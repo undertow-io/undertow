@@ -70,6 +70,10 @@
 
         <version.org.jboss.classfilewriter>1.0.4.Final-SNAPSHOT</version.org.jboss.classfilewriter>
         <version.junit>4.8.2</version.junit>
+        <version.xnio>3.1.0.Beta2-SNAPSHOT</version.xnio>
+        <version.org.jboss.logging>3.1.1.GA</version.org.jboss.logging>
+        <version.org.jboss.logmanager>1.4.0.Beta1</version.org.jboss.logmanager>
+        <version.org.jboss.logging.processor>1.0.3.Final</version.org.jboss.logging.processor>
 
         <!-- Surefire args -->
         <surefire.jpda.args/>
@@ -171,6 +175,35 @@
                 <version>${version.junit}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.jboss.logging</groupId>
+                <artifactId>jboss-logging</artifactId>
+                <version>${version.org.jboss.logging}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.logging</groupId>
+                <artifactId>jboss-logging-processor</artifactId>
+                <version>${version.org.jboss.logging.processor}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.logmanager</groupId>
+                <artifactId>jboss-logmanager</artifactId>
+                <version>${version.org.jboss.logmanager}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.xnio</groupId>
+                <artifactId>xnio-api</artifactId>
+                <version>${version.xnio}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.xnio</groupId>
+                <artifactId>xnio-nio</artifactId>
+                <version>${version.xnio}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
