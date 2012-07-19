@@ -29,7 +29,7 @@
       <version>9</version>
     </parent>
 
-    <groupId>org.texugo</groupId>
+    <groupId>org.jboss.texugo</groupId>
     <artifactId>texugo-parent</artifactId>
     <version>1.0.0.Alpha1-SNAPSHOT</version>
 
@@ -108,7 +108,7 @@
                     </configuration>
                     <dependencies>
                         <dependency>
-                            <groupId>org.texugo</groupId>
+                            <groupId>org.jboss.texugo</groupId>
                             <artifactId>texugo-build-config</artifactId>
                             <version>${project.version}</version>
                         </dependency>
@@ -129,7 +129,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.texugo</groupId>
+            <groupId>org.jboss.texugo</groupId>
             <artifactId>texugo-build-config</artifactId>
         </dependency>
     </dependencies>
@@ -140,19 +140,19 @@
             <!-- Modules in this project -->
 
             <dependency>
-                <groupId>org.texugo</groupId>
+                <groupId>org.jboss.texugo</groupId>
                 <artifactId>texugo-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.texugo</groupId>
+                <groupId>org.jboss.texugo</groupId>
                 <artifactId>texugo-build-config</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.texugo</groupId>
+                <groupId>org.jboss.texugo</groupId>
                 <artifactId>texugo-parser-generator</artifactId>
                 <version>${project.version}</version>
             </dependency>
