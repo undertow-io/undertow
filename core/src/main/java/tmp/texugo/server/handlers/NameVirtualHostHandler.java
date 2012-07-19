@@ -40,8 +40,8 @@ import tmp.texugo.util.Headers;
  */
 public class NameVirtualHostHandler implements HttpHandler {
 
-    private final HttpHandler defaultHandler;
-    private final Map<String, HttpHandler> hosts;
+    private volatile HttpHandler defaultHandler;
+    private volatile Map<String, HttpHandler> hosts;
 
     public NameVirtualHostHandler(final HttpHandler defaultHandler, final Map<String, HttpHandler> hosts) {
         if(defaultHandler == null) {
@@ -69,5 +69,24 @@ public class NameVirtualHostHandler implements HttpHandler {
 
     public Map<String, HttpHandler> getHosts() {
         return hosts;
+    }
+
+    public void setDefaultHandler(final HttpHandler defaultHandler) {
+        if(defaultHandler == null) {
+            throw TexugoMessages.MESSAGES.noDefaultHandlerSpecified();
+        }
+        this.defaultHandler = defaultHandler;
+    }
+
+    public synchronized void addHost(final String host, final HttpHandler handler) {
+        final Map<String, HttpHandler> hosts = new HashMap<String, HttpHandler>(this.hosts);
+        hosts.put(host, handler);
+        this.hosts = Collections.unmodifiableMap(hosts);
+    }
+
+    public synchronized void removeHost(final String host) {
+        final Map<String, HttpHandler> hosts = new HashMap<String, HttpHandler>(this.hosts);
+        hosts.remove(host);
+        this.hosts = Collections.unmodifiableMap(hosts);
     }
 }
