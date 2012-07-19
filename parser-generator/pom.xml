@@ -37,14 +37,37 @@
     <version>1.0.0.Alpha1-SNAPSHOT</version>
 
     <name>Texugo Parser Generator</name>
-    <description>An annotation processor that is used to generate the HTTP
-    parser</description>
+    <description>An annotation processor that is used to generate the HTTP parser</description>
+
+    <scm>
+        <connection>git://github.com/GoTexugo/texugo.git</connection>
+        <developerConnection>git://github.com/GoTexugo/texugo.git</developerConnection>
+        <url>https://github.com/GoTexugo/texugo</url>
+    </scm>
 
     <dependencies>
+        <dependency>
+            <groupId>org.jboss.classfilewriter</groupId>
+            <artifactId>jboss-classfilewriter</artifactId>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgument>-proc:none</compilerArgument>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

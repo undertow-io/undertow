@@ -35,6 +35,12 @@
     <name>Texugo Core</name>
 
     <dependencies>
+
+        <dependency>
+            <groupId>org.jboss.texugo</groupId>
+            <artifactId>texugo-parser-generator</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
