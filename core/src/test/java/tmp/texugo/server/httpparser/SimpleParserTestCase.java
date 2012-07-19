@@ -99,9 +99,9 @@ public class SimpleParserTestCase {
         final TokenState context = new TokenState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
-        Assert.assertSame("GET", result.verb);
+        Assert.assertSame("GET", result.method);
         Assert.assertEquals("/somepath", result.path);
-        Assert.assertSame("HTTP/1.1", result.httpVersion);
+        Assert.assertSame("HTTP/1.1", result.protocol);
         Assert.assertEquals("www.somehost.net", result.standardHeaders.get("Host"));
         Assert.assertEquals("some value", result.otherHeaders.get("OtherHeader"));
     }

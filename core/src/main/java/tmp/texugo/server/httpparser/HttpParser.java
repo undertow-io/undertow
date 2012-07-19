@@ -26,10 +26,140 @@ import java.nio.ByteBuffer;
 
 import tmp.texugo.annotationprocessor.HttpParserConfig;
 
+import static tmp.texugo.util.Headers.ACCEPT;
+import static tmp.texugo.util.Headers.ACCEPT_CHARSET;
+import static tmp.texugo.util.Headers.ACCEPT_ENCODING;
+import static tmp.texugo.util.Headers.ACCEPT_LANGUAGE;
+import static tmp.texugo.util.Headers.ACCEPT_RANGES;
+import static tmp.texugo.util.Headers.AGE;
+import static tmp.texugo.util.Headers.ALLOW;
+import static tmp.texugo.util.Headers.AUTHORIZATION;
+import static tmp.texugo.util.Headers.CACHE_CONTROL;
+import static tmp.texugo.util.Headers.CONNECTION;
+import static tmp.texugo.util.Headers.CONTENT_DISPOSITION;
+import static tmp.texugo.util.Headers.CONTENT_ENCODING;
+import static tmp.texugo.util.Headers.CONTENT_LANGUAGE;
+import static tmp.texugo.util.Headers.CONTENT_LENGTH;
+import static tmp.texugo.util.Headers.CONTENT_LOCATION;
+import static tmp.texugo.util.Headers.CONTENT_MD5;
+import static tmp.texugo.util.Headers.CONTENT_RANGE;
+import static tmp.texugo.util.Headers.CONTENT_TYPE;
+import static tmp.texugo.util.Headers.COOKIE;
+import static tmp.texugo.util.Headers.DATE;
+import static tmp.texugo.util.Headers.ETAG;
+import static tmp.texugo.util.Headers.EXPECT;
+import static tmp.texugo.util.Headers.EXPIRES;
+import static tmp.texugo.util.Headers.FROM;
+import static tmp.texugo.util.Headers.HOST;
+import static tmp.texugo.util.Headers.IF_MATCH;
+import static tmp.texugo.util.Headers.IF_MODIFIED_SINCE;
+import static tmp.texugo.util.Headers.IF_NONE_MATCH;
+import static tmp.texugo.util.Headers.IF_RANGE;
+import static tmp.texugo.util.Headers.IF_UNMODIFIED_SINCE;
+import static tmp.texugo.util.Headers.LAST_MODIFIED;
+import static tmp.texugo.util.Headers.LOCATION;
+import static tmp.texugo.util.Headers.MAX_FORWARDS;
+import static tmp.texugo.util.Headers.PRAGMA;
+import static tmp.texugo.util.Headers.PROXY_AUTHENTICATE;
+import static tmp.texugo.util.Headers.PROXY_AUTHORIZATION;
+import static tmp.texugo.util.Headers.RANGE;
+import static tmp.texugo.util.Headers.REFERER;
+import static tmp.texugo.util.Headers.REFRESH;
+import static tmp.texugo.util.Headers.RETRY_AFTER;
+import static tmp.texugo.util.Headers.SERVER;
+import static tmp.texugo.util.Headers.SET_COOKIE;
+import static tmp.texugo.util.Headers.SET_COOKIE2;
+import static tmp.texugo.util.Headers.STRICT_TRANSPORT_SECURITY;
+import static tmp.texugo.util.Headers.TE;
+import static tmp.texugo.util.Headers.TRAILER;
+import static tmp.texugo.util.Headers.TRANSFER_ENCODING;
+import static tmp.texugo.util.Headers.UPGRADE;
+import static tmp.texugo.util.Headers.USER_AGENT;
+import static tmp.texugo.util.Headers.VARY;
+import static tmp.texugo.util.Headers.VIA;
+import static tmp.texugo.util.Headers.WARNING;
+import static tmp.texugo.util.Headers.WWW_AUTHENTICATE;
+import static tmp.texugo.util.Methods.CONNECT;
+import static tmp.texugo.util.Methods.DELETE;
+import static tmp.texugo.util.Methods.GET;
+import static tmp.texugo.util.Methods.HEAD;
+import static tmp.texugo.util.Methods.OPTIONS;
+import static tmp.texugo.util.Methods.POST;
+import static tmp.texugo.util.Methods.PUT;
+import static tmp.texugo.util.Methods.TRACE;
+import static tmp.texugo.util.Protocols.HTTP_0_9;
+import static tmp.texugo.util.Protocols.HTTP_1_0;
+import static tmp.texugo.util.Protocols.HTTP_1_1;
+
 /**
  * @author Stuart Douglas
  */
-@HttpParserConfig(verbs = {"GET", "POST"}, versions = {"HTTP/1.0", "HTTP/1.1"}, headers = {"Host", "Accept-Encoding"})
+@HttpParserConfig(methods = {
+        OPTIONS,
+        GET,
+        HEAD,
+        POST,
+        PUT,
+        DELETE,
+        TRACE,
+        CONNECT},
+        protocols = {
+                HTTP_0_9, HTTP_1_0, HTTP_1_1
+        },
+        headers = {
+                ACCEPT,
+                ACCEPT_CHARSET,
+                ACCEPT_ENCODING,
+                ACCEPT_LANGUAGE,
+                ACCEPT_RANGES,
+                AGE,
+                ALLOW,
+                AUTHORIZATION,
+                CACHE_CONTROL,
+                COOKIE,
+                CONNECTION,
+                CONTENT_DISPOSITION,
+                CONTENT_ENCODING,
+                CONTENT_LANGUAGE,
+                CONTENT_LENGTH,
+                CONTENT_LOCATION,
+                CONTENT_MD5,
+                CONTENT_RANGE,
+                CONTENT_TYPE,
+                DATE,
+                ETAG,
+                EXPECT,
+                EXPIRES,
+                FROM,
+                HOST,
+                IF_MATCH,
+                IF_MODIFIED_SINCE,
+                IF_NONE_MATCH,
+                IF_RANGE,
+                IF_UNMODIFIED_SINCE,
+                LAST_MODIFIED,
+                LOCATION,
+                MAX_FORWARDS,
+                PRAGMA,
+                PROXY_AUTHENTICATE,
+                PROXY_AUTHORIZATION,
+                RANGE,
+                REFERER,
+                REFRESH,
+                RETRY_AFTER,
+                SERVER,
+                SET_COOKIE,
+                SET_COOKIE2,
+                STRICT_TRANSPORT_SECURITY,
+                TE,
+                TRAILER,
+                TRANSFER_ENCODING,
+                UPGRADE,
+                USER_AGENT,
+                VARY,
+                VIA,
+                WARNING,
+                WWW_AUTHENTICATE})
 public abstract class HttpParser {
 
     public static final HttpParser INSTANCE;

@@ -19,6 +19,8 @@
 package tmp.texugo.util;
 
 /**
+ * NOTE: if you add a new header here you must also add it to {@link tmp.texugo.server.httpparser.HttpParser}
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class Headers {
@@ -27,6 +29,7 @@ public final class Headers {
     }
 
     // Header names
+
 
     public static final String ACCEPT = "Accept";
     public static final String ACCEPT_CHARSET = "Accept-Charset";

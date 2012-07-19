@@ -25,6 +25,9 @@ import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.PushBackStreamChannel;
+import tmp.texugo.server.httpparser.HttpExchangeBuilder;
+import tmp.texugo.server.httpparser.HttpParser;
+import tmp.texugo.server.httpparser.TokenState;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -36,6 +39,8 @@ import static org.xnio.IoUtils.safeClose;
 final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     private final Pool<ByteBuffer> bufferPool;
 
+    private final TokenState state = new TokenState();
+    private final HttpExchangeBuilder builder = new HttpExchangeBuilder();
     HttpReadListener(final Pool<ByteBuffer> bufferPool) {
         this.bufferPool = bufferPool;
     }
@@ -66,6 +71,12 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 }
                 return;
             }
+            int remaining = HttpParser.INSTANCE.handle(buffer, res, state, builder);
+            if(remaining > 0) {
+                free = false;
+                channel.unget(pooled);
+            }
+
             // TODO: Parse the buffer via PFM, set free to false if the buffer is pushed back
         } finally {
             if (free) pooled.free();

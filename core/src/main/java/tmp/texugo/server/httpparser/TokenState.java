@@ -87,4 +87,8 @@ public class TokenState {
         this.current = null;
         this.pos = 0;
     }
+
+    public boolean isComplete() {
+        return state == PARSE_COMPLETE;
+    }
 }

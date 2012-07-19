@@ -32,9 +32,9 @@ import java.util.Map;
  * @author Stuart Douglas
  */
 public class HttpExchangeBuilder {
-    String verb;
+    String method;
     String path;
-    String httpVersion;
+    String protocol;
     final Map<String, String> standardHeaders = new IdentityHashMap<String, String>();
     final Map<String, String> otherHeaders = new HashMap<String, String>();
     String nextStandardHeader;

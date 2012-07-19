@@ -36,7 +36,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 public @interface HttpParserConfig {
-    String[] verbs();
-    String[] versions();
+    String[] methods();
+    String[] protocols();
     String[] headers();
 }

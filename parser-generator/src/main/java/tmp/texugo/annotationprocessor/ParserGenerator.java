@@ -118,13 +118,13 @@ public class ParserGenerator {
         c.getfield(TOKEN_STATE_CLASS, "state", "I");
         final Set<BranchEnd> returnSet = new HashSet<BranchEnd>();
         final TableSwitchBuilder builder = new TableSwitchBuilder(0, 4);
-        final AtomicReference<BranchEnd> verb = builder.add();
+        final AtomicReference<BranchEnd> method = builder.add();
         final AtomicReference<BranchEnd> path = builder.add();
         final AtomicReference<BranchEnd> http = builder.add();
         final AtomicReference<BranchEnd> header = builder.add();
         final AtomicReference<BranchEnd> headerValue = builder.add();
         c.tableswitch(builder);
-        c.branchEnd(verb.get());
+        c.branchEnd(method.get());
         c.aload(0);
         c.loadMethodParameters();
         c.invokespecial(className, HANDLE_HTTP_VERB, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", TOKEN_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
@@ -809,7 +809,7 @@ public class ParserGenerator {
         public void handleOtherToken(final CodeAttribute c) {
             c.aload(HTTP_EXCHANGE_BUILDER);
             c.swap();
-            c.putfield(HTTP_EXCHANGE_BUILDER_CLASS, "verb", DescriptorUtils.makeDescriptor(String.class));
+            c.putfield(HTTP_EXCHANGE_BUILDER_CLASS, "method", DescriptorUtils.makeDescriptor(String.class));
         }
 
         @Override
@@ -831,7 +831,7 @@ public class ParserGenerator {
         public void handleOtherToken(final CodeAttribute c) {
             c.aload(HTTP_EXCHANGE_BUILDER);
             c.swap();
-            c.putfield(HTTP_EXCHANGE_BUILDER_CLASS, "httpVersion", DescriptorUtils.makeDescriptor(String.class));
+            c.putfield(HTTP_EXCHANGE_BUILDER_CLASS, "protocol", DescriptorUtils.makeDescriptor(String.class));
         }
 
         @Override
