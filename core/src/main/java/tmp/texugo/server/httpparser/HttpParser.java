@@ -19,6 +19,8 @@
 package tmp.texugo.server.httpparser;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import tmp.texugo.annotationprocessor.HttpParserConfig;
 
@@ -181,18 +183,21 @@ public abstract class HttpParser {
     /**
      * This method is implemented by a generated subclass
      */
-    public abstract int handle(ByteBuffer buffer, int noBytes, final TokenState currentState, final HttpExchangeBuilder builder);
+    public abstract int handle(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpExchangeBuilder builder);
+
+
 
     /**
      * Parses a path value. This is called from the generated  bytecode.
-     * @param buffer The buffer
+     *
+     * @param buffer    The buffer
      * @param remaining The number of bytes remaining
-     * @param state The current state
-     * @param builder The exchange builder
+     * @param state     The current state
+     * @param builder   The exchange builder
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final int handlePath(ByteBuffer buffer, int remaining, TokenState state, HttpExchangeBuilder builder) {
+    final int handlePath(ByteBuffer buffer, int remaining, ParseState state, HttpExchangeBuilder builder) {
         StringBuilder stringBuilder = state.stringBuilder;
         if (stringBuilder == null) {
             state.stringBuilder = stringBuilder = new StringBuilder();
@@ -203,7 +208,7 @@ public abstract class HttpParser {
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     builder.path = stringBuilder.toString();
-                    state.state = TokenState.VERSION;
+                    state.state = ParseState.VERSION;
                     state.stringBuilder = null;
                     break;
                 }
@@ -215,26 +220,28 @@ public abstract class HttpParser {
         return remaining;
     }
 
-    private static final int EAT_WHITESPACE = 0;
-    private static final int NORMAL = 1;
-    private static final int BEGIN_LINE_END = 2;
-    private static final int LINE_END = 3;
-    private static final int AWAIT_DATA_END = 4;
+    private static final int NORMAL = 0;
+    private static final int BEGIN_LINE_END = 1;
+    private static final int LINE_END = 2;
+    private static final int AWAIT_DATA_END = 3;
 
 
     /**
      * Parses a header value. This is called from the generated  bytecode.
-     * @param buffer The buffer
+     *
+     * @param buffer    The buffer
      * @param remaining The number of bytes remaining
-     * @param state The current state
-     * @param builder The exchange builder
+     * @param state     The current state
+     * @param builder   The exchange builder
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final int handleHeaderValue(ByteBuffer buffer, int remaining, TokenState state, HttpExchangeBuilder builder) {
+    final int handleHeaderValue(ByteBuffer buffer, int remaining, ParseState state, HttpExchangeBuilder builder) {
         StringBuilder stringBuilder = state.stringBuilder;
+        List<String> nextHeaderValues = state.nextHeaderValues;
         if (stringBuilder == null) {
-            state.stringBuilder = stringBuilder = new StringBuilder();
+            stringBuilder = new StringBuilder();
+            nextHeaderValues = new ArrayList<String>();
         }
 
 
@@ -248,19 +255,13 @@ public abstract class HttpParser {
                         parseState = BEGIN_LINE_END;
                     } else if (next == '\n') {
                         parseState = LINE_END;
+                    } else if (next == ' ' || next == '\t') {
+                        if(stringBuilder.length() != 0) {
+                            nextHeaderValues.add(stringBuilder.toString());
+                            stringBuilder = new StringBuilder();
+                        }
                     } else {
                         stringBuilder.append((char) next);
-                    }
-                    break;
-                }
-                case EAT_WHITESPACE: {
-                    if (next == '\r') {
-                        parseState = BEGIN_LINE_END;
-                    } else if (next == '\n') {
-                        parseState = LINE_END;
-                    } else if (next != ' ' && next != '\t') {
-                        stringBuilder.append((char) next);
-                        parseState = NORMAL;
                     }
                     break;
                 }
@@ -271,24 +272,27 @@ public abstract class HttpParser {
                     } else if (next == '\t' ||
                             next == ' ') {
                         //this is a continuation
-                        stringBuilder.append(' ');
-                        parseState = EAT_WHITESPACE;
+                        if(stringBuilder.length() != 0) {
+                            nextHeaderValues.add(stringBuilder.toString());
+                            stringBuilder = new StringBuilder();
+                        }
+                        parseState = NORMAL;
                     } else {
                         //we have a header
-                        String nextStandardHeader = builder.nextStandardHeader;
-                        if (nextStandardHeader != null) {
-                            builder.standardHeaders.put(nextStandardHeader, stringBuilder.toString());
-                            builder.nextStandardHeader = null;
-                        } else {
-                            builder.otherHeaders.put(builder.nextOtherHeader, stringBuilder.toString());
-                            builder.nextOtherHeader = null;
+                        String nextStandardHeader = state.nextHeader;
+                        if(stringBuilder.length() != 0) {
+                            nextHeaderValues.add(stringBuilder.toString());
                         }
+                        builder.headers.put(nextStandardHeader, nextHeaderValues);
+                        state.nextHeader = null;
+                        state.nextHeaderValues = null;
+
                         state.leftOver = next;
                         state.stringBuilder = null;
-                        if(next == '\r') {
+                        if (next == '\r') {
                             parseState = AWAIT_DATA_END;
                         } else {
-                            state.state = TokenState.HEADER;
+                            state.state = ParseState.HEADER;
                             state.parseState = 0;
                             return remaining;
                         }
@@ -296,12 +300,15 @@ public abstract class HttpParser {
                     break;
                 }
                 case AWAIT_DATA_END: {
-                    state.state = TokenState.PARSE_COMPLETE;
+                    state.state = ParseState.PARSE_COMPLETE;
                     return remaining;
                 }
             }
         }
+        //we only write to the state if we did not finish parsing
         state.parseState = parseState;
+        state.stringBuilder = stringBuilder;
+        state.nextHeaderValues = nextHeaderValues;
         return remaining;
     }
 

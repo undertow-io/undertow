@@ -47,8 +47,8 @@ import org.jboss.classfilewriter.util.DescriptorUtils;
 public class ParserGenerator {
 
     //class names
-    public static final String TOKEN_STATE_CLASS = "tmp.texugo.server.httpparser.TokenState";
-    public static final String TOKEN_STATE_DESCRIPTOR = DescriptorUtils.makeDescriptor(TOKEN_STATE_CLASS);
+    public static final String PARSE_STATE_CLASS = "tmp.texugo.server.httpparser.ParseState";
+    public static final String PARSE_STATE_DESCRIPTOR = DescriptorUtils.makeDescriptor(PARSE_STATE_CLASS);
     public static final String HTTP_EXCHANGE_BUILDER_CLASS = "tmp.texugo.server.httpparser.HttpExchangeBuilder";
     public static final String HTTP_EXCHANGE_BUILDER_DESCRIPTOR = DescriptorUtils.makeDescriptor(HTTP_EXCHANGE_BUILDER_CLASS);
 
@@ -68,7 +68,7 @@ public class ParserGenerator {
 
     private static final int BYTE_BUFFER_VAR = 1;
     private static final int BYTES_REMAINING_VAR = 2;
-    private static final int TOKEN_STATE_VAR = 3;
+    private static final int PARSE_STATE_VAR = 3;
     private static final int HTTP_EXCHANGE_BUILDER = 4;
     private static final int CURRENT_STATE_VAR = 5;
     private static final int STATE_POS_VAR = 6;
@@ -100,7 +100,7 @@ public class ParserGenerator {
         createStateMachine(httpVersions, className, file, sctor, fieldCounter, HANDLE_HTTP_VERSION, new VersionStateMachine());
         createStateMachine(standardHeaders, className, file, sctor, fieldCounter, HANDLE_HEADER, new HeaderStateMachine());
 
-        final ClassMethod handle = file.addMethod(Modifier.PUBLIC, "handle", "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", TOKEN_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR);
+        final ClassMethod handle = file.addMethod(Modifier.PUBLIC, "handle", "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR);
         createHandleBody(className, handle);
 
 
@@ -110,8 +110,8 @@ public class ParserGenerator {
 
     private static void createHandleBody(final String className, final ClassMethod handle) {
         final CodeAttribute c = handle.getCodeAttribute();
-        c.aload(TOKEN_STATE_VAR);
-        c.getfield(TOKEN_STATE_CLASS, "state", "I");
+        c.aload(PARSE_STATE_VAR);
+        c.getfield(PARSE_STATE_CLASS, "state", "I");
         final Set<BranchEnd> returnSet = new HashSet<BranchEnd>();
         final TableSwitchBuilder builder = new TableSwitchBuilder(0, 4);
         final AtomicReference<BranchEnd> method = builder.add();
@@ -123,7 +123,7 @@ public class ParserGenerator {
         c.branchEnd(method.get());
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HTTP_VERB, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", TOKEN_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_HTTP_VERB, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
@@ -134,7 +134,7 @@ public class ParserGenerator {
         c.branchEnd(path.get());
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_PATH, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", TOKEN_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_PATH, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
@@ -143,7 +143,7 @@ public class ParserGenerator {
         c.branchEnd(http.get());
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HTTP_VERSION, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", TOKEN_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_HTTP_VERSION, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
@@ -153,27 +153,27 @@ public class ParserGenerator {
         CodeLocation headerStart = c.mark();
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HEADER, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", TOKEN_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_HEADER, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
 
         //it is possible that the header did not have a value
-        c.aload(TOKEN_STATE_VAR);
-        c.getfield(TOKEN_STATE_CLASS, "state", "I");
+        c.aload(PARSE_STATE_VAR);
+        c.getfield(PARSE_STATE_CLASS, "state", "I");
         c.iconst(PARSE_COMPLETE);
         returnSet.add(c.ifIcmpeq());
 
         c.branchEnd(headerValue.get());
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HEADER_VALUE, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", TOKEN_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_HEADER_VALUE, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
 
-        c.aload(TOKEN_STATE_VAR);
-        c.getfield(TOKEN_STATE_CLASS, "state", "I");
+        c.aload(PARSE_STATE_VAR);
+        c.getfield(PARSE_STATE_CLASS, "state", "I");
         c.iconst(PARSE_COMPLETE);
         returnSet.add(c.ifIcmpeq());
 
@@ -207,7 +207,7 @@ public class ParserGenerator {
 
         final int noStates = stateCounter.get();
 
-        final ClassMethod handle = file.addMethod(Modifier.PRIVATE, methodName, "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I",TOKEN_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR);
+        final ClassMethod handle = file.addMethod(Modifier.PRIVATE, methodName, "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR);
         writeStateMachine(className, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine);
     }
 
@@ -259,20 +259,20 @@ public class ParserGenerator {
         Collections.sort(states);
 
         //store the current state in a local variable
-        c.aload(TOKEN_STATE_VAR);
+        c.aload(PARSE_STATE_VAR);
         c.dup();
         c.dup();
         c.dup();
         c.dup();
-        c.getfield(TOKEN_STATE_CLASS, "parseState", "I");
+        c.getfield(PARSE_STATE_CLASS, "parseState", "I");
         c.istore(CURRENT_STATE_VAR);
-        c.getfield(TOKEN_STATE_CLASS, "pos", "I");
+        c.getfield(PARSE_STATE_CLASS, "pos", "I");
         c.istore(STATE_POS_VAR);
-        c.getfield(TOKEN_STATE_CLASS, "current", "Ljava/lang/String;");
+        c.getfield(PARSE_STATE_CLASS, "current", "Ljava/lang/String;");
         c.astore(STATE_CURRENT_VAR);
-        c.getfield(TOKEN_STATE_CLASS, "currentBytes", "[B");
+        c.getfield(PARSE_STATE_CLASS, "currentBytes", "[B");
         c.astore(STATE_CURRENT_BYTES_VAR);
-        c.getfield(TOKEN_STATE_CLASS, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
+        c.getfield(PARSE_STATE_CLASS, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
         c.astore(STATE_STRING_BUILDER_VAR);
 
 
@@ -305,42 +305,42 @@ public class ParserGenerator {
         //code that synchronizes the state object and returns
         setupLocalVariables(c);
         final CodeLocation returnIncompleteCode = c.mark();
-        c.aload(TOKEN_STATE_VAR);
+        c.aload(PARSE_STATE_VAR);
         c.dup();
         c.dup();
         c.dup();
         c.dup();
 
         c.iload(STATE_POS_VAR);
-        c.putfield(TOKEN_STATE_CLASS, "pos", "I");
+        c.putfield(PARSE_STATE_CLASS, "pos", "I");
         c.aload(STATE_CURRENT_VAR);
-        c.putfield(TOKEN_STATE_CLASS, "current", DescriptorUtils.makeDescriptor(String.class));
+        c.putfield(PARSE_STATE_CLASS, "current", DescriptorUtils.makeDescriptor(String.class));
         c.aload(STATE_CURRENT_BYTES_VAR);
-        c.putfield(TOKEN_STATE_CLASS, "currentBytes", "[B");
+        c.putfield(PARSE_STATE_CLASS, "currentBytes", "[B");
         c.aload(STATE_STRING_BUILDER_VAR);
-        c.putfield(TOKEN_STATE_CLASS, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
+        c.putfield(PARSE_STATE_CLASS, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
         c.iload(CURRENT_STATE_VAR);
-        c.putfield(TOKEN_STATE_CLASS, "parseState", "I");
+        c.putfield(PARSE_STATE_CLASS, "parseState", "I");
         c.iload(BYTES_REMAINING_VAR);
         c.returnInstruction();
         setupLocalVariables(c);
         final CodeLocation returnCompleteCode = c.mark();
-        c.aload(TOKEN_STATE_VAR);
+        c.aload(PARSE_STATE_VAR);
         c.dup();
         c.dup();
         c.dup();
         c.dup();
 
         c.iconst(0);
-        c.putfield(TOKEN_STATE_CLASS, "pos", "I");
+        c.putfield(PARSE_STATE_CLASS, "pos", "I");
         c.aconstNull();
-        c.putfield(TOKEN_STATE_CLASS, "current", DescriptorUtils.makeDescriptor(String.class));
+        c.putfield(PARSE_STATE_CLASS, "current", DescriptorUtils.makeDescriptor(String.class));
         c.aconstNull();
-        c.putfield(TOKEN_STATE_CLASS, "currentBytes", "[B");
+        c.putfield(PARSE_STATE_CLASS, "currentBytes", "[B");
         c.aconstNull();
-        c.putfield(TOKEN_STATE_CLASS, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
+        c.putfield(PARSE_STATE_CLASS, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
         c.iconst(0);
-        c.putfield(TOKEN_STATE_CLASS, "parseState", "I");
+        c.putfield(PARSE_STATE_CLASS, "parseState", "I");
         c.iload(BYTES_REMAINING_VAR);
         c.returnInstruction();
 
@@ -483,12 +483,12 @@ public class ParserGenerator {
         c.ifne(noStateLoop); //go back to the start if we have not run out of bytes
 
         //we have run out of bytes, so we need to write back the current state
-        c.aload(TOKEN_STATE_VAR);
+        c.aload(PARSE_STATE_VAR);
         c.dup();
         c.aload(STATE_STRING_BUILDER_VAR);
-        c.putfield(TOKEN_STATE_CLASS, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
+        c.putfield(PARSE_STATE_CLASS, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
         c.iload(CURRENT_STATE_VAR);
-        c.putfield(TOKEN_STATE_CLASS, "parseState", "I");
+        c.putfield(PARSE_STATE_CLASS, "parseState", "I");
         c.iconst(0);
         c.returnInstruction();
         for (BranchEnd b : nostateHandleSpace) {
@@ -516,7 +516,7 @@ public class ParserGenerator {
         c.setupFrame(DescriptorUtils.makeDescriptor("fakeclass"),
                 "[B",
                 "I",
-                TOKEN_STATE_DESCRIPTOR,
+                PARSE_STATE_DESCRIPTOR,
                 HTTP_EXCHANGE_BUILDER_DESCRIPTOR,
                 "I",
                 "I",
@@ -542,8 +542,8 @@ public class ParserGenerator {
         if (currentState == initialState) {
             //if this is the initial state there is a possibility that we need to deal with a left over character first
             //we need to see if we start with a left over character
-            c.aload(TOKEN_STATE_VAR);
-            c.getfield(TOKEN_STATE_CLASS, "leftOver", "B");
+            c.aload(PARSE_STATE_VAR);
+            c.getfield(PARSE_STATE_CLASS, "leftOver", "B");
             c.dup();
             final BranchEnd end = c.ifne();
             c.pop();
@@ -554,9 +554,9 @@ public class ParserGenerator {
             c.iinc(BYTES_REMAINING_VAR, -1);
             BranchEnd cont = c.gotoInstruction();
             c.branchEnd(end);
-            c.aload(TOKEN_STATE_VAR);
+            c.aload(PARSE_STATE_VAR);
             c.iconst(0);
-            c.putfield(TOKEN_STATE_CLASS, "leftOver", "B");
+            c.putfield(PARSE_STATE_CLASS, "leftOver", "B");
 
             c.branchEnd(cont);
 
@@ -774,23 +774,23 @@ public class ParserGenerator {
 
         @Override
         public void handleOtherToken(final CodeAttribute c) {
-            c.aload(HTTP_EXCHANGE_BUILDER);
+            c.aload(PARSE_STATE_VAR);
             c.swap();
-            c.putfield(HTTP_EXCHANGE_BUILDER_CLASS, "nextOtherHeader", DescriptorUtils.makeDescriptor(String.class));
+            c.putfield(PARSE_STATE_CLASS, "nextHeader", DescriptorUtils.makeDescriptor(String.class));
         }
 
         @Override
         public void handleStateMachineMatchedToken(final CodeAttribute c) {
-            c.aload(HTTP_EXCHANGE_BUILDER);
+            c.aload(PARSE_STATE_VAR);
             c.swap();
-            c.putfield(HTTP_EXCHANGE_BUILDER_CLASS, "nextStandardHeader", DescriptorUtils.makeDescriptor(String.class));
+            c.putfield(PARSE_STATE_CLASS, "nextHeader", DescriptorUtils.makeDescriptor(String.class));
         }
 
         @Override
         public void updateParseState(final CodeAttribute c) {
-            c.aload(TOKEN_STATE_VAR);
+            c.aload(PARSE_STATE_VAR);
             c.iconst(HEADER_VALUE);
-            c.putfield(TOKEN_STATE_CLASS, "state", "I");
+            c.putfield(PARSE_STATE_CLASS, "state", "I");
         }
     }
 
@@ -815,9 +815,9 @@ public class ParserGenerator {
 
         @Override
         public void updateParseState(final CodeAttribute c) {
-            c.aload(TOKEN_STATE_VAR);
+            c.aload(PARSE_STATE_VAR);
             c.iconst(PATH);
-            c.putfield(TOKEN_STATE_CLASS, "state", "I");
+            c.putfield(PARSE_STATE_CLASS, "state", "I");
         }
     }
 
@@ -842,9 +842,9 @@ public class ParserGenerator {
 
         @Override
         public void updateParseState(final CodeAttribute c) {
-            c.aload(TOKEN_STATE_VAR);
+            c.aload(PARSE_STATE_VAR);
             c.iconst(HEADER);
-            c.putfield(TOKEN_STATE_CLASS, "state", "I");
+            c.putfield(PARSE_STATE_CLASS, "state", "I");
         }
 
     }

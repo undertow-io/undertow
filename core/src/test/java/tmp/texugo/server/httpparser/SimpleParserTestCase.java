@@ -19,6 +19,8 @@
 package tmp.texugo.server.httpparser;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -62,15 +64,15 @@ public class SimpleParserTestCase {
     }
 
     private void runTest(final byte[] in) {
-        final TokenState context = new TokenState();
+        final ParseState context = new ParseState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
         Assert.assertSame("GET", result.method);
         Assert.assertEquals("/somepath", result.path);
         Assert.assertSame("HTTP/1.1", result.protocol);
-        Assert.assertEquals("www.somehost.net", result.standardHeaders.get("Host"));
-        Assert.assertEquals("some value", result.otherHeaders.get("OtherHeader"));
-        Assert.assertEquals(TokenState.PARSE_COMPLETE, context.state);
+        Assert.assertEquals(Collections.singletonList("www.somehost.net"), result.headers.get("Host"));
+        Assert.assertEquals(Arrays.asList(new String[] {"some","value"}), result.headers.get("OtherHeader"));
+        Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
     }
 
 

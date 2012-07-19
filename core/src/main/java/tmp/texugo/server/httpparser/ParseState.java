@@ -18,6 +18,8 @@
 
 package tmp.texugo.server.httpparser;
 
+import java.util.List;
+
 /**
  * The current state of the tokenizer state machine. This class is mutable and not thread safe.
  * <p/>
@@ -27,7 +29,7 @@ package tmp.texugo.server.httpparser;
  *
  * @author Stuart Douglas
  */
-public class TokenState {
+public class ParseState {
 
     //parsing states
     public static final int VERB = 0;
@@ -78,7 +80,18 @@ public class TokenState {
      */
     byte leftOver;
 
-    public TokenState() {
+
+    /**
+     * The next header
+     */
+    String nextHeader;
+
+    /**
+     * Next header values
+     */
+    List<String> nextHeaderValues;
+
+    public ParseState() {
         this.parseState = 0;
         this.current = null;
         this.pos = 0;

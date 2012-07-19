@@ -18,7 +18,7 @@
 
 package tmp.texugo.server.httpparser;
 
-import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 import tmp.texugo.util.SecureHashMap;
@@ -31,9 +31,7 @@ import tmp.texugo.util.SecureHashMap;
 public class HttpExchangeBuilder {
     String method;
     String path;
+    String canonicalPath;
     String protocol;
-    final Map<String, String> standardHeaders = new IdentityHashMap<String, String>();
-    final Map<String, String> otherHeaders = new SecureHashMap<String, String>();
-    String nextStandardHeader;
-    String nextOtherHeader;
+    final Map<String, List<String>> headers = new SecureHashMap<String, List<String>>();
 }

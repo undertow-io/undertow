@@ -19,6 +19,8 @@
 package tmp.texugo.server.httpparser;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -46,17 +48,17 @@ public class ParserResumeTestCase {
     @Test
     public void testOneCharacterAtATime() {
         byte[] in = DATA.getBytes();
-        final TokenState context = new TokenState();
+        final ParseState context = new ParseState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         ByteBuffer buffer = ByteBuffer.wrap(in);
-        while (context.state != TokenState.PARSE_COMPLETE){
+        while (context.state != ParseState.PARSE_COMPLETE){
             HttpParser.INSTANCE.handle(buffer, 1, context, result);
         }
         runAssertions(result, context);
     }
 
     private void testResume(final int split, byte[] in) {
-        final TokenState context = new TokenState();
+        final ParseState context = new ParseState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         ByteBuffer buffer = ByteBuffer.wrap(in);
         int left = HttpParser.INSTANCE.handle(buffer, split, context, result);
@@ -66,14 +68,14 @@ public class ParserResumeTestCase {
         Assert.assertEquals(4, left);
     }
 
-    private void runAssertions(final HttpExchangeBuilder result, final TokenState context) {
+    private void runAssertions(final HttpExchangeBuilder result, final ParseState context) {
         Assert.assertSame("POST", result.method);
         Assert.assertEquals("/apath", result.path);
         Assert.assertSame("HTTP/1.1", result.protocol);
-        Assert.assertEquals("www.somehost.net", result.standardHeaders.get("Host"));
-        Assert.assertEquals("some value", result.otherHeaders.get("OtherHeader"));
-        Assert.assertEquals("a", result.otherHeaders.get("Accept-garbage"));
-        Assert.assertEquals(TokenState.PARSE_COMPLETE, context.state);
+        Assert.assertEquals(Collections.singletonList("www.somehost.net"), result.headers.get("Host"));
+        Assert.assertEquals(Arrays.asList(new String[]{"some", "value"}), result.headers.get("OtherHeader"));
+        Assert.assertEquals(Collections.singletonList("a"), result.headers.get("Accept-garbage"));
+        Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
     }
 
 }

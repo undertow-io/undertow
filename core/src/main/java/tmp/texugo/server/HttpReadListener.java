@@ -27,7 +27,7 @@ import org.xnio.Pooled;
 import org.xnio.channels.PushBackStreamChannel;
 import tmp.texugo.server.httpparser.HttpExchangeBuilder;
 import tmp.texugo.server.httpparser.HttpParser;
-import tmp.texugo.server.httpparser.TokenState;
+import tmp.texugo.server.httpparser.ParseState;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -39,7 +39,7 @@ import static org.xnio.IoUtils.safeClose;
 final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     private final Pool<ByteBuffer> bufferPool;
 
-    private final TokenState state = new TokenState();
+    private final ParseState state = new ParseState();
     private final HttpExchangeBuilder builder = new HttpExchangeBuilder();
     HttpReadListener(final Pool<ByteBuffer> bufferPool) {
         this.bufferPool = bufferPool;
