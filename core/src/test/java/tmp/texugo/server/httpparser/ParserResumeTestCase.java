@@ -32,7 +32,7 @@ import org.junit.Test;
  */
 public class ParserResumeTestCase {
 
-    public static final String DATA = "POST /apath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
+    public static final String DATA = "POST http://www.somehost.net/apath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
 
     @Test
     public void testMethodSplit() {
@@ -70,7 +70,8 @@ public class ParserResumeTestCase {
 
     private void runAssertions(final HttpExchangeBuilder result, final ParseState context) {
         Assert.assertSame("POST", result.method);
-        Assert.assertEquals("/apath", result.path);
+        Assert.assertEquals("/apath", result.canonicalPath);
+        Assert.assertEquals("http://www.somehost.net/apath", result.path);
         Assert.assertSame("HTTP/1.1", result.protocol);
         Assert.assertEquals(Collections.singletonList("www.somehost.net"), result.headers.get("Host"));
         Assert.assertEquals(Arrays.asList(new String[]{"some", "value"}), result.headers.get("OtherHeader"));

@@ -63,6 +63,17 @@ public class SimpleParserTestCase {
         runTest(in);
     }
 
+    @Test
+    public void testCanonicalPath() {
+        byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
+
+        final ParseState context = new ParseState();
+        HttpExchangeBuilder result = new HttpExchangeBuilder();
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
+        Assert.assertEquals("/somepath", result.canonicalPath);
+        Assert.assertEquals("http://www.somehost.net/somepath", result.path);
+    }
+
     private void runTest(final byte[] in) {
         final ParseState context = new ParseState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();
@@ -71,7 +82,7 @@ public class SimpleParserTestCase {
         Assert.assertEquals("/somepath", result.path);
         Assert.assertSame("HTTP/1.1", result.protocol);
         Assert.assertEquals(Collections.singletonList("www.somehost.net"), result.headers.get("Host"));
-        Assert.assertEquals(Arrays.asList(new String[] {"some","value"}), result.headers.get("OtherHeader"));
+        Assert.assertEquals(Arrays.asList(new String[]{"some", "value"}), result.headers.get("OtherHeader"));
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
     }
 

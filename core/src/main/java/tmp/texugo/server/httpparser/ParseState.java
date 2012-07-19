@@ -82,7 +82,7 @@ public class ParseState {
 
 
     /**
-     * The next header
+     * This is used to store the next header value when parsing header key / value pairs,
      */
     String nextHeader;
 

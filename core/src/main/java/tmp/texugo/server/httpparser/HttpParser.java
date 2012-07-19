@@ -186,6 +186,14 @@ public abstract class HttpParser {
     public abstract int handle(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpExchangeBuilder builder);
 
 
+    /**
+     * The parse states for parsing the path.
+     */
+    private static final int START = 0;
+    private static final int FIRST_COLON = 1;
+    private static final int FIRST_SLASH = 2;
+    private static final int SECOND_SLASH = 3;
+    private static final int HOST_DONE = 3;
 
     /**
      * Parses a path value. This is called from the generated  bytecode.
@@ -199,6 +207,8 @@ public abstract class HttpParser {
     @SuppressWarnings("unused")
     final int handlePath(ByteBuffer buffer, int remaining, ParseState state, HttpExchangeBuilder builder) {
         StringBuilder stringBuilder = state.stringBuilder;
+        int parseState = state.parseState;
+        int canonicalPathStart = state.pos;
         if (stringBuilder == null) {
             state.stringBuilder = stringBuilder = new StringBuilder();
         }
@@ -207,19 +217,45 @@ public abstract class HttpParser {
             --remaining;
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
-                    builder.path = stringBuilder.toString();
+                    final String path = stringBuilder.toString();
+                    builder.path = path;
+                    if (parseState != HOST_DONE) {
+                        builder.canonicalPath = path;
+                    } else {
+                        builder.canonicalPath = path.substring(canonicalPathStart);
+                    }
                     state.state = ParseState.VERSION;
                     state.stringBuilder = null;
-                    break;
+                    state.parseState = 0;
+                    state.pos = 0;
+                    return remaining;
                 }
             } else {
+                if (next == ':' && parseState == START) {
+                    parseState = FIRST_COLON;
+                } else if (next == '/' && parseState == FIRST_COLON) {
+                    parseState = FIRST_SLASH;
+                } else if (next == '/' && parseState == FIRST_SLASH) {
+                    parseState = SECOND_SLASH;
+                } else if (next == '/' && parseState == SECOND_SLASH) {
+                    parseState = HOST_DONE;
+                    canonicalPathStart = stringBuilder.length();
+                } else if(parseState == FIRST_COLON || parseState == FIRST_SLASH) {
+                    parseState = START;
+                }
                 stringBuilder.append(next);
             }
 
         }
+        state.stringBuilder = stringBuilder;
+        state.parseState = parseState;
+        state.pos = canonicalPathStart;
         return remaining;
     }
 
+    /**
+     * The parse states for parsing heading values
+     */
     private static final int NORMAL = 0;
     private static final int BEGIN_LINE_END = 1;
     private static final int LINE_END = 2;
@@ -256,7 +292,7 @@ public abstract class HttpParser {
                     } else if (next == '\n') {
                         parseState = LINE_END;
                     } else if (next == ' ' || next == '\t') {
-                        if(stringBuilder.length() != 0) {
+                        if (stringBuilder.length() != 0) {
                             nextHeaderValues.add(stringBuilder.toString());
                             stringBuilder = new StringBuilder();
                         }
@@ -272,7 +308,7 @@ public abstract class HttpParser {
                     } else if (next == '\t' ||
                             next == ' ') {
                         //this is a continuation
-                        if(stringBuilder.length() != 0) {
+                        if (stringBuilder.length() != 0) {
                             nextHeaderValues.add(stringBuilder.toString());
                             stringBuilder = new StringBuilder();
                         }
@@ -280,7 +316,7 @@ public abstract class HttpParser {
                     } else {
                         //we have a header
                         String nextStandardHeader = state.nextHeader;
-                        if(stringBuilder.length() != 0) {
+                        if (stringBuilder.length() != 0) {
                             nextHeaderValues.add(stringBuilder.toString());
                         }
                         builder.headers.put(nextStandardHeader, nextHeaderValues);
