@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Puppy Crawl//DTD Check Configuration 1.2//EN"
+    "http://www.puppycrawl.com/dtds/configuration_1_2.dtd">
+
+<module name="Checker">
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true"/>
+    </module>
+
+    <module name="RegexpSingleline">
+        <!-- \s matches whitespace character, $ matches end of line. -->
+        <property name="format" value="\s+$"/>
+        <property name="message" value="Line has trailing spaces."/>
+    </module>
+
+    <module name="TreeWalker">
+
+        <property name="cacheFile" value="${checkstyle.cache.file}"/>
+
+        <!-- Checks for imports                              -->
+        <module name="AvoidStarImport"/>
+        <module name="RedundantImport"/>
+        <!-- Disabled until checkstyle can recognize imports which are used only by javadoc -->
+        <!--<module name="UnusedImports"/>-->
+
+        <!-- Modifier Checks                                    -->
+        <module name="ModifierOrder"/>
+        <module name="RedundantModifier"/>
+
+        <!-- Checks for blocks. You know, those {}'s         -->
+        <module name="LeftCurly"/>
+
+        <!-- Checks for common coding problems               -->
+        <!-- Disabled until http://sourceforge.net/tracker/?func=detail&aid=2843447&group_id=29721&atid=397078 is fixed-->
+        <!--<module name="DoubleCheckedLocking"/>-->
+        <module name="EmptyStatement"/>
+        <module name="EqualsHashCode"/>
+        <module name="IllegalInstantiation"/>
+        <module name="RedundantThrows">
+            <property name="allowUnchecked" value="true"/>
+        </module>
+
+        <!-- Miscellaneous other checks.                   -->
+        <module name="UpperEll"/>
+        <module name="PackageAnnotation"/>
+        <module name="CovariantEquals"/>
+        <module name="ArrayTypeStyle"/>
+
+    </module>
+
+</module>
+
