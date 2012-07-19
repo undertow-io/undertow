@@ -551,6 +551,7 @@ public class ParserGenerator {
             final BranchEnd end = c.ifne();
             c.pop();
             //load 2 copies of the current byte into the stack
+            handleReturnIfNoMoreBytes(c, returnIncompleteCode);
             c.aload(BYTE_BUFFER_VAR);
             c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
             c.iinc(BYTES_REMAINING_VAR, -1);
@@ -559,9 +560,11 @@ public class ParserGenerator {
             c.aload(TOKEN_STATE_VAR);
             c.iconst(0);
             c.putfield(TOKEN_STATE_CLASS, "leftOver", "B");
+
             c.branchEnd(cont);
 
         } else {
+            handleReturnIfNoMoreBytes(c, returnIncompleteCode);
             //load 2 copies of the current byte into the stack
             c.aload(BYTE_BUFFER_VAR);
             c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
@@ -623,6 +626,7 @@ public class ParserGenerator {
         c.invokespecial(StringBuilder.class.getName(), "<init>", "(Ljava/lang/String;)V");
         c.swap();
         c.invokevirtual(StringBuilder.class.getName(), "append", "(C)Ljava/lang/StringBuilder;");
+
         c.astore(STATE_STRING_BUILDER_VAR);
         c.gotoInstruction(noStateStart);
 

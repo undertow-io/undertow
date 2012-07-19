@@ -604,9 +604,11 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
     private V doGet(final Table<K, V> table, final K key) {
         final AtomicReferenceArray<Item<K, V>[]> array = table.array;
         final Item<K, V>[] row = array.get(hashOf(key) & (array.length() - 1));
-        for (Item<K, V> item : row) {
-            if (equals(key, item.key)) {
-                return item.value;
+        if(row != null) {
+            for (Item<K, V> item : row) {
+                if (equals(key, item.key)) {
+                    return item.value;
+                }
             }
         }
         return nonexistent();

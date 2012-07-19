@@ -92,6 +92,14 @@ import static tmp.texugo.util.Protocols.HTTP_1_0;
 import static tmp.texugo.util.Protocols.HTTP_1_1;
 
 /**
+ * The basic HTTP parser. The actual parser is a sub class of this class that is generated as part of
+ * the build process by the {@link tmp.texugo.annotationprocessor.ParserGenerator} annotation processor.
+ * <p/>
+ * The actual processor is a state machine, that means that for common header, method, protocol values
+ * it will return an interned string, rather than creating a new string for each one.
+ * <p/>
+ * TODO: we need to benchmark this and determine if it provides enough of a benefit to justify the additional complexity
+ *
  * @author Stuart Douglas
  */
 @HttpParserConfig(methods = {
@@ -208,6 +216,7 @@ public abstract class HttpParser {
     private static final int NORMAL = 1;
     private static final int BEGIN_LINE_END = 2;
     private static final int LINE_END = 3;
+    private static final int AWAIT_DATA_END = 4;
 
 
     @SuppressWarnings("unused")
@@ -254,26 +263,30 @@ public abstract class HttpParser {
                         stringBuilder.append(' ');
                         parseState = EAT_WHITESPACE;
                     } else {
-                        if (stringBuilder.length() != 0) {
-                            //we have a header
-                            String nextStandardHeader = builder.nextStandardHeader;
-                            if (nextStandardHeader != null) {
-                                builder.standardHeaders.put(nextStandardHeader, stringBuilder.toString());
-                                builder.nextStandardHeader = null;
-                            } else {
-                                builder.otherHeaders.put(builder.nextOtherHeader, stringBuilder.toString());
-                                builder.nextOtherHeader = null;
-                            }
-                            state.state = TokenState.HEADER;
-                            state.leftOver = next;
-                            state.stringBuilder = null;
-                            return remaining;
+                        //we have a header
+                        String nextStandardHeader = builder.nextStandardHeader;
+                        if (nextStandardHeader != null) {
+                            builder.standardHeaders.put(nextStandardHeader, stringBuilder.toString());
+                            builder.nextStandardHeader = null;
                         } else {
-                            state.state = TokenState.PARSE_COMPLETE;
+                            builder.otherHeaders.put(builder.nextOtherHeader, stringBuilder.toString());
+                            builder.nextOtherHeader = null;
+                        }
+                        state.leftOver = next;
+                        state.stringBuilder = null;
+                        if(next == '\r') {
+                            parseState = AWAIT_DATA_END;
+                        } else {
+                            state.state = TokenState.HEADER;
+                            state.parseState = 0;
                             return remaining;
                         }
                     }
                     break;
+                }
+                case AWAIT_DATA_END: {
+                    state.state = TokenState.PARSE_COMPLETE;
+                    return remaining;
                 }
             }
         }

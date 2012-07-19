@@ -28,54 +28,53 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * Basic test of the HTTP parser functionality.
- *
- * This tests parsing the same basic request, over and over, with minor differences.
- *
- * Not all these actually conform to the HTTP/1.1 specification, however we are supposed to be
- * liberal in what we accept.
+ * Tests that the parser can resume when it is given partial input
  *
  * @author Stuart Douglas
  */
-public class SimpleParserTestCase {
-
-
-    @Test
-    public void testSimpleRequest() {
-        byte[] in = "GET /somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\n\r\n".getBytes();
-        runTest(in);
-    }
+public class ParserResumeTestCase {
 
     @Test
-    public void testCarriageReturnLineEnds() {
-
-        byte[] in = "GET /somepath HTTP/1.1\rHost:   www.somehost.net\rOtherHeader: some\r    value\r\r\n".getBytes();
-        runTest(in);
+    public void testMethodSplit() {
+        byte[] in = "POST /apath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\n\r\ntttt".getBytes();
+        for(int i = 0; i < in.length - 4; ++i) {
+            try {
+                testResume(i, in);
+            } catch (Throwable e) {
+                throw new RuntimeException("Test failed at split " + i, e);
+            }
+        }
     }
-
     @Test
-    public void testLineFeedsLineEnds() {
-        byte[] in = "GET /somepath HTTP/1.1\nHost:   www.somehost.net\nOtherHeader: some\n    value\n\r\n".getBytes();
-        runTest(in);
-    }
-
-    @Test
-    public void testTabWhitespace() {
-        byte[] in = "GET\t/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
-        runTest(in);
-    }
-
-    private void runTest(final byte[] in) {
+    public void testOneCharacterAtATime() {
+        byte[] in = "POST /apath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\n\r\ntttt".getBytes();
         final TokenState context = new TokenState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();
-        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
-        Assert.assertSame("GET", result.method);
-        Assert.assertEquals("/somepath", result.path);
+        ByteBuffer buffer = ByteBuffer.wrap(in);
+        while (context.state != TokenState.PARSE_COMPLETE){
+            HttpParser.INSTANCE.handle(buffer, 1, context, result);
+        }
+        runAssertions(result, context);
+    }
+
+    private void testResume(final int split, byte[] in) {
+        final TokenState context = new TokenState();
+        HttpExchangeBuilder result = new HttpExchangeBuilder();
+        ByteBuffer buffer = ByteBuffer.wrap(in);
+        int left = HttpParser.INSTANCE.handle(buffer, split, context, result);
+        Assert.assertEquals(0, left);
+        left = HttpParser.INSTANCE.handle(buffer, in.length - split, context, result);
+        runAssertions(result, context);
+        Assert.assertEquals(4, left);
+    }
+
+    private void runAssertions(final HttpExchangeBuilder result, final TokenState context) {
+        Assert.assertSame("POST", result.method);
+        Assert.assertEquals("/apath", result.path);
         Assert.assertSame("HTTP/1.1", result.protocol);
         Assert.assertEquals("www.somehost.net", result.standardHeaders.get("Host"));
         Assert.assertEquals("some value", result.otherHeaders.get("OtherHeader"));
         Assert.assertEquals(TokenState.PARSE_COMPLETE, context.state);
     }
-
 
 }

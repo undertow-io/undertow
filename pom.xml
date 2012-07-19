@@ -47,8 +47,8 @@
     </licenses>
 
     <scm>
-        <connection>git://github.com/GoTexugo/texugo.git</connection>
-        <developerConnection>git://github.com/GoTexugo/texugo.git</developerConnection>
+        <connection>scm:git://github.com/GoTexugo/texugo.git</connection>
+        <developerConnection>scm:git://github.com/GoTexugo/texugo.git</developerConnection>
         <url>https://github.com/GoTexugo/texugo</url>
     </scm>
 

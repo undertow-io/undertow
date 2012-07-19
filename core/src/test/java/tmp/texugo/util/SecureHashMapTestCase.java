@@ -20,24 +20,18 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package tmp.texugo.server.httpparser;
+package tmp.texugo.util;
 
-import java.util.IdentityHashMap;
-import java.util.Map;
-
-import tmp.texugo.util.SecureHashMap;
+import org.junit.Test;
 
 /**
- *
- *
  * @author Stuart Douglas
  */
-public class HttpExchangeBuilder {
-    String method;
-    String path;
-    String protocol;
-    final Map<String, String> standardHeaders = new IdentityHashMap<String, String>();
-    final Map<String, String> otherHeaders = new SecureHashMap<String, String>();
-    String nextStandardHeader;
-    String nextOtherHeader;
+public class SecureHashMapTestCase {
+
+    @Test
+    public void testGetNonExistentDoesNotNPE(){
+        final SecureHashMap<String, String> map = new SecureHashMap<String, String>();
+        map.get("nothing");
+    }
 }
