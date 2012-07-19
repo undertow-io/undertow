@@ -455,6 +455,7 @@ public class ParserGenerator {
         c.branchEnd(prefixToNoState);
         CodeLocation noStateLoop = c.mark();
 
+        handleReturnIfNoMoreBytes(c, returnIncompleteCode);
         //load 2 copies of the current byte into the stack
         c.aload(BYTE_BUFFER_VAR);
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");

@@ -34,9 +34,11 @@ import org.junit.Test;
  */
 public class ParserResumeTestCase {
 
+    public static final String DATA = "POST /apath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
+
     @Test
     public void testMethodSplit() {
-        byte[] in = "POST /apath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\n\r\ntttt".getBytes();
+        byte[] in = DATA.getBytes();
         for(int i = 0; i < in.length - 4; ++i) {
             try {
                 testResume(i, in);
@@ -47,7 +49,7 @@ public class ParserResumeTestCase {
     }
     @Test
     public void testOneCharacterAtATime() {
-        byte[] in = "POST /apath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\n\r\ntttt".getBytes();
+        byte[] in = DATA.getBytes();
         final TokenState context = new TokenState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         ByteBuffer buffer = ByteBuffer.wrap(in);
@@ -74,6 +76,7 @@ public class ParserResumeTestCase {
         Assert.assertSame("HTTP/1.1", result.protocol);
         Assert.assertEquals("www.somehost.net", result.standardHeaders.get("Host"));
         Assert.assertEquals("some value", result.otherHeaders.get("OtherHeader"));
+        Assert.assertEquals("a", result.otherHeaders.get("Accept-garbage"));
         Assert.assertEquals(TokenState.PARSE_COMPLETE, context.state);
     }
 
