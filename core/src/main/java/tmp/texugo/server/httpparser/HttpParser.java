@@ -187,7 +187,14 @@ public abstract class HttpParser {
      */
     public abstract int handle(ByteBuffer buffer, int noBytes, final TokenState currentState, final HttpExchangeBuilder builder);
 
-
+    /**
+     * Parses a path value. This is called from the generated  bytecode.
+     * @param buffer The buffer
+     * @param remaining The number of bytes remaining
+     * @param state The current state
+     * @param builder The exchange builder
+     * @return The number of bytes remaining
+     */
     @SuppressWarnings("unused")
     final int handlePath(ByteBuffer buffer, int remaining, TokenState state, HttpExchangeBuilder builder) {
         StringBuilder stringBuilder = state.stringBuilder;
@@ -219,6 +226,14 @@ public abstract class HttpParser {
     private static final int AWAIT_DATA_END = 4;
 
 
+    /**
+     * Parses a header value. This is called from the generated  bytecode.
+     * @param buffer The buffer
+     * @param remaining The number of bytes remaining
+     * @param state The current state
+     * @param builder The exchange builder
+     * @return The number of bytes remaining
+     */
     @SuppressWarnings("unused")
     final int handleHeaderValue(ByteBuffer buffer, int remaining, TokenState state, HttpExchangeBuilder builder) {
         StringBuilder stringBuilder = state.stringBuilder;
