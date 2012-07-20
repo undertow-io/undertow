@@ -41,7 +41,11 @@ import tmp.texugo.util.StatusCodes;
  * An HTTP server request/response exchange.  An instance of this class is constructed as soon as the request headers are
  * fully parsed.
  *
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * This class is just a wrapper around {@link HttpServerExchange}.
+ *
+ * This class is mutable and not thread safe
+ *
+ * @author Stuart Douglas
  */
 public final class BlockingHttpServerExchange implements Attachable {
 
@@ -166,6 +170,14 @@ public final class BlockingHttpServerExchange implements Attachable {
      */
     public int getResponseCode() {
         return exchange.getResponseCode();
+    }
+
+    public OutputStream getOutputStream() {
+        return outputStream;
+    }
+
+    public InputStream getInputStream() {
+        return inputStream;
     }
 
     public void startResponse() throws IOException {

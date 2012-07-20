@@ -81,6 +81,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 return;
             }
             //TODO: we need to handle parse errors
+            buffer.flip();
             int remaining = HttpParser.INSTANCE.handle(buffer, res, state, builder);
             if(remaining > 0) {
                 free = false;

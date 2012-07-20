@@ -28,14 +28,20 @@ import tmp.texugo.server.HttpServerExchange;
  *
  * @author Stuart Douglas
  */
-public class BlockingHandler implements HttpHandler {
+public final class BlockingHandler implements HttpHandler {
 
     private volatile ExecutorService executorService;
-    private volatile BlockingHandler rootHandler;
+    private volatile BlockingHttpHandler rootHandler;
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange);
+        executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                rootHandler.handleRequest(blockingExchange);
+            }
+        });
     }
 
     public ExecutorService getExecutorService() {
@@ -53,11 +59,11 @@ public class BlockingHandler implements HttpHandler {
         return old;
     }
 
-    public BlockingHandler getRootHandler() {
+    public BlockingHttpHandler getRootHandler() {
         return rootHandler;
     }
 
-    public void setRootHandler(final BlockingHandler rootHandler) {
+    public void setRootHandler(final BlockingHttpHandler rootHandler) {
         this.rootHandler = rootHandler;
     }
 }

@@ -30,13 +30,13 @@ import org.xnio.channels.PushBackStreamChannel;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class HttpOpenListener implements ChannelListener<ConnectedStreamChannel> {
+public final class HttpOpenListener implements ChannelListener<ConnectedStreamChannel> {
 
     private final Pool<ByteBuffer> bufferPool;
 
     private volatile HttpHandler rootHandler;
 
-    HttpOpenListener(final Pool<ByteBuffer> pool) {
+    public HttpOpenListener(final Pool<ByteBuffer> pool) {
         bufferPool = pool;
     }
 
