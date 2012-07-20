@@ -35,7 +35,9 @@ public class HttpResponseHandler implements HttpHandler {
         if (!exchange.isResponseStarted()) {
             exchange.startResponse();
         }
-        next.handleRequest(exchange);
+        if(next != null) {
+            next.handleRequest(exchange);
+        }
     }
 
     public HttpHandler getNext() {
