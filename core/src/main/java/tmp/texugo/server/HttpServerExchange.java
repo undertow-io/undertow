@@ -33,6 +33,7 @@ import org.xnio.streams.ChannelOutputStream;
 import tmp.texugo.TexugoMessages;
 import tmp.texugo.util.Attachable;
 import tmp.texugo.util.HeaderMap;
+import tmp.texugo.util.StatusCodes;
 import tmp.texugo.util.Protocols;
 
 /**
@@ -46,7 +47,6 @@ public final class HttpServerExchange extends Attachable {
     private HeaderMap requestHeaders;
     private HeaderMap responseHeaders;
     private int responseCode = 200;
-    private String reasonPhrase = "OK";
     private String requestMethod;
     private String protocol;
     private String requestScheme;
@@ -150,7 +150,7 @@ public final class HttpServerExchange extends Attachable {
      *                               read
      */
     public ConnectedStreamChannel upgradeChannel() throws IllegalStateException, IOException {
-        setResponseCode(101, "Switching Protocols");
+        setResponseCode(101);
         startResponse();
         return new AssembledConnectedStreamChannel(getRequestChannel(), getResponseChannel());
     }
@@ -196,13 +196,6 @@ public final class HttpServerExchange extends Attachable {
      */
     public boolean isResponseStarted() {
         return responseStarted;
-    }
-
-    /**
-     * @return The reason phrase that is returned with the response
-     */
-    public String getReasonPhrase() {
-        return reasonPhrase;
     }
 
     /**
@@ -269,12 +262,10 @@ public final class HttpServerExchange extends Attachable {
      * the response code after the response headers have been transmitted has no effect.
      *
      * @param responseCode the new code
-     * @param reasonPhrase The reason phrase for this repsonse
      * @throws IllegalStateException if a response or upgrade was already sent
      */
-    public void setResponseCode(final int responseCode, final String reasonPhrase) {
+    public void setResponseCode(final int responseCode) {
         this.responseCode = responseCode;
-        this.reasonPhrase = reasonPhrase;
     }
 
     /**
@@ -346,14 +337,16 @@ public final class HttpServerExchange extends Attachable {
         if (responseStarted) {
             TexugoMessages.MESSAGES.responseAlreadyStarted();
         }
+        final HeaderMap responseHeaders = this.responseHeaders;
         responseHeaders.lock();
         responseStarted = true;
 
         final StringBuilder response = new StringBuilder(protocol);
         response.append(' ');
+        final int responseCode = this.responseCode;
         response.append(responseCode);
         response.append(' ');
-        response.append(reasonPhrase);
+        response.append(StatusCodes.getReason(responseCode));
         response.append("\r\n");
         for(final String header: responseHeaders) {
             response.append(header);
