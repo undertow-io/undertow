@@ -26,6 +26,7 @@ import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
+import tmp.texugo.TexugoLogger;
 import tmp.texugo.server.httpparser.HttpExchangeBuilder;
 import tmp.texugo.server.httpparser.HttpParser;
 import tmp.texugo.server.httpparser.ParseState;
@@ -47,11 +48,13 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
     private final HttpHandler rootHandler;
     private final ConnectedStreamChannel underlyingChannel;
+    private final HttpServerConnection connection;
 
     HttpReadListener(final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final ConnectedStreamChannel underlyingChannel) {
         this.bufferPool = bufferPool;
         this.rootHandler = rootHandler;
         this.underlyingChannel = underlyingChannel;
+        this.connection = new HttpServerConnection(underlyingChannel);
     }
 
     public void handleEvent(final PushBackStreamChannel channel) {
@@ -63,6 +66,9 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             try {
                 res = channel.read(buffer);
             } catch (IOException e) {
+                if(TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                    TexugoLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
+                }
                 safeClose(channel);
                 return;
             }
@@ -74,6 +80,9 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     channel.shutdownReads();
                     // TODO: enqueue a write handler which shuts down the write side of the connection
                 } catch (IOException e) {
+                    if(TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        TexugoLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
+                    }
                     // fuck it, it's all ruined
                     IoUtils.safeClose(channel);
                     return;
@@ -89,7 +98,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             }
 
             if(state.isComplete()) {
-                final HttpServerExchange httpServerExchange = new HttpServerExchange(builder.getHeaders(), new HeaderMap(), builder.getMethod());
+                final HttpServerExchange httpServerExchange = new HttpServerExchange(bufferPool, connection, builder.getHeaders(), new HeaderMap(), builder.getMethod());
                 httpServerExchange.setCanonicalPath(builder.getCanonicalPath());
                 httpServerExchange.setRelativePath(builder.getCanonicalPath());
                 httpServerExchange.setRequestPath(builder.getPath());

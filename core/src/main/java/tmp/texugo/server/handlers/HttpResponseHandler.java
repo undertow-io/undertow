@@ -32,9 +32,10 @@ public class HttpResponseHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
-        if(!exchange.isResponseStarted()) {
-            exchange.startResponse(next);
+        if (!exchange.isResponseStarted()) {
+            exchange.startResponse();
         }
+        next.handleRequest(exchange);
     }
 
     public HttpHandler getNext() {

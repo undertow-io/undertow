@@ -18,6 +18,7 @@
 
 package tmp.texugo;
 
+import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
 import org.jboss.logging.MessageLogger;
 
@@ -27,8 +28,10 @@ import org.jboss.logging.MessageLogger;
  * @author Stuart Douglas
  */
 @MessageLogger(projectCode = "TEXUGO")
-public interface TexugoLogger {
+public interface TexugoLogger extends BasicLogger {
 
     TexugoLogger ROOT_LOGGER = Logger.getMessageLogger(TexugoLogger.class, TexugoLogger.class.getPackage().getName());
+
+    TexugoLogger REQUEST_LOGGER = Logger.getMessageLogger(TexugoLogger.class, TexugoLogger.class.getPackage().getName()+".request");
 
 }

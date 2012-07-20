@@ -19,8 +19,11 @@
 package tmp.texugo.server.handlers.blocking;
 
 /**
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * A handler for blocking HTTP requests
+ *
+ * @author Stuart Douglas
  */
 public interface BlockingHttpHandler {
+
     void handleRequest(final BlockingHttpServerExchange exchange);
 }

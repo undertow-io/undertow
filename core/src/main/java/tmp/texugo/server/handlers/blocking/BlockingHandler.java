@@ -20,6 +20,8 @@ package tmp.texugo.server.handlers.blocking;
 
 import java.util.concurrent.ExecutorService;
 
+import org.xnio.IoUtils;
+import tmp.texugo.TexugoLogger;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
 
@@ -39,7 +41,15 @@ public final class BlockingHandler implements HttpHandler {
         executorService.submit(new Runnable() {
             @Override
             public void run() {
-                rootHandler.handleRequest(blockingExchange);
+                try {
+                    rootHandler.handleRequest(blockingExchange);
+                } catch (Throwable t) {
+                    if(TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        TexugoLogger.REQUEST_LOGGER.debugf(t, "Blocking request failed %s", blockingExchange);
+                    }
+                    IoUtils.safeClose(exchange.getResponseChannel());
+                    IoUtils.safeClose(exchange.getRequestChannel());
+                }
             }
         });
     }
