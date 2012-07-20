@@ -16,39 +16,33 @@
  * limitations under the License.
  */
 
-package tmp.texugo.server.httpparser;
+package tmp.texugo.server.handlers;
 
-import tmp.texugo.util.HeaderMap;
+import tmp.texugo.server.HttpHandler;
+import tmp.texugo.server.HttpServerExchange;
 
 /**
- *
+ * A handler that begins the response, if it has not already been started.
  *
  * @author Stuart Douglas
  */
-public class HttpExchangeBuilder {
-    String method;
-    String path;
-    String canonicalPath;
-    String protocol;
-    final HeaderMap headers = new HeaderMap();
+public class HttpResponseHandler implements HttpHandler {
 
-    public String getMethod() {
-        return method;
+    private volatile HttpHandler next;
+
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) {
+        if(!exchange.isResponseStarted()) {
+            exchange.startResponse(next);
+        }
     }
 
-    public String getPath() {
-        return path;
+    public HttpHandler getNext() {
+        return next;
     }
 
-    public String getCanonicalPath() {
-        return canonicalPath;
+    public void setNext(final HttpHandler next) {
+        this.next = next;
     }
 
-    public String getProtocol() {
-        return protocol;
-    }
-
-    public HeaderMap getHeaders() {
-        return headers;
-    }
 }

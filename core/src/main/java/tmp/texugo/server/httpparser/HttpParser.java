@@ -319,7 +319,11 @@ public abstract class HttpParser {
                         if (stringBuilder.length() != 0) {
                             nextHeaderValues.add(stringBuilder.toString());
                         }
-                        builder.headers.put(nextStandardHeader, nextHeaderValues);
+                        if(nextHeaderValues.size() == 1) {
+                            builder.headers.put(nextStandardHeader, nextHeaderValues.get(0));
+                        } else {
+                            builder.headers.putAll(nextStandardHeader, nextHeaderValues);
+                        }
                         state.nextHeader = null;
                         state.nextHeaderValues = null;
 

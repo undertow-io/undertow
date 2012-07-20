@@ -34,15 +34,25 @@ final class HttpOpenListener implements ChannelListener<ConnectedStreamChannel> 
 
     private final Pool<ByteBuffer> bufferPool;
 
+    private volatile HttpHandler rootHandler;
+
     HttpOpenListener(final Pool<ByteBuffer> pool) {
         bufferPool = pool;
     }
 
     public void handleEvent(final ConnectedStreamChannel channel) {
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(channel);
-        HttpReadListener readListener = new HttpReadListener(bufferPool);
+        HttpReadListener readListener = new HttpReadListener(bufferPool, rootHandler, channel);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);
         channel.resumeReads();
+    }
+
+    public HttpHandler getRootHandler() {
+        return rootHandler;
+    }
+
+    public void setRootHandler(final HttpHandler rootHandler) {
+        this.rootHandler = rootHandler;
     }
 }

@@ -24,10 +24,12 @@ import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
+import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import tmp.texugo.server.httpparser.HttpExchangeBuilder;
 import tmp.texugo.server.httpparser.HttpParser;
 import tmp.texugo.server.httpparser.ParseState;
+import tmp.texugo.util.HeaderMap;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -39,10 +41,17 @@ import static org.xnio.IoUtils.safeClose;
 final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     private final Pool<ByteBuffer> bufferPool;
 
+
     private final ParseState state = new ParseState();
     private final HttpExchangeBuilder builder = new HttpExchangeBuilder();
-    HttpReadListener(final Pool<ByteBuffer> bufferPool) {
+
+    private final HttpHandler rootHandler;
+    private final ConnectedStreamChannel underlyingChannel;
+
+    HttpReadListener(final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final ConnectedStreamChannel underlyingChannel) {
         this.bufferPool = bufferPool;
+        this.rootHandler = rootHandler;
+        this.underlyingChannel = underlyingChannel;
     }
 
     public void handleEvent(final PushBackStreamChannel channel) {
@@ -71,10 +80,23 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 }
                 return;
             }
+            //TODO: we need to handle parse errors
             int remaining = HttpParser.INSTANCE.handle(buffer, res, state, builder);
             if(remaining > 0) {
                 free = false;
                 channel.unget(pooled);
+            }
+
+            if(state.isComplete()) {
+                final HttpServerExchange httpServerExchange = new HttpServerExchange(builder.getHeaders(), new HeaderMap(), builder.getMethod());
+                httpServerExchange.setCanonicalPath(builder.getCanonicalPath());
+                httpServerExchange.setRelativePath(builder.getCanonicalPath());
+                httpServerExchange.setRequestPath(builder.getPath());
+                httpServerExchange.setProtocol(builder.getProtocol());
+                httpServerExchange.setRequestChannel(channel);
+                httpServerExchange.setResponseChannel(underlyingChannel);
+
+                rootHandler.handleRequest(httpServerExchange);
             }
 
             // TODO: Parse the buffer via PFM, set free to false if the buffer is pushed back

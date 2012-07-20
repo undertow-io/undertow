@@ -20,10 +20,17 @@ package tmp.texugo.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.Deque;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
 import org.xnio.channels.AssembledConnectedStreamChannel;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.streams.ChannelOutputStream;
+import tmp.texugo.TexugoMessages;
 import tmp.texugo.util.Attachable;
 import tmp.texugo.util.HeaderMap;
 import tmp.texugo.util.Protocols;
@@ -39,6 +46,7 @@ public final class HttpServerExchange extends Attachable {
     private HeaderMap requestHeaders;
     private HeaderMap responseHeaders;
     private int responseCode = 200;
+    private String reasonPhrase = "OK";
     private String requestMethod;
     private String protocol;
     private String requestScheme;
@@ -56,6 +64,11 @@ public final class HttpServerExchange extends Attachable {
     private String relativePath;
     private StreamSourceChannel requestChannel;
     private StreamSinkChannel responseChannel;
+
+    /**
+     * Set to true once the response headers etc have been written out
+     */
+    private boolean responseStarted = false;
 
     protected HttpServerExchange(final HeaderMap requestHeaders, final HeaderMap responseHeaders, final String requestMethod) {
         this.connection = null;
@@ -133,12 +146,11 @@ public final class HttpServerExchange extends Attachable {
      * response headers, and merges the request and response channels into one full-duplex socket stream channel.
      *
      * @return the socket channel
-     *
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
-     * read
+     *                               read
      */
     public ConnectedStreamChannel upgradeChannel() throws IllegalStateException, IOException {
-        setResponseCode(101);
+        setResponseCode(101, "Switching Protocols");
         startResponse();
         return new AssembledConnectedStreamChannel(getRequestChannel(), getResponseChannel());
     }
@@ -180,6 +192,20 @@ public final class HttpServerExchange extends Attachable {
     }
 
     /**
+     * @return <code>true</code> If the response has already been started
+     */
+    public boolean isResponseStarted() {
+        return responseStarted;
+    }
+
+    /**
+     * @return The reason phrase that is returned with the response
+     */
+    public String getReasonPhrase() {
+        return reasonPhrase;
+    }
+
+    /**
      * Get the inbound request.  If there is no request body, calling this method
      * may cause the next request to immediately be processed.  The {@link StreamSourceChannel#close()} or {@link StreamSourceChannel#shutdownReads()}
      * method must be called at some point after the request is processed to prevent resource leakage and to allow
@@ -208,7 +234,8 @@ public final class HttpServerExchange extends Attachable {
      * Force the codec to treat the request as fully read.  Should only be invoked by handlers which downgrade
      * the socket or implement a transfer coding.
      */
-    void terminateRequest() {}
+    void terminateRequest() {
+    }
 
     /**
      * Get the response channel. The {@link StreamSinkChannel#close()} or {@link StreamSinkChannel#shutdownWrites()}
@@ -241,11 +268,13 @@ public final class HttpServerExchange extends Attachable {
      * Change the response code for this response.  If not specified, the code will be a {@code 200}.  Setting
      * the response code after the response headers have been transmitted has no effect.
      *
-     * @param code the new code
+     * @param responseCode the new code
+     * @param reasonPhrase The reason phrase for this repsonse
      * @throws IllegalStateException if a response or upgrade was already sent
      */
-    public void setResponseCode(final int responseCode) {
+    public void setResponseCode(final int responseCode, final String reasonPhrase) {
         this.responseCode = responseCode;
+        this.reasonPhrase = reasonPhrase;
     }
 
     /**
@@ -261,19 +290,126 @@ public final class HttpServerExchange extends Attachable {
      * Force the codec to treat the response as fully written.  Should only be invoked by handlers which downgrade
      * the socket or implement a transfer coding.
      */
-    void terminateResponse() {}
+    void terminateResponse() {
+    }
 
     /**
-     * Transmit the response headers.  After this method successfully returns, the response channel may become writable.
-     *  If this method fails, the response channel should have been closed automatically, however it is advisable to add
-     * a {@code finally}-block to ensure that it is closed (and also the request channel if the request was not wholly
-     * read when the response headers are written).
+     * Transmit the response headers in a non blocking manner.
+     * After this method successfully returns, the response channel may become writable.
      *
-     * @throws IOException if the response headers could not be sent
+     * This method is asynchronous, when the write is completed it will invoke the {@link HttpHandler#handleRequest(HttpServerExchange)}
+     * method of the provided handler.
+     *
+     * @param next The handler to invoke after this write operation is completed
+     * @throws IOException           if the response headers could not be sent
+     * @throws IllegalStateException if the response headers were already sent
+     */
+    public void startResponse(final HttpHandler next) throws IllegalStateException {
+        final StringBuilder response = startResponseInternal();
+
+        final StreamSinkChannel channel = responseChannel;
+        final String result = response.toString();
+        final ByteBuffer buffer = ByteBuffer.wrap(result.getBytes());
+        int remaining = result.length();
+        ResponseWriteListener listener = new ResponseWriteListener(next, buffer, remaining, this);
+        channel.getWriteSetter().set(listener);
+        channel.resumeWrites();
+    }
+
+    /**
+     * Transmit the response headers, and wait for the write operation to be completed.
+     * After this method successfully returns, the response channel may become writable.
+     *
+     * If this method fails the request and response channels will be closed
+     *
+     * @throws IOException           if the response headers could not be sent
      * @throws IllegalStateException if the response headers were already sent
      */
     public void startResponse() throws IOException, IllegalStateException {
+        final StringBuilder response = startResponseInternal();
+        final ChannelOutputStream out = new ChannelOutputStream(responseChannel);
+        try {
+            out.write(response.toString().getBytes());
+        } catch (IOException e) {
+            //TODO: we need a consistent error handling strategy for IO errors
+            IoUtils.safeClose(requestChannel);
+            IoUtils.safeClose(requestChannel);
+            throw e;
+        } catch (RuntimeException e) {
+            IoUtils.safeClose(requestChannel);
+            IoUtils.safeClose(requestChannel);
+            throw e;
+        }
+    }
+
+    private StringBuilder startResponseInternal() {
+        if (responseStarted) {
+            TexugoMessages.MESSAGES.responseAlreadyStarted();
+        }
         responseHeaders.lock();
-        // todo send
+        responseStarted = true;
+
+        final StringBuilder response = new StringBuilder(protocol);
+        response.append(' ');
+        response.append(responseCode);
+        response.append(' ');
+        response.append(reasonPhrase);
+        response.append("\r\n");
+        for(final String header: responseHeaders) {
+            response.append(header);
+            response.append(": ");
+            final Deque<String> values = responseHeaders.get(header);
+            for(String value : values) {
+                response.append(value);
+                response.append(' ');
+            }
+            response.append("\r\n");
+        }
+        response.append("\r\n");
+        return response;
+    }
+
+    private static class ResponseWriteListener implements ChannelListener<StreamSinkChannel> {
+
+        private final HttpHandler next;
+        private final ByteBuffer buffer;
+        private int remaining;
+        private final HttpServerExchange exchange;
+
+        private ResponseWriteListener(final HttpHandler next, final ByteBuffer buffer, final int remaining, final HttpServerExchange exchange) {
+            this.next = next;
+            this.buffer = buffer;
+            this.remaining = remaining;
+            this.exchange = exchange;
+        }
+
+        @Override
+        public void handleEvent(final StreamSinkChannel channel) {
+            try {
+                int c = channel.write(buffer);
+                remaining = remaining - c;
+                if(remaining > 0) {
+                    channel.resumeWrites();
+                } else {
+                    if(next != null) {
+                        //this was invoked in non blocking mode
+                        next.handleRequest(exchange);
+                    } else {
+                        //invoked in blocking mode
+                        synchronized (this) {
+                            notifyAll();
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                //TODO: we need some consistent way of handling IO exception
+                IoUtils.safeClose(channel);
+                IoUtils.safeClose(exchange.getRequestChannel());
+            }
+        }
+
+        public int getRemaining() {
+            return remaining;
+        }
     }
 }

@@ -20,10 +20,10 @@ package tmp.texugo.server.httpparser;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 
 import org.junit.Assert;
 import org.junit.Test;
+import tmp.texugo.util.HeaderMap;
 
 /**
  * Basic test of the HTTP parser functionality.
@@ -81,8 +81,10 @@ public class SimpleParserTestCase {
         Assert.assertSame("GET", result.method);
         Assert.assertEquals("/somepath", result.path);
         Assert.assertSame("HTTP/1.1", result.protocol);
-        Assert.assertEquals(Collections.singletonList("www.somehost.net"), result.headers.get("Host"));
-        Assert.assertEquals(Arrays.asList(new String[]{"some", "value"}), result.headers.get("OtherHeader"));
+        HeaderMap map = new HeaderMap();
+        map.add("Host", "www.somehost.net");
+        map.addAll("OtherHeader", Arrays.asList("some", "value"));
+        Assert.assertEquals(map, result.headers);
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
     }
 

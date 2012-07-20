@@ -33,4 +33,7 @@ public interface TexugoMessages {
     @Message(id = 1, value = "A default handler must be specified")
     IllegalArgumentException noDefaultHandlerSpecified();
 
+    @Message(id = 2, value = "The response has already been started")
+    IllegalStateException responseAlreadyStarted();
+
 }

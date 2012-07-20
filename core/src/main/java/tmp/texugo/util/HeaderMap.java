@@ -53,6 +53,30 @@ public final class HeaderMap implements Iterable<String> {
         public String getName() {
             return name;
         }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            final HeaderValue strings = (HeaderValue) o;
+
+            if (name != null ? !name.equals(strings.name) : strings.name != null) return false;
+            if(strings.size() != size()) return false;
+            Iterator<String> i1 = iterator();
+            Iterator<String> i2 = strings.iterator();
+            while (i1.hasNext()) {
+                String n1 = i1.next();
+                String n2 = i2.next();
+                if(!n1.equals(n2)) return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            return super.hashCode();
+        }
     }
 
     private final Map<String, HeaderValue> values = new LinkedHashMap<String, HeaderValue>();
@@ -147,5 +171,29 @@ public final class HeaderMap implements Iterable<String> {
     public boolean contains(String headerName) {
         final HeaderValue value = values.get(headerName.toLowerCase(Locale.US));
         return value != null && ! value.isEmpty();
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        final HeaderMap strings = (HeaderMap) o;
+
+        if (values != null ? !values.equals(strings.values) : strings.values != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return values != null ? values.hashCode() : 0;
+    }
+
+    @Override
+    public String toString() {
+        return "HeaderMap{" +
+                "values=" + values +
+                '}';
     }
 }

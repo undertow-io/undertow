@@ -20,10 +20,10 @@ package tmp.texugo.server.httpparser;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 
 import org.junit.Assert;
 import org.junit.Test;
+import tmp.texugo.util.HeaderMap;
 
 /**
  * Tests that the parser can resume when it is given partial input
@@ -37,7 +37,7 @@ public class ParserResumeTestCase {
     @Test
     public void testMethodSplit() {
         byte[] in = DATA.getBytes();
-        for(int i = 0; i < in.length - 4; ++i) {
+        for (int i = 0; i < in.length - 4; ++i) {
             try {
                 testResume(i, in);
             } catch (Throwable e) {
@@ -45,13 +45,14 @@ public class ParserResumeTestCase {
             }
         }
     }
+
     @Test
     public void testOneCharacterAtATime() {
         byte[] in = DATA.getBytes();
         final ParseState context = new ParseState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         ByteBuffer buffer = ByteBuffer.wrap(in);
-        while (context.state != ParseState.PARSE_COMPLETE){
+        while (context.state != ParseState.PARSE_COMPLETE) {
             HttpParser.INSTANCE.handle(buffer, 1, context, result);
         }
         runAssertions(result, context);
@@ -73,9 +74,13 @@ public class ParserResumeTestCase {
         Assert.assertEquals("/apath", result.canonicalPath);
         Assert.assertEquals("http://www.somehost.net/apath", result.path);
         Assert.assertSame("HTTP/1.1", result.protocol);
-        Assert.assertEquals(Collections.singletonList("www.somehost.net"), result.headers.get("Host"));
-        Assert.assertEquals(Arrays.asList(new String[]{"some", "value"}), result.headers.get("OtherHeader"));
-        Assert.assertEquals(Collections.singletonList("a"), result.headers.get("Accept-garbage"));
+        HeaderMap map = new HeaderMap();
+        map.add("Host", "www.somehost.net");
+        map.addAll("OtherHeader", Arrays.asList("some", "value"));
+        map.add("Hostee", "another");
+        map.add("Accept-garbage", "a");
+        Assert.assertEquals(map, result.headers);
+
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
     }
 
