@@ -26,14 +26,14 @@ import org.xnio.Option;
 import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.ConnectedStreamChannel;
-import tmp.texugo.util.Attachable;
+import tmp.texugo.util.AbstractAttachable;
 
 /**
  * A server-side HTTP connection.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HttpServerConnection extends Attachable implements ConnectedChannel {
+public final class HttpServerConnection extends AbstractAttachable implements ConnectedChannel {
     private final ConnectedStreamChannel channel;
     private final ChannelListener.Setter<HttpServerConnection> closeSetter;
 

@@ -31,7 +31,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.streams.ChannelOutputStream;
 import tmp.texugo.TexugoMessages;
-import tmp.texugo.util.Attachable;
+import tmp.texugo.util.AbstractAttachable;
 import tmp.texugo.util.HeaderMap;
 import tmp.texugo.util.StatusCodes;
 import tmp.texugo.util.Protocols;
@@ -42,7 +42,7 @@ import tmp.texugo.util.Protocols;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HttpServerExchange extends Attachable {
+public final class HttpServerExchange extends AbstractAttachable {
     private final HttpServerConnection connection;
     private HeaderMap requestHeaders;
     private HeaderMap responseHeaders;

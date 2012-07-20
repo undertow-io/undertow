@@ -16,29 +16,11 @@
  * limitations under the License.
  */
 
-package tmp.texugo.util;
-
-import java.util.concurrent.ConcurrentMap;
+package tmp.texugo.server.handlers.blocking;
 
 /**
- * A thing which can have named attachments.
- *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface Attachable {
-    Object getAttachment(String name);
-
-    Object putAttachment(String name, Object value);
-
-    Object putAttachmentIfAbsent(String name, Object value);
-
-    Object replaceAttachment(String name, Object newValue);
-
-    Object removeAttachment(String name);
-
-    boolean replaceAttachment(String name, Object expectValue, Object newValue);
-
-    boolean removeAttachment(String name, Object expectValue);
-
-    ConcurrentMap<String, Object> getAttachments();
+public interface BlockingHttpHandler {
+    void handleRequest(final BlockingHttpServerExchange exchange);
 }
