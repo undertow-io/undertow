@@ -20,6 +20,7 @@ package tmp.texugo.server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
@@ -99,14 +100,20 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
             if(state.isComplete()) {
                 final HttpServerExchange httpServerExchange = new HttpServerExchange(bufferPool, connection, builder.getHeaders(), new HeaderMap(), builder.getMethod());
-                httpServerExchange.setCanonicalPath(builder.getCanonicalPath());
-                httpServerExchange.setRelativePath(builder.getCanonicalPath());
-                httpServerExchange.setRequestPath(builder.getPath());
-                httpServerExchange.setProtocol(builder.getProtocol());
-                httpServerExchange.setRequestChannel(channel);
-                httpServerExchange.setResponseChannel(underlyingChannel);
+                try {
+                    httpServerExchange.setCanonicalPath(builder.getCanonicalPath());
+                    httpServerExchange.setRelativePath(builder.getCanonicalPath());
+                    httpServerExchange.setRequestPath(builder.getPath());
+                    httpServerExchange.setProtocol(builder.getProtocol());
+                    httpServerExchange.setRequestChannel(channel);
+                    httpServerExchange.setResponseChannel(underlyingChannel);
 
-                rootHandler.handleRequest(httpServerExchange);
+                    rootHandler.handleRequest(httpServerExchange);
+                } catch (Throwable t) {
+                    //TODO: we should attempt to return a 500 status code in this situation
+                    IoUtils.safeClose(channel);
+                    IoUtils.safeClose(underlyingChannel);
+                }
             }
 
             // TODO: Parse the buffer via PFM, set free to false if the buffer is pushed back

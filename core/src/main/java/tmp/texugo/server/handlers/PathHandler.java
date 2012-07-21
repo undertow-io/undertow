@@ -16,44 +16,18 @@
  * limitations under the License.
  */
 
-package tmp.texugo.server.httpparser;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import tmp.texugo.util.HeaderMap;
+package tmp.texugo.server.handlers;
 
 /**
+ * Handler that dispatches to a given handler based of a prefix match of the path.
  *
+ *
+ * TODO: this is pretty inefficient, it really needs a Radix tree
  *
  * @author Stuart Douglas
  */
-public class HttpExchangeBuilder {
-    String method;
-    String path;
-    String canonicalPath;
-    String protocol;
-    final HeaderMap headers = new HeaderMap();
-    final Map<String, List<String>> queryParameters = new HashMap<String, List<String>>();
+public class PathHandler {
 
-    public String getMethod() {
-        return method;
-    }
 
-    public String getPath() {
-        return path;
-    }
 
-    public String getCanonicalPath() {
-        return canonicalPath;
-    }
-
-    public String getProtocol() {
-        return protocol;
-    }
-
-    public HeaderMap getHeaders() {
-        return headers;
-    }
 }

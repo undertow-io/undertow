@@ -16,44 +16,28 @@
  * limitations under the License.
  */
 
-package tmp.texugo.server.httpparser;
+package tmp.texugo.test.util;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import tmp.texugo.util.HeaderMap;
+import tmp.texugo.server.HttpHandler;
+import tmp.texugo.server.HttpServerExchange;
+import tmp.texugo.server.handlers.HttpResponseHandler;
 
 /**
- *
- *
  * @author Stuart Douglas
  */
-public class HttpExchangeBuilder {
-    String method;
-    String path;
-    String canonicalPath;
-    String protocol;
-    final HeaderMap headers = new HeaderMap();
-    final Map<String, List<String>> queryParameters = new HashMap<String, List<String>>();
+public class SetHeaderHandler implements HttpHandler {
 
-    public String getMethod() {
-        return method;
+    private final String header;
+    private final String value;
+
+    public SetHeaderHandler(final String header, final String value) {
+        this.header = header;
+        this.value = value;
     }
 
-    public String getPath() {
-        return path;
-    }
-
-    public String getCanonicalPath() {
-        return canonicalPath;
-    }
-
-    public String getProtocol() {
-        return protocol;
-    }
-
-    public HeaderMap getHeaders() {
-        return headers;
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) {
+        exchange.getResponseHeaders().put(header, value);
+        new HttpResponseHandler().handleRequest(exchange);
     }
 }

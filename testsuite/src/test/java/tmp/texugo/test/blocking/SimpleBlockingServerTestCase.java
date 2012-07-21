@@ -19,7 +19,6 @@
 package tmp.texugo.test.blocking;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -32,6 +31,7 @@ import tmp.texugo.server.handlers.blocking.BlockingHandler;
 import tmp.texugo.server.handlers.blocking.BlockingHttpHandler;
 import tmp.texugo.server.handlers.blocking.BlockingHttpServerExchange;
 import tmp.texugo.test.util.DefaultServer;
+import tmp.texugo.test.util.HttpClientUtils;
 
 /**
  * @author Stuart Douglas
@@ -61,21 +61,15 @@ public class SimpleBlockingServerTestCase {
 
     @Test
     public void sendHttpRequest() throws IOException {
-        HttpGet get = new HttpGet(DefaultServer.getBase() + "/path");
         DefaultHttpClient client = new DefaultHttpClient();
-        HttpResponse result = client.execute(get);
-        Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-        Assert.assertEquals(MESSAGE, readResponse(result));
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getBase() + "/path");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(MESSAGE, HttpClientUtils.readResponse(result));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
-    public static String readResponse(final HttpResponse response) throws IOException {
-        final StringBuilder builder = new StringBuilder();
-        byte[] data = new byte[100];
-        InputStream stream = response.getEntity().getContent();
-        int read;
-        while ((read = stream.read(data)) != -1) {
-            builder.append(new String(data,0,read));
-        }
-        return builder.toString();
-    }
 }

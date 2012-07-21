@@ -16,44 +16,31 @@
  * limitations under the License.
  */
 
-package tmp.texugo.server.httpparser;
+package tmp.texugo.test.util;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.io.InputStream;
 
-import tmp.texugo.util.HeaderMap;
+import org.apache.http.HttpResponse;
 
 /**
- *
- *
  * @author Stuart Douglas
  */
-public class HttpExchangeBuilder {
-    String method;
-    String path;
-    String canonicalPath;
-    String protocol;
-    final HeaderMap headers = new HeaderMap();
-    final Map<String, List<String>> queryParameters = new HashMap<String, List<String>>();
+public class HttpClientUtils {
 
-    public String getMethod() {
-        return method;
+    private HttpClientUtils() {
+
     }
 
-    public String getPath() {
-        return path;
+    public static String readResponse(final HttpResponse response) throws IOException {
+        final StringBuilder builder = new StringBuilder();
+        byte[] data = new byte[100];
+        InputStream stream = response.getEntity().getContent();
+        int read;
+        while ((read = stream.read(data)) != -1) {
+            builder.append(new String(data,0,read));
+        }
+        return builder.toString();
     }
 
-    public String getCanonicalPath() {
-        return canonicalPath;
-    }
-
-    public String getProtocol() {
-        return protocol;
-    }
-
-    public HeaderMap getHeaders() {
-        return headers;
-    }
 }
