@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package tmp.texugo.test.nonblocking;
+package tmp.texugo.test.handlers;
 
 import java.io.IOException;
 

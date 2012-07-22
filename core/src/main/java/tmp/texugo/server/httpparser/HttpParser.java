@@ -57,6 +57,7 @@ import static tmp.texugo.util.Headers.IF_UNMODIFIED_SINCE;
 import static tmp.texugo.util.Headers.LAST_MODIFIED;
 import static tmp.texugo.util.Headers.LOCATION;
 import static tmp.texugo.util.Headers.MAX_FORWARDS;
+import static tmp.texugo.util.Headers.ORIGIN;
 import static tmp.texugo.util.Headers.PRAGMA;
 import static tmp.texugo.util.Headers.PROXY_AUTHENTICATE;
 import static tmp.texugo.util.Headers.PROXY_AUTHORIZATION;
@@ -146,6 +147,7 @@ import static tmp.texugo.util.Protocols.HTTP_1_1;
                 LAST_MODIFIED,
                 LOCATION,
                 MAX_FORWARDS,
+                ORIGIN,
                 PRAGMA,
                 PROXY_AUTHENTICATE,
                 PROXY_AUTHORIZATION,
@@ -240,7 +242,7 @@ public abstract class HttpParser {
                 } else if (next == '/' && parseState == SECOND_SLASH) {
                     parseState = HOST_DONE;
                     canonicalPathStart = stringBuilder.length();
-                } else if(parseState == FIRST_COLON || parseState == FIRST_SLASH) {
+                } else if (parseState == FIRST_COLON || parseState == FIRST_SLASH) {
                     parseState = START;
                 }
                 stringBuilder.append(next);
@@ -319,7 +321,7 @@ public abstract class HttpParser {
                         if (stringBuilder.length() != 0) {
                             nextHeaderValues.add(stringBuilder.toString());
                         }
-                        if(nextHeaderValues.size() == 1) {
+                        if (nextHeaderValues.size() == 1) {
                             builder.headers.put(nextStandardHeader, nextHeaderValues.get(0));
                         } else {
                             builder.headers.putAll(nextStandardHeader, nextHeaderValues);

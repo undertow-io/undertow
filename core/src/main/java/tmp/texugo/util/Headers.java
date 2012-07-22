@@ -64,6 +64,7 @@ public final class Headers {
     public static final String LAST_MODIFIED = "Last-Modified";
     public static final String LOCATION = "Location";
     public static final String MAX_FORWARDS = "Max-Forwards";
+    public static final String ORIGIN = "Origin";
     public static final String PRAGMA = "Pragma";
     public static final String PROXY_AUTHENTICATE = "Proxy-Authenticate";
     public static final String PROXY_AUTHORIZATION = "Proxy-Authorization";

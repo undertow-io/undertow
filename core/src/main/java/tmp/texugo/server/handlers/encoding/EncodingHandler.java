@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package tmp.texugo.server.encoding;
+package tmp.texugo.server.handlers.encoding;
 
 import java.util.ArrayList;
 import java.util.Collections;

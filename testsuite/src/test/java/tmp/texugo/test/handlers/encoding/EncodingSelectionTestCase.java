@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package tmp.texugo.test.encoding;
+package tmp.texugo.test.handlers.encoding;
 
 import java.io.IOException;
 
@@ -27,9 +27,8 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import tmp.texugo.server.encoding.EncodingHandler;
+import tmp.texugo.server.handlers.encoding.EncodingHandler;
 import tmp.texugo.server.handlers.HttpResponseHandler;
-import tmp.texugo.server.handlers.blocking.BlockingHandler;
 import tmp.texugo.test.util.DefaultServer;
 import tmp.texugo.test.util.HttpClientUtils;
 import tmp.texugo.test.util.SetHeaderHandler;
@@ -44,8 +43,6 @@ import tmp.texugo.util.Headers;
 public class EncodingSelectionTestCase {
 
     private static final String HEADER = "selected";
-    private static final String MESSAGE = "My HTTP Request!";
-    private static BlockingHandler blockingHandler;
 
     /**
      * Tests encoding selection with no qvalue
