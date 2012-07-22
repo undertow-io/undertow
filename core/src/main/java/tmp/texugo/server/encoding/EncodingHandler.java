@@ -54,10 +54,13 @@ public class EncodingHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         final Deque<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
+        HttpHandler identityHandler = this.identityHandler;
         if (res == null || res.isEmpty()) {
             identityHandler.handleRequest(exchange);
             return;
         }
+        Map<String, Encoding> encodingMap = this.encodingMap;
+
         boolean identityProhibited = false;
         final List<ParsedEncoding> found = new ArrayList<ParsedEncoding>();
         ParsedEncoding current = null;

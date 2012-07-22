@@ -34,6 +34,9 @@
 
     <name>Texugo Testsuite</name>
 
+    <properties>
+    </properties>
+
     <dependencies>
 
         <dependency>
@@ -66,4 +69,20 @@
         </dependency>
 
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <default.server.address>localhost</default.server.address>
+                        <default.server.port>7777</default.server.port>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

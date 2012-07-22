@@ -55,7 +55,7 @@ public class SimpleNonBlockingServerTestCase {
     public void sendHttpRequest() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getBase() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders("MyHeader");

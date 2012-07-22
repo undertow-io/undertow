@@ -51,22 +51,24 @@ import tmp.texugo.server.handlers.blocking.BlockingHandler;
  */
 public class DefaultServer extends BlockJUnit4ClassRunner {
 
+    private static final String DEFAULT = "default";
+
     private static boolean first = true;
     private static HttpOpenListener openListener;
     private static XnioWorker worker;
     private static AcceptingChannel<? extends ConnectedStreamChannel> server;
-    private static  Xnio xnio;
+    private static Xnio xnio;
+
     /**
      * The executor service that is provided to
      */
     private static ExecutorService blockingExecutorService;
 
     /**
-     *
      * @return The base URL that can be used to make connections to this server
      */
-    public static String getBase() {
-        return "http://localhost:7777";
+    public static String getDefaultServerAddress() {
+        return "http://" + getHostAddress(DEFAULT) + ":" + getHostPost(DEFAULT);
     }
 
     /**
@@ -100,7 +102,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 worker = xnio.createWorker(OptionMap.create(Options.WORKER_WRITE_THREADS, 2, Options.WORKER_READ_THREADS, 2));
                 openListener = new HttpOpenListener(new ByteBufferSlicePool(10000, 10000));
                 ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByAddress(new byte[]{127, 0, 0, 1}), 7777), acceptListener, OptionMap.EMPTY);
+                server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPost(DEFAULT)), acceptListener, OptionMap.EMPTY);
                 server.resumeAccepts();
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -124,6 +126,14 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      */
     public static void setRootHandler(HttpHandler rootHandler) {
         openListener.setRootHandler(rootHandler);
+    }
+
+    private static String getHostAddress(String serverName) {
+        return System.getProperty(serverName + ".server.address");
+    }
+
+    private static int getHostPost(String serverName) {
+        return Integer.getInteger(serverName + ".server.port");
     }
 
 }
