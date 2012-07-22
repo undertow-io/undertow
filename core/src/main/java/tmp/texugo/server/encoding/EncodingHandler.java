@@ -74,28 +74,17 @@ public class EncodingHandler implements HttpHandler {
                 char c = header.charAt(i);
                 switch (c) {
                     case ',': {
-                        if (current != null) {
-                            if (stringStart != i) {
-                                //if this is a valid qvalue
-                                if (i - stringStart > 2 && header.charAt(stringStart) == 'q' &&
-                                        header.charAt(stringStart + 1) == '=') {
-                                    current.qvalue = header.substring(stringStart + 2, i);
-                                    if (current.encoding.equals("*")) {
-                                        if (handleDefault(found, current)) {
-                                            identityProhibited = true;
-                                        }
-                                    } else {
-                                        final Encoding handler = encodingMap.get(current.encoding);
-                                        if (handler != null) {
-                                            current.handler = handler;
-                                            found.add(current);
-                                        }
-                                    }
-                                    current = null;
-                                } else {
-                                    current = handleNewEncoding(found, header, stringStart, i);
+                        if (current != null &&
+                                (i - stringStart > 2 && header.charAt(stringStart) == 'q' &&
+                                        header.charAt(stringStart + 1) == '=')) {
+                            //if this is a valid qvalue
+                            current.qvalue = header.substring(stringStart + 2, i);
+                            if (current.encoding.equals("*")) {
+                                if (handleDefault(found, current)) {
+                                    identityProhibited = true;
                                 }
                             }
+                            current = null;
                         } else if (stringStart != i) {
                             current = handleNewEncoding(found, header, stringStart, i);
                         }
@@ -112,18 +101,15 @@ public class EncodingHandler implements HttpHandler {
                 }
             }
             if (stringStart != l) {
-                if (current != null) {
+                if (current != null &&
+                        (l - stringStart > 2 && header.charAt(stringStart) == 'q' &&
+                                header.charAt(stringStart + 1) == '=')) {
                     //if this is a valid qvalue
-                    if (l - stringStart > 2 && header.charAt(stringStart) == 'q' &&
-                            header.charAt(stringStart + 1) == '=') {
-                        current.qvalue = header.substring(stringStart + 2, l);
-                        if (current.encoding.equals("*")) {
-                            if (handleDefault(found, current)) {
-                                identityProhibited = true;
-                            }
+                    current.qvalue = header.substring(stringStart + 2, l);
+                    if (current.encoding.equals("*")) {
+                        if (handleDefault(found, current)) {
+                            identityProhibited = true;
                         }
-                    } else {
-                        current = handleNewEncoding(found, header, stringStart, l);
                     }
                 } else {
                     current = handleNewEncoding(found, header, stringStart, l);
