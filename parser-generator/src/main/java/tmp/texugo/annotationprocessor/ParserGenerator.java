@@ -380,12 +380,11 @@ public class ParserGenerator {
         BranchEnd overrun = c.ifIcmpeq();
         //so we have not overrun
         //now check if the character matches
+        c.dup();
         c.aload(STATE_CURRENT_BYTES_VAR);
         c.iload(STATE_POS_VAR);
         c.baload();
         c.isub();
-        c.iconst(0); //just to make the stacks match
-        c.swap();
         BranchEnd noMatch = c.ifne();
 
         //so they match
@@ -408,6 +407,7 @@ public class ParserGenerator {
         c.invokevirtual(String.class.getName(), "substring", "(II)Ljava/lang/String;");
         c.invokespecial(StringBuilder.class.getName(), "<init>", "(Ljava/lang/String;)V");
         c.swap();
+
         c.invokevirtual(StringBuilder.class.getName(), "append", "(C)Ljava/lang/StringBuilder;");
         c.astore(STATE_STRING_BUILDER_VAR);
         c.pop();
@@ -568,7 +568,6 @@ public class ParserGenerator {
             c.iinc(BYTES_REMAINING_VAR, -1);
         }
 
-
         c.dup();
         final Set<AtomicReference<BranchEnd>> tokenEnds = new HashSet<AtomicReference<BranchEnd>>();
         final Map<State, AtomicReference<BranchEnd>> ends = new IdentityHashMap<State, AtomicReference<BranchEnd>>();
@@ -612,7 +611,6 @@ public class ParserGenerator {
 
         }
 
-
         c.iconst(NO_STATE);
         c.istore(CURRENT_STATE_VAR);
 
@@ -622,6 +620,7 @@ public class ParserGenerator {
         c.ldc(currentState.soFar);
         c.invokespecial(StringBuilder.class.getName(), "<init>", "(Ljava/lang/String;)V");
         c.swap();
+
         c.invokevirtual(StringBuilder.class.getName(), "append", "(C)Ljava/lang/StringBuilder;");
 
         c.astore(STATE_STRING_BUILDER_VAR);
@@ -631,6 +630,7 @@ public class ParserGenerator {
         for (AtomicReference<BranchEnd> tokenEnd : tokenEnds) {
             c.branchEnd(tokenEnd.get());
         }
+
         c.pop(); //opo off our extra byte, we don't need it
         if (!currentState.soFar.equals("")) {
             c.ldc(currentState.soFar);
@@ -663,6 +663,7 @@ public class ParserGenerator {
                 c.istore(STATE_POS_VAR);
                 c.gotoInstruction(prefixStart);
             } else {
+
                 c.iconst(state.stateno);
                 c.istore(CURRENT_STATE_VAR);
                 state.jumpTo(c);
