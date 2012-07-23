@@ -21,7 +21,9 @@ package tmp.texugo.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -43,6 +45,8 @@ import tmp.texugo.util.StatusCodes;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class HttpServerExchange extends AbstractAttachable {
+
+
     private final Pool<ByteBuffer> bufferPool;
     private final HttpServerConnection connection;
     private HeaderMap requestHeaders;
@@ -63,20 +67,29 @@ public final class HttpServerExchange extends AbstractAttachable {
      * The remaining unresolved portion of the canonical path.
      */
     private String relativePath;
-    private StreamSourceChannel requestChannel;
-    private StreamSinkChannel responseChannel;
+
+    private final StreamSourceChannel requestChannel;
+
+    private final StreamSinkChannel responseChannel;
+
+    private boolean responseChannelAvailable = true;
+
+    private final List<ChannelWrapper<StreamSinkChannel>> responseWrappers = new ArrayList<ChannelWrapper<StreamSinkChannel>>();
+
 
     /**
      * Set to true once the response headers etc have been written out
      */
     private boolean responseStarted = false;
 
-    protected HttpServerExchange(final Pool<ByteBuffer> bufferPool, final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final String requestMethod) {
+    protected HttpServerExchange(final Pool<ByteBuffer> bufferPool, final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final String requestMethod, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
         this.bufferPool = bufferPool;
         this.connection = connection;
         this.requestHeaders = requestHeaders;
         this.responseHeaders = responseHeaders;
         this.requestMethod = requestMethod;
+        this.requestChannel = requestChannel;
+        this.responseChannel = responseChannel;
     }
 
     public String getProtocol() {
@@ -201,28 +214,27 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * Checks to see if {@link #getRequestChannel()} has been called yet.
+     *
+     * This should only be called by the initial handler thread.
+     *
+     * @return <code>true</code> if {@link #getRequestChannel()} has not been called yet
+     */
+    public boolean isRequestChannelAvailable() {
+        return requestChannel != null;
+    }
+
+    /**
      * Get the inbound request.  If there is no request body, calling this method
      * may cause the next request to immediately be processed.  The {@link StreamSourceChannel#close()} or {@link StreamSourceChannel#shutdownReads()}
      * method must be called at some point after the request is processed to prevent resource leakage and to allow
-     * the next request to proceed.  Any unread content will be discarded.  Multiple calls to this method will return
-     * the same channel.
+     * the next request to proceed.  Any unread content will be discarded.
+     *
      *
      * @return the channel for the inbound request
      */
     public StreamSourceChannel getRequestChannel() {
         return requestChannel;
-    }
-
-    /**
-     * Change the request channel.  Subsequent calls to {@link #getRequestChannel()} will return the replaced channel.
-     * If a channel is replaced, it is the responsibility of the replacing party to ensure that the request is read
-     * in full and closed.  This may be done by wrapping the original channel or by handling the request body
-     * asynchronously.
-     *
-     * @param requestChannel the replacement channel
-     */
-    public void setRequestChannel(final StreamSourceChannel requestChannel) {
-        this.requestChannel = requestChannel;
     }
 
     /**
@@ -241,22 +253,38 @@ public final class HttpServerExchange extends AbstractAttachable {
      * return the same channel.  The response channel may not be writable until after the response headers have been
      * sent.
      *
+     * This method must only be called at most once per request. If this method is not called then the exchange will
+     * be automatically closed once the handler chain finishes. If this method is called then the request is terminated
+     * once the stream is closed.
+     *
+     * The returned stream will lazily write out headers when the first byte is written to the stream, or when
+     * {@link java.nio.channels.Channel#close()} is called on the channel with no content being written.
+     *
+     * This method *MUST* be called if any further processing is to occur on this exchange in another thread, (including
+     * async reads from the request channel), otherwise the request will be automatically closed when the handler chain
+     * completes.
+     *
+     *
      * @return the response channel
      */
     public StreamSinkChannel getResponseChannel() {
-        return responseChannel;
+        if(!responseChannelAvailable) {
+            throw TexugoMessages.MESSAGES.responseChannelAlreadyProvided();
+        }
+        responseChannelAvailable = false;
+        StreamSinkChannel channel = responseChannel;
+        for(ChannelWrapper<StreamSinkChannel> wrapper : responseWrappers) {
+            channel = wrapper.wrap(channel, this);
+        }
+        return channel;
     }
 
     /**
-     * Change the response channel.  Subsequent calls to {@link #getResponseChannel()} will return the replaced channel.
-     * If a channel is replaced, it is the responsibility of the replacing party to ensure that the response is written
-     * in full and closed.  This may be done by wrapping the original channel or by writing the response body
-     * asynchronously.
      *
-     * @param responseChannel the replacement channel
+     * @return <code>true</code> if {@link #getResponseChannel()} has not been called
      */
-    public void setResponseChannel(final StreamSinkChannel responseChannel) {
-        this.responseChannel = responseChannel;
+    public boolean isResponseChannelAvailable() {
+        return responseChannelAvailable;
     }
 
     /**
@@ -271,6 +299,18 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw TexugoMessages.MESSAGES.responseAlreadyStarted();
         }
         this.responseCode = responseCode;
+    }
+
+    /**
+     * Adds a {@link ChannelWrapper} to
+     *
+     * @param wrapper The wrapper
+     */
+    public void addResponseWrapper(final ChannelWrapper<StreamSinkChannel> wrapper) {
+        if(!responseChannelAvailable) {
+            throw TexugoMessages.MESSAGES.responseChannelAlreadyProvided();
+        }
+        responseWrappers.add(wrapper);
     }
 
     /**

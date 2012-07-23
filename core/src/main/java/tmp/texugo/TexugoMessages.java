@@ -39,4 +39,6 @@ public interface TexugoMessages {
     @Message(id = 3, value = "Handler %s cannot run after the response has already started")
     IllegalStateException handlerMustRunBeforeResponseStarted(final Class<?> handlerClass);
 
+    @Message(id = 4, value = "getResponseChannel() has already been called")
+    IllegalStateException responseChannelAlreadyProvided();
 }
