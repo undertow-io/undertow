@@ -28,7 +28,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import tmp.texugo.server.handlers.encoding.EncodingHandler;
-import tmp.texugo.server.handlers.HttpResponseHandler;
 import tmp.texugo.test.util.DefaultServer;
 import tmp.texugo.test.util.HttpClientUtils;
 import tmp.texugo.test.util.SetHeaderHandler;
@@ -59,14 +58,14 @@ public class EncodingSelectionTestCase {
             final EncodingHandler handler = new EncodingHandler();
             handler.addEncodingHandler("compress", new SetHeaderHandler(HEADER, "compress"), 50);
             handler.addEncodingHandler("bzip", new SetHeaderHandler(HEADER, "bzip"), 100);
-            handler.setIdentityHandler(new HttpResponseHandler());
+            handler.setIdentityHandler(new SetHeaderHandler(HEADER, "identity"));
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(HEADER);
-            Assert.assertEquals(0, header.length);
+            Assert.assertEquals("identity", header[0].getValue());
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
@@ -130,7 +129,7 @@ public class EncodingSelectionTestCase {
             final EncodingHandler handler = new EncodingHandler();
             handler.addEncodingHandler("compress", new SetHeaderHandler(HEADER, "compress"), 100);
             handler.addEncodingHandler("bzip", new SetHeaderHandler(HEADER, "bzip"), 50);
-            handler.setIdentityHandler(new HttpResponseHandler());
+            handler.setIdentityHandler(new SetHeaderHandler(HEADER, "identity"));
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");

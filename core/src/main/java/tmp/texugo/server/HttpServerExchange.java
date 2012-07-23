@@ -35,6 +35,7 @@ import org.xnio.channels.StreamSourceChannel;
 import tmp.texugo.TexugoMessages;
 import tmp.texugo.util.AbstractAttachable;
 import tmp.texugo.util.HeaderMap;
+import tmp.texugo.util.Headers;
 import tmp.texugo.util.Protocols;
 import tmp.texugo.util.StatusCodes;
 
@@ -73,6 +74,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final StreamSinkChannel responseChannel;
 
     private boolean responseChannelAvailable = true;
+    private boolean requestChannelAvailable = true;
 
     private final List<ChannelWrapper<StreamSinkChannel>> responseWrappers = new ArrayList<ChannelWrapper<StreamSinkChannel>>();
 
@@ -110,6 +112,28 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public boolean isHttp11() {
         return protocol.equals(Protocols.HTTP_1_1);
+    }
+
+    /**
+     *
+     * If this is not a HTTP/1.1 request, or if the Connection: close header was sent we need to close the channel
+     *
+     * @return <code>true</code> if the connection should be closed once the response has been written
+     */
+    public boolean isCloseConnection() {
+        if (!isHttp11()) {
+            return true;
+        }
+        final Deque<String> connection = requestHeaders.get(Headers.CONNECTION);
+        if (connection != null) {
+            for (final String value : connection) {
+                if (value.toLowerCase().equals("close")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+
     }
 
     public String getRequestMethod() {
@@ -166,7 +190,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public ConnectedStreamChannel upgradeChannel() throws IllegalStateException, IOException {
         setResponseCode(101);
-        startResponse();
+        startResponse(false);
         return new AssembledConnectedStreamChannel(getRequestChannel(), getResponseChannel());
     }
 
@@ -214,27 +238,27 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Checks to see if {@link #getRequestChannel()} has been called yet.
-     *
-     * This should only be called by the initial handler thread.
-     *
-     * @return <code>true</code> if {@link #getRequestChannel()} has not been called yet
-     */
-    public boolean isRequestChannelAvailable() {
-        return requestChannel != null;
-    }
-
-    /**
      * Get the inbound request.  If there is no request body, calling this method
      * may cause the next request to immediately be processed.  The {@link StreamSourceChannel#close()} or {@link StreamSourceChannel#shutdownReads()}
      * method must be called at some point after the request is processed to prevent resource leakage and to allow
      * the next request to proceed.  Any unread content will be discarded.
-     *
+     * <p/>
+     * This method may only be called once. A handler that calls this method *MUST* also call {@link #getResponseChannel()}
+     * otherwise the exchange will be closed once the handler chain completes, which will cancel async reads on this
+     * Channel.
      *
      * @return the channel for the inbound request
      */
     public StreamSourceChannel getRequestChannel() {
+        if (!requestChannelAvailable) {
+            throw TexugoMessages.MESSAGES.requestChannelAlreadyProvided();
+        }
+        requestChannelAvailable = false;
         return requestChannel;
+    }
+
+    public boolean isRequestChannelAvailable() {
+        return requestChannelAvailable;
     }
 
     /**
@@ -252,35 +276,33 @@ public final class HttpServerExchange extends AbstractAttachable {
      * ensure that the proper content length is delivered when one is specified.  Multiple calls to this method will
      * return the same channel.  The response channel may not be writable until after the response headers have been
      * sent.
-     *
+     * <p/>
      * This method must only be called at most once per request. If this method is not called then the exchange will
      * be automatically closed once the handler chain finishes. If this method is called then the request is terminated
      * once the stream is closed.
-     *
+     * <p/>
      * The returned stream will lazily write out headers when the first byte is written to the stream, or when
      * {@link java.nio.channels.Channel#close()} is called on the channel with no content being written.
-     *
+     * <p/>
      * This method *MUST* be called if any further processing is to occur on this exchange in another thread, (including
      * async reads from the request channel), otherwise the request will be automatically closed when the handler chain
      * completes.
      *
-     *
      * @return the response channel
      */
     public StreamSinkChannel getResponseChannel() {
-        if(!responseChannelAvailable) {
+        if (!responseChannelAvailable) {
             throw TexugoMessages.MESSAGES.responseChannelAlreadyProvided();
         }
         responseChannelAvailable = false;
         StreamSinkChannel channel = responseChannel;
-        for(ChannelWrapper<StreamSinkChannel> wrapper : responseWrappers) {
+        for (ChannelWrapper<StreamSinkChannel> wrapper : responseWrappers) {
             channel = wrapper.wrap(channel, this);
         }
         return channel;
     }
 
     /**
-     *
      * @return <code>true</code> if {@link #getResponseChannel()} has not been called
      */
     public boolean isResponseChannelAvailable() {
@@ -307,7 +329,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param wrapper The wrapper
      */
     public void addResponseWrapper(final ChannelWrapper<StreamSinkChannel> wrapper) {
-        if(!responseChannelAvailable) {
+        if (!responseChannelAvailable) {
             throw TexugoMessages.MESSAGES.responseChannelAlreadyProvided();
         }
         responseWrappers.add(wrapper);
@@ -348,9 +370,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      * <p/>
      * TODO: make this work properly
      *
+     * @param closeWhenDone If this exchange should be closed once the response is sent
      * @throws IllegalStateException if the response headers were already sent
      */
-    public void startResponse() throws IllegalStateException {
+    void startResponse(boolean closeWhenDone) throws IllegalStateException {
         if (responseStarted) {
             TexugoMessages.MESSAGES.responseAlreadyStarted();
         }
@@ -380,7 +403,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             response.append("\r\n");
 
             final String result = response.toString();
-            ResponseWriteListener responseWriteListener = new ResponseWriteListener(ByteBuffer.wrap(result.getBytes()), result.length(), this );
+            ResponseWriteListener responseWriteListener = new ResponseWriteListener(ByteBuffer.wrap(result.getBytes()), result.length(), this, closeWhenDone);
             responseChannel.getWriteSetter().set(responseWriteListener);
             responseChannel.resumeWrites();
         } catch (RuntimeException e) {
@@ -395,11 +418,13 @@ public final class HttpServerExchange extends AbstractAttachable {
         private final ByteBuffer buffer;
         private int remaining;
         private final HttpServerExchange exchange;
+        private final boolean closeWhenDone;
 
-        private ResponseWriteListener(final ByteBuffer buffer, final int remaining, final HttpServerExchange exchange) {
+        private ResponseWriteListener(final ByteBuffer buffer, final int remaining, final HttpServerExchange exchange, final boolean closeWhenDone) {
             this.buffer = buffer;
             this.remaining = remaining;
             this.exchange = exchange;
+            this.closeWhenDone = closeWhenDone;
         }
 
         @Override
@@ -410,8 +435,9 @@ public final class HttpServerExchange extends AbstractAttachable {
                 if (remaining > 0) {
                     channel.resumeWrites();
                 } else {
-                    //TODO: FIX THIS
-                    exchange.terminateResponse();
+                    if(closeWhenDone) {
+                        exchange.terminateResponse();
+                    }
                 }
             } catch (IOException e) {
                 //TODO: we need some consistent way of handling IO exception

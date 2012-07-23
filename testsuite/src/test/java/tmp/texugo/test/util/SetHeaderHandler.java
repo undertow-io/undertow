@@ -20,7 +20,6 @@ package tmp.texugo.test.util;
 
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
-import tmp.texugo.server.handlers.HttpResponseHandler;
 
 /**
  * @author Stuart Douglas
@@ -38,6 +37,5 @@ public class SetHeaderHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         exchange.getResponseHeaders().put(header, value);
-        new HttpResponseHandler().handleRequest(exchange);
     }
 }

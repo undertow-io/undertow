@@ -41,4 +41,7 @@ public interface TexugoMessages {
 
     @Message(id = 4, value = "getResponseChannel() has already been called")
     IllegalStateException responseChannelAlreadyProvided();
+
+    @Message(id = 5, value = "getRequestChannel() has already been called")
+    IllegalStateException requestChannelAlreadyProvided();
 }

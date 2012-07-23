@@ -53,7 +53,6 @@ public class OriginHandler implements HttpHandler {
                     TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to lack of Origin: header", exchange.getRequestPath());
                 }
                 exchange.setResponseCode(403);
-                exchange.startResponse();
                 return;
             }
         } else {
@@ -70,7 +69,6 @@ public class OriginHandler implements HttpHandler {
                         TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to Origin %s not being in the allowed origins list", exchange.getRequestPath(), header);
                     }
                     exchange.setResponseCode(403);
-                    exchange.startResponse();
                     return;
                 }
             }
@@ -79,7 +77,6 @@ public class OriginHandler implements HttpHandler {
                     TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s as none of the specified origins %s were in the allowed origins list", exchange.getRequestPath(), origin);
                 }
                 exchange.setResponseCode(403);
-                exchange.startResponse();
                 return;
             }
         }

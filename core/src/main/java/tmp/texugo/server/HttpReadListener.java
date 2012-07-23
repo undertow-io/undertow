@@ -32,6 +32,7 @@ import tmp.texugo.server.httpparser.HttpExchangeBuilder;
 import tmp.texugo.server.httpparser.HttpParser;
 import tmp.texugo.server.httpparser.ParseState;
 import tmp.texugo.util.HeaderMap;
+import tmp.texugo.util.Headers;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -44,8 +45,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     private final Pool<ByteBuffer> bufferPool;
 
 
-    private final ParseState state = new ParseState();
-    private final HttpExchangeBuilder builder = new HttpExchangeBuilder();
+    private volatile ParseState state = new ParseState();
+    private volatile HttpExchangeBuilder builder = new HttpExchangeBuilder();
 
     private final HttpHandler rootHandler;
     private final ConnectedStreamChannel underlyingChannel;
@@ -107,10 +108,29 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     httpServerExchange.setProtocol(builder.getProtocol());
 
                     rootHandler.handleRequest(httpServerExchange);
+
+                    if(httpServerExchange.isResponseChannelAvailable()) {
+                        if(!httpServerExchange.isRequestChannelAvailable()) {
+                            TexugoLogger.REQUEST_LOGGER.getRequestCalledWithoutGetResponse();
+                        }
+                        //getResponseChannel() has not been called, this means we need to automatically write headers and
+                        //close the request
+                        if(httpServerExchange.isHttp11()) {
+                            //we set a content length of zero
+                            httpServerExchange.getResponseHeaders().add(Headers.CONTENT_LENGTH, "0");
+                        }
+                        httpServerExchange.startResponse(httpServerExchange.isCloseConnection());
+                    }
+
                 } catch (Throwable t) {
                     //TODO: we should attempt to return a 500 status code in this situation
+                    TexugoLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
                     IoUtils.safeClose(channel);
                     IoUtils.safeClose(underlyingChannel);
+
+                } finally {
+                    state = new ParseState();
+                    builder = new HttpExchangeBuilder();
                 }
             }
 

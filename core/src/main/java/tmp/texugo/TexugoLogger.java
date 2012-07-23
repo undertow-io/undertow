@@ -19,7 +19,10 @@
 package tmp.texugo;
 
 import org.jboss.logging.BasicLogger;
+import org.jboss.logging.Cause;
+import org.jboss.logging.LogMessage;
 import org.jboss.logging.Logger;
+import org.jboss.logging.Message;
 import org.jboss.logging.MessageLogger;
 
 /**
@@ -34,4 +37,13 @@ public interface TexugoLogger extends BasicLogger {
 
     TexugoLogger REQUEST_LOGGER = Logger.getMessageLogger(TexugoLogger.class, TexugoLogger.class.getPackage().getName()+".request");
 
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5000, value = "HttpServerExchange.getRequestChannel() has been called without also calling " +
+            "HttpServerExchange.getResponseChannel(), the request is going to be automatically closed which will " +
+            "cancel any async reads taking place on the request Channel")
+    void getRequestCalledWithoutGetResponse();
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5001, value = "An exception occured processing the request")
+    void exceptionProcessingRequest(@Cause Throwable cause);
 }

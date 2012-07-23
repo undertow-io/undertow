@@ -30,7 +30,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
-import tmp.texugo.server.handlers.HttpResponseHandler;
 import tmp.texugo.test.util.DefaultServer;
 
 /**
@@ -46,7 +45,6 @@ public class SimpleNonBlockingServerTestCase {
             @Override
             public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseHeaders().put("MyHeader", "MyValue");
-                new HttpResponseHandler().handleRequest(exchange);
             }
         });
     }

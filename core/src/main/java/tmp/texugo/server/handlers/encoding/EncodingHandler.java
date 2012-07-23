@@ -56,7 +56,12 @@ public class EncodingHandler implements HttpHandler {
         final Deque<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
         HttpHandler identityHandler = this.identityHandler;
         if (res == null || res.isEmpty()) {
-            identityHandler.handleRequest(exchange);
+            if(identityHandler != null) {
+                identityHandler.handleRequest(exchange);
+            } else {
+                //we don't have an identity handler
+                exchange.setResponseCode(406);
+            }
             return;
         }
         Map<String, Encoding> encodingMap = this.encodingMap;
@@ -121,7 +126,6 @@ public class EncodingHandler implements HttpHandler {
         if (size == 0) {
             if (identityProhibited || identityHandler == null) {
                 exchange.setResponseCode(406);
-                exchange.startResponse();
                 return;
             }
             identityHandler.handleRequest(exchange);

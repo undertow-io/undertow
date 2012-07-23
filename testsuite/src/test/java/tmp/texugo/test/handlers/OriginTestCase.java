@@ -26,7 +26,6 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import tmp.texugo.server.handlers.HttpResponseHandler;
 import tmp.texugo.server.handlers.OriginHandler;
 import tmp.texugo.server.handlers.blocking.BlockingHandler;
 import tmp.texugo.test.util.DefaultServer;
@@ -55,7 +54,6 @@ public class OriginTestCase {
         try {
             final OriginHandler handler = new OriginHandler();
             handler.addAllowedOrigins("http://www.mysite.com:80", "http://mysite.com:80");
-            handler.setNext(new HttpResponseHandler());
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
