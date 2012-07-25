@@ -18,24 +18,19 @@
 
 package tmp.texugo.server.handlers.blocking;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.util.Deque;
 import java.util.concurrent.ConcurrentMap;
 
-import org.xnio.IoUtils;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.streams.ChannelInputStream;
 import org.xnio.streams.ChannelOutputStream;
-import sun.nio.ch.ChannelInputStream;
-import tmp.texugo.TexugoMessages;
 import tmp.texugo.server.HttpServerConnection;
 import tmp.texugo.server.HttpServerExchange;
 import tmp.texugo.util.Attachable;
 import tmp.texugo.util.HeaderMap;
-import tmp.texugo.util.StatusCodes;
 
 /**
  * An HTTP server request/response exchange.  An instance of this class is constructed as soon as the request headers are
@@ -43,30 +38,16 @@ import tmp.texugo.util.StatusCodes;
  *
  * This class is just a wrapper around {@link HttpServerExchange}.
  *
- * This class is mutable and not thread safe
- *
  * @author Stuart Douglas
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class BlockingHttpServerExchange implements Attachable {
 
     private final HttpServerExchange exchange;
-    boolean responseStarted;
-    private final OutputStream outputStream;
-    private final InputStream inputStream;
-
-    private static final byte[] NEWLINE = "\r\n".getBytes();
-    private static final byte[] HEADER_END = ": ".getBytes();
-
 
     public BlockingHttpServerExchange(final HttpServerExchange exchange) {
-        if (exchange.isResponseStarted()) {
-            throw TexugoMessages.MESSAGES.handlerMustRunBeforeResponseStarted(BlockingHttpServerExchange.class);
-        }
         this.exchange = exchange;
-        this.inputStream = new BufferedInputStream(new ChannelInputStream(exchange.getRequestChannel()));
-        this.outputStream = new BufferedOutputStream(new ChannelOutputStream(exchange.getResponseChannel()));
     }
-
 
     public String getProtocol() {
         return exchange.getProtocol();
@@ -148,9 +129,8 @@ public final class BlockingHttpServerExchange implements Attachable {
      * @return <code>true</code> If the response has already been started
      */
     public boolean isResponseStarted() {
-        return responseStarted;
+        return exchange.isResponseStarted();
     }
-
 
     /**
      * Change the response code for this response.  If not specified, the code will be a {@code 200}.  Setting
@@ -173,43 +153,13 @@ public final class BlockingHttpServerExchange implements Attachable {
     }
 
     public OutputStream getOutputStream() {
-        return outputStream;
+        final StreamSinkChannel channel = exchange.getResponseChannel();
+        return channel == null ? null : new ChannelOutputStream(channel);
     }
 
     public InputStream getInputStream() {
-        return inputStream;
-    }
-
-    public void startResponse() throws IOException {
-        if (responseStarted) {
-            TexugoMessages.MESSAGES.responseAlreadyStarted();
-        }
-        final HeaderMap responseHeaders = getResponseHeaders();
-        responseHeaders.lock();
-        responseStarted = true;
-        final OutputStream stream = outputStream;
-        try {
-            stream.write(getProtocol().getBytes());
-            stream.write(' ');
-            stream.write(Integer.toString(getResponseCode()).getBytes());
-            stream.write(' ');
-            stream.write(StatusCodes.getReason(getResponseCode()).getBytes());
-            stream.write(NEWLINE);
-            for (final String header : responseHeaders) {
-                stream.write(header.getBytes());
-                stream.write(HEADER_END);
-                final Deque<String> values = responseHeaders.get(header);
-                for (String value : values) {
-                    stream.write(value.getBytes());
-                    stream.write(' ');
-                }
-                stream.write(NEWLINE);
-            }
-            stream.write(NEWLINE);
-        } catch (IOException e) {
-            IoUtils.safeClose(outputStream);
-            IoUtils.safeClose(inputStream);
-        }
+        final StreamSourceChannel channel = exchange.getRequestChannel();
+        return channel == null ? null : new ChannelInputStream(channel);
     }
 
     @Override

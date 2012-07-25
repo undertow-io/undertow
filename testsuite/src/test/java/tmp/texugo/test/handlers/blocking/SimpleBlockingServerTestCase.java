@@ -49,7 +49,6 @@ public class SimpleBlockingServerTestCase {
             @Override
             public void handleRequest(final BlockingHttpServerExchange exchange) {
                 try {
-                    exchange.startResponse();
                     exchange.getOutputStream().write(MESSAGE.getBytes());
                     exchange.getOutputStream().close();
                 } catch (IOException e) {
