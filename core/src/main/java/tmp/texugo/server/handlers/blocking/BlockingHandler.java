@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.xnio.IoUtils;
 import tmp.texugo.TexugoLogger;
+import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
 
@@ -36,7 +37,7 @@ public final class BlockingHandler implements HttpHandler {
     private volatile BlockingHttpHandler rootHandler;
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange);
         executorService.submit(new Runnable() {
             @Override
@@ -49,6 +50,8 @@ public final class BlockingHandler implements HttpHandler {
                     }
                     IoUtils.safeClose(exchange.getResponseChannel());
                     IoUtils.safeClose(exchange.getRequestChannel());
+                } finally {
+                    completionHandler.handleComplete();
                 }
             }
         });

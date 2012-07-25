@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import tmp.texugo.TexugoLogger;
+import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
 import tmp.texugo.util.Headers;
@@ -44,15 +45,16 @@ public class OriginHandler implements HttpHandler {
 
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final Deque<String> origin = exchange.getRequestHeaders().get(Headers.ORIGIN);
         if (origin == null) {
             if (requireOriginHeader) {
-                //TODO: Is 403 (Forbidden) the best reponse code
+                //TODO: Is 403 (Forbidden) the best response code
                 if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
                     TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to lack of Origin: header", exchange.getRequestPath());
                 }
                 exchange.setResponseCode(403);
+                completionHandler.handleComplete();
                 return;
             }
         } else {
@@ -69,6 +71,7 @@ public class OriginHandler implements HttpHandler {
                         TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to Origin %s not being in the allowed origins list", exchange.getRequestPath(), header);
                     }
                     exchange.setResponseCode(403);
+                    completionHandler.handleComplete();
                     return;
                 }
             }
@@ -77,12 +80,13 @@ public class OriginHandler implements HttpHandler {
                     TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s as none of the specified origins %s were in the allowed origins list", exchange.getRequestPath(), origin);
                 }
                 exchange.setResponseCode(403);
+                completionHandler.handleComplete();
                 return;
             }
         }
         HttpHandler next = this.next;
         if(next != null) {
-            next.handleRequest(exchange);
+            next.handleRequest(exchange, completionHandler);
         }
     }
 

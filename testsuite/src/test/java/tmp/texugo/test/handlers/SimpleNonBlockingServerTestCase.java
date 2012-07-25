@@ -28,6 +28,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
 import tmp.texugo.test.util.DefaultServer;
@@ -43,8 +44,9 @@ public class SimpleNonBlockingServerTestCase {
     public static void setup() {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
                 exchange.getResponseHeaders().put("MyHeader", "MyValue");
+                completionHandler.handleComplete();
             }
         });
     }
