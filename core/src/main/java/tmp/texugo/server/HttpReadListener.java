@@ -100,6 +100,11 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             }
 
             if(state.isComplete()) {
+                channel.suspendReads();
+                //we remove ourselves as the read listener from the channel for now
+                //TODO: we need a proper way to handle this
+                channel.getReadSetter().set(null);
+
                 final HttpServerExchange httpServerExchange = new HttpServerExchange(bufferPool, connection, builder.getHeaders(), new HeaderMap(), builder.getMethod(), channel, underlyingChannel);
                 try {
                     httpServerExchange.setCanonicalPath(builder.getCanonicalPath());
@@ -122,16 +127,15 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                         }
                         httpServerExchange.startResponse(httpServerExchange.isCloseConnection());
                     }
+                    state = new ParseState();
+                    builder = new HttpExchangeBuilder();
+                    channel.getReadSetter().set(this);
+                    channel.resumeReads();
 
                 } catch (Throwable t) {
                     //TODO: we should attempt to return a 500 status code in this situation
                     TexugoLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
-                    IoUtils.safeClose(channel);
                     IoUtils.safeClose(underlyingChannel);
-
-                } finally {
-                    state = new ParseState();
-                    builder = new HttpExchangeBuilder();
                 }
             }
 
