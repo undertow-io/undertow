@@ -18,8 +18,14 @@
 
 package tmp.texugo.server;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -37,12 +43,6 @@ import tmp.texugo.util.HeaderMap;
 import tmp.texugo.util.Headers;
 import tmp.texugo.util.Protocols;
 import tmp.texugo.util.StatusCodes;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.util.Deque;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
@@ -91,6 +91,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * The remaining unresolved portion of the canonical path.
      */
     private volatile String relativePath;
+
+    /**
+     * The resolved part of the canonical path.
+     */
+    private volatile String resolvedPath = "/";
 
     private static final ChannelWrapper<StreamSourceChannel>[] NO_SOURCE_WRAPPERS = new ChannelWrapper[0];
     private static final ChannelWrapper<StreamSinkChannel>[] NO_SINK_WRAPPERS = new ChannelWrapper[0];
@@ -190,6 +195,14 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public void setRelativePath(final String relativePath) {
         this.relativePath = relativePath;
+    }
+
+    public String getResolvedPath() {
+        return resolvedPath;
+    }
+
+    public void setResolvedPath(final String resolvedPath) {
+        this.resolvedPath = resolvedPath;
     }
 
     public String getCanonicalPath() {

@@ -18,12 +18,15 @@
 
 package tmp.texugo;
 
+import java.io.IOException;
+
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Cause;
 import org.jboss.logging.LogMessage;
 import org.jboss.logging.Logger;
 import org.jboss.logging.Message;
 import org.jboss.logging.MessageLogger;
+import org.xnio.IoFuture;
 
 /**
  * log messages start at 5000
@@ -50,4 +53,24 @@ public interface TexugoLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5002, value = "An exception occurred closing the response channel")
     void errorClosingResponseChannel(@Cause Exception e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5003, value = "An exception occurred getting the session")
+    void getSessionFailed(@Cause IOException exception);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5004, value = "Unexpected state in session callback %s")
+    void unexpectedStatusGettingSession(IoFuture.Status status);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5005, value = "Could not send session cookie as response has already started")
+    void couldNotSendSessionCookieAsResponseAlreadyStarted();
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5006, value = "Could not invalidate session cookie as response has already started")
+    void couldNotInvalidateSessionCookieAsResponseAlreadyStarted();
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5007, value = "Could not find session cookie config in the request, session will not be persistent across requests")
+    void couldNotFindSessionCookieConfig();
 }

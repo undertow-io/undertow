@@ -51,4 +51,14 @@ public interface TexugoMessages {
     @Message(id = 9, value = "Path must be specified")
     IllegalArgumentException pathMustBeSpecified();
 
+    @Message(id = 10, value = "Session not found %s")
+    IllegalStateException sessionNotFound(final String session);
+
+    @Message(id = 11, value = "Session manager must not be null")
+    IllegalStateException sessionManagerMustNotBeNull();
+
+    @Message(id = 12, value = "Session manager was not attached to the request. Make sure that the SessionAttachmentHander" +
+            "is installed in the handler chain")
+    IllegalStateException sessionManagerNotFound();
+
 }

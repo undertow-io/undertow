@@ -63,6 +63,7 @@ public class PathHandler implements HttpHandler {
         final HttpHandler next = paths.get(part);
         if(next != null) {
             exchange.setRelativePath(path.substring(pos));
+            exchange.setResolvedPath(exchange.getResolvedPath() + part);
             HttpHandlers.executeHandler(next, exchange, completionHandler);
         } else {
             HttpHandlers.executeHandler(defaultHandler, exchange, completionHandler);
