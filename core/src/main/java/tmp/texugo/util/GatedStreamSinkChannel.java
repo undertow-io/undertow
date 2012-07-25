@@ -26,6 +26,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -37,8 +38,13 @@ import org.xnio.channels.StreamSourceChannel;
 
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
-import static java.util.concurrent.locks.LockSupport.*;
-import static org.xnio.Bits.*;
+import static java.util.concurrent.locks.LockSupport.park;
+import static java.util.concurrent.locks.LockSupport.parkNanos;
+import static java.util.concurrent.locks.LockSupport.unpark;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
 import static org.xnio.ChannelListeners.delegatingChannelListener;
 import static org.xnio.ChannelListeners.invokeChannelListener;
 import static org.xnio.IoUtils.safeClose;
@@ -53,15 +59,16 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
     private final Object permit;
     private final ChannelListener.SimpleSetter<GatedStreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<GatedStreamSinkChannel>();
     private final ChannelListener.SimpleSetter<GatedStreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<GatedStreamSinkChannel>();
+    private final ChannelListener.SimpleSetter<GatedStreamSinkChannel> writeWithGateClosedSetter = new ChannelListener.SimpleSetter<GatedStreamSinkChannel>();
     private final int config;
 
     /**
      * Construct a new instance.
      *
-     * @param delegate the channel to wrap
-     * @param permit the permit required to open the gate
+     * @param delegate     the channel to wrap
+     * @param permit       the permit required to open the gate
      * @param configurable {@code true} to allow configuration of the delegate channel, {@code false} otherwise
-     * @param passClose {@code true} to close the underlying channel when this channel is closed, {@code false} otherwise
+     * @param passClose    {@code true} to close the underlying channel when this channel is closed, {@code false} otherwise
      */
     public GatedStreamSinkChannel(final StreamSinkChannel delegate, final Object permit, final boolean configurable, final boolean passClose) {
         this.delegate = delegate;
@@ -72,7 +79,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
     @SuppressWarnings("unused")
     private volatile int state;
     @SuppressWarnings("unused")
-    private volatile Thread awaiter;
+    private volatile Thread waiter;
     @SuppressWarnings("unused")
     private volatile Thread lockWaiter;
 
@@ -104,6 +111,10 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                     throw new ConcurrentStreamChannelAccessException();
                 }
                 if (anyAreSet(oldVal, skipIfSet) || anyAreClear(oldVal, skipIfClear)) {
+                    final ChannelListener<? super GatedStreamSinkChannel> writeWithGateClosedListener = writeWithGateClosedSetter.get();
+                    if(writeWithGateClosedListener != null && writeIntended && anyAreClear(oldVal, FLAG_GATE_OPEN)) {
+                        writeWithGateClosedListener.handleEvent(this);
+                    }
                     return oldVal;
                 }
                 while (anyAreSet(oldVal, FLAG_IN | FLAG_IN_WRITE)) {
@@ -117,7 +128,11 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                     safeUnpark(waiter);
                 }
                 newVal = oldVal & ~clearFlags | setFlags;
-            } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
+            } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+            final ChannelListener<? super GatedStreamSinkChannel> writeWithGateClosedListener = writeWithGateClosedSetter.get();
+            if(writeWithGateClosedListener != null && writeIntended && anyAreClear(oldVal, FLAG_GATE_OPEN)) {
+                writeWithGateClosedListener.handleEvent(this);
+            }
             return oldVal;
         } finally {
             if (intr) currentThread.interrupt();
@@ -126,7 +141,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
 
     private void exit(int oldVal, int enterFlag, final int setFlags) {
         int newVal = oldVal & ~enterFlag | setFlags;
-        while (! stateUpdater.compareAndSet(this, oldVal, newVal)) {
+        while (!stateUpdater.compareAndSet(this, oldVal, newVal)) {
             oldVal = state;
             newVal = oldVal & ~enterFlag | setFlags;
         }
@@ -151,7 +166,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                 safeClose(delegate);
             } else {
                 boolean doResume = allAreSet(val, FLAG_RESUME);
-                if (! doResume) {
+                if (!doResume) {
                     delegate.suspendWrites();
                 }
                 delegate.getWriteSetter().set(delegatingChannelListener(this, writeSetter));
@@ -179,6 +194,10 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
 
     public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
         return closeSetter;
+    }
+
+    public ChannelListener.SimpleSetter<? extends GatedStreamSinkChannel> getWriteWithGateClosedSetter() {
+        return writeWithGateClosedSetter;
     }
 
     public int write(final ByteBuffer src) throws IOException {
@@ -418,4 +437,5 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
     private static void safeUnpark(final Thread waiter) {
         if (waiter != null) unpark(waiter);
     }
+
 }

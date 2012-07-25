@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -95,6 +96,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.requestChannel = requestChannel;
         this.underlyingResponseChannel = responseChannel;
         this.gatedResponseChannel = new GatedStreamSinkChannel(responseChannel, this, false, true);
+        this.gatedResponseChannel.getWriteWithGateClosedSetter().set(new LazyHeaderWriteListener(this));
     }
 
     public String getProtocol() {
@@ -376,7 +378,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param closeWhenDone If this exchange should be closed once the response is sent
      * @throws IllegalStateException if the response headers were already sent
      */
-    public void startResponse(boolean closeWhenDone) throws IllegalStateException {
+    void startResponse(boolean closeWhenDone) throws IllegalStateException {
         if (responseStarted) {
             TexugoMessages.MESSAGES.responseAlreadyStarted();
         }
@@ -454,6 +456,30 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         public int getRemaining() {
             return remaining;
+        }
+    }
+
+    /**
+     * Listener that starts the response when a gated stream is written to for the first time.
+     */
+    private static final class LazyHeaderWriteListener implements ChannelListener<GatedStreamSinkChannel> {
+
+        private static final AtomicIntegerFieldUpdater<LazyHeaderWriteListener> RESPONSE_STARTED_UPDATER = AtomicIntegerFieldUpdater.newUpdater(LazyHeaderWriteListener.class, "started");
+
+        @SuppressWarnings("unused")
+        private volatile int started = 0;
+
+        private final HttpServerExchange exchange;
+
+        private LazyHeaderWriteListener(final HttpServerExchange exchange) {
+            this.exchange = exchange;
+        }
+
+        @Override
+        public void handleEvent(final GatedStreamSinkChannel channel) {
+            if(RESPONSE_STARTED_UPDATER.compareAndSet(this, 0, 1)) {
+                exchange.startResponse(false);
+            }
         }
     }
 }

@@ -18,6 +18,8 @@
 
 package tmp.texugo.server.handlers.blocking;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
