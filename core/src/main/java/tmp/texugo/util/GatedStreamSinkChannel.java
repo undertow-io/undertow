@@ -261,6 +261,8 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             }
             boolean flushed = delegate.flush();
             if (flushed && anyAreSet(val | setFlags, FLAG_CLOSE_SENT)) {
+                delegate.suspendWrites();
+                delegate.getWriteSetter().set(null);
                 setFlags |= FLAG_CLOSE_DONE;
             }
             return flushed;
@@ -342,8 +344,12 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             return;
         }
         try {
-            if (allAreSet(val, FLAG_GATE_OPEN) && allAreSet(config, CONF_FLAG_PASS_CLOSE)) {
-                delegate.close();
+            if (allAreSet(val, FLAG_GATE_OPEN)) {
+                delegate.suspendWrites();
+                delegate.getWriteSetter().set(null);
+                if (allAreSet(config, CONF_FLAG_PASS_CLOSE)) {
+                    delegate.close();
+                }
             }
         } finally {
             exit(val, FLAG_IN, 0);
