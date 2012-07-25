@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
 import tmp.texugo.util.Headers;
@@ -52,15 +53,16 @@ public class EncodingHandler implements HttpHandler {
     private static final String IDENTITY = "identity";
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final Deque<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
         HttpHandler identityHandler = this.identityHandler;
         if (res == null || res.isEmpty()) {
             if(identityHandler != null) {
-                identityHandler.handleRequest(exchange);
+                identityHandler.handleRequest(exchange, completionHandler);
             } else {
                 //we don't have an identity handler
                 exchange.setResponseCode(406);
+                completionHandler.handleComplete();
             }
             return;
         }
@@ -128,9 +130,9 @@ public class EncodingHandler implements HttpHandler {
                 exchange.setResponseCode(406);
                 return;
             }
-            identityHandler.handleRequest(exchange);
+            identityHandler.handleRequest(exchange, completionHandler);
         } else if (size == 1) {
-            found.get(0).handler.handler.handleRequest(exchange);
+            found.get(0).handler.handler.handleRequest(exchange, completionHandler);
         } else {
             ParsedEncoding max = found.get(0);
             for (int i = 1; i < size; ++i) {
@@ -139,7 +141,7 @@ public class EncodingHandler implements HttpHandler {
                     max = o;
                 }
             }
-            max.handler.handler.handleRequest(exchange);
+            max.handler.handler.handleRequest(exchange, completionHandler);
         }
     }
 

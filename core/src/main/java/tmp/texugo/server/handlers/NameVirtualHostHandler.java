@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import tmp.texugo.TexugoMessages;
+import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
 import tmp.texugo.util.Headers;
@@ -48,15 +49,15 @@ public class NameVirtualHostHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final Deque<String> host = exchange.getRequestHeaders().get(Headers.HOST);
         if(host != null) {
             final HttpHandler handler = hosts.get(host.getFirst());
             if(handler != null) {
-                handler.handleRequest(exchange);
+                handler.handleRequest(exchange, completionHandler);
             }
         }
-        defaultHandler.handleRequest(exchange);
+        defaultHandler.handleRequest(exchange, completionHandler);
     }
 
     public HttpHandler getDefaultHandler() {

@@ -79,7 +79,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      */
     public static BlockingHandler newBlockingHandler() {
         final BlockingHandler ret = new BlockingHandler();
-        ret.setExecutorService(blockingExecutorService);
+        ret.setExecutor(blockingExecutorService);
         return ret;
     }
 

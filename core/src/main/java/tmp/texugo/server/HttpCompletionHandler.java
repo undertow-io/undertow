@@ -19,18 +19,8 @@
 package tmp.texugo.server;
 
 /**
- * A handler for an HTTP request.  The request handler must eventually either call another handler or
- * the completion handler.  Failure to do so may result in undefined (undesirable) behavior.
- *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface HttpHandler {
-
-    /**
-     * Handle the request.
-     *
-     * @param exchange the HTTP request/response exchange
-     * @param completionHandler the completion handler
-     */
-    void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler);
+public interface HttpCompletionHandler {
+    void handleComplete();
 }

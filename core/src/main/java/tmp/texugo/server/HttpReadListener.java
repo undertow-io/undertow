@@ -107,7 +107,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     httpServerExchange.setRequestPath(builder.getPath());
                     httpServerExchange.setProtocol(builder.getProtocol());
 
-                    rootHandler.handleRequest(httpServerExchange);
+                    // todo - nothing will work until this part is implemented
+                    rootHandler.handleRequest(httpServerExchange, null);
 
                     if(httpServerExchange.isResponseChannelAvailable()) {
                         if(!httpServerExchange.isRequestChannelAvailable()) {
