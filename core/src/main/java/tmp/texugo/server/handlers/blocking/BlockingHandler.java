@@ -18,9 +18,9 @@
 
 package tmp.texugo.server.handlers.blocking;
 
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
-import org.xnio.IoUtils;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import tmp.texugo.TexugoLogger;
 import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
@@ -30,26 +30,41 @@ import tmp.texugo.server.HttpServerExchange;
  * A {@link HttpHandler} that initiates a blocking request.
  *
  * @author Stuart Douglas
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class BlockingHandler implements HttpHandler {
 
-    private volatile ExecutorService executorService;
-    private volatile BlockingHttpHandler rootHandler;
+    private volatile Executor executor;
+    private volatile BlockingHttpHandler handler;
+
+    private static final AtomicReferenceFieldUpdater<BlockingHandler, Executor> executorUpdater = AtomicReferenceFieldUpdater.newUpdater(BlockingHandler.class, Executor.class, "executor");
+    private static final AtomicReferenceFieldUpdater<BlockingHandler, BlockingHttpHandler> handlerUpdater = AtomicReferenceFieldUpdater.newUpdater(BlockingHandler.class, BlockingHttpHandler.class, "handler");
+
+    public BlockingHandler(final Executor executor, final BlockingHttpHandler handler) {
+        this.executor = executor;
+        this.handler = handler;
+    }
+
+    public BlockingHandler() {
+        this(null, null);
+    }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange);
-        executorService.submit(new Runnable() {
+        final Executor executor = this.executor;
+        (executor == null ? exchange.getConnection().getWorker() : executor).execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    rootHandler.handleRequest(blockingExchange);
+                    final BlockingHttpHandler handler = BlockingHandler.this.handler;
+                    if (handler != null) {
+                        handler.handleRequest(blockingExchange);
+                    }
                 } catch (Throwable t) {
-                    if(TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                    if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         TexugoLogger.REQUEST_LOGGER.debugf(t, "Blocking request failed %s", blockingExchange);
                     }
-                    IoUtils.safeClose(exchange.getResponseChannel());
-                    IoUtils.safeClose(exchange.getRequestChannel());
                 } finally {
                     completionHandler.handleComplete();
                 }
@@ -57,26 +72,25 @@ public final class BlockingHandler implements HttpHandler {
         });
     }
 
-    public ExecutorService getExecutorService() {
-        return executorService;
+    public Executor getExecutor() {
+        return executor;
     }
 
     /**
-     * Sets the executor service used by this handler. The old executor service will not be shut down.
-     * @param executorService The executor service to use
-     * @return The previous executor service
+     * Sets the executor used by this handler. The old executor will not be shut down.
+     *
+     * @param executor The executor to use
+     * @return The previous executor
      */
-    public synchronized ExecutorService setExecutorService(final ExecutorService executorService) {
-        ExecutorService old = this.executorService;
-        this.executorService = executorService;
-        return old;
+    public Executor setExecutor(final Executor executor) {
+        return executorUpdater.getAndSet(this, executor);
     }
 
-    public BlockingHttpHandler getRootHandler() {
-        return rootHandler;
+    public BlockingHttpHandler getHandler() {
+        return handler;
     }
 
-    public void setRootHandler(final BlockingHttpHandler rootHandler) {
-        this.rootHandler = rootHandler;
+    public BlockingHttpHandler setRootHandler(final BlockingHttpHandler rootHandler) {
+        return handlerUpdater.getAndSet(this, rootHandler);
     }
 }
