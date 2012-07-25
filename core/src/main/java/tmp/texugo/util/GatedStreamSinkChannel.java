@@ -313,7 +313,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             if (allAreSet(val, FLAG_GATE_OPEN)) {
                 delegate.wakeupWrites();
             } else {
-                getWriteThread().execute(ChannelListeners.getChannelListenerTask(this, writeSetter));
+                getWriteThread().execute(ChannelListeners.getChannelListenerTask(this, writeSetter.get()));
             }
         } finally {
             exit(val, FLAG_IN, 0);
