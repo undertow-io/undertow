@@ -24,15 +24,16 @@ package tmp.texugo.client;
 
 import java.io.Closeable;
 import java.net.URI;
+
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.channels.ConnectedStreamChannel;
-import tmp.texugo.util.Attachable;
+import tmp.texugo.util.AbstractAttachable;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public abstract class HttpClientConnection extends Attachable implements Closeable {
+public abstract class HttpClientConnection extends AbstractAttachable implements Closeable {
     private final HttpClient client;
 
     protected HttpClientConnection(final HttpClient client) {

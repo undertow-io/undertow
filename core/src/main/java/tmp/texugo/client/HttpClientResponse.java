@@ -23,14 +23,15 @@
 package tmp.texugo.client;
 
 import java.io.IOException;
+
 import org.xnio.channels.StreamSourceChannel;
-import tmp.texugo.util.Attachable;
+import tmp.texugo.util.AbstractAttachable;
 import tmp.texugo.util.HeaderMap;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public abstract class HttpClientResponse extends Attachable {
+public abstract class HttpClientResponse extends AbstractAttachable {
     private final HeaderMap responseHeaders = new HeaderMap();
 
     public final HeaderMap getResponseHeaders() {
