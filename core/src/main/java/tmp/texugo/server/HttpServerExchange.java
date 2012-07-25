@@ -34,6 +34,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import tmp.texugo.TexugoMessages;
 import tmp.texugo.util.AbstractAttachable;
+import tmp.texugo.util.GatedStreamSinkChannel;
 import tmp.texugo.util.HeaderMap;
 import tmp.texugo.util.Headers;
 import tmp.texugo.util.Protocols;
@@ -71,7 +72,8 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private final StreamSourceChannel requestChannel;
 
-    private final StreamSinkChannel responseChannel;
+    private final GatedStreamSinkChannel gatedResponseChannel;
+    private final StreamSinkChannel underlyingResponseChannel;
 
     private boolean responseChannelAvailable = true;
     private boolean requestChannelAvailable = true;
@@ -91,7 +93,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.responseHeaders = responseHeaders;
         this.requestMethod = requestMethod;
         this.requestChannel = requestChannel;
-        this.responseChannel = responseChannel;
+        this.underlyingResponseChannel = responseChannel;
+        this.gatedResponseChannel = new GatedStreamSinkChannel(responseChannel, this, false, true);
     }
 
     public String getProtocol() {
@@ -295,7 +298,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw TexugoMessages.MESSAGES.responseChannelAlreadyProvided();
         }
         responseChannelAvailable = false;
-        StreamSinkChannel channel = responseChannel;
+        StreamSinkChannel channel = gatedResponseChannel;
         for (ChannelWrapper<StreamSinkChannel> wrapper : responseWrappers) {
             channel = wrapper.wrap(channel, this);
         }
@@ -349,7 +352,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * the socket or implement a transfer coding.
      */
     void terminateResponse() {
-        IoUtils.safeClose(responseChannel);
+        IoUtils.safeClose(underlyingResponseChannel);
         IoUtils.safeClose(requestChannel);
     }
 
@@ -373,7 +376,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param closeWhenDone If this exchange should be closed once the response is sent
      * @throws IllegalStateException if the response headers were already sent
      */
-    void startResponse(boolean closeWhenDone) throws IllegalStateException {
+    public void startResponse(boolean closeWhenDone) throws IllegalStateException {
         if (responseStarted) {
             TexugoMessages.MESSAGES.responseAlreadyStarted();
         }
@@ -403,9 +406,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             response.append("\r\n");
 
             final String result = response.toString();
-            ResponseWriteListener responseWriteListener = new ResponseWriteListener(ByteBuffer.wrap(result.getBytes()), result.length(), this, closeWhenDone);
-            responseChannel.getWriteSetter().set(responseWriteListener);
-            responseChannel.resumeWrites();
+            ResponseWriteListener responseWriteListener = new ResponseWriteListener(ByteBuffer.wrap(result.getBytes()), result.length(), this, closeWhenDone, gatedResponseChannel);
+            underlyingResponseChannel.getWriteSetter().set(responseWriteListener);
+            underlyingResponseChannel.resumeWrites();
         } catch (RuntimeException e) {
             IoUtils.safeClose(requestChannel);
             IoUtils.safeClose(requestChannel);
@@ -419,12 +422,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         private int remaining;
         private final HttpServerExchange exchange;
         private final boolean closeWhenDone;
+        private final GatedStreamSinkChannel gatedResponseChannel;
 
-        private ResponseWriteListener(final ByteBuffer buffer, final int remaining, final HttpServerExchange exchange, final boolean closeWhenDone) {
+        private ResponseWriteListener(final ByteBuffer buffer, final int remaining, final HttpServerExchange exchange, final boolean closeWhenDone, final GatedStreamSinkChannel gatedResponseChannel) {
             this.buffer = buffer;
             this.remaining = remaining;
             this.exchange = exchange;
             this.closeWhenDone = closeWhenDone;
+            this.gatedResponseChannel = gatedResponseChannel;
         }
 
         @Override
@@ -435,6 +440,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 if (remaining > 0) {
                     channel.resumeWrites();
                 } else {
+                    gatedResponseChannel.openGate(exchange);
                     if(closeWhenDone) {
                         exchange.terminateResponse();
                     }
