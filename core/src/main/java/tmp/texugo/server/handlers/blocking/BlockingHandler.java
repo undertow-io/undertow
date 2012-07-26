@@ -18,13 +18,14 @@
 
 package tmp.texugo.server.handlers.blocking;
 
-import java.util.concurrent.Executor;
-
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import org.xnio.IoUtils;
 import tmp.texugo.TexugoLogger;
 import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A {@link HttpHandler} that initiates a blocking request.
@@ -66,6 +67,7 @@ public final class BlockingHandler implements HttpHandler {
                         TexugoLogger.REQUEST_LOGGER.debugf(t, "Blocking request failed %s", blockingExchange);
                     }
                 } finally {
+                    IoUtils.safeClose(blockingExchange.getOutputStream());
                     completionHandler.handleComplete();
                 }
             }

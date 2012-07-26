@@ -262,6 +262,11 @@ public final class HttpServerExchange extends AbstractAttachable {
         return requestChannel;
     }
 
+    //TODO: figure out how to handle this properly
+    StreamSourceChannel getUnderlyingRequestChannel() {
+        return requestChannel;
+    }
+
     public boolean isRequestChannelAvailable() {
         return requestChannelAvailable;
     }

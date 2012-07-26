@@ -18,18 +18,18 @@
 
 package tmp.texugo.server.handlers;
 
+import tmp.texugo.TexugoLogger;
+import tmp.texugo.server.HttpCompletionHandler;
+import tmp.texugo.server.HttpHandler;
+import tmp.texugo.server.HttpServerExchange;
+import tmp.texugo.util.Headers;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
-
-import tmp.texugo.TexugoLogger;
-import tmp.texugo.server.HttpCompletionHandler;
-import tmp.texugo.server.HttpHandler;
-import tmp.texugo.server.HttpServerExchange;
-import tmp.texugo.util.Headers;
 
 /**
  * A handler for the HTTP Origin header.
@@ -87,6 +87,8 @@ public class OriginHandler implements HttpHandler {
         HttpHandler next = this.next;
         if(next != null) {
             next.handleRequest(exchange, completionHandler);
+        } else {
+            completionHandler.handleComplete();
         }
     }
 

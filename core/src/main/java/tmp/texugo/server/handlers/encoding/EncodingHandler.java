@@ -18,17 +18,17 @@
 
 package tmp.texugo.server.handlers.encoding;
 
+import tmp.texugo.server.HttpCompletionHandler;
+import tmp.texugo.server.HttpHandler;
+import tmp.texugo.server.HttpServerExchange;
+import tmp.texugo.util.Headers;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import tmp.texugo.server.HttpCompletionHandler;
-import tmp.texugo.server.HttpHandler;
-import tmp.texugo.server.HttpServerExchange;
-import tmp.texugo.util.Headers;
 
 /**
  * Handler that serves as the basis for content encoding implementations.
@@ -128,6 +128,7 @@ public class EncodingHandler implements HttpHandler {
         if (size == 0) {
             if (identityProhibited || identityHandler == null) {
                 exchange.setResponseCode(406);
+                completionHandler.handleComplete();
                 return;
             }
             identityHandler.handleRequest(exchange, completionHandler);

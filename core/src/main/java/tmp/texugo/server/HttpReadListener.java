@@ -18,9 +18,6 @@
 
 package tmp.texugo.server;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
@@ -32,7 +29,9 @@ import tmp.texugo.server.httpparser.HttpExchangeBuilder;
 import tmp.texugo.server.httpparser.HttpParser;
 import tmp.texugo.server.httpparser.ParseState;
 import tmp.texugo.util.HeaderMap;
-import tmp.texugo.util.Headers;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -45,8 +44,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     private final Pool<ByteBuffer> bufferPool;
 
 
-    private volatile ParseState state = new ParseState();
-    private volatile HttpExchangeBuilder builder = new HttpExchangeBuilder();
+    private volatile ParseState state;
+    private volatile HttpExchangeBuilder builder;
 
     private final HttpHandler rootHandler;
     private final ConnectedStreamChannel underlyingChannel;
@@ -93,6 +92,10 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             }
             //TODO: we need to handle parse errors
             buffer.flip();
+            if(state == null) {
+                state = new ParseState();
+                builder = new HttpExchangeBuilder();
+            }
             int remaining = HttpParser.INSTANCE.handle(buffer, res, state, builder);
             if(remaining > 0) {
                 free = false;
@@ -106,31 +109,20 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 channel.getReadSetter().set(null);
 
                 final HttpServerExchange httpServerExchange = new HttpServerExchange(bufferPool, connection, builder.getHeaders(), new HeaderMap(), builder.getMethod(), channel, underlyingChannel);
+
+
                 try {
                     httpServerExchange.setCanonicalPath(builder.getCanonicalPath());
                     httpServerExchange.setRelativePath(builder.getCanonicalPath());
                     httpServerExchange.setRequestPath(builder.getPath());
                     httpServerExchange.setProtocol(builder.getProtocol());
 
+                    state = null;
+                    builder = null;
                     // todo - nothing will work until this part is implemented
-                    rootHandler.handleRequest(httpServerExchange, null);
+                    rootHandler.handleRequest(httpServerExchange, new HttpCompletionHandlerImpl(httpServerExchange, this));
 
-                    if(httpServerExchange.isResponseChannelAvailable()) {
-                        if(!httpServerExchange.isRequestChannelAvailable()) {
-                            TexugoLogger.REQUEST_LOGGER.getRequestCalledWithoutGetResponse();
-                        }
-                        //getResponseChannel() has not been called, this means we need to automatically write headers and
-                        //close the request
-                        if(httpServerExchange.isHttp11()) {
-                            //we set a content length of zero
-                            httpServerExchange.getResponseHeaders().add(Headers.CONTENT_LENGTH, "0");
-                        }
-                        httpServerExchange.startResponse(httpServerExchange.isCloseConnection());
-                    }
-                    state = new ParseState();
-                    builder = new HttpExchangeBuilder();
-                    channel.getReadSetter().set(this);
-                    channel.resumeReads();
+
 
                 } catch (Throwable t) {
                     //TODO: we should attempt to return a 500 status code in this situation
@@ -144,4 +136,5 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             if (free) pooled.free();
         }
     }
+
 }

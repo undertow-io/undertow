@@ -18,15 +18,6 @@
 
 package tmp.texugo.server.handlers.blocking;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.util.concurrent.ConcurrentMap;
-
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 import org.xnio.streams.ChannelInputStream;
 import org.xnio.streams.ChannelOutputStream;
 import tmp.texugo.server.HttpServerConnection;
@@ -34,10 +25,17 @@ import tmp.texugo.server.HttpServerExchange;
 import tmp.texugo.util.Attachable;
 import tmp.texugo.util.HeaderMap;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.util.concurrent.ConcurrentMap;
+
 /**
  * An HTTP server request/response exchange.  An instance of this class is constructed as soon as the request headers are
  * fully parsed.
- *
+ * <p/>
  * This class is just a wrapper around {@link HttpServerExchange}.
  *
  * @author Stuart Douglas
@@ -46,9 +44,13 @@ import tmp.texugo.util.HeaderMap;
 public final class BlockingHttpServerExchange implements Attachable {
 
     private final HttpServerExchange exchange;
+    private final OutputStream out;
+    private final InputStream in;
 
     public BlockingHttpServerExchange(final HttpServerExchange exchange) {
         this.exchange = exchange;
+        out = new BufferedOutputStream(new ChannelOutputStream(exchange.getResponseChannel()));
+        in = new BufferedInputStream(new ChannelInputStream(exchange.getRequestChannel()));
     }
 
     public String getProtocol() {
@@ -155,13 +157,11 @@ public final class BlockingHttpServerExchange implements Attachable {
     }
 
     public OutputStream getOutputStream() {
-        final StreamSinkChannel channel = exchange.getResponseChannel();
-        return channel == null ? null : new ChannelOutputStream(channel);
+        return out;
     }
 
     public InputStream getInputStream() {
-        final StreamSourceChannel channel = exchange.getRequestChannel();
-        return channel == null ? null : new ChannelInputStream(channel);
+        return in;
     }
 
     @Override
