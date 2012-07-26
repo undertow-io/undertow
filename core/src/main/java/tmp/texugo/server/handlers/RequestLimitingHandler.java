@@ -18,6 +18,8 @@
 
 package tmp.texugo.server.handlers;
 
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -44,7 +46,7 @@ public final class RequestLimitingHandler implements HttpHandler {
     private static final long MASK_MAX = longBitMask(32, 63);
     private static final long MASK_CURRENT = longBitMask(0, 30);
 
-    private final LinkedTransferQueue<QueuedRequest> queue = new LinkedTransferQueue<QueuedRequest>();
+    private final Queue<QueuedRequest> queue;
 
     /**
      * Construct a new instance. The maximum number of concurrent requests must be at least one.  The next handler
@@ -62,6 +64,13 @@ public final class RequestLimitingHandler implements HttpHandler {
         }
         state = (maximumConcurrentRequests & 0xFFFFFFFFL) << 32;
         this.nextHandler = nextHandler;
+        Queue<QueuedRequest> queue;
+        try {
+            queue = new LinkedTransferQueue<QueuedRequest>();
+        } catch (Throwable t) {
+            queue = new ConcurrentLinkedQueue<QueuedRequest>();
+        }
+        this.queue = queue;
     }
 
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
