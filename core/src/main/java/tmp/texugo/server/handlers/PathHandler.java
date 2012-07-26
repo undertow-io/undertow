@@ -44,17 +44,20 @@ public class PathHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
-        final int pos = 0;
+        int pos = 0;
         final String path = exchange.getRelativePath();
         final int length = path.length();
+
         while (pos < length) {
-            if(path.charAt(pos) == '/') {
+            if(path.charAt(pos) == '/' && pos != 0) {
                 break;
             }
+            ++pos;
         }
         final String part = path.substring(0, pos);
         final HttpHandler next = paths.get(part);
         if(next != null) {
+            exchange.setRelativePath(path.substring(pos));
             next.handleRequest(exchange, completionHandler);
         } else {
             defaultHandler.handleRequest(exchange, completionHandler);
