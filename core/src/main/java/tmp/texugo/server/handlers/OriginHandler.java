@@ -38,6 +38,7 @@ import java.util.Set;
  */
 public class OriginHandler implements HttpHandler {
 
+    private volatile ResponseCodeHandler originFailedHandler = ResponseCodeHandler.HANDLE_403;
     private volatile Set<String> allowedOrigins = new HashSet<String>();
     private volatile boolean requireAllOrigins = true;
     private volatile boolean requireOriginHeader = true;
@@ -53,8 +54,7 @@ public class OriginHandler implements HttpHandler {
                 if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
                     TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to lack of Origin: header", exchange.getRequestPath());
                 }
-                exchange.setResponseCode(403);
-                completionHandler.handleComplete();
+                originFailedHandler.handleRequest(exchange, completionHandler);
                 return;
             }
         } else {
@@ -70,8 +70,7 @@ public class OriginHandler implements HttpHandler {
                     if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to Origin %s not being in the allowed origins list", exchange.getRequestPath(), header);
                     }
-                    exchange.setResponseCode(403);
-                    completionHandler.handleComplete();
+                    originFailedHandler.handleRequest(exchange, completionHandler);
                     return;
                 }
             }
@@ -79,8 +78,7 @@ public class OriginHandler implements HttpHandler {
                 if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
                     TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s as none of the specified origins %s were in the allowed origins list", exchange.getRequestPath(), origin);
                 }
-                exchange.setResponseCode(403);
-                completionHandler.handleComplete();
+                originFailedHandler.handleRequest(exchange, completionHandler);
                 return;
             }
         }
@@ -140,5 +138,13 @@ public class OriginHandler implements HttpHandler {
 
     public void setNext(final HttpHandler next) {
         this.next = next;
+    }
+
+    public ResponseCodeHandler getOriginFailedHandler() {
+        return originFailedHandler;
+    }
+
+    public void setOriginFailedHandler(ResponseCodeHandler originFailedHandler) {
+        this.originFailedHandler = originFailedHandler;
     }
 }

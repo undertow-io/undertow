@@ -21,6 +21,7 @@ package tmp.texugo.server.handlers.encoding;
 import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
+import tmp.texugo.server.handlers.ResponseCodeHandler;
 import tmp.texugo.util.Headers;
 
 import java.util.ArrayList;
@@ -50,6 +51,8 @@ public class EncodingHandler implements HttpHandler {
 
     private volatile Map<String, Encoding> encodingMap = Collections.emptyMap();
 
+    private volatile HttpHandler noEncodingHandler = ResponseCodeHandler.HANDLE_406;
+
     private static final String IDENTITY = "identity";
 
     @Override
@@ -61,8 +64,7 @@ public class EncodingHandler implements HttpHandler {
                 identityHandler.handleRequest(exchange, completionHandler);
             } else {
                 //we don't have an identity handler
-                exchange.setResponseCode(406);
-                completionHandler.handleComplete();
+                noEncodingHandler.handleRequest(exchange, completionHandler);
             }
             return;
         }
@@ -127,8 +129,7 @@ public class EncodingHandler implements HttpHandler {
         int size = found.size();
         if (size == 0) {
             if (identityProhibited || identityHandler == null) {
-                exchange.setResponseCode(406);
-                completionHandler.handleComplete();
+                noEncodingHandler.handleRequest(exchange, completionHandler);
                 return;
             }
             identityHandler.handleRequest(exchange, completionHandler);
@@ -201,6 +202,14 @@ public class EncodingHandler implements HttpHandler {
         final Map<String, Encoding> encodingMap = new HashMap<String, Encoding>(this.encodingMap);
         encodingMap.remove(encoding);
         this.encodingMap = Collections.unmodifiableMap(encodingMap);
+    }
+
+    public HttpHandler getNoEncodingHandler() {
+        return noEncodingHandler;
+    }
+
+    public void setNoEncodingHandler(HttpHandler noEncodingHandler) {
+        this.noEncodingHandler = noEncodingHandler;
     }
 
     private static final class Encoding implements Comparable<Encoding> {

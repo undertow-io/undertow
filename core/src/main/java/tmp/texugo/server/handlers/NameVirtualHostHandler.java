@@ -18,16 +18,16 @@
 
 package tmp.texugo.server.handlers;
 
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
-
 import tmp.texugo.TexugoMessages;
 import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
 import tmp.texugo.util.Headers;
+
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A {@link HttpHandler} that implements virtual hosts based on the <code>Host:</code> http header
