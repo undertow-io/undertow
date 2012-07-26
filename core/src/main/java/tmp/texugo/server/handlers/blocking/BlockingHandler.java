@@ -18,7 +18,6 @@
 
 package tmp.texugo.server.handlers.blocking;
 
-import org.xnio.IoUtils;
 import tmp.texugo.TexugoLogger;
 import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
@@ -67,7 +66,6 @@ public final class BlockingHandler implements HttpHandler {
                         TexugoLogger.REQUEST_LOGGER.debugf(t, "Blocking request failed %s", blockingExchange);
                     }
                 } finally {
-                    IoUtils.safeClose(blockingExchange.getOutputStream());
                     completionHandler.handleComplete();
                 }
             }

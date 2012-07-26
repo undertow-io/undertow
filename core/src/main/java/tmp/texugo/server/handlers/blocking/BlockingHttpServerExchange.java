@@ -38,19 +38,19 @@ import java.util.concurrent.ConcurrentMap;
  * <p/>
  * This class is just a wrapper around {@link HttpServerExchange}.
  *
+ * This class is not thread safe, it must be externally synchronized if it is used by multiple threads.
+ *
  * @author Stuart Douglas
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class BlockingHttpServerExchange implements Attachable {
 
     private final HttpServerExchange exchange;
-    private final OutputStream out;
-    private final InputStream in;
+    private OutputStream out;
+    private InputStream in;
 
     public BlockingHttpServerExchange(final HttpServerExchange exchange) {
         this.exchange = exchange;
-        out = new BufferedOutputStream(new ChannelOutputStream(exchange.getResponseChannel()));
-        in = new BufferedInputStream(new ChannelInputStream(exchange.getRequestChannel()));
     }
 
     public String getProtocol() {
@@ -157,10 +157,16 @@ public final class BlockingHttpServerExchange implements Attachable {
     }
 
     public OutputStream getOutputStream() {
+        if(out == null) {
+            out = new BufferedOutputStream(new ChannelOutputStream(exchange.getResponseChannel()));
+        }
         return out;
     }
 
     public InputStream getInputStream() {
+        if(in == null) {
+            in = new BufferedInputStream(new ChannelInputStream(exchange.getRequestChannel()));
+        }
         return in;
     }
 

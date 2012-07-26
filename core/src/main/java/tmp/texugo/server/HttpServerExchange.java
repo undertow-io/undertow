@@ -18,14 +18,6 @@
 
 package tmp.texugo.server;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
@@ -40,6 +32,14 @@ import tmp.texugo.util.HeaderMap;
 import tmp.texugo.util.Headers;
 import tmp.texugo.util.Protocols;
 import tmp.texugo.util.StatusCodes;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * An HTTP server request/response exchange.  An instance of this class is constructed as soon as the request headers are
@@ -75,6 +75,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private final GatedStreamSinkChannel gatedResponseChannel;
     private final StreamSinkChannel underlyingResponseChannel;
+    private StreamSinkChannel wrappedResponseChannel;
 
     private boolean responseChannelAvailable = true;
     private boolean requestChannelAvailable = true;
@@ -309,6 +310,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         for (ChannelWrapper<StreamSinkChannel> wrapper : responseWrappers) {
             channel = wrapper.wrap(channel, this);
         }
+        this.wrappedResponseChannel = channel;
         return channel;
     }
 
@@ -317,6 +319,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public boolean isResponseChannelAvailable() {
         return responseChannelAvailable;
+    }
+
+    /**
+     * Gets the wrapped response channel for this request. If {@link #getResponseChannel()} has not been called this
+     * will return null
+     */
+    StreamSinkChannel getWrappedResponseChannel() {
+        return wrappedResponseChannel;
     }
 
     /**

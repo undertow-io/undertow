@@ -44,6 +44,10 @@ public interface TexugoLogger extends BasicLogger {
     void getRequestCalledWithoutGetResponse();
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5001, value = "An exception occured processing the request")
+    @Message(id = 5001, value = "An exception occurred processing the request")
     void exceptionProcessingRequest(@Cause Throwable cause);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5002, value = "An exception occurred closing the response channel")
+    void errorClosingResponseChannel(@Cause Exception e);
 }
