@@ -120,9 +120,11 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     state = null;
                     builder = null;
                     // todo - nothing will work until this part is implemented
-                    rootHandler.handleRequest(httpServerExchange, new HttpCompletionHandlerImpl(httpServerExchange, this));
-
-
+                    rootHandler.handleRequest(httpServerExchange, new HttpCompletionHandler() {
+                        public void handleComplete() {
+                            httpServerExchange.cleanup();
+                        }
+                    });
 
                 } catch (Throwable t) {
                     //TODO: we should attempt to return a 500 status code in this situation

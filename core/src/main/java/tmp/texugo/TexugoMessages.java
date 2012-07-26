@@ -44,4 +44,10 @@ public interface TexugoMessages {
 
     @Message(id = 5, value = "getRequestChannel() has already been called")
     IllegalStateException requestChannelAlreadyProvided();
+
+    @Message(id = 6, value = "Failed to acquire request channel")
+    IllegalStateException failedToAcquireRequestChannel();
+
+    @Message(id = 7, value = "Failed to acquire response channel")
+    IllegalStateException failedToAcquireResponseChannel();
 }

@@ -35,6 +35,7 @@
     <name>Texugo Testsuite</name>
 
     <properties>
+        <test.level>INFO</test.level>
     </properties>
 
     <dependencies>
@@ -63,6 +64,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.jboss.logmanager</groupId>
+            <artifactId>jboss-logmanager</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
@@ -79,6 +86,8 @@
                     <systemPropertyVariables>
                         <default.server.address>localhost</default.server.address>
                         <default.server.port>7777</default.server.port>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <test.level>${test.level}</test.level>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

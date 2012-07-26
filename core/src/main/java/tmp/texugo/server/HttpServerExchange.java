@@ -18,13 +18,18 @@
 
 package tmp.texugo.server;
 
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.channels.AssembledConnectedStreamChannel;
+import org.xnio.channels.Channels;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.channels.SuspendableReadChannel;
 import tmp.texugo.TexugoMessages;
 import tmp.texugo.util.AbstractAttachable;
 import tmp.texugo.util.GatedStreamSinkChannel;
@@ -36,10 +41,14 @@ import tmp.texugo.util.StatusCodes;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Deque;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.intBitMask;
+import static org.xnio.IoUtils.safeClose;
 
 /**
  * An HTTP server request/response exchange.  An instance of this class is constructed as soon as the request headers are
@@ -48,45 +57,57 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class HttpServerExchange extends AbstractAttachable {
+    // immutable state
 
-
+    @SuppressWarnings("unused") // todo for now
     private final Pool<ByteBuffer> bufferPool;
     private final HttpServerConnection connection;
-    private HeaderMap requestHeaders;
-    private HeaderMap responseHeaders;
-    private int responseCode = 200;
-    private String requestMethod;
-    private String protocol;
-    private String requestScheme;
-    /**
-     * The original request path.
-     */
-    private String requestPath;
-    /**
-     * The canonical version of the original path.
-     */
-    private String canonicalPath;
-    /**
-     * The remaining unresolved portion of the canonical path.
-     */
-    private String relativePath;
-
-    private final StreamSourceChannel requestChannel;
+    private final HeaderMap requestHeaders;
+    private final HeaderMap responseHeaders;
 
     private final GatedStreamSinkChannel gatedResponseChannel;
     private final StreamSinkChannel underlyingResponseChannel;
-    private StreamSinkChannel wrappedResponseChannel;
+    private final StreamSourceChannel underlyingRequestChannel;
 
-    private boolean responseChannelAvailable = true;
-    private boolean requestChannelAvailable = true;
+    private final Object gatePermit = new Object();
 
-    private final List<ChannelWrapper<StreamSinkChannel>> responseWrappers = new ArrayList<ChannelWrapper<StreamSinkChannel>>();
+    // todo: protocol should be immutable
+    private volatile String protocol;
 
+    // mutable state
 
+    private volatile int responseState = 200;
+    private volatile String requestMethod;
+    private volatile String requestScheme;
     /**
-     * Set to true once the response headers etc have been written out
+     * The original request path.
      */
-    private boolean responseStarted = false;
+    private volatile String requestPath;
+    /**
+     * The canonical version of the original path.
+     */
+    private volatile String canonicalPath;
+    /**
+     * The remaining unresolved portion of the canonical path.
+     */
+    private volatile String relativePath;
+
+    private static final ChannelWrapper<StreamSourceChannel>[] NO_SOURCE_WRAPPERS = new ChannelWrapper[0];
+    private static final ChannelWrapper<StreamSinkChannel>[] NO_SINK_WRAPPERS = new ChannelWrapper[0];
+
+    private volatile ChannelWrapper[] requestWrappers = NO_SOURCE_WRAPPERS;
+    private volatile ChannelWrapper[] responseWrappers = NO_SINK_WRAPPERS;
+
+    private static final AtomicReferenceFieldUpdater<HttpServerExchange, ChannelWrapper[]> requestWrappersUpdater = AtomicReferenceFieldUpdater.newUpdater(HttpServerExchange.class, ChannelWrapper[].class, "requestWrappers");
+    private static final AtomicReferenceFieldUpdater<HttpServerExchange, ChannelWrapper[]> responseWrappersUpdater = AtomicReferenceFieldUpdater.newUpdater(HttpServerExchange.class, ChannelWrapper[].class, "responseWrappers");
+
+    private static final AtomicIntegerFieldUpdater<HttpServerExchange> responseStateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpServerExchange.class, "responseState");
+
+    private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
+    private static final int FLAG_RESPONSE_SENT = 1 << 10;
+    private static final int FLAG_RESPONSE_TERMINATED = 1 << 11;
+    private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
+    private static final int FLAG_CLEANUP = 1 << 13;
 
     protected HttpServerExchange(final Pool<ByteBuffer> bufferPool, final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final String requestMethod, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
         this.bufferPool = bufferPool;
@@ -94,10 +115,9 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.requestHeaders = requestHeaders;
         this.responseHeaders = responseHeaders;
         this.requestMethod = requestMethod;
-        this.requestChannel = requestChannel;
+        this.underlyingRequestChannel = requestChannel;
         this.underlyingResponseChannel = responseChannel;
-        this.gatedResponseChannel = new GatedStreamSinkChannel(responseChannel, this, false, true);
-        this.gatedResponseChannel.getWriteWithGateClosedSetter().set(new LazyHeaderWriteListener(this));
+        this.gatedResponseChannel = new GatedStreamSinkChannel(responseChannel, gatePermit, false, true, new LazyHeaderWriteListener());
     }
 
     public String getProtocol() {
@@ -126,7 +146,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @return <code>true</code> if the connection should be closed once the response has been written
      */
-    public boolean isCloseConnection() {
+    boolean isCloseConnection() {
         if (!isHttp11()) {
             return true;
         }
@@ -196,7 +216,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public ConnectedStreamChannel upgradeChannel() throws IllegalStateException, IOException {
         setResponseCode(101);
-        startResponse(false);
         return new AssembledConnectedStreamChannel(getRequestChannel(), getResponseChannel());
     }
 
@@ -240,7 +259,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return <code>true</code> If the response has already been started
      */
     public boolean isResponseStarted() {
-        return responseStarted;
+        return allAreSet(responseState, FLAG_RESPONSE_SENT);
     }
 
     /**
@@ -248,28 +267,26 @@ public final class HttpServerExchange extends AbstractAttachable {
      * may cause the next request to immediately be processed.  The {@link StreamSourceChannel#close()} or {@link StreamSourceChannel#shutdownReads()}
      * method must be called at some point after the request is processed to prevent resource leakage and to allow
      * the next request to proceed.  Any unread content will be discarded.
-     * <p/>
-     * This method may only be called once. A handler that calls this method *MUST* also call {@link #getResponseChannel()}
-     * otherwise the exchange will be closed once the handler chain completes, which will cancel async reads on this
-     * Channel.
      *
-     * @return the channel for the inbound request
+     * @return the channel for the inbound request, or {@code null} if another party already acquired the channel
      */
     public StreamSourceChannel getRequestChannel() {
-        if (!requestChannelAvailable) {
-            throw TexugoMessages.MESSAGES.requestChannelAlreadyProvided();
+        final ChannelWrapper[] wrappers = requestWrappersUpdater.getAndSet(this, null);
+        if (wrappers == null) {
+            return null;
         }
-        requestChannelAvailable = false;
-        return requestChannel;
-    }
-
-    //TODO: figure out how to handle this properly
-    StreamSourceChannel getUnderlyingRequestChannel() {
-        return requestChannel;
+        StreamSourceChannel channel = underlyingRequestChannel;
+        for (ChannelWrapper wrapper : wrappers) {
+            channel = ((ChannelWrapper<StreamSourceChannel>)wrapper).wrap(channel, this);
+            if (channel == null) {
+                throw TexugoMessages.MESSAGES.failedToAcquireRequestChannel();
+            }
+        }
+        return channel;
     }
 
     public boolean isRequestChannelAvailable() {
-        return requestChannelAvailable;
+        return requestWrappers != null;
     }
 
     /**
@@ -284,33 +301,28 @@ public final class HttpServerExchange extends AbstractAttachable {
      * method must be called at some point after the request is processed to prevent resource leakage and to allow
      * the next request to proceed.  Closing a fixed-length response before the corresponding number of bytes has
      * been written will cause the connection to be reset and subsequent requests to fail; thus it is important to
-     * ensure that the proper content length is delivered when one is specified.  Multiple calls to this method will
-     * return the same channel.  The response channel may not be writable until after the response headers have been
-     * sent.
+     * ensure that the proper content length is delivered when one is specified.  The response channel may not be
+     * writable until after the response headers have been sent.
      * <p/>
-     * This method must only be called at most once per request. If this method is not called then the exchange will
-     * be automatically closed once the handler chain finishes. If this method is called then the request is terminated
-     * once the stream is closed.
+     * If this method is not called then an empty or default response body will be used, depending on the response code set.
      * <p/>
-     * The returned stream will lazily write out headers when the first byte is written to the stream, or when
+     * The returned stream will lazily begin to write out headers when the first write request is initiated, or when
      * {@link java.nio.channels.Channel#close()} is called on the channel with no content being written.
-     * <p/>
-     * This method *MUST* be called if any further processing is to occur on this exchange in another thread, (including
-     * async reads from the request channel), otherwise the request will be automatically closed when the handler chain
-     * completes.
      *
-     * @return the response channel
+     * @return the response channel, or {@code null} if another party already acquired the channel
      */
     public StreamSinkChannel getResponseChannel() {
-        if (!responseChannelAvailable) {
-            throw TexugoMessages.MESSAGES.responseChannelAlreadyProvided();
+        final ChannelWrapper[] wrappers = responseWrappersUpdater.getAndSet(this, null);
+        if (wrappers == null) {
+            return null;
         }
-        responseChannelAvailable = false;
         StreamSinkChannel channel = gatedResponseChannel;
-        for (ChannelWrapper<StreamSinkChannel> wrapper : responseWrappers) {
-            channel = wrapper.wrap(channel, this);
+        for (ChannelWrapper wrapper : wrappers) {
+            channel = ((ChannelWrapper<StreamSinkChannel>)wrapper).wrap(channel, this);
+            if (channel == null) {
+                throw TexugoMessages.MESSAGES.failedToAcquireResponseChannel();
+            }
         }
-        this.wrappedResponseChannel = channel;
         return channel;
     }
 
@@ -318,15 +330,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return <code>true</code> if {@link #getResponseChannel()} has not been called
      */
     public boolean isResponseChannelAvailable() {
-        return responseChannelAvailable;
-    }
-
-    /**
-     * Gets the wrapped response channel for this request. If {@link #getResponseChannel()} has not been called this
-     * will return null
-     */
-    StreamSinkChannel getWrappedResponseChannel() {
-        return wrappedResponseChannel;
+        return responseWrappers != null;
     }
 
     /**
@@ -337,22 +341,57 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException if a response or upgrade was already sent
      */
     public void setResponseCode(final int responseCode) {
-        if (responseStarted) {
-            throw TexugoMessages.MESSAGES.responseAlreadyStarted();
+        if (responseCode < 0 || responseCode > 999) {
+            throw new IllegalArgumentException("Invalid response code");
         }
-        this.responseCode = responseCode;
+        int oldVal, newVal;
+        do {
+            oldVal = responseState;
+            if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
+                throw TexugoMessages.MESSAGES.responseAlreadyStarted();
+            }
+            newVal = oldVal & ~MASK_RESPONSE_CODE | responseCode & MASK_RESPONSE_CODE;
+        } while (! responseStateUpdater.compareAndSet(this, oldVal, newVal));
     }
 
     /**
-     * Adds a {@link ChannelWrapper} to
+     * Adds a {@link ChannelWrapper} to the request wrapper chain.
      *
-     * @param wrapper The wrapper
+     * @param wrapper the wrapper
+     */
+    public void addRequestWrapper(final ChannelWrapper<StreamSinkChannel> wrapper) {
+        ChannelWrapper[] oldVal;
+        ChannelWrapper[] newVal;
+        int oldLen;
+        do {
+            oldVal = requestWrappers;
+            if (oldVal == null) {
+                throw TexugoMessages.MESSAGES.requestChannelAlreadyProvided();
+            }
+            oldLen = oldVal.length;
+            newVal = Arrays.copyOf(oldVal, oldLen + 1);
+            newVal[oldLen] = wrapper;
+        } while (! requestWrappersUpdater.compareAndSet(this, oldVal, newVal));
+    }
+
+    /**
+     * Adds a {@link ChannelWrapper} to the response wrapper chain.
+     *
+     * @param wrapper the wrapper
      */
     public void addResponseWrapper(final ChannelWrapper<StreamSinkChannel> wrapper) {
-        if (!responseChannelAvailable) {
-            throw TexugoMessages.MESSAGES.responseChannelAlreadyProvided();
-        }
-        responseWrappers.add(wrapper);
+        ChannelWrapper[] oldVal;
+        ChannelWrapper[] newVal;
+        int oldLen;
+        do {
+            oldVal = responseWrappers;
+            if (oldVal == null) {
+                throw TexugoMessages.MESSAGES.responseChannelAlreadyProvided();
+            }
+            oldLen = oldVal.length;
+            newVal = Arrays.copyOf(oldVal, oldLen + 1);
+            newVal[oldLen] = wrapper;
+        } while (! responseWrappersUpdater.compareAndSet(this, oldVal, newVal));
     }
 
     /**
@@ -361,7 +400,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the response code
      */
     public int getResponseCode() {
-        return responseCode;
+        return responseState & MASK_RESPONSE_CODE;
     }
 
     /**
@@ -369,8 +408,16 @@ public final class HttpServerExchange extends AbstractAttachable {
      * the socket or implement a transfer coding.
      */
     void terminateResponse() {
-        IoUtils.safeClose(underlyingResponseChannel);
-        IoUtils.safeClose(requestChannel);
+        int oldVal, newVal;
+        do {
+            oldVal = responseState;
+            if (allAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
+                // idempotent
+                return;
+            }
+            newVal = oldVal | FLAG_RESPONSE_TERMINATED;
+        } while (! responseStateUpdater.compareAndSet(this, oldVal, newVal));
+        // todo - let next exchange start pushing headers
     }
 
     /**
@@ -390,22 +437,25 @@ public final class HttpServerExchange extends AbstractAttachable {
      * <p/>
      * TODO: make this work properly
      *
-     * @param closeWhenDone If this exchange should be closed once the response is sent
      * @throws IllegalStateException if the response headers were already sent
      */
-    void startResponse(boolean closeWhenDone) throws IllegalStateException {
-        if (responseStarted) {
-            TexugoMessages.MESSAGES.responseAlreadyStarted();
-        }
+    void startResponse() throws IllegalStateException {
+        int oldVal, newVal;
+        do {
+            oldVal = responseState;
+            if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
+                throw TexugoMessages.MESSAGES.responseAlreadyStarted();
+            }
+            newVal = oldVal | FLAG_RESPONSE_SENT;
+        } while (! responseStateUpdater.compareAndSet(this, oldVal, newVal));
         final HeaderMap responseHeaders = this.responseHeaders;
-        responseHeaders.lock();
-        responseStarted = true;
 
+        responseHeaders.lock();
         try {
             //TODO: we should not be using a StringBuilder here, we should be wiring this stuff directly into a buffer
             final StringBuilder response = new StringBuilder(protocol);
             response.append(' ');
-            final int responseCode = this.responseCode;
+            final int responseCode = this.responseState & MASK_RESPONSE_CODE;
             response.append(responseCode);
             response.append(' ');
             response.append(StatusCodes.getReason(responseCode));
@@ -423,78 +473,114 @@ public final class HttpServerExchange extends AbstractAttachable {
             response.append("\r\n");
 
             final String result = response.toString();
-            ResponseWriteListener responseWriteListener = new ResponseWriteListener(ByteBuffer.wrap(result.getBytes()), result.length(), this, closeWhenDone, gatedResponseChannel);
+            ResponseWriteListener responseWriteListener = new ResponseWriteListener(ByteBuffer.wrap(result.getBytes()), gatedResponseChannel);
             underlyingResponseChannel.getWriteSetter().set(responseWriteListener);
             underlyingResponseChannel.resumeWrites();
         } catch (RuntimeException e) {
-            IoUtils.safeClose(requestChannel);
-            IoUtils.safeClose(requestChannel);
+            IoUtils.safeClose(underlyingRequestChannel);
+            IoUtils.safeClose(underlyingResponseChannel);
             throw e;
         }
     }
 
-    private static class ResponseWriteListener implements ChannelListener<StreamSinkChannel> {
+    StreamSourceChannel getUnderlyingRequestChannel() {
+        return underlyingRequestChannel;
+    }
+
+    void cleanup() {
+        // All other cleanup handlers have been called.  We will inspect the state of the exchange
+        // and attempt to fix any leftover or broken crap as best as we can.
+        //
+        // At this point if any channels were not acquired, we know that not even default handlers have
+        // handled the request, meaning we basically have no idea what their state is; the response headers
+        // may not even be valid.
+        //
+        // The only thing we can do is to determine if the request and reply were both terminated; if not,
+        // consume the request body nicely, send whatever HTTP response we have, and close down the connection.
+        int oldVal, newVal;
+        do {
+            oldVal = responseState;
+            if (allAreSet(oldVal, FLAG_CLEANUP)) {
+                return;
+            }
+            newVal = oldVal | FLAG_CLEANUP | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
+        } while (! responseStateUpdater.compareAndSet(this, oldVal, newVal));
+        if (allAreClear(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) try {
+            // Attempt a nice shutdown.
+            long res;
+            do {
+                res = Channels.drain(underlyingRequestChannel, Long.MAX_VALUE);
+            } while (res > 0);
+            if (res == 0) {
+                underlyingRequestChannel.getReadSetter().set(ChannelListeners.<StreamSourceChannel>drainListener(Long.MAX_VALUE, new ChannelListener<SuspendableReadChannel>() {
+                    public void handleEvent(final SuspendableReadChannel channel) {
+                        IoUtils.safeShutdownReads(channel);
+                    }
+                }, ChannelListeners.closingChannelExceptionHandler()));
+                underlyingRequestChannel.resumeReads();
+            }
+            gatedResponseChannel.shutdownWrites();
+            if (! gatedResponseChannel.flush()) {
+                gatedResponseChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, ChannelListeners.closingChannelExceptionHandler()));
+                gatedResponseChannel.resumeWrites();
+            }
+        } catch (Throwable t) {
+            // All sorts of things could go wrong, from runtime exceptions to java.io.IOException to errors.
+            // Just kill off the connection, it's fucked beyond repair.
+            safeClose(underlyingRequestChannel);
+            safeClose(gatedResponseChannel);
+            safeClose(underlyingResponseChannel);
+            safeClose(connection);
+        } else if (anyAreClear(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+            // Only one of the two channels were terminated - this is bad, because it means
+            // we may well have just closed one half of our socket but not the other.  Just
+            // kill the socket.
+            safeClose(underlyingRequestChannel);
+            safeClose(gatedResponseChannel);
+            safeClose(connection);
+        }
+        // Otherwise we're good; a transfer coding handler took care of things.
+    }
+
+    private class ResponseWriteListener implements ChannelListener<StreamSinkChannel> {
 
         private final ByteBuffer buffer;
-        private int remaining;
-        private final HttpServerExchange exchange;
-        private final boolean closeWhenDone;
         private final GatedStreamSinkChannel gatedResponseChannel;
 
-        private ResponseWriteListener(final ByteBuffer buffer, final int remaining, final HttpServerExchange exchange, final boolean closeWhenDone, final GatedStreamSinkChannel gatedResponseChannel) {
+        private ResponseWriteListener(final ByteBuffer buffer, final GatedStreamSinkChannel gatedResponseChannel) {
             this.buffer = buffer;
-            this.remaining = remaining;
-            this.exchange = exchange;
-            this.closeWhenDone = closeWhenDone;
             this.gatedResponseChannel = gatedResponseChannel;
         }
 
         @Override
         public void handleEvent(final StreamSinkChannel channel) {
             try {
-                int c = channel.write(buffer);
-                remaining = remaining - c;
-                if (remaining > 0) {
-                    channel.resumeWrites();
+                int c;
+                do {
+                    c = channel.write(buffer);
+                } while (buffer.hasRemaining() && c > 0);
+                if (buffer.hasRemaining()) {
+                    return;
                 } else {
-                    gatedResponseChannel.openGate(exchange);
-                    if(closeWhenDone) {
-                        exchange.terminateResponse();
-                    }
+                    // channel will auto-close if the gated channel was closed
+                    gatedResponseChannel.openGate(gatePermit);
                 }
             } catch (IOException e) {
                 //TODO: we need some consistent way of handling IO exception
                 IoUtils.safeClose(channel);
-                IoUtils.safeClose(exchange.getRequestChannel());
+                IoUtils.safeClose(connection);
             }
-        }
-
-        public int getRemaining() {
-            return remaining;
         }
     }
 
     /**
      * Listener that starts the response when a gated stream is written to for the first time.
      */
-    private static final class LazyHeaderWriteListener implements ChannelListener<GatedStreamSinkChannel> {
-
-        private static final AtomicIntegerFieldUpdater<LazyHeaderWriteListener> RESPONSE_STARTED_UPDATER = AtomicIntegerFieldUpdater.newUpdater(LazyHeaderWriteListener.class, "started");
-
-        @SuppressWarnings("unused")
-        private volatile int started = 0;
-
-        private final HttpServerExchange exchange;
-
-        private LazyHeaderWriteListener(final HttpServerExchange exchange) {
-            this.exchange = exchange;
-        }
+    private final class LazyHeaderWriteListener implements ChannelListener<GatedStreamSinkChannel> {
 
         @Override
         public void handleEvent(final GatedStreamSinkChannel channel) {
-            if(RESPONSE_STARTED_UPDATER.compareAndSet(this, 0, 1)) {
-                exchange.startResponse(false);
-            }
+            startResponse();
         }
     }
 }
