@@ -29,12 +29,17 @@ import tmp.texugo.server.HttpServerExchange;
  */
 public final class ResponseCodeHandler implements HttpHandler {
 
+    /**
+     * A handler which sets a 403 code.
+     */
     public static final ResponseCodeHandler HANDLE_403 = new ResponseCodeHandler(403);
     /**
      * A handler which sets a 404 code.
      */
     public static final ResponseCodeHandler HANDLE_404 = new ResponseCodeHandler(404);
-
+    /**
+     * A handler which sets a 406 code.
+     */
     public static final ResponseCodeHandler HANDLE_406 = new ResponseCodeHandler(406);
     /**
      * A handler which sets a 500 code.
