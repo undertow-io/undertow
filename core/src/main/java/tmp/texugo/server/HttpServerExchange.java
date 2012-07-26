@@ -141,7 +141,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * If this is not a HTTP/1.1 request, or if the Connection: close header was sent we need to close the channel
      *
      * @return <code>true</code> if the connection should be closed once the response has been written
@@ -159,7 +158,6 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
         return false;
-
     }
 
     public String getRequestMethod() {

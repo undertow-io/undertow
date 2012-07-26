@@ -18,16 +18,58 @@
 
 package tmp.texugo.server.handlers;
 
+import tmp.texugo.server.HttpCompletionHandler;
+import tmp.texugo.server.HttpHandler;
+import tmp.texugo.server.HttpServerExchange;
+import tmp.texugo.util.CopyOnWriteMap;
+
+import java.util.concurrent.ConcurrentMap;
+
 /**
  * Handler that dispatches to a given handler based of a prefix match of the path.
- *
- *
- * TODO: this is pretty inefficient, it really needs a Radix tree
+ * <p/>
+ * This only matches a single level of a request, e.g if you have a request that takes the form:
+ * <p/>
+ * /foo/bar
+ * <p/>
+ * This handler can only match a single part of this request (namely /foo). To match the full path
+ * two of these handlers must be chained together.
  *
  * @author Stuart Douglas
  */
-public class PathHandler {
+public class PathHandler implements HttpHandler {
 
+    private volatile HttpHandler defaultHandler = ResponseCodeHandler.HANDLE_404;
+    private final ConcurrentMap<String, HttpHandler> paths = new CopyOnWriteMap<String, HttpHandler>();
 
+    @Override
+    public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
+        final int pos = 0;
+        final String path = exchange.getRelativePath();
+        final int length = path.length();
+        while (pos < length) {
+            if(path.charAt(pos) == '/') {
+                break;
+            }
+        }
+        final String part = path.substring(0, pos);
+        final HttpHandler next = paths.get(part);
+        if(next != null) {
+            next.handleRequest(exchange, completionHandler);
+        } else {
+            defaultHandler.handleRequest(exchange, completionHandler);
+        }
+    }
 
+    public HttpHandler getDefaultHandler() {
+        return defaultHandler;
+    }
+
+    public void setDefaultHandler(HttpHandler defaultHandler) {
+        this.defaultHandler = defaultHandler;
+    }
+
+    public ConcurrentMap<String, HttpHandler> getPaths() {
+        return paths;
+    }
 }

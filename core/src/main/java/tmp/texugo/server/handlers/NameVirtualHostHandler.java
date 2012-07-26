@@ -22,11 +22,10 @@ import tmp.texugo.TexugoMessages;
 import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
+import tmp.texugo.util.CopyOnWriteMap;
 import tmp.texugo.util.Headers;
 
-import java.util.Collections;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -38,14 +37,14 @@ import java.util.Map;
 public class NameVirtualHostHandler implements HttpHandler {
 
     private volatile HttpHandler defaultHandler;
-    private volatile Map<String, HttpHandler> hosts;
+    private final Map<String, HttpHandler> hosts;
 
     public NameVirtualHostHandler(final HttpHandler defaultHandler, final Map<String, HttpHandler> hosts) {
         if(defaultHandler == null) {
             throw TexugoMessages.MESSAGES.noDefaultHandlerSpecified();
         }
         this.defaultHandler = defaultHandler;
-        this.hosts = Collections.unmodifiableMap(new HashMap<String, HttpHandler>(hosts));
+        this.hosts = new CopyOnWriteMap<String, HttpHandler>(hosts);
     }
 
     @Override
@@ -76,14 +75,10 @@ public class NameVirtualHostHandler implements HttpHandler {
     }
 
     public synchronized void addHost(final String host, final HttpHandler handler) {
-        final Map<String, HttpHandler> hosts = new HashMap<String, HttpHandler>(this.hosts);
         hosts.put(host, handler);
-        this.hosts = Collections.unmodifiableMap(hosts);
     }
 
     public synchronized void removeHost(final String host) {
-        final Map<String, HttpHandler> hosts = new HashMap<String, HttpHandler>(this.hosts);
         hosts.remove(host);
-        this.hosts = Collections.unmodifiableMap(hosts);
     }
 }

@@ -22,12 +22,11 @@ import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
 import tmp.texugo.server.handlers.ResponseCodeHandler;
+import tmp.texugo.util.CopyOnWriteMap;
 import tmp.texugo.util.Headers;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +48,7 @@ public class EncodingHandler implements HttpHandler {
 
     private volatile HttpHandler identityHandler;
 
-    private volatile Map<String, Encoding> encodingMap = Collections.emptyMap();
+    private final Map<String, Encoding> encodingMap = new CopyOnWriteMap<String, Encoding>();
 
     private volatile HttpHandler noEncodingHandler = ResponseCodeHandler.HANDLE_406;
 
@@ -193,15 +192,11 @@ public class EncodingHandler implements HttpHandler {
     }
 
     public synchronized void addEncodingHandler(final String encoding, final HttpHandler handler, int priority) {
-        final Map<String, Encoding> hosts = new HashMap<String, Encoding>(this.encodingMap);
-        hosts.put(encoding, new Encoding(handler, priority));
-        this.encodingMap = Collections.unmodifiableMap(hosts);
+        this.encodingMap.put(encoding, new Encoding(handler, priority));
     }
 
     public synchronized void removeEncodingHandler(final String encoding) {
-        final Map<String, Encoding> encodingMap = new HashMap<String, Encoding>(this.encodingMap);
         encodingMap.remove(encoding);
-        this.encodingMap = Collections.unmodifiableMap(encodingMap);
     }
 
     public HttpHandler getNoEncodingHandler() {
