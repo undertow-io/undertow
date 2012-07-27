@@ -18,17 +18,18 @@
 
 package tmp.texugo.server.handlers.encoding;
 
-import tmp.texugo.server.HttpCompletionHandler;
-import tmp.texugo.server.HttpHandler;
-import tmp.texugo.server.HttpServerExchange;
-import tmp.texugo.server.handlers.ResponseCodeHandler;
-import tmp.texugo.util.CopyOnWriteMap;
-import tmp.texugo.util.Headers;
-
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+
+import tmp.texugo.server.HttpCompletionHandler;
+import tmp.texugo.server.HttpHandler;
+import tmp.texugo.server.HttpServerExchange;
+import tmp.texugo.server.handlers.HttpHandlers;
+import tmp.texugo.server.handlers.ResponseCodeHandler;
+import tmp.texugo.util.CopyOnWriteMap;
+import tmp.texugo.util.Headers;
 
 /**
  * Handler that serves as the basis for content encoding implementations.
@@ -46,7 +47,7 @@ import java.util.Map;
  */
 public class EncodingHandler implements HttpHandler {
 
-    private volatile HttpHandler identityHandler;
+    private volatile HttpHandler identityHandler = ResponseCodeHandler.HANDLE_406;
 
     private final Map<String, Encoding> encodingMap = new CopyOnWriteMap<String, Encoding>();
 
@@ -60,15 +61,13 @@ public class EncodingHandler implements HttpHandler {
         HttpHandler identityHandler = this.identityHandler;
         if (res == null || res.isEmpty()) {
             if(identityHandler != null) {
-                identityHandler.handleRequest(exchange, completionHandler);
+                HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
             } else {
                 //we don't have an identity handler
                 noEncodingHandler.handleRequest(exchange, completionHandler);
             }
             return;
         }
-        Map<String, Encoding> encodingMap = this.encodingMap;
-
         boolean identityProhibited = false;
         final List<ParsedEncoding> found = new ArrayList<ParsedEncoding>();
         ParsedEncoding current = null;
@@ -128,12 +127,12 @@ public class EncodingHandler implements HttpHandler {
         int size = found.size();
         if (size == 0) {
             if (identityProhibited || identityHandler == null) {
-                noEncodingHandler.handleRequest(exchange, completionHandler);
+                HttpHandlers.executeHandler(noEncodingHandler, exchange, completionHandler);
                 return;
             }
-            identityHandler.handleRequest(exchange, completionHandler);
+            HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
         } else if (size == 1) {
-            found.get(0).handler.handler.handleRequest(exchange, completionHandler);
+            HttpHandlers.executeHandler(found.get(0).handler.handler, exchange, completionHandler);
         } else {
             ParsedEncoding max = found.get(0);
             for (int i = 1; i < size; ++i) {
@@ -142,7 +141,7 @@ public class EncodingHandler implements HttpHandler {
                     max = o;
                 }
             }
-            max.handler.handler.handleRequest(exchange, completionHandler);
+            HttpHandlers.executeHandler(max.handler.handler, exchange, completionHandler);
         }
     }
 
@@ -187,11 +186,13 @@ public class EncodingHandler implements HttpHandler {
     }
 
     public void setIdentityHandler(final HttpHandler identityHandler) {
+        HttpHandlers.handlerNotNull(identityHandler);
         this.identityHandler = identityHandler;
         addEncodingHandler(IDENTITY, identityHandler, 0);
     }
 
     public synchronized void addEncodingHandler(final String encoding, final HttpHandler handler, int priority) {
+        HttpHandlers.handlerNotNull(handler);
         this.encodingMap.put(encoding, new Encoding(handler, priority));
     }
 
@@ -204,6 +205,7 @@ public class EncodingHandler implements HttpHandler {
     }
 
     public void setNoEncodingHandler(HttpHandler noEncodingHandler) {
+        HttpHandlers.handlerNotNull(noEncodingHandler);
         this.noEncodingHandler = noEncodingHandler;
     }
 

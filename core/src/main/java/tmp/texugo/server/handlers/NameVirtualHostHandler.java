@@ -18,15 +18,14 @@
 
 package tmp.texugo.server.handlers;
 
-import tmp.texugo.TexugoMessages;
+import java.util.Deque;
+import java.util.Map;
+
 import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
 import tmp.texugo.util.CopyOnWriteMap;
 import tmp.texugo.util.Headers;
-
-import java.util.Deque;
-import java.util.Map;
 
 /**
  * A {@link HttpHandler} that implements virtual hosts based on the <code>Host:</code> http header
@@ -36,16 +35,9 @@ import java.util.Map;
  */
 public class NameVirtualHostHandler implements HttpHandler {
 
-    private volatile HttpHandler defaultHandler;
-    private final Map<String, HttpHandler> hosts;
+    private volatile HttpHandler defaultHandler = ResponseCodeHandler.HANDLE_404;
+    private final Map<String, HttpHandler> hosts = new CopyOnWriteMap<String, HttpHandler>();
 
-    public NameVirtualHostHandler(final HttpHandler defaultHandler, final Map<String, HttpHandler> hosts) {
-        if(defaultHandler == null) {
-            throw TexugoMessages.MESSAGES.noDefaultHandlerSpecified();
-        }
-        this.defaultHandler = defaultHandler;
-        this.hosts = new CopyOnWriteMap<String, HttpHandler>(hosts);
-    }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
@@ -53,10 +45,10 @@ public class NameVirtualHostHandler implements HttpHandler {
         if(host != null) {
             final HttpHandler handler = hosts.get(host.getFirst());
             if(handler != null) {
-                handler.handleRequest(exchange, completionHandler);
+                HttpHandlers.executeHandler(handler, exchange, completionHandler);
             }
         }
-        defaultHandler.handleRequest(exchange, completionHandler);
+        HttpHandlers.executeHandler(defaultHandler, exchange, completionHandler);
     }
 
     public HttpHandler getDefaultHandler() {
@@ -68,13 +60,12 @@ public class NameVirtualHostHandler implements HttpHandler {
     }
 
     public void setDefaultHandler(final HttpHandler defaultHandler) {
-        if(defaultHandler == null) {
-            throw TexugoMessages.MESSAGES.noDefaultHandlerSpecified();
-        }
+        HttpHandlers.handlerNotNull(defaultHandler);
         this.defaultHandler = defaultHandler;
     }
 
     public synchronized void addHost(final String host, final HttpHandler handler) {
+        HttpHandlers.handlerNotNull(handler);
         hosts.put(host, handler);
     }
 

@@ -18,12 +18,15 @@
 
 package tmp.texugo.server.handlers;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+
+import tmp.texugo.TexugoMessages;
 import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
 import tmp.texugo.util.CopyOnWriteMap;
-
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Handler that dispatches to a given handler based of a prefix match of the path.
@@ -34,6 +37,8 @@ import java.util.concurrent.ConcurrentMap;
  * <p/>
  * This handler can only match a single part of this request (namely /foo). To match the full path
  * two of these handlers must be chained together.
+ *
+ * Note that
  *
  * @author Stuart Douglas
  */
@@ -58,9 +63,9 @@ public class PathHandler implements HttpHandler {
         final HttpHandler next = paths.get(part);
         if(next != null) {
             exchange.setRelativePath(path.substring(pos));
-            next.handleRequest(exchange, completionHandler);
+            HttpHandlers.executeHandler(next, exchange, completionHandler);
         } else {
-            defaultHandler.handleRequest(exchange, completionHandler);
+            HttpHandlers.executeHandler(defaultHandler, exchange, completionHandler);
         }
     }
 
@@ -69,10 +74,44 @@ public class PathHandler implements HttpHandler {
     }
 
     public void setDefaultHandler(HttpHandler defaultHandler) {
+        HttpHandlers.handlerNotNull(defaultHandler);
         this.defaultHandler = defaultHandler;
     }
 
-    public ConcurrentMap<String, HttpHandler> getPaths() {
-        return paths;
+    /**
+     * Adds a path and a handler for that path. If the path does not start
+     * with a / then one will be prepended
+     * @param path The path
+     * @param handler The handler
+     */
+    public void addPath(final String path, final HttpHandler handler) {
+        HttpHandlers.handlerNotNull(handler);
+        if(path == null || path.isEmpty()) {
+            throw TexugoMessages.MESSAGES.pathMustBeSpecified();
+        }
+        if(path.charAt(0) != '/') {
+            paths.put("/" + path, handler);
+        } else {
+            paths.put(path, handler);
+        }
+    }
+
+    public void removePath(final String path) {
+        if(path == null || path.isEmpty()) {
+            throw TexugoMessages.MESSAGES.pathMustBeSpecified();
+        }
+        if(path.charAt(0) != '/') {
+            paths.remove("/" + path);
+        } else {
+            paths.remove(path);
+        }
+    }
+
+    public void clearPaths() {
+        paths.clear();
+    }
+
+    public Map<String, HttpHandler> getPaths() {
+        return Collections.unmodifiableMap(paths);
     }
 }

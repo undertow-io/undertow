@@ -18,6 +18,8 @@
 
 package tmp.texugo.test.handlers.path;
 
+import java.io.IOException;
+
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -32,8 +34,6 @@ import tmp.texugo.server.handlers.PathHandler;
 import tmp.texugo.test.util.DefaultServer;
 import tmp.texugo.test.util.HttpClientUtils;
 
-import java.io.IOException;
-
 /**
  * Tests that the path handler works as expected
  *
@@ -42,7 +42,6 @@ import java.io.IOException;
 @RunWith(DefaultServer.class)
 public class PathTestCase {
 
-    private static final String HEADER = "selected";
     public static final String MATCHED = "matched";
     public static final String PATH = "path";
 
@@ -51,13 +50,13 @@ public class PathTestCase {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
             final PathHandler handler = new PathHandler();
-            handler.getPaths().put("/a", new RemainingPathHandler("/a"));
-            handler.getPaths().put("/aa", new RemainingPathHandler("/aa"));
+            handler.addPath("a", new RemainingPathHandler("/a"));
+            handler.addPath("/aa", new RemainingPathHandler("/aa"));
 
             final PathHandler sub = new PathHandler();
 
-            handler.getPaths().put("/path", sub);
-            sub.getPaths().put("/subpath", new RemainingPathHandler("/subpath"));
+            handler.addPath("/path", sub);
+            sub.addPath("/subpath", new RemainingPathHandler("/subpath"));
             sub.setDefaultHandler(new RemainingPathHandler("/path"));
 
             DefaultServer.setRootHandler(handler);

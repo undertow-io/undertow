@@ -30,14 +30,8 @@ public interface TexugoMessages {
 
     TexugoMessages MESSAGES = Messages.getBundle(TexugoMessages.class);
 
-    @Message(id = 1, value = "A default handler must be specified")
-    IllegalArgumentException noDefaultHandlerSpecified();
-
     @Message(id = 2, value = "The response has already been started")
     IllegalStateException responseAlreadyStarted();
-
-    @Message(id = 3, value = "Handler %s cannot run after the response has already started")
-    IllegalStateException handlerMustRunBeforeResponseStarted(final Class<?> handlerClass);
 
     @Message(id = 4, value = "getResponseChannel() has already been called")
     IllegalStateException responseChannelAlreadyProvided();
@@ -50,4 +44,11 @@ public interface TexugoMessages {
 
     @Message(id = 7, value = "Failed to acquire response channel")
     IllegalStateException failedToAcquireResponseChannel();
+
+    @Message(id = 8, value = "Handler cannot be null")
+    IllegalArgumentException handlerCannotBeNull();
+
+    @Message(id = 9, value = "Path must be specified")
+    IllegalArgumentException pathMustBeSpecified();
+
 }

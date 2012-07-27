@@ -30,6 +30,12 @@ import tmp.texugo.server.HttpServerExchange;
 public final class ResponseCodeHandler implements HttpHandler {
 
     /**
+     * A handler which sets a 200 code. This is the default response code, so in most cases
+     * this simply has the result of finishing the request
+     */
+    public static final ResponseCodeHandler HANDLE_200 = new ResponseCodeHandler(200);
+
+    /**
      * A handler which sets a 403 code.
      */
     public static final ResponseCodeHandler HANDLE_403 = new ResponseCodeHandler(403);

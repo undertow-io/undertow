@@ -38,7 +38,7 @@ import static org.xnio.Bits.*;
 public final class RequestLimitingHandler implements HttpHandler {
     @SuppressWarnings("unused")
     private volatile long state;
-    private volatile HttpHandler nextHandler;
+    private volatile HttpHandler nextHandler = ResponseCodeHandler.HANDLE_404;
 
     private static final AtomicLongFieldUpdater<RequestLimitingHandler> stateUpdater = AtomicLongFieldUpdater.newUpdater(RequestLimitingHandler.class, "state");
     private static final AtomicReferenceFieldUpdater<RequestLimitingHandler, HttpHandler> nextHandlerUpdater = AtomicReferenceFieldUpdater.newUpdater(RequestLimitingHandler.class, HttpHandler.class, "nextHandler");
@@ -85,7 +85,7 @@ public final class RequestLimitingHandler implements HttpHandler {
             }
             newVal = oldVal + 1;
         } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
-        nextHandler.handleRequest(exchange, new CompletionHandler(completionHandler, exchange));
+        HttpHandlers.executeHandler(nextHandler, exchange, new CompletionHandler(completionHandler, exchange));
     }
 
     /**
@@ -143,9 +143,7 @@ public final class RequestLimitingHandler implements HttpHandler {
      * @return the old next handler
      */
     public HttpHandler setNextHandler(final HttpHandler nextHandler) {
-        if (nextHandler == null) {
-            throw new IllegalArgumentException("nextHandler is null");
-        }
+        HttpHandlers.handlerNotNull(nextHandler);
         return nextHandlerUpdater.getAndSet(this, nextHandler);
     }
 
@@ -159,7 +157,7 @@ public final class RequestLimitingHandler implements HttpHandler {
         }
 
         public void run() {
-            nextHandler.handleRequest(exchange, new CompletionHandler(completionHandler, exchange));
+            HttpHandlers.executeHandler(nextHandler, exchange, new CompletionHandler(completionHandler, exchange));
         }
     }
 

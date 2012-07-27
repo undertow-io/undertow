@@ -18,6 +18,7 @@
 
 package tmp.texugo.server.handlers;
 
+import tmp.texugo.TexugoMessages;
 import tmp.texugo.server.HttpCompletionHandler;
 import tmp.texugo.server.HttpHandler;
 import tmp.texugo.server.HttpServerExchange;
@@ -45,6 +46,12 @@ public final class HttpHandlers {
                 exchange.setResponseCode(500);
                 completionHandler.handleComplete();
             } catch (Throwable ignored) {}
+        }
+    }
+
+    public static void handlerNotNull(final HttpHandler handler) {
+        if(handler == null) {
+            throw TexugoMessages.MESSAGES.handlerCannotBeNull();
         }
     }
 }

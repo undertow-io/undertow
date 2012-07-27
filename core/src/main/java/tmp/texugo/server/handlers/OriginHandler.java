@@ -18,18 +18,18 @@
 
 package tmp.texugo.server.handlers;
 
-import tmp.texugo.TexugoLogger;
-import tmp.texugo.server.HttpCompletionHandler;
-import tmp.texugo.server.HttpHandler;
-import tmp.texugo.server.HttpServerExchange;
-import tmp.texugo.util.Headers;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
+
+import tmp.texugo.TexugoLogger;
+import tmp.texugo.server.HttpCompletionHandler;
+import tmp.texugo.server.HttpHandler;
+import tmp.texugo.server.HttpServerExchange;
+import tmp.texugo.util.Headers;
 
 /**
  * A handler for the HTTP Origin header.
@@ -42,7 +42,7 @@ public class OriginHandler implements HttpHandler {
     private volatile Set<String> allowedOrigins = new HashSet<String>();
     private volatile boolean requireAllOrigins = true;
     private volatile boolean requireOriginHeader = true;
-    private volatile HttpHandler next;
+    private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
 
     @Override
@@ -54,7 +54,7 @@ public class OriginHandler implements HttpHandler {
                 if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
                     TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to lack of Origin: header", exchange.getRequestPath());
                 }
-                originFailedHandler.handleRequest(exchange, completionHandler);
+                HttpHandlers.executeHandler(originFailedHandler, exchange, completionHandler);
                 return;
             }
         } else {
@@ -70,7 +70,7 @@ public class OriginHandler implements HttpHandler {
                     if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to Origin %s not being in the allowed origins list", exchange.getRequestPath(), header);
                     }
-                    originFailedHandler.handleRequest(exchange, completionHandler);
+                    HttpHandlers.executeHandler(originFailedHandler, exchange, completionHandler);
                     return;
                 }
             }
@@ -78,16 +78,11 @@ public class OriginHandler implements HttpHandler {
                 if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
                     TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s as none of the specified origins %s were in the allowed origins list", exchange.getRequestPath(), origin);
                 }
-                originFailedHandler.handleRequest(exchange, completionHandler);
+                HttpHandlers.executeHandler(originFailedHandler, exchange, completionHandler);
                 return;
             }
         }
-        HttpHandler next = this.next;
-        if(next != null) {
-            next.handleRequest(exchange, completionHandler);
-        } else {
-            completionHandler.handleComplete();
-        }
+        HttpHandlers.executeHandler(next, exchange, completionHandler);
     }
 
     public synchronized void addAllowedOrigin(final String origin) {
@@ -137,6 +132,7 @@ public class OriginHandler implements HttpHandler {
     }
 
     public void setNext(final HttpHandler next) {
+        HttpHandlers.handlerNotNull(next);
         this.next = next;
     }
 
@@ -145,6 +141,7 @@ public class OriginHandler implements HttpHandler {
     }
 
     public void setOriginFailedHandler(ResponseCodeHandler originFailedHandler) {
+        HttpHandlers.handlerNotNull(originFailedHandler);
         this.originFailedHandler = originFailedHandler;
     }
 }
