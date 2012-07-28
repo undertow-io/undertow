@@ -22,7 +22,7 @@ import tmp.texugo.server.HttpServerExchange;
 
 /**
  *
- * A listener for session events. This listener is always invoked in the thread
+ * A listener for session events.
  *
  *
  * @author Stuart Douglas
@@ -35,6 +35,7 @@ public interface SessionListener {
      * @param exchange The {@link HttpServerExchange} that created the session
      */
     void sessionCreated(final Session session, final HttpServerExchange exchange);
+
     /**
      * Called when a session is destroyed
      * @param session The new session

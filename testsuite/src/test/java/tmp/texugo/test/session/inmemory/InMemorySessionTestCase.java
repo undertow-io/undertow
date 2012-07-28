@@ -59,16 +59,20 @@ public class InMemorySessionTestCase {
             handler.setNext(new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-                    Session session = (Session) exchange.getAttachment(Session.ATTACHMENT_KEY);
-                    if(session == null) {
-                        final SessionManager manager = (SessionManager) exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
-                        session = manager.createSession(exchange);
-                        session.setAttribute(COUNT, 0);
+                    try {
+                        Session session = (Session) exchange.getAttachment(Session.ATTACHMENT_KEY);
+                        if(session == null) {
+                            final SessionManager manager = (SessionManager) exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
+                            session = manager.createSession(exchange).get();
+                            session.setAttribute(COUNT, 0);
+                        }
+                        Integer count = (Integer)session.getAttribute(COUNT).get();
+                        exchange.getResponseHeaders().add(COUNT, count.toString());
+                        session.setAttribute(COUNT, ++count);
+                        HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_200, exchange, completionHandler);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
-                    Integer count = (Integer)session.getAttribute(COUNT);
-                    exchange.getResponseHeaders().add(COUNT, count.toString());
-                    session.setAttribute(COUNT, ++count);
-                    HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_200, exchange, completionHandler);
                 }
             });
             handler.setSessionManager(new InMemorySessionManager());

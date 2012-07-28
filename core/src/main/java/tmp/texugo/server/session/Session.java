@@ -125,12 +125,7 @@ public interface Session {
      *                               invalidated session
      * @return the object with the specified name
      */
-    Object getAttribute(String name);
-
-    /**
-     * async version of {@link #getAttribute(String)}
-     */
-    IoFuture<Object> getAttributeAsync(String name);
+    IoFuture<Object> getAttribute(String name);
 
     /**
      * Returns an <code>Set</code> of <code>String</code> objects
@@ -143,12 +138,7 @@ public interface Session {
      * names of all the objects bound to
      * this session
      */
-    Set<String> getAttributeNames();
-
-    /**
-     * async version of {@link #getAttributeNames()}
-     */
-    IoFuture<Set<String>> getAttributeNamesAsync();
+    IoFuture<Set<String>> getAttributeNames();
 
     /**
      * Binds an object to this session, using the name specified.
@@ -165,12 +155,7 @@ public interface Session {
      * @param value the object to be bound
      * @throws IllegalStateException if this method is called on an invalidated session
      */
-    void setAttribute(String name, Object value);
-
-    /**
-     * async version of {@link #setAttribute(String, Object)}
-     */
-    IoFuture<Void> setAttributeAsync(final String name, Object value);
+    IoFuture<Void> setAttribute(final String name, Object value);
 
     /**
      * Removes the object bound with the specified name from
@@ -181,30 +166,16 @@ public interface Session {
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
      */
-    void removeAttribute(final String name);
-
-    /**
-     * async version of {@link #removeAttribute(String)}
-     */
-    IoFuture<Void> removeAttributeAsync(final String name);
+    IoFuture<Void> removeAttribute(final String name);
 
     /**
      * Invalidates this session then unbinds any objects bound
      * to it.
      *
-     * TODO: how do we handle clearing the session cookie, it seems messy to rely on the session to do it
-     *
      * @throws IllegalStateException if this method is called on an
      *                               already invalidated session
      */
-    void invalidate(final HttpServerExchange exchange);
-
-    /**
-     * Async version of {@link #invalidate(HttpServerExchange)}
-     *
-     * @return
-     */
-    IoFuture<Void> invalidateAsync(final HttpServerExchange exchange);
+    IoFuture<Void> invalidate(final HttpServerExchange exchange);
 
     /**
      * @return The session manager that is associated with this session

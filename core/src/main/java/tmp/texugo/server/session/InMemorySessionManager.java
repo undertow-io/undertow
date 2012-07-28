@@ -48,11 +48,13 @@ public class InMemorySessionManager implements SessionManager {
 
     /**
      * 30 minute default
+     *
+     *
      */
     private volatile int defaultSessionTimeout = 30 * 60;
 
     @Override
-    public Session createSession(final HttpServerExchange serverExchange) {
+    public IoFuture<Session> createSession(final HttpServerExchange serverExchange) {
         final String sessionID = sessionIdGenerator.createSessionId();
         final Session session = new SessionImpl(sessionID);
         InMemorySession im = new InMemorySession(session, defaultSessionTimeout);
@@ -66,28 +68,18 @@ public class InMemorySessionManager implements SessionManager {
         } else {
             TexugoLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
         }
-        return session;
+        return new FinishedIoFuture<Session>(session);
     }
 
     @Override
-    public IoFuture<Session> createSessionAsync(final HttpServerExchange serverExchange) {
-        return new FinishedIoFuture<Session>(createSession(serverExchange));
-    }
-
-    @Override
-    public Session getSession(final HttpServerExchange serverExchange, final String sessionId) {
+    public IoFuture<Session> getSession(final HttpServerExchange serverExchange, final String sessionId) {
         final InMemorySession sess = sessions.get(sessionId);
         if (sess == null) {
-            return null;
+            return new FinishedIoFuture<Session>(null);
         } else {
             sess.lastAccessed = System.currentTimeMillis();
-            return sess.session;
+            return new FinishedIoFuture<Session>(sess.session);
         }
-    }
-
-    @Override
-    public IoFuture<Session> getSessionAsync(final HttpServerExchange serverExchange, final String sessionId) {
-        return new FinishedIoFuture<Session>(getSession(serverExchange, sessionId));
     }
 
 
@@ -168,35 +160,25 @@ public class InMemorySessionManager implements SessionManager {
         }
 
         @Override
-        public Object getAttribute(final String name) {
+        public IoFuture<Object> getAttribute(final String name) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
                 throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
             }
-            return sess.attributes.get(name);
+            return new FinishedIoFuture<Object>(sess.attributes.get(name));
         }
 
         @Override
-        public IoFuture<Object> getAttributeAsync(final String name) {
-            return new FinishedIoFuture<Object>(getAttribute(name));
-        }
-
-        @Override
-        public Set<String> getAttributeNames() {
+        public IoFuture<Set<String>> getAttributeNames() {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
                 throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
             }
-            return sess.attributes.keySet();
+            return new FinishedIoFuture<Set<String>>(sess.attributes.keySet());
         }
 
         @Override
-        public IoFuture<Set<String>> getAttributeNamesAsync() {
-            return new FinishedIoFuture<Set<String>>(getAttributeNames());
-        }
-
-        @Override
-        public void setAttribute(final String name, final Object value) {
+        public IoFuture<Void> setAttribute(final String name, final Object value) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
                 throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
@@ -209,16 +191,11 @@ public class InMemorySessionManager implements SessionManager {
                     listener.attributeUpdated(sess.session, name, value);
                 }
             }
-        }
-
-        @Override
-        public IoFuture<Void> setAttributeAsync(final String name, final Object value) {
-            setAttribute(name, value);
             return new FinishedIoFuture<Void>(null);
         }
 
         @Override
-        public void removeAttribute(final String name) {
+        public IoFuture<Void> removeAttribute(final String name) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
                 throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
@@ -227,16 +204,10 @@ public class InMemorySessionManager implements SessionManager {
             for (SessionListener listener : listeners) {
                 listener.attributeRemoved(sess.session, name);
             }
-        }
-
-        @Override
-        public IoFuture<Void> removeAttributeAsync(final String name) {
-            removeAttribute(name);
             return new FinishedIoFuture<Void>(null);
         }
-
         @Override
-        public void invalidate(final HttpServerExchange exchange) {
+        public IoFuture<Void> invalidate(final HttpServerExchange exchange) {
             final InMemorySession sess = sessions.remove(sessionId);
             if (sess != null) {
                 for (SessionListener listener : listeners) {
@@ -249,11 +220,6 @@ public class InMemorySessionManager implements SessionManager {
             } else {
                 TexugoLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
             }
-        }
-
-        @Override
-        public IoFuture<Void> invalidateAsync(final HttpServerExchange exchange) {
-            invalidate(exchange);
             return new FinishedIoFuture<Void>(null);
         }
 

@@ -70,7 +70,7 @@ public class SessionAttachmentHandler implements HttpHandler {
         if (sessionId == null) {
             HttpHandlers.executeHandler(next, exchange, completionHandler);
         } else {
-            final IoFuture<Session> session = sessionManager.getSessionAsync(exchange, sessionId);
+            final IoFuture<Session> session = sessionManager.getSession(exchange, sessionId);
             session.addNotifier(new IoFuture.Notifier<Session, Session>() {
                 @Override
                 public void notify(final IoFuture<? extends Session> ioFuture, final Session attachment) {

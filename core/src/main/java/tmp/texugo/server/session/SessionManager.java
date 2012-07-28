@@ -45,30 +45,14 @@ public interface SessionManager {
      *
      * @return The created session
      */
-    IoFuture<Session> createSessionAsync(final HttpServerExchange serverExchange);
-
-    /**
-     * Creates a new session. Any {@link SessionListener}s registered with this manager will be notified
-     * of the session creation.
-     *
-     *
-     * @return The created session
-     */
-    Session createSession(final HttpServerExchange serverExchange);
+    IoFuture<Session> createSession(final HttpServerExchange serverExchange);
 
     /**
      *
      * @param sessionId The session id
      * @return An IoFuture that can be used to retrieve the session, or an IoFuture that will return null if not found
      */
-    IoFuture<Session> getSessionAsync(final HttpServerExchange serverExchange, final String sessionId);
-
-    /**
-     *
-     * @param sessionId The session id
-     * @return The session, or null
-     */
-    Session getSession(final HttpServerExchange serverExchange, final String sessionId);
+    IoFuture<Session> getSession(final HttpServerExchange serverExchange, final String sessionId);
 
     /**
      * Registers a session listener for the session manager
