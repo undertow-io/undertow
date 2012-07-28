@@ -26,12 +26,12 @@
         <version>9</version>
     </parent>
 
-    <groupId>org.jboss.texugo</groupId>
-    <artifactId>texugo-parent</artifactId>
+    <groupId>io.undertow</groupId>
+    <artifactId>undertow-parent</artifactId>
     <version>1.0.0.Alpha1-SNAPSHOT</version>
 
-    <name>Texugo</name>
-    <description>Texugo</description>
+    <name>Undertow</name>
+    <description>Undertow</description>
 
     <packaging>pom</packaging>
 
@@ -44,9 +44,9 @@
     </licenses>
 
     <scm>
-        <connection>scm:git://github.com/GoTexugo/texugo.git</connection>
-        <developerConnection>scm:git://github.com/GoTexugo/texugo.git</developerConnection>
-        <url>https://github.com/GoTexugo/texugo</url>
+        <connection>scm:git://github.com/undertow-io/undertow.git</connection>
+        <developerConnection>scm:git://github.com/undertow-io/undertow.git</developerConnection>
+        <url>https://github.com/undertow-io/undertow</url>
     </scm>
 
     <properties>
@@ -65,7 +65,7 @@
             For example: <version.org.jboss.as.console>
          -->
 
-        <version.org.jboss.classfilewriter>1.0.4.Final-SNAPSHOT</version.org.jboss.classfilewriter>
+        <version.org.jboss.classfilewriter>1.0.4.Final</version.org.jboss.classfilewriter>
         <version.junit>4.8.2</version.junit>
         <version.xnio>3.1.0.Beta2</version.xnio>
         <version.org.jboss.logging>3.1.1.GA</version.org.jboss.logging>
@@ -103,15 +103,15 @@
                     <artifactId>maven-checkstyle-plugin</artifactId>
                     <version>${version.checkstyle.plugin}</version>
                     <configuration>
-                        <configLocation>texugo-checkstyle/checkstyle.xml</configLocation>
+                        <configLocation>undertow-checkstyle/checkstyle.xml</configLocation>
                         <consoleOutput>true</consoleOutput>
                         <failsOnError>true</failsOnError>
                         <useFile/>
                     </configuration>
                     <dependencies>
                         <dependency>
-                            <groupId>org.jboss.texugo</groupId>
-                            <artifactId>texugo-build-config</artifactId>
+                            <groupId>io.undertow</groupId>
+                            <artifactId>undertow-build-config</artifactId>
                             <version>${project.version}</version>
                         </dependency>
                     </dependencies>
@@ -165,8 +165,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.jboss.texugo</groupId>
-            <artifactId>texugo-build-config</artifactId>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-build-config</artifactId>
         </dependency>
     </dependencies>
 
@@ -176,20 +176,20 @@
             <!-- Modules in this project -->
 
             <dependency>
-                <groupId>org.jboss.texugo</groupId>
-                <artifactId>texugo-core</artifactId>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.jboss.texugo</groupId>
-                <artifactId>texugo-build-config</artifactId>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-build-config</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.jboss.texugo</groupId>
-                <artifactId>texugo-parser-generator</artifactId>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-parser-generator</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

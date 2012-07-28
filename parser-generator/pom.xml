@@ -23,23 +23,17 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.jboss.texugo</groupId>
-        <artifactId>texugo-parent</artifactId>
+        <groupId>io.undertow</groupId>
+        <artifactId>undertow-parent</artifactId>
         <version>1.0.0.Alpha1-SNAPSHOT</version>
     </parent>
 
-    <groupId>org.jboss.texugo</groupId>
-    <artifactId>texugo-parser-generator</artifactId>
+    <groupId>io.undertow</groupId>
+    <artifactId>undertow-parser-generator</artifactId>
     <version>1.0.0.Alpha1-SNAPSHOT</version>
 
-    <name>Texugo Parser Generator</name>
+    <name>Undertow Parser Generator</name>
     <description>An annotation processor that is used to generate the HTTP parser</description>
-
-    <scm>
-        <connection>git://github.com/GoTexugo/texugo.git</connection>
-        <developerConnection>git://github.com/GoTexugo/texugo.git</developerConnection>
-        <url>https://github.com/GoTexugo/texugo</url>
-    </scm>
 
     <dependencies>
         <dependency>

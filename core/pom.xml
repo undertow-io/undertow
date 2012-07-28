@@ -23,22 +23,22 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.jboss.texugo</groupId>
-        <artifactId>texugo-parent</artifactId>
+        <groupId>io.undertow</groupId>
+        <artifactId>undertow-parent</artifactId>
         <version>1.0.0.Alpha1-SNAPSHOT</version>
     </parent>
 
-    <groupId>org.jboss.texugo</groupId>
-    <artifactId>texugo-core</artifactId>
+    <groupId>io.undertow</groupId>
+    <artifactId>undertow-core</artifactId>
     <version>1.0.0.Alpha1-SNAPSHOT</version>
 
-    <name>Texugo Core</name>
+    <name>Undertow Core</name>
 
     <dependencies>
 
         <dependency>
-            <groupId>org.jboss.texugo</groupId>
-            <artifactId>texugo-parser-generator</artifactId>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-parser-generator</artifactId>
         </dependency>
 
         <dependency>

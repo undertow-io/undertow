@@ -23,16 +23,16 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.jboss.texugo</groupId>
-        <artifactId>texugo-parent</artifactId>
+        <groupId>io.undertow</groupId>
+        <artifactId>undertow-parent</artifactId>
         <version>1.0.0.Alpha1-SNAPSHOT</version>
     </parent>
 
-    <groupId>org.jboss.texugo</groupId>
-    <artifactId>texugo-testsuite</artifactId>
+    <groupId>io.undertow</groupId>
+    <artifactId>undertow-testsuite</artifactId>
     <version>1.0.0.Alpha1-SNAPSHOT</version>
 
-    <name>Texugo Testsuite</name>
+    <name>Undertow Testsuite</name>
 
     <properties>
         <test.level>INFO</test.level>
@@ -41,8 +41,8 @@
     <dependencies>
 
         <dependency>
-            <groupId>org.jboss.texugo</groupId>
-            <artifactId>texugo-core</artifactId>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-core</artifactId>
         </dependency>
 
         <dependency>
