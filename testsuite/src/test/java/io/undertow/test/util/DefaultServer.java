@@ -136,4 +136,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return Integer.getInteger(serverName + ".server.port");
     }
 
+    public static ExecutorService getBlockingExecutorService() {
+        return blockingExecutorService;
+    }
 }

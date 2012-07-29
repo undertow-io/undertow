@@ -53,6 +53,13 @@ public class SessionAttachmentHandler implements HttpHandler {
     private volatile boolean secure = false;
     private volatile String cookieName = SessionCookieConfig.DEFAULT_SESSION_ID;
 
+    public SessionAttachmentHandler(final SessionManager sessionManager) {
+        if(sessionManager == null) {
+            throw TexugoMessages.MESSAGES.sessionManagerMustNotBeNull();
+        }
+        this.sessionManager = sessionManager;
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         if (sessionManager == null) {
@@ -134,6 +141,9 @@ public class SessionAttachmentHandler implements HttpHandler {
     }
 
     public void setSessionManager(final SessionManager sessionManager) {
+        if(sessionManager == null) {
+            throw TexugoMessages.MESSAGES.sessionManagerMustNotBeNull();
+        }
         this.sessionManager = sessionManager;
     }
 

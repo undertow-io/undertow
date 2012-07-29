@@ -55,7 +55,7 @@ public class InMemorySessionTestCase {
         DefaultHttpClient client = new DefaultHttpClient();
         client.setCookieStore(new BasicCookieStore());
         try {
-            final SessionAttachmentHandler handler = new SessionAttachmentHandler();
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager());
             handler.setNext(new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
@@ -75,7 +75,6 @@ public class InMemorySessionTestCase {
                     }
                 }
             });
-            handler.setSessionManager(new InMemorySessionManager());
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");

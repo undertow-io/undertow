@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 import io.undertow.TexugoLogger;
 import io.undertow.server.HttpCompletionHandler;
@@ -49,9 +50,17 @@ public class FileErrorPageHandler implements HttpHandler {
     /**
      * The response codes that this handler will handle. If this is empty then this handler will have no effect.
      */
-    private volatile Set<Integer> responseCodes = Collections.emptySet();
+    private volatile Set<Integer> responseCodes;
 
     private volatile File file;
+
+    private volatile ExecutorService executorService;
+
+    public FileErrorPageHandler(final File file, final ExecutorService executorService, final Integer ... responseCodes) {
+        this.file = file;
+        this.executorService = executorService;
+        this.responseCodes = new HashSet<Integer>(Arrays.asList(responseCodes));
+    }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
@@ -66,13 +75,14 @@ public class FileErrorPageHandler implements HttpHandler {
                     } else  {
                         final StreamSinkChannel response = exchange.getResponseChannel();
                         try {
-                            final FileWriteChannelListener listener = new FileWriteChannelListener(file, response.getWorker().getXnio()) {
+                            final FileWriteChannelListener listener = new FileWriteChannelListener(file, response.getWorker().getXnio(), executorService) {
                                 @Override
                                 protected void writeDone(final StreamSinkChannel channel) {
                                     completionHandler.handleComplete();
                                 }
                             };
-                            listener.setup(response);
+                            response.getWriteSetter().set(listener);
+                            response.resumeWrites();
                         } catch (IOException e) {
                             TexugoLogger.ROOT_LOGGER.errorLoadingErrorPage(e, file);
                             completionHandler.handleComplete();
