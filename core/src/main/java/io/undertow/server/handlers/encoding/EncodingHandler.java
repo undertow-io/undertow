@@ -64,7 +64,7 @@ public class EncodingHandler implements HttpHandler {
                 HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
             } else {
                 //we don't have an identity handler
-                noEncodingHandler.handleRequest(exchange, completionHandler);
+                HttpHandlers.executeHandler(noEncodingHandler, exchange, completionHandler);
             }
             return;
         }

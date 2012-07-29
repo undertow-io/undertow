@@ -571,6 +571,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                     c = channel.write(buffer);
                 } while (buffer.hasRemaining() && c > 0);
                 if (buffer.hasRemaining()) {
+                    channel.resumeWrites();
                     return;
                 } else {
                     // channel will auto-close if the gated channel was closed

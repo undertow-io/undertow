@@ -18,20 +18,20 @@
 
 package io.undertow.server;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import io.undertow.TexugoLogger;
+import io.undertow.server.httpparser.HttpExchangeBuilder;
+import io.undertow.server.httpparser.HttpParser;
+import io.undertow.server.httpparser.ParseState;
+import io.undertow.util.HeaderMap;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
-import io.undertow.TexugoLogger;
-import io.undertow.server.httpparser.HttpExchangeBuilder;
-import io.undertow.server.httpparser.HttpParser;
-import io.undertow.server.httpparser.ParseState;
-import io.undertow.util.HeaderMap;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -119,7 +119,6 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
                     state = null;
                     builder = null;
-                    // todo - nothing will work until this part is implemented
                     rootHandler.handleRequest(httpServerExchange, new HttpCompletionHandler() {
                         public void handleComplete() {
                             httpServerExchange.cleanup();
