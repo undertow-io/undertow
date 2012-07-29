@@ -42,44 +42,34 @@ public interface UndertowLogger extends BasicLogger {
     UndertowLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request");
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5000, value = "HttpServerExchange.getRequestChannel() has been called without also calling " +
-            "HttpServerExchange.getResponseChannel(), the request is going to be automatically closed which will " +
-            "cancel any async reads taking place on the request Channel")
-    void getRequestCalledWithoutGetResponse();
-
-    @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5001, value = "An exception occurred processing the request")
     void exceptionProcessingRequest(@Cause Throwable cause);
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5002, value = "An exception occurred closing the response channel")
-    void errorClosingResponseChannel(@Cause Exception e);
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5003, value = "An exception occurred getting the session")
+    @Message(id = 5002, value = "An exception occurred getting the session")
     void getSessionFailed(@Cause IOException exception);
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5004, value = "Unexpected state in session callback %s")
+    @Message(id = 5003, value = "Unexpected state in session callback %s")
     void unexpectedStatusGettingSession(IoFuture.Status status);
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5005, value = "Could not send session cookie as response has already started")
+    @Message(id = 5004, value = "Could not send session cookie as response has already started")
     void couldNotSendSessionCookieAsResponseAlreadyStarted();
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5006, value = "Could not invalidate session cookie as response has already started")
+    @Message(id = 5005, value = "Could not invalidate session cookie as response has already started")
     void couldNotInvalidateSessionCookieAsResponseAlreadyStarted();
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5007, value = "Could not find session cookie config in the request, session will not be persistent across requests")
+    @Message(id = 5006, value = "Could not find session cookie config in the request, session will not be persistent across requests")
     void couldNotFindSessionCookieConfig();
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5008, value = "Configured error page %s was not found")
+    @Message(id = 5007, value = "Configured error page %s was not found")
     void errorPageDoesNotExist(File file);
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5009, value = "Exception reading error page %s")
+    @Message(id = 5008, value = "Exception reading error page %s")
     void errorLoadingErrorPage(@Cause final IOException e, final File file);
 }
