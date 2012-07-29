@@ -19,25 +19,23 @@
 package io.undertow.server.handlers.error;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 
-import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.util.FileWriteChannelListener;
-import org.xnio.channels.StreamSinkChannel;
+import io.undertow.server.handlers.file.DirectFileCache;
+import io.undertow.server.handlers.file.FileCache;
 
 /**
  * Handler that serves up a file from disk to serve as an error page.
- *
+ * <p/>
  * This handler does not server up and response codes by default, you must configure
  * the response codes it responds to.
  *
@@ -54,11 +52,10 @@ public class FileErrorPageHandler implements HttpHandler {
 
     private volatile File file;
 
-    private volatile ExecutorService executorService;
+    private volatile FileCache fileCache = DirectFileCache.INSTANCE;
 
-    public FileErrorPageHandler(final File file, final ExecutorService executorService, final Integer ... responseCodes) {
+    public FileErrorPageHandler(final File file, final Integer... responseCodes) {
         this.file = file;
-        this.executorService = executorService;
         this.responseCodes = new HashSet<Integer>(Arrays.asList(responseCodes));
     }
 
@@ -68,33 +65,8 @@ public class FileErrorPageHandler implements HttpHandler {
             @Override
             public void handleComplete() {
                 Set<Integer> codes = responseCodes;
-                if (!exchange.isResponseStarted() &&  codes.contains(exchange.getResponseCode())) {
-                    if(!file.exists()) {
-                        UndertowLogger.ROOT_LOGGER.errorPageDoesNotExist(file);
-                        completionHandler.handleComplete();
-                    } else  {
-                        final StreamSinkChannel response = exchange.getResponseChannel();
-                        try {
-                            final FileWriteChannelListener listener = new FileWriteChannelListener(file, response.getWorker().getXnio(), executorService) {
-                                @Override
-                                protected void done(final StreamSinkChannel channel, final Exception exception) {
-
-                                    if(exception != null) {
-                                        //if we have already started sending content there is really nothing we can do
-                                        //except clean up the request as normal
-                                        if(!exchange.isResponseStarted()) {
-                                            exchange.setResponseCode(500);
-                                        }
-                                    }
-                                    completionHandler.handleComplete();
-                                }
-                            };
-                            listener.setup(exchange, response);
-                        } catch (IOException e) {
-                            UndertowLogger.ROOT_LOGGER.errorLoadingErrorPage(e, file);
-                            completionHandler.handleComplete();
-                        }
-                    }
+                if (!exchange.isResponseStarted() && codes.contains(exchange.getResponseCode())) {
+                    fileCache.serveFile(exchange, completionHandler, file);
                 } else {
                     completionHandler.handleComplete();
                 }
@@ -116,7 +88,7 @@ public class FileErrorPageHandler implements HttpHandler {
     }
 
     public void setResponseCodes(final Set<Integer> responseCodes) {
-        if(responseCodes == null) {
+        if (responseCodes == null) {
             this.responseCodes = Collections.emptySet();
         } else {
             this.responseCodes = new HashSet<Integer>(responseCodes);
@@ -133,5 +105,16 @@ public class FileErrorPageHandler implements HttpHandler {
 
     public void setFile(final File file) {
         this.file = file;
+    }
+
+    public FileCache getFileCache() {
+        return fileCache;
+    }
+
+    public void setFileCache(final FileCache fileCache) {
+        if(fileCache == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+        }
+        this.fileCache = fileCache;
     }
 }

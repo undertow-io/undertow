@@ -42,7 +42,7 @@ public class FileErrorPageHandlerTestCase {
     public void testFileBasedErrorPageIsGenerated() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            final FileErrorPageHandler handler = new FileErrorPageHandler(new File(getClass().getResource("errorpage.html").getFile()), DefaultServer.getBlockingExecutorService(), 404);
+            final FileErrorPageHandler handler = new FileErrorPageHandler(new File(getClass().getResource("errorpage.html").getFile()), 404);
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");

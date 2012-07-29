@@ -61,4 +61,6 @@ public interface UndertowMessages {
             "is installed in the handler chain")
     IllegalStateException sessionManagerNotFound();
 
+    @Message(id = 13, value = "Argument cannot be null")
+    IllegalArgumentException argumentCannotBeNull();
 }
