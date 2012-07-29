@@ -81,8 +81,7 @@ public class FileErrorPageHandler implements HttpHandler {
                                     completionHandler.handleComplete();
                                 }
                             };
-                            response.getWriteSetter().set(listener);
-                            response.resumeWrites();
+                            listener.setup(response);
                         } catch (IOException e) {
                             UndertowLogger.ROOT_LOGGER.errorLoadingErrorPage(e, file);
                             completionHandler.handleComplete();

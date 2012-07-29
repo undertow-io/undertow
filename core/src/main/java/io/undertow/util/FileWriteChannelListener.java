@@ -33,6 +33,8 @@ import org.xnio.channels.StreamSinkChannel;
  * A simple write listener that can be used to write out the contents of a file. When the file is written
  * out it closes the channel.
  *
+ * This should not be added directly to the channel, instead {@link #setup(org.xnio.channels.StreamSinkChannel)}
+ * should be called, which will attempt a write, and only add the listener if required.
  *
  * @author Stuart Douglas
  */
@@ -48,6 +50,29 @@ public class FileWriteChannelListener implements ChannelListener<StreamSinkChann
         this.file = xnio.openFile(file, FileAccess.READ_ONLY);
         this.length = file.length();
         this.executorService = executorService;
+    }
+
+    public void setup(final StreamSinkChannel channel) {
+        executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    long c;
+                    do {
+                        c = channel.transferFrom(file, written, length);
+                        written += c;
+                    } while (written < length && c > 0);
+                    if (written < length) {
+                        channel.getWriteSetter().set(FileWriteChannelListener.this);
+                        channel.resumeWrites();
+                    } else {
+                        writeDone(channel);
+                    }
+                } catch (IOException e) {
+                    IoUtils.safeClose(channel);
+                }
+            }
+        });
     }
 
     @Override
