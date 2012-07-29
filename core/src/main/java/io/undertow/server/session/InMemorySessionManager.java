@@ -40,7 +40,7 @@ import io.undertow.util.SecureHashMap;
  */
 public class InMemorySessionManager implements SessionManager {
 
-    private volatile SessionIdGenerator sessionIdGenerator = UUIDSessionIdGenerator.INSTANCE;
+    private volatile SessionIdGenerator sessionIdGenerator = new SecureRandomeSessionIdGenerator();
 
     private final ConcurrentMap<String, InMemorySession> sessions = new SecureHashMap<String, InMemorySession>();
 
