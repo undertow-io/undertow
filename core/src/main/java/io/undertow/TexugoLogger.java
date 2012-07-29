@@ -18,6 +18,7 @@
 
 package io.undertow;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.jboss.logging.BasicLogger;
@@ -38,7 +39,7 @@ public interface TexugoLogger extends BasicLogger {
 
     TexugoLogger ROOT_LOGGER = Logger.getMessageLogger(TexugoLogger.class, TexugoLogger.class.getPackage().getName());
 
-    TexugoLogger REQUEST_LOGGER = Logger.getMessageLogger(TexugoLogger.class, TexugoLogger.class.getPackage().getName()+".request");
+    TexugoLogger REQUEST_LOGGER = Logger.getMessageLogger(TexugoLogger.class, TexugoLogger.class.getPackage().getName() + ".request");
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5000, value = "HttpServerExchange.getRequestChannel() has been called without also calling " +
@@ -73,4 +74,12 @@ public interface TexugoLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5007, value = "Could not find session cookie config in the request, session will not be persistent across requests")
     void couldNotFindSessionCookieConfig();
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5008, value = "Configured error page %s was not found")
+    void errorPageDoesNotExist(File file);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5009, value = "Exception reading error page %s")
+    void errorLoadingErrorPage(@Cause final IOException e, final File file);
 }

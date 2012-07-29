@@ -18,33 +18,40 @@
 
 package io.undertow.server.handlers.error;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import io.undertow.TexugoLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.util.StatusCodes;
-import io.undertow.util.StringWriteChannelListener;
+import io.undertow.util.FileWriteChannelListener;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
- * Handler that generates an extremely simple no frills error page
+ * Handler that serves up a file from disk to serve as an error page.
+ *
+ * This handler does not server up and response codes by default, you must configure
+ * the response codes it responds to.
  *
  * @author Stuart Douglas
  */
-public class SimpleErrorPageHandler implements HttpHandler {
+public class FileErrorPageHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
     /**
-     * The response codes that this handler will handle. If this is null then it will handle all 4xx and 5xx codes.
+     * The response codes that this handler will handle. If this is empty then this handler will have no effect.
      */
-    private volatile Set<Integer> responseCodes = null;
+    private volatile Set<Integer> responseCodes = Collections.emptySet();
+
+    private volatile File file;
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
@@ -52,19 +59,25 @@ public class SimpleErrorPageHandler implements HttpHandler {
             @Override
             public void handleComplete() {
                 Set<Integer> codes = responseCodes;
-                if (!exchange.isResponseStarted() &&
-                        (codes == null && exchange.getResponseCode() >= 400) ||
-                        codes.contains(exchange.getResponseCode())) {
-
-                    final StreamSinkChannel response = exchange.getResponseChannel();
-                    final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getResponseCode() + " - " + StatusCodes.getReason(exchange.getResponseCode()) + "</body></html>";
-                    StringWriteChannelListener listener = new StringWriteChannelListener(errorPage) {
-                        @Override
-                        protected void writeDone(final StreamSinkChannel channel) {
+                if (!exchange.isResponseStarted() &&  codes.contains(exchange.getResponseCode())) {
+                    if(!file.exists()) {
+                        TexugoLogger.ROOT_LOGGER.errorPageDoesNotExist(file);
+                        completionHandler.handleComplete();
+                    } else  {
+                        final StreamSinkChannel response = exchange.getResponseChannel();
+                        try {
+                            final FileWriteChannelListener listener = new FileWriteChannelListener(file, response.getWorker().getXnio()) {
+                                @Override
+                                protected void writeDone(final StreamSinkChannel channel) {
+                                    completionHandler.handleComplete();
+                                }
+                            };
+                            listener.setup(response);
+                        } catch (IOException e) {
+                            TexugoLogger.ROOT_LOGGER.errorLoadingErrorPage(e, file);
                             completionHandler.handleComplete();
                         }
-                    };
-                    listener.setup(response);
+                    }
                 } else {
                     completionHandler.handleComplete();
                 }
@@ -86,10 +99,22 @@ public class SimpleErrorPageHandler implements HttpHandler {
     }
 
     public void setResponseCodes(final Set<Integer> responseCodes) {
-        this.responseCodes = new HashSet<Integer>(responseCodes);
+        if(responseCodes == null) {
+            this.responseCodes = Collections.emptySet();
+        } else {
+            this.responseCodes = new HashSet<Integer>(responseCodes);
+        }
     }
 
     public void setResponseCodes(final Integer... responseCodes) {
         this.responseCodes = new HashSet<Integer>(Arrays.asList(responseCodes));
+    }
+
+    public File getFile() {
+        return file;
+    }
+
+    public void setFile(final File file) {
+        this.file = file;
     }
 }
