@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.ExecutorService;
 
+import io.undertow.UndertowLogger;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
@@ -40,65 +41,66 @@ import org.xnio.channels.StreamSinkChannel;
  */
 public class FileWriteChannelListener implements ChannelListener<StreamSinkChannel> {
 
-    private final FileChannel file;
+    private final File file;
+    private final FileChannel fileChannel;
     private final ExecutorService executorService;
     private final long length;
+    private FileWriteTask writeTask;
     private int written;
 
 
     public FileWriteChannelListener(final File file, final Xnio xnio, final ExecutorService executorService) throws IOException {
-        this.file = xnio.openFile(file, FileAccess.READ_ONLY);
+        this.file = file;
+        this.fileChannel = xnio.openFile(file, FileAccess.READ_ONLY);
         this.length = file.length();
         this.executorService = executorService;
     }
 
     public void setup(final StreamSinkChannel channel) {
-        executorService.submit(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    long c;
-                    do {
-                        c = channel.transferFrom(file, written, length);
-                        written += c;
-                    } while (written < length && c > 0);
-                    if (written < length) {
-                        channel.getWriteSetter().set(FileWriteChannelListener.this);
-                        channel.resumeWrites();
-                    } else {
-                        writeDone(channel);
-                    }
-                } catch (IOException e) {
-                    IoUtils.safeClose(channel);
-                }
-            }
-        });
+        this.writeTask = new FileWriteTask(channel);
+        executorService.submit(writeTask);
     }
 
     @Override
     public void handleEvent(final StreamSinkChannel channel) {
-        executorService.submit(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    long c;
-                    do {
-                        c = channel.transferFrom(file, written, length);
-                        written += c;
-                    } while (written < length && c > 0);
-                    if (written < length) {
-                        channel.resumeWrites();
-                    } else {
-                        writeDone(channel);
-                    }
-                } catch (IOException e) {
-                    IoUtils.safeClose(channel);
-                }
-            }
-        });
+        executorService.submit(writeTask);
     }
 
-    protected void writeDone(final StreamSinkChannel channel) {
+    protected void done(final StreamSinkChannel channel, final Exception exception) {
         IoUtils.safeClose(channel);
+    }
+
+    private class FileWriteTask implements Runnable {
+        private final StreamSinkChannel channel;
+
+        public FileWriteTask(final StreamSinkChannel channel) {
+            this.channel = channel;
+        }
+
+        @Override
+        public synchronized void run() {
+            if(!channel.isOpen()) {
+                return;
+            }
+            try {
+                long c;
+                do {
+                    c = channel.transferFrom(fileChannel, written, length);
+                    written += c;
+                } while (written < length && c > 0);
+                if (written < length) {
+                    channel.getWriteSetter().set(FileWriteChannelListener.this);
+                    channel.resumeWrites();
+                } else {
+                    IoUtils.safeClose(fileChannel);
+                    done(channel, null);
+                }
+            } catch (IOException e) {
+                IoUtils.safeClose(fileChannel);
+                IoUtils.safeClose(channel);
+                UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(e, file);
+                done(channel, null);
+            }
+        }
     }
 }

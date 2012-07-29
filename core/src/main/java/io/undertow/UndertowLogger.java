@@ -72,4 +72,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5008, value = "Exception reading error page %s")
     void errorLoadingErrorPage(@Cause final IOException e, final File file);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5009, value = "Exception reading file %s")
+    void exceptionReadingFile(@Cause final IOException e, final File file);
 }

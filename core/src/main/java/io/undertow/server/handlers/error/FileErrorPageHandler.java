@@ -77,7 +77,7 @@ public class FileErrorPageHandler implements HttpHandler {
                         try {
                             final FileWriteChannelListener listener = new FileWriteChannelListener(file, response.getWorker().getXnio(), executorService) {
                                 @Override
-                                protected void writeDone(final StreamSinkChannel channel) {
+                                protected void done(final StreamSinkChannel channel, final Exception exception) {
                                     completionHandler.handleComplete();
                                 }
                             };
