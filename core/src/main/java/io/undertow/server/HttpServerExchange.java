@@ -26,6 +26,13 @@ import java.util.Deque;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import io.undertow.TexugoMessages;
+import io.undertow.util.AbstractAttachable;
+import io.undertow.util.GatedStreamSinkChannel;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+import io.undertow.util.Protocols;
+import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -36,13 +43,6 @@ import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.channels.SuspendableReadChannel;
-import io.undertow.TexugoMessages;
-import io.undertow.util.AbstractAttachable;
-import io.undertow.util.GatedStreamSinkChannel;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-import io.undertow.util.Protocols;
-import io.undertow.util.StatusCodes;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
@@ -288,7 +288,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         StreamSourceChannel channel = underlyingRequestChannel;
         for (ChannelWrapper wrapper : wrappers) {
-            channel = ((ChannelWrapper<StreamSourceChannel>)wrapper).wrap(channel, this);
+            channel = ((ChannelWrapper<StreamSourceChannel>) wrapper).wrap(channel, this);
             if (channel == null) {
                 throw TexugoMessages.MESSAGES.failedToAcquireRequestChannel();
             }
@@ -329,7 +329,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         StreamSinkChannel channel = gatedResponseChannel;
         for (ChannelWrapper wrapper : wrappers) {
-            channel = ((ChannelWrapper<StreamSinkChannel>)wrapper).wrap(channel, this);
+            channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(channel, this);
             if (channel == null) {
                 throw TexugoMessages.MESSAGES.failedToAcquireResponseChannel();
             }
@@ -362,7 +362,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 throw TexugoMessages.MESSAGES.responseAlreadyStarted();
             }
             newVal = oldVal & ~MASK_RESPONSE_CODE | responseCode & MASK_RESPONSE_CODE;
-        } while (! responseStateUpdater.compareAndSet(this, oldVal, newVal));
+        } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
     }
 
     /**
@@ -382,7 +382,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             oldLen = oldVal.length;
             newVal = Arrays.copyOf(oldVal, oldLen + 1);
             newVal[oldLen] = wrapper;
-        } while (! requestWrappersUpdater.compareAndSet(this, oldVal, newVal));
+        } while (!requestWrappersUpdater.compareAndSet(this, oldVal, newVal));
     }
 
     /**
@@ -402,7 +402,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             oldLen = oldVal.length;
             newVal = Arrays.copyOf(oldVal, oldLen + 1);
             newVal[oldLen] = wrapper;
-        } while (! responseWrappersUpdater.compareAndSet(this, oldVal, newVal));
+        } while (!responseWrappersUpdater.compareAndSet(this, oldVal, newVal));
     }
 
     /**
@@ -427,7 +427,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 return;
             }
             newVal = oldVal | FLAG_RESPONSE_TERMINATED;
-        } while (! responseStateUpdater.compareAndSet(this, oldVal, newVal));
+        } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
         // todo - let next exchange start pushing headers
     }
 
@@ -458,7 +458,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 throw TexugoMessages.MESSAGES.responseAlreadyStarted();
             }
             newVal = oldVal | FLAG_RESPONSE_SENT;
-        } while (! responseStateUpdater.compareAndSet(this, oldVal, newVal));
+        } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
         final HeaderMap responseHeaders = this.responseHeaders;
 
         responseHeaders.lock();
@@ -515,33 +515,35 @@ public final class HttpServerExchange extends AbstractAttachable {
                 return;
             }
             newVal = oldVal | FLAG_CLEANUP | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
-        } while (! responseStateUpdater.compareAndSet(this, oldVal, newVal));
-        if (allAreClear(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) try {
-            // Attempt a nice shutdown.
-            long res;
-            do {
-                res = Channels.drain(underlyingRequestChannel, Long.MAX_VALUE);
-            } while (res > 0);
-            if (res == 0) {
-                underlyingRequestChannel.getReadSetter().set(ChannelListeners.<StreamSourceChannel>drainListener(Long.MAX_VALUE, new ChannelListener<SuspendableReadChannel>() {
-                    public void handleEvent(final SuspendableReadChannel channel) {
-                        IoUtils.safeShutdownReads(channel);
-                    }
-                }, ChannelListeners.closingChannelExceptionHandler()));
-                underlyingRequestChannel.resumeReads();
+        } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
+        if (allAreClear(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+            try {
+                // Attempt a nice shutdown.
+                long res;
+                do {
+                    res = Channels.drain(underlyingRequestChannel, Long.MAX_VALUE);
+                } while (res > 0);
+                if (res == 0) {
+                    underlyingRequestChannel.getReadSetter().set(ChannelListeners.<StreamSourceChannel>drainListener(Long.MAX_VALUE, new ChannelListener<SuspendableReadChannel>() {
+                        public void handleEvent(final SuspendableReadChannel channel) {
+                            IoUtils.safeShutdownReads(channel);
+                        }
+                    }, ChannelListeners.closingChannelExceptionHandler()));
+                    underlyingRequestChannel.resumeReads();
+                }
+                gatedResponseChannel.shutdownWrites();
+                if (!gatedResponseChannel.flush()) {
+                    gatedResponseChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, ChannelListeners.closingChannelExceptionHandler()));
+                    gatedResponseChannel.resumeWrites();
+                }
+            } catch (Throwable t) {
+                // All sorts of things could go wrong, from runtime exceptions to java.io.IOException to errors.
+                // Just kill off the connection, it's fucked beyond repair.
+                safeClose(underlyingRequestChannel);
+                safeClose(gatedResponseChannel);
+                safeClose(underlyingResponseChannel);
+                safeClose(connection);
             }
-            gatedResponseChannel.shutdownWrites();
-            if (! gatedResponseChannel.flush()) {
-                gatedResponseChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, ChannelListeners.closingChannelExceptionHandler()));
-                gatedResponseChannel.resumeWrites();
-            }
-        } catch (Throwable t) {
-            // All sorts of things could go wrong, from runtime exceptions to java.io.IOException to errors.
-            // Just kill off the connection, it's fucked beyond repair.
-            safeClose(underlyingRequestChannel);
-            safeClose(gatedResponseChannel);
-            safeClose(underlyingResponseChannel);
-            safeClose(connection);
         } else if (anyAreClear(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
             // Only one of the two channels were terminated - this is bad, because it means
             // we may well have just closed one half of our socket but not the other.  Just
