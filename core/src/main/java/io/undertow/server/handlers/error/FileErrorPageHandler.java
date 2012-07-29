@@ -78,10 +78,18 @@ public class FileErrorPageHandler implements HttpHandler {
                             final FileWriteChannelListener listener = new FileWriteChannelListener(file, response.getWorker().getXnio(), executorService) {
                                 @Override
                                 protected void done(final StreamSinkChannel channel, final Exception exception) {
+
+                                    if(exception != null) {
+                                        //if we have already started sending content there is really nothing we can do
+                                        //except clean up the request as normal
+                                        if(!exchange.isResponseStarted()) {
+                                            exchange.setResponseCode(500);
+                                        }
+                                    }
                                     completionHandler.handleComplete();
                                 }
                             };
-                            listener.setup(response);
+                            listener.setup(exchange, response);
                         } catch (IOException e) {
                             UndertowLogger.ROOT_LOGGER.errorLoadingErrorPage(e, file);
                             completionHandler.handleComplete();

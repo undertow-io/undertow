@@ -24,6 +24,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.ExecutorService;
 
 import io.undertow.UndertowLogger;
+import io.undertow.server.HttpServerExchange;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
@@ -33,8 +34,8 @@ import org.xnio.channels.StreamSinkChannel;
 /**
  * A simple write listener that can be used to write out the contents of a file. When the file is written
  * out it closes the channel.
- *
- * This should not be added directly to the channel, instead {@link #setup(org.xnio.channels.StreamSinkChannel)}
+ * <p/>
+ * This should not be added directly to the channel, instead {@link #setup(io.undertow.server.HttpServerExchange, org.xnio.channels.StreamSinkChannel)}
  * should be called, which will attempt a write, and only add the listener if required.
  *
  * @author Stuart Douglas
@@ -56,8 +57,9 @@ public class FileWriteChannelListener implements ChannelListener<StreamSinkChann
         this.executorService = executorService;
     }
 
-    public void setup(final StreamSinkChannel channel) {
+    public void setup(final HttpServerExchange exchange, final StreamSinkChannel channel) {
         this.writeTask = new FileWriteTask(channel);
+        exchange.getResponseHeaders().add(Headers.CONTENT_LENGTH, "" + length);
         executorService.submit(writeTask);
     }
 
@@ -79,7 +81,7 @@ public class FileWriteChannelListener implements ChannelListener<StreamSinkChann
 
         @Override
         public synchronized void run() {
-            if(!channel.isOpen()) {
+            if (!channel.isOpen()) {
                 return;
             }
             try {
@@ -97,9 +99,8 @@ public class FileWriteChannelListener implements ChannelListener<StreamSinkChann
                 }
             } catch (IOException e) {
                 IoUtils.safeClose(fileChannel);
-                IoUtils.safeClose(channel);
                 UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(e, file);
-                done(channel, null);
+                done(channel, e);
             }
         }
     }
