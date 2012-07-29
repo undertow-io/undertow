@@ -21,9 +21,9 @@ package io.undertow.server.session;
 import java.io.IOException;
 import java.util.Deque;
 
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import org.xnio.IoFuture;
-import io.undertow.TexugoLogger;
-import io.undertow.TexugoMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -55,7 +55,7 @@ public class SessionAttachmentHandler implements HttpHandler {
 
     public SessionAttachmentHandler(final SessionManager sessionManager) {
         if(sessionManager == null) {
-            throw TexugoMessages.MESSAGES.sessionManagerMustNotBeNull();
+            throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
         this.sessionManager = sessionManager;
     }
@@ -63,7 +63,7 @@ public class SessionAttachmentHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         if (sessionManager == null) {
-            throw TexugoMessages.MESSAGES.sessionManagerMustNotBeNull();
+            throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
         String path = this.path;
@@ -87,14 +87,14 @@ public class SessionAttachmentHandler implements HttpHandler {
                             HttpHandlers.executeHandler(next, exchange, completionHandler);
                         } else if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
                             //we failed to get the session
-                            TexugoLogger.REQUEST_LOGGER.getSessionFailed(ioFuture.getException());
+                            UndertowLogger.REQUEST_LOGGER.getSessionFailed(ioFuture.getException());
                             HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange, completionHandler);
                         } else {
-                            TexugoLogger.REQUEST_LOGGER.unexpectedStatusGettingSession(ioFuture.getStatus());
+                            UndertowLogger.REQUEST_LOGGER.unexpectedStatusGettingSession(ioFuture.getStatus());
                             HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange, completionHandler);
                         }
                     } catch (IOException e) {
-                        TexugoLogger.REQUEST_LOGGER.getSessionFailed(e);
+                        UndertowLogger.REQUEST_LOGGER.getSessionFailed(e);
                         HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange, completionHandler);
                     }
                 }
@@ -142,7 +142,7 @@ public class SessionAttachmentHandler implements HttpHandler {
 
     public void setSessionManager(final SessionManager sessionManager) {
         if(sessionManager == null) {
-            throw TexugoMessages.MESSAGES.sessionManagerMustNotBeNull();
+            throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
         this.sessionManager = sessionManager;
     }

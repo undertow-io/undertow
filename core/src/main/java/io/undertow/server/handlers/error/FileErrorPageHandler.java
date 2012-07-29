@@ -26,7 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
-import io.undertow.TexugoLogger;
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -70,7 +70,7 @@ public class FileErrorPageHandler implements HttpHandler {
                 Set<Integer> codes = responseCodes;
                 if (!exchange.isResponseStarted() &&  codes.contains(exchange.getResponseCode())) {
                     if(!file.exists()) {
-                        TexugoLogger.ROOT_LOGGER.errorPageDoesNotExist(file);
+                        UndertowLogger.ROOT_LOGGER.errorPageDoesNotExist(file);
                         completionHandler.handleComplete();
                     } else  {
                         final StreamSinkChannel response = exchange.getResponseChannel();
@@ -84,7 +84,7 @@ public class FileErrorPageHandler implements HttpHandler {
                             response.getWriteSetter().set(listener);
                             response.resumeWrites();
                         } catch (IOException e) {
-                            TexugoLogger.ROOT_LOGGER.errorLoadingErrorPage(e, file);
+                            UndertowLogger.ROOT_LOGGER.errorLoadingErrorPage(e, file);
                             completionHandler.handleComplete();
                         }
                     }

@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
-import io.undertow.TexugoMessages;
+import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -88,7 +88,7 @@ public class PathHandler implements HttpHandler {
     public void addPath(final String path, final HttpHandler handler) {
         HttpHandlers.handlerNotNull(handler);
         if(path == null || path.isEmpty()) {
-            throw TexugoMessages.MESSAGES.pathMustBeSpecified();
+            throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
         if(path.charAt(0) != '/') {
             paths.put("/" + path, handler);
@@ -99,7 +99,7 @@ public class PathHandler implements HttpHandler {
 
     public void removePath(final String path) {
         if(path == null || path.isEmpty()) {
-            throw TexugoMessages.MESSAGES.pathMustBeSpecified();
+            throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
         if(path.charAt(0) != '/') {
             paths.remove("/" + path);

@@ -19,11 +19,12 @@
 package io.undertow.server;
 
 import java.nio.ByteBuffer;
+
+import io.undertow.UndertowLogger;
 import org.xnio.ChannelListener;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
-import io.undertow.TexugoLogger;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -42,8 +43,8 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
     }
 
     public void handleEvent(final ConnectedStreamChannel channel) {
-        if(TexugoLogger.REQUEST_LOGGER.isTraceEnabled()) {
-            TexugoLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
+        if(UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
+            UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(channel);
         HttpReadListener readListener = new HttpReadListener(bufferPool, rootHandler, channel);

@@ -18,7 +18,7 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.TexugoMessages;
+import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -51,7 +51,7 @@ public final class HttpHandlers {
 
     public static void handlerNotNull(final HttpHandler handler) {
         if(handler == null) {
-            throw TexugoMessages.MESSAGES.handlerCannotBeNull();
+            throw UndertowMessages.MESSAGES.handlerCannotBeNull();
         }
     }
 }

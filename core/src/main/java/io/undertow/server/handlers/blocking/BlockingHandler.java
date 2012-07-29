@@ -18,7 +18,7 @@
 
 package io.undertow.server.handlers.blocking;
 
-import io.undertow.TexugoLogger;
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -62,8 +62,8 @@ public final class BlockingHandler implements HttpHandler {
                         handler.handleRequest(blockingExchange);
                     }
                 } catch (Throwable t) {
-                    if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                        TexugoLogger.REQUEST_LOGGER.debugf(t, "Blocking request failed %s", blockingExchange);
+                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        UndertowLogger.REQUEST_LOGGER.debugf(t, "Blocking request failed %s", blockingExchange);
                     }
                 } finally {
                     completionHandler.handleComplete();

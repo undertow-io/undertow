@@ -26,7 +26,7 @@ import java.util.Deque;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import io.undertow.TexugoMessages;
+import io.undertow.UndertowMessages;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.GatedStreamSinkChannel;
 import io.undertow.util.HeaderMap;
@@ -290,7 +290,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         for (ChannelWrapper wrapper : wrappers) {
             channel = ((ChannelWrapper<StreamSourceChannel>) wrapper).wrap(channel, this);
             if (channel == null) {
-                throw TexugoMessages.MESSAGES.failedToAcquireRequestChannel();
+                throw UndertowMessages.MESSAGES.failedToAcquireRequestChannel();
             }
         }
         return channel;
@@ -331,7 +331,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         for (ChannelWrapper wrapper : wrappers) {
             channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(channel, this);
             if (channel == null) {
-                throw TexugoMessages.MESSAGES.failedToAcquireResponseChannel();
+                throw UndertowMessages.MESSAGES.failedToAcquireResponseChannel();
             }
         }
         return channel;
@@ -359,7 +359,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         do {
             oldVal = responseState;
             if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
-                throw TexugoMessages.MESSAGES.responseAlreadyStarted();
+                throw UndertowMessages.MESSAGES.responseAlreadyStarted();
             }
             newVal = oldVal & ~MASK_RESPONSE_CODE | responseCode & MASK_RESPONSE_CODE;
         } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
@@ -377,7 +377,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         do {
             oldVal = requestWrappers;
             if (oldVal == null) {
-                throw TexugoMessages.MESSAGES.requestChannelAlreadyProvided();
+                throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
             }
             oldLen = oldVal.length;
             newVal = Arrays.copyOf(oldVal, oldLen + 1);
@@ -397,7 +397,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         do {
             oldVal = responseWrappers;
             if (oldVal == null) {
-                throw TexugoMessages.MESSAGES.responseChannelAlreadyProvided();
+                throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
             }
             oldLen = oldVal.length;
             newVal = Arrays.copyOf(oldVal, oldLen + 1);
@@ -455,7 +455,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         do {
             oldVal = responseState;
             if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
-                throw TexugoMessages.MESSAGES.responseAlreadyStarted();
+                throw UndertowMessages.MESSAGES.responseAlreadyStarted();
             }
             newVal = oldVal | FLAG_RESPONSE_SENT;
         } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));

@@ -21,7 +21,7 @@ package io.undertow.server;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import io.undertow.TexugoLogger;
+import io.undertow.UndertowLogger;
 import io.undertow.server.httpparser.HttpExchangeBuilder;
 import io.undertow.server.httpparser.HttpParser;
 import io.undertow.server.httpparser.ParseState;
@@ -67,8 +67,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             try {
                 res = channel.read(buffer);
             } catch (IOException e) {
-                if(TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                    TexugoLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
+                if(UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                    UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
                 }
                 safeClose(channel);
                 return;
@@ -81,8 +81,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     channel.shutdownReads();
                     // TODO: enqueue a write handler which shuts down the write side of the connection
                 } catch (IOException e) {
-                    if(TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                        TexugoLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
+                    if(UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
                     }
                     // fuck it, it's all ruined
                     IoUtils.safeClose(channel);
@@ -127,7 +127,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
                 } catch (Throwable t) {
                     //TODO: we should attempt to return a 500 status code in this situation
-                    TexugoLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
+                    UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
                     IoUtils.safeClose(underlyingChannel);
                 }
             }

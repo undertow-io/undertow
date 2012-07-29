@@ -18,7 +18,7 @@
 
 package io.undertow.server.session;
 
-import io.undertow.TexugoLogger;
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 
@@ -52,7 +52,7 @@ public class SessionCookieConfig {
 
     public void setSessionCookie(final HttpServerExchange exchange, final Session session) {
         if(exchange.isResponseStarted()) {
-            TexugoLogger.REQUEST_LOGGER.couldNotSendSessionCookieAsResponseAlreadyStarted();
+            UndertowLogger.REQUEST_LOGGER.couldNotSendSessionCookieAsResponseAlreadyStarted();
             return;
         }
         final StringBuilder header = new StringBuilder(cookieName);
@@ -84,7 +84,7 @@ public class SessionCookieConfig {
 
     public void clearCookie(final HttpServerExchange exchange, final Session session) {
         if(exchange.isResponseStarted()) {
-            TexugoLogger.REQUEST_LOGGER.couldNotInvalidateSessionCookieAsResponseAlreadyStarted();
+            UndertowLogger.REQUEST_LOGGER.couldNotInvalidateSessionCookieAsResponseAlreadyStarted();
             return;
         }
         final StringBuilder header = new StringBuilder(cookieName);

@@ -25,10 +25,10 @@ import org.jboss.logging.Messages;
 /**
  * @author Stuart Douglas
  */
-@MessageBundle(projectCode = "TEXUGO")
-public interface TexugoMessages {
+@MessageBundle(projectCode = "UNDERTOW")
+public interface UndertowMessages {
 
-    TexugoMessages MESSAGES = Messages.getBundle(TexugoMessages.class);
+    UndertowMessages MESSAGES = Messages.getBundle(UndertowMessages.class);
 
     @Message(id = 2, value = "The response has already been started")
     IllegalStateException responseAlreadyStarted();

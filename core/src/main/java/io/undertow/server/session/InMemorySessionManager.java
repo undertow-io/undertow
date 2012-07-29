@@ -24,10 +24,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import org.xnio.FinishedIoFuture;
 import org.xnio.IoFuture;
-import io.undertow.TexugoLogger;
-import io.undertow.TexugoMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.SecureHashMap;
 
@@ -66,7 +66,7 @@ public class InMemorySessionManager implements SessionManager {
         if(config != null) {
             config.setSessionCookie(serverExchange, session);
         } else {
-            TexugoLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
+            UndertowLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
         }
         return new FinishedIoFuture<Session>(session);
     }
@@ -127,7 +127,7 @@ public class InMemorySessionManager implements SessionManager {
         public long getCreationTime() {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
-                throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             return sess.creationTime;
         }
@@ -136,7 +136,7 @@ public class InMemorySessionManager implements SessionManager {
         public long getLastAccessedTime() {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
-                throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             return sess.lastAccessed;
         }
@@ -145,7 +145,7 @@ public class InMemorySessionManager implements SessionManager {
         public void setMaxInactiveInterval(final int interval) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
-                throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             sess.maxInactiveInterval = interval;
         }
@@ -154,7 +154,7 @@ public class InMemorySessionManager implements SessionManager {
         public int getMaxInactiveInterval() {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
-                throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             return sess.maxInactiveInterval;
         }
@@ -163,7 +163,7 @@ public class InMemorySessionManager implements SessionManager {
         public IoFuture<Object> getAttribute(final String name) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
-                throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             return new FinishedIoFuture<Object>(sess.attributes.get(name));
         }
@@ -172,7 +172,7 @@ public class InMemorySessionManager implements SessionManager {
         public IoFuture<Set<String>> getAttributeNames() {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
-                throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             return new FinishedIoFuture<Set<String>>(sess.attributes.keySet());
         }
@@ -181,7 +181,7 @@ public class InMemorySessionManager implements SessionManager {
         public IoFuture<Void> setAttribute(final String name, final Object value) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
-                throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             final Object existing = sess.attributes.put(name, value);
             for (SessionListener listener : listeners) {
@@ -198,7 +198,7 @@ public class InMemorySessionManager implements SessionManager {
         public IoFuture<Void> removeAttribute(final String name) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
-                throw TexugoMessages.MESSAGES.sessionNotFound(sessionId);
+                throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             final Object existing = sess.attributes.remove(name);
             for (SessionListener listener : listeners) {
@@ -218,7 +218,7 @@ public class InMemorySessionManager implements SessionManager {
             if(config != null) {
                 config.clearCookie(exchange, this);
             } else {
-                TexugoLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
+                UndertowLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
             }
             return new FinishedIoFuture<Void>(null);
         }

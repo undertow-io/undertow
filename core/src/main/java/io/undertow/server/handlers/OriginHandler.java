@@ -25,7 +25,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
 
-import io.undertow.TexugoLogger;
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -51,8 +51,8 @@ public class OriginHandler implements HttpHandler {
         if (origin == null) {
             if (requireOriginHeader) {
                 //TODO: Is 403 (Forbidden) the best response code
-                if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                    TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to lack of Origin: header", exchange.getRequestPath());
+                if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                    UndertowLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to lack of Origin: header", exchange.getRequestPath());
                 }
                 HttpHandlers.executeHandler(originFailedHandler, exchange, completionHandler);
                 return;
@@ -67,16 +67,16 @@ public class OriginHandler implements HttpHandler {
                         break;
                     }
                 } else if (requireAllOrigins) {
-                    if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                        TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to Origin %s not being in the allowed origins list", exchange.getRequestPath(), header);
+                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        UndertowLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to Origin %s not being in the allowed origins list", exchange.getRequestPath(), header);
                     }
                     HttpHandlers.executeHandler(originFailedHandler, exchange, completionHandler);
                     return;
                 }
             }
             if (!found) {
-                if (TexugoLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                    TexugoLogger.REQUEST_LOGGER.debugf("Refusing request for %s as none of the specified origins %s were in the allowed origins list", exchange.getRequestPath(), origin);
+                if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                    UndertowLogger.REQUEST_LOGGER.debugf("Refusing request for %s as none of the specified origins %s were in the allowed origins list", exchange.getRequestPath(), origin);
                 }
                 HttpHandlers.executeHandler(originFailedHandler, exchange, completionHandler);
                 return;

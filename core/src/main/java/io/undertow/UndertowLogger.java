@@ -34,12 +34,12 @@ import org.xnio.IoFuture;
  *
  * @author Stuart Douglas
  */
-@MessageLogger(projectCode = "TEXUGO")
-public interface TexugoLogger extends BasicLogger {
+@MessageLogger(projectCode = "UNDERTOW")
+public interface UndertowLogger extends BasicLogger {
 
-    TexugoLogger ROOT_LOGGER = Logger.getMessageLogger(TexugoLogger.class, TexugoLogger.class.getPackage().getName());
+    UndertowLogger ROOT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName());
 
-    TexugoLogger REQUEST_LOGGER = Logger.getMessageLogger(TexugoLogger.class, TexugoLogger.class.getPackage().getName() + ".request");
+    UndertowLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request");
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5000, value = "HttpServerExchange.getRequestChannel() has been called without also calling " +
