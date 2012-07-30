@@ -29,28 +29,22 @@
     </parent>
 
     <groupId>io.undertow</groupId>
-    <artifactId>undertow-core</artifactId>
+    <artifactId>undertow-servlet</artifactId>
     <version>1.0.0.Alpha1-SNAPSHOT</version>
 
-    <name>Undertow Core</name>
+    <name>Undertow Servlet</name>
 
     <dependencies>
 
         <dependency>
             <groupId>io.undertow</groupId>
-            <artifactId>undertow-parser-generator</artifactId>
-            <scope>provided</scope>
+            <artifactId>undertow-core</artifactId>
         </dependency>
 
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jboss.logging</groupId>
-            <artifactId>jboss-logging</artifactId>
         </dependency>
 
         <dependency>
@@ -67,13 +61,8 @@
 
         <dependency>
             <groupId>org.jboss.xnio</groupId>
-            <artifactId>xnio-api</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jboss.xnio</groupId>
             <artifactId>xnio-nio</artifactId>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

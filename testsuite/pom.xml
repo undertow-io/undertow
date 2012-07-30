@@ -29,10 +29,15 @@
     </parent>
 
     <groupId>io.undertow</groupId>
-    <artifactId>undertow-testsuite</artifactId>
+    <artifactId>undertow-testsuite-parent</artifactId>
     <version>1.0.0.Alpha1-SNAPSHOT</version>
+    <packaging>pom</packaging>
 
-    <name>Undertow Testsuite</name>
+    <modules>
+        <module>core</module>
+    </modules>
+
+    <name>Undertow Testsuite Parent</name>
 
     <properties>
         <test.level>INFO</test.level>

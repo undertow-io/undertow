@@ -84,6 +84,7 @@
         <module>build-config</module>
         <module>parser-generator</module>
         <module>core</module>
+        <module>servlet</module>
         <module>testsuite</module>
     </modules>
 
@@ -190,6 +191,12 @@
             <dependency>
                 <groupId>io.undertow</groupId>
                 <artifactId>undertow-parser-generator</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-servlet</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
