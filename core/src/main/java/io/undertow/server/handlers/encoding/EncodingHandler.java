@@ -60,7 +60,7 @@ public class EncodingHandler implements HttpHandler {
         final Deque<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
         HttpHandler identityHandler = this.identityHandler;
         if (res == null || res.isEmpty()) {
-            if(identityHandler != null) {
+            if (identityHandler != null) {
                 HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
             } else {
                 //we don't have an identity handler
@@ -105,8 +105,27 @@ public class EncodingHandler implements HttpHandler {
                         }
                         break;
                     }
+                    case ' ': {
+                        if (stringStart != i) {
+                            if (current != null &&
+                                    (i - stringStart > 2 && header.charAt(stringStart) == 'q' &&
+                                            header.charAt(stringStart + 1) == '=')) {
+                                //if this is a valid qvalue
+                                current.qvalue = header.substring(stringStart + 2, i);
+                                if (current.encoding.equals("*")) {
+                                    if (handleDefault(found, current)) {
+                                        identityProhibited = true;
+                                    }
+                                }
+                            } else {
+                                current = handleNewEncoding(found, header, stringStart, i);
+                            }
+                        }
+                        stringStart = i + 1;
+                    }
                 }
             }
+
             if (stringStart != l) {
                 if (current != null &&
                         (l - stringStart > 2 && header.charAt(stringStart) == 'q' &&
@@ -123,7 +142,6 @@ public class EncodingHandler implements HttpHandler {
                 }
             }
         }
-
         int size = found.size();
         if (size == 0) {
             if (identityProhibited || identityHandler == null) {

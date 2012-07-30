@@ -19,11 +19,10 @@
 package io.undertow.server.httpparser;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
+import io.undertow.util.HeaderMap;
 import org.junit.Assert;
 import org.junit.Test;
-import io.undertow.util.HeaderMap;
 
 /**
  * Tests that the parser can resume when it is given partial input
@@ -76,7 +75,7 @@ public class ParserResumeTestCase {
         Assert.assertSame("HTTP/1.1", result.protocol);
         HeaderMap map = new HeaderMap();
         map.add("Host", "www.somehost.net");
-        map.addAll("OtherHeader", Arrays.asList("some", "value"));
+        map.add("OtherHeader", "some value");
         map.add("Hostee", "another");
         map.add("Accept-garbage", "a");
         Assert.assertEquals(map, result.headers);

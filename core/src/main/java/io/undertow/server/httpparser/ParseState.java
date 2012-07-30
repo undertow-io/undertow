@@ -86,10 +86,6 @@ public class ParseState {
      */
     String nextHeader;
 
-    /**
-     * Next header values
-     */
-    List<String> nextHeaderValues;
 
     public ParseState() {
         this.parseState = 0;

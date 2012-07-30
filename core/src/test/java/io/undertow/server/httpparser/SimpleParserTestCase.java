@@ -19,11 +19,10 @@
 package io.undertow.server.httpparser;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
+import io.undertow.util.HeaderMap;
 import org.junit.Assert;
 import org.junit.Test;
-import io.undertow.util.HeaderMap;
 
 /**
  * Basic test of the HTTP parser functionality.
@@ -83,7 +82,7 @@ public class SimpleParserTestCase {
         Assert.assertSame("HTTP/1.1", result.protocol);
         HeaderMap map = new HeaderMap();
         map.add("Host", "www.somehost.net");
-        map.addAll("OtherHeader", Arrays.asList("some", "value"));
+        map.add("OtherHeader", "some value");
         Assert.assertEquals(map, result.headers);
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
     }

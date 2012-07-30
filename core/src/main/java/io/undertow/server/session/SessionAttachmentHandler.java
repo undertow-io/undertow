@@ -19,17 +19,19 @@
 package io.undertow.server.session;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import org.xnio.IoFuture;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
+import org.xnio.IoFuture;
 
 /**
  * Handler that attaches the session to the request.
@@ -54,7 +56,7 @@ public class SessionAttachmentHandler implements HttpHandler {
     private volatile String cookieName = SessionCookieConfig.DEFAULT_SESSION_ID;
 
     public SessionAttachmentHandler(final SessionManager sessionManager) {
-        if(sessionManager == null) {
+        if (sessionManager == null) {
             throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
         this.sessionManager = sessionManager;
@@ -106,17 +108,19 @@ public class SessionAttachmentHandler implements HttpHandler {
     private String findSessionId(final HttpServerExchange exchange) {
         final Deque<String> cookies = exchange.getRequestHeaders().get(Headers.COOKIE);
         if (cookies != null) {
-            for (String cookie : cookies) {
-                if (!cookie.startsWith("$")) {
-                    String[] parts = cookie.split("=");
-                    if (parts.length == 2) {
-                        if (parts[0].equals(cookieName)) {
-                            String value = parts[1];
-                            if (value.length() > 2) {
-                                if (value.charAt(0) == '"') {
-                                    int last = value.lastIndexOf("\"");
-                                    String trimmed = value.substring(1, last);
-                                    return trimmed;
+            for (String fullCookie : cookies) {
+                for (String cookie : split(fullCookie)) {
+                    if (!cookie.startsWith("$")) {
+                        String[] parts = cookie.split("=");
+                        if (parts.length == 2) {
+                            if (parts[0].equals(cookieName)) {
+                                String value = parts[1];
+                                if (value.length() > 2) {
+                                    if (value.charAt(0) == '"') {
+                                        int last = value.lastIndexOf("\"");
+                                        String trimmed = value.substring(1, last);
+                                        return trimmed;
+                                    }
                                 }
                             }
                         }
@@ -125,6 +129,24 @@ public class SessionAttachmentHandler implements HttpHandler {
             }
         }
         return null;
+    }
+
+    private static List<String> split(final String string) {
+        List<String> ret = new ArrayList<String>();
+        int p = 0;
+        for (int i = 0; i < string.length(); ++i) {
+            if (string.charAt(i) == ' ') {
+                if (p != i) {
+                    ret.add(string.substring(p, i));
+                    p = i + 1;
+                }
+            }
+
+        }
+        if (p < string.length() - 1) {
+            ret.add(string.substring(p));
+        }
+        return ret;
     }
 
 
@@ -141,7 +163,7 @@ public class SessionAttachmentHandler implements HttpHandler {
     }
 
     public void setSessionManager(final SessionManager sessionManager) {
-        if(sessionManager == null) {
+        if (sessionManager == null) {
             throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
         this.sessionManager = sessionManager;
@@ -178,4 +200,5 @@ public class SessionAttachmentHandler implements HttpHandler {
     public synchronized void setSecure(final boolean secure) {
         this.secure = secure;
     }
+
 }
