@@ -96,9 +96,9 @@ public class ParserGenerator {
         final ClassMethod sctor = file.addMethod(AccessFlag.PUBLIC | AccessFlag.STATIC, "<clinit>", "V");
         final AtomicInteger fieldCounter = new AtomicInteger(1);
 
-        createStateMachine(httpVerbs, className, file, sctor, fieldCounter, HANDLE_HTTP_VERB, new VerbStateMachine());
-        createStateMachine(httpVersions, className, file, sctor, fieldCounter, HANDLE_HTTP_VERSION, new VersionStateMachine());
-        createStateMachine(standardHeaders, className, file, sctor, fieldCounter, HANDLE_HEADER, new HeaderStateMachine());
+        createStateMachine(httpVerbs, className, file, sctor, fieldCounter, HANDLE_HTTP_VERB, new VerbStateMachine(), false);
+        createStateMachine(httpVersions, className, file, sctor, fieldCounter, HANDLE_HTTP_VERSION, new VersionStateMachine(), false);
+        createStateMachine(standardHeaders, className, file, sctor, fieldCounter, HANDLE_HEADER, new HeaderStateMachine(), true);
 
         final ClassMethod handle = file.addMethod(Modifier.PUBLIC, "handle", "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR);
         createHandleBody(className, handle);
@@ -190,11 +190,22 @@ public class ParserGenerator {
 
     }
 
-    private static void createStateMachine(final String[] httpVerbs, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter, final String methodName, final CustomStateMachine stateMachine) {
+    private static void createStateMachine(final String[] originalItems, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter, final String methodName, final CustomStateMachine stateMachine, final boolean caseInsensitive) {
+
+        final String[] modifiedItems;
+        if(caseInsensitive) {
+            modifiedItems = new String[originalItems.length];
+            for(int i = 0; i < modifiedItems.length; ++i) {
+                modifiedItems[i] = originalItems[i].toLowerCase();
+            }
+        } else {
+            modifiedItems = originalItems;
+        }
+
         //list of all states except the initial
         final List<State> allStates = new ArrayList<State>();
         final State initial = new State((byte) 0, "");
-        for (String value : httpVerbs) {
+        for (String value : modifiedItems) {
             addStates(initial, value, allStates);
         }
         //we want initial to be number 0
@@ -208,7 +219,7 @@ public class ParserGenerator {
         final int noStates = stateCounter.get();
 
         final ClassMethod handle = file.addMethod(Modifier.PRIVATE, methodName, "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR);
-        writeStateMachine(className, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine);
+        writeStateMachine(className, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, caseInsensitive);
     }
 
     private static void createStateField(final State state, final ClassFile file, final CodeAttribute sc) {
@@ -251,7 +262,7 @@ public class ParserGenerator {
         }
     }
 
-    private static void writeStateMachine(final String className, final CodeAttribute c, final State initial, final List<State> allStates, int noStates, final CustomStateMachine stateMachine) {
+    private static void writeStateMachine(final String className, final CodeAttribute c, final State initial, final List<State> allStates, int noStates, final CustomStateMachine stateMachine, final boolean caseInsensitive) {
 
         final List<State> states = new ArrayList<State>();
         states.add(initial);
@@ -352,6 +363,9 @@ public class ParserGenerator {
         //load 3 copies of the current byte into the stack
         c.aload(BYTE_BUFFER_VAR);
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
+        if(caseInsensitive) {
+            c.invokestatic(Character.class.getName(), "toLowerCase", "(C)C");
+        }
         c.dup();
         c.dup();
         c.iinc(BYTES_REMAINING_VAR, -1);
