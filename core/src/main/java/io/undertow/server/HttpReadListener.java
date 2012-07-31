@@ -108,7 +108,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 //TODO: we need a proper way to handle this
                 channel.getReadSetter().set(null);
 
-                final HttpServerExchange httpServerExchange = new HttpServerExchange(bufferPool, connection, builder.getHeaders(), new HeaderMap(), builder.getMethod(), channel, underlyingChannel);
+                final HttpServerExchange httpServerExchange = new HttpServerExchange(bufferPool, connection, builder.getHeaders(), new HeaderMap(), builder.getQueryParameters(), builder.getMethod(), channel, underlyingChannel);
 
 
                 try {

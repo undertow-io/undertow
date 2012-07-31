@@ -65,6 +65,8 @@ public class ParseState {
      */
     int pos;
 
+    int queryParamPos;
+
     /**
      * If this is in {@link #NO_STATE} then this holds the current token that has been read so far.
      */

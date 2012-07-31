@@ -73,6 +73,23 @@ public class SimpleParserTestCase {
         Assert.assertEquals("http://www.somehost.net/somepath", result.path);
     }
 
+    @Test
+    public void testQueryParams() {
+        byte[] in = "GET\thttp://www.somehost.net/somepath?a=b&b=c&d&e&f=\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
+
+        final ParseState context = new ParseState();
+        HttpExchangeBuilder result = new HttpExchangeBuilder();
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
+        Assert.assertEquals("/somepath?a=b&b=c&d&e&f=", result.canonicalPath);
+        Assert.assertEquals("http://www.somehost.net/somepath?a=b&b=c&d&e&f=", result.path);
+        Assert.assertEquals("b", result.queryParameters.get("a").get(0));
+        Assert.assertEquals("c", result.queryParameters.get("b").get(0));
+        Assert.assertEquals("", result.queryParameters.get("d").get(0));
+        Assert.assertEquals("", result.queryParameters.get("e").get(0));
+        Assert.assertEquals("", result.queryParameters.get("f").get(0));
+
+    }
+
     private void runTest(final byte[] in) {
         final ParseState context = new ParseState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();

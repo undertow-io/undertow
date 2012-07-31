@@ -31,7 +31,7 @@ import org.junit.Test;
  */
 public class ParserResumeTestCase {
 
-    public static final String DATA = "POST http://www.somehost.net/apath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
+    public static final String DATA = "POST http://www.somehost.net/apath?key1=value1&key2=value2 HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
 
     @Test
     public void testMethodSplit() {
@@ -70,8 +70,8 @@ public class ParserResumeTestCase {
 
     private void runAssertions(final HttpExchangeBuilder result, final ParseState context) {
         Assert.assertSame("POST", result.method);
-        Assert.assertEquals("/apath", result.canonicalPath);
-        Assert.assertEquals("http://www.somehost.net/apath", result.path);
+        Assert.assertEquals("/apath?key1=value1&key2=value2", result.canonicalPath);
+        Assert.assertEquals("http://www.somehost.net/apath?key1=value1&key2=value2", result.path);
         Assert.assertSame("HTTP/1.1", result.protocol);
         HeaderMap map = new HeaderMap();
         map.add("Host", "www.somehost.net");
@@ -81,6 +81,8 @@ public class ParserResumeTestCase {
         Assert.assertEquals(map, result.headers);
 
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
+        Assert.assertEquals("value1", result.queryParameters.get("key1").get(0));
+        Assert.assertEquals("value2", result.queryParameters.get("key2").get(0));
     }
 
 }

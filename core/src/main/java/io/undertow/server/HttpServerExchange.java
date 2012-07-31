@@ -23,6 +23,8 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -64,6 +66,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final HttpServerConnection connection;
     private final HeaderMap requestHeaders;
     private final HeaderMap responseHeaders;
+
+    private final Map<String, List<String>> queryParameters;
 
     private final GatedStreamSinkChannel gatedResponseChannel;
     private final StreamSinkChannel underlyingResponseChannel;
@@ -114,11 +118,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_CLEANUP = 1 << 13;
 
-    protected HttpServerExchange(final Pool<ByteBuffer> bufferPool, final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final String requestMethod, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
+    protected HttpServerExchange(final Pool<ByteBuffer> bufferPool, final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final Map<String, List<String>> queryParameters, final String requestMethod, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
         this.bufferPool = bufferPool;
         this.connection = connection;
         this.requestHeaders = requestHeaders;
         this.responseHeaders = responseHeaders;
+        this.queryParameters = queryParameters;
         this.requestMethod = requestMethod;
         this.underlyingRequestChannel = requestChannel;
         this.underlyingResponseChannel = responseChannel;
@@ -264,6 +269,15 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public HeaderMap getResponseHeaders() {
         return responseHeaders;
+    }
+
+    /**
+     * Returns a mutable map of very parameters.
+     *
+     * @return The query parameters
+     */
+    public Map<String, List<String>> getQueryParameters() {
+        return queryParameters;
     }
 
     /**

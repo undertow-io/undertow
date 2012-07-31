@@ -22,7 +22,6 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
@@ -79,7 +78,7 @@ public final class HeaderMap implements Iterable<String> {
         }
     }
 
-    private final Map<String, HeaderValue> values = new LinkedHashMap<String, HeaderValue>();
+    private final Map<String, HeaderValue> values = new SecureHashMap<String, HeaderValue>();
 
     public Iterator<String> iterator() {
         final Iterator<HeaderValue> iterator = values.values().iterator();

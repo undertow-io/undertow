@@ -193,7 +193,9 @@ public abstract class HttpParser {
     private static final int FIRST_COLON = 1;
     private static final int FIRST_SLASH = 2;
     private static final int SECOND_SLASH = 3;
-    private static final int HOST_DONE = 3;
+    private static final int HOST_DONE =  4;
+    private static final int QUERY_PARAM_NAME =  5;
+    private static final int QUERY_PARAM_VALUE =  6;
 
     /**
      * Parses a path value. This is called from the generated  bytecode.
@@ -209,6 +211,8 @@ public abstract class HttpParser {
         StringBuilder stringBuilder = state.stringBuilder;
         int parseState = state.parseState;
         int canonicalPathStart = state.pos;
+        int queryParamPos = state.queryParamPos;
+        String nextQueryParam = state.nextHeader;
         if (stringBuilder == null) {
             state.stringBuilder = stringBuilder = new StringBuilder();
         }
@@ -219,15 +223,22 @@ public abstract class HttpParser {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
                     builder.path = path;
-                    if (parseState != HOST_DONE) {
+                    if (parseState < HOST_DONE) {
                         builder.canonicalPath = path;
                     } else {
                         builder.canonicalPath = path.substring(canonicalPathStart);
+                    }
+                    if(parseState == QUERY_PARAM_NAME) {
+                        builder.addQueryParam(stringBuilder.substring(queryParamPos), "");
+                    } else if(parseState == QUERY_PARAM_VALUE){
+                        builder.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
                     }
                     state.state = ParseState.VERSION;
                     state.stringBuilder = null;
                     state.parseState = 0;
                     state.pos = 0;
+                    state.nextHeader = null;
+                    state.queryParamPos = 0;
                     return remaining;
                 }
             } else {
@@ -242,6 +253,23 @@ public abstract class HttpParser {
                     canonicalPathStart = stringBuilder.length();
                 } else if (parseState == FIRST_COLON || parseState == FIRST_SLASH) {
                     parseState = START;
+                } else if(next == '?' && (parseState == START || parseState == HOST_DONE)) {
+                    parseState = QUERY_PARAM_NAME;
+                    queryParamPos = stringBuilder.length() + 1;
+                } else if(next == '=' && parseState == QUERY_PARAM_NAME) {
+                    parseState = QUERY_PARAM_VALUE;
+                    nextQueryParam = stringBuilder.substring(queryParamPos);
+                    queryParamPos = stringBuilder.length() + 1;
+                } else if(next == '&' && parseState == QUERY_PARAM_NAME) {
+                    parseState = QUERY_PARAM_NAME;
+                    builder.addQueryParam(stringBuilder.substring(queryParamPos), "");
+                    nextQueryParam = null;
+                    queryParamPos = stringBuilder.length() + 1;
+                } else if(next == '&' && parseState == QUERY_PARAM_VALUE) {
+                    parseState = QUERY_PARAM_NAME;
+                    builder.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
+                    nextQueryParam = null;
+                    queryParamPos = stringBuilder.length() + 1;
                 }
                 stringBuilder.append(next);
             }
@@ -250,6 +278,8 @@ public abstract class HttpParser {
         state.stringBuilder = stringBuilder;
         state.parseState = parseState;
         state.pos = canonicalPathStart;
+        state.nextHeader = nextQueryParam;
+        state.queryParamPos = queryParamPos;
         return remaining;
     }
 

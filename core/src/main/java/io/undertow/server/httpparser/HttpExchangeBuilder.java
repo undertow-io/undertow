@@ -18,11 +18,13 @@
 
 package io.undertow.server.httpparser;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import io.undertow.util.HeaderMap;
+import io.undertow.util.SecureHashMap;
 
 /**
  *
@@ -35,7 +37,7 @@ public class HttpExchangeBuilder {
     String canonicalPath;
     String protocol;
     final HeaderMap headers = new HeaderMap();
-    final Map<String, List<String>> queryParameters = new HashMap<String, List<String>>();
+    final Map<String, List<String>> queryParameters = new SecureHashMap<String, java.util.List<String>>();
 
     public String getMethod() {
         return method;
@@ -55,5 +57,17 @@ public class HttpExchangeBuilder {
 
     public HeaderMap getHeaders() {
         return headers;
+    }
+
+    public void addQueryParam(final String name, final String param) {
+        List<String> list = queryParameters.get(name);
+        if(list == null) {
+            queryParameters.put(name, list = Collections.synchronizedList(new ArrayList<String>()));
+        }
+        list.add(param);
+    }
+
+    public Map<String, List<String>> getQueryParameters() {
+        return queryParameters;
     }
 }
