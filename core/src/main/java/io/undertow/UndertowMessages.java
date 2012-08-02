@@ -18,6 +18,8 @@
 
 package io.undertow;
 
+import java.io.IOException;
+
 import org.jboss.logging.Message;
 import org.jboss.logging.MessageBundle;
 import org.jboss.logging.Messages;
@@ -63,4 +65,7 @@ public interface UndertowMessages {
 
     @Message(id = 13, value = "Argument cannot be null")
     IllegalArgumentException argumentCannotBeNull();
+
+    @Message(id = 14, value = "close() called with data still to be flushed. Please call shutdownWrites() and then call flush() until it returns true before calling close()")
+    IOException closeCalledWithDataStillToBeFlushed();
 }
