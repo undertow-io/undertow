@@ -1020,7 +1020,7 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
                 return next;
             } finally {
                 removeIterator = tableIterator;
-                next = null;
+                next = nonexistent();
             }
             throw new NoSuchElementException();
         }

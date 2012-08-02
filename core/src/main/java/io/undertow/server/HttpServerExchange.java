@@ -222,6 +222,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection;
     }
 
+    public Pool<ByteBuffer> getBufferPool() {
+        return bufferPool;
+    }
+
     /**
      * Upgrade the channel to a raw socket.  This is a convenience method which sets a 101 response code, sends the
      * response headers, and merges the request and response channels into one full-duplex socket stream channel.
@@ -486,14 +490,13 @@ public final class HttpServerExchange extends AbstractAttachable {
             response.append(StatusCodes.getReason(responseCode));
             response.append("\r\n");
             for (final String header : responseHeaders) {
-                response.append(header);
-                response.append(": ");
                 final Deque<String> values = responseHeaders.get(header);
                 for (String value : values) {
+                    response.append(header);
+                    response.append(": ");
                     response.append(value);
-                    response.append(' ');
+                    response.append("\r\n");
                 }
-                response.append("\r\n");
             }
             response.append("\r\n");
 
