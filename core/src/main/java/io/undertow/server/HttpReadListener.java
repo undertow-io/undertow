@@ -28,10 +28,9 @@ import io.undertow.server.httpparser.ParseState;
 import io.undertow.util.HeaderMap;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
 import org.xnio.Pooled;
-import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
+import org.xnio.channels.StreamSinkChannel;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -41,25 +40,21 @@ import static org.xnio.IoUtils.safeClose;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
-    private final Pool<ByteBuffer> bufferPool;
 
 
     private volatile ParseState state;
     private volatile HttpExchangeBuilder builder;
 
-    private final HttpHandler rootHandler;
-    private final ConnectedStreamChannel underlyingChannel;
     private final HttpServerConnection connection;
+    private final StreamSinkChannel responseChannel;
 
-    HttpReadListener(final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final ConnectedStreamChannel underlyingChannel) {
-        this.bufferPool = bufferPool;
-        this.rootHandler = rootHandler;
-        this.underlyingChannel = underlyingChannel;
-        this.connection = new HttpServerConnection(underlyingChannel);
+    HttpReadListener( final StreamSinkChannel responseChannel, final HttpServerConnection connection) {
+        this.connection = connection;
+        this.responseChannel = responseChannel;
     }
 
     public void handleEvent(final PushBackStreamChannel channel) {
-        final Pooled<ByteBuffer> pooled = bufferPool.allocate();
+        final Pooled<ByteBuffer> pooled = connection.getBufferPool().allocate();
         final ByteBuffer buffer = pooled.getResource();
         boolean free = true;
         try {
@@ -108,7 +103,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 //TODO: we need a proper way to handle this
                 channel.getReadSetter().set(null);
 
-                final HttpServerExchange httpServerExchange = new HttpServerExchange(bufferPool, connection, builder.getHeaders(), new HeaderMap(), builder.getQueryParameters(), builder.getMethod(), channel, underlyingChannel);
+                final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, builder.getHeaders(), new HeaderMap(), builder.getQueryParameters(), builder.getMethod(), channel, responseChannel);
 
 
                 try {
@@ -119,7 +114,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
                     state = null;
                     builder = null;
-                    rootHandler.handleRequest(httpServerExchange, new HttpCompletionHandler() {
+                    connection.getRootHandler().handleRequest(httpServerExchange, new HttpCompletionHandler() {
                         public void handleComplete() {
                             httpServerExchange.cleanup();
                         }
@@ -128,7 +123,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 } catch (Throwable t) {
                     //TODO: we should attempt to return a 500 status code in this situation
                     UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
-                    IoUtils.safeClose(underlyingChannel);
+                    IoUtils.safeClose(responseChannel);
+                    IoUtils.safeClose(channel);
                 }
             }
 

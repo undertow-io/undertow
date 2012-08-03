@@ -38,7 +38,6 @@ import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
 import org.xnio.channels.AssembledConnectedStreamChannel;
 import org.xnio.channels.Channels;
 import org.xnio.channels.ConnectedStreamChannel;
@@ -62,7 +61,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     // immutable state
 
     @SuppressWarnings("unused") // todo for now
-    private final Pool<ByteBuffer> bufferPool;
     private final HttpServerConnection connection;
     private final HeaderMap requestHeaders;
     private final HeaderMap responseHeaders;
@@ -118,8 +116,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_CLEANUP = 1 << 13;
 
-    protected HttpServerExchange(final Pool<ByteBuffer> bufferPool, final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final Map<String, List<String>> queryParameters, final String requestMethod, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
-        this.bufferPool = bufferPool;
+    protected HttpServerExchange(final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final Map<String, List<String>> queryParameters, final String requestMethod, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
         this.connection = connection;
         this.requestHeaders = requestHeaders;
         this.responseHeaders = responseHeaders;
@@ -220,10 +217,6 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public HttpServerConnection getConnection() {
         return connection;
-    }
-
-    public Pool<ByteBuffer> getBufferPool() {
-        return bufferPool;
     }
 
     /**
@@ -388,7 +381,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param wrapper the wrapper
      */
-    public void addRequestWrapper(final ChannelWrapper<StreamSinkChannel> wrapper) {
+    public void addRequestWrapper(final ChannelWrapper<StreamSourceChannel> wrapper) {
         ChannelWrapper[] oldVal;
         ChannelWrapper[] newVal;
         int oldLen;
@@ -511,9 +504,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
-    StreamSourceChannel getUnderlyingRequestChannel() {
-        return underlyingRequestChannel;
-    }
+
 
     void cleanup() {
         // All other cleanup handlers have been called.  We will inspect the state of the exchange

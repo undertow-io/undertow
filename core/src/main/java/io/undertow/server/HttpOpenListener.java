@@ -47,7 +47,8 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(channel);
-        HttpReadListener readListener = new HttpReadListener(bufferPool, rootHandler, channel);
+        HttpServerConnection connection = new HttpServerConnection(channel, pushBackStreamChannel, bufferPool, rootHandler);
+        HttpReadListener readListener = new HttpReadListener(channel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);
         channel.resumeReads();

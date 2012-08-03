@@ -20,13 +20,17 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
+import org.xnio.Pool;
 import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.ConnectedStreamChannel;
 import io.undertow.util.AbstractAttachable;
+import org.xnio.channels.PushBackStreamChannel;
 
 /**
  * A server-side HTTP connection.
@@ -35,14 +39,36 @@ import io.undertow.util.AbstractAttachable;
  */
 public final class HttpServerConnection extends AbstractAttachable implements ConnectedChannel {
     private final ConnectedStreamChannel channel;
+    private final PushBackStreamChannel requestChannel;
     private final ChannelListener.Setter<HttpServerConnection> closeSetter;
+    private final Pool<ByteBuffer> bufferPool;
+    private final HttpHandler rootHandler;
 
-    HttpServerConnection(ConnectedStreamChannel channel) {
+    HttpServerConnection(ConnectedStreamChannel channel, final PushBackStreamChannel requestChannel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler) {
         this.channel = channel;
+        this.requestChannel = requestChannel;
+        this.bufferPool = bufferPool;
+        this.rootHandler = rootHandler;
         closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
     }
 
-    public ConnectedChannel getChannel() {
+    /**
+     * This is the underlying push back channel
+     * @return
+     */
+    public PushBackStreamChannel getRequestChannel() {
+        return requestChannel;
+    }
+
+    public HttpHandler getRootHandler() {
+        return rootHandler;
+    }
+
+    public Pool<ByteBuffer> getBufferPool() {
+        return bufferPool;
+    }
+
+    public ConnectedStreamChannel getChannel() {
         return channel;
     }
 

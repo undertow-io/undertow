@@ -62,7 +62,7 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
     private final StreamSinkChannel delegate;
     private final ChannelListener.SimpleSetter<ChunkedStreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<ChunkedStreamSinkChannel>();
     private final ChannelListener.SimpleSetter<ChunkedStreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<ChunkedStreamSinkChannel>();
-    private final ChannelListener.SimpleSetter<ChunkedStreamSinkChannel> finishSetter = new ChannelListener.SimpleSetter<ChunkedStreamSinkChannel>();
+    private final ChannelListener<? super ChunkedStreamSinkChannel> finishListener;
     private final int config;
 
     /**
@@ -139,10 +139,12 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
      * @param delegate     the channel to wrap
      * @param configurable {@code true} to allow configuration of the delegate channel, {@code false} otherwise
      * @param passClose    {@code true} to close the underlying channel when this channel is closed, {@code false} otherwise
+     * @param finishListener
      * @param bufferPool
      */
-    public ChunkedStreamSinkChannel(final StreamSinkChannel delegate, final boolean configurable, final boolean passClose, final Pool<ByteBuffer> bufferPool) {
+    public ChunkedStreamSinkChannel(final StreamSinkChannel delegate, final boolean configurable, final boolean passClose, final ChannelListener<? super ChunkedStreamSinkChannel> finishListener, final Pool<ByteBuffer> bufferPool) {
         this.delegate = delegate;
+        this.finishListener = finishListener;
         this.bufferPool = bufferPool;
         config = (configurable ? CONF_FLAG_CONFIGURABLE : 0) | (passClose ? CONF_FLAG_PASS_CLOSE : 0);
         delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
@@ -217,13 +219,6 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
     @Override
     public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
         return closeSetter;
-    }
-
-    /**
-     * Listener that is called when writes have been shutdown and the stream is fully flushed.
-     */
-    public ChannelListener.Setter<? extends StreamSinkChannel> getFinishSetter() {
-        return finishSetter;
     }
 
     @Override
@@ -390,7 +385,7 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
             }
             boolean flushed = delegate.flush();
             if (flushed && anyAreSet(val, FLAG_CLOSE_REQ) && anyAreClear(val, FLAG_FINISH)) {
-                ChannelListeners.invokeChannelListener(this, finishSetter.get());
+                ChannelListeners.invokeChannelListener(this, finishListener);
                 setFlags |= FLAG_FINISH;
             }
             if (flushed && anyAreSet(val | setFlags, FLAG_CLOSE_SENT)) {

@@ -20,7 +20,8 @@ package io.undertow.test.handlers;
 
 import java.io.IOException;
 
-import io.undertow.server.handlers.TransferCodingHandler;
+import io.undertow.server.HttpServerConnection;
+import io.undertow.server.PersistentConnectionHandler;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
@@ -44,9 +45,11 @@ public class ChunkedTransferCodingTestCase {
 
     private static volatile String message;
 
+    private static volatile HttpServerConnection connection;
+
     @BeforeClass
     public static void setup() {
-        final TransferCodingHandler handler = new TransferCodingHandler();
+        final PersistentConnectionHandler handler = new PersistentConnectionHandler();
         final BlockingHandler blockingHandler = DefaultServer.newBlockingHandler();
         handler.setNext(blockingHandler);
         DefaultServer.setRootHandler(handler);
@@ -54,6 +57,13 @@ public class ChunkedTransferCodingTestCase {
             @Override
             public void handleRequest(final BlockingHttpServerExchange exchange) {
                 try {
+                    if(connection == null) {
+                        connection = exchange.getConnection();
+                    } else if(connection.getChannel() != exchange.getConnection().getChannel()){
+                        exchange.getOutputStream().write("Connection not persistent".getBytes());
+                        exchange.getOutputStream().close();
+                        return;
+                    }
                     exchange.getOutputStream().write(message.getBytes());
                     exchange.getOutputStream().close();
                 } catch (IOException e) {
@@ -73,14 +83,9 @@ public class ChunkedTransferCodingTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
-        client = new DefaultHttpClient();
-        try {
 
             generateMessage(1000);
-            HttpResponse result = client.execute(get);
+            result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
         } finally {
