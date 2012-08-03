@@ -103,4 +103,8 @@ public final class Headers {
     // COMPRESS
     // DEFLATE
 
+    // Connection values
+    public static final String KEEP_ALIVE = "keep-alive";
+    public static final String CLOSE = "close";
+
 }
