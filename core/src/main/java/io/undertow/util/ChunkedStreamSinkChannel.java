@@ -62,6 +62,7 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
     private final StreamSinkChannel delegate;
     private final ChannelListener.SimpleSetter<ChunkedStreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<ChunkedStreamSinkChannel>();
     private final ChannelListener.SimpleSetter<ChunkedStreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<ChunkedStreamSinkChannel>();
+    private final ChannelListener.SimpleSetter<ChunkedStreamSinkChannel> finishSetter = new ChannelListener.SimpleSetter<ChunkedStreamSinkChannel>();
     private final int config;
 
     /**
@@ -126,6 +127,11 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
      * and that the channel is in the process of writing out the last chunk.
      */
     private static final int FLAG_CLOSING_ASYNC = 1 << 7;
+
+    /**
+     * Set when the finish listener has been invoked
+     */
+    private static final int FLAG_FINISH = 1 << 8;
 
     /**
      * Construct a new instance.
@@ -211,6 +217,13 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
     @Override
     public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
         return closeSetter;
+    }
+
+    /**
+     * Listener that is called when writes have been shutdown and the stream is fully flushed.
+     */
+    public ChannelListener.Setter<? extends StreamSinkChannel> getFinishSetter() {
+        return finishSetter;
     }
 
     @Override
@@ -376,6 +389,10 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
                 delegate.shutdownWrites();
             }
             boolean flushed = delegate.flush();
+            if (flushed && anyAreSet(val, FLAG_CLOSE_REQ) && anyAreClear(val, FLAG_FINISH)) {
+                ChannelListeners.invokeChannelListener(this, finishSetter.get());
+                setFlags |= FLAG_FINISH;
+            }
             if (flushed && anyAreSet(val | setFlags, FLAG_CLOSE_SENT)) {
                 delegate.suspendWrites();
                 delegate.getWriteSetter().set(null);
@@ -470,7 +487,7 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
             if (allAreSet(val, FLAG_CLOSE_DONE)) {
                 return;
             }
-            if (anyAreSet(val, FLAG_WRITING_CHUNKED | FLAG_CLOSING_ASYNC) || anyAreClear(val, FLAG_CLOSE_REQ)) {
+            if (anyAreSet(val, FLAG_WRITING_CHUNKED | FLAG_CLOSING_ASYNC) || anyAreClear(val, FLAG_CLOSE_REQ | FLAG_FINISH)) {
                 throw UndertowMessages.MESSAGES.closeCalledWithDataStillToBeFlushed();
             }
             delegate.suspendWrites();
