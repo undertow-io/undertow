@@ -101,9 +101,8 @@ public class PersistentConnectionHandler implements HttpHandler {
         private final HttpCompletionHandler delegate;
         private final HttpServerExchange exchange;
 
-        
-
         private static final AtomicIntegerFieldUpdater<TransferCodingChannelWrapper> doneCountUpdater = AtomicIntegerFieldUpdater.newUpdater(TransferCodingChannelWrapper.class, "doneCount");
+
         @SuppressWarnings("unused")
         private volatile int doneCount = 2;
 
@@ -201,7 +200,6 @@ public class PersistentConnectionHandler implements HttpHandler {
                         wrappedResponse.wakeupWrites();
                     }
                 }
-
 
                 if (wrappedRequest != null) {
                     if (traceEnabled) {

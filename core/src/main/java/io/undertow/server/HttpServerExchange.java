@@ -68,6 +68,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     static {
         traceEnabled = log.isTraceEnabled();
     }
+
     @SuppressWarnings("unused") // todo for now
     private final HttpServerConnection connection;
     private final HeaderMap requestHeaders;
@@ -479,7 +480,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             newVal = oldVal | FLAG_RESPONSE_SENT;
         } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
 
-        if(traceEnabled) {
+        if (traceEnabled) {
             log.tracef("Starting to write response for %s using channel %s", this, underlyingResponseChannel);
         }
         final HeaderMap responseHeaders = this.responseHeaders;
@@ -507,16 +508,31 @@ public final class HttpServerExchange extends AbstractAttachable {
 
             final String result = response.toString();
             ByteBuffer buffer = ByteBuffer.wrap(result.getBytes());
-            ResponseWriteListener responseWriteListener = new ResponseWriteListener(buffer, gatedResponseChannel);
-            underlyingResponseChannel.getWriteSetter().set(responseWriteListener);
-            underlyingResponseChannel.resumeWrites();
+            int c;
+            do {
+                c = underlyingResponseChannel.write(buffer);
+            } while (buffer.hasRemaining() && c > 0);
+
+            if (buffer.hasRemaining()) {
+                ResponseWriteListener responseWriteListener = new ResponseWriteListener(buffer, gatedResponseChannel);
+                underlyingResponseChannel.getWriteSetter().set(responseWriteListener);
+                underlyingResponseChannel.resumeWrites();
+            } else {
+                // channel will auto-close if the gated channel was closed
+                gatedResponseChannel.openGate(gatePermit);
+            }
+
         } catch (RuntimeException e) {
             IoUtils.safeClose(underlyingRequestChannel);
             IoUtils.safeClose(underlyingResponseChannel);
             throw e;
+        } catch (IOException e) {
+            //TODO: we need some consistent way of handling IO exception
+            IoUtils.safeClose(underlyingResponseChannel);
+            IoUtils.safeClose(connection);
+            throw new RuntimeException(e);
         }
     }
-
 
 
     void cleanup() {

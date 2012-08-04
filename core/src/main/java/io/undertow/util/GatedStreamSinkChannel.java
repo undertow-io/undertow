@@ -26,6 +26,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -37,8 +38,13 @@ import org.xnio.channels.StreamSourceChannel;
 
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
-import static java.util.concurrent.locks.LockSupport.*;
-import static org.xnio.Bits.*;
+import static java.util.concurrent.locks.LockSupport.park;
+import static java.util.concurrent.locks.LockSupport.parkNanos;
+import static java.util.concurrent.locks.LockSupport.unpark;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
 import static org.xnio.ChannelListeners.delegatingChannelListener;
 import static org.xnio.ChannelListeners.invokeChannelListener;
 import static org.xnio.IoUtils.safeClose;
@@ -59,10 +65,10 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
     /**
      * Construct a new instance.
      *
-     * @param delegate the channel to wrap
-     * @param permit the permit required to open the gate
-     * @param configurable {@code true} to allow configuration of the delegate channel, {@code false} otherwise
-     * @param passClose {@code true} to close the underlying channel when this channel is closed, {@code false} otherwise
+     * @param delegate           the channel to wrap
+     * @param permit             the permit required to open the gate
+     * @param configurable       {@code true} to allow configuration of the delegate channel, {@code false} otherwise
+     * @param passClose          {@code true} to close the underlying channel when this channel is closed, {@code false} otherwise
      * @param firstWriteListener the listener to call on first write attempt while gated (including close), {@code null} for none
      */
     public GatedStreamSinkChannel(final StreamSinkChannel delegate, final Object permit, final boolean configurable, final boolean passClose, final ChannelListener<GatedStreamSinkChannel> firstWriteListener) {
@@ -121,7 +127,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                     safeUnpark(waiter);
                 }
                 newVal = oldVal & ~clearFlags | setFlags;
-            } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
+            } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
             return oldVal;
         } finally {
             if (intr) currentThread.interrupt();
@@ -130,7 +136,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
 
     private void exit(int oldVal, int enterFlag, final int setFlags) {
         int newVal = oldVal & ~enterFlag | setFlags;
-        while (! stateUpdater.compareAndSet(this, oldVal, newVal)) {
+        while (!stateUpdater.compareAndSet(this, oldVal, newVal)) {
             oldVal = state;
             newVal = oldVal & ~enterFlag | setFlags;
         }
@@ -155,7 +161,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                 safeClose(delegate);
             } else {
                 boolean doResume = allAreSet(val, FLAG_RESUME);
-                if (! doResume) {
+                if (!doResume) {
                     delegate.suspendWrites();
                 }
                 delegate.getWriteSetter().set(delegatingChannelListener(this, writeSetter));
@@ -192,14 +198,14 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
         }
         try {
             if (anyAreClear(val, FLAG_GATE_OPEN)) {
-                if (allAreClear(val, FLAG_FIRST_WRITE)) {
-                    ChannelListeners.invokeChannelListener(this, firstWriteListener);
-                }
                 return 0;
             }
             return delegate.write(src);
         } finally {
             exit(val, FLAG_IN_WRITE, 0);
+            if (allAreClear(val, FLAG_FIRST_WRITE | FLAG_GATE_OPEN)) {
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            }
         }
     }
 
@@ -214,14 +220,14 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
         }
         try {
             if (anyAreClear(val, FLAG_GATE_OPEN)) {
-                if (allAreClear(val, FLAG_FIRST_WRITE)) {
-                    ChannelListeners.invokeChannelListener(this, firstWriteListener);
-                }
                 return 0;
             }
             return delegate.write(srcs, offset, length);
         } finally {
             exit(val, FLAG_IN_WRITE, 0);
+            if (allAreClear(val, FLAG_FIRST_WRITE | FLAG_GATE_OPEN)) {
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            }
         }
     }
 
@@ -232,14 +238,14 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
         }
         try {
             if (anyAreClear(val, FLAG_GATE_OPEN)) {
-                if (allAreClear(val, FLAG_FIRST_WRITE)) {
-                    ChannelListeners.invokeChannelListener(this, firstWriteListener);
-                }
                 return 0L;
             }
             return delegate.transferFrom(src, position, count);
         } finally {
             exit(val, FLAG_IN_WRITE, 0);
+            if (allAreClear(val, FLAG_FIRST_WRITE | FLAG_GATE_OPEN)) {
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            }
         }
     }
 
@@ -250,14 +256,14 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
         }
         try {
             if (anyAreClear(val, FLAG_GATE_OPEN)) {
-                if (allAreClear(val, FLAG_FIRST_WRITE)) {
-                    ChannelListeners.invokeChannelListener(this, firstWriteListener);
-                }
                 return 0L;
             }
             return delegate.transferFrom(source, count, throughBuffer);
         } finally {
             exit(val, FLAG_IN_WRITE, 0);
+            if (allAreClear(val, FLAG_FIRST_WRITE | FLAG_GATE_OPEN)) {
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            }
         }
     }
 
@@ -269,9 +275,6 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
         int setFlags = 0;
         try {
             if (allAreClear(val, FLAG_GATE_OPEN)) {
-                if (allAreClear(val, FLAG_FIRST_WRITE)) {
-                    ChannelListeners.invokeChannelListener(this, firstWriteListener);
-                }
                 return false;
             }
             if (allAreSet(config, CONF_FLAG_PASS_CLOSE) && allAreSet(val, FLAG_CLOSE_REQ) && allAreClear(val, FLAG_CLOSE_SENT)) {
@@ -287,6 +290,9 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             return flushed;
         } finally {
             exit(val, FLAG_IN, setFlags);
+            if (allAreClear(val, FLAG_FIRST_WRITE | FLAG_GATE_OPEN)) {
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            }
         }
     }
 
@@ -346,9 +352,6 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
         }
         int setFlags = 0;
         try {
-            if (allAreClear(val, FLAG_FIRST_WRITE)) {
-                ChannelListeners.invokeChannelListener(this, firstWriteListener);
-            }
             if (allAreSet(val, FLAG_GATE_OPEN)) {
                 setFlags |= FLAG_CLOSE_SENT;
                 if (allAreSet(config, CONF_FLAG_PASS_CLOSE)) {
@@ -357,6 +360,9 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             }
         } finally {
             exit(val, FLAG_IN, setFlags);
+            if (allAreClear(val, FLAG_FIRST_WRITE)) {
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            }
         }
     }
 
@@ -366,9 +372,6 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             return;
         }
         try {
-            if (allAreClear(val, FLAG_FIRST_WRITE)) {
-                ChannelListeners.invokeChannelListener(this, firstWriteListener);
-            }
             if (allAreSet(val, FLAG_GATE_OPEN)) {
                 delegate.suspendWrites();
                 delegate.getWriteSetter().set(null);
@@ -378,6 +381,9 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             }
         } finally {
             exit(val, FLAG_IN, 0);
+            if (allAreClear(val, FLAG_FIRST_WRITE)) {
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            }
             invokeChannelListener(this, closeSetter.get());
         }
     }
