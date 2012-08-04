@@ -82,6 +82,7 @@ public class PersistentConnectionHandler implements HttpHandler {
             final TransferCodingChannelWrapper wrapper = new TransferCodingChannelWrapper(completionHandler, exchange);
             exchange.addResponseWrapper(wrapper.getResponseWrapper());
             exchange.addRequestWrapper(wrapper.getRequestWrapper());
+            wrapper.handleZeroLengthRequest();
             HttpHandlers.executeHandler(next, exchange, wrapper);
         }
     }
@@ -106,17 +107,19 @@ public class PersistentConnectionHandler implements HttpHandler {
 
         @SuppressWarnings("unused")
         private volatile StreamSinkChannel nextChannel;
+        private volatile boolean zeroContentRequest = false;
+
 
         private final ChannelListener<Channel> responseFinishedListener = new ChannelListener<Channel>() {
             @Override
             public void handleEvent(final Channel channel) {
                 StreamSinkChannel rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
-                if(rc == null) {
-                    if(!nextChannelUpdater.compareAndSet(TransferCodingChannelWrapper.this, null, exchange.getConnection().getChannel())) {
+                if (rc == null) {
+                    if (!nextChannelUpdater.compareAndSet(TransferCodingChannelWrapper.this, null, exchange.getConnection().getChannel())) {
                         rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
                     }
                 }
-                if(rc instanceof GatedStreamSinkChannel) {
+                if (rc instanceof GatedStreamSinkChannel) {
                     ((GatedStreamSinkChannel) rc).openGate(TransferCodingChannelWrapper.this);
                 }
             }
@@ -126,9 +129,9 @@ public class PersistentConnectionHandler implements HttpHandler {
             @Override
             public void handleEvent(final Channel channel) {
                 StreamSinkChannel rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
-                if(rc == null) {
+                if (rc == null) {
                     rc = new GatedStreamSinkChannel(exchange.getConnection().getChannel(), TransferCodingChannelWrapper.this, false, false, null);
-                    if(!nextChannelUpdater.compareAndSet(TransferCodingChannelWrapper.this, null, rc)) {
+                    if (!nextChannelUpdater.compareAndSet(TransferCodingChannelWrapper.this, null, rc)) {
                         rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
                     }
                 }
@@ -223,33 +226,39 @@ public class PersistentConnectionHandler implements HttpHandler {
                     }
                 }
 
-                if (wrappedRequest != null) {
-                    if (traceEnabled) {
-                        log.tracef("Shutting down wrapped request %s", exchange);
+                if (!zeroContentRequest) {
+                    StreamSourceChannel req = wrappedRequest;
+                    if(req == null) {
+                        req = exchange.getUnderlyingRequestChannel();
                     }
-                    if (wrappedRequest.isOpen()) {
+                    if (req != null) {
                         if (traceEnabled) {
-                            log.tracef("Wrapped request %s is still open, closing", exchange);
+                            log.tracef("Shutting down wrapped request %s", exchange);
                         }
-                        wrappedRequest.shutdownReads();
-                        long res;
-                        do {
-                            res = Channels.drain(wrappedRequest, Long.MAX_VALUE);
-                        } while (res > 0);
-                        if (res == 0) {
-                            wrappedRequest.getReadSetter().set(ChannelListeners.<StreamSourceChannel>drainListener(Long.MAX_VALUE, new ChannelListener<SuspendableReadChannel>() {
-                                public void handleEvent(final SuspendableReadChannel channel) {
-                                    IoUtils.safeShutdownReads(channel);
-                                }
-                            }, ChannelListeners.closingChannelExceptionHandler()));
-                            wrappedRequest.resumeReads();
+                        if (req.isOpen()) {
+                            if (traceEnabled) {
+                                log.tracef("Wrapped request %s is still open, closing", exchange);
+                            }
+                            req.shutdownReads();
+                            long res;
+                            do {
+                                res = Channels.drain(req, Long.MAX_VALUE);
+                            } while (res > 0);
+                            if (res == 0) {
+                                req.getReadSetter().set(ChannelListeners.<StreamSourceChannel>drainListener(Long.MAX_VALUE, new ChannelListener<SuspendableReadChannel>() {
+                                    public void handleEvent(final SuspendableReadChannel channel) {
+                                        IoUtils.safeShutdownReads(channel);
+                                    }
+                                }, ChannelListeners.closingChannelExceptionHandler()));
+                                req.resumeReads();
+                            }
                         }
+                    } else {
+                        if (traceEnabled) {
+                            log.tracef("Wrapped request is null, invoking finish listener %s", exchange);
+                        }
+                        requestFinishedListener.handleEvent(null);
                     }
-                } else {
-                    if (traceEnabled) {
-                        log.tracef("Wrapped request is null, invoking finish listener %s", exchange);
-                    }
-                    requestFinishedListener.handleEvent(null);
                 }
             } catch (IOException e) {
                 UndertowLogger.REQUEST_LOGGER.ioExceptionClosingChannel(e);
@@ -258,6 +267,19 @@ public class PersistentConnectionHandler implements HttpHandler {
 
             //note that we do not delegate by default, as this will close the channel
             //TODO: what other clean up do we have to do here?
+        }
+
+        public void handleZeroLengthRequest() {
+            if (exchange.getRequestHeaders().contains(Headers.CONTENT_LENGTH)) {
+                final String header = exchange.getRequestHeaders().get(Headers.CONTENT_LENGTH).getFirst();
+                if (0 == Long.parseLong(header)) {
+                    zeroContentRequest = true;
+                    requestFinishedListener.handleEvent(null);
+                }
+            } else if (!exchange.getRequestHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                zeroContentRequest = true;
+                requestFinishedListener.handleEvent(null);
+            }
         }
 
         public ChannelWrapper<StreamSinkChannel> getResponseWrapper() {

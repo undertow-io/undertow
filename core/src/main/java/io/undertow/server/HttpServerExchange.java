@@ -320,6 +320,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         return requestWrappers != null;
     }
 
+    StreamSourceChannel getUnderlyingRequestChannel() {
+        return underlyingRequestChannel;
+    }
+
     /**
      * Force the codec to treat the request as fully read.  Should only be invoked by handlers which downgrade
      * the socket or implement a transfer coding.
