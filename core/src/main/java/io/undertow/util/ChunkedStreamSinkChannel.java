@@ -454,6 +454,7 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
             return;
         }
         int setFlags = 0;
+        int clearFlags = 0;
         try {
             setFlags |= FLAG_CLOSE_SENT;
             //we pass the closing async flag here to make it attempt
@@ -464,13 +465,14 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
                 if (allAreSet(config, CONF_FLAG_PASS_CLOSE)) {
                     delegate.shutdownWrites();
                 }
+                clearFlags |= FLAG_WRITING_CHUNKED;
             } else {
                 //we still need to write some stuff out
                 //the user is going to need to flush a bit more
                 setFlags |= FLAG_CLOSING_ASYNC;
             }
         } finally {
-            exit(val, FLAG_IN, setFlags);
+            exit(val, FLAG_IN | clearFlags, setFlags);
         }
     }
 
@@ -573,7 +575,7 @@ public class ChunkedStreamSinkChannel implements StreamSinkChannel {
             do {
                 c = delegate.write(buffer);
             } while (buffer.hasRemaining() && c > 0);
-            if (!buffer.hasRemaining() && anyAreSet(flags, FLAG_CLOSE_REQ)) {
+            if (!buffer.hasRemaining() && anyAreSet(flags, FLAG_CLOSING_ASYNC)) {
                 //we need to start writing the last chunk
                 buffer.clear();
                 buffer.put(LAST_CHUNK);
