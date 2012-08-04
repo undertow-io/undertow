@@ -193,18 +193,25 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
 
     public int write(final ByteBuffer src) throws IOException {
         int val = enter(FLAG_IN_WRITE | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_REQ, 0);
+        boolean exited = false;
         if (anyAreSet(val, FLAG_CLOSE_REQ)) {
             throw new ClosedChannelException();
         }
         try {
+            if (allAreClear(val, FLAG_FIRST_WRITE)) {
+                exit(val, FLAG_IN_WRITE, 0);
+                exited = true;
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+                val = enter(FLAG_IN_WRITE | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_REQ, 0);
+                exited = false;
+            }
             if (anyAreClear(val, FLAG_GATE_OPEN)) {
                 return 0;
             }
             return delegate.write(src);
         } finally {
-            exit(val, FLAG_IN_WRITE, 0);
-            if (allAreClear(val, FLAG_FIRST_WRITE | FLAG_GATE_OPEN)) {
-                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            if (!exited) {
+                exit(val, FLAG_IN_WRITE, 0);
             }
         }
     }
@@ -215,66 +222,97 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
 
     public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
         int val = enter(FLAG_IN_WRITE | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_REQ, 0);
+        boolean exited = false;
         if (anyAreSet(val, FLAG_CLOSE_REQ)) {
             throw new ClosedChannelException();
         }
         try {
+            if (allAreClear(val, FLAG_FIRST_WRITE)) {
+                exit(val, FLAG_IN_WRITE, 0);
+                exited = true;
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+                val = enter(FLAG_IN_WRITE | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_REQ, 0);
+                exited = false;
+            }
             if (anyAreClear(val, FLAG_GATE_OPEN)) {
                 return 0;
             }
             return delegate.write(srcs, offset, length);
         } finally {
-            exit(val, FLAG_IN_WRITE, 0);
-            if (allAreClear(val, FLAG_FIRST_WRITE | FLAG_GATE_OPEN)) {
-                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            if (!exited) {
+                exit(val, FLAG_IN_WRITE, 0);
             }
         }
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
         int val = enter(FLAG_IN_WRITE | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_REQ, 0);
+        boolean exited = false;
         if (anyAreSet(val, FLAG_CLOSE_REQ)) {
             throw new ClosedChannelException();
         }
         try {
+            if (allAreClear(val, FLAG_FIRST_WRITE)) {
+                exit(val, FLAG_IN_WRITE, 0);
+                exited = true;
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+                exit(val, FLAG_IN_WRITE, 0);
+                exited = false;
+            }
             if (anyAreClear(val, FLAG_GATE_OPEN)) {
                 return 0L;
             }
             return delegate.transferFrom(src, position, count);
         } finally {
-            exit(val, FLAG_IN_WRITE, 0);
-            if (allAreClear(val, FLAG_FIRST_WRITE | FLAG_GATE_OPEN)) {
-                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            if (!exited) {
+                exit(val, FLAG_IN_WRITE, 0);
             }
         }
     }
 
     public long transferFrom(final StreamSourceChannel source, final long count, final ByteBuffer throughBuffer) throws IOException {
         int val = enter(FLAG_IN_WRITE | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_REQ, 0);
+        boolean exited = false;
         if (anyAreSet(val, FLAG_CLOSE_REQ)) {
             throw new ClosedChannelException();
         }
         try {
+            if (allAreClear(val, FLAG_FIRST_WRITE)) {
+                exit(val, FLAG_IN_WRITE, 0);
+                exited = true;
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+                val = enter(FLAG_IN_WRITE | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_REQ, 0);
+                exited = false;
+            }
             if (anyAreClear(val, FLAG_GATE_OPEN)) {
+
                 return 0L;
             }
             return delegate.transferFrom(source, count, throughBuffer);
         } finally {
-            exit(val, FLAG_IN_WRITE, 0);
-            if (allAreClear(val, FLAG_FIRST_WRITE | FLAG_GATE_OPEN)) {
-                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            if (!exited) {
+                exit(val, FLAG_IN_WRITE, 0);
             }
         }
     }
 
     public boolean flush() throws IOException {
         int val = enter(FLAG_IN | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_DONE, 0);
+        boolean exited = false;
         if (allAreSet(val, FLAG_CLOSE_DONE)) {
             return true;
         }
         int setFlags = 0;
         try {
+            if (allAreClear(val, FLAG_FIRST_WRITE)) {
+                exit(val, FLAG_IN, setFlags);
+                exited = true;
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+                val = enter(FLAG_IN | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_DONE, 0);
+                exited = false;
+            }
             if (allAreClear(val, FLAG_GATE_OPEN)) {
+
                 return false;
             }
             if (allAreSet(config, CONF_FLAG_PASS_CLOSE) && allAreSet(val, FLAG_CLOSE_REQ) && allAreClear(val, FLAG_CLOSE_SENT)) {
@@ -289,9 +327,8 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             }
             return flushed;
         } finally {
-            exit(val, FLAG_IN, setFlags);
-            if (allAreClear(val, FLAG_FIRST_WRITE | FLAG_GATE_OPEN)) {
-                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            if (!exited) {
+                exit(val, FLAG_IN, setFlags);
             }
         }
     }
@@ -347,11 +384,19 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
 
     public void shutdownWrites() throws IOException {
         int val = enter(FLAG_IN | FLAG_CLOSE_REQ | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_REQ, 0);
+        boolean exited = false;
         if (allAreSet(val, FLAG_CLOSE_REQ)) {
             return;
         }
         int setFlags = 0;
         try {
+            if (allAreClear(val, FLAG_FIRST_WRITE)) {
+                exit(val, FLAG_IN, setFlags);
+                exited = true;
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+                enter(FLAG_IN | FLAG_CLOSE_REQ | FLAG_FIRST_WRITE, 0, FLAG_CLOSE_REQ, 0);
+                exited = false;
+            }
             if (allAreSet(val, FLAG_GATE_OPEN)) {
                 setFlags |= FLAG_CLOSE_SENT;
                 if (allAreSet(config, CONF_FLAG_PASS_CLOSE)) {
@@ -359,19 +404,26 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                 }
             }
         } finally {
-            exit(val, FLAG_IN, setFlags);
-            if (allAreClear(val, FLAG_FIRST_WRITE)) {
-                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            if (!exited) {
+                exit(val, FLAG_IN, setFlags);
             }
         }
     }
 
     public void close() throws IOException {
         int val = enter(FLAG_IN | FLAG_CLOSE_REQ | FLAG_CLOSE_SENT | FLAG_FIRST_WRITE | FLAG_CLOSE_DONE, 0, FLAG_CLOSE_DONE, 0);
+        boolean exited = false;
         if (allAreSet(val, FLAG_CLOSE_DONE)) {
             return;
         }
         try {
+            if (allAreClear(val, FLAG_FIRST_WRITE)) {
+                exit(val, FLAG_IN, 0);
+                exited = true;
+                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+                val = enter(FLAG_IN | FLAG_CLOSE_REQ | FLAG_CLOSE_SENT | FLAG_FIRST_WRITE | FLAG_CLOSE_DONE, 0, FLAG_CLOSE_DONE, 0);
+                exited = false;
+            }
             if (allAreSet(val, FLAG_GATE_OPEN)) {
                 delegate.suspendWrites();
                 delegate.getWriteSetter().set(null);
@@ -380,9 +432,8 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                 }
             }
         } finally {
-            exit(val, FLAG_IN, 0);
-            if (allAreClear(val, FLAG_FIRST_WRITE)) {
-                ChannelListeners.invokeChannelListener(this, firstWriteListener);
+            if (!exited) {
+                exit(val, FLAG_IN, 0);
             }
             invokeChannelListener(this, closeSetter.get());
         }
