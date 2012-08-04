@@ -130,7 +130,12 @@ public class PersistentConnectionHandler implements HttpHandler {
                         log.tracef("Using fixed length channel for response %s", exchange);
                     }
                     long contentLength = Long.parseLong(exchange.getResponseHeaders().get(Headers.CONTENT_LENGTH).getFirst());
-                    return wrappedResponse = new FixedLengthStreamSinkChannel(channel, contentLength, false, true, finishedListener);
+                    final FixedLengthStreamSinkChannel wrappedResponse = new FixedLengthStreamSinkChannel(channel, contentLength, false, true, finishedListener);
+
+                    //todo: remove this line when xnio correctly creates delegating setter
+                    channel.getWriteSetter().set(ChannelListeners.delegatingChannelListener(wrappedResponse, (ChannelListener.SimpleSetter<FixedLengthStreamSinkChannel>) wrappedResponse.getWriteSetter()));
+                    return TransferCodingChannelWrapper.this.wrappedResponse = wrappedResponse;
+
                 } else {
                     if (traceEnabled) {
                         log.tracef("Using chunked channel for response %s", exchange);
