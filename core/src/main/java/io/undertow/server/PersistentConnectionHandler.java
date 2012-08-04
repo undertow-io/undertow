@@ -20,14 +20,14 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.ChunkedStreamSinkChannel;
-import io.undertow.util.GatedStreamSinkChannel;
 import io.undertow.util.Headers;
+import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -56,6 +56,14 @@ public class PersistentConnectionHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
+    private static final Logger log = Logger.getLogger(PersistentConnectionHandler.class);
+
+    private static final boolean traceEnabled;
+
+    static {
+        traceEnabled = log.isTraceEnabled();
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
 
@@ -73,7 +81,6 @@ public class PersistentConnectionHandler implements HttpHandler {
             final TransferCodingChannelWrapper wrapper = new TransferCodingChannelWrapper(completionHandler, exchange);
             exchange.addResponseWrapper(wrapper.getResponseWrapper());
             exchange.addRequestWrapper(wrapper.getRequestWrapper());
-            wrapper.handleZeroContentRequest();
             HttpHandlers.executeHandler(next, exchange, wrapper);
         }
     }
@@ -94,50 +101,24 @@ public class PersistentConnectionHandler implements HttpHandler {
         private final HttpCompletionHandler delegate;
         private final HttpServerExchange exchange;
 
+        
+
+        private static final AtomicIntegerFieldUpdater<TransferCodingChannelWrapper> doneCountUpdater = AtomicIntegerFieldUpdater.newUpdater(TransferCodingChannelWrapper.class, "doneCount");
         @SuppressWarnings("unused")
-        private volatile StreamSinkChannel nextResponseChannel = null;
+        private volatile int doneCount = 2;
 
-        private static final AtomicReferenceFieldUpdater<TransferCodingChannelWrapper, StreamSinkChannel> nextResponseUpdater = AtomicReferenceFieldUpdater.newUpdater(TransferCodingChannelWrapper.class, StreamSinkChannel.class, "nextResponseChannel");
+        private void startNextRequest() {
+            final PushBackStreamChannel pushBackStreamChannel = exchange.getConnection().getRequestChannel();
+            HttpReadListener readListener = new HttpReadListener(exchange.getConnection().getChannel(), exchange.getConnection());
+            pushBackStreamChannel.getReadSetter().set(readListener);
+            pushBackStreamChannel.wakeupReads();
+        }
 
-        private volatile boolean zeroContentResponse = false;
-
-        private final ChannelListener<Channel> requestFinishedListener = new ChannelListener<Channel>() {
+        private final ChannelListener<Channel> finishedListener = new ChannelListener<Channel>() {
             @Override
             public void handleEvent(final Channel channel) {
-                if (zeroContentResponse) {
-                    return;
-                }
-                //the request stream has been closed. We can start the next request. If the response has not been written
-                //out yet we need to install a gated stream so the next request does not start writing prematurely
-                StreamSinkChannel nextResponse = nextResponseUpdater.get(TransferCodingChannelWrapper.this);
-                if (nextResponse == null) {
-                    nextResponse = new GatedStreamSinkChannel(exchange.getConnection().getChannel(), TransferCodingChannelWrapper.this, false, false, null);
-                    //attempt to set the next response. We don't really care if it fails, because it means that the response
-                    //just finished as well, so there is not need for the gated stream anyway
-                    if (!nextResponseUpdater.compareAndSet(TransferCodingChannelWrapper.this, null, nextResponse)) {
-                        nextResponse = TransferCodingChannelWrapper.this.nextResponseChannel;
-                    }
-                }
-                final PushBackStreamChannel pushBackStreamChannel = exchange.getConnection().getRequestChannel();
-                HttpReadListener readListener = new HttpReadListener(nextResponse, exchange.getConnection());
-                pushBackStreamChannel.getReadSetter().set(readListener);
-                pushBackStreamChannel.wakeupReads();
-            }
-        };
-
-        private final ChannelListener<Channel> responseFinishedListener = new ChannelListener<Channel>() {
-            @Override
-            public void handleEvent(final Channel channel) {
-                StreamSinkChannel nextResponse = nextResponseUpdater.get(TransferCodingChannelWrapper.this);
-                if (nextResponse == null) {
-                    //attempt to set the next response. We don't really care if it fails, because it means that the response
-                    //just finished as well, so there is not need for the gated stream anyway
-                    if (!nextResponseUpdater.compareAndSet(TransferCodingChannelWrapper.this, null, exchange.getConnection().getChannel())) {
-                        nextResponse = nextResponseUpdater.get(TransferCodingChannelWrapper.this);
-                    }
-                }
-                if (nextResponse instanceof GatedStreamSinkChannel) {
-                    ((GatedStreamSinkChannel) nextResponse).openGate(TransferCodingChannelWrapper.this);
+                if (doneCountUpdater.decrementAndGet(TransferCodingChannelWrapper.this) == 0) {
+                    startNextRequest();
                 }
             }
         };
@@ -146,11 +127,17 @@ public class PersistentConnectionHandler implements HttpHandler {
             @Override
             public StreamSinkChannel wrap(final StreamSinkChannel channel, final HttpServerExchange exchange) {
                 if (exchange.getResponseHeaders().contains(Headers.CONTENT_LENGTH)) {
+                    if (traceEnabled) {
+                        log.tracef("Using fixed length channel for response %s", exchange);
+                    }
                     long contentLength = Long.parseLong(exchange.getResponseHeaders().get(Headers.CONTENT_LENGTH).getFirst());
-                    return wrappedResponse = new FixedLengthStreamSinkChannel(channel, contentLength, false, false, responseFinishedListener);
+                    return wrappedResponse = new FixedLengthStreamSinkChannel(channel, contentLength, false, true, finishedListener);
                 } else {
+                    if (traceEnabled) {
+                        log.tracef("Using chunked channel for response %s", exchange);
+                    }
                     exchange.getResponseHeaders().add(Headers.TRANSFER_ENCODING, Headers.CHUNKED);
-                    return wrappedResponse = new ChunkedStreamSinkChannel(channel, false, false, responseFinishedListener, exchange.getConnection().getBufferPool());
+                    return wrappedResponse = new ChunkedStreamSinkChannel(channel, false, true, finishedListener, exchange.getConnection().getBufferPool());
                 }
             }
         };
@@ -159,13 +146,19 @@ public class PersistentConnectionHandler implements HttpHandler {
             @Override
             public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
                 if (exchange.getRequestHeaders().contains(Headers.CONTENT_LENGTH)) {
+                    if (traceEnabled) {
+                        log.tracef("Using fixed length stream for request %s", exchange);
+                    }
                     long contentLength = Long.parseLong(exchange.getRequestHeaders().get(Headers.CONTENT_LENGTH).getFirst());
-                    return wrappedRequest = new FixedLengthStreamSourceChannel(channel, contentLength, requestFinishedListener);
+                    return wrappedRequest = new FixedLengthStreamSourceChannel(channel, contentLength, finishedListener);
                 } else if (exchange.getRequestHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                    if (traceEnabled) {
+                        log.tracef("Using fixed chunked channel for request %s", exchange);
+                    }
                     return null; //TODO: chunked channel
                 } else {
                     //otherwise we assume no content. This case should be handled by handleZeroContentRequest()
-                    return wrappedRequest = new FixedLengthStreamSourceChannel(channel, 0, requestFinishedListener);
+                    return wrappedRequest = new FixedLengthStreamSourceChannel(channel, 0, finishedListener);
                 }
             }
         };
@@ -175,42 +168,49 @@ public class PersistentConnectionHandler implements HttpHandler {
             this.exchange = exchange;
         }
 
-        public void handleZeroContentRequest() {
-            boolean noContent = false;
-            if (exchange.getRequestHeaders().contains(Headers.CONTENT_LENGTH)) {
-                long contentLength = Long.parseLong(exchange.getRequestHeaders().get(Headers.CONTENT_LENGTH).getFirst());
-                if (contentLength == 0) {
-                    noContent = true;
-                }
-            } else if (!exchange.getRequestHeaders().contains(Headers.TRANSFER_ENCODING)) {
-                noContent = true;
-            }
-            if (noContent) {
-                //there is no content, so we start the next request straight away
-                requestFinishedListener.handleEvent(null);
-                this.zeroContentResponse = true;
-            }
-        }
-
         @Override
         public void handleComplete() {
+            if (traceEnabled) {
+                log.tracef("Running persistent connection completion handler for %s", exchange);
+            }
             try {
-                if (wrappedResponse != null) {
-                    //we just shutdown writes and flush the response
-                    //when the response is fully flushed the finish listener
-                    //will handle kicking off the next request
-                    if (wrappedResponse.isOpen()) {
-                        wrappedResponse.shutdownWrites();
-                        if (!wrappedResponse.flush()) {
-                            wrappedResponse.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, ChannelListeners.closingChannelExceptionHandler()));
-                        }
+                if (wrappedResponse == null) {
+                    if (traceEnabled) {
+                        log.tracef("Wrapped response is null, calling getResponseChannel() %s", exchange);
                     }
-                } else {
-                    responseFinishedListener.handleEvent(null);
+                    //if the user has not get the response channel we grab it here
+                    //we need to force the response to be started, and then we need to call the
+                    //finished event once this has finished. If we just called startResponse
+                    //here we would not have any way of being notified when it was completed
+                    if (!exchange.getResponseHeaders().contains(Headers.CONTENT_LENGTH) &&
+                            !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
+                    }
+                    exchange.getResponseChannel();
+                }
+                //we just shutdown writes and flush the response
+                //when the response is fully flushed the finish listener
+                //will handle kicking off the next request
+                if (wrappedResponse.isOpen()) {
+                    if (traceEnabled) {
+                        log.tracef("Response channel is open, shutting down writes %s", exchange);
+                    }
+                    wrappedResponse.shutdownWrites();
+                    if (!wrappedResponse.flush()) {
+                        wrappedResponse.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, ChannelListeners.closingChannelExceptionHandler()));
+                        wrappedResponse.wakeupWrites();
+                    }
                 }
 
+
                 if (wrappedRequest != null) {
+                    if (traceEnabled) {
+                        log.tracef("Shutting down wrapped request %s", exchange);
+                    }
                     if (wrappedRequest.isOpen()) {
+                        if (traceEnabled) {
+                            log.tracef("Wrapped request %s is still open, closing", exchange);
+                        }
                         wrappedRequest.shutdownReads();
                         long res;
                         do {
@@ -226,7 +226,10 @@ public class PersistentConnectionHandler implements HttpHandler {
                         }
                     }
                 } else {
-                    requestFinishedListener.handleEvent(null);
+                    if (traceEnabled) {
+                        log.tracef("Wrapped request is null, invoking finish listener %s", exchange);
+                    }
+                    finishedListener.handleEvent(null);
                 }
             } catch (IOException e) {
                 UndertowLogger.REQUEST_LOGGER.ioExceptionClosingChannel(e);
