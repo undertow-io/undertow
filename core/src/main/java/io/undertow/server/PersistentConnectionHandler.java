@@ -20,12 +20,13 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.ChunkedStreamSinkChannel;
+import io.undertow.util.GatedStreamSinkChannel;
 import io.undertow.util.Headers;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
@@ -101,24 +102,40 @@ public class PersistentConnectionHandler implements HttpHandler {
         private final HttpCompletionHandler delegate;
         private final HttpServerExchange exchange;
 
-        private static final AtomicIntegerFieldUpdater<TransferCodingChannelWrapper> doneCountUpdater = AtomicIntegerFieldUpdater.newUpdater(TransferCodingChannelWrapper.class, "doneCount");
+        private static final AtomicReferenceFieldUpdater<TransferCodingChannelWrapper, StreamSinkChannel> nextChannelUpdater = AtomicReferenceFieldUpdater.newUpdater(TransferCodingChannelWrapper.class, StreamSinkChannel.class, "nextChannel");
 
         @SuppressWarnings("unused")
-        private volatile int doneCount = 2;
+        private volatile StreamSinkChannel nextChannel;
 
-        private void startNextRequest() {
-            final PushBackStreamChannel pushBackStreamChannel = exchange.getConnection().getRequestChannel();
-            HttpReadListener readListener = new HttpReadListener(exchange.getConnection().getChannel(), exchange.getConnection());
-            pushBackStreamChannel.getReadSetter().set(readListener);
-            pushBackStreamChannel.wakeupReads();
-        }
-
-        private final ChannelListener<Channel> finishedListener = new ChannelListener<Channel>() {
+        private final ChannelListener<Channel> responseFinishedListener = new ChannelListener<Channel>() {
             @Override
             public void handleEvent(final Channel channel) {
-                if (doneCountUpdater.decrementAndGet(TransferCodingChannelWrapper.this) == 0) {
-                    startNextRequest();
+                StreamSinkChannel rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
+                if(rc == null) {
+                    if(!nextChannelUpdater.compareAndSet(TransferCodingChannelWrapper.this, null, exchange.getConnection().getChannel())) {
+                        rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
+                    }
                 }
+                if(rc instanceof GatedStreamSinkChannel) {
+                    ((GatedStreamSinkChannel) rc).openGate(TransferCodingChannelWrapper.this);
+                }
+            }
+        };
+
+        private final ChannelListener<Channel> requestFinishedListener = new ChannelListener<Channel>() {
+            @Override
+            public void handleEvent(final Channel channel) {
+                StreamSinkChannel rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
+                if(rc == null) {
+                    rc = new GatedStreamSinkChannel(exchange.getConnection().getChannel(), TransferCodingChannelWrapper.this, false, false, null);
+                    if(!nextChannelUpdater.compareAndSet(TransferCodingChannelWrapper.this, null, rc)) {
+                        rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
+                    }
+                }
+                final PushBackStreamChannel pushBackStreamChannel = exchange.getConnection().getRequestChannel();
+                HttpReadListener readListener = new HttpReadListener(rc, exchange.getConnection());
+                pushBackStreamChannel.getReadSetter().set(readListener);
+                pushBackStreamChannel.wakeupReads();
             }
         };
 
@@ -130,7 +147,7 @@ public class PersistentConnectionHandler implements HttpHandler {
                         log.tracef("Using fixed length channel for response %s", exchange);
                     }
                     long contentLength = Long.parseLong(exchange.getResponseHeaders().get(Headers.CONTENT_LENGTH).getFirst());
-                    final FixedLengthStreamSinkChannel wrappedResponse = new FixedLengthStreamSinkChannel(channel, contentLength, false, true, finishedListener);
+                    final FixedLengthStreamSinkChannel wrappedResponse = new FixedLengthStreamSinkChannel(channel, contentLength, false, true, responseFinishedListener);
 
                     //todo: remove this line when xnio correctly creates delegating setter
                     channel.getWriteSetter().set(ChannelListeners.delegatingChannelListener(wrappedResponse, (ChannelListener.SimpleSetter<FixedLengthStreamSinkChannel>) wrappedResponse.getWriteSetter()));
@@ -141,7 +158,7 @@ public class PersistentConnectionHandler implements HttpHandler {
                         log.tracef("Using chunked channel for response %s", exchange);
                     }
                     exchange.getResponseHeaders().add(Headers.TRANSFER_ENCODING, Headers.CHUNKED);
-                    return wrappedResponse = new ChunkedStreamSinkChannel(channel, false, true, finishedListener, exchange.getConnection().getBufferPool());
+                    return wrappedResponse = new ChunkedStreamSinkChannel(channel, false, true, responseFinishedListener, exchange.getConnection().getBufferPool());
                 }
             }
         };
@@ -154,7 +171,7 @@ public class PersistentConnectionHandler implements HttpHandler {
                         log.tracef("Using fixed length stream for request %s", exchange);
                     }
                     long contentLength = Long.parseLong(exchange.getRequestHeaders().get(Headers.CONTENT_LENGTH).getFirst());
-                    return wrappedRequest = new FixedLengthStreamSourceChannel(channel, contentLength, finishedListener);
+                    return wrappedRequest = new FixedLengthStreamSourceChannel(channel, contentLength, requestFinishedListener);
                 } else if (exchange.getRequestHeaders().contains(Headers.TRANSFER_ENCODING)) {
                     if (traceEnabled) {
                         log.tracef("Using fixed chunked channel for request %s", exchange);
@@ -162,7 +179,7 @@ public class PersistentConnectionHandler implements HttpHandler {
                     return null; //TODO: chunked channel
                 } else {
                     //otherwise we assume no content. This case should be handled by handleZeroContentRequest()
-                    return wrappedRequest = new FixedLengthStreamSourceChannel(channel, 0, finishedListener);
+                    return wrappedRequest = new FixedLengthStreamSourceChannel(channel, 0, requestFinishedListener);
                 }
             }
         };
@@ -232,7 +249,7 @@ public class PersistentConnectionHandler implements HttpHandler {
                     if (traceEnabled) {
                         log.tracef("Wrapped request is null, invoking finish listener %s", exchange);
                     }
-                    finishedListener.handleEvent(null);
+                    requestFinishedListener.handleEvent(null);
                 }
             } catch (IOException e) {
                 UndertowLogger.REQUEST_LOGGER.ioExceptionClosingChannel(e);
