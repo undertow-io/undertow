@@ -21,6 +21,7 @@ package io.undertow.server.handlers;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import org.jboss.logging.Logger;
 
 /**
  * A handler which simply sets a response code.
@@ -28,6 +29,13 @@ import io.undertow.server.HttpServerExchange;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ResponseCodeHandler implements HttpHandler {
+
+    private static final Logger log = Logger.getLogger(ResponseCodeHandler.class);
+    private static final boolean traceEnabled;
+
+    static {
+        traceEnabled = log.isTraceEnabled();
+    }
 
     /**
      * A handler which sets a 200 code. This is the default response code, so in most cases
@@ -65,6 +73,9 @@ public final class ResponseCodeHandler implements HttpHandler {
 
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         exchange.setResponseCode(responseCode);
+        if(traceEnabled) {
+            log.tracef("Setting response code %s for exchange %s", responseCode, exchange);
+        }
         completionHandler.handleComplete();
     }
 }

@@ -21,7 +21,6 @@ package io.undertow.test.handlers;
 import java.io.IOException;
 
 import io.undertow.server.HttpServerConnection;
-import io.undertow.server.PersistentConnectionHandler;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
@@ -49,10 +48,8 @@ public class ChunkedTransferCodingTestCase {
 
     @BeforeClass
     public static void setup() {
-        final PersistentConnectionHandler handler = new PersistentConnectionHandler();
         final BlockingHandler blockingHandler = DefaultServer.newBlockingHandler();
-        handler.setNext(blockingHandler);
-        DefaultServer.setRootHandler(handler);
+        DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(new BlockingHttpHandler() {
             @Override
             public void handleRequest(final BlockingHttpServerExchange exchange) {

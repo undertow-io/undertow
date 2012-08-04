@@ -35,6 +35,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
+import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -60,6 +61,13 @@ import static org.xnio.IoUtils.safeClose;
 public final class HttpServerExchange extends AbstractAttachable {
     // immutable state
 
+    private static final Logger log = Logger.getLogger(HttpServerExchange.class);
+
+    private static final boolean traceEnabled;
+
+    static {
+        traceEnabled = log.isTraceEnabled();
+    }
     @SuppressWarnings("unused") // todo for now
     private final HttpServerConnection connection;
     private final HeaderMap requestHeaders;
@@ -124,7 +132,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.requestMethod = requestMethod;
         this.underlyingRequestChannel = requestChannel;
         this.underlyingResponseChannel = responseChannel;
-        this.gatedResponseChannel = new GatedStreamSinkChannel(responseChannel, gatePermit, false, true, new LazyHeaderWriteListener());
+        this.gatedResponseChannel = new GatedStreamSinkChannel(responseChannel, gatePermit, false, false, new LazyHeaderWriteListener());
     }
 
     public String getProtocol() {
@@ -470,6 +478,10 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             newVal = oldVal | FLAG_RESPONSE_SENT;
         } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
+
+        if(traceEnabled) {
+            log.tracef("Starting to write response for %s using channel %s", this, underlyingResponseChannel);
+        }
         final HeaderMap responseHeaders = this.responseHeaders;
 
         responseHeaders.lock();
@@ -494,7 +506,8 @@ public final class HttpServerExchange extends AbstractAttachable {
             response.append("\r\n");
 
             final String result = response.toString();
-            ResponseWriteListener responseWriteListener = new ResponseWriteListener(ByteBuffer.wrap(result.getBytes()), gatedResponseChannel);
+            ByteBuffer buffer = ByteBuffer.wrap(result.getBytes());
+            ResponseWriteListener responseWriteListener = new ResponseWriteListener(buffer, gatedResponseChannel);
             underlyingResponseChannel.getWriteSetter().set(responseWriteListener);
             underlyingResponseChannel.resumeWrites();
         } catch (RuntimeException e) {
