@@ -20,6 +20,7 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
@@ -37,6 +38,7 @@ import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
+import org.xnio.Pool;
 import org.xnio.channels.AssembledConnectedStreamChannel;
 import org.xnio.channels.Channels;
 import org.xnio.channels.ConnectedStreamChannel;
@@ -349,7 +351,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (wrappers == null) {
             return null;
         }
-        StreamSinkChannel channel = new HttpResponseChannel(gatedResponseChannel, bufferPool.allocate(), this);
+        Pool<ByteBuffer> pool = connection.getBufferPool();
+        StreamSinkChannel channel = new HttpResponseChannel(gatedResponseChannel, pool.allocate(), this);
         for (ChannelWrapper wrapper : wrappers) {
             channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(channel, this);
             if (channel == null) {
