@@ -20,7 +20,6 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
@@ -34,7 +33,6 @@ import io.undertow.util.GatedStreamSinkChannel;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Protocols;
-import io.undertow.util.StatusCodes;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -133,7 +131,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.requestMethod = requestMethod;
         this.underlyingRequestChannel = requestChannel;
         this.underlyingResponseChannel = responseChannel;
-        this.gatedResponseChannel = new GatedStreamSinkChannel(responseChannel, gatePermit, false, false, new LazyHeaderWriteListener());
+        this.gatedResponseChannel = new GatedStreamSinkChannel(responseChannel, gatePermit, false, false);
     }
 
     public String getProtocol() {
@@ -488,54 +486,8 @@ public final class HttpServerExchange extends AbstractAttachable {
             log.tracef("Starting to write response for %s using channel %s", this, underlyingResponseChannel);
         }
         final HeaderMap responseHeaders = this.responseHeaders;
-
         responseHeaders.lock();
-        try {
-            //TODO: we should not be using a StringBuilder here, we should be wiring this stuff directly into a buffer
-            final StringBuilder response = new StringBuilder(protocol);
-            response.append(' ');
-            final int responseCode = this.responseState & MASK_RESPONSE_CODE;
-            response.append(responseCode);
-            response.append(' ');
-            response.append(StatusCodes.getReason(responseCode));
-            response.append("\r\n");
-            for (final String header : responseHeaders) {
-                final Deque<String> values = responseHeaders.get(header);
-                for (String value : values) {
-                    response.append(header);
-                    response.append(": ");
-                    response.append(value);
-                    response.append("\r\n");
-                }
-            }
-            response.append("\r\n");
-
-            final String result = response.toString();
-            ByteBuffer buffer = ByteBuffer.wrap(result.getBytes());
-            int c;
-            do {
-                c = underlyingResponseChannel.write(buffer);
-            } while (buffer.hasRemaining() && c > 0);
-
-            if (buffer.hasRemaining()) {
-                ResponseWriteListener responseWriteListener = new ResponseWriteListener(buffer, gatedResponseChannel);
-                underlyingResponseChannel.getWriteSetter().set(responseWriteListener);
-                underlyingResponseChannel.resumeWrites();
-            } else {
-                // channel will auto-close if the gated channel was closed
-                gatedResponseChannel.openGate(gatePermit);
-            }
-
-        } catch (RuntimeException e) {
-            IoUtils.safeClose(underlyingRequestChannel);
-            IoUtils.safeClose(underlyingResponseChannel);
-            throw e;
-        } catch (IOException e) {
-            //TODO: we need some consistent way of handling IO exception
-            IoUtils.safeClose(underlyingResponseChannel);
-            IoUtils.safeClose(connection);
-            throw new RuntimeException(e);
-        }
+        // todo un-gate
     }
 
 
@@ -594,48 +546,5 @@ public final class HttpServerExchange extends AbstractAttachable {
             safeClose(connection);
         }
         // Otherwise we're good; a transfer coding handler took care of things.
-    }
-
-    private class ResponseWriteListener implements ChannelListener<StreamSinkChannel> {
-
-        private final ByteBuffer buffer;
-        private final GatedStreamSinkChannel gatedResponseChannel;
-
-        private ResponseWriteListener(final ByteBuffer buffer, final GatedStreamSinkChannel gatedResponseChannel) {
-            this.buffer = buffer;
-            this.gatedResponseChannel = gatedResponseChannel;
-        }
-
-        @Override
-        public void handleEvent(final StreamSinkChannel channel) {
-            try {
-                int c;
-                do {
-                    c = channel.write(buffer);
-                } while (buffer.hasRemaining() && c > 0);
-                if (buffer.hasRemaining()) {
-                    channel.resumeWrites();
-                    return;
-                } else {
-                    // channel will auto-close if the gated channel was closed
-                    gatedResponseChannel.openGate(gatePermit);
-                }
-            } catch (IOException e) {
-                //TODO: we need some consistent way of handling IO exception
-                IoUtils.safeClose(channel);
-                IoUtils.safeClose(connection);
-            }
-        }
-    }
-
-    /**
-     * Listener that starts the response when a gated stream is written to for the first time.
-     */
-    private final class LazyHeaderWriteListener implements ChannelListener<GatedStreamSinkChannel> {
-
-        @Override
-        public void handleEvent(final GatedStreamSinkChannel channel) {
-            startResponse();
-        }
     }
 }
