@@ -109,14 +109,17 @@ public class PersistentConnectionHandler implements HttpHandler {
         private volatile StreamSinkChannel nextChannel;
         private volatile boolean zeroContentRequest = false;
 
+        private boolean compareAndSetNextChannel(StreamSinkChannel expect, StreamSinkChannel update) {
+            return nextChannelUpdater.compareAndSet(this, expect, update);
+        }
 
         private final ChannelListener<Channel> responseFinishedListener = new ChannelListener<Channel>() {
             @Override
             public void handleEvent(final Channel channel) {
-                StreamSinkChannel rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
+                StreamSinkChannel rc = nextChannel;
                 if (rc == null) {
-                    if (!nextChannelUpdater.compareAndSet(TransferCodingChannelWrapper.this, null, exchange.getConnection().getChannel())) {
-                        rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
+                    if (! compareAndSetNextChannel(null, exchange.getConnection().getChannel())) {
+                        rc = nextChannel;
                     }
                 }
                 if (rc instanceof GatedStreamSinkChannel) {
@@ -128,11 +131,11 @@ public class PersistentConnectionHandler implements HttpHandler {
         private final ChannelListener<Channel> requestFinishedListener = new ChannelListener<Channel>() {
             @Override
             public void handleEvent(final Channel channel) {
-                StreamSinkChannel rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
+                StreamSinkChannel rc = nextChannel;
                 if (rc == null) {
-                    rc = new GatedStreamSinkChannel(exchange.getConnection().getChannel(), TransferCodingChannelWrapper.this, false, false, null);
-                    if (!nextChannelUpdater.compareAndSet(TransferCodingChannelWrapper.this, null, rc)) {
-                        rc = nextChannelUpdater.get(TransferCodingChannelWrapper.this);
+                    rc = new GatedStreamSinkChannel(exchange.getConnection().getChannel(), TransferCodingChannelWrapper.this, false, false);
+                    if (! compareAndSetNextChannel(null, rc)) {
+                        rc = nextChannel;
                     }
                 }
                 final PushBackStreamChannel pushBackStreamChannel = exchange.getConnection().getRequestChannel();
