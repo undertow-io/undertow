@@ -349,7 +349,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (wrappers == null) {
             return null;
         }
-        StreamSinkChannel channel = gatedResponseChannel;
+        StreamSinkChannel channel = new HttpResponseChannel(gatedResponseChannel, bufferPool.allocate(), this);
         for (ChannelWrapper wrapper : wrappers) {
             channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(channel, this);
             if (channel == null) {
