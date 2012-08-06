@@ -34,6 +34,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
+import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
@@ -48,6 +49,7 @@ import static org.xnio.Bits.*;
  */
 final class HttpResponseChannel implements StreamSinkChannel {
     private final StreamSinkChannel delegate;
+    private final Pool<ByteBuffer> pool;
 
     @SuppressWarnings("unused")
     private volatile int state = STATE_START;
@@ -82,9 +84,9 @@ final class HttpResponseChannel implements StreamSinkChannel {
     private static final int FLAG_ENTERED       = 0x00000010;
     private static final int FLAG_SHUTDOWN      = 0x00000020;
 
-    HttpResponseChannel(final StreamSinkChannel delegate, final Pooled<ByteBuffer> pooledBuffer, final HttpServerExchange exchange) {
+    HttpResponseChannel(final StreamSinkChannel delegate, final Pool<ByteBuffer> pool, final HttpServerExchange exchange) {
         this.delegate = delegate;
-        this.pooledBuffer = pooledBuffer;
+        this.pool = pool;
         this.exchange = exchange;
         delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
         delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
@@ -99,6 +101,9 @@ final class HttpResponseChannel implements StreamSinkChannel {
     }
 
     private int processWrite(int state) throws IOException {
+        if (state == STATE_START) {
+            pooledBuffer = pool.allocate();
+        }
         ByteBuffer buffer = pooledBuffer.getResource();
         Iterator<String> nameIterator = this.nameIterator;
         Iterator<String> valueIterator = this.valueIterator;
