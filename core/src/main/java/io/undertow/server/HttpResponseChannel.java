@@ -1,0 +1,621 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2012, Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags. See the copyright.txt file in the
+ * distribution for a full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+
+package io.undertow.server;
+
+import io.undertow.util.HeaderMap;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.Option;
+import org.xnio.Pooled;
+import org.xnio.XnioExecutor;
+import org.xnio.XnioWorker;
+import org.xnio.channels.ConcurrentStreamChannelAccessException;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
+
+import static org.xnio.Bits.*;
+
+/**
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
+final class HttpResponseChannel implements StreamSinkChannel {
+    private final StreamSinkChannel delegate;
+
+    @SuppressWarnings("unused")
+    private volatile int state = STATE_START;
+
+    private Iterator<String> nameIterator;
+    private String string;
+    private Iterator<String> valueIterator;
+    private int charIndex;
+    private Pooled<ByteBuffer> pooledBuffer;
+    private HttpServerExchange exchange;
+
+    private final ChannelListener.SimpleSetter<HttpResponseChannel> writeSetter = new ChannelListener.SimpleSetter<HttpResponseChannel>();
+    private final ChannelListener.SimpleSetter<HttpResponseChannel> closeSetter = new ChannelListener.SimpleSetter<HttpResponseChannel>();
+
+    private static final AtomicIntegerFieldUpdater<HttpResponseChannel> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpResponseChannel.class, "state");
+
+    private static final int STATE_BODY = 0; // Message body, normal pass-through operation
+    private static final int STATE_START = 1; // No headers written yet
+    private static final int STATE_HDR_NAME = 2; // Header name indexed by charIndex
+    private static final int STATE_HDR_D = 3; // Header delimiter ':'
+    private static final int STATE_HDR_DS = 4; // Header delimiter ': '
+    private static final int STATE_HDR_VAL = 5; // Header value
+    private static final int STATE_HDR_VAL_D = 6; // Header value delimiter ','
+    private static final int STATE_HDR_VAL_DS = 7; // Header value delimiter ', '
+    private static final int STATE_HDR_EOL_CR = 8; // Header line CR
+    private static final int STATE_HDR_EOL_LF = 9; // Header line LF
+    private static final int STATE_HDR_FINAL_CR = 10; // Final CR
+    private static final int STATE_HDR_FINAL_LF = 11; // Final LF
+    private static final int STATE_BUF_FLUSH = 12; // flush the buffer and go to writing body
+
+    private static final int MASK_STATE         = 0x0000000F;
+    private static final int FLAG_ENTERED       = 0x00000010;
+
+    HttpResponseChannel(final StreamSinkChannel delegate, final Pooled<ByteBuffer> pooledBuffer, final HttpServerExchange exchange) {
+        this.delegate = delegate;
+        this.pooledBuffer = pooledBuffer;
+        this.exchange = exchange;
+        delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
+        delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
+    }
+
+    public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter() {
+        return writeSetter;
+    }
+
+    public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
+        return closeSetter;
+    }
+
+    private int processWrite(int state) throws IOException {
+        ByteBuffer buffer = pooledBuffer.getResource();
+        Iterator<String> nameIterator = this.nameIterator;
+        Iterator<String> valueIterator = this.valueIterator;
+        int charIndex = this.charIndex;
+        int length;
+        String string = this.string;
+        int res;
+        // BUFFER IS FLIPPED COMING IN
+        if (buffer.hasRemaining()) {
+            do {
+                res = delegate.write(buffer);
+                if (res == 0) {
+                    return state;
+                }
+            } while (buffer.hasRemaining());
+        }
+        buffer.clear();
+        // BUFFER IS NOW EMPTY FOR FILLING
+        for (;;) {
+            switch (state) {
+                case STATE_BODY: {
+                    // shouldn't be possible, but might as well do the right thing anyway
+                    return state;
+                }
+                case STATE_START: {
+                    exchange.startResponse();
+                    // we assume that our buffer has enough space for the initial response line plus one more CR+LF
+                    assert buffer.remaining() >= 0x100;
+                    int code = exchange.getResponseCode();
+                    assert 999 >= code && code >= 100;
+                    buffer.put((byte) (code / 100 + '0'));
+                    buffer.put((byte) (code / 10 % 10 + '0'));
+                    buffer.put((byte) (code % 10 + '0'));
+                    buffer.put((byte) ' ');
+                    string = "Put Response String Here"; // <-- TODO
+                    length = string.length();
+                    for (charIndex = 0; charIndex < length; charIndex ++) {
+                        buffer.put((byte) string.charAt(charIndex));
+                    }
+                    buffer.put((byte) '\r').put((byte) '\n');
+                    HeaderMap headers = exchange.getResponseHeaders();
+                    nameIterator = headers.iterator();
+                    if (! nameIterator.hasNext()) {
+                        buffer.put((byte) '\r').put((byte) '\n');
+                        buffer.flip();
+                        while (buffer.hasRemaining()) {
+                            res = delegate.write(buffer);
+                            if (res == 0) {
+                                return STATE_BUF_FLUSH;
+                            }
+                        }
+                        pooledBuffer.free();
+                        pooledBuffer = null;
+                        return STATE_BODY;
+                    }
+                    string = nameIterator.next();
+                    assert charIndex == 0; // should be already set
+                    // fall thru
+                }
+                case STATE_HDR_NAME: {
+                    length = string.length();
+                    while (charIndex < length) {
+                        if (buffer.hasRemaining()) {
+                            buffer.put((byte) string.charAt(charIndex++));
+                        } else {
+                            buffer.flip();
+                            do {
+                                res = delegate.write(buffer);
+                                if (res == 0) {
+                                    this.string = string;
+                                    this.charIndex = charIndex;
+                                    this.nameIterator = nameIterator;
+                                    return STATE_HDR_NAME;
+                                }
+                            } while (buffer.hasRemaining());
+                            buffer.clear();
+                        }
+                    }
+                    // fall thru
+                }
+                case STATE_HDR_D: {
+                    if (! buffer.hasRemaining()) {
+                        buffer.flip();
+                        do {
+                            res = delegate.write(buffer);
+                            if (res == 0) {
+                                return STATE_HDR_D;
+                            }
+                        } while (buffer.hasRemaining());
+                        buffer.clear();
+                    }
+                    buffer.put((byte) ':');
+                    // fall thru
+                }
+                case STATE_HDR_DS: {
+                    if (! buffer.hasRemaining()) {
+                        buffer.flip();
+                        do {
+                            res = delegate.write(buffer);
+                            if (res == 0) {
+                                return STATE_HDR_DS;
+                            }
+                        } while (buffer.hasRemaining());
+                        buffer.clear();
+                    }
+                    buffer.put((byte) ' ');
+                    valueIterator = exchange.getResponseHeaders().get(string).iterator();
+                    assert valueIterator.hasNext();
+                    string = valueIterator.next();
+                    charIndex = 0;
+                    // fall thru
+                }
+                case STATE_HDR_VAL: {
+                    length = string.length();
+                    while (charIndex < length) {
+                        if (buffer.hasRemaining()) {
+                            buffer.put((byte) string.charAt(charIndex++));
+                        } else {
+                            buffer.flip();
+                            do {
+                                res = delegate.write(buffer);
+                                if (res == 0) {
+                                    this.string = string;
+                                    this.charIndex = charIndex;
+                                    this.valueIterator = valueIterator;
+                                    return STATE_HDR_VAL;
+                                }
+                            } while (buffer.hasRemaining());
+                            buffer.clear();
+                        }
+                    }
+                    if (! valueIterator.hasNext()) {
+                        if (! buffer.hasRemaining()) {
+                            buffer.flip();
+                            do {
+                                res = delegate.write(buffer);
+                                if (res == 0) {
+                                    return STATE_HDR_EOL_CR;
+                                }
+                            } while (buffer.hasRemaining());
+                            buffer.clear();
+                        }
+                        buffer.put((byte) 13); // CR
+                        if (! buffer.hasRemaining()) {
+                            buffer.flip();
+                            do {
+                                res = delegate.write(buffer);
+                                if (res == 0) {
+                                    return STATE_HDR_EOL_LF;
+                                }
+                            } while (buffer.hasRemaining());
+                            buffer.clear();
+                        }
+                        buffer.put((byte) 10); // LF
+                        if (nameIterator.hasNext()) {
+                            string = nameIterator.next();
+                            state = STATE_HDR_NAME;
+                            break;
+                        } else {
+                            if (! buffer.hasRemaining()) {
+                                buffer.flip();
+                                do {
+                                    res = delegate.write(buffer);
+                                    if (res == 0) {
+                                        return STATE_HDR_FINAL_CR;
+                                    }
+                                } while (buffer.hasRemaining());
+                                buffer.clear();
+                            }
+                            buffer.put((byte) 13); // CR
+                            if (! buffer.hasRemaining()) {
+                                buffer.flip();
+                                do {
+                                    res = delegate.write(buffer);
+                                    if (res == 0) {
+                                        return STATE_HDR_FINAL_LF;
+                                    }
+                                } while (buffer.hasRemaining());
+                                buffer.clear();
+                            }
+                            buffer.put((byte) 10); // LF
+                            this.nameIterator = null;
+                            this.valueIterator = null;
+                            this.string = null;
+                            buffer.flip();
+                            do {
+                                res = delegate.write(buffer);
+                                if (res == 0) {
+                                    return STATE_BUF_FLUSH;
+                                }
+                            } while (buffer.hasRemaining());
+                            pooledBuffer.free();
+                            pooledBuffer = null;
+                            return STATE_BODY;
+                        }
+                        // not reached
+                    }
+                    // fall thru
+                }
+                case STATE_HDR_VAL_D: {
+                    if (! buffer.hasRemaining()) {
+                        buffer.flip();
+                        do {
+                            res = delegate.write(buffer);
+                            if (res == 0) {
+                                return STATE_HDR_D;
+                            }
+                        } while (buffer.hasRemaining());
+                        buffer.clear();
+                    }
+                    buffer.put((byte) ',');
+                    // fall thru
+                }
+                case STATE_HDR_VAL_DS: {
+                    if (! buffer.hasRemaining()) {
+                        buffer.flip();
+                        do {
+                            res = delegate.write(buffer);
+                            if (res == 0) {
+                                return STATE_HDR_DS;
+                            }
+                        } while (buffer.hasRemaining());
+                        buffer.clear();
+                    }
+                    buffer.put((byte) ' ');
+                    assert valueIterator.hasNext();
+                    string = valueIterator.next();
+                    state = STATE_HDR_VAL;
+                    break;
+                }
+                // Clean-up states
+                case STATE_HDR_EOL_CR: {
+                    if (! buffer.hasRemaining()) {
+                        buffer.flip();
+                        do {
+                            res = delegate.write(buffer);
+                            if (res == 0) {
+                                return STATE_HDR_EOL_CR;
+                            }
+                        } while (buffer.hasRemaining());
+                        buffer.clear();
+                    }
+                    buffer.put((byte) 13); // CR
+                }
+                case STATE_HDR_EOL_LF: {
+                    if (! buffer.hasRemaining()) {
+                        buffer.flip();
+                        do {
+                            res = delegate.write(buffer);
+                            if (res == 0) {
+                                return STATE_HDR_EOL_LF;
+                            }
+                        } while (buffer.hasRemaining());
+                        buffer.clear();
+                    }
+                    buffer.put((byte) 10); // LF
+                    if (nameIterator.hasNext()) {
+                        string = nameIterator.next();
+                        state = STATE_HDR_NAME;
+                        break;
+                    }
+                    // fall thru
+                }
+                case STATE_HDR_FINAL_CR: {
+                    if (! buffer.hasRemaining()) {
+                        buffer.flip();
+                        do {
+                            res = delegate.write(buffer);
+                            if (res == 0) {
+                                return STATE_HDR_FINAL_CR;
+                            }
+                        } while (buffer.hasRemaining());
+                        buffer.clear();
+                    }
+                    buffer.put((byte) 13); // CR
+                    // fall thru
+                }
+                case STATE_HDR_FINAL_LF: {
+                    if (! buffer.hasRemaining()) {
+                        buffer.flip();
+                        do {
+                            res = delegate.write(buffer);
+                            if (res == 0) {
+                                return STATE_HDR_FINAL_LF;
+                            }
+                        } while (buffer.hasRemaining());
+                        buffer.clear();
+                    }
+                    buffer.put((byte) 10); // LF
+                    this.nameIterator = null;
+                    this.valueIterator = null;
+                    this.string = null;
+                    // fall thru
+                }
+                case STATE_BUF_FLUSH: {
+                    buffer.flip();
+                    do {
+                        res = delegate.write(buffer);
+                        if (res == 0) {
+                            return STATE_BUF_FLUSH;
+                        }
+                    } while (buffer.hasRemaining());
+                    pooledBuffer.free();
+                    pooledBuffer = null;
+                    return STATE_BODY;
+                }
+                default: {
+                    throw new IllegalStateException();
+                }
+            }
+        }
+    }
+
+    public int write(final ByteBuffer src) throws IOException {
+        int oldVal, newVal;
+        do {
+            oldVal = state;
+            if (allAreSet(oldVal, FLAG_ENTERED)) {
+                throw new ConcurrentStreamChannelAccessException();
+            }
+            newVal = oldVal | FLAG_ENTERED;
+        } while (stateUpdater.compareAndSet(this, oldVal, newVal));
+        int state = oldVal & MASK_STATE;
+        try {
+            if (state != 0) {
+                state = processWrite(state);
+                if (state != 0) {
+                    return 0;
+                }
+            }
+            return delegate.write(src);
+        } finally {
+            oldVal = newVal;
+            newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
+            while (! stateUpdater.compareAndSet(this, oldVal, newVal)) {
+                oldVal = this.state;
+                newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
+            }
+        }
+    }
+
+    public long write(final ByteBuffer[] srcs) throws IOException {
+        return write(srcs, 0, srcs.length);
+    }
+
+    public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
+        if (length == 0) {
+            return 0L;
+        }
+        int oldVal, newVal;
+        do {
+            oldVal = state;
+            if (allAreSet(oldVal, FLAG_ENTERED)) {
+                throw new ConcurrentStreamChannelAccessException();
+            }
+            newVal = oldVal | FLAG_ENTERED;
+        } while (stateUpdater.compareAndSet(this, oldVal, newVal));
+        int state = oldVal & MASK_STATE;
+        try {
+            if (state != 0) {
+                state = processWrite(state);
+                if (state != 0) {
+                    return 0;
+                }
+            }
+            return length == 1 ? delegate.write(srcs[offset]) : delegate.write(srcs, offset, length);
+        } finally {
+            oldVal = newVal;
+            newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
+            while (! stateUpdater.compareAndSet(this, oldVal, newVal)) {
+                oldVal = this.state;
+                newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
+            }
+        }
+    }
+
+    public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
+        if (count == 0L) {
+            return 0L;
+        }
+        int oldVal, newVal;
+        do {
+            oldVal = state;
+            if (allAreSet(oldVal, FLAG_ENTERED)) {
+                throw new ConcurrentStreamChannelAccessException();
+            }
+            newVal = oldVal | FLAG_ENTERED;
+        } while (stateUpdater.compareAndSet(this, oldVal, newVal));
+        int state = oldVal & MASK_STATE;
+        try {
+            if (state != 0) {
+                state = processWrite(state);
+                if (state != 0) {
+                    return 0;
+                }
+            }
+            return delegate.transferFrom(src, position, count);
+        } finally {
+            oldVal = newVal;
+            newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
+            while (! stateUpdater.compareAndSet(this, oldVal, newVal)) {
+                oldVal = this.state;
+                newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
+            }
+        }
+    }
+
+    public long transferFrom(final StreamSourceChannel source, final long count, final ByteBuffer throughBuffer) throws IOException {
+        if (count == 0) {
+            throughBuffer.clear().limit(0);
+            return 0L;
+        }
+        int oldVal, newVal;
+        do {
+            oldVal = state;
+            if (allAreSet(oldVal, FLAG_ENTERED)) {
+                throw new ConcurrentStreamChannelAccessException();
+            }
+            newVal = oldVal | FLAG_ENTERED;
+        } while (stateUpdater.compareAndSet(this, oldVal, newVal));
+        int state = oldVal & MASK_STATE;
+        try {
+            if (state != 0) {
+                state = processWrite(state);
+                if (state != 0) {
+                    return 0;
+                }
+            }
+            return delegate.transferFrom(source, count, throughBuffer);
+        } finally {
+            oldVal = newVal;
+            newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
+            while (! stateUpdater.compareAndSet(this, oldVal, newVal)) {
+                oldVal = this.state;
+                newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
+            }
+        }
+    }
+
+    public boolean flush() throws IOException {
+        int oldVal, newVal;
+        do {
+            oldVal = state;
+            if (allAreSet(oldVal, FLAG_ENTERED)) {
+                return false;
+            }
+            newVal = oldVal | FLAG_ENTERED;
+        } while (stateUpdater.compareAndSet(this, oldVal, newVal));
+        int state = oldVal & MASK_STATE;
+        try {
+            if (state != 0) {
+                state = processWrite(state);
+                if (state != 0) {
+                    return false;
+                }
+            }
+            return delegate.flush();
+        } finally {
+            oldVal = newVal;
+            newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
+            while (! stateUpdater.compareAndSet(this, oldVal, newVal)) {
+                oldVal = this.state;
+                newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
+            }
+        }
+    }
+
+    public void suspendWrites() {
+        delegate.suspendWrites();
+    }
+
+    public void resumeWrites() {
+        delegate.resumeWrites();
+    }
+
+    public boolean isWriteResumed() {
+        return delegate.isWriteResumed();
+    }
+
+    public void wakeupWrites() {
+        delegate.wakeupWrites();
+    }
+
+    public void shutdownWrites() throws IOException {
+        delegate.shutdownWrites();
+    }
+
+    public void awaitWritable() throws IOException {
+        delegate.awaitWritable();
+    }
+
+    public void awaitWritable(final long time, final TimeUnit timeUnit) throws IOException {
+        delegate.awaitWritable(time, timeUnit);
+    }
+
+    public boolean isOpen() {
+        return delegate.isOpen();
+    }
+
+    public void close() throws IOException {
+        delegate.close();
+    }
+
+    public XnioWorker getWorker() {
+        return delegate.getWorker();
+    }
+
+    public XnioExecutor getWriteThread() {
+        return delegate.getWriteThread();
+    }
+
+    public boolean supportsOption(final Option<?> option) {
+        return delegate.supportsOption(option);
+    }
+
+    public <T> T getOption(final Option<T> option) throws IOException {
+        return delegate.getOption(option);
+    }
+
+    public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
+        return delegate.setOption(option, value);
+    }
+}
