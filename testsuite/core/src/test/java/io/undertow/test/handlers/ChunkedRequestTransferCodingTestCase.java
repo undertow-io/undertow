@@ -27,8 +27,10 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.test.util.DefaultServer;
 import io.undertow.test.util.HttpClientUtils;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -38,7 +40,9 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class ChunkedTransferCodingTestCase {
+public class ChunkedRequestTransferCodingTestCase {
+
+    private static final Logger log = Logger.getLogger(ChunkedRequestTransferCodingTestCase.class);
 
     private static final String MESSAGE = "My HTTP Request!";
 
@@ -54,14 +58,16 @@ public class ChunkedTransferCodingTestCase {
             @Override
             public void handleRequest(final BlockingHttpServerExchange exchange) {
                 try {
-                    if(connection == null) {
+                    if (connection == null) {
                         connection = exchange.getConnection();
-                    } else if(connection.getChannel() != exchange.getConnection().getChannel()){
+                    } else if (connection.getChannel() != exchange.getConnection().getChannel()) {
                         exchange.getOutputStream().write("Connection not persistent".getBytes());
                         exchange.getOutputStream().close();
                         return;
                     }
-                    exchange.getOutputStream().write(message.getBytes());
+                    String m = HttpClientUtils.readResponse(exchange.getInputStream());
+                    Assert.assertEquals(message, m);
+                    exchange.getInputStream().close();
                     exchange.getOutputStream().close();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -70,25 +76,38 @@ public class ChunkedTransferCodingTestCase {
         });
     }
 
-    //TODO: fix this test to use persistent connections
     @Test
-    public void sendHttpRequest() throws IOException {
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+    public void testChunkedRequest() throws IOException {
+        HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
+        post.setEntity(new StringEntity("This is a test"));
         DefaultHttpClient client = new DefaultHttpClient();
         try {
             generateMessage(1);
-            HttpResponse result = client.execute(get);
+            post.setEntity(new StringEntity(message) {
+                @Override
+                public long getContentLength() {
+                    return -1;
+                }
+            });
+            HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(message, HttpClientUtils.readResponse(result));
+            HttpClientUtils.readResponse(result);
 
             generateMessage(1000);
-            result = client.execute(get);
+            post.setEntity(new StringEntity(message) {
+                @Override
+                public long getContentLength() {
+                    return -1;
+                }
+            });
+            result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(message, HttpClientUtils.readResponse(result));
+            HttpClientUtils.readResponse(result);
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
+
 
     private static void generateMessage(int repetitions) {
         final StringBuilder builder = new StringBuilder(repetitions * MESSAGE.length());

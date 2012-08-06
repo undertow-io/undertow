@@ -33,14 +33,16 @@ public class HttpClientUtils {
     }
 
     public static String readResponse(final HttpResponse response) throws IOException {
+        return readResponse(response.getEntity().getContent());
+    }
+
+    public static String readResponse(InputStream stream) throws IOException {
         final StringBuilder builder = new StringBuilder();
         byte[] data = new byte[100];
-        InputStream stream = response.getEntity().getContent();
         int read;
         while ((read = stream.read(data)) != -1) {
             builder.append(new String(data,0,read));
         }
         return builder.toString();
     }
-
 }
