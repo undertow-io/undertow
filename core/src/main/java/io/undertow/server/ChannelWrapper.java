@@ -21,10 +21,22 @@ package io.undertow.server;
 import java.nio.channels.Channel;
 
 /**
- * Interface that provides a means of wrapping a {@link java.nio.channels.Channel}
+ * Interface that provides a means of wrapping a {@link java.nio.channels.Channel}.  Every channel wrapper has a chance
+ * to replace the channel with a channel which either wraps or replaces the passed in channel.  However it is the responsibility
+ * of either the channel wrapper instance or the channel it creates to ensure that the original channel is eventually
+ * cleaned up and shut down properly when the request is terminated.
  *
  * @author Stuart Douglas
  */
 public interface ChannelWrapper<T extends Channel> {
+
+    /**
+     * Wrap the channel.  The wrapper should not return {@code null}.  If no wrapping is desired, the original
+     * channel should be returned.
+     *
+     * @param channel the original channel
+     * @param exchange the in-flight HTTP exchange
+     * @return the replacement channel
+     */
     T wrap(final T channel, final HttpServerExchange exchange);
 }
