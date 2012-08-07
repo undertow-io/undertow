@@ -19,8 +19,17 @@
 package io.undertow.server;
 
 /**
+ * The handler which is called when an {@link HttpHandler} has completely finished processing a request.  Calling
+ * this handler will generally force the request and response streams to be cleaned and closed asynchronously as
+ * appropriate.  The handler may be called from the same thread as the request handler's original execution, or a
+ * different thread.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface HttpCompletionHandler {
+
+    /**
+     * Signify completion of the request handler's execution.
+     */
     void handleComplete();
 }
