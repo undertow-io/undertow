@@ -50,6 +50,21 @@ public class HttpTransferEncodingHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
+    /**
+     * Construct a new instance.
+     */
+    public HttpTransferEncodingHandler() {
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param next the next HTTP handler
+     */
+    public HttpTransferEncodingHandler(final HttpHandler next) {
+        this.next = next;
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
@@ -209,10 +224,20 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         };
     }
 
+    /**
+     * Get the next HTTP handler.
+     *
+     * @return the next HTTP handler
+     */
     public HttpHandler getNext() {
         return next;
     }
 
+    /**
+     * Set the next http handler.
+     *
+     * @param next the next http handler
+     */
     public void setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
