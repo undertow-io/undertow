@@ -158,7 +158,7 @@ public final class BlockingHttpServerExchange implements Attachable {
 
     public OutputStream getOutputStream() {
         if(out == null) {
-            out = new BufferedOutputStream(new ChannelOutputStream(exchange.getResponseChannel()));
+            out = new BufferedOutputStream(new ChannelOutputStream(exchange.getResponseChannelFactory().create()));
         }
         return out;
     }

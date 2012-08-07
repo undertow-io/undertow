@@ -56,7 +56,7 @@ public class SimpleErrorPageHandler implements HttpHandler {
                         (codes == null && exchange.getResponseCode() >= 400) ||
                         codes.contains(exchange.getResponseCode())) {
 
-                    final StreamSinkChannel response = exchange.getResponseChannel();
+                    final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
                     final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getResponseCode() + " - " + StatusCodes.getReason(exchange.getResponseCode()) + "</body></html>";
                     StringWriteChannelListener listener = new StringWriteChannelListener(errorPage) {
                         @Override

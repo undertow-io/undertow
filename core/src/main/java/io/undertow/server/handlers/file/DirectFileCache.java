@@ -48,7 +48,7 @@ public class DirectFileCache implements FileCache {
         try {
             final long length = file.length();
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + length);
-            final StreamSinkChannel response = exchange.getResponseChannel();
+            final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
             if(response == null) {
                 throw UndertowMessages.MESSAGES.failedToAcquireResponseChannel();
             }

@@ -37,6 +37,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.channels.AssembledConnectedStreamChannel;
+import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
@@ -205,7 +206,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public ConnectedStreamChannel upgradeChannel() throws IllegalStateException, IOException {
         setResponseCode(101);
-        return new AssembledConnectedStreamChannel(getRequestChannel(), getResponseChannel());
+        return new AssembledConnectedStreamChannel(getRequestChannel(), getResponseChannelFactory().create());
     }
 
     /**
@@ -310,38 +311,62 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the response channel. The {@link StreamSinkChannel#close()} or {@link StreamSinkChannel#shutdownWrites()}
-     * method must be called at some point after the request is processed to prevent resource leakage and to allow
-     * the next request to proceed.  Closing a fixed-length response before the corresponding number of bytes has
-     * been written will cause the connection to be reset and subsequent requests to fail; thus it is important to
-     * ensure that the proper content length is delivered when one is specified.  The response channel may not be
-     * writable until after the response headers have been sent.
+     * Get the factory to produce the response channel.  The resultant channel's {@link StreamSinkChannel#close()} or
+     * {@link StreamSinkChannel#shutdownWrites()} method must be called at some point after the request is processed to
+     * prevent resource leakage and to allow the next request to proceed.  Closing a fixed-length response before the
+     * corresponding number of bytes has been written will cause the connection to be reset and subsequent requests to
+     * fail; thus it is important to ensure that the proper content length is delivered when one is specified.  The
+     * response channel may not be writable until after the response headers have been sent.
      * <p/>
      * If this method is not called then an empty or default response body will be used, depending on the response code set.
      * <p/>
-     * The returned stream will lazily begin to write out headers when the first write request is initiated, or when
-     * {@link java.nio.channels.Channel#close()} is called on the channel with no content being written.
+     * The returned channel will begin to write out headers when the first write request is initiated, or when
+     * {@link java.nio.channels.Channel#close()} is called on the channel with no content being written.  Once the channel
+     * is acquired, however, the response code and headers may not be modified.
      *
-     * @return the response channel, or {@code null} if another party already acquired the channel
+     * @return the response channel factory, or {@code null} if another party already acquired the channel factory
      */
-    public StreamSinkChannel getResponseChannel() {
+    public ChannelFactory<StreamSinkChannel> getResponseChannelFactory() {
         final ChannelWrapper[] wrappers = responseWrappersUpdater.getAndSet(this, null);
         if (wrappers == null) {
             return null;
         }
-        StreamSinkChannel oldChannel = underlyingResponseChannel;
-        StreamSinkChannel channel = oldChannel;
-        for (ChannelWrapper wrapper : wrappers) {
-            channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(oldChannel, this);
-            if (channel == null) {
-                channel = oldChannel;
-            }
+        return new ResponseChannelFactory(this, underlyingResponseChannel, wrappers);
+    }
+
+    private static final class ResponseChannelFactory implements ChannelFactory<StreamSinkChannel> {
+        private static final AtomicReferenceFieldUpdater<ResponseChannelFactory, ChannelWrapper[]> wrappersUpdater = AtomicReferenceFieldUpdater.newUpdater(ResponseChannelFactory.class, ChannelWrapper[].class, "wrappers");
+        private final HttpServerExchange exchange;
+        private final StreamSinkChannel firstChannel;
+        @SuppressWarnings("unused")
+        private volatile ChannelWrapper[] wrappers;
+
+        ResponseChannelFactory(final HttpServerExchange exchange, final StreamSinkChannel firstChannel, final ChannelWrapper[] wrappers) {
+            this.exchange = exchange;
+            this.firstChannel = firstChannel;
+            this.wrappers = wrappers;
         }
-        return channel;
+
+        public StreamSinkChannel create() {
+            final ChannelWrapper[] wrappers = wrappersUpdater.getAndSet(this, null);
+            if (wrappers == null) {
+                return null;
+            }
+            StreamSinkChannel oldChannel = firstChannel;
+            StreamSinkChannel channel = oldChannel;
+            for (ChannelWrapper wrapper : wrappers) {
+                channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(oldChannel, exchange);
+                if (channel == null) {
+                    channel = oldChannel;
+                }
+            }
+            exchange.startResponse();
+            return channel;
+        }
     }
 
     /**
-     * @return <code>true</code> if {@link #getResponseChannel()} has not been called
+     * @return <code>true</code> if {@link #getResponseChannelFactory()} has not been called
      */
     public boolean isResponseChannelAvailable() {
         return responseWrappers != null;
@@ -466,7 +491,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         log.tracef("Starting to write response for %s using channel %s", this, underlyingResponseChannel);
         final HeaderMap responseHeaders = this.responseHeaders;
         responseHeaders.lock();
-        // todo un-gate
     }
 
 

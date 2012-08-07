@@ -128,7 +128,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                     responseHeaders.remove(Headers.TRANSFER_ENCODING);
                     responseHeaders.remove(Headers.CONTENT_LENGTH);
-                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, false, ! stillPersistent, finishListener);
+                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, false, ! stillPersistent, finishListener, this);
                 } else if (! transferEncoding.equalsIgnoreCase("identity")) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                     wrappedChannel = new ChunkedStreamSinkChannel(channel, false, ! stillPersistent, finishListener, exchange.getConnection().getBufferPool());
@@ -136,7 +136,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                     final long contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                     // fixed-length response
-                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, ! stillPersistent, finishListener);
+                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, ! stillPersistent, finishListener, this);
                     //todo: remove this line when xnio correctly creates delegating setter
                     channel.getWriteSetter().set(ChannelListeners.delegatingChannelListener((FixedLengthStreamSinkChannel) wrappedChannel, (ChannelListener.SimpleSetter<FixedLengthStreamSinkChannel>) wrappedChannel.getWriteSetter()));
                 } else {
@@ -165,7 +165,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
     private static ChannelWrapper<StreamSourceChannel> fixedLengthStreamSourceChannelWrapper(final long contentLength) {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
-                return new FixedLengthStreamSourceChannel(channel, contentLength, false, fixedLengthDrainListener(channel, exchange));
+                return new FixedLengthStreamSourceChannel(channel, contentLength, false, fixedLengthDrainListener(channel, exchange), this);
             }
         };
     }

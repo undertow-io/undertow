@@ -131,7 +131,6 @@ final class HttpResponseChannel implements StreamSinkChannel {
                 }
                 case STATE_START: {
                     log.trace("Starting response");
-                    exchange.startResponse();
                     // we assume that our buffer has enough space for the initial response line plus one more CR+LF
                     assert buffer.remaining() >= 0x100;
                     string = exchange.getProtocol();
