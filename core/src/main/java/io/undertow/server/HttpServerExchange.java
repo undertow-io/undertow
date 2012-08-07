@@ -30,6 +30,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Protocols;
+import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -111,7 +112,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_CLEANUP = 1 << 13;
 
-    protected HttpServerExchange(final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final Map<String, List<String>> queryParameters, final String requestMethod, final String protocol, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel, final Runnable requestTerminateAction, final Runnable responseTerminateAction) {
+    HttpServerExchange(final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final Map<String, List<String>> queryParameters, final String requestMethod, final String protocol, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel, final Runnable requestTerminateAction, final Runnable responseTerminateAction) {
         this.connection = connection;
         this.requestHeaders = requestHeaders;
         this.responseHeaders = responseHeaders;
@@ -124,70 +125,155 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.responseTerminateAction = responseTerminateAction;
     }
 
+    /**
+     * Get the request protocol string.  Normally this is one of the strings listed in {@link Protocols}.
+     *
+     * @return the request protocol string
+     */
     public String getProtocol() {
         return protocol;
     }
 
+    /**
+     * Determine whether this request conforms to HTTP 0.9.
+     *
+     * @return {@code true} if the request protocol is equal to {@link Protocols#HTTP_0_9}, {@code false} otherwise
+     */
     public boolean isHttp09() {
         return protocol.equals(Protocols.HTTP_0_9);
     }
 
+    /**
+     * Determine whether this request conforms to HTTP 1.0.
+     *
+     * @return {@code true} if the request protocol is equal to {@link Protocols#HTTP_1_0}, {@code false} otherwise
+     */
     public boolean isHttp10() {
         return protocol.equals(Protocols.HTTP_1_0);
     }
 
+    /**
+     * Determine whether this request conforms to HTTP 1.1.
+     *
+     * @return {@code true} if the request protocol is equal to {@link Protocols#HTTP_1_1}, {@code false} otherwise
+     */
     public boolean isHttp11() {
         return protocol.equals(Protocols.HTTP_1_1);
     }
 
+    /**
+     * Get the HTTP request method.  Normally this is one of the strings listed in {@link Methods}.
+     *
+     * @return the HTTP request method
+     */
     public String getRequestMethod() {
         return requestMethod;
     }
 
+    /**
+     * Set the HTTP request method.
+     *
+     * @param requestMethod the HTTP request method
+     */
     public void setRequestMethod(final String requestMethod) {
         this.requestMethod = requestMethod;
     }
 
+    /**
+     * Get the request URI scheme.  Normally this is one of {@code http} or {@code https}.
+     *
+     * @return the request URI scheme
+     */
     public String getRequestScheme() {
         return requestScheme;
     }
 
+    /**
+     * Set the request URI scheme.
+     *
+     * @param requestScheme the request URI scheme
+     */
     public void setRequestScheme(final String requestScheme) {
         this.requestScheme = requestScheme;
     }
 
+    /**
+     * Get the request URI path.  This is the whole original request path.
+     *
+     * @return the request URI path
+     */
     public String getRequestPath() {
         return requestPath;
     }
 
+    /**
+     * Set the request URI path.
+     *
+     * @param requestPath the request URI path
+     */
     public void setRequestPath(final String requestPath) {
         this.requestPath = requestPath;
     }
 
+    /**
+     * Get the request relative path.  This is the path which should be evaluated by the current handler.
+     *
+     * @return the request relative path
+     */
     public String getRelativePath() {
         return relativePath;
     }
 
+    /**
+     * Set the request relative path.
+     *
+     * @param relativePath the request relative path
+     */
     public void setRelativePath(final String relativePath) {
         this.relativePath = relativePath;
     }
 
+    /**
+     * Get the resolved path.
+     *
+     * @return the resolved path
+     */
     public String getResolvedPath() {
         return resolvedPath;
     }
 
+    /**
+     * Set the resolved path.
+     *
+     * @param resolvedPath the resolved path
+     */
     public void setResolvedPath(final String resolvedPath) {
         this.resolvedPath = resolvedPath;
     }
 
+    /**
+     * Get the canonical path.
+     *
+     * @return the canonical path
+     */
     public String getCanonicalPath() {
         return canonicalPath;
     }
 
+    /**
+     * Set the canonical path.
+     *
+     * @param canonicalPath the canonical path
+     */
     public void setCanonicalPath(final String canonicalPath) {
         this.canonicalPath = canonicalPath;
     }
 
+    /**
+     * Get the underlying HTTP connection.
+     *
+     * @return the underlying HTTP connection
+     */
     public HttpServerConnection getConnection() {
         return connection;
     }
