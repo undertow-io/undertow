@@ -116,6 +116,11 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                         // RFC 2616 3.6 last paragraph
                         responseHeaders.remove(Headers.TRANSFER_ENCODING);
                     }
+                } else if(exchange.isHttp11() && !responseHeaders.contains(Headers.CONTENT_LENGTH)) {
+                    //if we have a HTTP 1.1 request with no transfer encoding and no content length
+                    //then we default to chunked, to enable persistent connections to work
+                    responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED);
+                    transferEncoding = Headers.CHUNKED;
                 }
                 StreamSinkChannel wrappedChannel = channel;
                 final int code = exchange.getResponseCode();
