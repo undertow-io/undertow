@@ -30,7 +30,6 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.ConnectedStreamChannel;
 import io.undertow.util.AbstractAttachable;
-import org.xnio.channels.PushBackStreamChannel;
 
 /**
  * A server-side HTTP connection.
@@ -39,35 +38,40 @@ import org.xnio.channels.PushBackStreamChannel;
  */
 public final class HttpServerConnection extends AbstractAttachable implements ConnectedChannel {
     private final ConnectedStreamChannel channel;
-    private final PushBackStreamChannel requestChannel;
     private final ChannelListener.Setter<HttpServerConnection> closeSetter;
     private final Pool<ByteBuffer> bufferPool;
     private final HttpHandler rootHandler;
 
-    HttpServerConnection(ConnectedStreamChannel channel, final PushBackStreamChannel requestChannel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler) {
+    HttpServerConnection(ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler) {
         this.channel = channel;
-        this.requestChannel = requestChannel;
         this.bufferPool = bufferPool;
         this.rootHandler = rootHandler;
         closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
     }
 
     /**
-     * This is the underlying push back channel
-     * @return
+     * Get the root HTTP handler for this connection.
+     *
+     * @return the root HTTP handler for this connection
      */
-    public PushBackStreamChannel getRequestChannel() {
-        return requestChannel;
-    }
-
     public HttpHandler getRootHandler() {
         return rootHandler;
     }
 
+    /**
+     * Get the buffer pool for this connection.
+     *
+     * @return the buffer pool for this connection
+     */
     public Pool<ByteBuffer> getBufferPool() {
         return bufferPool;
     }
 
+    /**
+     * Get the underlying channel.
+     *
+     * @return the underlying channel
+     */
     public ConnectedStreamChannel getChannel() {
         return channel;
     }
