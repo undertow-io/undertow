@@ -141,8 +141,6 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 final int code = exchange.getResponseCode();
                 if (exchange.getRequestMethod().equalsIgnoreCase(Methods.HEAD) || (100 <= code && code <= 199) || code == 204 || code == 304) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    responseHeaders.remove(Headers.TRANSFER_ENCODING);
-                    responseHeaders.remove(Headers.CONTENT_LENGTH);
                     wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, false, ! stillPersistent, finishListener, this);
                 } else if (! transferEncoding.equalsIgnoreCase("identity")) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
