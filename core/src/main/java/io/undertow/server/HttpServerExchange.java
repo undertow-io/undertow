@@ -21,7 +21,6 @@ package io.undertow.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -30,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import io.undertow.UndertowMessages;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
 import io.undertow.util.Protocols;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
@@ -44,9 +42,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.channels.SuspendableReadChannel;
 
-import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.intBitMask;
 import static org.xnio.IoUtils.safeClose;
 
