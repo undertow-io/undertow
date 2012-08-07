@@ -18,13 +18,13 @@
 
 package io.undertow.test.util;
 
+import io.undertow.server.HttpTransferEncodingHandler;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import io.undertow.server.PersistentConnectionHandler;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
@@ -126,7 +126,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @param rootHandler The handler to use
      */
     public static void setRootHandler(HttpHandler rootHandler) {
-        final PersistentConnectionHandler ph = new PersistentConnectionHandler();
+        final HttpTransferEncodingHandler ph = new HttpTransferEncodingHandler();
         ph.setNext(rootHandler);
         openListener.setRootHandler(ph);
     }

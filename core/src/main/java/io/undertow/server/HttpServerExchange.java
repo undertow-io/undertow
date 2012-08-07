@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.undertow.UndertowMessages;
 import io.undertow.util.AbstractAttachable;
-import io.undertow.util.GatedStreamSinkChannel;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Protocols;
@@ -61,31 +60,23 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private static final Logger log = Logger.getLogger(HttpServerExchange.class);
 
-    private static final boolean traceEnabled;
-
-    static {
-        traceEnabled = log.isTraceEnabled();
-    }
-
-    @SuppressWarnings("unused") // todo for now
     private final HttpServerConnection connection;
     private final HeaderMap requestHeaders;
     private final HeaderMap responseHeaders;
 
     private final Map<String, List<String>> queryParameters;
 
-    private final GatedStreamSinkChannel gatedResponseChannel;
     private final StreamSinkChannel underlyingResponseChannel;
     private final StreamSourceChannel underlyingRequestChannel;
 
-    private final Object gatePermit = new Object();
+    private final Runnable requestTerminateAction;
+    private final Runnable responseTerminateAction;
 
-    // todo: protocol should be immutable
-    private volatile String protocol;
+    private final String protocol;
 
     // mutable state
 
-    private volatile int responseState = 200;
+    private volatile int state = 200;
     private volatile String requestMethod;
     private volatile String requestScheme;
     /**
@@ -115,7 +106,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final AtomicReferenceFieldUpdater<HttpServerExchange, ChannelWrapper[]> requestWrappersUpdater = AtomicReferenceFieldUpdater.newUpdater(HttpServerExchange.class, ChannelWrapper[].class, "requestWrappers");
     private static final AtomicReferenceFieldUpdater<HttpServerExchange, ChannelWrapper[]> responseWrappersUpdater = AtomicReferenceFieldUpdater.newUpdater(HttpServerExchange.class, ChannelWrapper[].class, "responseWrappers");
 
-    private static final AtomicIntegerFieldUpdater<HttpServerExchange> responseStateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpServerExchange.class, "responseState");
+    private static final AtomicIntegerFieldUpdater<HttpServerExchange> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpServerExchange.class, "state");
 
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
     private static final int FLAG_RESPONSE_SENT = 1 << 10;
@@ -123,23 +114,21 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_CLEANUP = 1 << 13;
 
-    protected HttpServerExchange(final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final Map<String, List<String>> queryParameters, final String requestMethod, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
+    protected HttpServerExchange(final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final Map<String, List<String>> queryParameters, final String requestMethod, final String protocol, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel, final Runnable requestTerminateAction, final Runnable responseTerminateAction) {
         this.connection = connection;
         this.requestHeaders = requestHeaders;
         this.responseHeaders = responseHeaders;
         this.queryParameters = queryParameters;
         this.requestMethod = requestMethod;
+        this.protocol = protocol;
         this.underlyingRequestChannel = requestChannel;
-        this.underlyingResponseChannel = responseChannel;
-        this.gatedResponseChannel = new GatedStreamSinkChannel(responseChannel, gatePermit, false, false);
+        this.underlyingResponseChannel = new HttpResponseChannel(responseChannel, connection.getBufferPool(), this);
+        this.requestTerminateAction = requestTerminateAction;
+        this.responseTerminateAction = responseTerminateAction;
     }
 
     public String getProtocol() {
         return protocol;
-    }
-
-    public void setProtocol(final String protocol) {
-        this.protocol = protocol;
     }
 
     public boolean isHttp09() {
@@ -152,26 +141,6 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public boolean isHttp11() {
         return protocol.equals(Protocols.HTTP_1_1);
-    }
-
-    /**
-     * If this is not a HTTP/1.1 request, or if the Connection: close header was sent we need to close the channel
-     *
-     * @return <code>true</code> if the connection should be closed once the response has been written
-     */
-    boolean isCloseConnection() {
-        if (!isHttp11()) {
-            return true;
-        }
-        final Deque<String> connection = requestHeaders.get(Headers.CONNECTION);
-        if (connection != null) {
-            for (final String value : connection) {
-                if (value.toLowerCase().equals("close")) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     public String getRequestMethod() {
@@ -288,7 +257,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return <code>true</code> If the response has already been started
      */
     public boolean isResponseStarted() {
-        return allAreSet(responseState, FLAG_RESPONSE_SENT);
+        return allAreSet(state, FLAG_RESPONSE_SENT);
     }
 
     /**
@@ -308,6 +277,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         for (ChannelWrapper wrapper : wrappers) {
             channel = ((ChannelWrapper<StreamSourceChannel>) wrapper).wrap(channel, this);
             if (channel == null) {
+                safeClose(underlyingRequestChannel);
                 throw UndertowMessages.MESSAGES.failedToAcquireRequestChannel();
             }
         }
@@ -327,6 +297,16 @@ public final class HttpServerExchange extends AbstractAttachable {
      * the socket or implement a transfer coding.
      */
     void terminateRequest() {
+        int oldVal, newVal;
+        do {
+            oldVal = state;
+            if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
+                // idempotent
+                return;
+            }
+            newVal = oldVal | FLAG_REQUEST_TERMINATED;
+        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
+        requestTerminateAction.run();
     }
 
     /**
@@ -349,11 +329,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (wrappers == null) {
             return null;
         }
-        StreamSinkChannel channel = new HttpResponseChannel(gatedResponseChannel, connection.getBufferPool(), this);
+        StreamSinkChannel oldChannel = underlyingResponseChannel;
+        StreamSinkChannel channel = oldChannel;
         for (ChannelWrapper wrapper : wrappers) {
-            channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(channel, this);
+            channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(oldChannel, this);
             if (channel == null) {
-                throw UndertowMessages.MESSAGES.failedToAcquireResponseChannel();
+                channel = oldChannel;
             }
         }
         return channel;
@@ -379,12 +360,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         int oldVal, newVal;
         do {
-            oldVal = responseState;
+            oldVal = state;
             if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
                 throw UndertowMessages.MESSAGES.responseAlreadyStarted();
             }
             newVal = oldVal & ~MASK_RESPONSE_CODE | responseCode & MASK_RESPONSE_CODE;
-        } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
+        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
     }
 
     /**
@@ -433,7 +414,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the response code
      */
     public int getResponseCode() {
-        return responseState & MASK_RESPONSE_CODE;
+        return state & MASK_RESPONSE_CODE;
     }
 
     /**
@@ -443,14 +424,14 @@ public final class HttpServerExchange extends AbstractAttachable {
     void terminateResponse() {
         int oldVal, newVal;
         do {
-            oldVal = responseState;
+            oldVal = state;
             if (allAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
                 // idempotent
                 return;
             }
             newVal = oldVal | FLAG_RESPONSE_TERMINATED;
-        } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
-        // todo - let next exchange start pushing headers
+        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+        responseTerminateAction.run();
     }
 
     /**
@@ -475,16 +456,14 @@ public final class HttpServerExchange extends AbstractAttachable {
     void startResponse() throws IllegalStateException {
         int oldVal, newVal;
         do {
-            oldVal = responseState;
+            oldVal = state;
             if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
                 throw UndertowMessages.MESSAGES.responseAlreadyStarted();
             }
             newVal = oldVal | FLAG_RESPONSE_SENT;
-        } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
+        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
 
-        if (traceEnabled) {
-            log.tracef("Starting to write response for %s using channel %s", this, underlyingResponseChannel);
-        }
+        log.tracef("Starting to write response for %s using channel %s", this, underlyingResponseChannel);
         final HeaderMap responseHeaders = this.responseHeaders;
         responseHeaders.lock();
         // todo un-gate
@@ -503,48 +482,55 @@ public final class HttpServerExchange extends AbstractAttachable {
         // consume the request body nicely, send whatever HTTP response we have, and close down the connection.
         int oldVal, newVal;
         do {
-            oldVal = responseState;
+            oldVal = state;
             if (allAreSet(oldVal, FLAG_CLEANUP)) {
                 return;
             }
             newVal = oldVal | FLAG_CLEANUP | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
-        } while (!responseStateUpdater.compareAndSet(this, oldVal, newVal));
-        if (allAreClear(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+        final StreamSourceChannel requestChannel = underlyingRequestChannel;
+        final StreamSinkChannel responseChannel = underlyingResponseChannel;
+        if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+            // we're good; a transfer coding handler took care of things.
+            return;
+        } else {
             try {
                 // Attempt a nice shutdown.
                 long res;
                 do {
-                    res = Channels.drain(underlyingRequestChannel, Long.MAX_VALUE);
+                    res = Channels.drain(requestChannel, Long.MAX_VALUE);
                 } while (res > 0);
                 if (res == 0) {
-                    underlyingRequestChannel.getReadSetter().set(ChannelListeners.<StreamSourceChannel>drainListener(Long.MAX_VALUE, new ChannelListener<SuspendableReadChannel>() {
+                    requestChannel.getReadSetter().set(ChannelListeners.<StreamSourceChannel>drainListener(Long.MAX_VALUE, new ChannelListener<SuspendableReadChannel>() {
                         public void handleEvent(final SuspendableReadChannel channel) {
+                            channel.suspendReads();
+                            channel.getReadSetter().set(null);
                             IoUtils.safeShutdownReads(channel);
                         }
                     }, ChannelListeners.closingChannelExceptionHandler()));
-                    underlyingRequestChannel.resumeReads();
+                    requestChannel.resumeReads();
+                } else {
+                    assert res == -1;
+                    requestChannel.shutdownReads();
                 }
-                gatedResponseChannel.shutdownWrites();
-                if (!gatedResponseChannel.flush()) {
-                    gatedResponseChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, ChannelListeners.closingChannelExceptionHandler()));
-                    gatedResponseChannel.resumeWrites();
+                responseChannel.shutdownWrites();
+                if (! responseChannel.flush()) {
+                    responseChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
+                        public void handleEvent(final StreamSinkChannel channel) {
+                            // this shouldn't be necessary...
+                            channel.suspendWrites();
+                            channel.getWriteSetter().set(null);
+                        }
+                    }, ChannelListeners.closingChannelExceptionHandler()));
+                    responseChannel.resumeWrites();
                 }
             } catch (Throwable t) {
                 // All sorts of things could go wrong, from runtime exceptions to java.io.IOException to errors.
                 // Just kill off the connection, it's fucked beyond repair.
-                safeClose(underlyingRequestChannel);
-                safeClose(gatedResponseChannel);
-                safeClose(underlyingResponseChannel);
+                safeClose(requestChannel);
+                safeClose(responseChannel);
                 safeClose(connection);
             }
-        } else if (anyAreClear(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
-            // Only one of the two channels were terminated - this is bad, because it means
-            // we may well have just closed one half of our socket but not the other.  Just
-            // kill the socket.
-            safeClose(underlyingRequestChannel);
-            safeClose(gatedResponseChannel);
-            safeClose(connection);
         }
-        // Otherwise we're good; a transfer coding handler took care of things.
     }
 }

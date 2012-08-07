@@ -18,6 +18,7 @@
 
 package io.undertow.server;
 
+import io.undertow.util.GatedStreamSinkChannel;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -26,7 +27,10 @@ import io.undertow.server.httpparser.HttpExchangeBuilder;
 import io.undertow.server.httpparser.HttpParser;
 import io.undertow.server.httpparser.ParseState;
 import io.undertow.util.HeaderMap;
+import java.util.List;
+import java.util.Map;
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.PushBackStreamChannel;
@@ -41,16 +45,16 @@ import static org.xnio.IoUtils.safeClose;
  */
 final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
-
-    private volatile ParseState state;
-    private volatile HttpExchangeBuilder builder;
-
-    private final HttpServerConnection connection;
     private final StreamSinkChannel responseChannel;
 
-    HttpReadListener( final StreamSinkChannel responseChannel, final HttpServerConnection connection) {
-        this.connection = connection;
+    private ParseState state;
+    private HttpExchangeBuilder builder;
+
+    private final HttpServerConnection connection;
+
+    HttpReadListener(final StreamSinkChannel responseChannel, final HttpServerConnection connection) {
         this.responseChannel = responseChannel;
+        this.connection = connection;
     }
 
     public void handleEvent(final PushBackStreamChannel channel) {
@@ -74,7 +78,13 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             if (res == -1) {
                 try {
                     channel.shutdownReads();
-                    // TODO: enqueue a write handler which shuts down the write side of the connection
+                    final StreamSinkChannel responseChannel = this.responseChannel;
+                    responseChannel.shutdownWrites();
+                    // will return false if there's a response queued ahead of this one, so we'll set up a listener then
+                    if (! responseChannel.flush()) {
+                        responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
+                        responseChannel.resumeWrites();
+                    }
                 } catch (IOException e) {
                     if(UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
@@ -98,19 +108,35 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             }
 
             if(state.isComplete()) {
-                channel.suspendReads();
-                //we remove ourselves as the read listener from the channel for now
-                //TODO: we need a proper way to handle this
+                // we remove ourselves as the read listener from the channel;
+                // if the http handler doesn't set any then reads will suspend, which is the right thing to do
                 channel.getReadSetter().set(null);
+                final StreamSinkChannel ourResponseChannel = this.responseChannel;
+                final StreamSinkChannel targetChannel = ourResponseChannel instanceof GatedStreamSinkChannel ? ((GatedStreamSinkChannel)ourResponseChannel).getChannel() : ourResponseChannel;
+                final GatedStreamSinkChannel nextRequestResponseChannel = new GatedStreamSinkChannel(targetChannel, this, false, true);
+                final HeaderMap requestHeaders = builder.getHeaders();
+                final HeaderMap responseHeaders = new HeaderMap();
+                final Map<String,List<String>> parameters = builder.getQueryParameters();
+                final String method = builder.getMethod();
+                final String protocol = builder.getProtocol();
 
-                final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, builder.getHeaders(), new HeaderMap(), builder.getQueryParameters(), builder.getMethod(), channel, responseChannel);
-
+                final Runnable requestTerminateAction = new Runnable() {
+                    public void run() {
+                        channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
+                        channel.resumeReads();
+                    }
+                };
+                final Runnable responseTerminateAction = new Runnable() {
+                    public void run() {
+                        nextRequestResponseChannel.openGate(HttpReadListener.this);
+                    }
+                };
+                final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, requestHeaders, responseHeaders, parameters, method, protocol, channel, ourResponseChannel, requestTerminateAction, responseTerminateAction);
 
                 try {
                     httpServerExchange.setCanonicalPath(builder.getCanonicalPath());
                     httpServerExchange.setRelativePath(builder.getCanonicalPath());
                     httpServerExchange.setRequestPath(builder.getPath());
-                    httpServerExchange.setProtocol(builder.getProtocol());
 
                     state = null;
                     builder = null;
@@ -123,12 +149,10 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 } catch (Throwable t) {
                     //TODO: we should attempt to return a 500 status code in this situation
                     UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
-                    IoUtils.safeClose(responseChannel);
+                    IoUtils.safeClose(nextRequestResponseChannel);
                     IoUtils.safeClose(channel);
                 }
             }
-
-            // TODO: Parse the buffer via PFM, set free to false if the buffer is pushed back
         } finally {
             if (free) pooled.free();
         }

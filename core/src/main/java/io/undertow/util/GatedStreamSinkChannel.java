@@ -165,6 +165,10 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
         }
     }
 
+    public boolean isGateOpen() {
+        return allAreSet(state, FLAG_GATE_OPEN);
+    }
+
     public XnioWorker getWorker() {
         return delegate.getWorker();
     }
@@ -417,5 +421,14 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
 
     private static void safeUnpark(final Thread waiter) {
         if (waiter != null) unpark(waiter);
+    }
+
+    /**
+     * Get the underlying channel if the gate is open, else return this channel.
+     *
+     * @return the underlying channel, or this channel if the gate is not open
+     */
+    public StreamSinkChannel getChannel() {
+        return allAreSet(state, FLAG_GATE_OPEN) ? delegate : this;
     }
 }
