@@ -53,6 +53,9 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
     private final boolean configurable;
     private final Pool<ByteBuffer> bufferPool;
 
+    //byte buffer for raw unchunked data that has been read from the channel
+    private volatile Pooled<ByteBuffer> rawData;
+
 
     private final ChannelListener<? super ChunkedStreamSourceChannel> finishListener;
     private final ChannelListener.SimpleSetter<ChunkedStreamSourceChannel> readSetter = new ChannelListener.SimpleSetter<ChunkedStreamSourceChannel>();
@@ -86,31 +89,191 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
-        //TODO: this is not non blocking, is that an issue?
-        if (count <= 0) {
-            return 0;
+        final long oldVal = enterRead();
+        //we have read the last chunk, we just return EOF
+        if (anyAreSet(oldVal, FLAG_FINISHED)) {
+            return -1;
         }
-        final Pooled<ByteBuffer> buffer = bufferPool.allocate();
-        final ByteBuffer buf = buffer.getResource();
-        buf.clear();
-        buf.limit(Math.max((int) count, buf.limit()));
-        long pos = position;
+        if (anyAreClear(oldVal, FLAG_CLOSED)) {
+            throw new ClosedChannelException();
+        }
+        long newVal;
+
+        if (anyAreSet(oldVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_FINISHED)) {
+            //we are in the process of reading chunking overhead
+            newVal = readRawData(oldVal);
+        } else {
+            assert (oldVal & MASK_COUNT) != 0;
+            //otherwise we still have some raw data we can read, either from the buffer
+            //or directly form the underlying stream
+            //note that chunkRemaining will never be zero here
+            newVal = oldVal;
+        }
+        long chunkRemaining = newVal & MASK_COUNT;
         try {
-            int read = read(buf);
-            buf.flip();
-            int c = 0;
-            do {
-                c = target.write(buf, pos);
-                pos += c;
-            } while (buf.hasRemaining());
+            long pos = position;
+            long remaining = count;
+            if (anyAreSet(newVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_FINISHED)) {
+                //we did not manage to read anything except chunking overhead
+                return 0;
+            }
+            //now we may have some stuff in the raw buffer
+            //or the raw buffer may be exhausted, and we should read directly into the destination buffer
+            //from the delegate
+
+            int read = 0;
+            final Pooled<ByteBuffer> buffer = rawData;
+            if (buffer != null) {
+                final ByteBuffer buf = buffer.getResource();
+                if (buf.remaining() > count) {
+                    //it won't fit
+                    int orig = buf.limit();
+                    buf.limit((int) (buf.position() + count));
+                    int written = 0;
+                    long c;
+                    do {
+                        c = target.write(buf, pos);
+                        written += c;
+                        pos += c;
+                    } while (buf.hasRemaining() && c > 0);
+                    buf.limit(orig);
+                    chunkRemaining -= written;
+                    return written;
+                } else if (buf.hasRemaining()) {
+                    int written = 0;
+                    long c;
+                    do {
+                        c = target.write(buf, pos);
+                        written += c;
+                        pos += c;
+                    } while (buf.hasRemaining() && c > 0);
+                    chunkRemaining -= written;
+                    if (buf.hasRemaining()) {
+                        return written;
+                    }
+                    read += written;
+                    remaining -= written;
+                }
+            }
+            //there is still more to read
+            //we attempt to just use the delegates transferTo method
+            if (chunkRemaining > 0) {
+                long c = 0;
+                remaining = Math.min(chunkRemaining, remaining);
+                do {
+                    c = delegate.transferTo(pos, remaining, target);
+                    if (c > 0) {
+                        read += c;
+                        chunkRemaining -= c;
+                        pos += c;
+                        remaining -= c;
+                    }
+                } while (c > 0 && remaining > 0);
+                if (c == -1) {
+                    newVal |= FLAG_FINISHED;
+                }
+                if (chunkRemaining == 0) {
+                    newVal |= FLAG_READING_NEWLINE;
+                }
+            }
             return read;
+
         } finally {
-            buffer.free();
+            //buffer will be freed if not needed in exitRead
+            exitRead(oldVal, chunkRemaining, newVal & (FLAG_FINISHED | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE), ~newVal & (FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE));
         }
     }
 
     public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
-        throw new RuntimeException("Not implemented yet");
+        final long oldVal = enterRead();
+        //we have read the last chunk, we just return EOF
+        if (anyAreSet(oldVal, FLAG_FINISHED)) {
+            return -1;
+        }
+        if (anyAreClear(oldVal, FLAG_CLOSED)) {
+            throw new ClosedChannelException();
+        }
+        long newVal;
+
+        if (anyAreSet(oldVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_FINISHED)) {
+            //we are in the process of reading chunking overhead
+            newVal = readRawData(oldVal);
+        } else {
+            assert (oldVal & MASK_COUNT) != 0;
+            //otherwise we still have some raw data we can read, either from the buffer
+            //or directly form the underlying stream
+            //note that chunkRemaining will never be zero here
+            newVal = oldVal;
+        }
+        long chunkRemaining = newVal & MASK_COUNT;
+        try {
+            long remaining = count;
+            if (anyAreSet(newVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_FINISHED)) {
+                //we did not manage to read anything except chunking overhead
+                return 0;
+            }
+            //now we may have some stuff in the raw buffer
+            //or the raw buffer may be exhausted, and we should read directly into the destination buffer
+            //from the delegate
+
+            int read = 0;
+            final Pooled<ByteBuffer> buffer = rawData;
+            if (buffer != null) {
+                final ByteBuffer buf = buffer.getResource();
+                if (buf.remaining() > count) {
+                    //it won't fit
+                    int orig = buf.limit();
+                    buf.limit((int) (buf.position() + count));
+                    int written = 0;
+                    long c = 0;
+                    do {
+                        c = target.write(buf);
+                        written += c;
+                    } while (buf.hasRemaining() && c > 0);
+                    buf.limit(orig);
+                    chunkRemaining -= written;
+                    return written;
+                } else if (buf.hasRemaining()) {
+                    int written = 0;
+                    long c = 0;
+                    do {
+                        c = target.write(buf);
+                        written += c;
+                    } while (buf.hasRemaining() && c > 0);
+                    chunkRemaining -= written;
+                    if (buf.hasRemaining()) {
+                        return written;
+                    }
+                    read += written;
+                    remaining -= written;
+                }
+            }
+            //there is still more to read
+            //we attempt to just use the delegates transferTo method
+            if (chunkRemaining > 0) {
+                long c = 0;
+                remaining = Math.min(chunkRemaining, remaining);
+                do {
+                    c = delegate.transferTo(remaining, throughBuffer, target);
+                    if (c > 0) {
+                        read += c;
+                        chunkRemaining -= c;
+                        remaining -= c;
+                    }
+                } while (c > 0 && remaining > 0);
+                if (c == -1) {
+                    newVal |= FLAG_FINISHED;
+                }
+                if (chunkRemaining == 0) {
+                    newVal |= FLAG_READING_NEWLINE;
+                }
+            }
+            return read;
+
+        } finally {
+            //buffer will be freed if not needed in exitRead
+            exitRead(oldVal, chunkRemaining, newVal & (FLAG_FINISHED | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE), ~newVal & (FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE));
+        }
     }
 
     public ChannelListener.Setter<? extends StreamSourceChannel> getReadSetter() {
@@ -136,164 +299,186 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
 
     public int read(final ByteBuffer dst) throws IOException {
         final long oldVal = enterRead();
-        long newVal = oldVal;
-        if (anyAreSet(newVal, FLAG_FINISHED)) {
+        //we have read the last chunk, we just return EOF
+        if (anyAreSet(oldVal, FLAG_FINISHED)) {
             return -1;
         }
-        if (anyAreClear(newVal, FLAG_CLOSED)) {
+        if (anyAreClear(oldVal, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
-        int read = 0;
+        long newVal;
+
+        if (anyAreSet(oldVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_FINISHED)) {
+            //we are in the process of reading chunking overhead
+            newVal = readRawData(oldVal);
+        } else {
+            assert (oldVal & MASK_COUNT) != 0;
+            //otherwise we still have some raw data we can read, either from the buffer
+            //or directly form the underlying stream
+            //note that chunkRemaining will never be zero here
+            newVal = oldVal;
+        }
         long chunkRemaining = newVal & MASK_COUNT;
-        Pooled<ByteBuffer> buffer = null;
-        ByteBuffer buf = null;
-        //we have read the last chunk, we just return EOF
 
         final int originalLimit = dst.limit();
         try {
-            if (allAreClear(newVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE) && chunkRemaining == 0) {
-                newVal |= FLAG_FINISHED;
-                return -1;
+            if (anyAreSet(newVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_FINISHED)) {
+                //we did not manage to read anything except chunking overhead
+                return 0;
             }
-            for (; ; ) {
-                while (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
-                    if (buffer == null) {
-                        buffer = bufferPool.allocate();
-                        buf = buffer.getResource();
-                        buf.clear();
-                        //we need to make sure we do not read more than can fit in the user supplied buffer
-                        buf.limit(Math.min(dst.limit() - dst.position(), buf.capacity()));
-                    } else {
-                        buf.compact();
-                    }
-                    int c = delegate.read(buf);
-                    buf.flip();
-                    if (c == -1) {
-                        newVal |= FLAG_FINISHED;
-                        return read;
-                    } else if (c == 0 && !buf.hasRemaining()) {
-                        return read;
-                    }
-                    while (buf.hasRemaining()) {
-                        byte b = buf.get();
-                        if (b == '\n') {
-                            newVal = newVal & ~FLAG_READING_NEWLINE | FLAG_READING_LENGTH;
-                            break;
-                        }
-                    }
-                }
+            //now we may have some stuff in the raw buffer
+            //or the raw buffer may be exhausted, and we should read directly into the destination buffer
+            //from the delegate
 
-                while (anyAreSet(newVal, FLAG_READING_LENGTH)) {
-                    if (buffer == null) {
-                        buffer = bufferPool.allocate();
-                        buf = buffer.getResource();
-                        buf.clear();
-                        //we need to make sure we do not read more than can fit in the user supplied buffer
-                        buf.limit(Math.min(dst.limit() - dst.position(), buf.capacity()));
-                    } else {
-                        buf.compact();
-                    }
-                    int c = delegate.read(buf);
-                    buf.flip();
-                    if (c == -1) {
-                        newVal |= FLAG_FINISHED;
-                        return read;
-                    } else if (c == 0 && !buf.hasRemaining()) {
-                        return read;
-                    }
-                    while (buf.hasRemaining()) {
-                        byte b = buf.get();
-                        if ((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b < 'F')) {
-                            chunkRemaining <<= 4; //shift it 4 bytes and then add the next value to the end
-                            chunkRemaining += Integer.parseInt("" + (char) b, 16);
-                        } else {
-                            newVal = newVal & ~FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE;
-                            break;
-                        }
-                    }
+            int read = 0;
+            final Pooled<ByteBuffer> buffer = rawData;
+            if (buffer != null) {
+                final ByteBuffer buf = buffer.getResource();
+                int remaining = dst.remaining();
+                if (buf.remaining() > remaining) {
+                    //it won't fit
+                    int orig = buf.limit();
+                    buf.limit(buf.position() + remaining);
+                    dst.put(buf);
+                    buf.limit(orig);
+                    chunkRemaining -= remaining;
+                    return remaining;
+                } else {
+                    chunkRemaining -= buf.remaining();
+                    read += buf.remaining();
+                    dst.put(buf);
                 }
-                while (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
-                    if (buffer == null) {
-                        buffer = bufferPool.allocate();
-                        buf = buffer.getResource();
-                        buf.clear();
-                        //we need to make sure we do not read more than can fit in the user supplied buffer
-                        buf.limit(Math.min(dst.limit() - dst.position(), buf.capacity()));
-                    }
-                    while (buf.hasRemaining()) {
-                        if (buffer.getResource().get() == '\n') {
-                            newVal = newVal & ~FLAG_READING_TILL_END_OF_LINE;
-                            break;
-                        }
-                    }
-                    if (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
-                        int c = delegate.read(buf);
-                        buf.flip();
-                        if (c == -1) {
-                            newVal |= FLAG_FINISHED;
-                            return read;
-                        } else if (c == 0) {
-                            return read;
-                        }
-                    }
-                }
-                //we have our chunk size, check to make sure it was not the last chunk
-                if (allAreClear(newVal, FLAG_READING_NEWLINE | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE) && chunkRemaining == 0) {
-                    newVal |= FLAG_FINISHED;
-                    //we may have read to far
-                    if (buf.hasRemaining()) {
-                        delegate.unget(buffer);
-                        buffer = null;
-                    }
-                    return read;
-                }
-                //is we have already read some stuff we need to transfer it to the destination buffer
-                //we know it will all fit as we sized our buffer appropriately
-                int remaining = buf.limit() - buf.position();
-                int old = buf.limit();
-                buf.limit((int) Math.min(old, buf.position() + chunkRemaining));
-                dst.put(buf);
-                buf.limit(old);
-                dst.put(buf.get());
-                long readBytes = Math.min(chunkRemaining, remaining);
-                read += (int) readBytes;
-                chunkRemaining -= readBytes;
-
-                //if there is still data remaining then we need to do this whole thing again
-                if (buf.hasRemaining()) {
-                    newVal |= FLAG_READING_NEWLINE;
-                    continue;
-                }
-
-                //resize the dest buffer if needed so it does not exceed the chunk size
-                int remainingBufferSize = dst.limit() - dst.position();
-                if (chunkRemaining < remainingBufferSize) {
+            }
+            //there is still more to read
+            //we attempt to just read it directly into the destination buffer
+            //adjusting the limit as nessesary to make sure we do not read too much
+            if (chunkRemaining > 0) {
+                if (chunkRemaining < dst.remaining()) {
                     dst.limit((int) (dst.position() + chunkRemaining));
                 }
-                int c;
+                int c = 0;
                 do {
                     c = delegate.read(dst);
                     if (c > 0) {
                         read += c;
                         chunkRemaining -= c;
                     }
-                } while (c > 0);
+                } while (c > 0 && chunkRemaining > 0);
                 if (c == -1) {
                     newVal |= FLAG_FINISHED;
                 }
                 if (chunkRemaining == 0) {
                     newVal |= FLAG_READING_NEWLINE;
                 }
-                return read;
             }
+            return read;
 
         } finally {
+            //buffer will be freed if not needed in exitRead
             dst.limit(originalLimit);
-            if (buffer != null) {
-                buffer.free();
-            }
             exitRead(oldVal, chunkRemaining, newVal & (FLAG_FINISHED | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE), ~newVal & (FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE));
         }
+    }
+
+    /**
+     * Reads raw data from the stream, dealing with chunking as nessesary.
+     * <p/>
+     * Any chunking overhead bytes will be consumed, and the raw data buffer will be left in a state where
+     * it can be read up till the given number of bytes specified in the return value (once the return value has
+     * been suitable masked).
+     * <p/>
+     * The caller must check any flags set in the return value and act accordingly.
+     *
+     * @return The new state value
+     * @throws IOException
+     */
+    public long readRawData(long oldVal) throws IOException {
+        long newVal = oldVal;
+        long chunkRemaining = newVal & MASK_COUNT;
+        Pooled<ByteBuffer> buffer = this.rawData;
+        if (buffer == null) {
+            buffer = this.rawData = bufferPool.allocate();
+        }
+        ByteBuffer buf = buffer.getResource();
+        buf.compact();
+
+        if (allAreClear(newVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE) && chunkRemaining == 0) {
+            newVal |= FLAG_FINISHED;
+            return newVal;
+        }
+        while (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
+            while (buf.hasRemaining()) {
+                byte b = buf.get();
+                if (b == '\n') {
+                    newVal = newVal & ~FLAG_READING_NEWLINE | FLAG_READING_LENGTH;
+                    break;
+                }
+            }
+            if (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
+                int c = delegate.read(buf);
+                buf.flip();
+                if (c == -1) {
+                    newVal |= FLAG_FINISHED;
+                    return newVal;
+                } else if (c == 0) {
+                    return newVal;
+                }
+            }
+        }
+
+        while (anyAreSet(newVal, FLAG_READING_LENGTH)) {
+            while (buf.hasRemaining()) {
+                byte b = buf.get();
+                if ((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b < 'F')) {
+                    chunkRemaining <<= 4; //shift it 4 bytes and then add the next value to the end
+                    chunkRemaining += Integer.parseInt("" + (char) b, 16);
+                } else {
+                    newVal = newVal & ~FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE;
+                    break;
+                }
+            }
+            if (anyAreSet(newVal, FLAG_READING_LENGTH)) {
+                buf.compact();
+                int c = delegate.read(buf);
+                buf.flip();
+                if (c == -1) {
+                    newVal |= FLAG_FINISHED;
+                    return newVal;
+                } else if (c == 0) {
+                    return newVal;
+                }
+            }
+        }
+        while (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
+            while (buf.hasRemaining()) {
+                if (buffer.getResource().get() == '\n') {
+                    newVal = newVal & ~FLAG_READING_TILL_END_OF_LINE;
+                    break;
+                }
+            }
+            if (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
+                int c = delegate.read(buf);
+                buf.flip();
+                if (c == -1) {
+                    newVal |= FLAG_FINISHED;
+                    return newVal;
+                } else if (c == 0) {
+                    return newVal;
+                }
+            }
+        }
+        //we have our chunk size, check to make sure it was not the last chunk
+        if (allAreClear(newVal, FLAG_READING_NEWLINE | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE) && chunkRemaining == 0) {
+            newVal |= FLAG_FINISHED;
+            //we may have read to far
+            if (buf.hasRemaining()) {
+                delegate.unget(buffer);
+                buffer = null;
+            }
+        }
+        //ok, we are done, return the state so the real read method can handle the chunked data
+        //however it feels like
+        return newVal;
     }
 
     public void suspendReads() {
@@ -404,15 +589,6 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
         return delegate;
     }
 
-    /**
-     * Get the number of remaining bytes.
-     *
-     * @return the number of remaining bytes
-     */
-    public long getRemaining() {
-        return state & MASK_COUNT;
-    }
-
     private long enterShutdownReads() {
         long oldVal, newVal;
         do {
@@ -509,6 +685,10 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             oldVal = state;
             newVal = oldVal | setFlags & ~clearFlags & chunkSize;
         }
+        if (rawData != null && !rawData.getResource().hasRemaining()) {
+            rawData.free();
+            rawData = null;
+        }
         if (allAreSet(newVal, FLAG_CLOSED)) {
             // closed while we were in flight.  Call the listener.
             callClosed();
@@ -516,6 +696,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
         if (allAreClear(oldVal, FLAG_FINISHED) && allAreSet(newVal, FLAG_FINISHED)) {
             callFinish();
         }
+
     }
 
     private void callFinish() {

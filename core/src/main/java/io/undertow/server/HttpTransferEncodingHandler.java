@@ -18,6 +18,10 @@
 
 package io.undertow.server;
 
+import java.io.IOException;
+
+import io.undertow.UndertowLogger;
+import io.undertow.util.ChunkedStreamSourceChannel;
 import io.undertow.util.HeaderMap;
 
 import io.undertow.server.handlers.HttpHandlers;
@@ -27,9 +31,11 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.FixedLengthStreamSinkChannel;
 import org.xnio.channels.FixedLengthStreamSourceChannel;
+import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -83,12 +89,8 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             transferEncoding = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
         }
         if (! transferEncoding.equalsIgnoreCase("identity")) {
-            // TODO: implement chunked request
-            exchange.setResponseCode(501);
-            completionHandler.handleComplete();
-            return;
-        }
-        if (hasContentLength) {
+            exchange.addRequestWrapper(chunkedStreamSourceChannelWrapper());
+        } else if (hasContentLength) {
             final long contentLength = Long.parseLong(requestHeaders.get(Headers.CONTENT_LENGTH).getFirst());
             if (contentLength == 0L) {
                 // no content - immediately start the next request, returning an empty stream for this one
@@ -115,6 +117,14 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         // now the response wrapper, to add in the appropriate connection control headers
         exchange.addResponseWrapper(responseWrapper(persistentConnection));
         next.handleRequest(exchange, completionHandler);
+    }
+
+    private ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper() {
+        return new ChannelWrapper<StreamSourceChannel>() {
+            public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
+                return new ChunkedStreamSourceChannel((PushBackStreamChannel)channel,  chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool());
+            }
+        };
     }
 
     private static ChannelWrapper<StreamSinkChannel> responseWrapper(final boolean requestLooksPersistent) {
@@ -205,7 +215,13 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             }
         };
     }
-
+    private static ChannelListener<ChunkedStreamSourceChannel> chunkedDrainListener(final StreamSourceChannel channel, final HttpServerExchange exchange) {
+        return new ChannelListener<ChunkedStreamSourceChannel>() {
+            public void handleEvent(final ChunkedStreamSourceChannel chunkedStreamSourceChannel) {
+                channel.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, terminateRequestListener(exchange), ChannelListeners.closingChannelExceptionHandler()));
+            }
+        };
+    }
     private static ChannelListener<StreamSinkChannel> terminateResponseListener(final HttpServerExchange exchange) {
         return new ChannelListener<StreamSinkChannel>() {
             public void handleEvent(final StreamSinkChannel channel) {
