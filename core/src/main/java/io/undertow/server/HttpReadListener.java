@@ -135,8 +135,9 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, requestHeaders, responseHeaders, parameters, method, protocol, channel, ourResponseChannel, requestTerminateAction, responseTerminateAction);
 
                 try {
+                    httpServerExchange.setRequestURI(builder.getFullPath());
                     httpServerExchange.setRelativePath(builder.getRelativePath());
-                    httpServerExchange.setRequestPath(builder.getPath());
+                    httpServerExchange.setRequestPath(builder.getRelativePath());
 
                     state = null;
                     builder = null;

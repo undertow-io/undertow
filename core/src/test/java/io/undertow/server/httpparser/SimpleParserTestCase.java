@@ -70,7 +70,7 @@ public class SimpleParserTestCase {
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
         Assert.assertEquals("/somepath", result.relativePath);
-        Assert.assertEquals("http://www.somehost.net/somepath", result.path);
+        Assert.assertEquals("http://www.somehost.net/somepath", result.fullPath);
     }
 
     @Test
@@ -81,7 +81,7 @@ public class SimpleParserTestCase {
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
         Assert.assertEquals("/somepath?a=b&b=c&d&e&f=", result.relativePath);
-        Assert.assertEquals("http://www.somehost.net/somepath?a=b&b=c&d&e&f=", result.path);
+        Assert.assertEquals("http://www.somehost.net/somepath?a=b&b=c&d&e&f=", result.fullPath);
         Assert.assertEquals("b", result.queryParameters.get("a").get(0));
         Assert.assertEquals("c", result.queryParameters.get("b").get(0));
         Assert.assertEquals("", result.queryParameters.get("d").get(0));
@@ -95,7 +95,7 @@ public class SimpleParserTestCase {
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
         Assert.assertSame("GET", result.method);
-        Assert.assertEquals("/somepath", result.path);
+        Assert.assertEquals("/somepath", result.fullPath);
         Assert.assertSame("HTTP/1.1", result.protocol);
         HeaderMap map = new HeaderMap();
         map.add("Host", "www.somehost.net");

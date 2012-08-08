@@ -78,6 +78,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     private volatile String requestMethod;
     private volatile String requestScheme;
     /**
+     * The original request URI. This will include the host name if it was specified by the client
+     */
+    private volatile String requestURI;
+    /**
      * The original request path.
      */
     private volatile String requestPath;
@@ -195,6 +199,25 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void setRequestScheme(final String requestScheme) {
         this.requestScheme = requestScheme;
+    }
+
+    /**
+     * Gets the request URI, including hostname, protocol etc if specified by the client.
+     *
+     * In most cases this will be equal to {@link #requestPath}
+     * @return The request URI
+     */
+    public String getRequestURI() {
+        return requestURI;
+    }
+
+    /**
+     * Sets the request URI
+     *
+     * @param requestURI The new request URI
+     */
+    public void setRequestURI(final String requestURI) {
+        this.requestURI = requestURI;
     }
 
     /**

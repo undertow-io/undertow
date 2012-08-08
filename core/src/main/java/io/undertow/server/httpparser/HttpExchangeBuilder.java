@@ -33,7 +33,7 @@ import io.undertow.util.SecureHashMap;
  */
 public class HttpExchangeBuilder {
     String method;
-    String path;
+    String fullPath;
     String relativePath;
     String protocol;
     final HeaderMap headers = new HeaderMap();
@@ -43,14 +43,14 @@ public class HttpExchangeBuilder {
         return method;
     }
 
-    public String getPath() {
-        return path;
+    public String getFullPath() {
+        return fullPath;
     }
 
     /**
      * This is the part of the path without the host name and port.
      *
-     * For 99% of requests this will be the same as {@link #path}, however the
+     * For 99% of requests this will be the same as {@link #fullPath}, however the
      * RFC does allow the complete hostname to be specified in the path
      * (see http://tools.ietf.org/html/rfc2616#page-36, 5.1.2)
      */

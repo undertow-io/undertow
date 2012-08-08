@@ -222,7 +222,7 @@ public abstract class HttpParser {
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
-                    builder.path = path;
+                    builder.fullPath = path;
                     if (parseState < HOST_DONE) {
                         builder.relativePath = path;
                     } else {
