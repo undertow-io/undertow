@@ -43,8 +43,9 @@ public class DirectFileCache implements FileCache {
 
     @Override
     public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
+        final FileChannel fileChannel;
+        final long length;
         try {
-            final FileChannel fileChannel;
             try {
                 fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
             } catch (FileNotFoundException e) {
@@ -52,17 +53,17 @@ public class DirectFileCache implements FileCache {
                 completionHandler.handleComplete();
                 return;
             }
-            final long length = fileChannel.size();
-            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
-            final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
-            assert response == null;
-            response.getWorker().execute(new FileWriteTask(completionHandler, response, fileChannel, file, length));
+            length = fileChannel.size();
         } catch (IOException e) {
             UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file, e);
             exchange.setResponseCode(500);
             completionHandler.handleComplete();
             return;
         }
+        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
+        final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
+        assert response == null;
+        response.getWorker().execute(new FileWriteTask(completionHandler, response, fileChannel, file, length));
     }
 
     private static class FileWriteTask implements Runnable {
@@ -87,9 +88,8 @@ public class DirectFileCache implements FileCache {
                 Channels.transferBlocking(channel, fileChannel, 0, length);
                 channel.shutdownWrites();
                 Channels.flushBlocking(channel);
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 IoUtils.safeClose(fileChannel);
-                UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file, e);
                 completionHandler.handleComplete();
             } finally {
                 IoUtils.safeClose(fileChannel);
