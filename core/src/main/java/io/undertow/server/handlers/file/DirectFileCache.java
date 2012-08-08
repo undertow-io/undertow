@@ -27,9 +27,9 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
-import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
+import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
@@ -53,27 +53,25 @@ public class DirectFileCache implements FileCache {
                 return;
             }
             final long length = fileChannel.size();
-            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + length);
+            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
             final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
             assert response == null;
-            final FileWriteTask task = new FileWriteTask(completionHandler, response, fileChannel, file, length);
-            response.getWorker().submit(task);
+            response.getWorker().execute(new FileWriteTask(completionHandler, response, fileChannel, file, length));
         } catch (IOException e) {
-            UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(e, file);
+            UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file, e);
             exchange.setResponseCode(500);
             completionHandler.handleComplete();
             return;
         }
     }
 
-    private static class FileWriteTask implements Runnable, ChannelListener<StreamSinkChannel> {
+    private static class FileWriteTask implements Runnable {
 
         private final HttpCompletionHandler completionHandler;
         private final StreamSinkChannel channel;
         private final FileChannel fileChannel;
         private final File file;
         private final long length;
-        private long written;
 
         public FileWriteTask(final HttpCompletionHandler completionHandler, final StreamSinkChannel channel, final FileChannel fileChannel, final File file, final long length) {
             this.completionHandler = completionHandler;
@@ -84,32 +82,19 @@ public class DirectFileCache implements FileCache {
         }
 
         @Override
-        public synchronized void run() {
+        public void run() {
             try {
-                long c;
-                do {
-                    c = channel.transferFrom(fileChannel, written, length - written);
-                    written += c;
-                } while (written < length && c > 0);
-                if (written < length) {
-                    channel.getWriteSetter().set(this);
-                    channel.resumeWrites();
-                } else {
-                    channel.getWriteSetter().set(null);
-                    IoUtils.safeClose(fileChannel);
-                    completionHandler.handleComplete();
-                }
+                Channels.transferBlocking(channel, fileChannel, 0, length);
+                channel.shutdownWrites();
+                Channels.flushBlocking(channel);
             } catch (IOException e) {
                 IoUtils.safeClose(fileChannel);
-                UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(e, file);
+                UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file, e);
                 completionHandler.handleComplete();
+            } finally {
+                IoUtils.safeClose(fileChannel);
+                IoUtils.safeClose(channel);
             }
-        }
-
-        @Override
-        public void handleEvent(final StreamSinkChannel channel) {
-            channel.getWorker().submit(this);
-            channel.suspendWrites();
         }
     }
 }
