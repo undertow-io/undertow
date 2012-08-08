@@ -19,6 +19,7 @@
 package io.undertow.server.handlers.file;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 
@@ -26,8 +27,6 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
@@ -46,21 +45,28 @@ public class DirectFileCache implements FileCache {
     @Override
     public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
         try {
-            final long length = file.length();
+            final FileChannel fileChannel;
+            try {
+                fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
+            } catch (FileNotFoundException e) {
+                exchange.setResponseCode(404);
+                completionHandler.handleComplete();
+                return;
+            }
+            final long length = fileChannel.size();
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + length);
             final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
             if (response == null) {
                 throw UndertowMessages.MESSAGES.failedToAcquireResponseChannel();
             }
-            final FileChannel fileChannel = response.getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
             final FileWriteTask task = new FileWriteTask(completionHandler, response, fileChannel, file, length);
             response.getWorker().submit(task);
         } catch (IOException e) {
             UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(e, file);
-            HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange, completionHandler);
+            exchange.setResponseCode(500);
+            completionHandler.handleComplete();
+            return;
         }
-
-
     }
 
     private static class FileWriteTask implements Runnable, ChannelListener<StreamSinkChannel> {

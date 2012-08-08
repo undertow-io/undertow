@@ -25,14 +25,20 @@ import io.undertow.util.ChunkedStreamSourceChannel;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import java.io.IOException;
+import java.nio.channels.Channel;
+import org.jboss.logging.Logger;
+import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.FixedLengthStreamSinkChannel;
 import org.xnio.channels.FixedLengthStreamSourceChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.channels.SuspendableWriteChannel;
 
 /**
  * Handler responsible for dealing with wrapping the response stream and request stream to deal with persistent
@@ -48,6 +54,8 @@ import org.xnio.channels.StreamSourceChannel;
  * @see http://tools.ietf.org/html/rfc2616#section-4.4
  */
 public class HttpTransferEncodingHandler implements HttpHandler {
+
+    private static final Logger log = Logger.getLogger("io.undertow.server.handler.transfer-encoding");
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
@@ -75,8 +83,10 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         } else if (exchange.isHttp10()) {
             persistentConnection = requestHeaders.contains(Headers.CONNECTION) && requestHeaders.getFirst(Headers.CONNECTION).equalsIgnoreCase(Headers.KEEP_ALIVE);
         } else {
+            log.trace("Connection not persistent");
             persistentConnection = false;
         }
+        CompletionHandler ourCompletionHandler = new CompletionHandler(exchange, completionHandler);
         String transferEncoding = Headers.IDENTITY;
         final boolean hasTransferEncoding = requestHeaders.contains(Headers.TRANSFER_ENCODING);
         final boolean hasContentLength = requestHeaders.contains(Headers.CONTENT_LENGTH);
@@ -84,18 +94,20 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             transferEncoding = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
         }
         if (!transferEncoding.equalsIgnoreCase(Headers.IDENTITY)) {
-            exchange.addRequestWrapper(chunkedStreamSourceChannelWrapper());
+            exchange.addRequestWrapper(chunkedStreamSourceChannelWrapper(ourCompletionHandler));
         } else if (hasContentLength) {
             final long contentLength;
             try {
                 contentLength = Long.parseLong(requestHeaders.get(Headers.CONTENT_LENGTH).getFirst());
             } catch (NumberFormatException e) {
+                log.trace("Invalid request due to unparsable content length");
                 // content length is bad; invalid request
                 exchange.setResponseCode(400);
                 completionHandler.handleComplete();
                 return;
             }
             if (contentLength == 0L) {
+                log.trace("No content, starting next request");
                 // no content - immediately start the next request, returning an empty stream for this one
                 exchange.addRequestWrapper(emptyStreamSourceChannelWrapper());
                 exchange.terminateRequest();
@@ -103,11 +115,12 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 // fixed-length content - add a wrapper for a fixed-length stream
                 if (persistentConnection) {
                     // but only if the connection is persistent; else why bother?
-                    exchange.addRequestWrapper(fixedLengthStreamSourceChannelWrapper(contentLength));
+                    exchange.addRequestWrapper(fixedLengthStreamSourceChannelWrapper(ourCompletionHandler, contentLength));
                 }
             }
         } else if (hasTransferEncoding) {
             if (transferEncoding.equalsIgnoreCase(Headers.IDENTITY)) {
+                log.trace("Connection not persistent (no content length and identity transfer encoding)");
                 // make it not persistent
                 persistentConnection = false;
             }
@@ -118,19 +131,61 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         }
 
         //now the response wrapper, to add in the appropriate connection control headers
-        exchange.addResponseWrapper(responseWrapper(persistentConnection));
-        HttpHandlers.executeHandler(next, exchange, completionHandler);
+        exchange.addResponseWrapper(responseWrapper(ourCompletionHandler, persistentConnection));
+        HttpHandlers.executeHandler(next, exchange, ourCompletionHandler);
     }
 
-    private ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper() {
-        return new ChannelWrapper<StreamSourceChannel>() {
-            public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
-                return new ChunkedStreamSourceChannel((PushBackStreamChannel) channel, chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool());
+    private static final class CompletionHandler implements HttpCompletionHandler {
+        private final HttpServerExchange exchange;
+        private final HttpCompletionHandler delegate;
+        private volatile StreamSourceChannel requestStream;
+        private volatile StreamSinkChannel responseStream;
+
+        private CompletionHandler(final HttpServerExchange exchange, final HttpCompletionHandler delegate) {
+            this.exchange = exchange;
+            this.delegate = delegate;
+        }
+
+        public StreamSourceChannel setRequestStream(final StreamSourceChannel requestStream) {
+            return this.requestStream = requestStream;
+        }
+
+        public StreamSinkChannel setResponseStream(final StreamSinkChannel responseStream) {
+            return this.responseStream = responseStream;
+        }
+
+        public void handleComplete() {
+            // create the channels if they haven't yet been
+            exchange.getRequestChannel();
+            exchange.getResponseChannelFactory().create();
+            IoUtils.safeClose(requestStream);
+            try {
+                responseStream.shutdownWrites();
+                if (responseStream.flush()) {
+                    delegate.handleComplete();
+                    return;
+                } else {
+                    responseStream.getWriteSetter().set(ChannelListeners.flushingChannelListener(new ChannelListener<SuspendableWriteChannel>() {
+                        public void handleEvent(final SuspendableWriteChannel channel) {
+                            delegate.handleComplete();
+                        }
+                    }, new ChannelExceptionHandler<Channel>() {
+                        public void handleException(final Channel channel, final IOException exception) {
+                            delegate.handleComplete();
+                        }
+                    }));
+                    responseStream.resumeWrites();
+                    return;
+                }
+            } catch (Throwable e) {
+                // oh well...
+                IoUtils.safeClose(responseStream);
+                delegate.handleComplete();
             }
-        };
+        }
     }
 
-    private static ChannelWrapper<StreamSinkChannel> responseWrapper(final boolean requestLooksPersistent) {
+    private static ChannelWrapper<StreamSinkChannel> responseWrapper(final CompletionHandler ourCompletionHandler, final boolean requestLooksPersistent) {
         return new ChannelWrapper<StreamSinkChannel>() {
             public StreamSinkChannel wrap(final StreamSinkChannel channel, final HttpServerExchange exchange) {
                 final HeaderMap responseHeaders = exchange.getResponseHeaders();
@@ -171,13 +226,15 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                         wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
                     }
                 } else {
+                    log.trace("Cancelling persistence because response is identity with no content length");
                     // make it not persistent - very unfortunate for the next request handler really...
                     stillPersistent = false;
                     wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
                 }
                 if (exchange.isHttp11()) {
                     if (stillPersistent) {
-                        responseHeaders.remove(Headers.CONNECTION);
+                        // not strictly required but user agents seem to like it
+                        responseHeaders.put(Headers.CONNECTION, Headers.KEEP_ALIVE);
                     } else {
                         responseHeaders.put(Headers.CONNECTION, Headers.CLOSE);
                     }
@@ -188,15 +245,23 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                         responseHeaders.remove(Headers.CONNECTION);
                     }
                 }
-                return wrappedChannel;
+                return ourCompletionHandler.setResponseStream(wrappedChannel);
             }
         };
     }
 
-    private static ChannelWrapper<StreamSourceChannel> fixedLengthStreamSourceChannelWrapper(final long contentLength) {
+    private static ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler) {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
-                return new FixedLengthStreamSourceChannel(channel, contentLength, false, fixedLengthDrainListener(channel, exchange), this);
+                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channel, chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool()));
+            }
+        };
+    }
+
+    private static ChannelWrapper<StreamSourceChannel> fixedLengthStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler, final long contentLength) {
+        return new ChannelWrapper<StreamSourceChannel>() {
+            public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
+                return ourCompletionHandler.setRequestStream(new FixedLengthStreamSourceChannel(channel, contentLength, false, fixedLengthDrainListener(channel, exchange), this));
             }
         };
     }

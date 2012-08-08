@@ -5,5 +5,7 @@ target
 .project
 .classpath
 *~
-
 local-test
+out
+lib
+

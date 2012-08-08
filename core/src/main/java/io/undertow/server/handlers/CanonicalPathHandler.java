@@ -30,6 +30,13 @@ public class CanonicalPathHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
+    public CanonicalPathHandler() {
+    }
+
+    public CanonicalPathHandler(final HttpHandler next) {
+        this.next = next;
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         exchange.setCanonicalPath(CanonicalPathUtils.canonicalize(exchange.getRequestPath()));
