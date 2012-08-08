@@ -224,9 +224,9 @@ public abstract class HttpParser {
                     final String path = stringBuilder.toString();
                     builder.path = path;
                     if (parseState < HOST_DONE) {
-                        builder.canonicalPath = path;
+                        builder.relativePath = path;
                     } else {
-                        builder.canonicalPath = path.substring(canonicalPathStart);
+                        builder.relativePath = path.substring(canonicalPathStart);
                     }
                     if(parseState == QUERY_PARAM_NAME) {
                         builder.addQueryParam(stringBuilder.substring(queryParamPos), "");

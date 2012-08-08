@@ -18,17 +18,17 @@
 
 package io.undertow.server;
 
-import io.undertow.util.GatedStreamSinkChannel;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.httpparser.HttpExchangeBuilder;
 import io.undertow.server.httpparser.HttpParser;
 import io.undertow.server.httpparser.ParseState;
+import io.undertow.util.GatedStreamSinkChannel;
 import io.undertow.util.HeaderMap;
-import java.util.List;
-import java.util.Map;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -134,8 +134,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, requestHeaders, responseHeaders, parameters, method, protocol, channel, ourResponseChannel, requestTerminateAction, responseTerminateAction);
 
                 try {
-                    httpServerExchange.setCanonicalPath(builder.getCanonicalPath());
-                    httpServerExchange.setRelativePath(builder.getCanonicalPath());
+                    httpServerExchange.setRelativePath(builder.getRelativePath());
                     httpServerExchange.setRequestPath(builder.getPath());
 
                     state = null;

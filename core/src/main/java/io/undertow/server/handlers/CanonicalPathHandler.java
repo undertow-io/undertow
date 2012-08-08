@@ -32,17 +32,9 @@ public class CanonicalPathHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        String canonicalPath = CanonicalPathUtils.canonicalize(exchange.getCanonicalPath());
-        if(canonicalPath == null) {
-            //this can happen if the path could not be canonicalized, generally
-            //because it included too many ../ characters
-            //in this case we just return a 404
-            exchange.setResponseCode(404);
-            completionHandler.handleComplete();
-        } else {
-            exchange.setCanonicalPath(canonicalPath);
-            HttpHandlers.executeHandler(next, exchange, completionHandler);
-        }
+        exchange.setCanonicalPath(CanonicalPathUtils.canonicalize(exchange.getRequestPath()));
+        exchange.setRelativePath(CanonicalPathUtils.canonicalize(exchange.getRelativePath()));
+        HttpHandlers.executeHandler(next, exchange, completionHandler);
     }
 
     public HttpHandler getNext() {

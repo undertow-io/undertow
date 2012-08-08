@@ -218,6 +218,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Get the request relative path.  This is the path which should be evaluated by the current handler.
      *
+     * If the {@link io.undertow.server.handlers.CanonicalPathHandler} is installed in the current chain
+     * then this path with be canonicalized
+     *
      * @return the request relative path
      */
     public String getRelativePath() {

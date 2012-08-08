@@ -69,7 +69,7 @@ public class SimpleParserTestCase {
         final ParseState context = new ParseState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
-        Assert.assertEquals("/somepath", result.canonicalPath);
+        Assert.assertEquals("/somepath", result.relativePath);
         Assert.assertEquals("http://www.somehost.net/somepath", result.path);
     }
 
@@ -80,7 +80,7 @@ public class SimpleParserTestCase {
         final ParseState context = new ParseState();
         HttpExchangeBuilder result = new HttpExchangeBuilder();
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
-        Assert.assertEquals("/somepath?a=b&b=c&d&e&f=", result.canonicalPath);
+        Assert.assertEquals("/somepath?a=b&b=c&d&e&f=", result.relativePath);
         Assert.assertEquals("http://www.somehost.net/somepath?a=b&b=c&d&e&f=", result.path);
         Assert.assertEquals("b", result.queryParameters.get("a").get(0));
         Assert.assertEquals("c", result.queryParameters.get("b").get(0));

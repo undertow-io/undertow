@@ -85,4 +85,9 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5011, value = "IOException writing to channel")
     void ioExceptionClosingChannel(@Cause IOException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5012, value = "File was requested outside the handlers base directory. Installing a canonical path " +
+            "handler in front of the file handler will prevent this")
+    void fileHandlerWithoutCanonicalPathHandler();
 }

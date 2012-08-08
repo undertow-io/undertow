@@ -70,7 +70,7 @@ public class ParserResumeTestCase {
 
     private void runAssertions(final HttpExchangeBuilder result, final ParseState context) {
         Assert.assertSame("POST", result.method);
-        Assert.assertEquals("/apath?key1=value1&key2=value2", result.canonicalPath);
+        Assert.assertEquals("/apath?key1=value1&key2=value2", result.relativePath);
         Assert.assertEquals("http://www.somehost.net/apath?key1=value1&key2=value2", result.path);
         Assert.assertSame("HTTP/1.1", result.protocol);
         HeaderMap map = new HeaderMap();

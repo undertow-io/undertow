@@ -34,7 +34,7 @@ import io.undertow.util.SecureHashMap;
 public class HttpExchangeBuilder {
     String method;
     String path;
-    String canonicalPath;
+    String relativePath;
     String protocol;
     final HeaderMap headers = new HeaderMap();
     final Map<String, List<String>> queryParameters = new SecureHashMap<String, java.util.List<String>>();
@@ -47,8 +47,15 @@ public class HttpExchangeBuilder {
         return path;
     }
 
-    public String getCanonicalPath() {
-        return canonicalPath;
+    /**
+     * This is the part of the path without the host name and port.
+     *
+     * For 99% of requests this will be the same as {@link #path}, however the
+     * RFC does allow the complete hostname to be specified in the path
+     * (see http://tools.ietf.org/html/rfc2616#page-36, 5.1.2)
+     */
+    public String getRelativePath() {
+        return relativePath;
     }
 
     public String getProtocol() {
