@@ -27,6 +27,7 @@ import io.undertow.util.Headers;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -74,6 +75,11 @@ public class InLineFileCache implements FileCache {
             return;
         }
         final StreamSinkChannel responseChannel = factory.create();
+        responseChannel.getCloseSetter().set(new ChannelListener<Channel>() {
+            public void handleEvent(final Channel channel) {
+                IoUtils.safeClose(fileChannel);
+            }
+        });
         long pos = 0L;
         long res;
         while (length > 0L) {

@@ -21,12 +21,14 @@ package io.undertow.server.handlers.file;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.channels.ChannelFactory;
@@ -71,6 +73,11 @@ public class DirectFileCache implements FileCache {
             return;
         }
         final StreamSinkChannel response = factory.create();
+        response.getCloseSetter().set(new ChannelListener<Channel>() {
+            public void handleEvent(final Channel channel) {
+                IoUtils.safeClose(fileChannel);
+            }
+        });
         response.getWorker().execute(new FileWriteTask(completionHandler, response, fileChannel, length));
     }
 
