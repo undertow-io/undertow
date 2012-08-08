@@ -60,6 +60,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     public void handleEvent(final PushBackStreamChannel channel) {
         final Pooled<ByteBuffer> pooled = connection.getBufferPool().allocate();
         final ByteBuffer buffer = pooled.getResource();
+        buffer.clear();
         boolean free = true;
         try {
             final int res;

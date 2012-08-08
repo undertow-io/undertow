@@ -49,7 +49,7 @@ public class DirectFileCache implements FileCache {
             final long length = file.length();
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + length);
             final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
-            if(response == null) {
+            if (response == null) {
                 throw UndertowMessages.MESSAGES.failedToAcquireResponseChannel();
             }
             final FileChannel fileChannel = response.getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
@@ -63,7 +63,7 @@ public class DirectFileCache implements FileCache {
 
     }
 
-    private class FileWriteTask implements Runnable, ChannelListener<StreamSinkChannel> {
+    private static class FileWriteTask implements Runnable, ChannelListener<StreamSinkChannel> {
 
         private final HttpCompletionHandler completionHandler;
         private final StreamSinkChannel channel;
@@ -93,7 +93,6 @@ public class DirectFileCache implements FileCache {
                     channel.resumeWrites();
                 } else {
                     channel.getWriteSetter().set(null);
-                    channel.suspendWrites();
                     IoUtils.safeClose(fileChannel);
                     completionHandler.handleComplete();
                 }
@@ -107,6 +106,7 @@ public class DirectFileCache implements FileCache {
         @Override
         public void handleEvent(final StreamSinkChannel channel) {
             channel.getWorker().submit(this);
+            channel.suspendWrites();
         }
     }
 }

@@ -18,20 +18,15 @@
 
 package io.undertow.server;
 
-import java.io.IOException;
-
-import io.undertow.UndertowLogger;
-import io.undertow.util.ChunkedStreamSourceChannel;
-import io.undertow.util.HeaderMap;
-
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.ChunkedStreamSinkChannel;
+import io.undertow.util.ChunkedStreamSourceChannel;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.FixedLengthStreamSinkChannel;
 import org.xnio.channels.FixedLengthStreamSourceChannel;
@@ -76,7 +71,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         boolean persistentConnection;
         if (exchange.isHttp11()) {
-            persistentConnection = ! (requestHeaders.contains(Headers.CONNECTION) && requestHeaders.getFirst(Headers.CONNECTION).equalsIgnoreCase(Headers.CLOSE));
+            persistentConnection = !(requestHeaders.contains(Headers.CONNECTION) && requestHeaders.getFirst(Headers.CONNECTION).equalsIgnoreCase(Headers.CLOSE));
         } else if (exchange.isHttp10()) {
             persistentConnection = requestHeaders.contains(Headers.CONNECTION) && requestHeaders.getFirst(Headers.CONNECTION).equalsIgnoreCase(Headers.KEEP_ALIVE);
         } else {
@@ -88,7 +83,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         if (hasTransferEncoding) {
             transferEncoding = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
         }
-        if (! transferEncoding.equalsIgnoreCase("identity")) {
+        if (!transferEncoding.equalsIgnoreCase("identity")) {
             exchange.addRequestWrapper(chunkedStreamSourceChannelWrapper());
         } else if (hasContentLength) {
             final long contentLength = Long.parseLong(requestHeaders.get(Headers.CONTENT_LENGTH).getFirst());
@@ -108,21 +103,24 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 // make it not persistent
                 persistentConnection = false;
             }
-        } else {
+        } else if (persistentConnection) {
             // no content - immediately start the next request, returning an empty stream for this one
             exchange.terminateRequest();
             exchange.addRequestWrapper(emptyStreamSourceChannelWrapper());
         }
 
-        // now the response wrapper, to add in the appropriate connection control headers
-        exchange.addResponseWrapper(responseWrapper(persistentConnection));
-        next.handleRequest(exchange, completionHandler);
+        //now the response wrapper, to add in the appropriate connection control headers
+        //we only add this if this is a persistent connection
+        if (persistentConnection) {
+            exchange.addResponseWrapper(responseWrapper(persistentConnection));
+        }
+        HttpHandlers.executeHandler(next, exchange, completionHandler);
     }
 
     private ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper() {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
-                return new ChunkedStreamSourceChannel((PushBackStreamChannel)channel,  chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool());
+                return new ChunkedStreamSourceChannel((PushBackStreamChannel) channel, chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool());
             }
         };
     }
@@ -141,7 +139,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                         // RFC 2616 3.6 last paragraph
                         responseHeaders.remove(Headers.TRANSFER_ENCODING);
                     }
-                } else if(exchange.isHttp11() && !responseHeaders.contains(Headers.CONTENT_LENGTH)) {
+                } else if (exchange.isHttp11() && !responseHeaders.contains(Headers.CONTENT_LENGTH)) {
                     //if we have a HTTP 1.1 request with no transfer encoding and no content length
                     //then we default to chunked, to enable persistent connections to work
                     responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED);
@@ -151,15 +149,15 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 final int code = exchange.getResponseCode();
                 if (exchange.getRequestMethod().equalsIgnoreCase(Methods.HEAD) || (100 <= code && code <= 199) || code == 204 || code == 304) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, false, ! stillPersistent, finishListener, this);
-                } else if (! transferEncoding.equalsIgnoreCase("identity")) {
+                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, false, !stillPersistent, finishListener, this);
+                } else if (!transferEncoding.equalsIgnoreCase("identity")) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    wrappedChannel = new ChunkedStreamSinkChannel(channel, false, ! stillPersistent, finishListener, exchange.getConnection().getBufferPool());
+                    wrappedChannel = new ChunkedStreamSinkChannel(channel, false, !stillPersistent, finishListener, exchange.getConnection().getBufferPool());
                 } else if (responseHeaders.contains(Headers.CONTENT_LENGTH)) {
                     final long contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                     // fixed-length response
-                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, ! stillPersistent, finishListener, this);
+                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, !stillPersistent, finishListener, this);
                     //todo: remove this line when xnio correctly creates delegating setter
                     channel.getWriteSetter().set(ChannelListeners.delegatingChannelListener((FixedLengthStreamSinkChannel) wrappedChannel, (ChannelListener.SimpleSetter<FixedLengthStreamSinkChannel>) wrappedChannel.getWriteSetter()));
                 } else {
@@ -215,6 +213,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             }
         };
     }
+
     private static ChannelListener<ChunkedStreamSourceChannel> chunkedDrainListener(final StreamSourceChannel channel, final HttpServerExchange exchange) {
         return new ChannelListener<ChunkedStreamSourceChannel>() {
             public void handleEvent(final ChunkedStreamSourceChannel chunkedStreamSourceChannel) {
@@ -222,6 +221,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             }
         };
     }
+
     private static ChannelListener<StreamSinkChannel> terminateResponseListener(final HttpServerExchange exchange) {
         return new ChannelListener<StreamSinkChannel>() {
             public void handleEvent(final StreamSinkChannel channel) {
