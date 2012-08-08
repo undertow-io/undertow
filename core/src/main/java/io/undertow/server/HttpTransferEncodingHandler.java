@@ -86,11 +86,19 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         if (!transferEncoding.equalsIgnoreCase(Headers.IDENTITY)) {
             exchange.addRequestWrapper(chunkedStreamSourceChannelWrapper());
         } else if (hasContentLength) {
-            final long contentLength = Long.parseLong(requestHeaders.get(Headers.CONTENT_LENGTH).getFirst());
+            final long contentLength;
+            try {
+                contentLength = Long.parseLong(requestHeaders.get(Headers.CONTENT_LENGTH).getFirst());
+            } catch (NumberFormatException e) {
+                // content length is bad; invalid request
+                exchange.setResponseCode(400);
+                completionHandler.handleComplete();
+                return;
+            }
             if (contentLength == 0L) {
                 // no content - immediately start the next request, returning an empty stream for this one
-                exchange.terminateRequest();
                 exchange.addRequestWrapper(emptyStreamSourceChannelWrapper());
+                exchange.terminateRequest();
             } else {
                 // fixed-length content - add a wrapper for a fixed-length stream
                 if (persistentConnection) {
@@ -151,10 +159,17 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                     wrappedChannel = new ChunkedStreamSinkChannel(channel, false, !stillPersistent, finishListener, exchange.getConnection().getBufferPool());
                 } else if (responseHeaders.contains(Headers.CONTENT_LENGTH)) {
-                    final long contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
-                    final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    // fixed-length response
-                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, !stillPersistent, finishListener, this);
+                    final long contentLength;
+                    try {
+                        contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
+                        final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
+                        // fixed-length response
+                        wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, !stillPersistent, finishListener, this);
+                    } catch (NumberFormatException e) {
+                        // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
+                        stillPersistent = false;
+                        wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
+                    }
                 } else {
                     // make it not persistent - very unfortunate for the next request handler really...
                     stillPersistent = false;
