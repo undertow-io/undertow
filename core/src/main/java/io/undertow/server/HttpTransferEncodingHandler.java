@@ -77,13 +77,13 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         } else {
             persistentConnection = false;
         }
-        String transferEncoding = "identity";
+        String transferEncoding = Headers.IDENTITY;
         final boolean hasTransferEncoding = requestHeaders.contains(Headers.TRANSFER_ENCODING);
         final boolean hasContentLength = requestHeaders.contains(Headers.CONTENT_LENGTH);
         if (hasTransferEncoding) {
             transferEncoding = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
         }
-        if (!transferEncoding.equalsIgnoreCase("identity")) {
+        if (!transferEncoding.equalsIgnoreCase(Headers.IDENTITY)) {
             exchange.addRequestWrapper(chunkedStreamSourceChannelWrapper());
         } else if (hasContentLength) {
             final long contentLength = Long.parseLong(requestHeaders.get(Headers.CONTENT_LENGTH).getFirst());
@@ -99,7 +99,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 }
             }
         } else if (hasTransferEncoding) {
-            if (transferEncoding.equalsIgnoreCase("identity")) {
+            if (transferEncoding.equalsIgnoreCase(Headers.IDENTITY)) {
                 // make it not persistent
                 persistentConnection = false;
             }
@@ -110,10 +110,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         }
 
         //now the response wrapper, to add in the appropriate connection control headers
-        //we only add this if this is a persistent connection
-        if (persistentConnection) {
-            exchange.addResponseWrapper(responseWrapper(persistentConnection));
-        }
+        exchange.addResponseWrapper(responseWrapper(persistentConnection));
         HttpHandlers.executeHandler(next, exchange, completionHandler);
     }
 
@@ -131,7 +128,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 final HeaderMap responseHeaders = exchange.getResponseHeaders();
                 // test to see if we're still persistent
                 boolean stillPersistent = requestLooksPersistent;
-                String transferEncoding = "identity";
+                String transferEncoding = Headers.IDENTITY;
                 if (responseHeaders.contains(Headers.TRANSFER_ENCODING)) {
                     if (exchange.isHttp11()) {
                         transferEncoding = responseHeaders.getLast(Headers.TRANSFER_ENCODING);
@@ -145,7 +142,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                     responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED);
                     transferEncoding = Headers.CHUNKED;
                 }
-                StreamSinkChannel wrappedChannel = channel;
+                StreamSinkChannel wrappedChannel;
                 final int code = exchange.getResponseCode();
                 if (exchange.getRequestMethod().equalsIgnoreCase(Methods.HEAD) || (100 <= code && code <= 199) || code == 204 || code == 304) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
@@ -158,12 +155,10 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                     // fixed-length response
                     wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, !stillPersistent, finishListener, this);
-                    //todo: remove this line when xnio correctly creates delegating setter
-                    channel.getWriteSetter().set(ChannelListeners.delegatingChannelListener((FixedLengthStreamSinkChannel) wrappedChannel, (ChannelListener.SimpleSetter<FixedLengthStreamSinkChannel>) wrappedChannel.getWriteSetter()));
                 } else {
                     // make it not persistent - very unfortunate for the next request handler really...
-                    // todo: we need a wrapper stream with a "stealth" close listener so we can call terminateResponse, which will allow the next response handler to crash and burn correctly
                     stillPersistent = false;
+                    wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
                 }
                 if (exchange.isHttp11()) {
                     if (stillPersistent) {
