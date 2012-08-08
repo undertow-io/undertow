@@ -69,7 +69,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @return The base URL that can be used to make connections to this server
      */
     public static String getDefaultServerAddress() {
-        return "http://" + getHostAddress(DEFAULT) + ":" + getHostPost(DEFAULT);
+        return "http://" + getHostAddress(DEFAULT) + ":" + getHostPort(DEFAULT);
     }
 
     /**
@@ -103,7 +103,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 worker = xnio.createWorker(OptionMap.create(Options.WORKER_WRITE_THREADS, 2, Options.WORKER_READ_THREADS, 2));
                 openListener = new HttpOpenListener(new ByteBufferSlicePool(10000, 10000));
                 ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPost(DEFAULT)), acceptListener, OptionMap.EMPTY);
+                server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, OptionMap.EMPTY);
                 server.resumeAccepts();
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -135,7 +135,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return System.getProperty(serverName + ".server.address");
     }
 
-    private static int getHostPost(String serverName) {
+    private static int getHostPort(String serverName) {
         return Integer.getInteger(serverName + ".server.port");
     }
 

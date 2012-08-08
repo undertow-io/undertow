@@ -46,6 +46,13 @@ public class SimpleErrorPageHandler implements HttpHandler {
      */
     private volatile Set<Integer> responseCodes = null;
 
+    public SimpleErrorPageHandler(final HttpHandler next) {
+        this.next = next;
+    }
+
+    public SimpleErrorPageHandler() {
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         HttpHandlers.executeHandler(next, exchange, new HttpCompletionHandler() {

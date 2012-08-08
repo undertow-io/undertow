@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 
 import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -56,9 +55,7 @@ public class DirectFileCache implements FileCache {
             final long length = fileChannel.size();
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + length);
             final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
-            if (response == null) {
-                throw UndertowMessages.MESSAGES.failedToAcquireResponseChannel();
-            }
+            assert response == null;
             final FileWriteTask task = new FileWriteTask(completionHandler, response, fileChannel, file, length);
             response.getWorker().submit(task);
         } catch (IOException e) {

@@ -32,8 +32,12 @@ public interface UndertowMessages {
 
     UndertowMessages MESSAGES = Messages.getBundle(UndertowMessages.class);
 
+    // id = 1
+
     @Message(id = 2, value = "The response has already been started")
     IllegalStateException responseAlreadyStarted();
+
+    // id = 3
 
     @Message(id = 4, value = "getResponseChannel() has already been called")
     IllegalStateException responseChannelAlreadyProvided();
@@ -41,11 +45,9 @@ public interface UndertowMessages {
     @Message(id = 5, value = "getRequestChannel() has already been called")
     IllegalStateException requestChannelAlreadyProvided();
 
-    @Message(id = 6, value = "Failed to acquire request channel")
-    IllegalStateException failedToAcquireRequestChannel();
+    // id = 6
 
-    @Message(id = 7, value = "Failed to acquire response channel")
-    IllegalStateException failedToAcquireResponseChannel();
+    // id = 7
 
     @Message(id = 8, value = "Handler cannot be null")
     IllegalArgumentException handlerCannotBeNull();

@@ -32,6 +32,7 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
+import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.FixedLengthStreamSinkChannel;
 import org.xnio.channels.FixedLengthStreamSourceChannel;
@@ -157,7 +158,8 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         public void handleComplete() {
             // create the channels if they haven't yet been
             exchange.getRequestChannel();
-            exchange.getResponseChannelFactory().create();
+            final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
+            if (factory != null) factory.create();
             IoUtils.safeClose(requestStream);
             try {
                 responseStream.shutdownWrites();

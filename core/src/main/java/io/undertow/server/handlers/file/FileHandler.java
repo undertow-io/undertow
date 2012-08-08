@@ -20,7 +20,6 @@ package io.undertow.server.handlers.file;
 
 import java.io.File;
 
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
@@ -46,15 +45,16 @@ public class FileHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        final File file = new File(base.getAbsolutePath() + File.separatorChar + exchange.getRelativePath());
-        //TODO: is there a better way to do this check
-        if(!file.getAbsolutePath().startsWith(base.getAbsolutePath())) {
-            UndertowLogger.REQUEST_LOGGER.fileHandlerWithoutCanonicalPathHandler();
-            exchange.setResponseCode(500);
-            completionHandler.handleComplete();
-            return;
+        String path = exchange.getRelativePath();
+        if (File.separatorChar != '/') {
+            if (path.indexOf(File.separatorChar) != -1) {
+                exchange.setResponseCode(404);
+                completionHandler.handleComplete();
+                return;
+            }
+            path = path.replace('/', File.separatorChar);
         }
-        fileCache.serveFile(exchange, completionHandler, file);
+        fileCache.serveFile(exchange, completionHandler, new File(base, path));
     }
 
     public File getBase() {
