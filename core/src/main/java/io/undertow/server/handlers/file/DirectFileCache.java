@@ -29,6 +29,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
+import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -63,9 +64,14 @@ public class DirectFileCache implements FileCache {
             return;
         }
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
-        final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
-        assert response == null;
-        response.getWorker().execute(new FileWriteTask(completionHandler, response, fileChannel, file, length));
+        final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
+        if (factory == null) {
+            IoUtils.safeClose(fileChannel);
+            completionHandler.handleComplete();
+            return;
+        }
+        final StreamSinkChannel response = factory.create();
+        response.getWorker().execute(new FileWriteTask(completionHandler, response, fileChannel, length));
     }
 
     private static class FileWriteTask implements Runnable {
@@ -73,14 +79,12 @@ public class DirectFileCache implements FileCache {
         private final HttpCompletionHandler completionHandler;
         private final StreamSinkChannel channel;
         private final FileChannel fileChannel;
-        private final File file;
         private final long length;
 
-        public FileWriteTask(final HttpCompletionHandler completionHandler, final StreamSinkChannel channel, final FileChannel fileChannel, final File file, final long length) {
+        public FileWriteTask(final HttpCompletionHandler completionHandler, final StreamSinkChannel channel, final FileChannel fileChannel, final long length) {
             this.completionHandler = completionHandler;
             this.channel = channel;
             this.fileChannel = fileChannel;
-            this.file = file;
             this.length = length;
         }
 

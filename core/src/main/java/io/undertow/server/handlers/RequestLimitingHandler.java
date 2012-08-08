@@ -127,6 +127,10 @@ public final class RequestLimitingHandler implements HttpHandler {
         return oldMax;
     }
 
+    private void decrementRequests() {
+        stateUpdater.decrementAndGet(this);
+    }
+
     /**
      * Get the next handler.  Will not be {@code null}.
      *
@@ -183,7 +187,7 @@ public final class RequestLimitingHandler implements HttpHandler {
                 if (task != null) {
                     exchange.getConnection().getWorker().execute(task);
                 } else {
-                    stateUpdater.decrementAndGet(RequestLimitingHandler.this);
+                    decrementRequests();
                 }
             }
         }

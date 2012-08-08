@@ -32,6 +32,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
+import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.SuspendableWriteChannel;
 
@@ -66,8 +67,13 @@ public class InLineFileCache implements FileCache {
             return;
         }
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
-        final StreamSinkChannel responseChannel = exchange.getResponseChannelFactory().create();
-        assert responseChannel == null;
+        final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
+        if (factory == null) {
+            IoUtils.safeClose(fileChannel);
+            completionHandler.handleComplete();
+            return;
+        }
+        final StreamSinkChannel responseChannel = factory.create();
         long pos = 0L;
         long res;
         while (length > 0L) {
