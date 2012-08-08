@@ -120,9 +120,9 @@ public class CanonicalPathUtils {
             }
         }
         //the path is pointing at a higher directory than the root
-        //so we just return null
+        //so we just return /
         if(eatCount > 0) {
-            return null;
+            return "/";
         }
         final StringBuilder result = new StringBuilder();
         if(tokenEnd != 0) {

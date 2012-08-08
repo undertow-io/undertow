@@ -56,7 +56,7 @@ public class CanonicalPathUtilsTestCase {
         Assert.assertEquals("/b", CanonicalPathUtils.canonicalize("/a/../b"));
         Assert.assertEquals("/b", CanonicalPathUtils.canonicalize("/a/../c/../e/../b"));
         Assert.assertEquals("/b", CanonicalPathUtils.canonicalize("/a/c/../../b"));
-        Assert.assertNull(CanonicalPathUtils.canonicalize("/a/../.."));
+        Assert.assertEquals("/", CanonicalPathUtils.canonicalize("/a/../.."));
     }
 
 }
