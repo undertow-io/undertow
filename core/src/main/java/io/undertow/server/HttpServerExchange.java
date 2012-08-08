@@ -29,8 +29,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import io.undertow.UndertowMessages;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.Protocols;
 import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -217,7 +217,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Get the request relative path.  This is the path which should be evaluated by the current handler.
-     *
+     * <p/>
      * If the {@link io.undertow.server.handlers.CanonicalPathHandler} is installed in the current chain
      * then this path with be canonicalized
      *
@@ -361,10 +361,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         StreamSourceChannel channel = underlyingRequestChannel;
         for (ChannelWrapper wrapper : wrappers) {
-            channel = ((ChannelWrapper<StreamSourceChannel>) wrapper).wrap(channel, this);
+            final StreamSourceChannel oldChannel = channel;
+            channel = ((ChannelWrapper<StreamSourceChannel>) wrapper).wrap(oldChannel, this);
             if (channel == null) {
-                safeClose(underlyingRequestChannel);
-                throw UndertowMessages.MESSAGES.failedToAcquireRequestChannel();
+                channel = oldChannel;
             }
         }
         return channel;
@@ -391,7 +391,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 return;
             }
             newVal = oldVal | FLAG_REQUEST_TERMINATED;
-        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
+        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
         requestTerminateAction.run();
     }
 
@@ -623,7 +623,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                     requestChannel.shutdownReads();
                 }
                 responseChannel.shutdownWrites();
-                if (! responseChannel.flush()) {
+                if (!responseChannel.flush()) {
                     responseChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
                         public void handleEvent(final StreamSinkChannel channel) {
                             // this shouldn't be necessary...
