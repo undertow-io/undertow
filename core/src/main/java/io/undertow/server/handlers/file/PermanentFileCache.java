@@ -18,19 +18,18 @@
 
 package io.undertow.server.handlers.file;
 
-import io.undertow.util.Methods;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.nio.channels.Channel;
-import java.nio.channels.FileChannel;
-
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.Methods;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.jboss.logging.Logger;
-import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.channels.ChannelFactory;
@@ -38,30 +37,42 @@ import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
- * A file cache that serves files directly with no caching.
+ * A file cache that serves files directly with a permanent cache.
  *
  * @author Stuart Douglas
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public class DirectFileCache implements FileCache {
+public class PermanentFileCache implements FileCache {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.handlers.file");
 
-    public static final FileCache INSTANCE = new DirectFileCache();
+    public PermanentFileCache() {
+    }
+
+    private final ConcurrentMap<String, FileChannel> channels = new ConcurrentHashMap<String, FileChannel>();
 
     @Override
     public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
         // ignore request body
         IoUtils.safeClose(exchange.getRequestChannel());
         final String method = exchange.getRequestMethod();
-        final FileChannel fileChannel;
         final long length;
+        FileChannel fileChannel;
         try {
-            try {
-                fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
-            } catch (FileNotFoundException e) {
-                exchange.setResponseCode(404);
-                completionHandler.handleComplete();
-                return;
+            fileChannel = channels.get(file.getPath());
+            if (fileChannel == null) {
+                try {
+                    fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
+                } catch (FileNotFoundException e) {
+                    exchange.setResponseCode(404);
+                    completionHandler.handleComplete();
+                    return;
+                }
+                final FileChannel appearing = channels.putIfAbsent(file.getPath(), fileChannel);
+                if (appearing != null) {
+                    IoUtils.safeClose(fileChannel);
+                    fileChannel = appearing;
+                }
             }
             length = fileChannel.size();
         } catch (IOException e) {
@@ -82,16 +93,10 @@ public class DirectFileCache implements FileCache {
         }
         final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
         if (factory == null) {
-            IoUtils.safeClose(fileChannel);
             completionHandler.handleComplete();
             return;
         }
         final StreamSinkChannel response = factory.create();
-        response.getCloseSetter().set(new ChannelListener<Channel>() {
-            public void handleEvent(final Channel channel) {
-                IoUtils.safeClose(fileChannel);
-            }
-        });
         response.getWorker().execute(new FileWriteTask(completionHandler, response, fileChannel, length));
     }
 
@@ -122,10 +127,8 @@ public class DirectFileCache implements FileCache {
                 completionHandler.handleComplete();
             } catch (IOException ignored) {
                 log.tracef("Failed to serve %s: %s", fileChannel, ignored);
-                IoUtils.safeClose(fileChannel);
                 completionHandler.handleComplete();
             } finally {
-                IoUtils.safeClose(fileChannel);
                 IoUtils.safeClose(channel);
             }
         }

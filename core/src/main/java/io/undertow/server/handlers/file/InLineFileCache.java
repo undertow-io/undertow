@@ -24,6 +24,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CompletionChannelExceptionHandler;
 import io.undertow.util.CompletionChannelListener;
 import io.undertow.util.Headers;
+import io.undertow.util.Methods;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -50,6 +51,7 @@ public class InLineFileCache implements FileCache {
     public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
         // ignore request body
         IoUtils.safeClose(exchange.getRequestChannel());
+        final String method = exchange.getRequestMethod();
         final FileChannel fileChannel;
         long length;
         try {
@@ -68,6 +70,15 @@ public class InLineFileCache implements FileCache {
             return;
         }
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
+        if (method.equalsIgnoreCase(Methods.HEAD)) {
+            completionHandler.handleComplete();
+            return;
+        }
+        if (! method.equalsIgnoreCase(Methods.GET)) {
+            exchange.setResponseCode(500);
+            completionHandler.handleComplete();
+            return;
+        }
         final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
         if (factory == null) {
             IoUtils.safeClose(fileChannel);
