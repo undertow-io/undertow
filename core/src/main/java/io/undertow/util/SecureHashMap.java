@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  */
 public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
     private static final int MAX_ROW_LENGTH = 32;
-    private static final int DEFAULT_INITIAL_CAPACITY = 512;
+    private static final int DEFAULT_INITIAL_CAPACITY = 16;
     private static final int MAXIMUM_CAPACITY = 1 << 30;
     private static final float DEFAULT_LOAD_FACTOR = 0.60f;
 
@@ -911,13 +911,18 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
                     return false;
                 }
                 if (tableIterator == null) {
-                    tableIterator = createRowIterator(table, tableIdx++);
+                    int rowIdx = tableIdx++;
+                    if (table.array.get(rowIdx) != null) {
+                        tableIterator = createRowIterator(table, rowIdx);
+                    }
                 }
-                if (tableIterator.hasNext()) {
-                    next = tableIterator.next();
-                    return true;
-                } else {
-                    tableIterator = null;
+                if (tableIterator != null) {
+                    if (tableIterator.hasNext()) {
+                        next = tableIterator.next();
+                        return true;
+                    } else {
+                        tableIterator = null;
+                    }
                 }
             }
             return true;
@@ -958,13 +963,18 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
                     return false;
                 }
                 if (tableIterator == null) {
-                    tableIterator = createRowIterator(table, tableIdx++);
+                    int rowIdx = tableIdx++;
+                    if (table.array.get(rowIdx) != null) {
+                        tableIterator = createRowIterator(table, rowIdx);
+                    }
                 }
-                if (tableIterator.hasNext()) {
-                    next = tableIterator.next();
-                    return true;
-                } else {
-                    tableIterator = null;
+                if (tableIterator != null) {
+                    if (tableIterator.hasNext()) {
+                        next = tableIterator.next();
+                        return true;
+                    } else {
+                        tableIterator = null;
+                    }
                 }
             }
             return true;
@@ -1005,11 +1015,16 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
                     return false;
                 }
                 if (tableIterator == null) {
-                    tableIterator = createRowIterator(table, tableIdx++);
+                    int rowIdx = tableIdx++;
+                    if (table.array.get(rowIdx) != null) {
+                        tableIterator = createRowIterator(table, rowIdx);
+                    }
                 }
-                next = tableIterator.nextValue();
-                if (next == NONEXISTENT) {
-                    tableIterator = null;
+                if (tableIterator != null) {
+                    next = tableIterator.nextValue();
+                    if (next == NONEXISTENT) {
+                        tableIterator = null;
+                    }
                 }
             }
             return true;
