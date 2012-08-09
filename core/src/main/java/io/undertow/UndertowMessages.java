@@ -32,7 +32,8 @@ public interface UndertowMessages {
 
     UndertowMessages MESSAGES = Messages.getBundle(UndertowMessages.class);
 
-    // id = 1
+    @Message(id = 1, value = "Maximum concurrent requests must be larger than zero.")
+    IllegalArgumentException maximumConcurrentRequestsMustBeLargerThanZero();
 
     @Message(id = 2, value = "The response has already been started")
     IllegalStateException responseAlreadyStarted();
@@ -70,4 +71,5 @@ public interface UndertowMessages {
 
     @Message(id = 14, value = "close() called with data still to be flushed. Please call shutdownWrites() and then call flush() until it returns true before calling close()")
     IOException closeCalledWithDataStillToBeFlushed();
+
 }

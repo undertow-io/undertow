@@ -21,6 +21,7 @@ package io.undertow.server;
 import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import org.xnio.ChannelListener;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
@@ -38,6 +39,11 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
 
     private volatile HttpHandler rootHandler;
 
+    /**
+     * The maximum number of requests that can be processed at a time for a given connection.
+     */
+    private volatile int maxConcurrentRequestsPerConnection = 1;
+
     public HttpOpenListener(final Pool<ByteBuffer> pool) {
         bufferPool = pool;
     }
@@ -47,7 +53,7 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(channel);
-        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler);
+        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, maxConcurrentRequestsPerConnection);
         HttpReadListener readListener = new HttpReadListener(channel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);
@@ -60,5 +66,16 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
 
     public void setRootHandler(final HttpHandler rootHandler) {
         this.rootHandler = rootHandler;
+    }
+
+    public int getMaxConcurrentRequestsPerConnection() {
+        return maxConcurrentRequestsPerConnection;
+    }
+
+    public void setMaxConcurrentRequestsPerConnection(final int maxConcurrentRequestsPerConnection) {
+        if(maxConcurrentRequestsPerConnection <= 0) {
+            throw UndertowMessages.MESSAGES.maximumConcurrentRequestsMustBeLargerThanZero();
+        }
+        this.maxConcurrentRequestsPerConnection = maxConcurrentRequestsPerConnection;
     }
 }
