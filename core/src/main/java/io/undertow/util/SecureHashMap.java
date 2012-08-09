@@ -270,7 +270,7 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
                     }
                 }
             } while (! origArray.compareAndSet(i, origRow, SecureHashMap.<K, V>resized()));
-            sizeUpdater.getAndAdd(newTable, origRow.length);
+            if (origRow != null) sizeUpdater.getAndAdd(newTable, origRow.length);
         }
 
         int size;
