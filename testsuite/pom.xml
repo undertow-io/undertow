@@ -101,6 +101,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <runOrder>reversealphabetical</runOrder>
                     <systemPropertyVariables>
                         <default.server.address>localhost</default.server.address>
                         <default.server.port>7777</default.server.port>

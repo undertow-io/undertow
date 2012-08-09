@@ -115,7 +115,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 channel.getReadSetter().set(null);
                 final StreamSinkChannel ourResponseChannel = this.responseChannel;
                 final StreamSinkChannel targetChannel = ourResponseChannel instanceof GatedStreamSinkChannel ? ((GatedStreamSinkChannel) ourResponseChannel).getChannel() : ourResponseChannel;
-                final GatedStreamSinkChannel nextRequestResponseChannel = new GatedStreamSinkChannel(targetChannel, this, false, true);
+                final Object permit = new Object();
+                final GatedStreamSinkChannel nextRequestResponseChannel = new GatedStreamSinkChannel(targetChannel, permit, false, true);
                 final HeaderMap requestHeaders = builder.getHeaders();
                 final HeaderMap responseHeaders = new HeaderMap();
                 final Map<String, List<String>> parameters = builder.getQueryParameters();
@@ -123,9 +124,10 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 final String protocol = builder.getProtocol();
 
                 final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(channel, nextRequestResponseChannel, connection);
+
                 final Runnable responseTerminateAction = new Runnable() {
                     public void run() {
-                        nextRequestResponseChannel.openGate(HttpReadListener.this);
+                        nextRequestResponseChannel.openGate(permit);
                     }
                 };
                 final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, requestHeaders, responseHeaders, parameters, method, protocol, channel, ourResponseChannel, startNextRequestAction, responseTerminateAction);
