@@ -18,12 +18,6 @@
 
 package io.undertow.server;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
 import io.undertow.UndertowLogger;
 import io.undertow.server.httpparser.HttpExchangeBuilder;
 import io.undertow.server.httpparser.HttpParser;
@@ -36,6 +30,12 @@ import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -124,11 +124,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
                 final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(channel, nextRequestResponseChannel, connection);
 
-                final Runnable responseTerminateAction = new Runnable() {
-                    public void run() {
-                        nextRequestResponseChannel.openGate(permit);
-                    }
-                };
+                final Runnable responseTerminateAction = new ResponseTerminateAction(nextRequestResponseChannel, permit);
                 final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, requestHeaders, responseHeaders, parameters, method, protocol, channel, ourResponseChannel, startNextRequestAction, responseTerminateAction);
 
                 try {
@@ -166,9 +162,9 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
      */
     private static class StartNextRequestAction implements Runnable {
 
-        private final PushBackStreamChannel channel;
-        private final GatedStreamSinkChannel nextRequestResponseChannel;
-        private final HttpServerConnection connection;
+        private volatile PushBackStreamChannel channel;
+        private volatile GatedStreamSinkChannel nextRequestResponseChannel;
+        private volatile HttpServerConnection connection;
 
         /**
          * maintains the current state.
@@ -199,11 +195,17 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     stateUpdater.set(this, 1);
                     channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
                     channel.resumeReads();
+                    nextRequestResponseChannel = null;
+                    connection = null;
+                    channel = null;
                     return;
                 } else if (state == 0 && connection.startRequest()) {
                     stateUpdater.set(this, 1);
                     channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
                     channel.resumeReads();
+                    nextRequestResponseChannel = null;
+                    connection = null;
+                    channel = null;
                     return;
                 }
             } while (!stateUpdater.compareAndSet(this, state, 2));
@@ -221,9 +223,28 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     stateUpdater.set(this, 1);
                     channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
                     channel.resumeReads();
+                    nextRequestResponseChannel = null;
+                    connection = null;
+                    channel = null;
                     return;
                 }
             } while (!stateUpdater.compareAndSet(this, state, 3));
+        }
+    }
+
+    private static class ResponseTerminateAction implements Runnable {
+        private volatile GatedStreamSinkChannel nextRequestResponseChannel;
+        private volatile Object permit;
+
+        public ResponseTerminateAction(GatedStreamSinkChannel nextRequestResponseChannel, Object permit) {
+            this.nextRequestResponseChannel = nextRequestResponseChannel;
+            this.permit = permit;
+        }
+
+        public void run() {
+            nextRequestResponseChannel.openGate(permit);
+            nextRequestResponseChannel = null;
+            permit = null;
         }
     }
 }

@@ -228,7 +228,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 final int code = exchange.getResponseCode();
                 if (exchange.getRequestMethod().equalsIgnoreCase(Methods.HEAD) || (100 <= code && code <= 199) || code == 204 || code == 304) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, false, !stillPersistent, finishListener, this);
+                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, false, !stillPersistent, finishListener, null);
                 } else if (!transferEncoding.equalsIgnoreCase("identity")) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                     wrappedChannel = new ChunkedStreamSinkChannel(channel, false, !stillPersistent, finishListener, exchange.getConnection().getBufferPool());
@@ -238,7 +238,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                         contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
                         final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                         // fixed-length response
-                        wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, !stillPersistent, finishListener, this);
+                        wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, !stillPersistent, finishListener, null);
                     } catch (NumberFormatException e) {
                         // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
                         stillPersistent = false;
@@ -280,7 +280,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
     private static ChannelWrapper<StreamSourceChannel> fixedLengthStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler, final long contentLength) {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
-                return ourCompletionHandler.setRequestStream(new FixedLengthStreamSourceChannel(channel, contentLength, false, fixedLengthDrainListener(channel, exchange), this));
+                return ourCompletionHandler.setRequestStream(new FixedLengthStreamSourceChannel(channel, contentLength, false, fixedLengthDrainListener(channel, exchange), null));
             }
         };
     }
