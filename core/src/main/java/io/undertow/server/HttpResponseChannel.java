@@ -426,9 +426,6 @@ final class HttpResponseChannel implements StreamSinkChannel {
                     this.nameIterator = null;
                     this.valueIterator = null;
                     this.string = null;
-                    // fall thru
-                }
-                case STATE_BUF_FLUSH: {
                     buffer.flip();
                     do {
                         res = delegate.write(buffer);
@@ -437,6 +434,10 @@ final class HttpResponseChannel implements StreamSinkChannel {
                             return STATE_BUF_FLUSH;
                         }
                     } while (buffer.hasRemaining());
+                    // fall thru
+                }
+                case STATE_BUF_FLUSH: {
+                    // buffer was successfully flushed above
                     pooledBuffer.free();
                     pooledBuffer = null;
                     return STATE_BODY;
