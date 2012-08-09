@@ -101,6 +101,7 @@ public class DirectFileCache implements FileCache {
                 Channels.transferBlocking(channel, fileChannel, 0, length);
                 channel.shutdownWrites();
                 Channels.flushBlocking(channel);
+                completionHandler.handleComplete();
             } catch (IOException ignored) {
                 IoUtils.safeClose(fileChannel);
                 completionHandler.handleComplete();
