@@ -18,19 +18,17 @@
 
 package io.undertow.test.util;
 
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpOpenListener;
 import io.undertow.server.HttpTransferEncodingHandler;
-import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.InetSocketAddress;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
+import io.undertow.server.handlers.blocking.BlockingHandler;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.InitializationError;
+import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -40,9 +38,12 @@ import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.channels.ConnectedStreamChannel;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpOpenListener;
-import io.undertow.server.handlers.blocking.BlockingHandler;
+
+import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetSocketAddress;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * A class that starts a server before the test suite. By swapping out the root handler
@@ -100,8 +101,15 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             xnio = Xnio.getInstance("nio", DefaultServer.class.getClassLoader());
             try {
                 blockingExecutorService = Executors.newFixedThreadPool(10);
-                worker = xnio.createWorker(OptionMap.create(Options.WORKER_WRITE_THREADS, 2, Options.WORKER_READ_THREADS, 2));
-                openListener = new HttpOpenListener(new ByteBufferSlicePool(10000, 10000));
+                worker = xnio.createWorker(OptionMap.builder()
+                        .set(Options.WORKER_WRITE_THREADS, 4)
+                        .set(Options.WORKER_READ_THREADS, 4)
+                        .set(Options.CONNECTION_HIGH_WATER, 1000000)
+                        .set(Options.CONNECTION_LOW_WATER, 1000000)
+                        .set(Options.WORKER_TASK_CORE_THREADS, 10)
+                        .set(Options.WORKER_TASK_MAX_THREADS, 12)
+                        .getMap());
+                openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192));
                 ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
                 server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, OptionMap.EMPTY);
                 server.resumeAccepts();
