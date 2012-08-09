@@ -28,6 +28,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
@@ -41,6 +42,8 @@ import org.xnio.channels.StreamSinkChannel;
  * @author Stuart Douglas
  */
 public class DirectFileCache implements FileCache {
+
+    private static final Logger log = Logger.getLogger("io.undertow.server.handlers.file");
 
     public static final FileCache INSTANCE = new DirectFileCache();
 
@@ -98,11 +101,16 @@ public class DirectFileCache implements FileCache {
         @Override
         public void run() {
             try {
+                log.tracef("Serving file %s (blocking)", fileChannel);
                 Channels.transferBlocking(channel, fileChannel, 0, length);
+                log.tracef("Finished serving %s, shutting down (blocking)", fileChannel);
                 channel.shutdownWrites();
+                log.tracef("Finished serving %s, flushing (blocking)", fileChannel);
                 Channels.flushBlocking(channel);
+                log.tracef("Finished serving %s (complete)", fileChannel);
                 completionHandler.handleComplete();
             } catch (IOException ignored) {
+                log.tracef("Failed to serve %s: %s", fileChannel, ignored);
                 IoUtils.safeClose(fileChannel);
                 completionHandler.handleComplete();
             } finally {
