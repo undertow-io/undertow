@@ -21,6 +21,7 @@ package io.undertow.server.handlers;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import io.undertow.server.HttpCompletionHandler;
@@ -169,7 +170,7 @@ public final class RequestLimitingHandler implements HttpHandler {
      * Our completion handler.  Put off instantiating as late as possible to maximize chances of being collected by
      * the copying collector.
      */
-    private class CompletionHandler implements HttpCompletionHandler {
+    private class CompletionHandler extends AtomicBoolean implements HttpCompletionHandler {
 
         private final HttpCompletionHandler completionHandler;
         private final HttpServerExchange exchange;
@@ -180,6 +181,9 @@ public final class RequestLimitingHandler implements HttpHandler {
         }
 
         public void handleComplete() {
+            if (! compareAndSet(false, true)) {
+                return;
+            }
             try {
                 completionHandler.handleComplete();
             } finally {

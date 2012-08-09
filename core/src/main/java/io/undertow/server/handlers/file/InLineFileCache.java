@@ -78,6 +78,7 @@ public class InLineFileCache implements FileCache {
         responseChannel.getCloseSetter().set(new ChannelListener<Channel>() {
             public void handleEvent(final Channel channel) {
                 IoUtils.safeClose(fileChannel);
+                completionHandler.handleComplete();
             }
         });
         long pos = 0L;
@@ -110,6 +111,8 @@ public class InLineFileCache implements FileCache {
         } catch (IOException e) {
             IoUtils.safeClose(fileChannel);
             IoUtils.safeClose(responseChannel);
+            completionHandler.handleComplete();
+            return;
         }
     }
 
@@ -161,6 +164,8 @@ public class InLineFileCache implements FileCache {
                     IoUtils.safeClose(fileChannel);
                     responseChannel.suspendWrites();
                     IoUtils.safeClose(responseChannel);
+                    completionHandler.handleComplete();
+                    return;
                 }
             } finally {
                 this.length = length;

@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.nio.channels.Channel;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -154,6 +155,9 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         private final HttpCompletionHandler delegate;
         private volatile StreamSourceChannel requestStream;
         private volatile StreamSinkChannel responseStream;
+        private volatile int called;
+
+        private static final AtomicIntegerFieldUpdater<CompletionHandler> calledUpdater = AtomicIntegerFieldUpdater.newUpdater(CompletionHandler.class, "called");
 
         private CompletionHandler(final HttpServerExchange exchange, final HttpCompletionHandler delegate) {
             this.exchange = exchange;
@@ -169,6 +173,9 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         }
 
         public void handleComplete() {
+            if (! calledUpdater.compareAndSet(this, 0, 1)) {
+                return;
+            }
             // create the channels if they haven't yet been
             exchange.getRequestChannel();
             final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
