@@ -48,7 +48,7 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
     private static final float DEFAULT_LOAD_FACTOR = 0.60f;
 
     /** A row which has been resized into the new view. */
-    private static final Object[] RESIZED = new Object[0];
+    private static final Item[] RESIZED = new Item[0];
     /** A non-existent table entry (as opposed to a {@code null} value). */
     private static final Object NONEXISTENT = new Object();
 
