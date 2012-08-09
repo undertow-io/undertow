@@ -27,8 +27,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import java.io.IOException;
 import java.nio.channels.Channel;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
@@ -43,8 +41,6 @@ import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.channels.SuspendableWriteChannel;
-
-import static java.util.Arrays.asList;
 
 /**
  * Handler responsible for dealing with wrapping the response stream and request stream to deal with persistent
@@ -62,8 +58,6 @@ import static java.util.Arrays.asList;
 public class HttpTransferEncodingHandler implements HttpHandler {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.handler.transfer-encoding");
-
-    private static final Set<String> BODILESS_METHODS = new HashSet<String>(asList(Methods.GET, Methods.HEAD, Methods.OPTIONS));
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
@@ -87,17 +81,19 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         boolean persistentConnection;
         final boolean hasConnectionHeader = requestHeaders.contains(Headers.CONNECTION);
-        final boolean shouldHaveNoBody = BODILESS_METHODS.contains(exchange.getRequestMethod());
         final boolean hasTransferEncoding = requestHeaders.contains(Headers.TRANSFER_ENCODING);
         final boolean hasContentLength = requestHeaders.contains(Headers.CONTENT_LENGTH);
         if (exchange.isHttp11()) {
             persistentConnection = !(hasConnectionHeader && requestHeaders.getFirst(Headers.CONNECTION).equalsIgnoreCase(Headers.CLOSE));
         } else if (exchange.isHttp10()) {
+            persistentConnection = false;
             if (hasConnectionHeader) {
-                persistentConnection = requestHeaders.getFirst(Headers.CONNECTION).equalsIgnoreCase(Headers.KEEP_ALIVE);
-            } else {
-                // todo: this makes apache bench sad, presumably due to FD exhaustion
-                persistentConnection = false && shouldHaveNoBody && ! hasTransferEncoding && ! hasContentLength;
+                for (String value : requestHeaders.get(Headers.CONNECTION)) {
+                    if (value.equalsIgnoreCase(Headers.KEEP_ALIVE)) {
+                        persistentConnection = true;
+                        break;
+                    }
+                }
             }
         } else {
             log.trace("Connection not persistent");
@@ -155,6 +151,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         private final HttpCompletionHandler delegate;
         private volatile StreamSourceChannel requestStream;
         private volatile StreamSinkChannel responseStream;
+        @SuppressWarnings("unused")
         private volatile int called;
 
         private static final AtomicIntegerFieldUpdater<CompletionHandler> calledUpdater = AtomicIntegerFieldUpdater.newUpdater(CompletionHandler.class, "called");
