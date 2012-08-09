@@ -177,7 +177,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
          * 3=completion handler run, but next request not started
          */
         private volatile int state = 0;
-        private static final AtomicIntegerFieldUpdater<StartNextRequestAction> stateUdater = AtomicIntegerFieldUpdater.newUpdater(StartNextRequestAction.class, "state");
+        private static final AtomicIntegerFieldUpdater<StartNextRequestAction> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(StartNextRequestAction.class, "state");
 
 
         public StartNextRequestAction(final PushBackStreamChannel channel, final GatedStreamSinkChannel nextRequestResponseChannel, final HttpServerConnection connection) {
@@ -192,37 +192,37 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         public void run() {
             int state;
             do {
-                state = stateUdater.get(this);
+                state = stateUpdater.get(this);
                 if (state == 3) {
                     //we start unconditionally
-                    stateUdater.set(this, 1);
+                    stateUpdater.set(this, 1);
                     channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
                     channel.resumeReads();
                     return;
                 } else if (state == 0 && connection.startRequest()) {
-                    stateUdater.set(this, 1);
+                    stateUpdater.set(this, 1);
                     channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
                     channel.resumeReads();
                     return;
                 }
-            } while (!stateUdater.compareAndSet(this, state, 2));
+            } while (!stateUpdater.compareAndSet(this, state, 2));
         }
 
         public void completionHandler() {
             int state;
             do {
-                state = stateUdater.get(this);
+                state = stateUpdater.get(this);
                 if(state == 1) {
                     return;
                 }
                 if (state == 2) {
                     //we start unconditionally
-                    stateUdater.set(this, 1);
+                    stateUpdater.set(this, 1);
                     channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
                     channel.resumeReads();
                     return;
                 }
-            } while (!stateUdater.compareAndSet(this, state, 3));
+            } while (!stateUpdater.compareAndSet(this, state, 3));
         }
     }
 }
