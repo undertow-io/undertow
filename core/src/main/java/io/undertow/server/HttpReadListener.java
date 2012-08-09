@@ -114,9 +114,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 // if the http handler doesn't set any then reads will suspend, which is the right thing to do
                 channel.getReadSetter().set(null);
                 final StreamSinkChannel ourResponseChannel = this.responseChannel;
-                final StreamSinkChannel targetChannel = ourResponseChannel instanceof GatedStreamSinkChannel ? ((GatedStreamSinkChannel) ourResponseChannel).getChannel() : ourResponseChannel;
                 final Object permit = new Object();
-                final GatedStreamSinkChannel nextRequestResponseChannel = new GatedStreamSinkChannel(targetChannel, permit, false, true);
+                final GatedStreamSinkChannel nextRequestResponseChannel = new GatedStreamSinkChannel(connection.getChannel(), permit, false, true);
                 final HeaderMap requestHeaders = builder.getHeaders();
                 final HeaderMap responseHeaders = new HeaderMap();
                 final Map<String, List<String>> parameters = builder.getQueryParameters();
