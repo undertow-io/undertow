@@ -108,10 +108,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         .set(Options.CONNECTION_LOW_WATER, 1000000)
                         .set(Options.WORKER_TASK_CORE_THREADS, 10)
                         .set(Options.WORKER_TASK_MAX_THREADS, 12)
+                        .set(Options.TCP_NODELAY, true)
+                        .set(Options.CORK, true)
                         .getMap());
                 openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192));
                 ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, OptionMap.EMPTY);
+                server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, OptionMap.create(Options.TCP_NODELAY, true));
                 server.resumeAccepts();
             } catch (IOException e) {
                 throw new RuntimeException(e);
