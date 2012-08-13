@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.test.util;
+package io.undertow.test.shared;
 
 import java.io.IOException;
 

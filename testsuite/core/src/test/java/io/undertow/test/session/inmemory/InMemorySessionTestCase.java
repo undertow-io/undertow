@@ -20,14 +20,6 @@ package io.undertow.test.session.inmemory;
 
 import java.io.IOException;
 
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicCookieStore;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -37,8 +29,16 @@ import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionManager;
-import io.undertow.test.util.DefaultServer;
-import io.undertow.test.util.HttpClientUtils;
+import io.undertow.test.shared.DefaultServer;
+import io.undertow.test.shared.HttpClientUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * basic test of in memory session functionality

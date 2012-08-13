@@ -20,6 +20,12 @@ package io.undertow.test.handlers.path;
 
 import java.io.IOException;
 
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.test.shared.DefaultServer;
+import io.undertow.test.shared.HttpClientUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -27,12 +33,6 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.test.util.DefaultServer;
-import io.undertow.test.util.HttpClientUtils;
 
 /**
  * Tests that the path handler works as expected

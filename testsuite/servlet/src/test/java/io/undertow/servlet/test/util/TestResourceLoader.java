@@ -16,21 +16,31 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.api;
+package io.undertow.servlet.test.util;
 
 import java.io.IOException;
 import java.net.URL;
 import java.nio.channels.FileChannel;
 
+import io.undertow.servlet.api.ResourceLoader;
+import org.xnio.FileAccess;
 import org.xnio.Xnio;
 
 /**
- *
  * @author Stuart Douglas
  */
-public interface ResourceLoader {
+public class TestResourceLoader implements ResourceLoader {
 
-    URL getResource(final String resource);
+    public static TestResourceLoader INSTANCE = new TestResourceLoader();
 
-    FileChannel getResourceAsChannel(final String resource, final Xnio xnio) throws IOException;
+    @Override
+    public URL getResource(final String resource) {
+        return TestResourceLoader.class.getClassLoader().getResource(resource);
+    }
+
+    @Override
+    public FileChannel getResourceAsChannel(final String resource, final Xnio xnio) throws IOException {
+        URL url  = TestResourceLoader.class.getClassLoader().getResource(resource);
+        return xnio.openFile(url.getFile(), FileAccess.READ_ONLY);
+    }
 }

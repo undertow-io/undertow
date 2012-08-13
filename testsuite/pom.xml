@@ -35,6 +35,7 @@
 
     <modules>
         <module>core</module>
+        <module>servlet</module>
     </modules>
 
     <name>Undertow Testsuite Parent</name>
@@ -48,6 +49,11 @@
         <dependency>
             <groupId>io.undertow</groupId>
             <artifactId>undertow-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-testsuite-shared</artifactId>
         </dependency>
 
         <dependency>

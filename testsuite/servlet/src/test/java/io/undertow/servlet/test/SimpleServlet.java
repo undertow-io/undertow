@@ -16,28 +16,27 @@
  * limitations under the License.
  */
 
-package io.undertow.test.util;
+package io.undertow.servlet.test;
 
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
+import java.io.IOException;
+import java.io.PrintWriter;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * @author Stuart Douglas
  */
-public class SetHeaderHandler implements HttpHandler {
+public class SimpleServlet extends HttpServlet {
 
-    private final String header;
-    private final String value;
-
-    public SetHeaderHandler(final String header, final String value) {
-        this.header = header;
-        this.value = value;
-    }
+    public static final String HELLO_WORLD = "Hello World";
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        exchange.getResponseHeaders().put(header, value);
-        completionHandler.handleComplete();
+    protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+        PrintWriter writer = resp.getWriter();
+        writer.write(HELLO_WORLD);
+        writer.close();
     }
 }

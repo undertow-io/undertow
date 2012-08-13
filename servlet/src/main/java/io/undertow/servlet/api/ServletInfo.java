@@ -68,7 +68,7 @@ public class ServletInfo {
         return mappings;
     }
 
-    public ServletInfoBuilder builder() {
+    public static ServletInfoBuilder builder() {
         return new ServletInfoBuilder();
     }
 
@@ -114,6 +114,11 @@ public class ServletInfo {
 
         public List<String> getMappings() {
             return mappings;
+        }
+
+        public ServletInfoBuilder addMapping(final String mapping) {
+            mappings.add(mapping);
+            return this;
         }
     }
 }

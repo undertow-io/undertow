@@ -16,21 +16,28 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.api;
+package io.undertow.test.shared;
 
-import java.io.IOException;
-import java.net.URL;
-import java.nio.channels.FileChannel;
-
-import org.xnio.Xnio;
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 
 /**
- *
  * @author Stuart Douglas
  */
-public interface ResourceLoader {
+public class SetHeaderHandler implements HttpHandler {
 
-    URL getResource(final String resource);
+    private final String header;
+    private final String value;
 
-    FileChannel getResourceAsChannel(final String resource, final Xnio xnio) throws IOException;
+    public SetHeaderHandler(final String header, final String value) {
+        this.header = header;
+        this.value = value;
+    }
+
+    @Override
+    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+        exchange.getResponseHeaders().put(header, value);
+        completionHandler.handleComplete();
+    }
 }

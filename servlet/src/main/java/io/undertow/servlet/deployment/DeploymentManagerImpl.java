@@ -78,7 +78,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 for(final String mapping : servlet.getMappings()) {
                     final BlockingHandler blockingHandler = new BlockingHandler();
                     blockingHandler.setRootHandler(initial);
-                    pathHandler.addPath(mapping, blockingHandler);
+                    servletHandler.addPath(mapping, blockingHandler);
                 }
             }
         } catch (Exception e) {

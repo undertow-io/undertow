@@ -20,6 +20,11 @@ package io.undertow.test.handlers.encoding;
 
 import java.io.IOException;
 
+import io.undertow.server.handlers.encoding.EncodingHandler;
+import io.undertow.test.shared.DefaultServer;
+import io.undertow.test.shared.HttpClientUtils;
+import io.undertow.test.shared.SetHeaderHandler;
+import io.undertow.util.Headers;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -27,11 +32,6 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import io.undertow.server.handlers.encoding.EncodingHandler;
-import io.undertow.test.util.DefaultServer;
-import io.undertow.test.util.HttpClientUtils;
-import io.undertow.test.util.SetHeaderHandler;
-import io.undertow.util.Headers;
 
 /**
  * Tests that the correct encoding is selected

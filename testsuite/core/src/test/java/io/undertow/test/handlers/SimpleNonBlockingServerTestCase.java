@@ -20,6 +20,10 @@ package io.undertow.test.handlers;
 
 import java.io.IOException;
 
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.test.shared.DefaultServer;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -28,10 +32,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.test.util.DefaultServer;
 
 /**
  * @author Stuart Douglas

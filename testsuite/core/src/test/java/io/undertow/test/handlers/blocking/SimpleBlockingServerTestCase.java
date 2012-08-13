@@ -20,6 +20,11 @@ package io.undertow.test.handlers.blocking;
 
 import java.io.IOException;
 
+import io.undertow.server.handlers.blocking.BlockingHandler;
+import io.undertow.server.handlers.blocking.BlockingHttpHandler;
+import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.test.shared.DefaultServer;
+import io.undertow.test.shared.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -27,11 +32,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import io.undertow.server.handlers.blocking.BlockingHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
-import io.undertow.test.util.DefaultServer;
-import io.undertow.test.util.HttpClientUtils;
 
 /**
  * @author Stuart Douglas

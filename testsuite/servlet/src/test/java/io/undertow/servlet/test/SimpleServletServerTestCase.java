@@ -16,20 +16,23 @@
  * limitations under the License.
  */
 
-package io.undertow.test.handlers.file;
+package io.undertow.servlet.test;
 
-import java.io.File;
 import java.io.IOException;
 
-import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.file.FileHandler;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.shared.DefaultServer;
 import io.undertow.test.shared.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -37,26 +40,43 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class FileHandlerTestCase {
+public class SimpleServletServerTestCase {
 
+
+    @BeforeClass
+    public static void setup() {
+
+        final PathHandler root = new PathHandler();
+        final ServletContainer container = new ServletContainer(root);
+
+        ServletInfo.ServletInfoBuilder s = ServletInfo.builder()
+                .setName("servlet")
+                .setServletClass(SimpleServlet.class.getName())
+                .addMapping("/aa");
+
+        DeploymentInfo.DeploymentInfoBuilder builder = DeploymentInfo.builder()
+                .setClassLoader(SimpleServletServerTestCase.class.getClassLoader())
+                .setContextName("/servletContext")
+                .setDeploymentName("servletContext.war")
+                .setResourceLoader(TestResourceLoader.INSTANCE)
+                .addServlet(s);
+
+        DeploymentManager manager = container.addDeployment(builder.build());
+        manager.deploy();
+        manager.start();
+
+        DefaultServer.setRootHandler(root);
+    }
 
     @Test
-    public void testFileIsServed() throws IOException {
+    public void testSimpleHttpServlet() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            final FileHandler handler = new FileHandler(new File(getClass().getResource("page.html").getFile()).getParentFile());
-            final PathHandler path = new PathHandler();
-            path.addPath("/path", handler);
-            final CanonicalPathHandler root = new CanonicalPathHandler();
-            root.setNext(path);
-            DefaultServer.setRootHandler(root);
-
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path/page.html");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/aa");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertTrue(response, response.contains("A web page"));
-
+            Assert.assertEquals(SimpleServlet.HELLO_WORLD, response);
         } finally {
             client.getConnectionManager().shutdown();
         }

@@ -22,8 +22,8 @@ import java.io.File;
 import java.io.IOException;
 
 import io.undertow.server.handlers.error.FileErrorPageHandler;
-import io.undertow.test.util.DefaultServer;
-import io.undertow.test.util.HttpClientUtils;
+import io.undertow.test.shared.DefaultServer;
+import io.undertow.test.shared.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
