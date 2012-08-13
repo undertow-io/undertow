@@ -25,5 +25,5 @@ package io.undertow.server.handlers.blocking;
  */
 public interface BlockingHttpHandler {
 
-    void handleRequest(final BlockingHttpServerExchange exchange);
+    void handleRequest(final BlockingHttpServerExchange exchange)  throws Exception;
 }

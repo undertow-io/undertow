@@ -20,48 +20,44 @@ package io.undertow.servlet.api;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import io.undertow.servlet.UndertowServletMessages;
 
 /**
  * @author Stuart Douglas
  */
-public class ServletInfo {
+public class FilterInfo {
 
-    private final String servletClass;
+    private final String filterClass;
     private final String name;
     private final InstanceFactory instanceFactory;
     private final List<String> mappings;
-    private final Map<String, String> initParams;
 
-    ServletInfo(final String servletClass, final String name, final InstanceFactory instanceFactory, final List<String> mappings, final Map<String, String> initParams) {
-        if (servletClass == null) {
-            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("servletClass");
-        }
+    FilterInfo(final String name, final String filterClass, final InstanceFactory instanceFactory, final List<String> mappings) {
         if (name == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("name");
+        }
+        if (filterClass == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("filterClass");
         }
         if (mappings == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("mappings");
         }
 
-        this.servletClass = servletClass;
         this.name = name;
+        this.filterClass = filterClass;
         this.instanceFactory = instanceFactory;
         this.mappings = Collections.unmodifiableList(new ArrayList<String>(mappings));
-        this.initParams = Collections.unmodifiableMap(new LinkedHashMap<String, String>(initParams));
 
-    }
-
-    public String getServletClass() {
-        return servletClass;
     }
 
     public String getName() {
         return name;
+    }
+
+    public String getFilterClass() {
+        return filterClass;
     }
 
     public InstanceFactory getInstanceFactory() {
@@ -72,44 +68,39 @@ public class ServletInfo {
         return mappings;
     }
 
-    public Map<String, String> getInitParams() {
-        return initParams;
+    public static FilterInfoBuilder builder() {
+        return new FilterInfoBuilder();
     }
 
-    public static ServletInfoBuilder builder() {
-        return new ServletInfoBuilder();
-    }
-
-    public static class ServletInfoBuilder {
-        private String servletClass;
+    public static class FilterInfoBuilder {
+        private String filterClass;
         private String name;
         private InstanceFactory instanceFactory;
         private final List<String> mappings = new ArrayList<String>();
-        private final Map<String, String> initParams = new LinkedHashMap<String, String>();
 
-        ServletInfoBuilder() {
+        FilterInfoBuilder() {
 
         }
 
-        public ServletInfo build() {
-            return new ServletInfo(servletClass, name, instanceFactory, mappings, initParams);
+        public FilterInfo build() {
+            return new FilterInfo(name, filterClass,  instanceFactory, mappings);
         }
 
         public String getName() {
             return name;
         }
 
-        public ServletInfoBuilder setName(final String name) {
+        public FilterInfoBuilder setName(final String name) {
             this.name = name;
             return this;
         }
 
-        public String getServletClass() {
-            return servletClass;
+        public String getFilterClass() {
+            return filterClass;
         }
 
-        public ServletInfoBuilder setServletClass(final String servletClass) {
-            this.servletClass = servletClass;
+        public FilterInfoBuilder setFilterClass(final String filterClass) {
+            this.filterClass = filterClass;
             return this;
         }
 
@@ -117,24 +108,17 @@ public class ServletInfo {
             return instanceFactory;
         }
 
-        public ServletInfoBuilder setInstanceFactory(final InstanceFactory instanceFactory) {
+        public void setInstanceFactory(final InstanceFactory instanceFactory) {
             this.instanceFactory = instanceFactory;
-            return this;
         }
 
         public List<String> getMappings() {
             return mappings;
         }
 
-        public ServletInfoBuilder addMapping(final String mapping) {
+        public FilterInfoBuilder addMapping(final String mapping) {
             mappings.add(mapping);
             return this;
         }
-
-        public Map<String, String> getInitParams() {
-            return initParams;
-        }
-
-
     }
 }

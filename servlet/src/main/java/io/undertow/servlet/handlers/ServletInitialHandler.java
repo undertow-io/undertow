@@ -38,7 +38,7 @@ public class ServletInitialHandler implements BlockingHttpHandler {
     }
 
     @Override
-    public void handleRequest(final BlockingHttpServerExchange exchange) {
+    public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange);
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
         exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);

@@ -16,38 +16,25 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.api;
+package io.undertow.servlet.test.path;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
- * Manager that can be used to deploy and undeploy a servlet deployment.
- *
  * @author Stuart Douglas
  */
-public interface DeploymentManager {
+public class PathMappingServlet extends HttpServlet {
 
-    /**
-     * Perform the initial deployment.
-     *
-     * The builds all the internal metadata needed to support the servlet deployment, but will not actually start
-     * any servlets
-     *
-     */
-    void deploy();
-
-    /**
-     * Starts the container. Any servlets with init on startup will be created here
-     */
-    void start();
-
-    void stop();
-
-    void undeploy();
-
-    State getState();
-
-    public static enum State {
-        UNDEPLOYED,
-        DEPLOYED,
-        STARTED;
+    @Override
+    protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+        PrintWriter writer = resp.getWriter();
+        writer.write(getServletName());
+        writer.close();
     }
 }

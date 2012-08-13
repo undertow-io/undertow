@@ -19,8 +19,10 @@
 package io.undertow.servlet.api;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,13 +40,17 @@ public class DeploymentInfo {
     private final ClassLoader classLoader;
     private final ResourceLoader resourceLoader;
     private final Map<String, ServletInfo> servlets;
+    private final Map<String, FilterInfo> filters;
 
-    DeploymentInfo(final String deploymentName, final String contextName, final ClassLoader classLoader, final ResourceLoader resourceLoader, final Map<String, ServletInfo> servlets) {
+    DeploymentInfo(final String deploymentName, final String contextName, final ClassLoader classLoader,
+                   final ResourceLoader resourceLoader, final Map<String, ServletInfo> servlets,
+                   final Map<String, FilterInfo> filters) {
         this.deploymentName = deploymentName;
         this.contextName = contextName;
         this.classLoader = classLoader;
         this.resourceLoader = resourceLoader;
-        this.servlets = Collections.unmodifiableMap(new HashMap<String, ServletInfo>(servlets));
+        this.servlets = Collections.unmodifiableMap(new LinkedHashMap<String, ServletInfo>(servlets));
+        this.filters = Collections.unmodifiableMap(new LinkedHashMap<String, FilterInfo>(filters));
     }
 
     public String getDeploymentName() {
@@ -67,6 +73,10 @@ public class DeploymentInfo {
         return servlets;
     }
 
+    public Map<String, FilterInfo> getFilters() {
+        return filters;
+    }
+
     public static DeploymentInfoBuilder builder() {
         return new DeploymentInfoBuilder();
     }
@@ -78,6 +88,7 @@ public class DeploymentInfo {
         private ClassLoader classLoader;
         private ResourceLoader resourceLoader;
         private final List<ServletInfo.ServletInfoBuilder> servlets = new ArrayList<ServletInfo.ServletInfoBuilder>();
+        private final List<FilterInfo.FilterInfoBuilder> filters = new ArrayList<FilterInfo.FilterInfoBuilder>();
 
         DeploymentInfoBuilder() {
 
@@ -98,14 +109,21 @@ public class DeploymentInfo {
                 throw UndertowServletMessages.MESSAGES.paramCannotBeNull("resourceLoader");
             }
 
-            final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
+            final Map<String, ServletInfo> servlets = new LinkedHashMap<String, ServletInfo>();
             for (final ServletInfo.ServletInfoBuilder servlet : this.servlets) {
                 if (servlets.containsKey(servlet.getName())) {
                     throw UndertowServletMessages.MESSAGES.twoServletsWithSameName();
                 }
                 servlets.put(servlet.getName(), servlet.build());
             }
-            return new DeploymentInfo(deploymentName, contextName, classLoader, resourceLoader, servlets);
+            final Map<String, FilterInfo> filters = new LinkedHashMap<String, FilterInfo>();
+            for (final FilterInfo.FilterInfoBuilder filter : this.filters) {
+                if (filters.containsKey(filter.getName())) {
+                    throw UndertowServletMessages.MESSAGES.twoFiltersWithSameName();
+                }
+                filters.put(filter.getName(), filter.build());
+            }
+            return new DeploymentInfo(deploymentName, contextName, classLoader, resourceLoader, servlets, filters);
         }
 
         public String getDeploymentName() {
@@ -149,9 +167,40 @@ public class DeploymentInfo {
             return this;
         }
 
+        public DeploymentInfoBuilder addServlets(final ServletInfo.ServletInfoBuilder ... servlets) {
+            this.servlets.addAll(Arrays.asList(servlets));
+            return this;
+        }
+
+        public DeploymentInfoBuilder addServlets(final Collection<ServletInfo.ServletInfoBuilder> servlets) {
+            this.servlets.addAll(servlets);
+            return this;
+        }
+
         public List<ServletInfo.ServletInfoBuilder> getServlets() {
             return servlets;
         }
+
+
+        public DeploymentInfoBuilder addFilter(final FilterInfo.FilterInfoBuilder filter) {
+            filters.add(filter);
+            return this;
+        }
+
+        public DeploymentInfoBuilder addFilters(final FilterInfo.FilterInfoBuilder ... filters) {
+            this.filters.addAll(Arrays.asList(filters));
+            return this;
+        }
+
+        public DeploymentInfoBuilder addFilters(final Collection<FilterInfo.FilterInfoBuilder> filters) {
+            this.filters.addAll(filters);
+            return this;
+        }
+
+        public List<FilterInfo.FilterInfoBuilder> getFilters() {
+            return filters;
+        }
+
     }
 
 }

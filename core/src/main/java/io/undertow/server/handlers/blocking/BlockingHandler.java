@@ -18,13 +18,13 @@
 
 package io.undertow.server.handlers.blocking;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A {@link HttpHandler} that initiates a blocking request.
@@ -43,6 +43,10 @@ public final class BlockingHandler implements HttpHandler {
     public BlockingHandler(final Executor executor, final BlockingHttpHandler handler) {
         this.executor = executor;
         this.handler = handler;
+    }
+
+    public BlockingHandler( final BlockingHttpHandler handler) {
+        this(null, handler);
     }
 
     public BlockingHandler() {

@@ -53,4 +53,10 @@ public interface UndertowServletMessages {
 
     @Message(id = 10006, value = "Cannot call getWriter(), getOutputStream() already called")
     IllegalStateException getOutputStreamAlreadyCalled();
+
+    @Message(id = 10007, value = "Cannot build servlet metadata, two filters with same name specified")
+    IllegalArgumentException twoFiltersWithSameName();
+
+    @Message(id = 10008, value = "Two servlets specified with same mapping %s")
+    IllegalArgumentException twoServletsWithSameMapping(String path);
 }

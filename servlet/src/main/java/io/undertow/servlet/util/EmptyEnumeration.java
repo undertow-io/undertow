@@ -16,38 +16,33 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.api;
+package io.undertow.servlet.util;
+
+import java.util.Enumeration;
 
 /**
- * Manager that can be used to deploy and undeploy a servlet deployment.
- *
  * @author Stuart Douglas
  */
-public interface DeploymentManager {
+public class EmptyEnumeration implements Enumeration<Object> {
 
-    /**
-     * Perform the initial deployment.
-     *
-     * The builds all the internal metadata needed to support the servlet deployment, but will not actually start
-     * any servlets
-     *
-     */
-    void deploy();
+    private static final Enumeration<?> INSTANCE = new EmptyEnumeration();
 
-    /**
-     * Starts the container. Any servlets with init on startup will be created here
-     */
-    void start();
+    @SuppressWarnings("unchecked")
+    public static <T> Enumeration<T> instance() {
+        return (Enumeration<T>) INSTANCE;
+    }
 
-    void stop();
+    private EmptyEnumeration() {
 
-    void undeploy();
+    }
 
-    State getState();
+    @Override
+    public boolean hasMoreElements() {
+        return false;
+    }
 
-    public static enum State {
-        UNDEPLOYED,
-        DEPLOYED,
-        STARTED;
+    @Override
+    public Object nextElement() {
+        return null;
     }
 }

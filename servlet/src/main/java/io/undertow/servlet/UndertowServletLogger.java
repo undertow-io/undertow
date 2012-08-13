@@ -18,8 +18,17 @@
 
 package io.undertow.servlet;
 
+import java.io.IOException;
+import java.util.Date;
+
+import javax.servlet.ServletException;
+import javax.servlet.UnavailableException;
+
 import org.jboss.logging.BasicLogger;
+import org.jboss.logging.Cause;
+import org.jboss.logging.LogMessage;
 import org.jboss.logging.Logger;
+import org.jboss.logging.Message;
 import org.jboss.logging.MessageLogger;
 
 /**
@@ -34,4 +43,19 @@ public interface UndertowServletLogger extends BasicLogger {
 
     UndertowServletLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowServletLogger.class, UndertowServletLogger.class.getPackage().getName() + ".request");
 
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 15000, value = "IOException handling request")
+    void ioExceptionHandingRequest(@Cause IOException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 15001, value = "ServletException handling request")
+    void servletExceptionHandlingRequest(@Cause ServletException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 15002, value = "Stopping servlet %s due to permanent unavailability")
+    void stoppingServletDueToPermanentUnavailability(final String servlet, @Cause UnavailableException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 15003, value = "Stopping servlet %s till %s due to temporary unavailability")
+    void stoppingServletUntilDueToTemporaryUnavailability(String name, Date till, @Cause UnavailableException e);
 }

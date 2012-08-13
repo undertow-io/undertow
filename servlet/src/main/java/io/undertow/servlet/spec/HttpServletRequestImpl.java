@@ -24,7 +24,6 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -47,6 +46,7 @@ import javax.servlet.http.Part;
 
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -103,7 +103,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public Enumeration<String> getHeaders(final String name) {
         Deque<String> headers = exchange.getExchange().getRequestHeaders().get(name);
         if(headers == null) {
-            return Collections.emptyEnumeration();
+            return EmptyEnumeration.instance();
         }
         return new IteratorEnumeration<String>(headers.iterator());
     }
