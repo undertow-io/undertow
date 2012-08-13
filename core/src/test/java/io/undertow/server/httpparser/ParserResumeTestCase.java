@@ -81,8 +81,8 @@ public class ParserResumeTestCase {
         Assert.assertEquals(map, result.headers);
 
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
-        Assert.assertEquals("value1", result.queryParameters.get("key1").get(0));
-        Assert.assertEquals("value2", result.queryParameters.get("key2").get(0));
+        Assert.assertEquals("value1", result.queryParameters.get("key1").getFirst());
+        Assert.assertEquals("value2", result.queryParameters.get("key2").getFirst());
     }
 
 }

@@ -20,7 +20,7 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -119,7 +119,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 final GatedStreamSinkChannel nextRequestResponseChannel = new GatedStreamSinkChannel(connection.getChannel(), permit, false, true);
                 final HeaderMap requestHeaders = builder.getHeaders();
                 final HeaderMap responseHeaders = new HeaderMap();
-                final Map<String, List<String>> parameters = builder.getQueryParameters();
+                final Map<String, Deque<String>> parameters = builder.getQueryParameters();
                 final String method = builder.getMethod();
                 final String protocol = builder.getProtocol();
 

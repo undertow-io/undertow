@@ -21,7 +21,7 @@ package io.undertow.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -62,7 +62,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final HeaderMap requestHeaders;
     private final HeaderMap responseHeaders;
 
-    private final Map<String, List<String>> queryParameters;
+    private final Map<String, Deque<String>> queryParameters;
 
     private final StreamSinkChannel underlyingResponseChannel;
     private final StreamSourceChannel underlyingRequestChannel;
@@ -116,7 +116,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_CLEANUP = 1 << 13;
 
-    HttpServerExchange(final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final Map<String, List<String>> queryParameters, final String requestMethod, final String protocol, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel, final Runnable requestTerminateAction, final Runnable responseTerminateAction) {
+    HttpServerExchange(final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final Map<String, Deque<String>> queryParameters, final String requestMethod, final String protocol, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel, final Runnable requestTerminateAction, final Runnable responseTerminateAction) {
         this.connection = connection;
         this.requestHeaders = requestHeaders;
         this.responseHeaders = responseHeaders;
@@ -358,7 +358,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @return The query parameters
      */
-    public Map<String, List<String>> getQueryParameters() {
+    public Map<String, Deque<String>> getQueryParameters() {
         return queryParameters;
     }
 

@@ -82,11 +82,11 @@ public class SimpleParserTestCase {
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
         Assert.assertEquals("/somepath?a=b&b=c&d&e&f=", result.relativePath);
         Assert.assertEquals("http://www.somehost.net/somepath?a=b&b=c&d&e&f=", result.fullPath);
-        Assert.assertEquals("b", result.queryParameters.get("a").get(0));
-        Assert.assertEquals("c", result.queryParameters.get("b").get(0));
-        Assert.assertEquals("", result.queryParameters.get("d").get(0));
-        Assert.assertEquals("", result.queryParameters.get("e").get(0));
-        Assert.assertEquals("", result.queryParameters.get("f").get(0));
+        Assert.assertEquals("b", result.queryParameters.get("a").getFirst());
+        Assert.assertEquals("c", result.queryParameters.get("b").getFirst());
+        Assert.assertEquals("", result.queryParameters.get("d").getFirst());
+        Assert.assertEquals("", result.queryParameters.get("e").getFirst());
+        Assert.assertEquals("", result.queryParameters.get("f").getFirst());
 
     }
 

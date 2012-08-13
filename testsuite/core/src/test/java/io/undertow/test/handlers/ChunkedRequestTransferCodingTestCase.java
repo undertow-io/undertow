@@ -59,8 +59,8 @@ public class ChunkedRequestTransferCodingTestCase {
             public void handleRequest(final BlockingHttpServerExchange exchange) {
                 try {
                     if (connection == null) {
-                        connection = exchange.getConnection();
-                    } else if (connection.getChannel() != exchange.getConnection().getChannel()) {
+                        connection = exchange.getExchange().getConnection();
+                    } else if (connection.getChannel() != exchange.getExchange().getConnection().getChannel()) {
                         exchange.getOutputStream().write("Connection not persistent".getBytes());
                         exchange.getOutputStream().close();
                         return;

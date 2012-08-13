@@ -18,9 +18,8 @@
 
 package io.undertow.server.httpparser;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Map;
 
 import io.undertow.util.HeaderMap;
@@ -37,7 +36,7 @@ public class HttpExchangeBuilder {
     String relativePath;
     String protocol;
     final HeaderMap headers = new HeaderMap();
-    final Map<String, List<String>> queryParameters = new SecureHashMap<String, java.util.List<String>>();
+    final Map<String, Deque<String>> queryParameters = new SecureHashMap<String, java.util.Deque<String>>();
 
     public String getMethod() {
         return method;
@@ -67,14 +66,14 @@ public class HttpExchangeBuilder {
     }
 
     public void addQueryParam(final String name, final String param) {
-        List<String> list = queryParameters.get(name);
+        Deque<String> list = queryParameters.get(name);
         if(list == null) {
-            queryParameters.put(name, list = Collections.synchronizedList(new ArrayList<String>()));
+            queryParameters.put(name, list = new ArrayDeque<String>());
         }
         list.add(param);
     }
 
-    public Map<String, List<String>> getQueryParameters() {
+    public Map<String, Deque<String>> getQueryParameters() {
         return queryParameters;
     }
 }
