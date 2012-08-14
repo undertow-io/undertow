@@ -18,6 +18,12 @@
 
 package io.undertow.server;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.httpparser.HttpExchangeBuilder;
 import io.undertow.server.httpparser.HttpParser;
@@ -30,12 +36,6 @@ import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -75,6 +75,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 return;
             }
             if (res == 0) {
+                channel.resumeReads();
                 return;
             }
             if (res == -1) {
