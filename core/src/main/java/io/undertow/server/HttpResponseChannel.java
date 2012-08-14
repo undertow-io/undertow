@@ -18,7 +18,6 @@
 
 package io.undertow.server;
 
-import io.undertow.util.HeaderMap;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -26,6 +25,8 @@ import java.nio.channels.FileChannel;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import io.undertow.util.HeaderMap;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -39,7 +40,8 @@ import org.xnio.channels.ConcurrentStreamChannelAccessException;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
-import static org.xnio.Bits.*;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -59,7 +61,7 @@ final class HttpResponseChannel implements StreamSinkChannel {
     private Iterator<String> valueIterator;
     private int charIndex;
     private Pooled<ByteBuffer> pooledBuffer;
-    private HttpServerExchange exchange;
+    private final HttpServerExchange exchange;
 
     private final ChannelListener.SimpleSetter<HttpResponseChannel> writeSetter = new ChannelListener.SimpleSetter<HttpResponseChannel>();
     private final ChannelListener.SimpleSetter<HttpResponseChannel> closeSetter = new ChannelListener.SimpleSetter<HttpResponseChannel>();
@@ -712,7 +714,14 @@ final class HttpResponseChannel implements StreamSinkChannel {
         do {
             oldVal = state;
             if (allAreClear(oldVal, MASK_STATE)) {
-                delegate.close();
+                try {
+                    delegate.close();
+                } finally {
+                    if(pooledBuffer != null) {
+                        pooledBuffer.free();
+                        pooledBuffer = null;
+                    }
+                }
                 return;
             }
             newVal = oldVal & ~MASK_STATE | FLAG_SHUTDOWN | STATE_BODY;
