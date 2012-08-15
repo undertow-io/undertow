@@ -48,8 +48,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
     private final StreamSinkChannel responseChannel;
 
-    private ParseState state;
-    private HttpExchangeBuilder builder;
+    private volatile ParseState state;
+    private volatile HttpExchangeBuilder builder;
 
     private final HttpServerConnection connection;
 
@@ -75,7 +75,6 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 return;
             }
             if (res == 0) {
-                channel.resumeReads();
                 return;
             }
             if (res == -1) {
