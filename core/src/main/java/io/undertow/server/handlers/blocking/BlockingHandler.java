@@ -62,6 +62,7 @@ public final class BlockingHandler implements HttpHandler {
                         handler.handleRequest(blockingExchange);
                     }
                 } catch (Throwable t) {
+                    exchange.setResponseCode(500);
                     if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         UndertowLogger.REQUEST_LOGGER.debugf(t, "Blocking request failed %s", blockingExchange);
                     }
