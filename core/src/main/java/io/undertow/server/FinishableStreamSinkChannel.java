@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -37,9 +39,19 @@ final class FinishableStreamSinkChannel implements StreamSinkChannel {
     private final StreamSinkChannel delegate;
     private volatile ChannelListener<? super FinishableStreamSinkChannel> writeListener;
     private volatile ChannelListener<? super FinishableStreamSinkChannel> closeListener;
+    private final ChannelListener<? super FinishableStreamSinkChannel> finishListener;
+
+    //0 = open
+    //1 = writes shutdown
+    //2 = finish listener invoked
+    @SuppressWarnings("unused")
+    private volatile int shutdownState = 0;
+
+    private static final AtomicIntegerFieldUpdater<FinishableStreamSinkChannel> shutdownStateUpdater = AtomicIntegerFieldUpdater.newUpdater(FinishableStreamSinkChannel.class, "shutdownState");
 
     FinishableStreamSinkChannel(final StreamSinkChannel delegate, final ChannelListener<? super FinishableStreamSinkChannel> finishListener) {
         this.delegate = delegate;
+        this.finishListener = finishListener;
         delegate.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
             public void handleEvent(final StreamSinkChannel channel) {
                 ChannelListeners.invokeChannelListener(FinishableStreamSinkChannel.this, writeListener);
@@ -48,7 +60,10 @@ final class FinishableStreamSinkChannel implements StreamSinkChannel {
         delegate.getCloseSetter().set(new ChannelListener<StreamSinkChannel>() {
             public void handleEvent(final StreamSinkChannel channel) {
                 ChannelListeners.invokeChannelListener(FinishableStreamSinkChannel.this, closeListener);
-                ChannelListeners.invokeChannelListener(FinishableStreamSinkChannel.this, finishListener);
+                int state = shutdownStateUpdater.get(FinishableStreamSinkChannel.this);
+                if(state != 2 && shutdownStateUpdater.compareAndSet(FinishableStreamSinkChannel.this,state, 2 )) {
+                    ChannelListeners.invokeChannelListener(FinishableStreamSinkChannel.this, finishListener);
+                }
             }
         });
     }
@@ -123,6 +138,7 @@ final class FinishableStreamSinkChannel implements StreamSinkChannel {
 
     public void shutdownWrites() throws IOException {
         delegate.shutdownWrites();
+        shutdownStateUpdater.compareAndSet(this, 0 ,1);
     }
 
     public void awaitWritable() throws IOException {
@@ -138,7 +154,11 @@ final class FinishableStreamSinkChannel implements StreamSinkChannel {
     }
 
     public boolean flush() throws IOException {
-        return delegate.flush();
+        final boolean val =  delegate.flush();
+        if(val && shutdownStateUpdater.compareAndSet(this, 1, 2)) {
+            ChannelListeners.invokeChannelListener(FinishableStreamSinkChannel.this, finishListener);
+        }
+        return val;
     }
 
     public XnioWorker getWorker() {
