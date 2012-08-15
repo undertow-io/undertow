@@ -20,15 +20,15 @@ package io.undertow.server.handlers;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
-import static org.xnio.Bits.*;
+import static org.xnio.Bits.longBitMask;
 
 /**
  * A handler which limits the maximum number of concurrent requests.  Requests beyond the limit will
@@ -49,6 +49,18 @@ public final class RequestLimitingHandler implements HttpHandler {
 
     private final Queue<QueuedRequest> queue;
 
+    private static final Class<Queue> linkedTransferQueue;
+
+    static {
+        Class<Queue> q;
+        try {
+            q = (Class<Queue>) Class.forName("java.util.concurrent.LinkedTransferQueue");
+        } catch (ClassNotFoundException e) {
+            q = null;
+        }
+        linkedTransferQueue = q;
+    }
+
     /**
      * Construct a new instance. The maximum number of concurrent requests must be at least one.  The next handler
      * must not be {@code null}.
@@ -66,10 +78,14 @@ public final class RequestLimitingHandler implements HttpHandler {
         state = (maximumConcurrentRequests & 0xFFFFFFFFL) << 32;
         this.nextHandler = nextHandler;
         Queue<QueuedRequest> queue;
-        try {
-            queue = new LinkedTransferQueue<QueuedRequest>();
-        } catch (Throwable t) {
+        if(linkedTransferQueue == null) {
             queue = new ConcurrentLinkedQueue<QueuedRequest>();
+        } else {
+            try {
+                queue = linkedTransferQueue.newInstance();
+            } catch (Throwable t) {
+                queue = new ConcurrentLinkedQueue<QueuedRequest>();
+            }
         }
         this.queue = queue;
     }
