@@ -56,7 +56,7 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, maxConcurrentRequestsPerConnection);
         HttpReadListener readListener = new HttpReadListener(channel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
-        channel.resumeReads();
+        readListener.handleEvent(pushBackStreamChannel);
     }
 
     public HttpHandler getRootHandler() {

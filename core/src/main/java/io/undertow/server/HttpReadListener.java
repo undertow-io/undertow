@@ -75,6 +75,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 return;
             }
             if (res == 0) {
+                channel.resumeReads();
                 return;
             }
             if (res == -1) {
