@@ -36,6 +36,7 @@ public final class HeaderMap implements Iterable<String> {
         private final String name;
 
         HeaderValue(final String name) {
+            super(1);
             this.name = name;
         }
 

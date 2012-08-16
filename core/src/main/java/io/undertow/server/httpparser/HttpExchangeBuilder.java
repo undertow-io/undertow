@@ -36,7 +36,7 @@ public class HttpExchangeBuilder {
     String relativePath;
     String protocol;
     final HeaderMap headers = new HeaderMap();
-    final Map<String, Deque<String>> queryParameters = new SecureHashMap<String, java.util.Deque<String>>();
+    final Map<String, Deque<String>> queryParameters = new SecureHashMap<String, java.util.Deque<String>>(0);
 
     public String getMethod() {
         return method;
