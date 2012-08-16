@@ -58,6 +58,7 @@ final class HttpResponseChannel implements StreamSinkChannel {
 
     private Iterator<String> nameIterator;
     private String string;
+    private String headerName;
     private Iterator<String> valueIterator;
     private int charIndex;
     private Pooled<ByteBuffer> pooledBuffer;
@@ -74,13 +75,11 @@ final class HttpResponseChannel implements StreamSinkChannel {
     private static final int STATE_HDR_D = 3; // Header delimiter ':'
     private static final int STATE_HDR_DS = 4; // Header delimiter ': '
     private static final int STATE_HDR_VAL = 5; // Header value
-    private static final int STATE_HDR_VAL_D = 6; // Header value delimiter ','
-    private static final int STATE_HDR_VAL_DS = 7; // Header value delimiter ', '
-    private static final int STATE_HDR_EOL_CR = 8; // Header line CR
-    private static final int STATE_HDR_EOL_LF = 9; // Header line LF
-    private static final int STATE_HDR_FINAL_CR = 10; // Final CR
-    private static final int STATE_HDR_FINAL_LF = 11; // Final LF
-    private static final int STATE_BUF_FLUSH = 12; // flush the buffer and go to writing body
+    private static final int STATE_HDR_EOL_CR = 6; // Header line CR
+    private static final int STATE_HDR_EOL_LF = 7; // Header line LF
+    private static final int STATE_HDR_FINAL_CR = 8; // Final CR
+    private static final int STATE_HDR_FINAL_LF = 9; // Final LF
+    private static final int STATE_BUF_FLUSH = 10; // flush the buffer and go to writing body
 
     private static final int MASK_STATE         = 0x0000000F;
     private static final int FLAG_ENTERED       = 0x00000010;
@@ -112,6 +111,7 @@ final class HttpResponseChannel implements StreamSinkChannel {
         int charIndex = this.charIndex;
         int length;
         String string = this.string;
+        String headerName = this.headerName;
         int res;
         // BUFFER IS FLIPPED COMING IN
         if (state != STATE_START && buffer.hasRemaining()) {
@@ -171,16 +171,16 @@ final class HttpResponseChannel implements StreamSinkChannel {
                         log.trace("Body");
                         return STATE_BODY;
                     }
-                    string = nameIterator.next();
+                    headerName = nameIterator.next();
                     charIndex = 0;
                     // fall thru
                 }
                 case STATE_HDR_NAME: {
-                    log.tracef("Processing header '%s'", string);
-                    length = string.length();
+                    log.tracef("Processing header '%s'", headerName);
+                    length = headerName.length();
                     while (charIndex < length) {
                         if (buffer.hasRemaining()) {
-                            buffer.put((byte) string.charAt(charIndex++));
+                            buffer.put((byte) headerName.charAt(charIndex++));
                         } else {
                             log.trace("Buffer flush");
                             buffer.flip();
@@ -188,7 +188,9 @@ final class HttpResponseChannel implements StreamSinkChannel {
                                 res = delegate.write(buffer);
                                 if (res == 0) {
                                     this.string = string;
+                                    this.headerName = headerName;
                                     this.charIndex = charIndex;
+                                    this.valueIterator = valueIterator;
                                     this.nameIterator = nameIterator;
                                     log.trace("Continuation");
                                     return STATE_HDR_NAME;
@@ -206,6 +208,11 @@ final class HttpResponseChannel implements StreamSinkChannel {
                             res = delegate.write(buffer);
                             if (res == 0) {
                                 log.trace("Continuation");
+                                this.string = string;
+                                this.headerName = headerName;
+                                this.charIndex = charIndex;
+                                this.valueIterator = valueIterator;
+                                this.nameIterator = nameIterator;
                                 return STATE_HDR_D;
                             }
                         } while (buffer.hasRemaining());
@@ -221,13 +228,20 @@ final class HttpResponseChannel implements StreamSinkChannel {
                             res = delegate.write(buffer);
                             if (res == 0) {
                                 log.trace("Continuation");
+                                this.string = string;
+                                this.headerName = headerName;
+                                this.charIndex = charIndex;
+                                this.valueIterator = valueIterator;
+                                this.nameIterator = nameIterator;
                                 return STATE_HDR_DS;
                             }
                         } while (buffer.hasRemaining());
                         buffer.clear();
                     }
                     buffer.put((byte) ' ');
-                    valueIterator = exchange.getResponseHeaders().get(string).iterator();
+                    if(valueIterator == null) {
+                        valueIterator = exchange.getResponseHeaders().get(headerName).iterator();
+                    }
                     assert valueIterator.hasNext();
                     string = valueIterator.next();
                     charIndex = 0;
@@ -245,8 +259,10 @@ final class HttpResponseChannel implements StreamSinkChannel {
                                 res = delegate.write(buffer);
                                 if (res == 0) {
                                     this.string = string;
+                                    this.headerName = headerName;
                                     this.charIndex = charIndex;
                                     this.valueIterator = valueIterator;
+                                    this.nameIterator = nameIterator;
                                     log.trace("Continuation");
                                     return STATE_HDR_VAL;
                                 }
@@ -281,7 +297,8 @@ final class HttpResponseChannel implements StreamSinkChannel {
                         }
                         buffer.put((byte) 10); // LF
                         if (nameIterator.hasNext()) {
-                            string = nameIterator.next();
+                            headerName = nameIterator.next();
+                            valueIterator = null;
                             state = STATE_HDR_NAME;
                             break;
                         } else {
@@ -329,39 +346,6 @@ final class HttpResponseChannel implements StreamSinkChannel {
                     }
                     // fall thru
                 }
-                case STATE_HDR_VAL_D: {
-                    if (! buffer.hasRemaining()) {
-                        buffer.flip();
-                        do {
-                            res = delegate.write(buffer);
-                            if (res == 0) {
-                                log.trace("Continuation");
-                                return STATE_HDR_D;
-                            }
-                        } while (buffer.hasRemaining());
-                        buffer.clear();
-                    }
-                    buffer.put((byte) ',');
-                    // fall thru
-                }
-                case STATE_HDR_VAL_DS: {
-                    if (! buffer.hasRemaining()) {
-                        buffer.flip();
-                        do {
-                            res = delegate.write(buffer);
-                            if (res == 0) {
-                                log.trace("Continuation");
-                                return STATE_HDR_DS;
-                            }
-                        } while (buffer.hasRemaining());
-                        buffer.clear();
-                    }
-                    buffer.put((byte) ' ');
-                    assert valueIterator.hasNext();
-                    string = valueIterator.next();
-                    state = STATE_HDR_VAL;
-                    break;
-                }
                 // Clean-up states
                 case STATE_HDR_EOL_CR: {
                     if (! buffer.hasRemaining()) {
@@ -390,8 +374,12 @@ final class HttpResponseChannel implements StreamSinkChannel {
                         buffer.clear();
                     }
                     buffer.put((byte) 10); // LF
-                    if (nameIterator.hasNext()) {
+                    if(valueIterator.hasNext()) {
+                        state = STATE_HDR_NAME;
+                        break;
+                    }else  if (nameIterator.hasNext()) {
                         string = nameIterator.next();
+                        valueIterator = null;
                         state = STATE_HDR_NAME;
                         break;
                     }
