@@ -22,12 +22,14 @@ import java.io.IOException;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.spec.FilterConfigImpl;
 
 /**
  * @author Stuart Douglas
@@ -35,15 +37,15 @@ import io.undertow.servlet.api.InstanceHandle;
 public class ManagedFilter {
 
     private final FilterInfo filterInfo;
-    private final Class<?> filterClass;
+    private final ServletContext servletContext;
 
     private volatile boolean started = false;
     private volatile Filter filter;
     private volatile InstanceHandle handle;
 
-    public ManagedFilter(final FilterInfo filterInfo, final Class<?> filterClass) {
+    public ManagedFilter(final FilterInfo filterInfo, final ServletContext servletContext) {
         this.filterInfo = filterInfo;
-        this.filterClass = filterClass;
+        this.servletContext = servletContext;
     }
 
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
@@ -53,20 +55,21 @@ public class ManagedFilter {
         filter.doFilter(request, response, chain);
     }
 
-    public synchronized void start() {
+    public synchronized void start() throws ServletException {
         if (!started) {
             if (filterInfo.getInstanceFactory() != null) {
                 handle = filterInfo.getInstanceFactory().createInstance();
                 filter = (Filter) handle.getInstance();
             } else {
                 try {
-                    filter = (Filter) filterClass.newInstance();
+                    filter = filterInfo.getFilterClass().newInstance();
                 } catch (InstantiationException e) {
                     throw new RuntimeException(e);
                 } catch (IllegalAccessException e) {
                     throw new RuntimeException(e);
                 }
             }
+            filter.init(new FilterConfigImpl(filterInfo, servletContext));
             started = true;
         }
     }

@@ -51,7 +51,7 @@ public class SimpleServletServerTestCase {
 
         ServletInfo.ServletInfoBuilder s = ServletInfo.builder()
                 .setName("servlet")
-                .setServletClass(SimpleServlet.class.getName())
+                .setServletClass(SimpleServlet.class)
                 .addMapping("/aa");
 
         DeploymentInfo.DeploymentInfoBuilder builder = DeploymentInfo.builder()

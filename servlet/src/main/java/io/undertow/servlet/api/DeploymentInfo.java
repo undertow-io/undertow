@@ -36,29 +36,38 @@ import io.undertow.servlet.UndertowServletMessages;
 public class DeploymentInfo {
 
     private final String deploymentName;
-    private final String contextName;
+    private final String contextPath;
     private final ClassLoader classLoader;
     private final ResourceLoader resourceLoader;
+    private final int majorVersion;
+    private final int minorVersion;
     private final Map<String, ServletInfo> servlets;
     private final Map<String, FilterInfo> filters;
 
-    DeploymentInfo(final String deploymentName, final String contextName, final ClassLoader classLoader,
+    DeploymentInfo(final String deploymentName, final String contextPath, final ClassLoader classLoader,
                    final ResourceLoader resourceLoader, final Map<String, ServletInfo> servlets,
-                   final Map<String, FilterInfo> filters) {
+                   final Map<String, FilterInfo> filters, final int majorVersion, final int minorVersion) {
         this.deploymentName = deploymentName;
-        this.contextName = contextName;
+        this.contextPath = contextPath;
         this.classLoader = classLoader;
         this.resourceLoader = resourceLoader;
+        this.majorVersion = majorVersion;
+        this.minorVersion = minorVersion;
         this.servlets = Collections.unmodifiableMap(new LinkedHashMap<String, ServletInfo>(servlets));
         this.filters = Collections.unmodifiableMap(new LinkedHashMap<String, FilterInfo>(filters));
     }
 
+    /**
+     * Gets the deployment name
+     *
+     * @return The deployment name
+     */
     public String getDeploymentName() {
         return deploymentName;
     }
 
-    public String getContextName() {
-        return contextName;
+    public String getContextPath() {
+        return contextPath;
     }
 
     public ClassLoader getClassLoader() {
@@ -71,6 +80,14 @@ public class DeploymentInfo {
 
     public Map<String, ServletInfo> getServlets() {
         return servlets;
+    }
+
+    public int getMajorVersion() {
+        return majorVersion;
+    }
+
+    public int getMinorVersion() {
+        return minorVersion;
     }
 
     public Map<String, FilterInfo> getFilters() {
@@ -87,6 +104,8 @@ public class DeploymentInfo {
         private String contextName;
         private ClassLoader classLoader;
         private ResourceLoader resourceLoader;
+        private int majorVersion = 3;
+        private int minorVersion = 0;
         private final List<ServletInfo.ServletInfoBuilder> servlets = new ArrayList<ServletInfo.ServletInfoBuilder>();
         private final List<FilterInfo.FilterInfoBuilder> filters = new ArrayList<FilterInfo.FilterInfoBuilder>();
 
@@ -123,7 +142,7 @@ public class DeploymentInfo {
                 }
                 filters.put(filter.getName(), filter.build());
             }
-            return new DeploymentInfo(deploymentName, contextName, classLoader, resourceLoader, servlets, filters);
+            return new DeploymentInfo(deploymentName, contextName, classLoader, resourceLoader, servlets, filters, majorVersion, minorVersion);
         }
 
         public String getDeploymentName() {
@@ -201,6 +220,21 @@ public class DeploymentInfo {
             return filters;
         }
 
+        public int getMajorVersion() {
+            return majorVersion;
+        }
+
+        public void setMajorVersion(final int majorVersion) {
+            this.majorVersion = majorVersion;
+        }
+
+        public int getMinorVersion() {
+            return minorVersion;
+        }
+
+        public void setMinorVersion(final int minorVersion) {
+            this.minorVersion = minorVersion;
+        }
     }
 
 }

@@ -19,15 +19,20 @@
 package io.undertow.servlet.test.path;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.shared.DefaultServer;
 import io.undertow.test.shared.HttpClientUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -40,7 +45,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class ServletPathMappingTestCase {
+public class FilterPathMappingTestCase {
 
 
     @BeforeClass
@@ -59,16 +64,6 @@ public class ServletPathMappingTestCase {
                 .setServletClass(PathMappingServlet.class)
                 .addMapping("/aa");
 
-        ServletInfo.ServletInfoBuilder aaStar = ServletInfo.builder()
-                .setName("/aa/*")
-                .setServletClass(PathMappingServlet.class)
-                .addMapping("/aa/*");
-
-        ServletInfo.ServletInfoBuilder ab = ServletInfo.builder()
-                .setName("/a/b/*")
-                .setServletClass(PathMappingServlet.class)
-                .addMapping("/a/b/*");
-
         ServletInfo.ServletInfoBuilder d = ServletInfo.builder()
                 .setName("/")
                 .setServletClass(PathMappingServlet.class)
@@ -80,12 +75,35 @@ public class ServletPathMappingTestCase {
                 .setServletClass(PathMappingServlet.class)
                 .addMapping("");
 
+        FilterInfo.FilterInfoBuilder f1 = FilterInfo.builder()
+                .setFilterClass(PathFilter.class)
+                .setName("/*")
+                .addUrlMapping("/*");
+
+
+        FilterInfo.FilterInfoBuilder f2 = FilterInfo.builder()
+                .setFilterClass(PathFilter.class)
+                .setName("/a/*")
+                .addUrlMapping("/a/*");
+
+        FilterInfo.FilterInfoBuilder f3 = FilterInfo.builder()
+                .setFilterClass(PathFilter.class)
+                .setName("/aa")
+                .addUrlMapping("/aa");
+
+
+        FilterInfo.FilterInfoBuilder f4 = FilterInfo.builder()
+                .setFilterClass(PathFilter.class)
+                .setName("contextRoot")
+                .addServletNameMapping("contextRoot");
+
         DeploymentInfo.DeploymentInfoBuilder builder = DeploymentInfo.builder()
-                .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
+                .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
                 .setContextName("/servletContext")
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.INSTANCE)
-                .addServlets(aStar, aa, aaStar, ab, d, cr);
+                .addServlets(aStar, aa, d, cr)
+                .addFilters(f1, f2, f3, f4);
 
         DeploymentManager manager = container.addDeployment(builder.build());
         manager.deploy();
@@ -103,36 +121,42 @@ public class ServletPathMappingTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("/aa", response);
+            requireHeaders(result, "/*", "/aa");
 
             get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/a/c");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
+            requireHeaders(result, "/*", "/a/*");
+            Assert.assertEquals("/a/*", response);
+
+            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/a");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            requireHeaders(result, "/*", "/a/*");
             Assert.assertEquals("/a/*", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/aa/b");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/aa/*", response);
+            requireHeaders(result, "/*");
+            Assert.assertEquals("/", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/a/b/c/d");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/a/b/*", response);
-
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/a/b");
-            result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/a/b/*", response);
+            requireHeaders(result, "/*", "/a/*");
+            Assert.assertEquals("/a/*", response);
 
 
             get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/defaultStuff");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
+            requireHeaders(result, "/*");
             Assert.assertEquals("/", response);
 
 
@@ -140,10 +164,24 @@ public class ServletPathMappingTestCase {
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
+            requireHeaders(result, "/*", "contextRoot");
             Assert.assertEquals("contextRoot", response);
 
         } finally {
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    private void requireHeaders(final HttpResponse result, final String... headers) {
+        final Header[] resultHeaders = result.getHeaders("filter");
+        final Set<String> found = new HashSet<String>(Arrays.asList(headers));
+        for(Header header : resultHeaders) {
+            if(!found.remove(header.getValue())) {
+                Assert.fail("Found unexpected header " + header.getValue());
+            }
+        }
+        if(!found.isEmpty()) {
+            Assert.fail("header(s) not found " + found);
         }
     }
 

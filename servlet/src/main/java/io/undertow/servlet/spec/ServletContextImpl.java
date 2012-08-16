@@ -37,13 +37,22 @@ import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import io.undertow.servlet.api.DeploymentInfo;
+
 /**
  * @author Stuart Douglas
  */
 public class ServletContextImpl implements ServletContext {
+
+    private final DeploymentInfo deploymentInfo;
+
+    public ServletContextImpl(final DeploymentInfo deploymentInfo) {
+        this.deploymentInfo = deploymentInfo;
+    }
+
     @Override
     public String getContextPath() {
-        return null;
+        return deploymentInfo.getContextPath();
     }
 
     @Override
@@ -53,12 +62,12 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public int getMajorVersion() {
-        return 3;
+        return deploymentInfo.getMajorVersion();
     }
 
     @Override
     public int getMinorVersion() {
-        return 0;
+        return deploymentInfo.getMinorVersion();
     }
 
     @Override

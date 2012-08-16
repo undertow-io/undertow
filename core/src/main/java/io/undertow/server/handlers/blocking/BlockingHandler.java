@@ -45,7 +45,7 @@ public final class BlockingHandler implements HttpHandler {
         this.handler = handler;
     }
 
-    public BlockingHandler( final BlockingHttpHandler handler) {
+    public BlockingHandler(final BlockingHttpHandler handler) {
         this(null, handler);
     }
 
@@ -66,10 +66,10 @@ public final class BlockingHandler implements HttpHandler {
                         handler.handleRequest(blockingExchange);
                     }
                 } catch (Throwable t) {
-                    exchange.setResponseCode(500);
-                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                        UndertowLogger.REQUEST_LOGGER.debugf(t, "Blocking request failed %s", blockingExchange);
+                    if (!exchange.isResponseStarted()) {
+                        exchange.setResponseCode(500);
                     }
+                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", blockingExchange);
                 } finally {
                     completionHandler.handleComplete();
                 }

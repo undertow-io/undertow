@@ -24,6 +24,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.Servlet;
+
 import io.undertow.servlet.UndertowServletMessages;
 
 /**
@@ -31,13 +33,13 @@ import io.undertow.servlet.UndertowServletMessages;
  */
 public class ServletInfo {
 
-    private final String servletClass;
+    private final Class<? extends Servlet> servletClass;
     private final String name;
     private final InstanceFactory instanceFactory;
     private final List<String> mappings;
     private final Map<String, String> initParams;
 
-    ServletInfo(final String servletClass, final String name, final InstanceFactory instanceFactory, final List<String> mappings, final Map<String, String> initParams) {
+    ServletInfo(final Class<? extends Servlet> servletClass, final String name, final InstanceFactory instanceFactory, final List<String> mappings, final Map<String, String> initParams) {
         if (servletClass == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("servletClass");
         }
@@ -47,7 +49,9 @@ public class ServletInfo {
         if (mappings == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("mappings");
         }
-
+        if (initParams == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("initParams");
+        }
         this.servletClass = servletClass;
         this.name = name;
         this.instanceFactory = instanceFactory;
@@ -56,7 +60,7 @@ public class ServletInfo {
 
     }
 
-    public String getServletClass() {
+    public Class<? extends Servlet> getServletClass() {
         return servletClass;
     }
 
@@ -81,7 +85,7 @@ public class ServletInfo {
     }
 
     public static class ServletInfoBuilder {
-        private String servletClass;
+        private Class<? extends Servlet> servletClass;
         private String name;
         private InstanceFactory instanceFactory;
         private final List<String> mappings = new ArrayList<String>();
@@ -89,6 +93,16 @@ public class ServletInfo {
 
         ServletInfoBuilder() {
 
+        }
+
+        public ServletInfoBuilder clone() {
+            ServletInfoBuilder n = new ServletInfoBuilder();
+            n.setServletClass(servletClass)
+                    .setName(name)
+                    .setInstanceFactory(instanceFactory)
+                    .getMappings().addAll(mappings);
+            n.getInitParams().putAll(initParams);
+            return n;
         }
 
         public ServletInfo build() {
@@ -104,11 +118,11 @@ public class ServletInfo {
             return this;
         }
 
-        public String getServletClass() {
+        public Class<? extends Servlet> getServletClass() {
             return servletClass;
         }
 
-        public ServletInfoBuilder setServletClass(final String servletClass) {
+        public ServletInfoBuilder setServletClass(final Class<? extends Servlet> servletClass) {
             this.servletClass = servletClass;
             return this;
         }

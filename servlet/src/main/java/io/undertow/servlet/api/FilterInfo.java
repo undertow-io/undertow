@@ -20,7 +20,11 @@ package io.undertow.servlet.api;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import javax.servlet.Filter;
 
 import io.undertow.servlet.UndertowServletMessages;
 
@@ -29,12 +33,14 @@ import io.undertow.servlet.UndertowServletMessages;
  */
 public class FilterInfo {
 
-    private final String filterClass;
+    private final Class<? extends Filter> filterClass;
     private final String name;
     private final InstanceFactory instanceFactory;
-    private final List<String> mappings;
+    private final List<Mapping> mappings;
+    private final Map<String, String> initParams;
 
-    FilterInfo(final String name, final String filterClass, final InstanceFactory instanceFactory, final List<String> mappings) {
+    FilterInfo(final String name, final Class<? extends Filter> filterClass, final InstanceFactory instanceFactory, final List<Mapping> mappings, final Map<String, String> initParams) {
+
         if (name == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("name");
         }
@@ -45,18 +51,21 @@ public class FilterInfo {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("mappings");
         }
 
+        if (initParams == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("initParams");
+        }
         this.name = name;
         this.filterClass = filterClass;
         this.instanceFactory = instanceFactory;
-        this.mappings = Collections.unmodifiableList(new ArrayList<String>(mappings));
-
+        this.mappings = Collections.unmodifiableList(new ArrayList<Mapping>(mappings));
+        this.initParams = Collections.unmodifiableMap(new HashMap<String, String>(initParams));
     }
 
     public String getName() {
         return name;
     }
 
-    public String getFilterClass() {
+    public Class<? extends Filter> getFilterClass() {
         return filterClass;
     }
 
@@ -64,8 +73,12 @@ public class FilterInfo {
         return instanceFactory;
     }
 
-    public List<String> getMappings() {
+    public List<Mapping> getMappings() {
         return mappings;
+    }
+
+    public Map<String, String> getInitParams() {
+        return initParams;
     }
 
     public static FilterInfoBuilder builder() {
@@ -73,17 +86,18 @@ public class FilterInfo {
     }
 
     public static class FilterInfoBuilder {
-        private String filterClass;
+        private Class<? extends Filter> filterClass;
         private String name;
         private InstanceFactory instanceFactory;
-        private final List<String> mappings = new ArrayList<String>();
+        private final List<Mapping> mappings = new ArrayList<Mapping>();
+        private final Map<String, String> initParams = new HashMap<String, String>();
 
         FilterInfoBuilder() {
 
         }
 
         public FilterInfo build() {
-            return new FilterInfo(name, filterClass,  instanceFactory, mappings);
+            return new FilterInfo(name, filterClass, instanceFactory, mappings, initParams);
         }
 
         public String getName() {
@@ -95,11 +109,11 @@ public class FilterInfo {
             return this;
         }
 
-        public String getFilterClass() {
+        public Class<? extends Filter> getFilterClass() {
             return filterClass;
         }
 
-        public FilterInfoBuilder setFilterClass(final String filterClass) {
+        public FilterInfoBuilder setFilterClass(final Class<? extends Filter> filterClass) {
             this.filterClass = filterClass;
             return this;
         }
@@ -112,13 +126,47 @@ public class FilterInfo {
             this.instanceFactory = instanceFactory;
         }
 
-        public List<String> getMappings() {
+        public List<Mapping> getMappings() {
             return mappings;
         }
 
-        public FilterInfoBuilder addMapping(final String mapping) {
-            mappings.add(mapping);
+        public FilterInfoBuilder addUrlMapping(final String mapping) {
+            mappings.add(new Mapping(MappingType.URL, mapping));
             return this;
         }
+
+        public FilterInfoBuilder addServletNameMapping(final String mapping) {
+            mappings.add(new Mapping(MappingType.SERVLET, mapping));
+            return this;
+        }
+
+        public Map<String, String> getInitParams() {
+            return initParams;
+        }
     }
+
+
+    public static enum MappingType {
+        URL,
+        SERVLET;
+    }
+
+    public static class Mapping {
+        private final MappingType mappingType;
+        private final String mapping;
+
+        public Mapping(final MappingType mappingType, final String mapping) {
+            this.mappingType = mappingType;
+            this.mapping = mapping;
+        }
+
+        public MappingType getMappingType() {
+            return mappingType;
+        }
+
+        public String getMapping() {
+            return mapping;
+        }
+    }
+
 }

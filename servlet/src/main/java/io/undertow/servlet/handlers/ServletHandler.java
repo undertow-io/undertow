@@ -48,7 +48,6 @@ import io.undertow.servlet.spec.ServletContextImpl;
 public class ServletHandler implements BlockingHttpHandler {
 
     private final ServletInfo servletInfo;
-    private final Class<?> servletClass;
 
     private volatile boolean started = false;
     private volatile boolean stopped = false;
@@ -59,27 +58,26 @@ public class ServletHandler implements BlockingHttpHandler {
     @SuppressWarnings("unused")
     private volatile long unavailableUntil = 0;
 
-    public ServletHandler(final ServletInfo servletInfo, final Class<?> servletClass, final ServletContextImpl servletContext) {
+    public ServletHandler(final ServletInfo servletInfo, final ServletContextImpl servletContext) {
         this.servletInfo = servletInfo;
-        this.servletClass = servletClass;
-        if (SingleThreadModel.class.isAssignableFrom(servletClass)) {
-            instanceStrategy = new SingleThreadModelPoolStrategy(servletInfo.getInstanceFactory(), servletClass, servletInfo, servletContext);
+        if (SingleThreadModel.class.isAssignableFrom(servletInfo.getServletClass())) {
+            instanceStrategy = new SingleThreadModelPoolStrategy(servletInfo.getInstanceFactory(), servletInfo.getServletClass(), servletInfo, servletContext);
         } else {
-            instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletClass, servletInfo, servletContext);
+            instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletInfo.getServletClass(), servletInfo, servletContext);
         }
     }
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws IOException, ServletException {
         if (stopped) {
-            UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 503 for servlet %s due to permanent unavailability", servletClass);
+            UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 503 for servlet %s due to permanent unavailability", servletInfo.getName());
             exchange.getExchange().setResponseCode(503);
             return;
         }
 
         long until = unavailableUntilUpdater.get(this);
         if (until != 0) {
-            UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 503 for servlet %s due to temporary unavailability", servletClass);
+            UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 503 for servlet %s due to temporary unavailability", servletInfo.getName());
             if (System.currentTimeMillis() < until) {
                 exchange.getExchange().setResponseCode(503);
                 return;

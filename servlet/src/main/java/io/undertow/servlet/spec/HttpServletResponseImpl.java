@@ -103,22 +103,22 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setHeader(final String name, final String value) {
-
+        exchange.getExchange().getResponseHeaders().put(name, value);
     }
 
     @Override
     public void addHeader(final String name, final String value) {
-
+        exchange.getExchange().getResponseHeaders().add(name, value);
     }
 
     @Override
     public void setIntHeader(final String name, final int value) {
-
+        exchange.getExchange().getResponseHeaders().put(name, "" + value);
     }
 
     @Override
     public void addIntHeader(final String name, final int value) {
-
+        exchange.getExchange().getResponseHeaders().add(name, "" + value);
     }
 
     @Override
