@@ -35,9 +35,10 @@ public class ParseState {
     public static final int VERB = 0;
     public static final int PATH = 1;
     public static final int VERSION = 2;
-    public static final int HEADER = 3;
-    public static final int HEADER_VALUE = 4;
-    public static final int PARSE_COMPLETE = 5;
+    public static final int AFTER_VERSION = 3;
+    public static final int HEADER = 4;
+    public static final int HEADER_VALUE = 5;
+    public static final int PARSE_COMPLETE = 6;
 
     /**
      * The actual state of request parsing

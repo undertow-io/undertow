@@ -74,6 +74,17 @@ public class SimpleParserTestCase {
     }
 
     @Test
+    public void testNoHeaders() {
+        byte[] in = "GET\t/aa\tHTTP/1.1\n\n\n".getBytes();
+
+        final ParseState context = new ParseState();
+        HttpExchangeBuilder result = new HttpExchangeBuilder();
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
+        Assert.assertTrue(context.isComplete());
+        Assert.assertEquals("/aa", result.relativePath);
+    }
+
+    @Test
     public void testQueryParams() {
         byte[] in = "GET\thttp://www.somehost.net/somepath?a=b&b=c&d&e&f=\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 

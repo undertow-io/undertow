@@ -193,9 +193,9 @@ public abstract class HttpParser {
     private static final int FIRST_COLON = 1;
     private static final int FIRST_SLASH = 2;
     private static final int SECOND_SLASH = 3;
-    private static final int HOST_DONE =  4;
-    private static final int QUERY_PARAM_NAME =  5;
-    private static final int QUERY_PARAM_VALUE =  6;
+    private static final int HOST_DONE = 4;
+    private static final int QUERY_PARAM_NAME = 5;
+    private static final int QUERY_PARAM_VALUE = 6;
 
     /**
      * Parses a path value. This is called from the generated  bytecode.
@@ -228,9 +228,9 @@ public abstract class HttpParser {
                     } else {
                         builder.relativePath = path.substring(canonicalPathStart);
                     }
-                    if(parseState == QUERY_PARAM_NAME) {
+                    if (parseState == QUERY_PARAM_NAME) {
                         builder.addQueryParam(stringBuilder.substring(queryParamPos), "");
-                    } else if(parseState == QUERY_PARAM_VALUE){
+                    } else if (parseState == QUERY_PARAM_VALUE) {
                         builder.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
                     }
                     state.state = ParseState.VERSION;
@@ -253,19 +253,19 @@ public abstract class HttpParser {
                     canonicalPathStart = stringBuilder.length();
                 } else if (parseState == FIRST_COLON || parseState == FIRST_SLASH) {
                     parseState = START;
-                } else if(next == '?' && (parseState == START || parseState == HOST_DONE)) {
+                } else if (next == '?' && (parseState == START || parseState == HOST_DONE)) {
                     parseState = QUERY_PARAM_NAME;
                     queryParamPos = stringBuilder.length() + 1;
-                } else if(next == '=' && parseState == QUERY_PARAM_NAME) {
+                } else if (next == '=' && parseState == QUERY_PARAM_NAME) {
                     parseState = QUERY_PARAM_VALUE;
                     nextQueryParam = stringBuilder.substring(queryParamPos);
                     queryParamPos = stringBuilder.length() + 1;
-                } else if(next == '&' && parseState == QUERY_PARAM_NAME) {
+                } else if (next == '&' && parseState == QUERY_PARAM_NAME) {
                     parseState = QUERY_PARAM_NAME;
                     builder.addQueryParam(stringBuilder.substring(queryParamPos), "");
                     nextQueryParam = null;
                     queryParamPos = stringBuilder.length() + 1;
-                } else if(next == '&' && parseState == QUERY_PARAM_VALUE) {
+                } else if (next == '&' && parseState == QUERY_PARAM_VALUE) {
                     parseState = QUERY_PARAM_NAME;
                     builder.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
                     nextQueryParam = null;
@@ -377,6 +377,36 @@ public abstract class HttpParser {
         //we only write to the state if we did not finish parsing
         state.parseState = parseState;
         state.stringBuilder = stringBuilder;
+        return remaining;
+    }
+
+    protected int handleAfterVersion(ByteBuffer buffer, int remaining, ParseState state, HttpExchangeBuilder builder) {
+        boolean newLine = state.leftOver == '\n';
+        while (remaining > 0) {
+            final byte next = buffer.get();
+            --remaining;
+            if (newLine) {
+                if (next == '\n') {
+                    state.state = ParseState.PARSE_COMPLETE;
+                    return remaining;
+                } else {
+                    state.state = ParseState.HEADER;
+                    state.leftOver = next;
+                    return remaining;
+                }
+            } else {
+                if (next == '\n') {
+                    newLine = true;
+                } else if (next != '\r' && next != ' ' && next != '\t') {
+                    state.state = ParseState.HEADER;
+                    state.leftOver = next;
+                    return remaining;
+                }
+            }
+        }
+        if (newLine) {
+            state.leftOver = '\n';
+        }
         return remaining;
     }
 

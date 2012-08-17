@@ -61,9 +61,10 @@ public class ParserGenerator {
     public static final int VERB = 0;
     public static final int PATH = 1;
     public static final int VERSION = 2;
-    public static final int HEADER = 3;
-    public static final int HEADER_VALUE = 4;
-    public static final int PARSE_COMPLETE = 5;
+    public static final int AFTER_VERSION = 3;
+    public static final int HEADER = 4;
+    public static final int HEADER_VALUE = 5;
+    public static final int PARSE_COMPLETE = 6;
 
 
     private static final int BYTE_BUFFER_VAR = 1;
@@ -79,6 +80,7 @@ public class ParserGenerator {
     public static final String HANDLE_HTTP_VERB = "handleHttpVerbs";
     public static final String HANDLE_PATH = "handlePath";
     public static final String HANDLE_HTTP_VERSION = "handleHttpVersion";
+    public static final String HANDLE_AFTER_VERSION = "handleAfterVersion";
     public static final String HANDLE_HEADER = "handleHeader";
     public static final String HANDLE_HEADER_VALUE = "handleHeaderValue";
     public static final String CLASS_NAME_SUFFIX = "$$generated";
@@ -113,10 +115,11 @@ public class ParserGenerator {
         c.aload(PARSE_STATE_VAR);
         c.getfield(PARSE_STATE_CLASS, "state", "I");
         final Set<BranchEnd> returnSet = new HashSet<BranchEnd>();
-        final TableSwitchBuilder builder = new TableSwitchBuilder(0, 4);
+        final TableSwitchBuilder builder = new TableSwitchBuilder(0, 5);
         final AtomicReference<BranchEnd> method = builder.add();
         final AtomicReference<BranchEnd> path = builder.add();
         final AtomicReference<BranchEnd> http = builder.add();
+        final AtomicReference<BranchEnd> afterVersion = builder.add();
         final AtomicReference<BranchEnd> header = builder.add();
         final AtomicReference<BranchEnd> headerValue = builder.add();
         c.tableswitch(builder);
@@ -148,6 +151,19 @@ public class ParserGenerator {
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
 
+        c.branchEnd(afterVersion.get());
+        c.aload(0);
+        c.loadMethodParameters();
+        c.invokespecial(className, HANDLE_AFTER_VERSION, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.dup();
+        c.istore(BYTES_REMAINING_VAR);
+        returnSet.add(c.ifeq());
+
+        //there may not have been any headers
+        c.aload(PARSE_STATE_VAR);
+        c.getfield(PARSE_STATE_CLASS, "state", "I");
+        c.iconst(PARSE_COMPLETE);
+        returnSet.add(c.ifIcmpeq());
 
         c.branchEnd(header.get());
         CodeLocation headerStart = c.mark();
@@ -298,7 +314,7 @@ public class ParserGenerator {
         //load the current state
         c.iload(CURRENT_STATE_VAR);
         //switch on the current state
-        TableSwitchBuilder builder = new TableSwitchBuilder(-BYTES_REMAINING_VAR, noStates);
+        TableSwitchBuilder builder = new TableSwitchBuilder(-2, noStates);
         final IdentityHashMap<State, AtomicReference<BranchEnd>> ends = new IdentityHashMap<State, AtomicReference<BranchEnd>>();
         final AtomicReference<BranchEnd> prefixMatch = builder.add();
         final AtomicReference<BranchEnd> noState = builder.add();
@@ -386,7 +402,6 @@ public class ParserGenerator {
         c.dup();
         c.iconst('\n');
         prefixHandleSpace.add(c.ifIcmpeq());
-
         //check if we have overrun
         c.aload(STATE_CURRENT_BYTES_VAR);
         c.arraylength();
@@ -448,7 +463,7 @@ public class ParserGenerator {
         stateMachine.handleOtherToken(c);
         //TODO: exit if it returns null
         //decrease the available bytes
-        c.pop2();
+        c.pop();
         tokenDone(c, returnCompleteCode, stateMachine);
 
         c.branchEnd(correctLength);
@@ -456,7 +471,7 @@ public class ParserGenerator {
         c.aload(STATE_CURRENT_VAR);
         stateMachine.handleStateMachineMatchedToken(c);
         //TODO: exit if it returns null
-        c.pop2();
+        c.pop();
         tokenDone(c, returnCompleteCode, stateMachine);
 
 
@@ -514,7 +529,6 @@ public class ParserGenerator {
         c.astore(STATE_STRING_BUILDER_VAR);
         stateMachine.handleOtherToken(c);
         //TODO: exit if it returns null
-        c.pop();
         tokenDone(c, returnCompleteCode, stateMachine);
 
 
@@ -524,6 +538,7 @@ public class ParserGenerator {
                 invokeState(className, c, ends.get(s).get(), s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
             }
         }
+
     }
 
     private static void setupLocalVariables(final CodeAttribute c) {
@@ -552,6 +567,8 @@ public class ParserGenerator {
     private static void invokeState(final String className, final CodeAttribute c, BranchEnd methodState, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine) {
         c.branchEnd(methodState);
         currentState.mark(c);
+
+        BranchEnd parseDone = null;
 
         if (currentState == initialState) {
             //if this is the initial state there is a possibility that we need to deal with a left over character first
@@ -645,7 +662,6 @@ public class ParserGenerator {
             c.branchEnd(tokenEnd.get());
         }
 
-        c.pop(); //opo off our extra byte, we don't need it
         if (!currentState.soFar.equals("")) {
             c.ldc(currentState.soFar);
             if (currentState.finalState) {
@@ -656,6 +672,12 @@ public class ParserGenerator {
             //TODO: exit if it returns null
             tokenDone(c, returnCompleteCode, stateMachine);
         } else {
+            if(stateMachine.initialNewlineMeansRequestDone()) {
+                c.iconst('\n');
+                parseDone = c.ifIcmpeq();
+            } else {
+                c.pop();
+            }
             setupLocalVariables(c);
             handleReturnIfNoMoreBytes(c, returnIncompleteCode);
         }
@@ -682,6 +704,15 @@ public class ParserGenerator {
                 c.istore(CURRENT_STATE_VAR);
                 state.jumpTo(c);
             }
+        }
+        if(parseDone != null) {
+            c.branchEnd(parseDone);
+
+            c.aload(PARSE_STATE_VAR);
+            c.iconst(PARSE_COMPLETE);
+            c.putfield(PARSE_STATE_CLASS, "state", "I");
+            c.iconst(0);
+            c.returnInstruction();
         }
     }
 
@@ -777,6 +808,8 @@ public class ParserGenerator {
         void handleOtherToken(final CodeAttribute c);
 
         void updateParseState(CodeAttribute c);
+
+        boolean initialNewlineMeansRequestDone();
     }
 
 
@@ -803,9 +836,15 @@ public class ParserGenerator {
 
         @Override
         public void updateParseState(final CodeAttribute c) {
+            c.pop();
             c.aload(PARSE_STATE_VAR);
             c.iconst(HEADER_VALUE);
             c.putfield(PARSE_STATE_CLASS, "state", "I");
+        }
+
+        @Override
+        public boolean initialNewlineMeansRequestDone() {
+            return true;
         }
     }
 
@@ -830,9 +869,15 @@ public class ParserGenerator {
 
         @Override
         public void updateParseState(final CodeAttribute c) {
+            c.pop();
             c.aload(PARSE_STATE_VAR);
             c.iconst(PATH);
             c.putfield(PARSE_STATE_CLASS, "state", "I");
+        }
+
+        @Override
+        public boolean initialNewlineMeansRequestDone() {
+            return false;
         }
     }
 
@@ -858,8 +903,16 @@ public class ParserGenerator {
         @Override
         public void updateParseState(final CodeAttribute c) {
             c.aload(PARSE_STATE_VAR);
-            c.iconst(HEADER);
+            c.swap();
+            c.putfield(PARSE_STATE_CLASS, "leftOver", "B");
+            c.aload(PARSE_STATE_VAR);
+            c.iconst(AFTER_VERSION);
             c.putfield(PARSE_STATE_CLASS, "state", "I");
+        }
+
+        @Override
+        public boolean initialNewlineMeansRequestDone() {
+            return false;
         }
 
     }
