@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers.form;
 
+import java.io.IOException;
+
 import org.xnio.IoFuture;
 
 /**
@@ -32,7 +34,21 @@ public interface FormDataParser {
 
     String ATTACHMENT_KEY = FormDataParser.class.getName();
 
-
+    /**
+     * Parse the form data asynchronously. If all the data cannot be read immediately then a read listener will be
+     * registered, and the data will be parsed by the read thread.
+     *
+     * @return An IoFuture that can be used to retrieve the parsed data
+     */
     IoFuture<FormData> parse();
+
+    /**
+     * Parse the data, blocking the current thread until parsing is complete. For blocking handlers this method is
+     * more efficient than {@link #parse()}, as the calling thread should do that actual parsing, rather than the
+     * read thread
+     * @return The parsed form data
+     * @throws IOException If the data could not be read
+     */
+    FormData parseBlocking() throws IOException;
 
 }

@@ -159,9 +159,9 @@ public class FormEncodedDataHandler implements HttpHandler {
                     }
                 } while (c > 0);
                 if (c == -1) {
-                    if(state == 2) {
+                    if (state == 2) {
                         data.add(name, builder.toString());
-                    } else if(state == 3) {
+                    } else if (state == 3) {
                         data.add(name, URLDecoder.decode(builder.toString(), "UTF-8"));
                     }
                     state = 4;
@@ -177,6 +177,7 @@ public class FormEncodedDataHandler implements HttpHandler {
                 pooled.free();
             }
         }
+
 
         @Override
         public synchronized IoFuture<FormData> parse() {
@@ -200,6 +201,29 @@ public class FormEncodedDataHandler implements HttpHandler {
                 }
             }
             return ioFuture;
+        }
+
+        @Override
+        public FormData parseBlocking() throws IOException {
+            if (ioFuture == null) {
+                synchronized (this) {
+                    if (ioFuture == null) {
+                        StreamSourceChannel channel = exchange.getRequestChannel();
+                        if (channel == null) {
+                            ioFuture = new FailedIoFuture<FormData>(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
+                        } else {
+                            while (state != 4) {
+                                handleEvent(channel);
+                                if (state != 4) {
+                                    channel.awaitReadable();
+                                }
+                            }
+                            ioFuture = new FinishedIoFuture<FormData>(data);
+                        }
+                    }
+                }
+            }
+            return ioFuture.get();
         }
     }
 

@@ -30,7 +30,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
-import io.undertow.server.handlers.form.BlockingFormEncodedDataHandler;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.FormEncodedDataHandler;
@@ -90,15 +89,16 @@ public class FormDataParserTestCase {
         ret.add(new Object[]{fd});
         final BlockingHandler blocking = new BlockingHandler();
 
-        final BlockingFormEncodedDataHandler bf = new BlockingFormEncodedDataHandler();
-        bf.setNext(new BlockingHttpHandler() {
+        final FormEncodedDataHandler bf = new FormEncodedDataHandler();
+        bf.setNext(blocking);
+        blocking.setRootHandler(new BlockingHttpHandler() {
 
 
             @Override
             public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
                 final FormDataParser parser = (FormDataParser) exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
                 try {
-                    FormData data = parser.parse().get();
+                    FormData data = parser.parseBlocking();
                     Iterator<String> it = data.iterator();
                     while (it.hasNext()) {
                         String fd = it.next();
@@ -109,8 +109,7 @@ public class FormDataParserTestCase {
                 }
             }
         });
-        blocking.setRootHandler(bf);
-        ret.add(new Object[]{blocking});
+        ret.add(new Object[]{bf});
         return ret;
 
     }
