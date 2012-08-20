@@ -20,6 +20,7 @@ package io.undertow.test.handlers.form;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -115,13 +116,19 @@ public class FormDataParserTestCase {
     }
 
     @Test
-    public void testFormDataParsing() throws IOException {
+    public void testFormDataParsing() throws Exception {
+        runTest(new BasicNameValuePair("name", "A Value"));
+        runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
+
+    }
+
+    private void runTest(final NameValuePair ... pairs) throws Exception{
         DefaultServer.setRootHandler(rootHandler);
         DefaultHttpClient client = new DefaultHttpClient();
         try {
 
             final List<NameValuePair> data = new ArrayList<NameValuePair>();
-            data.add(new BasicNameValuePair("name", "A Value"));
+            data.addAll(Arrays.asList(pairs));
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
             post.setHeader(Headers.CONTENT_TYPE, FormEncodedDataHandler.APPLICATION_X_WWW_FORM_URLENCODED);
             post.setEntity(new UrlEncodedFormEntity(data));
@@ -134,7 +141,6 @@ public class FormDataParserTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
-
     }
 
     private void checkResult(final List<NameValuePair> data, final HttpResponse result) {
