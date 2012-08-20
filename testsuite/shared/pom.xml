@@ -26,6 +26,7 @@
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
         <version>1.0.0.Alpha1-SNAPSHOT</version>
+        <relativePath>../../</relativePath>
     </parent>
 
     <groupId>io.undertow</groupId>
