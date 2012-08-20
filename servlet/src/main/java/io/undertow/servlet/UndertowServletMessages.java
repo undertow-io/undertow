@@ -59,4 +59,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10008, value = "Two servlets specified with same mapping %s")
     IllegalArgumentException twoServletsWithSameMapping(String path);
+
+    @Message(id = 10009, value = "Header %s cannot be converted to a date")
+    IllegalArgumentException headerCannotBeConvertedToDate(String header);
 }

@@ -22,6 +22,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 
 /**
  * Utility methods pertaining to HTTP handlers.
@@ -50,6 +51,13 @@ public final class HttpHandlers {
     }
 
     public static void handlerNotNull(final HttpHandler handler) {
+        if(handler == null) {
+            throw UndertowMessages.MESSAGES.handlerCannotBeNull();
+        }
+    }
+
+
+    public static void handlerNotNull(final BlockingHttpHandler handler) {
         if(handler == null) {
             throw UndertowMessages.MESSAGES.handlerCannotBeNull();
         }

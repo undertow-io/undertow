@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Deque;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -48,6 +49,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
+import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 
@@ -67,6 +69,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     private ServletInputStream servletInputStream;
     private BufferedReader reader;
 
+    private Cookie[] cookies;
+
     public HttpServletRequestImpl(final BlockingHttpServerExchange exchange) {
         this.exchange = exchange;
     }
@@ -82,12 +86,37 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Cookie[] getCookies() {
-        return new Cookie[0];
+        if(cookies == null) {
+            Map<String, io.undertow.server.handlers.Cookie> cookies = io.undertow.server.handlers.Cookie.getRequestCookies(exchange.getExchange());
+            Cookie[] value = new Cookie[cookies.size()];
+            int i = 0;
+            for(Map.Entry<String, io.undertow.server.handlers.Cookie> entry : cookies.entrySet()) {
+                io.undertow.server.handlers.Cookie cookie = entry.getValue();
+                Cookie c = new Cookie(cookie.getName(), cookie.getValue());
+                c.setDomain(cookie.getDomain());
+                c.setHttpOnly(cookie.isHttpOnly());
+                c.setMaxAge(cookie.getMaxAge());
+                c.setPath(cookie.getPath());
+                c.setSecure(cookie.isSecure());
+                c.setVersion(cookie.getVersion());
+                value[i++] = c;
+            }
+            this.cookies = value;
+        }
+        return cookies;
     }
 
     @Override
     public long getDateHeader(final String name) {
-        return 0;
+        String header = exchange.getExchange().getRequestHeaders().getFirst(name);
+        if(header == null) {
+            return -1;
+        }
+        Date date = DateUtils.parseDate(header);
+        if(date == null) {
+            throw UndertowServletMessages.MESSAGES.headerCannotBeConvertedToDate(header);
+        }
+        return date.getTime();
     }
 
     @Override

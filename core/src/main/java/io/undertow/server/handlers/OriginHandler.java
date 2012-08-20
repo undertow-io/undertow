@@ -38,7 +38,7 @@ import io.undertow.util.Headers;
  */
 public class OriginHandler implements HttpHandler {
 
-    private volatile ResponseCodeHandler originFailedHandler = ResponseCodeHandler.HANDLE_403;
+    private volatile HttpHandler originFailedHandler = ResponseCodeHandler.HANDLE_403;
     private volatile Set<String> allowedOrigins = new HashSet<String>();
     private volatile boolean requireAllOrigins = true;
     private volatile boolean requireOriginHeader = true;
@@ -136,11 +136,11 @@ public class OriginHandler implements HttpHandler {
         this.next = next;
     }
 
-    public ResponseCodeHandler getOriginFailedHandler() {
+    public HttpHandler getOriginFailedHandler() {
         return originFailedHandler;
     }
 
-    public void setOriginFailedHandler(ResponseCodeHandler originFailedHandler) {
+    public void setOriginFailedHandler(HttpHandler originFailedHandler) {
         HttpHandlers.handlerNotNull(originFailedHandler);
         this.originFailedHandler = originFailedHandler;
     }

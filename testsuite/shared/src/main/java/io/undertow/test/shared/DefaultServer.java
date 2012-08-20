@@ -96,6 +96,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     @Override
     public void run(final RunNotifier notifier) {
+        runInternal(notifier);
+        super.run(notifier);
+    }
+
+    private static void runInternal(final RunNotifier notifier) {
         if (first) {
             first = false;
             xnio = Xnio.getInstance("nio", DefaultServer.class.getClassLoader());
@@ -127,7 +132,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 }
             });
         }
-        super.run(notifier);
     }
 
     /**
@@ -151,5 +155,18 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     public static ExecutorService getBlockingExecutorService() {
         return blockingExecutorService;
+    }
+
+    public static class Parameterized extends org.junit.runners.Parameterized {
+
+        public Parameterized(Class<?> klass) throws Throwable {
+            super(klass);
+        }
+
+        @Override
+        public void run(final RunNotifier notifier) {
+            runInternal(notifier);
+            super.run(notifier);
+        }
     }
 }
