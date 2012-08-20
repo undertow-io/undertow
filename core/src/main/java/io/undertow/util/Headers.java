@@ -41,6 +41,7 @@ public final class Headers {
     public static final String AUTHORIZATION = "Authorization";
     public static final String CACHE_CONTROL = "Cache-Control";
     public static final String COOKIE = "Cookie";
+    public static final String COOKIE2 = "Cookie2";
     public static final String CONNECTION = "Connection";
     public static final String CONTENT_DISPOSITION = "Content-Disposition";
     public static final String CONTENT_ENCODING = "Content-Encoding";

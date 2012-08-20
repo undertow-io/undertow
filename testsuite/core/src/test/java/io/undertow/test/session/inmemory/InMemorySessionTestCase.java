@@ -23,6 +23,7 @@ import java.io.IOException;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.InMemorySessionManager;
@@ -54,6 +55,7 @@ public class InMemorySessionTestCase {
     public void testBasicPathHanding() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         client.setCookieStore(new BasicCookieStore());
+        final CookieHandler cookieHandler = new CookieHandler();
         try {
             final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager());
             handler.setNext(new HttpHandler() {
@@ -75,7 +77,8 @@ public class InMemorySessionTestCase {
                     }
                 }
             });
-            DefaultServer.setRootHandler(handler);
+            cookieHandler.setNext(handler);
+            DefaultServer.setRootHandler(cookieHandler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
             HttpResponse result = client.execute(get);

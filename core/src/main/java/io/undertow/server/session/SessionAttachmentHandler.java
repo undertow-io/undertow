@@ -19,18 +19,16 @@
 package io.undertow.server.session;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
+import java.util.Map;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.util.Headers;
 import org.xnio.IoFuture;
 
 /**
@@ -104,57 +102,23 @@ public class SessionAttachmentHandler implements HttpHandler {
         }
     }
 
-    //TODO: we need some real cookie handing utilities
     private String findSessionId(final HttpServerExchange exchange) {
-        final Deque<String> cookies = exchange.getRequestHeaders().get(Headers.COOKIE);
-        if (cookies != null) {
-            for (String fullCookie : cookies) {
-                for (String cookie : split(fullCookie)) {
-                    if (!cookie.startsWith("$")) {
-                        String[] parts = cookie.split("=");
-                        if (parts.length == 2) {
-                            if (parts[0].equals(cookieName)) {
-                                String value = parts[1];
-                                if (value.length() > 2) {
-                                    if (value.charAt(0) == '"') {
-                                        int last = value.lastIndexOf("\"");
-                                        String trimmed = value.substring(1, last);
-                                        return trimmed;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        Map<String, Cookie> cookies = Cookie.getRequestCookies(exchange);
+        if(cookies != null) {
+            Cookie sessionId = cookies.get(cookieName);
+            if(sessionId != null) {
+                return sessionId.getValue();
             }
         }
         return null;
     }
-
-    private static List<String> split(final String string) {
-        List<String> ret = new ArrayList<String>();
-        int p = 0;
-        for (int i = 0; i < string.length(); ++i) {
-            if (string.charAt(i) == ' ') {
-                if (p != i) {
-                    ret.add(string.substring(p, i));
-                    p = i + 1;
-                }
-            }
-
-        }
-        if (p < string.length() - 1) {
-            ret.add(string.substring(p));
-        }
-        return ret;
-    }
-
 
     public HttpHandler getNext() {
         return next;
     }
 
     public void setNext(final HttpHandler next) {
+        HttpHandlers.handlerNotNull(next);
         this.next = next;
     }
 

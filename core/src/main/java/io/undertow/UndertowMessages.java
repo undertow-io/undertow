@@ -72,4 +72,6 @@ public interface UndertowMessages {
     @Message(id = 14, value = "close() called with data still to be flushed. Please call shutdownWrites() and then call flush() until it returns true before calling close()")
     IOException closeCalledWithDataStillToBeFlushed();
 
+    @Message(id = 16, value = "Could not add cookie as cookie handler was not present in the handler chain")
+    IllegalStateException cookieHandlerNotPresent();
 }
