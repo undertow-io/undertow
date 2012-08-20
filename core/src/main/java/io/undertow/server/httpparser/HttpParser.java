@@ -18,8 +18,10 @@
 
 package io.undertow.server.httpparser;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
+import com.sun.xml.internal.messaging.saaj.packaging.mime.internet.MimeUtility;
 import io.undertow.annotationprocessor.HttpParserConfig;
 
 import static io.undertow.util.Headers.ACCEPT;
@@ -306,6 +308,7 @@ public abstract class HttpParser {
         StringBuilder stringBuilder = state.stringBuilder;
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
+            state.parseState = 0;
         }
 
 
@@ -352,7 +355,13 @@ public abstract class HttpParser {
                     } else {
                         //we have a header
                         String nextStandardHeader = state.nextHeader;
-                        builder.headers.put(nextStandardHeader, stringBuilder.toString());
+                        String headerValue = stringBuilder.toString();
+                        try {
+                            //TODO: we should only call decodeTest if we have seen a =? symbol
+                            builder.headers.put(nextStandardHeader, MimeUtility.decodeText(headerValue));
+                        } catch (UnsupportedEncodingException e) {
+                            builder.headers.put(nextStandardHeader, headerValue);
+                        }
 
                         state.nextHeader = null;
 
