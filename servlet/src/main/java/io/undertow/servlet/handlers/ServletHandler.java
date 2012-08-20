@@ -88,8 +88,8 @@ public class ServletHandler implements BlockingHttpHandler {
         if (!started) {
             start();
         }
-        HttpServletRequestImpl request = (HttpServletRequestImpl) exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        HttpServletResponseImpl response = (HttpServletResponseImpl) exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        HttpServletRequestImpl request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+        HttpServletResponseImpl response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
         final InstanceHandle servlet = instanceStrategy.getServlet();
         try {
             ((Servlet) servlet.getInstance()).service(request, response);

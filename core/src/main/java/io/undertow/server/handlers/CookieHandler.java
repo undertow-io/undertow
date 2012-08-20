@@ -23,13 +23,13 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.ChannelWrapper;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentList;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
@@ -47,7 +47,7 @@ public class CookieHandler implements HttpHandler {
 
         final Map<String, Cookie> cookies = parseCookies(exchange);
         exchange.putAttachment(Cookie.REQUEST_COOKIES, new CopyOnWriteMap<String, Cookie>(cookies));
-        exchange.putAttachment(Cookie.RESPONSE_COOKIES, new CopyOnWriteArrayList<Cookie>());
+        exchange.putAttachment(Cookie.RESPONSE_COOKIES, new AttachmentList<Cookie>(Cookie.class));
         exchange.addResponseWrapper(CookieChannelWrapper.INSTANCE);
         HttpHandlers.executeHandler(next, exchange, completionHandler);
     }
@@ -189,11 +189,9 @@ public class CookieHandler implements HttpHandler {
         @Override
         public StreamSinkChannel wrap(final StreamSinkChannel channel, final HttpServerExchange exchange) {
 
-            final List<Cookie> cookies = (List<Cookie>) exchange.getAttachment(Cookie.RESPONSE_COOKIES);
-            if (cookies != null) {
-                for (Cookie cookie : cookies) {
-                    addResponseCookieToExchange(cookie, exchange);
-                }
+            final List<Cookie> cookies = exchange.getAttachmentList(Cookie.RESPONSE_COOKIES);
+            for (Cookie cookie : cookies) {
+                addResponseCookieToExchange(cookie, exchange);
             }
 
             return channel;

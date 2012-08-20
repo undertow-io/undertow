@@ -20,6 +20,7 @@ package io.undertow.server.handlers.form;
 
 import java.io.IOException;
 
+import io.undertow.util.AttachmentKey;
 import org.xnio.IoFuture;
 
 /**
@@ -32,7 +33,7 @@ import org.xnio.IoFuture;
  */
 public interface FormDataParser {
 
-    String ATTACHMENT_KEY = FormDataParser.class.getName();
+    AttachmentKey<FormDataParser> ATTACHMENT_KEY = AttachmentKey.create(FormDataParser.class);
 
     /**
      * Parse the form data asynchronously. If all the data cannot be read immediately then a read listener will be

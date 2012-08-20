@@ -18,7 +18,12 @@
 
 package io.undertow.util;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+
+import io.undertow.UndertowMessages;
 
 /**
  * A thing which can have named attachments.
@@ -26,7 +31,7 @@ import java.util.concurrent.ConcurrentMap;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public abstract class AbstractAttachable implements Attachable {
-    private final ConcurrentMap<String, Object> attachments = new SecureHashMap<String, Object>();
+    private final ConcurrentMap<Object, Object> attachments = new SecureHashMap<Object, Object>();
 
     @Override
     public Object getAttachment(String name) {
@@ -69,8 +74,80 @@ public abstract class AbstractAttachable implements Attachable {
         return attachments.remove(name, expectValue);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public ConcurrentMap<String, Object> getAttachments() {
-        return attachments;
+    public <T> T getAttachment(final AttachmentKey<T> key) {
+        if (key == null) {
+            return null;
+        }
+        return key.cast(attachments.get(key));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> List<T> getAttachmentList(AttachmentKey<? extends List<T>> key) {
+        if (key == null) {
+            return null;
+        }
+        List<T> list = key.cast(attachments.get(key));
+        if (list == null) {
+            return Collections.emptyList();
+        }
+        return list;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> T putAttachment(final AttachmentKey<T> key, final T value) {
+        if (key == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+        }
+        return key.cast(attachments.put(key, key.cast(value)));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> T putAttachmentIfAbsent(final AttachmentKey<T> key, final T value) {
+        if (key == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+        }
+        return key.cast(attachments.putIfAbsent(key, key.cast(value)));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> T removeAttachment(final AttachmentKey<T> key) {
+        if (key == null) {
+            return null;
+        }
+        return key.cast(attachments.remove(key));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> void addToAttachmentList(final AttachmentKey<AttachmentList<T>> key, final T value) {
+        if (key != null) {
+            final Map<Object, Object> attachments = this.attachments;
+            final AttachmentList<T> list = key.cast(attachments.get(key));
+            if (list == null) {
+                final AttachmentList<T> newList = new AttachmentList<T>(((ListAttachmentKey<T>) key).getValueClass());
+                attachments.put(key, newList);
+                newList.add(value);
+            } else {
+                list.add(value);
+            }
+        }
     }
 }

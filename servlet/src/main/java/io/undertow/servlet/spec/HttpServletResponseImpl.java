@@ -29,13 +29,14 @@ import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.util.AttachmentKey;
 
 /**
  * @author Stuart Douglas
  */
 public class HttpServletResponseImpl implements HttpServletResponse {
 
-    public static final String ATTACHMENT_KEY = HttpServletResponseImpl.class.getName();
+    public static final AttachmentKey<HttpServletResponseImpl> ATTACHMENT_KEY = AttachmentKey.create(HttpServletResponseImpl.class);
 
     private final BlockingHttpServerExchange exchange;
 

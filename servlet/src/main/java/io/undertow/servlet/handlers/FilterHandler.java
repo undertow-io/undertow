@@ -48,8 +48,8 @@ public class FilterHandler implements BlockingHttpHandler {
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        HttpServletRequestImpl request = (HttpServletRequestImpl) exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        HttpServletResponseImpl response = (HttpServletResponseImpl) exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        HttpServletRequestImpl request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+        HttpServletResponseImpl response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
         FilterChainImpl filterChain = new FilterChainImpl(exchange);
         filterChain.doFilter(request, response);
     }

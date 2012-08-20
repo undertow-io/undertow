@@ -24,6 +24,8 @@ import java.util.Map;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.AttachmentList;
 
 /**
  * A HTTP cookie.
@@ -33,8 +35,8 @@ import io.undertow.server.HttpServerExchange;
  */
 public class Cookie {
 
-    public static final String REQUEST_COOKIES = Cookie.class.getName() + ".RequestCookies";
-    public static final String RESPONSE_COOKIES = Cookie.class.getName() + ".ResponseCookies";
+    public static final AttachmentKey<Map<String, Cookie>> REQUEST_COOKIES = AttachmentKey.create(Map.class);
+    public static final AttachmentKey<AttachmentList<Cookie>> RESPONSE_COOKIES = AttachmentKey.createList(Cookie.class);
 
     private final String name;
     private volatile String value;
@@ -58,15 +60,15 @@ public class Cookie {
     }
 
     public static Map<String, Cookie> getRequestCookies(final HttpServerExchange exchange) {
-        return (Map<String, Cookie>) exchange.getAttachment(REQUEST_COOKIES);
+        return  exchange.getAttachment(REQUEST_COOKIES);
     }
 
     public static List<Cookie> getResponseCookies(final HttpServerExchange exchange) {
-        return (List<Cookie>) exchange.getAttachment(RESPONSE_COOKIES);
+        return exchange.getAttachment(RESPONSE_COOKIES);
     }
 
     public static void addResponseCookie(final HttpServerExchange exchange, final Cookie cookie) {
-        List<Cookie> cookies = (List<Cookie>)exchange.getAttachment(RESPONSE_COOKIES);
+        List<Cookie> cookies = exchange.getAttachment(RESPONSE_COOKIES);
         if(cookies == null) {
             throw UndertowMessages.MESSAGES.cookieHandlerNotPresent();
         }

@@ -18,6 +18,7 @@
 
 package io.undertow.server.session;
 
+import io.undertow.util.AttachmentKey;
 import org.xnio.IoFuture;
 import io.undertow.server.HttpServerExchange;
 
@@ -36,7 +37,7 @@ import io.undertow.server.HttpServerExchange;
  */
 public interface SessionManager {
 
-    String ATTACHMENT_KEY = "io.undertow.session.SessionManager";
+    AttachmentKey<SessionManager> ATTACHMENT_KEY = AttachmentKey.create(SessionManager.class);
 
     /**
      * Creates a new session. Any {@link SessionListener}s registered with this manager will be notified

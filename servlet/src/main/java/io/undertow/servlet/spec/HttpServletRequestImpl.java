@@ -49,6 +49,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -60,7 +61,7 @@ import io.undertow.util.Headers;
  */
 public class HttpServletRequestImpl implements HttpServletRequest {
 
-    public static final String ATTACHMENT_KEY = HttpServletRequestImpl.class.getName();
+    public static final AttachmentKey<HttpServletRequestImpl> ATTACHMENT_KEY = AttachmentKey.create(HttpServletRequestImpl.class);
 
     private final BlockingHttpServerExchange exchange;
 
