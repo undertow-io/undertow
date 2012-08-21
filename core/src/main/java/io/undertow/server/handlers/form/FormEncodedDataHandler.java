@@ -32,8 +32,6 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
 import org.xnio.AbstractIoFuture;
 import org.xnio.ChannelListener;
-import org.xnio.FailedIoFuture;
-import org.xnio.FinishedIoFuture;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
@@ -81,7 +79,7 @@ public class FormEncodedDataHandler implements HttpHandler {
         private final FormData data = new FormData();
         private final StringBuilder builder = new StringBuilder();
         private String name = null;
-        private volatile AbstractIoFuture<FormData> ioFuture;
+        private volatile FormIoFuture ioFuture;
 
         //0= parsing name
         //1=parsing name, decode required
@@ -165,14 +163,14 @@ public class FormEncodedDataHandler implements HttpHandler {
                         data.add(name, URLDecoder.decode(builder.toString(), "UTF-8"));
                     }
                     state = 4;
-                    if (ioFuture instanceof FormIoFuture) {
-                        ((FormIoFuture) ioFuture).setResult(data);
-                    }
+                    ioFuture.setResult(data);
                 }
             } catch (IOException e) {
+                ioFuture.setException(e);
                 IoUtils.safeClose(channel);
                 UndertowLogger.REQUEST_LOGGER.ioExceptionReadingFromChannel(e);
                 completionHandler.handleComplete();
+
             } finally {
                 pooled.free();
             }
@@ -180,22 +178,24 @@ public class FormEncodedDataHandler implements HttpHandler {
 
 
         @Override
-        public synchronized IoFuture<FormData> parse() {
+        public IoFuture<FormData> parse() {
             if (ioFuture == null) {
+                FormIoFuture created = null;
                 synchronized (this) {
                     if (ioFuture == null) {
-                        StreamSourceChannel channel = exchange.getRequestChannel();
-                        if (channel == null) {
-                            ioFuture = new FailedIoFuture<FormData>(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
-                        } else {
-                            handleEvent(channel);
-                            if (state == 4) {
-                                ioFuture = new FinishedIoFuture<FormData>(data);
-                            } else {
-                                ioFuture = new FormIoFuture();
-                                channel.getReadSetter().set(this);
-                                channel.resumeReads();
-                            }
+                        ioFuture = created = new FormIoFuture();
+
+                    }
+                }
+                if (created != null) {
+                    StreamSourceChannel channel = exchange.getRequestChannel();
+                    if (channel == null) {
+                        created.setException(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
+                    } else {
+                        handleEvent(channel);
+                        if (state != 4) {
+                            channel.getReadSetter().set(this);
+                            channel.resumeReads();
                         }
                     }
                 }
@@ -206,19 +206,23 @@ public class FormEncodedDataHandler implements HttpHandler {
         @Override
         public FormData parseBlocking() throws IOException {
             if (ioFuture == null) {
+                FormIoFuture created = null;
                 synchronized (this) {
                     if (ioFuture == null) {
-                        StreamSourceChannel channel = exchange.getRequestChannel();
-                        if (channel == null) {
-                            ioFuture = new FailedIoFuture<FormData>(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
-                        } else {
-                            while (state != 4) {
-                                handleEvent(channel);
-                                if (state != 4) {
-                                    channel.awaitReadable();
-                                }
+                        ioFuture = created = new FormIoFuture();
+
+                    }
+                }
+                if (created != null) {
+                    StreamSourceChannel channel = exchange.getRequestChannel();
+                    if (channel == null) {
+                        created.setException(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
+                    } else {
+                        while (state != 4) {
+                            handleEvent(channel);
+                            if (state != 4) {
+                                channel.awaitReadable();
                             }
-                            ioFuture = new FinishedIoFuture<FormData>(data);
                         }
                     }
                 }
@@ -231,6 +235,11 @@ public class FormEncodedDataHandler implements HttpHandler {
         @Override
         public boolean setResult(final FormData result) {
             return super.setResult(result);
+        }
+
+        @Override
+        public boolean setException(final IOException exception) {
+            return super.setException(exception);
         }
     }
 
