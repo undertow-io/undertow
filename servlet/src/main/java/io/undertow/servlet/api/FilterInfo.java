@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 
 import io.undertow.servlet.UndertowServletMessages;
@@ -38,9 +39,9 @@ public class FilterInfo {
     private final InstanceFactory instanceFactory;
     private final List<Mapping> mappings;
     private final Map<String, String> initParams;
+    private final boolean asyncSupported;
 
-    FilterInfo(final String name, final Class<? extends Filter> filterClass, final InstanceFactory instanceFactory, final List<Mapping> mappings, final Map<String, String> initParams) {
-
+    FilterInfo(final String name, final Class<? extends Filter> filterClass, final InstanceFactory instanceFactory, final List<Mapping> mappings, final Map<String, String> initParams, final boolean asyncSupported) {
         if (name == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("name");
         }
@@ -59,6 +60,7 @@ public class FilterInfo {
         this.instanceFactory = instanceFactory;
         this.mappings = Collections.unmodifiableList(new ArrayList<Mapping>(mappings));
         this.initParams = Collections.unmodifiableMap(new HashMap<String, String>(initParams));
+        this.asyncSupported = asyncSupported;
     }
 
     public FilterInfoBuilder copy() {
@@ -99,6 +101,7 @@ public class FilterInfo {
         private Class<? extends Filter> filterClass;
         private String name;
         private InstanceFactory instanceFactory;
+        private volatile boolean asyncSupported;
         private final List<Mapping> mappings = new ArrayList<Mapping>();
         private final Map<String, String> initParams = new HashMap<String, String>();
 
@@ -107,7 +110,7 @@ public class FilterInfo {
         }
 
         public FilterInfo build() {
-            return new FilterInfo(name, filterClass, instanceFactory, mappings, initParams);
+            return new FilterInfo(name, filterClass, instanceFactory, mappings, initParams, asyncSupported);
         }
 
         public String getName() {
@@ -142,17 +145,36 @@ public class FilterInfo {
         }
 
         public FilterInfoBuilder addUrlMapping(final String mapping) {
-            mappings.add(new Mapping(MappingType.URL, mapping));
+            mappings.add(new Mapping(MappingType.URL, mapping, null));
+            return this;
+        }
+
+        public FilterInfoBuilder addUrlMapping(final String mapping , DispatcherType dispatcher) {
+            mappings.add(new Mapping(MappingType.URL, mapping, dispatcher));
             return this;
         }
 
         public FilterInfoBuilder addServletNameMapping(final String mapping) {
-            mappings.add(new Mapping(MappingType.SERVLET, mapping));
+            mappings.add(new Mapping(MappingType.SERVLET, mapping, null));
+            return this;
+        }
+
+        public FilterInfoBuilder addServletNameMapping(final String mapping, final DispatcherType dispatcher) {
+            mappings.add(new Mapping(MappingType.SERVLET, mapping, dispatcher));
             return this;
         }
 
         public Map<String, String> getInitParams() {
             return initParams;
+        }
+
+        public boolean isAsyncSupported() {
+            return asyncSupported;
+        }
+
+        public FilterInfoBuilder setAsyncSupported(final boolean asyncSupported) {
+            this.asyncSupported = asyncSupported;
+            return this;
         }
     }
 
@@ -165,10 +187,12 @@ public class FilterInfo {
     public static class Mapping {
         private final MappingType mappingType;
         private final String mapping;
+        private final DispatcherType dispatcher;
 
-        public Mapping(final MappingType mappingType, final String mapping) {
+        public Mapping(final MappingType mappingType, final String mapping, final DispatcherType dispatcher) {
             this.mappingType = mappingType;
             this.mapping = mapping;
+            this.dispatcher = dispatcher;
         }
 
         public MappingType getMappingType() {
@@ -177,6 +201,10 @@ public class FilterInfo {
 
         public String getMapping() {
             return mapping;
+        }
+
+        public DispatcherType getDispatcher() {
+            return dispatcher;
         }
     }
 

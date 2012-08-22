@@ -43,18 +43,21 @@ public class DeploymentInfo {
     private final int minorVersion;
     private final Map<String, ServletInfo> servlets;
     private final Map<String, FilterInfo> filters;
+    private final List<Class<?>> listeners;
 
     DeploymentInfo(final String deploymentName, final String contextPath, final ClassLoader classLoader,
                    final ResourceLoader resourceLoader, final Map<String, ServletInfo> servlets,
-                   final Map<String, FilterInfo> filters, final int majorVersion, final int minorVersion) {
+                   final Map<String, FilterInfo> filters, final List<Class<?>> listeners, final int majorVersion, final int minorVersion) {
         this.deploymentName = deploymentName;
         this.contextPath = contextPath;
         this.classLoader = classLoader;
         this.resourceLoader = resourceLoader;
+        this.listeners = listeners;
         this.majorVersion = majorVersion;
         this.minorVersion = minorVersion;
         this.servlets = Collections.unmodifiableMap(new LinkedHashMap<String, ServletInfo>(servlets));
         this.filters = Collections.unmodifiableMap(new LinkedHashMap<String, FilterInfo>(filters));
+
     }
 
     /**
@@ -94,6 +97,10 @@ public class DeploymentInfo {
         return filters;
     }
 
+    public List<Class<?>> getListeners() {
+        return listeners;
+    }
+
     public static DeploymentInfoBuilder builder() {
         return new DeploymentInfoBuilder();
     }
@@ -114,6 +121,8 @@ public class DeploymentInfo {
         for(Map.Entry<String, FilterInfo> e : filters.entrySet()) {
             builder.addFilter(e.getValue().copy());
         }
+        builder.listeners.addAll(listeners);
+
         return builder;
     }
 
@@ -127,6 +136,7 @@ public class DeploymentInfo {
         private int minorVersion = 0;
         private final List<ServletInfo.ServletInfoBuilder> servlets = new ArrayList<ServletInfo.ServletInfoBuilder>();
         private final List<FilterInfo.FilterInfoBuilder> filters = new ArrayList<FilterInfo.FilterInfoBuilder>();
+        private final List<Class<?>> listeners = new ArrayList<Class<?>>();
 
         DeploymentInfoBuilder() {
 
@@ -161,7 +171,7 @@ public class DeploymentInfo {
                 }
                 filters.put(filter.getName(), filter.build());
             }
-            return new DeploymentInfo(deploymentName, contextPath, classLoader, resourceLoader, servlets, filters, majorVersion, minorVersion);
+            return new DeploymentInfo(deploymentName, contextPath, classLoader, resourceLoader, servlets, filters, listeners, majorVersion, minorVersion);
         }
 
         public String getDeploymentName() {
@@ -237,6 +247,25 @@ public class DeploymentInfo {
 
         public List<FilterInfo.FilterInfoBuilder> getFilters() {
             return filters;
+        }
+
+        public DeploymentInfoBuilder addListener(final Class<?> listener) {
+            listeners.add(listener);
+            return this;
+        }
+
+        public DeploymentInfoBuilder addListeners(final Class<?> ... listeners) {
+            this.listeners.addAll(Arrays.asList(listeners));
+            return this;
+        }
+
+        public DeploymentInfoBuilder addListeners(final Collection<Class<?>> listeners) {
+            this.listeners.addAll(listeners);
+            return this;
+        }
+
+        public List<Class<?>> getListeners() {
+            return listeners;
         }
 
         public int getMajorVersion() {
