@@ -56,7 +56,7 @@ public class SimpleServletServerTestCase {
 
         DeploymentInfo.DeploymentInfoBuilder builder = DeploymentInfo.builder()
                 .setClassLoader(SimpleServletServerTestCase.class.getClassLoader())
-                .setContextName("/servletContext")
+                .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.INSTANCE)
                 .addServlet(s);

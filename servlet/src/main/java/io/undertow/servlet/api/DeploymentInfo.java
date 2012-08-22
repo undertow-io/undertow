@@ -98,10 +98,29 @@ public class DeploymentInfo {
         return new DeploymentInfoBuilder();
     }
 
+    public DeploymentInfoBuilder copy() {
+        final DeploymentInfoBuilder builder = new DeploymentInfoBuilder()
+                .setClassLoader(classLoader)
+                .setContextPath(contextPath)
+                .setResourceLoader(resourceLoader)
+                .setMajorVersion(majorVersion)
+                .setMinorVersion(minorVersion)
+                .setDeploymentName(deploymentName);
+
+        for(Map.Entry<String, ServletInfo> e : servlets.entrySet()) {
+            builder.addServlet(e.getValue().copy());
+        }
+
+        for(Map.Entry<String, FilterInfo> e : filters.entrySet()) {
+            builder.addFilter(e.getValue().copy());
+        }
+        return builder;
+    }
+
     public static class DeploymentInfoBuilder {
 
         private String deploymentName;
-        private String contextName;
+        private String contextPath;
         private ClassLoader classLoader;
         private ResourceLoader resourceLoader;
         private int majorVersion = 3;
@@ -118,7 +137,7 @@ public class DeploymentInfo {
             if (deploymentName == null) {
                 throw UndertowServletMessages.MESSAGES.paramCannotBeNull("deploymentName");
             }
-            if (contextName == null) {
+            if (contextPath == null) {
                 throw UndertowServletMessages.MESSAGES.paramCannotBeNull("contextName");
             }
             if (classLoader == null) {
@@ -142,7 +161,7 @@ public class DeploymentInfo {
                 }
                 filters.put(filter.getName(), filter.build());
             }
-            return new DeploymentInfo(deploymentName, contextName, classLoader, resourceLoader, servlets, filters, majorVersion, minorVersion);
+            return new DeploymentInfo(deploymentName, contextPath, classLoader, resourceLoader, servlets, filters, majorVersion, minorVersion);
         }
 
         public String getDeploymentName() {
@@ -154,12 +173,12 @@ public class DeploymentInfo {
             return this;
         }
 
-        public String getContextName() {
-            return contextName;
+        public String getContextPath() {
+            return contextPath;
         }
 
-        public DeploymentInfoBuilder setContextName(final String contextName) {
-            this.contextName = contextName;
+        public DeploymentInfoBuilder setContextPath(final String contextPath) {
+            this.contextPath = contextPath;
             return this;
         }
 
@@ -224,16 +243,18 @@ public class DeploymentInfo {
             return majorVersion;
         }
 
-        public void setMajorVersion(final int majorVersion) {
+        public DeploymentInfoBuilder setMajorVersion(final int majorVersion) {
             this.majorVersion = majorVersion;
+            return this;
         }
 
         public int getMinorVersion() {
             return minorVersion;
         }
 
-        public void setMinorVersion(final int minorVersion) {
+        public DeploymentInfoBuilder setMinorVersion(final int minorVersion) {
             this.minorVersion = minorVersion;
+            return this;
         }
     }
 

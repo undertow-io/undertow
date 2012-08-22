@@ -82,7 +82,7 @@ public class ServletPathMappingTestCase {
 
         DeploymentInfo.DeploymentInfoBuilder builder = DeploymentInfo.builder()
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
-                .setContextName("/servletContext")
+                .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.INSTANCE)
                 .addServlets(aStar, aa, aaStar, ab, d, cr);

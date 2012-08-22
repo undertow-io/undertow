@@ -99,7 +99,7 @@ public class FilterPathMappingTestCase {
 
         DeploymentInfo.DeploymentInfoBuilder builder = DeploymentInfo.builder()
                 .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
-                .setContextName("/servletContext")
+                .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.INSTANCE)
                 .addServlets(aStar, aa, d, cr)

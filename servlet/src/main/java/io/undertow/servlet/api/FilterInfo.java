@@ -61,6 +61,16 @@ public class FilterInfo {
         this.initParams = Collections.unmodifiableMap(new HashMap<String, String>(initParams));
     }
 
+    public FilterInfoBuilder copy() {
+        FilterInfoBuilder builder = new FilterInfoBuilder()
+                .setName(name)
+                .setFilterClass(filterClass)
+                .setInstanceFactory(instanceFactory);
+        builder.mappings.addAll(mappings);
+        builder.initParams.putAll(initParams);
+        return builder;
+    }
+
     public String getName() {
         return name;
     }
@@ -122,8 +132,9 @@ public class FilterInfo {
             return instanceFactory;
         }
 
-        public void setInstanceFactory(final InstanceFactory instanceFactory) {
+        public FilterInfoBuilder setInstanceFactory(final InstanceFactory instanceFactory) {
             this.instanceFactory = instanceFactory;
+            return this;
         }
 
         public List<Mapping> getMappings() {

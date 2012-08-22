@@ -60,6 +60,16 @@ public class ServletInfo {
 
     }
 
+    public ServletInfoBuilder copy() {
+        ServletInfoBuilder builder = new ServletInfoBuilder()
+                .setInstanceFactory(instanceFactory)
+                .setName(name)
+                .setServletClass(servletClass);
+        builder.mappings.addAll(mappings);
+        builder.initParams.putAll(initParams);
+        return builder;
+    }
+
     public Class<? extends Servlet> getServletClass() {
         return servletClass;
     }
