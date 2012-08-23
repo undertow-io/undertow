@@ -30,6 +30,6 @@ public interface InstanceFactory {
      *
      * @return The fully injected instance
      */
-    InstanceHandle createInstance();
+    InstanceHandle createInstance() throws InstantiationException, IllegalAccessException;
 
 }

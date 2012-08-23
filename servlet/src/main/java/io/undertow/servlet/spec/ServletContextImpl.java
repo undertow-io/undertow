@@ -37,16 +37,24 @@ import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.ListenerInfo;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.util.EmptyEnumeration;
+import io.undertow.servlet.util.ImmediateInstanceFactory;
 
 /**
  * @author Stuart Douglas
  */
 public class ServletContextImpl implements ServletContext {
 
-    private final DeploymentInfo deploymentInfo;
+    private final ServletContainer servletContainer;
+    private volatile DeploymentInfo deploymentInfo;
+    private volatile boolean bootstrapComplete = false;
 
-    public ServletContextImpl(final DeploymentInfo deploymentInfo) {
+    public ServletContextImpl(final ServletContainer servletContainer, final DeploymentInfo deploymentInfo) {
+        this.servletContainer = servletContainer;
         this.deploymentInfo = deploymentInfo;
     }
 
@@ -57,27 +65,27 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletContext getContext(final String uripath) {
-        return null;
+        return servletContainer.getDeploymentByPath(uripath).getServletContext();
     }
 
     @Override
     public int getMajorVersion() {
-        return deploymentInfo.getMajorVersion();
+        return 3;
     }
 
     @Override
     public int getMinorVersion() {
-        return deploymentInfo.getMinorVersion();
+        return 0;
     }
 
     @Override
     public int getEffectiveMajorVersion() {
-        return 0;
+        return deploymentInfo.getMajorVersion();
     }
 
     @Override
     public int getEffectiveMinorVersion() {
-        return 0;
+        return deploymentInfo.getMinorVersion();
     }
 
     @Override
@@ -87,17 +95,17 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Set<String> getResourcePaths(final String path) {
-        return null;
+        return deploymentInfo.getResourceLoader().getResourcePaths(path);
     }
 
     @Override
     public URL getResource(final String path) throws MalformedURLException {
-        return null;
+        return deploymentInfo.getResourceLoader().getResource(path);
     }
 
     @Override
     public InputStream getResourceAsStream(final String path) {
-        return null;
+        return deploymentInfo.getResourceLoader().getResourceAsStream(path);
     }
 
     @Override
@@ -117,27 +125,27 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Enumeration<Servlet> getServlets() {
-        return null;
+        return EmptyEnumeration.instance();
     }
 
     @Override
     public Enumeration<String> getServletNames() {
-        return null;
+        return EmptyEnumeration.instance();
     }
 
     @Override
     public void log(final String msg) {
-
+        UndertowServletLogger.ROOT_LOGGER.info(msg);
     }
 
     @Override
     public void log(final Exception exception, final String msg) {
-
+        UndertowServletLogger.ROOT_LOGGER.error(msg, exception);
     }
 
     @Override
     public void log(final String message, final Throwable throwable) {
-
+        UndertowServletLogger.ROOT_LOGGER.error(message, throwable);
     }
 
     @Override
@@ -277,12 +285,12 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends EventListener> void addListener(final T t) {
-
+        deploymentInfo.addListener(new ListenerInfo(t.getClass(), new ImmediateInstanceFactory(t)));
     }
 
     @Override
     public void addListener(final Class<? extends EventListener> listenerClass) {
-
+        deploymentInfo.addListener(new ListenerInfo(listenerClass));
     }
 
     @Override
@@ -297,7 +305,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ClassLoader getClassLoader() {
-        return null;
+        return deploymentInfo.getClassLoader();
     }
 
     @Override

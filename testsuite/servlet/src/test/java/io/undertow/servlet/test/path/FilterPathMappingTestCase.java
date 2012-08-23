@@ -54,50 +54,32 @@ public class FilterPathMappingTestCase {
         final PathHandler root = new PathHandler();
         final ServletContainer container = new ServletContainer(root);
 
-        ServletInfo.ServletInfoBuilder aStar = ServletInfo.builder()
-                .setName("/a/*")
-                .setServletClass(PathMappingServlet.class)
+        final ServletInfo aStar = new ServletInfo("/a/*", PathMappingServlet.class)
                 .addMapping("/a/*");
 
-        ServletInfo.ServletInfoBuilder aa = ServletInfo.builder()
-                .setName("/aa")
-                .setServletClass(PathMappingServlet.class)
+        final ServletInfo aa = new ServletInfo( "/aa", PathMappingServlet.class)
                 .addMapping("/aa");
 
-        ServletInfo.ServletInfoBuilder d = ServletInfo.builder()
-                .setName("/")
-                .setServletClass(PathMappingServlet.class)
+        final ServletInfo d = new ServletInfo("/", PathMappingServlet.class)
                 .addMapping("/");
 
-
-        ServletInfo.ServletInfoBuilder cr = ServletInfo.builder()
-                .setName("contextRoot")
-                .setServletClass(PathMappingServlet.class)
+        final ServletInfo cr = new ServletInfo("contextRoot", PathMappingServlet.class)
                 .addMapping("");
 
-        FilterInfo.FilterInfoBuilder f1 = FilterInfo.builder()
-                .setFilterClass(PathFilter.class)
-                .setName("/*")
+        final FilterInfo f1 = new FilterInfo("/*", PathFilter.class)
                 .addUrlMapping("/*");
 
-
-        FilterInfo.FilterInfoBuilder f2 = FilterInfo.builder()
-                .setFilterClass(PathFilter.class)
-                .setName("/a/*")
+        final FilterInfo f2 = new FilterInfo("/a/*",  PathFilter.class)
                 .addUrlMapping("/a/*");
 
-        FilterInfo.FilterInfoBuilder f3 = FilterInfo.builder()
-                .setFilterClass(PathFilter.class)
-                .setName("/aa")
+        final FilterInfo f3 = new FilterInfo("/aa", PathFilter.class)
                 .addUrlMapping("/aa");
 
 
-        FilterInfo.FilterInfoBuilder f4 = FilterInfo.builder()
-                .setFilterClass(PathFilter.class)
-                .setName("contextRoot")
+        final FilterInfo f4 = new FilterInfo("contextRoot", PathFilter.class)
                 .addServletNameMapping("contextRoot");
 
-        DeploymentInfo.DeploymentInfoBuilder builder = DeploymentInfo.builder()
+        final DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
@@ -105,7 +87,7 @@ public class FilterPathMappingTestCase {
                 .addServlets(aStar, aa, d, cr)
                 .addFilters(f1, f2, f3, f4);
 
-        DeploymentManager manager = container.addDeployment(builder.build());
+        final DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         manager.start();
 

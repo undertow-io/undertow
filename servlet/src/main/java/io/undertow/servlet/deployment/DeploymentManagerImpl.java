@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.ServletContext;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.blocking.BlockingHandler;
@@ -34,8 +36,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.handlers.DefaultServlet;
 import io.undertow.servlet.handlers.FilterHandler;
@@ -44,6 +45,7 @@ import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletMatchingHandler;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.servlet.util.ImmediateInstanceFactory;
 
 /**
  * The deployment manager. This manager is responsible for controlling the lifecycle of a servlet deployment.
@@ -52,13 +54,20 @@ import io.undertow.servlet.spec.ServletContextImpl;
  */
 public class DeploymentManagerImpl implements DeploymentManager {
 
+    /**
+     * The original deployment information, this is
+     */
     private final DeploymentInfo deployment;
     private final PathHandler pathHandler;
+    private final ServletContainer servletContainer;
     private volatile State state = State.UNDEPLOYED;
+    private volatile HttpHandler servletHandler;
+    private volatile ServletContextImpl servletContext;
 
-    public DeploymentManagerImpl(final DeploymentInfo deployment, final PathHandler pathHandler) {
+    public DeploymentManagerImpl(final DeploymentInfo deployment, final PathHandler pathHandler, final ServletContainer servletContainer) {
         this.deployment = deployment;
         this.pathHandler = pathHandler;
+        this.servletContainer = servletContainer;
     }
 
     @Override
@@ -66,14 +75,15 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         ClassLoader old = SecurityActions.getContextClassLoader();
 
+        final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
+        this.servletContext = servletContext;
+
         //TODO: this is just a temporary hack, this will probably change a lot
         try {
             SecurityActions.setContextClassLoader(deployment.getClassLoader());
 
-            final ServletContextImpl servletContext = new ServletContextImpl(deployment);
 
-            final ServletMatchingHandler servletHandler = setupServletChains(servletContext);
-            pathHandler.addPath(deployment.getContextPath(), servletHandler);
+            servletHandler = setupServletChains(servletContext);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
@@ -151,25 +161,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         if (defaultServlet == null) {
             defaultHandler = new DefaultServlet(deployment.getResourceLoader());
             final HttpHandler handler = defaultHandler;
-            defaultServlet = new ServletHandler(ServletInfo.builder().setServletClass(DefaultServlet.class)
-                    .setName("DefaultServlet")
-                    .setInstanceFactory(new InstanceFactory() {
-                        @Override
-                        public InstanceHandle createInstance() {
-                            return new InstanceHandle() {
-                                @Override
-                                public Object getInstance() {
-                                    return handler;
-                                }
-
-                                @Override
-                                public void release() {
-
-                                }
-                            };
-                        }
-                    })
-                    .build(), servletContext);
+            defaultServlet = new ServletHandler(new ServletInfo("DefaultServlet", DefaultServlet.class , new ImmediateInstanceFactory(handler)), servletContext);
         }
 
         for (final String path : pathMatches) {
@@ -284,7 +276,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private boolean isFilterApplicable(final String path, final String filterPath) {
-        if(path.isEmpty()) {
+        if (path.isEmpty()) {
             return filterPath.equals("/*") || filterPath.equals("/");
         }
         if (filterPath.endsWith("/*")) {
@@ -297,6 +289,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void start() {
+        pathHandler.addPath(deployment.getContextPath(), servletHandler);
+
+
     }
 
     @Override
@@ -312,5 +307,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
     @Override
     public State getState() {
         return state;
+    }
+
+    @Override
+    public ServletContext getServletContext() {
+        return servletContext;
     }
 }

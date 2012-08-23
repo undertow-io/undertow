@@ -49,19 +49,17 @@ public class SimpleServletServerTestCase {
         final PathHandler root = new PathHandler();
         final ServletContainer container = new ServletContainer(root);
 
-        ServletInfo.ServletInfoBuilder s = ServletInfo.builder()
-                .setName("servlet")
-                .setServletClass(SimpleServlet.class)
+        ServletInfo s = new ServletInfo("servlet", SimpleServlet.class)
                 .addMapping("/aa");
 
-        DeploymentInfo.DeploymentInfoBuilder builder = DeploymentInfo.builder()
+        DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletServerTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.INSTANCE)
                 .addServlet(s);
 
-        DeploymentManager manager = container.addDeployment(builder.build());
+        DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         manager.start();
 

@@ -27,6 +27,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
+import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.spec.FilterConfigImpl;
@@ -57,18 +58,12 @@ public class ManagedFilter {
 
     public synchronized void start() throws ServletException {
         if (!started) {
-            if (filterInfo.getInstanceFactory() != null) {
+            try {
                 handle = filterInfo.getInstanceFactory().createInstance();
-                filter = (Filter) handle.getInstance();
-            } else {
-                try {
-                    filter = filterInfo.getFilterClass().newInstance();
-                } catch (InstantiationException e) {
-                    throw new RuntimeException(e);
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
+            } catch (Exception e) {
+                throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(filterInfo.getName(), e);
             }
+            filter = (Filter) handle.getInstance();
             filter.init(new FilterConfigImpl(filterInfo, servletContext));
             started = true;
         }

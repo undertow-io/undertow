@@ -49,45 +49,33 @@ public class ServletPathMappingTestCase {
         final PathHandler root = new PathHandler();
         final ServletContainer container = new ServletContainer(root);
 
-        ServletInfo.ServletInfoBuilder aStar = ServletInfo.builder()
-                .setName("/a/*")
-                .setServletClass(PathMappingServlet.class)
+        ServletInfo aStar = new ServletInfo("/a/*", PathMappingServlet.class)
                 .addMapping("/a/*");
 
-        ServletInfo.ServletInfoBuilder aa = ServletInfo.builder()
-                .setName("/aa")
-                .setServletClass(PathMappingServlet.class)
+        ServletInfo aa = new ServletInfo("/aa", PathMappingServlet.class)
                 .addMapping("/aa");
 
-        ServletInfo.ServletInfoBuilder aaStar = ServletInfo.builder()
-                .setName("/aa/*")
-                .setServletClass(PathMappingServlet.class)
+        ServletInfo aaStar = new ServletInfo("/aa/*", PathMappingServlet.class)
                 .addMapping("/aa/*");
 
-        ServletInfo.ServletInfoBuilder ab = ServletInfo.builder()
-                .setName("/a/b/*")
-                .setServletClass(PathMappingServlet.class)
+        ServletInfo ab = new ServletInfo("/a/b/*", PathMappingServlet.class)
                 .addMapping("/a/b/*");
 
-        ServletInfo.ServletInfoBuilder d = ServletInfo.builder()
-                .setName("/")
-                .setServletClass(PathMappingServlet.class)
+        ServletInfo d = new ServletInfo("/", PathMappingServlet.class)
                 .addMapping("/");
 
 
-        ServletInfo.ServletInfoBuilder cr = ServletInfo.builder()
-                .setName("contextRoot")
-                .setServletClass(PathMappingServlet.class)
+        ServletInfo cr = new ServletInfo("contextRoot", PathMappingServlet.class)
                 .addMapping("");
 
-        DeploymentInfo.DeploymentInfoBuilder builder = DeploymentInfo.builder()
+        DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.INSTANCE)
                 .addServlets(aStar, aa, aaStar, ab, d, cr);
 
-        DeploymentManager manager = container.addDeployment(builder.build());
+        DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         manager.start();
 

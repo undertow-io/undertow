@@ -22,9 +22,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.undertow.servlet.UndertowServletMessages;
 
@@ -35,78 +37,183 @@ import io.undertow.servlet.UndertowServletMessages;
  */
 public class DeploymentInfo {
 
-    private final String deploymentName;
-    private final String contextPath;
-    private final ClassLoader classLoader;
-    private final ResourceLoader resourceLoader;
-    private final int majorVersion;
-    private final int minorVersion;
-    private final Map<String, ServletInfo> servlets;
-    private final Map<String, FilterInfo> filters;
-    private final List<Class<?>> listeners;
+    private volatile String deploymentName;
+    private volatile String contextPath;
+    private volatile ClassLoader classLoader;
+    private volatile ResourceLoader resourceLoader;
+    private volatile int majorVersion = 3;
+    private volatile int minorVersion;
+    private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
+    private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
+    private final List<ListenerInfo> listeners = new ArrayList<ListenerInfo>();
+    private final Set<ServletContainerInitializerInfo> servletContainerInitializers = new HashSet<ServletContainerInitializerInfo>();
 
-    DeploymentInfo(final String deploymentName, final String contextPath, final ClassLoader classLoader,
-                   final ResourceLoader resourceLoader, final Map<String, ServletInfo> servlets,
-                   final Map<String, FilterInfo> filters, final List<Class<?>> listeners, final int majorVersion, final int minorVersion) {
-        this.deploymentName = deploymentName;
-        this.contextPath = contextPath;
-        this.classLoader = classLoader;
-        this.resourceLoader = resourceLoader;
-        this.listeners = listeners;
-        this.majorVersion = majorVersion;
-        this.minorVersion = minorVersion;
-        this.servlets = Collections.unmodifiableMap(new LinkedHashMap<String, ServletInfo>(servlets));
-        this.filters = Collections.unmodifiableMap(new LinkedHashMap<String, FilterInfo>(filters));
 
+
+    public void validate() {
+        if (deploymentName == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("deploymentName");
+        }
+        if (contextPath == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("contextName");
+        }
+        if (classLoader == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("classLoader");
+        }
+        if (resourceLoader == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("resourceLoader");
+        }
+
+        for (final ServletInfo servlet : this.servlets.values()) {
+            servlet.validate();
+        }
+        for (final FilterInfo filter : this.filters.values()) {
+            filter.validate();
+        }
     }
 
-    /**
-     * Gets the deployment name
-     *
-     * @return The deployment name
-     */
     public String getDeploymentName() {
         return deploymentName;
+    }
+
+    public DeploymentInfo setDeploymentName(final String deploymentName) {
+        this.deploymentName = deploymentName;
+        return this;
     }
 
     public String getContextPath() {
         return contextPath;
     }
 
+    public DeploymentInfo setContextPath(final String contextPath) {
+        this.contextPath = contextPath;
+        return this;
+    }
+
     public ClassLoader getClassLoader() {
         return classLoader;
+    }
+
+    public DeploymentInfo setClassLoader(final ClassLoader classLoader) {
+        this.classLoader = classLoader;
+        return this;
     }
 
     public ResourceLoader getResourceLoader() {
         return resourceLoader;
     }
 
+    public DeploymentInfo setResourceLoader(final ResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
+        return this;
+    }
+
+    public DeploymentInfo addServlet(final ServletInfo servlet) {
+        servlets.put(servlet.getName(), servlet);
+        return this;
+    }
+
+    public DeploymentInfo addServlets(final ServletInfo... servlets) {
+        for(final ServletInfo servlet : servlets) {
+            this.servlets.put(servlet.getName(), servlet);
+        }
+        return this;
+    }
+
+    public DeploymentInfo addServlets(final Collection<ServletInfo> servlets) {
+        for(final ServletInfo servlet : servlets) {
+            this.servlets.put(servlet.getName(), servlet);
+        }
+        return this;
+    }
+
     public Map<String, ServletInfo> getServlets() {
-        return servlets;
+        return Collections.unmodifiableMap(servlets);
+    }
+
+
+    public DeploymentInfo addFilter(final FilterInfo filter) {
+        filters.put(filter.getName(), filter);
+        return this;
+    }
+
+    public DeploymentInfo addFilters(final FilterInfo... filters) {
+        for(final FilterInfo filter : filters) {
+            this.filters.put(filter.getName(), filter);
+        }
+        return this;
+    }
+
+    public DeploymentInfo addFilters(final Collection<FilterInfo> filters) {
+        for(final FilterInfo filter : filters) {
+            this.filters.put(filter.getName(), filter);
+        }
+        return this;
+    }
+
+    public Map<String, FilterInfo> getFilters() {
+        return Collections.unmodifiableMap(filters);
+    }
+
+    public DeploymentInfo addListener(final ListenerInfo listener) {
+        listeners.add(listener);
+        return this;
+    }
+
+    public DeploymentInfo addListeners(final ListenerInfo... listeners) {
+        this.listeners.addAll(Arrays.asList(listeners));
+        return this;
+    }
+
+    public DeploymentInfo addListeners(final Collection<ListenerInfo> listeners) {
+        this.listeners.addAll(listeners);
+        return this;
+    }
+
+    public List<ListenerInfo> getListeners() {
+        return listeners;
     }
 
     public int getMajorVersion() {
         return majorVersion;
     }
 
+    public DeploymentInfo setMajorVersion(final int majorVersion) {
+        this.majorVersion = majorVersion;
+        return this;
+    }
+
     public int getMinorVersion() {
         return minorVersion;
     }
 
-    public Map<String, FilterInfo> getFilters() {
-        return filters;
+    public DeploymentInfo setMinorVersion(final int minorVersion) {
+        this.minorVersion = minorVersion;
+        return this;
     }
 
-    public List<Class<?>> getListeners() {
-        return listeners;
+    public DeploymentInfo addServletContainerInitalizer(final ServletContainerInitializerInfo servletContainerInitializer) {
+        servletContainerInitializers.add(servletContainerInitializer);
+        return this;
     }
 
-    public static DeploymentInfoBuilder builder() {
-        return new DeploymentInfoBuilder();
+    public DeploymentInfo addServletContainerInitalizers(final ServletContainerInitializerInfo... servletContainerInitializer) {
+        servletContainerInitializers.addAll(Arrays.asList(servletContainerInitializer));
+        return this;
     }
 
-    public DeploymentInfoBuilder copy() {
-        final DeploymentInfoBuilder builder = new DeploymentInfoBuilder()
+    public DeploymentInfo addServletContainerInitalizers(final List<ServletContainerInitializerInfo> servletContainerInitializer) {
+        servletContainerInitializers.addAll(servletContainerInitializer);
+        return this;
+    }
+
+    public Set<ServletContainerInitializerInfo> getServletContainerInitializers() {
+        return servletContainerInitializers;
+    }
+
+
+    public DeploymentInfo copy() {
+        final DeploymentInfo info = new DeploymentInfo()
                 .setClassLoader(classLoader)
                 .setContextPath(contextPath)
                 .setResourceLoader(resourceLoader)
@@ -114,177 +221,18 @@ public class DeploymentInfo {
                 .setMinorVersion(minorVersion)
                 .setDeploymentName(deploymentName);
 
-        for(Map.Entry<String, ServletInfo> e : servlets.entrySet()) {
-            builder.addServlet(e.getValue().copy());
+        for (Map.Entry<String, ServletInfo> e : servlets.entrySet()) {
+            info.addServlet(e.getValue().copy());
         }
 
-        for(Map.Entry<String, FilterInfo> e : filters.entrySet()) {
-            builder.addFilter(e.getValue().copy());
+        for (Map.Entry<String, FilterInfo> e : filters.entrySet()) {
+            info.addFilter(e.getValue().copy());
         }
-        builder.listeners.addAll(listeners);
+        info.listeners.addAll(listeners);
+        info.servletContainerInitializers.addAll(servletContainerInitializers);
 
-        return builder;
+        return info;
     }
 
-    public static class DeploymentInfoBuilder {
-
-        private String deploymentName;
-        private String contextPath;
-        private ClassLoader classLoader;
-        private ResourceLoader resourceLoader;
-        private int majorVersion = 3;
-        private int minorVersion = 0;
-        private final List<ServletInfo.ServletInfoBuilder> servlets = new ArrayList<ServletInfo.ServletInfoBuilder>();
-        private final List<FilterInfo.FilterInfoBuilder> filters = new ArrayList<FilterInfo.FilterInfoBuilder>();
-        private final List<Class<?>> listeners = new ArrayList<Class<?>>();
-
-        DeploymentInfoBuilder() {
-
-        }
-
-        public DeploymentInfo build() {
-
-            if (deploymentName == null) {
-                throw UndertowServletMessages.MESSAGES.paramCannotBeNull("deploymentName");
-            }
-            if (contextPath == null) {
-                throw UndertowServletMessages.MESSAGES.paramCannotBeNull("contextName");
-            }
-            if (classLoader == null) {
-                throw UndertowServletMessages.MESSAGES.paramCannotBeNull("classLoader");
-            }
-            if (resourceLoader == null) {
-                throw UndertowServletMessages.MESSAGES.paramCannotBeNull("resourceLoader");
-            }
-
-            final Map<String, ServletInfo> servlets = new LinkedHashMap<String, ServletInfo>();
-            for (final ServletInfo.ServletInfoBuilder servlet : this.servlets) {
-                if (servlets.containsKey(servlet.getName())) {
-                    throw UndertowServletMessages.MESSAGES.twoServletsWithSameName();
-                }
-                servlets.put(servlet.getName(), servlet.build());
-            }
-            final Map<String, FilterInfo> filters = new LinkedHashMap<String, FilterInfo>();
-            for (final FilterInfo.FilterInfoBuilder filter : this.filters) {
-                if (filters.containsKey(filter.getName())) {
-                    throw UndertowServletMessages.MESSAGES.twoFiltersWithSameName();
-                }
-                filters.put(filter.getName(), filter.build());
-            }
-            return new DeploymentInfo(deploymentName, contextPath, classLoader, resourceLoader, servlets, filters, listeners, majorVersion, minorVersion);
-        }
-
-        public String getDeploymentName() {
-            return deploymentName;
-        }
-
-        public DeploymentInfoBuilder setDeploymentName(final String deploymentName) {
-            this.deploymentName = deploymentName;
-            return this;
-        }
-
-        public String getContextPath() {
-            return contextPath;
-        }
-
-        public DeploymentInfoBuilder setContextPath(final String contextPath) {
-            this.contextPath = contextPath;
-            return this;
-        }
-
-        public ClassLoader getClassLoader() {
-            return classLoader;
-        }
-
-        public DeploymentInfoBuilder setClassLoader(final ClassLoader classLoader) {
-            this.classLoader = classLoader;
-            return this;
-        }
-
-        public ResourceLoader getResourceLoader() {
-            return resourceLoader;
-        }
-
-        public DeploymentInfoBuilder setResourceLoader(final ResourceLoader resourceLoader) {
-            this.resourceLoader = resourceLoader;
-            return this;
-        }
-
-        public DeploymentInfoBuilder addServlet(final ServletInfo.ServletInfoBuilder servlet) {
-            servlets.add(servlet);
-            return this;
-        }
-
-        public DeploymentInfoBuilder addServlets(final ServletInfo.ServletInfoBuilder ... servlets) {
-            this.servlets.addAll(Arrays.asList(servlets));
-            return this;
-        }
-
-        public DeploymentInfoBuilder addServlets(final Collection<ServletInfo.ServletInfoBuilder> servlets) {
-            this.servlets.addAll(servlets);
-            return this;
-        }
-
-        public List<ServletInfo.ServletInfoBuilder> getServlets() {
-            return servlets;
-        }
-
-
-        public DeploymentInfoBuilder addFilter(final FilterInfo.FilterInfoBuilder filter) {
-            filters.add(filter);
-            return this;
-        }
-
-        public DeploymentInfoBuilder addFilters(final FilterInfo.FilterInfoBuilder ... filters) {
-            this.filters.addAll(Arrays.asList(filters));
-            return this;
-        }
-
-        public DeploymentInfoBuilder addFilters(final Collection<FilterInfo.FilterInfoBuilder> filters) {
-            this.filters.addAll(filters);
-            return this;
-        }
-
-        public List<FilterInfo.FilterInfoBuilder> getFilters() {
-            return filters;
-        }
-
-        public DeploymentInfoBuilder addListener(final Class<?> listener) {
-            listeners.add(listener);
-            return this;
-        }
-
-        public DeploymentInfoBuilder addListeners(final Class<?> ... listeners) {
-            this.listeners.addAll(Arrays.asList(listeners));
-            return this;
-        }
-
-        public DeploymentInfoBuilder addListeners(final Collection<Class<?>> listeners) {
-            this.listeners.addAll(listeners);
-            return this;
-        }
-
-        public List<Class<?>> getListeners() {
-            return listeners;
-        }
-
-        public int getMajorVersion() {
-            return majorVersion;
-        }
-
-        public DeploymentInfoBuilder setMajorVersion(final int majorVersion) {
-            this.majorVersion = majorVersion;
-            return this;
-        }
-
-        public int getMinorVersion() {
-            return minorVersion;
-        }
-
-        public DeploymentInfoBuilder setMinorVersion(final int minorVersion) {
-            this.minorVersion = minorVersion;
-            return this;
-        }
-    }
 
 }

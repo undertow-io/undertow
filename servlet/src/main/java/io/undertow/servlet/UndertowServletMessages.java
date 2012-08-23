@@ -18,7 +18,12 @@
 
 package io.undertow.servlet;
 
+import javax.servlet.Filter;
+import javax.servlet.Servlet;
+import javax.servlet.ServletException;
+
 import io.undertow.servlet.api.DeploymentManager;
+import org.jboss.logging.Cause;
 import org.jboss.logging.Message;
 import org.jboss.logging.MessageBundle;
 import org.jboss.logging.Messages;
@@ -33,11 +38,11 @@ public interface UndertowServletMessages {
 
     UndertowServletMessages MESSAGES = Messages.getBundle(UndertowServletMessages.class);
 
-    @Message(id = 10000, value = "Cannot build servlet metadata, two servlets with same name specified")
-    IllegalArgumentException twoServletsWithSameName();
-
-    @Message(id = 10001, value = "%s cannot be null")
+    @Message(id = 10000, value = "%s cannot be null")
     IllegalArgumentException paramCannotBeNull(String param);
+
+    @Message(id = 10001, value = "%s cannot be null for %s named %s")
+    IllegalArgumentException paramCannotBeNull(String param, String componentType, String name);
 
     @Message(id = 10002, value = "Deployments can only be removed when in undeployed state, but state was %s")
     IllegalStateException canOnlyRemoveDeploymentsWhenUndeployed(DeploymentManager.State state);
@@ -54,12 +59,24 @@ public interface UndertowServletMessages {
     @Message(id = 10006, value = "Cannot call getWriter(), getOutputStream() already called")
     IllegalStateException getOutputStreamAlreadyCalled();
 
-    @Message(id = 10007, value = "Cannot build servlet metadata, two filters with same name specified")
-    IllegalArgumentException twoFiltersWithSameName();
-
-    @Message(id = 10008, value = "Two servlets specified with same mapping %s")
+    @Message(id = 10007, value = "Two servlets specified with same mapping %s")
     IllegalArgumentException twoServletsWithSameMapping(String path);
 
-    @Message(id = 10009, value = "Header %s cannot be converted to a date")
+    @Message(id = 10008, value = "Header %s cannot be converted to a date")
     IllegalArgumentException headerCannotBeConvertedToDate(String header);
+
+    @Message(id = 10009, value = "Servlet %s of type %s does not implement javax.servlet.Servlet")
+    IllegalArgumentException servletMustImplementServlet(String name, Class<? extends Servlet> servletClass);
+
+    @Message(id = 10010, value = "%s of type %s must have a default constructor")
+    IllegalArgumentException componentMustHaveDefaultConstructor(String componentType, Class<?> componentClass);
+
+    @Message(id = 10011, value = "Filter %s of type %s does not implement javax.servlet.Filter")
+    IllegalArgumentException filterMustImplementFilter(String name, Class<? extends Filter> filterClass);
+
+    @Message(id = 10012, value = "Listener class %s must implement at least one listener interface")
+    IllegalArgumentException listenerMustImplementListenerClass(Class<?> listenerClass);
+
+    @Message(id = 10013, value = "Could not instantiate %s")
+    ServletException couldNotInstantiateComponent(String name, @Cause Exception e);
 }

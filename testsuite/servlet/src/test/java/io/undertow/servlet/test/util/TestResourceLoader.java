@@ -19,8 +19,10 @@
 package io.undertow.servlet.test.util;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.channels.FileChannel;
+import java.util.Set;
 
 import io.undertow.servlet.api.ResourceLoader;
 import org.xnio.FileAccess;
@@ -39,8 +41,18 @@ public class TestResourceLoader implements ResourceLoader {
     }
 
     @Override
+    public InputStream getResourceAsStream(final String resource) {
+        return TestResourceLoader.class.getClassLoader().getResourceAsStream(resource);
+    }
+
+    @Override
     public FileChannel getResourceAsChannel(final String resource, final Xnio xnio) throws IOException {
         URL url  = TestResourceLoader.class.getClassLoader().getResource(resource);
         return xnio.openFile(url.getFile(), FileAccess.READ_ONLY);
+    }
+
+    @Override
+    public Set<String> getResourcePaths(final String path) {
+        return null;
     }
 }

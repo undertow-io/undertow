@@ -16,27 +16,24 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.api;
+package io.undertow.servlet.util;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.channels.FileChannel;
-import java.util.Set;
-
-import org.xnio.Xnio;
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
 
 /**
- *
  * @author Stuart Douglas
  */
-public interface ResourceLoader {
+public class ImmediateInstanceFactory implements InstanceFactory {
 
-    URL getResource(final String resource);
+    private final Object instance;
 
-    InputStream getResourceAsStream(final String resource);
+    public ImmediateInstanceFactory(final Object instance) {
+        this.instance = instance;
+    }
 
-    FileChannel getResourceAsChannel(final String resource, final Xnio xnio) throws IOException;
-
-    Set<String> getResourcePaths(final String path);
+    @Override
+    public InstanceHandle createInstance() throws InstantiationException, IllegalAccessException {
+        return new ImmediateInstanceHandle(instance);
+    }
 }

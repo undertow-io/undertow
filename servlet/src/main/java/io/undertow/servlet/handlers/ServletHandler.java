@@ -30,6 +30,7 @@ import javax.servlet.UnavailableException;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
+import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ServletInfo;
@@ -153,18 +154,12 @@ public class ServletHandler implements BlockingHttpHandler {
         }
 
         public void start() throws ServletException {
-            if (factory != null) {
+            try {
                 handle = factory.createInstance();
-                instance = (Servlet) handle.getInstance();
-            } else {
-                try {
-                    instance = (Servlet) servletClass.newInstance();
-                } catch (InstantiationException e) {
-                    throw new RuntimeException(e);
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
+            } catch (Exception e) {
+                throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(servletInfo.getName(), e);
             }
+            instance = (Servlet) handle.getInstance();
             instance.init(new ServletConfigImpl(servletInfo, servletContext));
         }
 
@@ -224,21 +219,14 @@ public class ServletHandler implements BlockingHttpHandler {
         public InstanceHandle getServlet() throws ServletException {
             final InstanceHandle instanceHandle;
             final Servlet instance;
-            if (factory != null) {
-                //TODO: pooling
+            //TODO: pooling
+            try {
                 instanceHandle = factory.createInstance();
-                instance = (Servlet) instanceHandle.getInstance();
-            } else {
-                try {
-                    instance = (Servlet) servletClass.newInstance();
-                    instanceHandle = null;
-                } catch (InstantiationException e) {
-                    throw new RuntimeException(e);
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-
+            } catch (Exception e) {
+                throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(servletInfo.getName(), e);
             }
+            instance = (Servlet) instanceHandle.getInstance();
+
             instance.init(new ServletConfigImpl(servletInfo, servletContext));
             return new InstanceHandle() {
                 @Override
@@ -249,9 +237,7 @@ public class ServletHandler implements BlockingHttpHandler {
                 @Override
                 public void release() {
                     instance.destroy();
-                    if (instanceHandle != null) {
-                        instanceHandle.release();
-                    }
+                    instanceHandle.release();
                 }
             };
 

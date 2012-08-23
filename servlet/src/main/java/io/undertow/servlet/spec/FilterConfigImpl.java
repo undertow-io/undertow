@@ -24,6 +24,7 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 
 import io.undertow.servlet.api.FilterInfo;
+import io.undertow.servlet.util.IteratorEnumeration;
 
 /**
  * @author Stuart Douglas
@@ -50,11 +51,11 @@ public class FilterConfigImpl implements FilterConfig {
 
     @Override
     public String getInitParameter(final String name) {
-        return null;
+        return filterInfo.getInitParams().get(name);
     }
 
     @Override
     public Enumeration<String> getInitParameterNames() {
-        return null;
+        return new IteratorEnumeration<String>(filterInfo.getInitParams().keySet().iterator());
     }
 }

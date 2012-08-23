@@ -39,6 +39,7 @@ public class ServletContainer {
     private final PathHandler rootContext;
 
     private final Map<String, DeploymentManager> deployments = Collections.synchronizedMap(new HashMap<String, DeploymentManager>());
+    private final Map<String, DeploymentManager> deploymentsByPath = Collections.synchronizedMap(new HashMap<String, DeploymentManager>());
 
     public ServletContainer(final PathHandler rootContext) {
         this.rootContext = rootContext;
@@ -49,8 +50,9 @@ public class ServletContainer {
     }
 
     public DeploymentManager addDeployment(final DeploymentInfo deployment) {
-        DeploymentManager deploymentManager = new DeploymentManagerImpl(deployment, rootContext);
+        DeploymentManager deploymentManager = new DeploymentManagerImpl(deployment, rootContext, this);
         deployments.put(deployment.getDeploymentName(), deploymentManager);
+        deploymentsByPath.put(deployment.getContextPath(), deploymentManager);
         return deploymentManager;
     }
 
@@ -66,4 +68,7 @@ public class ServletContainer {
         deployments.remove(deploymentName);
     }
 
+    public DeploymentManager getDeploymentByPath(final String uripath) {
+        return deploymentsByPath.get(uripath);
+    }
 }

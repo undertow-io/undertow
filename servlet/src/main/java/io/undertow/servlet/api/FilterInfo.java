@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.api;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,8 +27,10 @@ import java.util.Map;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
+import javax.servlet.Servlet;
 
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.util.ConstructorInstanceFactory;
 
 /**
  * @author Stuart Douglas
@@ -36,49 +39,75 @@ public class FilterInfo {
 
     private final Class<? extends Filter> filterClass;
     private final String name;
-    private final InstanceFactory instanceFactory;
-    private final List<Mapping> mappings;
-    private final Map<String, String> initParams;
-    private final boolean asyncSupported;
+    private volatile InstanceFactory instanceFactory;
 
-    FilterInfo(final String name, final Class<? extends Filter> filterClass, final InstanceFactory instanceFactory, final List<Mapping> mappings, final Map<String, String> initParams, final boolean asyncSupported) {
+    private final List<Mapping> mappings = new ArrayList<Mapping>();
+    private final Map<String, String> initParams = new HashMap<String, String>();
+    private volatile boolean asyncSupported;
+
+
+    public FilterInfo(final String name, final Class<? extends Filter> filterClass) {
         if (name == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("name");
         }
         if (filterClass == null) {
-            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("filterClass");
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("filterClass", "Filter", name);
         }
-        if (mappings == null) {
-            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("mappings");
+        if (!Filter.class.isAssignableFrom(filterClass)) {
+            throw UndertowServletMessages.MESSAGES.filterMustImplementFilter(name, filterClass);
         }
-
-        if (initParams == null) {
-            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("initParams");
+        try {
+            final Constructor<?> ctor = filterClass.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            this.instanceFactory = new ConstructorInstanceFactory(ctor);
+            this.name = name;
+            this.filterClass = filterClass;
+        } catch (NoSuchMethodException e) {
+            throw UndertowServletMessages.MESSAGES.componentMustHaveDefaultConstructor("Filter", filterClass);
         }
-        this.name = name;
-        this.filterClass = filterClass;
-        this.instanceFactory = instanceFactory;
-        this.mappings = Collections.unmodifiableList(new ArrayList<Mapping>(mappings));
-        this.initParams = Collections.unmodifiableMap(new HashMap<String, String>(initParams));
-        this.asyncSupported = asyncSupported;
     }
 
-    public FilterInfoBuilder copy() {
-        FilterInfoBuilder builder = new FilterInfoBuilder()
-                .setName(name)
-                .setFilterClass(filterClass)
-                .setInstanceFactory(instanceFactory);
-        builder.mappings.addAll(mappings);
-        builder.initParams.putAll(initParams);
-        return builder;
+
+    public FilterInfo(final String name, final Class<? extends Filter> filterClass, final InstanceFactory instanceFactory) {
+        if (name == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("name");
+        }
+        if (filterClass == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("filterClass", "Filter", name);
+        }
+        if (!Servlet.class.isAssignableFrom(filterClass)) {
+            throw UndertowServletMessages.MESSAGES.filterMustImplementFilter(name, filterClass);
+        }
+        this.instanceFactory = instanceFactory;
+        this.name = name;
+        this.filterClass = filterClass;
+    }
+
+    public void validate() {
+        //TODO
+    }
+
+    public FilterInfo copy() {
+        FilterInfo info = new FilterInfo(name, filterClass, instanceFactory)
+                .setAsyncSupported(asyncSupported);
+        info.mappings.addAll(mappings);
+        info.initParams.putAll(initParams);
+        return info;
+    }
+
+    public Class<? extends Filter> getFilterClass() {
+        return filterClass;
     }
 
     public String getName() {
         return name;
     }
 
-    public Class<? extends Filter> getFilterClass() {
-        return filterClass;
+    public void setInstanceFactory(final InstanceFactory instanceFactory) {
+        if(instanceFactory == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("instanceFactory");
+        }
+        this.instanceFactory = instanceFactory;
     }
 
     public InstanceFactory getInstanceFactory() {
@@ -86,96 +115,46 @@ public class FilterInfo {
     }
 
     public List<Mapping> getMappings() {
-        return mappings;
+        return Collections.unmodifiableList(mappings);
     }
+
+    public FilterInfo addUrlMapping(final String mapping) {
+        mappings.add(new Mapping(MappingType.URL, mapping, null));
+        return this;
+    }
+
+    public FilterInfo addUrlMapping(final String mapping, DispatcherType dispatcher) {
+        mappings.add(new Mapping(MappingType.URL, mapping, dispatcher));
+        return this;
+    }
+
+    public FilterInfo addServletNameMapping(final String mapping) {
+        mappings.add(new Mapping(MappingType.SERVLET, mapping, null));
+        return this;
+    }
+
+    public FilterInfo addServletNameMapping(final String mapping, final DispatcherType dispatcher) {
+        mappings.add(new Mapping(MappingType.SERVLET, mapping, dispatcher));
+        return this;
+    }
+
+    public FilterInfo addInitParam(final String name, final String value) {
+        initParams.put(name, value);
+        return this;
+    }
+
 
     public Map<String, String> getInitParams() {
-        return initParams;
+        return Collections.unmodifiableMap(initParams);
     }
 
-    public static FilterInfoBuilder builder() {
-        return new FilterInfoBuilder();
+    public boolean isAsyncSupported() {
+        return asyncSupported;
     }
 
-    public static class FilterInfoBuilder {
-        private Class<? extends Filter> filterClass;
-        private String name;
-        private InstanceFactory instanceFactory;
-        private volatile boolean asyncSupported;
-        private final List<Mapping> mappings = new ArrayList<Mapping>();
-        private final Map<String, String> initParams = new HashMap<String, String>();
-
-        FilterInfoBuilder() {
-
-        }
-
-        public FilterInfo build() {
-            return new FilterInfo(name, filterClass, instanceFactory, mappings, initParams, asyncSupported);
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public FilterInfoBuilder setName(final String name) {
-            this.name = name;
-            return this;
-        }
-
-        public Class<? extends Filter> getFilterClass() {
-            return filterClass;
-        }
-
-        public FilterInfoBuilder setFilterClass(final Class<? extends Filter> filterClass) {
-            this.filterClass = filterClass;
-            return this;
-        }
-
-        public InstanceFactory getInstanceFactory() {
-            return instanceFactory;
-        }
-
-        public FilterInfoBuilder setInstanceFactory(final InstanceFactory instanceFactory) {
-            this.instanceFactory = instanceFactory;
-            return this;
-        }
-
-        public List<Mapping> getMappings() {
-            return mappings;
-        }
-
-        public FilterInfoBuilder addUrlMapping(final String mapping) {
-            mappings.add(new Mapping(MappingType.URL, mapping, null));
-            return this;
-        }
-
-        public FilterInfoBuilder addUrlMapping(final String mapping , DispatcherType dispatcher) {
-            mappings.add(new Mapping(MappingType.URL, mapping, dispatcher));
-            return this;
-        }
-
-        public FilterInfoBuilder addServletNameMapping(final String mapping) {
-            mappings.add(new Mapping(MappingType.SERVLET, mapping, null));
-            return this;
-        }
-
-        public FilterInfoBuilder addServletNameMapping(final String mapping, final DispatcherType dispatcher) {
-            mappings.add(new Mapping(MappingType.SERVLET, mapping, dispatcher));
-            return this;
-        }
-
-        public Map<String, String> getInitParams() {
-            return initParams;
-        }
-
-        public boolean isAsyncSupported() {
-            return asyncSupported;
-        }
-
-        public FilterInfoBuilder setAsyncSupported(final boolean asyncSupported) {
-            this.asyncSupported = asyncSupported;
-            return this;
-        }
+    public FilterInfo setAsyncSupported(final boolean asyncSupported) {
+        this.asyncSupported = asyncSupported;
+        return this;
     }
 
 

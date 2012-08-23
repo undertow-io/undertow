@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.api;
 
+import javax.servlet.ServletContext;
+
 /**
  * Manager that can be used to deploy and undeploy a servlet deployment.
  *
@@ -44,6 +46,12 @@ public interface DeploymentManager {
     void undeploy();
 
     State getState();
+
+    /**
+     *
+     * @return This deployments ServletContext
+     */
+    ServletContext getServletContext();
 
     public static enum State {
         UNDEPLOYED,
