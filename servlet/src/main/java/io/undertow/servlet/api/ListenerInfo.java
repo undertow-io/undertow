@@ -19,6 +19,7 @@
 package io.undertow.servlet.api;
 
 import java.lang.reflect.Constructor;
+import java.util.EventListener;
 
 import javax.servlet.ServletContextAttributeListener;
 import javax.servlet.ServletContextListener;
@@ -40,10 +41,10 @@ public class ListenerInfo {
             javax.servlet.http.HttpSessionListener.class,
             javax.servlet.http.HttpSessionAttributeListener.class};
 
-    private final Class<?> listenerClass;
-    private final InstanceFactory instanceFactory;
+    private final Class<? extends EventListener> listenerClass;
+    private final InstanceFactory<? super EventListener> instanceFactory;
 
-    public ListenerInfo(final Class<?> listenerClass, final InstanceFactory instanceFactory) {
+    public ListenerInfo(final Class<? extends EventListener> listenerClass, final InstanceFactory<? super EventListener> instanceFactory) {
         this.listenerClass = listenerClass;
         this.instanceFactory = instanceFactory;
         boolean ok = false;
@@ -58,19 +59,19 @@ public class ListenerInfo {
         }
     }
 
-    public ListenerInfo(final Class<?> listenerClass) {
+    public ListenerInfo(final Class<? extends EventListener> listenerClass) {
         this.listenerClass = listenerClass;
 
         try {
-            final Constructor<?> ctor = listenerClass.getDeclaredConstructor();
+            final Constructor<EventListener> ctor = (Constructor<EventListener>) listenerClass.getDeclaredConstructor();
             ctor.setAccessible(true);
-            this.instanceFactory = new ConstructorInstanceFactory(ctor);
+            this.instanceFactory = new ConstructorInstanceFactory<EventListener>(ctor);
         } catch (NoSuchMethodException e) {
             throw UndertowServletMessages.MESSAGES.componentMustHaveDefaultConstructor("Listener", listenerClass);
         }
     }
 
-    public InstanceFactory getInstanceFactory() {
+    public InstanceFactory<? super EventListener> getInstanceFactory() {
         return instanceFactory;
     }
 

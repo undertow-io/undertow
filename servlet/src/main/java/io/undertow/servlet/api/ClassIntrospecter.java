@@ -18,18 +18,26 @@
 
 package io.undertow.servlet.api;
 
+import java.util.EventListener;
+
+import javax.servlet.Filter;
+import javax.servlet.Servlet;
+
 /**
- * Factory that creates fully injected component instances.
+ *
+ * Interface that is provided by the container to create a servlet / filter / listener
+ * definition from a given class, based on the annotations present on the class.
+ *
+ * This is needed to allow for annotations to be taken into account when servlets etc are
+ * added programatically.
  *
  * @author Stuart Douglas
  */
-public interface InstanceFactory<T> {
+public interface ClassIntrospecter {
 
-    /**
-     * Factory that creates a fully injected instance.
-     *
-     * @return The fully injected instance
-     */
-    InstanceHandle<T> createInstance() throws InstantiationException;
+    ServletInfo createServletInfo(final String name, final Class<? extends Servlet> servlet);
 
+    FilterInfo createFilterInfo(final String name, final Class<? extends Filter> filter);
+
+    ListenerInfo createListenerInfo(final Class<? extends EventListener> listener);
 }

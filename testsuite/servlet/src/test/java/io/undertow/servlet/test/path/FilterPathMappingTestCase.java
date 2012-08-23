@@ -29,6 +29,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.shared.DefaultServer;
 import io.undertow.test.shared.HttpClientUtils;
@@ -80,6 +81,7 @@ public class FilterPathMappingTestCase {
                 .addServletNameMapping("contextRoot");
 
         final DeploymentInfo builder = new DeploymentInfo()
+                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")

@@ -62,9 +62,9 @@ public class ServletHandler implements BlockingHttpHandler {
     public ServletHandler(final ServletInfo servletInfo, final ServletContextImpl servletContext) {
         this.servletInfo = servletInfo;
         if (SingleThreadModel.class.isAssignableFrom(servletInfo.getServletClass())) {
-            instanceStrategy = new SingleThreadModelPoolStrategy(servletInfo.getInstanceFactory(), servletInfo.getServletClass(), servletInfo, servletContext);
+            instanceStrategy = new SingleThreadModelPoolStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
         } else {
-            instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletInfo.getServletClass(), servletInfo, servletContext);
+            instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
         }
     }
 
@@ -91,9 +91,9 @@ public class ServletHandler implements BlockingHttpHandler {
         }
         HttpServletRequestImpl request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         HttpServletResponseImpl response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
-        final InstanceHandle servlet = instanceStrategy.getServlet();
+        final InstanceHandle<? extends Servlet> servlet = instanceStrategy.getServlet();
         try {
-            ((Servlet) servlet.getInstance()).service(request, response);
+            servlet.getInstance().service(request, response);
         } catch (UnavailableException e) {
             if (e.isPermanent()) {
                 UndertowServletLogger.REQUEST_LOGGER.stoppingServletDueToPermanentUnavailability(servletInfo.getName(), e);
@@ -130,7 +130,7 @@ public class ServletHandler implements BlockingHttpHandler {
 
         void stop();
 
-        InstanceHandle getServlet() throws ServletException;
+        InstanceHandle<? extends Servlet> getServlet() throws ServletException;
     }
 
 
@@ -139,16 +139,14 @@ public class ServletHandler implements BlockingHttpHandler {
      */
     private static class DefaultInstanceStrategy implements InstanceStrategy {
 
-        private final InstanceFactory factory;
-        private final Class<?> servletClass;
+        private final InstanceFactory<? extends Servlet> factory;
         private final ServletInfo servletInfo;
         private final ServletContextImpl servletContext;
-        private volatile InstanceHandle handle;
+        private volatile InstanceHandle<? extends Servlet> handle;
         private volatile Servlet instance;
 
-        private DefaultInstanceStrategy(final InstanceFactory factory, final Class<?> servletClass, final ServletInfo servletInfo, final ServletContextImpl servletContext) {
+        private DefaultInstanceStrategy(final InstanceFactory<? extends Servlet> factory, final ServletInfo servletInfo, final ServletContextImpl servletContext) {
             this.factory = factory;
-            this.servletClass = servletClass;
             this.servletInfo = servletInfo;
             this.servletContext = servletContext;
         }
@@ -159,7 +157,7 @@ public class ServletHandler implements BlockingHttpHandler {
             } catch (Exception e) {
                 throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(servletInfo.getName(), e);
             }
-            instance = (Servlet) handle.getInstance();
+            instance =  handle.getInstance();
             instance.init(new ServletConfigImpl(servletInfo, servletContext));
         }
 
@@ -170,8 +168,8 @@ public class ServletHandler implements BlockingHttpHandler {
             }
         }
 
-        public InstanceHandle getServlet() {
-            return new InstanceHandle() {
+        public InstanceHandle<? extends Servlet> getServlet() {
+            return new InstanceHandle<Servlet>() {
                 @Override
                 public Servlet getInstance() {
                     return instance;
@@ -191,16 +189,12 @@ public class ServletHandler implements BlockingHttpHandler {
     private static class SingleThreadModelPoolStrategy implements InstanceStrategy {
 
 
-        private final InstanceFactory factory;
-        private final Class<?> servletClass;
+        private final InstanceFactory<? extends Servlet> factory;
         private final ServletInfo servletInfo;
         private final ServletContextImpl servletContext;
-        private volatile InstanceHandle handle;
-        private volatile Servlet instance;
 
-        private SingleThreadModelPoolStrategy(final InstanceFactory factory, final Class<?> servletClass, final ServletInfo servletInfo, final ServletContextImpl servletContext) {
+        private SingleThreadModelPoolStrategy(final InstanceFactory<? extends Servlet> factory, final ServletInfo servletInfo, final ServletContextImpl servletContext) {
             this.factory = factory;
-            this.servletClass = servletClass;
             this.servletInfo = servletInfo;
             this.servletContext = servletContext;
         }
@@ -216,8 +210,8 @@ public class ServletHandler implements BlockingHttpHandler {
         }
 
         @Override
-        public InstanceHandle getServlet() throws ServletException {
-            final InstanceHandle instanceHandle;
+        public InstanceHandle<? extends Servlet> getServlet() throws ServletException {
+            final InstanceHandle<? extends Servlet> instanceHandle;
             final Servlet instance;
             //TODO: pooling
             try {
@@ -225,12 +219,12 @@ public class ServletHandler implements BlockingHttpHandler {
             } catch (Exception e) {
                 throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(servletInfo.getName(), e);
             }
-            instance = (Servlet) instanceHandle.getInstance();
+            instance = instanceHandle.getInstance();
 
             instance.init(new ServletConfigImpl(servletInfo, servletContext));
-            return new InstanceHandle() {
+            return new InstanceHandle<Servlet>() {
                 @Override
-                public Object getInstance() {
+                public Servlet getInstance() {
                     return instance;
                 }
 

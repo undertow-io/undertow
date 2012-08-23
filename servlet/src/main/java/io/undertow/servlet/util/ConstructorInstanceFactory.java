@@ -27,20 +27,20 @@ import io.undertow.servlet.api.InstanceHandle;
 /**
  * @author Stuart Douglas
  */
-public class ConstructorInstanceFactory implements InstanceFactory {
+public class ConstructorInstanceFactory<T> implements InstanceFactory<T> {
 
-    private final Constructor<?> constructor;
+    private final Constructor<T> constructor;
 
-    public ConstructorInstanceFactory(final Constructor<?> constructor) {
+    public ConstructorInstanceFactory(final Constructor<T> constructor) {
         constructor.setAccessible(true);
         this.constructor = constructor;
     }
 
     @Override
-    public InstanceHandle createInstance() throws InstantiationException {
+    public InstanceHandle<T> createInstance() throws InstantiationException {
         try {
-            final Object instance = constructor.newInstance();
-            return new ImmediateInstanceHandle(instance);
+            final T instance = constructor.newInstance();
+            return new ImmediateInstanceHandle<T>(instance);
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         } catch (InvocationTargetException e) {

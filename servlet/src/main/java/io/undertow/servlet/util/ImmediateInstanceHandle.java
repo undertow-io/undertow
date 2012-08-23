@@ -23,16 +23,16 @@ import io.undertow.servlet.api.InstanceHandle;
 /**
  * @author Stuart Douglas
  */
-public class ImmediateInstanceHandle implements InstanceHandle {
+public class ImmediateInstanceHandle<T> implements InstanceHandle<T> {
 
-    private final Object instance;
+    private final T instance;
 
-    public ImmediateInstanceHandle(final Object instance) {
+    public ImmediateInstanceHandle(final T instance) {
         this.instance = instance;
     }
 
     @Override
-    public Object getInstance() {
+    public T getInstance() {
         return instance;
     }
 

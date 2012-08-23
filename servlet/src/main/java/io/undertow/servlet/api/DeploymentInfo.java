@@ -41,6 +41,7 @@ public class DeploymentInfo {
     private volatile String contextPath;
     private volatile ClassLoader classLoader;
     private volatile ResourceLoader resourceLoader;
+    private volatile ClassIntrospecter classIntrospecter;
     private volatile int majorVersion = 3;
     private volatile int minorVersion;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
@@ -62,6 +63,9 @@ public class DeploymentInfo {
         }
         if (resourceLoader == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("resourceLoader");
+        }
+        if (classIntrospecter == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("classIntrospecter");
         }
 
         for (final ServletInfo servlet : this.servlets.values()) {
@@ -105,6 +109,15 @@ public class DeploymentInfo {
 
     public DeploymentInfo setResourceLoader(final ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
+        return this;
+    }
+
+    public ClassIntrospecter getClassIntrospecter() {
+        return classIntrospecter;
+    }
+
+    public DeploymentInfo setClassIntrospecter(final ClassIntrospecter classIntrospecter) {
+        this.classIntrospecter = classIntrospecter;
         return this;
     }
 

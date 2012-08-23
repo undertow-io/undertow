@@ -42,7 +42,7 @@ public class ManagedFilter {
 
     private volatile boolean started = false;
     private volatile Filter filter;
-    private volatile InstanceHandle handle;
+    private volatile InstanceHandle<? extends Filter> handle;
 
     public ManagedFilter(final FilterInfo filterInfo, final ServletContext servletContext) {
         this.filterInfo = filterInfo;
@@ -63,7 +63,7 @@ public class ManagedFilter {
             } catch (Exception e) {
                 throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(filterInfo.getName(), e);
             }
-            filter = (Filter) handle.getInstance();
+            filter = handle.getInstance();
             filter.init(new FilterConfigImpl(filterInfo, servletContext));
             started = true;
         }

@@ -25,6 +25,7 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.shared.DefaultServer;
 import io.undertow.test.shared.HttpClientUtils;
@@ -55,6 +56,7 @@ public class SimpleServletServerTestCase {
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletServerTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
+                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.INSTANCE)
                 .addServlet(s);

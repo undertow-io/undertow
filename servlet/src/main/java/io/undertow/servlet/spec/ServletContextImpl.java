@@ -295,7 +295,12 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends EventListener> T createListener(final Class<T> clazz) throws ServletException {
-        return null;
+        ListenerInfo info =  deploymentInfo.getClassIntrospecter().createListenerInfo(clazz);
+        try {
+            return (T) info.getInstanceFactory().createInstance().getInstance();
+        } catch (InstantiationException e) {
+            throw new ServletException(e);
+        }
     }
 
     @Override

@@ -24,13 +24,13 @@ package io.undertow.servlet.api;
  *
  * @author Stuart Douglas
  */
-public interface InstanceHandle {
+public interface InstanceHandle<T> {
 
     /**
      * @return The managed instance
      *
      */
-    Object getInstance();
+    T getInstance();
 
     /**
      * releases the instance, uninjecting and calling an pre-destroy methods as appropriate

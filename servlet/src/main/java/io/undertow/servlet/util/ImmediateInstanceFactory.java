@@ -24,16 +24,16 @@ import io.undertow.servlet.api.InstanceHandle;
 /**
  * @author Stuart Douglas
  */
-public class ImmediateInstanceFactory implements InstanceFactory {
+public class ImmediateInstanceFactory<T> implements InstanceFactory<T> {
 
-    private final Object instance;
+    private final T instance;
 
-    public ImmediateInstanceFactory(final Object instance) {
+    public ImmediateInstanceFactory(final T instance) {
         this.instance = instance;
     }
 
     @Override
-    public InstanceHandle createInstance() throws InstantiationException, IllegalAccessException {
-        return new ImmediateInstanceHandle(instance);
+    public InstanceHandle<T> createInstance() throws InstantiationException {
+        return new ImmediateInstanceHandle<T>(instance);
     }
 }

@@ -39,7 +39,7 @@ public class FilterInfo {
 
     private final Class<? extends Filter> filterClass;
     private final String name;
-    private volatile InstanceFactory instanceFactory;
+    private volatile InstanceFactory<? extends Filter> instanceFactory;
 
     private final List<Mapping> mappings = new ArrayList<Mapping>();
     private final Map<String, String> initParams = new HashMap<String, String>();
@@ -57,9 +57,9 @@ public class FilterInfo {
             throw UndertowServletMessages.MESSAGES.filterMustImplementFilter(name, filterClass);
         }
         try {
-            final Constructor<?> ctor = filterClass.getDeclaredConstructor();
+            final Constructor<Filter> ctor = (Constructor<Filter>) filterClass.getDeclaredConstructor();
             ctor.setAccessible(true);
-            this.instanceFactory = new ConstructorInstanceFactory(ctor);
+            this.instanceFactory = new ConstructorInstanceFactory<Filter>(ctor);
             this.name = name;
             this.filterClass = filterClass;
         } catch (NoSuchMethodException e) {
@@ -103,14 +103,14 @@ public class FilterInfo {
         return name;
     }
 
-    public void setInstanceFactory(final InstanceFactory instanceFactory) {
+    public void setInstanceFactory(final InstanceFactory<? extends Filter> instanceFactory) {
         if(instanceFactory == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("instanceFactory");
         }
         this.instanceFactory = instanceFactory;
     }
 
-    public InstanceFactory getInstanceFactory() {
+    public InstanceFactory<? extends Filter> getInstanceFactory() {
         return instanceFactory;
     }
 

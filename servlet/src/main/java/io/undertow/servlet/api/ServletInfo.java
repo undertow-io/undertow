@@ -42,7 +42,7 @@ public class ServletInfo {
     private final Map<String, String> initParams = new HashMap<String, String>();
     private final List<SecurityRoleRef> securityRoleRefs = new ArrayList<SecurityRoleRef>();
 
-    private volatile InstanceFactory instanceFactory;
+    private volatile InstanceFactory<? extends Servlet> instanceFactory;
     private volatile String jspFile;
     private volatile boolean loadOnStartup;
     private volatile boolean enabled;
@@ -113,14 +113,14 @@ public class ServletInfo {
         return name;
     }
 
-    public void setInstanceFactory(final InstanceFactory instanceFactory) {
+    public void setInstanceFactory(final InstanceFactory<? extends Servlet> instanceFactory) {
         if(instanceFactory == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("instanceFactory");
         }
         this.instanceFactory = instanceFactory;
     }
 
-    public InstanceFactory getInstanceFactory() {
+    public InstanceFactory<? extends Servlet> getInstanceFactory() {
         return instanceFactory;
     }
 
