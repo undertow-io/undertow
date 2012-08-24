@@ -34,7 +34,7 @@ import io.undertow.server.HttpServerExchange;
 public class FileHandler implements HttpHandler {
 
     private volatile File base;
-    private volatile FileCache fileCache = DirectFileCache.INSTANCE;
+    private volatile FileCache fileCache = CachingFileCache.INSTANCE;
 
     public FileHandler(final File base) {
         if (base == null) {

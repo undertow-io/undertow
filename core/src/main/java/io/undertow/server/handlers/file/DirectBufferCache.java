@@ -1,14 +1,11 @@
 package io.undertow.server.handlers.file;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.util.IllegalFormatFlagsException;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.sun.xml.internal.ws.util.Pool;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.Pooled;
@@ -29,7 +26,7 @@ public class DirectBufferCache {
     private final Segment[] segments;
 
     public DirectBufferCache(int sliceSize, int max) {
-        this(sliceSize, max, Runtime.getRuntime().availableProcessors() * 2);
+        this(sliceSize, max, Runtime.getRuntime().availableProcessors());
     }
 
     public DirectBufferCache(int sliceSize, int max, int concurrency) {
@@ -37,7 +34,7 @@ public class DirectBufferCache {
         this.max = max;
         this.pool = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, sliceSize, max);
         int shift = 1;
-        while (concurrency < (shift <<= 1));
+        while (concurrency < (shift <<= 1)) {}
         segmentShift = 32 - shift;
         segments = new Segment[shift];
         for (int i = 0; i < 1; i++) {
@@ -66,6 +63,11 @@ public class DirectBufferCache {
         return segments[hash(path.hashCode()) >>> segmentShift & (segments.length - 1)].get(path);
     }
 
+    public void remove(String path) {
+        Segment[] segments = this.segments;
+        segments[hash(path.hashCode()) >>> segmentShift & (segments.length - 1)].remove(path);
+    }
+
     private static class MaxLinkedMap<K, V> extends LinkedHashMap<K, V> {
         private int max;
 
@@ -87,9 +89,13 @@ public class DirectBufferCache {
 
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, CacheEntry> eldest) {
-            CacheEntry value = eldest.getValue();
-            value.destroy();
-            return super.removeEldestEntry(eldest);
+            if (super.removeEldestEntry(eldest))  {
+                CacheEntry value = eldest.getValue();
+                value.destroy();
+                return true;
+            }
+
+            return false;
         }
     }
 
@@ -166,7 +172,7 @@ public class DirectBufferCache {
                 candidates.remove(path);
                 entry = addCacheEntry(path, size);
             }  else {
-                candidates.put(path, Integer.valueOf(count++));
+                candidates.put(path, Integer.valueOf(++count));
             }
 
             return entry;
@@ -217,6 +223,12 @@ public class DirectBufferCache {
 
             return result;
 
+        }
+
+        public void remove(String path) {
+            CacheEntry remove = cache.remove(path);
+            if (remove != null)
+                remove.destroy();
         }
     }
 }

@@ -51,7 +51,7 @@ public class CachingFileCache implements FileCache {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.handlers.file");
     public static final FileCache INSTANCE = new CachingFileCache();
-    private final int sliceSize = 512;
+    private final int sliceSize = 1024;
     private final DirectBufferCache cache = new DirectBufferCache(sliceSize, sliceSize * 20480);
     private static final int MAX_CACHE_FILE_SIZE = 2048 * 1024;
 
@@ -71,16 +71,10 @@ public class CachingFileCache implements FileCache {
             completionHandler.handleComplete();
             return;
         }
-        final StreamSinkChannel responseChannel = factory.create();
-        responseChannel.getCloseSetter().set(new ChannelListener<Channel>() {
-            public void handleEvent(final Channel channel) {
-                completionHandler.handleComplete();
-            }
-        });
 
         DirectBufferCache.CacheEntry entry = cache.get(file.getAbsolutePath());
         if (entry == null) {
-            responseChannel.getWorker().execute(new FileWriteLoadTask(exchange, completionHandler, responseChannel, file));
+            exchange.getConnection().getWorker().execute(new FileWriteLoadTask(exchange, completionHandler, factory, file));
             return;
         }
 
@@ -92,9 +86,16 @@ public class CachingFileCache implements FileCache {
 
         // It's loading retry later
         if (!entry.isEnabled()) {
-            responseChannel.getWorker().execute(new FileWriteLoadTask(exchange, completionHandler, responseChannel, file));
+            exchange.getConnection().getWorker().execute(new FileWriteLoadTask(exchange, completionHandler, factory, file));
             return;
         }
+
+        final StreamSinkChannel responseChannel = factory.create();
+        responseChannel.getCloseSetter().set(new ChannelListener<Channel>() {
+            public void handleEvent(final Channel channel) {
+                completionHandler.handleComplete();
+            }
+        });
 
 
         Pooled<ByteBuffer>[] pooled = entry.buffers();
@@ -111,20 +112,20 @@ public class CachingFileCache implements FileCache {
     private class FileWriteLoadTask implements Runnable {
 
         private final HttpCompletionHandler completionHandler;
-        private final StreamSinkChannel channel;
         private final File file;
-        private HttpServerExchange exchange;
+        private final HttpServerExchange exchange;
+        private final ChannelFactory<StreamSinkChannel> factory;
 
-        public FileWriteLoadTask(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final StreamSinkChannel channel, final File file) {
+        public FileWriteLoadTask(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final ChannelFactory<StreamSinkChannel> factory, final File file) {
             this.completionHandler = completionHandler;
-            this.channel = channel;
+            this.factory = factory;
             this.file = file;
             this.exchange = exchange;
         }
 
         @Override
         public void run() {
-         final String method = exchange.getRequestMethod();
+            final String method = exchange.getRequestMethod();
             final FileChannel fileChannel;
             final long length;
             try {
@@ -152,13 +153,21 @@ public class CachingFileCache implements FileCache {
                 return;
             }
 
+            final StreamSinkChannel channel = factory.create();
+            channel.getCloseSetter().set(new ChannelListener<Channel>() {
+                public void handleEvent(final Channel channel) {
+                    completionHandler.handleComplete();
+                }
+            });
+
             DirectBufferCache.CacheEntry entry = null;
+             String path = file.getAbsolutePath();
             if (length < MAX_CACHE_FILE_SIZE) {
-                entry = cache.add(file.getAbsolutePath(), (int) length);
+                entry = cache.add(path, (int) length);
             }
 
             if (entry == null) {
-                transfer(fileChannel, length);
+                transfer(channel, fileChannel, length);
                 return;
             }
 
@@ -167,7 +176,6 @@ public class CachingFileCache implements FileCache {
             for (int i = 0; i < buffers.length; i++) {
                 buffers[i] = pooled[i].getResource();
             }
-
 
             long remaining = length;
             while (remaining > 0) {
@@ -178,6 +186,7 @@ public class CachingFileCache implements FileCache {
                     }
                 } catch (IOException e) {
                     IoUtils.safeClose(fileChannel);
+                    cache.remove(path);
                     exchange.setResponseCode(500);
                     completionHandler.handleComplete();
                     return;
@@ -202,7 +211,7 @@ public class CachingFileCache implements FileCache {
             new TransferListener(channel, completionHandler, buffers, true).handleEvent(null);
         }
 
-        private void transfer(FileChannel fileChannel, long length) {
+        private void transfer(StreamSinkChannel channel, FileChannel fileChannel, long length) {
             try {
                 log.tracef("Serving file %s (blocking)", fileChannel);
                 Channels.transferBlocking(channel, fileChannel, 0, length);
@@ -267,6 +276,8 @@ public class CachingFileCache implements FileCache {
                 completionHandler.handleComplete();
                 return;
             }
+
+            completionHandler.handleComplete();
         }
     }
 }
