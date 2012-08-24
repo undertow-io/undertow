@@ -50,7 +50,7 @@ public class ServletPathMappingTestCase {
     public static void setup() throws ServletException {
 
         final PathHandler root = new PathHandler();
-        final ServletContainer container = new ServletContainer(root);
+        final ServletContainer container = ServletContainer.Factory.newInstance(root);
 
         ServletInfo aStar = new ServletInfo("/a/*", PathMappingServlet.class)
                 .addMapping("/a/*");

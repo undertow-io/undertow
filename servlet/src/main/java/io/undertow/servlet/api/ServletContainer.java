@@ -19,56 +19,35 @@
 package io.undertow.servlet.api;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
 
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.deployment.DeploymentManagerImpl;
+import io.undertow.servlet.core.ServletContainerImpl;
 
 /**
- *
- * The manager for all servlet deployments.
- *
  * @author Stuart Douglas
  */
-public class ServletContainer {
+public interface ServletContainer {
 
-    private final PathHandler rootContext;
+    /**
+     *
+     * @return The names of the deployments in this container
+     */
+    Collection<String> listDeployments();
 
-    private final Map<String, DeploymentManager> deployments = Collections.synchronizedMap(new HashMap<String, DeploymentManager>());
-    private final Map<String, DeploymentManager> deploymentsByPath = Collections.synchronizedMap(new HashMap<String, DeploymentManager>());
+    DeploymentManager addDeployment(DeploymentInfo deployment);
 
-    public ServletContainer(final PathHandler rootContext) {
-        this.rootContext = rootContext;
+    DeploymentManager getDeployment(String deploymentName);
+
+    void removeDeployment(String deploymentName);
+
+    DeploymentManager getDeploymentByPath(String uripath);
+
+    public static class Factory {
+
+        public static ServletContainer newInstance(PathHandler rootContext) {
+            return new ServletContainerImpl(rootContext);
+        };
+
     }
 
-    public Collection<String> listDeployments() {
-        return new HashSet<String>(deployments.keySet());
-    }
-
-    public DeploymentManager addDeployment(final DeploymentInfo deployment) {
-        DeploymentManager deploymentManager = new DeploymentManagerImpl(deployment, rootContext, this);
-        deployments.put(deployment.getDeploymentName(), deploymentManager);
-        deploymentsByPath.put(deployment.getContextPath(), deploymentManager);
-        return deploymentManager;
-    }
-
-    public DeploymentManager getDeployment(final String deploymentName) {
-        return deployments.get(deploymentName);
-    }
-
-    public void removeDeployment(final String deploymentName) {
-        final DeploymentManager deploymentManager = deployments.get(deploymentName);
-        if(deploymentManager.getState() != DeploymentManager.State.UNDEPLOYED) {
-            throw UndertowServletMessages.MESSAGES.canOnlyRemoveDeploymentsWhenUndeployed(deploymentManager.getState());
-        }
-        deployments.remove(deploymentName);
-    }
-
-    public DeploymentManager getDeploymentByPath(final String uripath) {
-        return deploymentsByPath.get(uripath);
-    }
 }

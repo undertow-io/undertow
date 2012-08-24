@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.deployment;
+package io.undertow.servlet.core;
 
 
 import java.security.AccessController;

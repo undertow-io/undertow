@@ -30,7 +30,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.servlet.deployment.ManagedServlet;
+import io.undertow.servlet.core.ManagedServlet;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 

@@ -29,7 +29,7 @@ import javax.servlet.ServletResponse;
 
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
-import io.undertow.servlet.deployment.ManagedFilter;
+import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 

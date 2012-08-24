@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.deployment;
+package io.undertow.servlet.core;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -167,7 +167,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         if (defaultServlet == null) {
             defaultHandler = new DefaultServlet(deployment.getResourceLoader());
             final HttpHandler handler = defaultHandler;
-            final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class , new ImmediateInstanceFactory(handler)), servletContext);
+            final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class , new ImmediateInstanceFactory<HttpHandler>(handler)), servletContext);
             lifecycles.add(managedDefaultServlet);
             defaultServlet = new ServletHandler(managedDefaultServlet);
         }

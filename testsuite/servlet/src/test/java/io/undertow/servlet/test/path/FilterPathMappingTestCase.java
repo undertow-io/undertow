@@ -55,7 +55,7 @@ public class FilterPathMappingTestCase {
     public static void setup() throws ServletException {
 
         final PathHandler root = new PathHandler();
-        final ServletContainer container = new ServletContainer(root);
+        final ServletContainer container = ServletContainer.Factory.newInstance(root);
 
         final ServletInfo aStar = new ServletInfo("/a/*", PathMappingServlet.class)
                 .addMapping("/a/*");

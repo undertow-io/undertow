@@ -50,7 +50,7 @@ public class SimpleServletServerTestCase {
     public static void setup() throws ServletException {
 
         final PathHandler root = new PathHandler();
-        final ServletContainer container = new ServletContainer(root);
+        final ServletContainer container = ServletContainer.Factory.newInstance(root);
 
         ServletInfo s = new ServletInfo("servlet", SimpleServlet.class)
                 .addMapping("/aa");

@@ -27,7 +27,6 @@ import java.util.Map;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
-import javax.servlet.Servlet;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
@@ -35,7 +34,7 @@ import io.undertow.servlet.util.ConstructorInstanceFactory;
 /**
  * @author Stuart Douglas
  */
-public class FilterInfo {
+public class FilterInfo implements Cloneable {
 
     private final Class<? extends Filter> filterClass;
     private final String name;
@@ -75,7 +74,7 @@ public class FilterInfo {
         if (filterClass == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("filterClass", "Filter", name);
         }
-        if (!Servlet.class.isAssignableFrom(filterClass)) {
+        if (!Filter.class.isAssignableFrom(filterClass)) {
             throw UndertowServletMessages.MESSAGES.filterMustImplementFilter(name, filterClass);
         }
         this.instanceFactory = instanceFactory;
@@ -87,7 +86,8 @@ public class FilterInfo {
         //TODO
     }
 
-    public FilterInfo copy() {
+    @Override
+    public FilterInfo clone() {
         FilterInfo info = new FilterInfo(name, filterClass, instanceFactory)
                 .setAsyncSupported(asyncSupported);
         info.mappings.addAll(mappings);
@@ -104,7 +104,7 @@ public class FilterInfo {
     }
 
     public void setInstanceFactory(final InstanceFactory<? extends Filter> instanceFactory) {
-        if(instanceFactory == null) {
+        if (instanceFactory == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("instanceFactory");
         }
         this.instanceFactory = instanceFactory;

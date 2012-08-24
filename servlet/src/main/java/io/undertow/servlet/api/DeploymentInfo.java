@@ -35,7 +35,7 @@ import io.undertow.servlet.UndertowServletMessages;
  *
  * @author Stuart Douglas
  */
-public class DeploymentInfo {
+public class DeploymentInfo implements Cloneable {
 
     private volatile String deploymentName;
     private volatile String contextPath;
@@ -48,7 +48,6 @@ public class DeploymentInfo {
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<ListenerInfo> listeners = new ArrayList<ListenerInfo>();
     private final Set<ServletContainerInitializerInfo> servletContainerInitializers = new HashSet<ServletContainerInitializerInfo>();
-
 
 
     public void validate() {
@@ -127,14 +126,14 @@ public class DeploymentInfo {
     }
 
     public DeploymentInfo addServlets(final ServletInfo... servlets) {
-        for(final ServletInfo servlet : servlets) {
+        for (final ServletInfo servlet : servlets) {
             this.servlets.put(servlet.getName(), servlet);
         }
         return this;
     }
 
     public DeploymentInfo addServlets(final Collection<ServletInfo> servlets) {
-        for(final ServletInfo servlet : servlets) {
+        for (final ServletInfo servlet : servlets) {
             this.servlets.put(servlet.getName(), servlet);
         }
         return this;
@@ -151,14 +150,14 @@ public class DeploymentInfo {
     }
 
     public DeploymentInfo addFilters(final FilterInfo... filters) {
-        for(final FilterInfo filter : filters) {
+        for (final FilterInfo filter : filters) {
             this.filters.put(filter.getName(), filter);
         }
         return this;
     }
 
     public DeploymentInfo addFilters(final Collection<FilterInfo> filters) {
-        for(final FilterInfo filter : filters) {
+        for (final FilterInfo filter : filters) {
             this.filters.put(filter.getName(), filter);
         }
         return this;
@@ -224,8 +223,8 @@ public class DeploymentInfo {
         return servletContainerInitializers;
     }
 
-
-    public DeploymentInfo copy() {
+    @Override
+    public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
                 .setClassLoader(classLoader)
                 .setContextPath(contextPath)
@@ -235,11 +234,11 @@ public class DeploymentInfo {
                 .setDeploymentName(deploymentName);
 
         for (Map.Entry<String, ServletInfo> e : servlets.entrySet()) {
-            info.addServlet(e.getValue().copy());
+            info.addServlet(e.getValue().clone());
         }
 
         for (Map.Entry<String, FilterInfo> e : filters.entrySet()) {
-            info.addFilter(e.getValue().copy());
+            info.addFilter(e.getValue().clone());
         }
         info.listeners.addAll(listeners);
         info.servletContainerInitializers.addAll(servletContainerInitializers);

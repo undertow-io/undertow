@@ -33,7 +33,7 @@ import io.undertow.servlet.util.ConstructorInstanceFactory;
 /**
  * @author Stuart Douglas
  */
-public class ServletInfo {
+public class ServletInfo implements Cloneable {
 
     private final Class<? extends Servlet> servletClass;
     private final String name;
@@ -91,7 +91,8 @@ public class ServletInfo {
         //TODO
     }
 
-    public ServletInfo copy() {
+    @Override
+    public ServletInfo clone() {
         ServletInfo info = new ServletInfo(name, servletClass, instanceFactory)
                 .setJspFile(jspFile)
                 .setLoadOnStartup(loadOnStartup)
