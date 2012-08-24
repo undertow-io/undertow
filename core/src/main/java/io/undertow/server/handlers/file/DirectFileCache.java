@@ -18,7 +18,6 @@
 
 package io.undertow.server.handlers.file;
 
-import io.undertow.util.Methods;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,6 +28,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
@@ -52,72 +52,74 @@ public class DirectFileCache implements FileCache {
     public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
         // ignore request body
         IoUtils.safeShutdownReads(exchange.getRequestChannel());
-        final String method = exchange.getRequestMethod();
-        final FileChannel fileChannel;
-        final long length;
-        try {
-            try {
-                fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
-            } catch (FileNotFoundException e) {
-                exchange.setResponseCode(404);
-                completionHandler.handleComplete();
-                return;
-            }
-            length = fileChannel.size();
-        } catch (IOException e) {
-            UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file, e);
-            exchange.setResponseCode(500);
-            completionHandler.handleComplete();
-            return;
-        }
-        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
-        if (method.equalsIgnoreCase(Methods.HEAD)) {
-            completionHandler.handleComplete();
-            return;
-        }
-        if (! method.equalsIgnoreCase(Methods.GET)) {
-            exchange.setResponseCode(500);
-            completionHandler.handleComplete();
-            return;
-        }
-        final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
-        if (factory == null) {
-            IoUtils.safeClose(fileChannel);
-            completionHandler.handleComplete();
-            return;
-        }
-        final StreamSinkChannel response = factory.create();
-        response.getCloseSetter().set(new ChannelListener<Channel>() {
-            public void handleEvent(final Channel channel) {
-                IoUtils.safeClose(fileChannel);
-            }
-        });
-        response.getWorker().execute(new FileWriteTask(completionHandler, response, fileChannel, length));
+
+        exchange.getConnection().getWorker().execute(new FileWriteTask(exchange, completionHandler, file));
     }
 
     private static class FileWriteTask implements Runnable {
 
+        private final HttpServerExchange exchange;
         private final HttpCompletionHandler completionHandler;
-        private final StreamSinkChannel channel;
-        private final FileChannel fileChannel;
-        private final long length;
+        private final File file;
 
-        public FileWriteTask(final HttpCompletionHandler completionHandler, final StreamSinkChannel channel, final FileChannel fileChannel, final long length) {
+        private FileWriteTask(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
+            this.exchange = exchange;
             this.completionHandler = completionHandler;
-            this.channel = channel;
-            this.fileChannel = fileChannel;
-            this.length = length;
+            this.file = file;
         }
 
         @Override
         public void run() {
+
+            final String method = exchange.getRequestMethod();
+            final FileChannel fileChannel;
+            final long length;
+            try {
+                try {
+                    fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
+                } catch (FileNotFoundException e) {
+                    exchange.setResponseCode(404);
+                    completionHandler.handleComplete();
+                    return;
+                }
+                length = fileChannel.size();
+            } catch (IOException e) {
+                UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file, e);
+                exchange.setResponseCode(500);
+                completionHandler.handleComplete();
+                return;
+            }
+            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
+            if (method.equalsIgnoreCase(Methods.HEAD)) {
+                completionHandler.handleComplete();
+                return;
+            }
+            if (!method.equalsIgnoreCase(Methods.GET)) {
+                exchange.setResponseCode(500);
+                completionHandler.handleComplete();
+                return;
+            }
+            final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
+            if (factory == null) {
+                IoUtils.safeClose(fileChannel);
+                completionHandler.handleComplete();
+                return;
+            }
+            final StreamSinkChannel response = factory.create();
+            response.getCloseSetter().set(new ChannelListener<Channel>() {
+                public void handleEvent(final Channel channel) {
+                    IoUtils.safeClose(fileChannel);
+                }
+            });
+
+
             try {
                 log.tracef("Serving file %s (blocking)", fileChannel);
-                Channels.transferBlocking(channel, fileChannel, 0, length);
+                Channels.transferBlocking(response, fileChannel, 0, length);
                 log.tracef("Finished serving %s, shutting down (blocking)", fileChannel);
-                channel.shutdownWrites();
+                response.shutdownWrites();
                 log.tracef("Finished serving %s, flushing (blocking)", fileChannel);
-                Channels.flushBlocking(channel);
+                Channels.flushBlocking(response);
                 log.tracef("Finished serving %s (complete)", fileChannel);
                 completionHandler.handleComplete();
             } catch (IOException ignored) {
@@ -126,7 +128,7 @@ public class DirectFileCache implements FileCache {
                 completionHandler.handleComplete();
             } finally {
                 IoUtils.safeClose(fileChannel);
-                IoUtils.safeClose(channel);
+                IoUtils.safeClose(response);
             }
         }
     }
