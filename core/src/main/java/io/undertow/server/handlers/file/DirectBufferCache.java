@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.sun.xml.internal.ws.util.Pool;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.Pooled;
@@ -17,6 +18,9 @@ import org.xnio.Pooled;
  * @author Jason T. Greene
  */
 public class DirectBufferCache {
+    @SuppressWarnings("unchecked")
+    private static final Pooled<ByteBuffer>[] EMPTY_BUFFERS = new Pooled[0];
+
     private final ByteBufferSlicePool pool;
     private final AtomicInteger use = new AtomicInteger();
     private final int max;
@@ -52,9 +56,14 @@ public class DirectBufferCache {
         return h ^ (h >>> 16);
     }
 
-    public CacheEntry getOrAdd(String path, int size) {
+    public CacheEntry add(String path, int size) {
         Segment[] segments = this.segments;
-        return segments[hash(path.hashCode()) >>> segmentShift & (segments.length - 1)].getOrAdd(path, size);
+        return segments[hash(path.hashCode()) >>> segmentShift & (segments.length - 1)].add(path, size);
+    }
+
+    public CacheEntry get(String path) {
+        Segment[] segments = this.segments;
+        return segments[hash(path.hashCode()) >>> segmentShift & (segments.length - 1)].get(path);
     }
 
     private static class MaxLinkedMap<K, V> extends LinkedHashMap<K, V> {
@@ -121,15 +130,12 @@ public class DirectBufferCache {
 
         public void destroy() {
             enabled = false;
-            if (buffers == null) {
-                return;
-            }
 
             for (Pooled<ByteBuffer> buffer : buffers()) {
                 buffer.free();
                 use.getAndAdd(-sliceSize);
             }
-            buffers = null;
+            buffers = EMPTY_BUFFERS;
         }
 
     }
@@ -144,10 +150,14 @@ public class DirectBufferCache {
             candidates = new MaxLinkedMap<String, Integer>(limit);
         }
 
-        public synchronized CacheEntry getOrAdd(String path, int size) {
+        public synchronized CacheEntry get(String path) {
+            return cache.get(path);
+        }
+
+        public synchronized CacheEntry add(String path, int size) {
             CacheEntry entry = cache.get(path);
             if (entry != null)
-                return entry;
+                return null;
 
             Integer i = candidates.get(path);
             int count = i == null ? 0 : i.intValue();
