@@ -51,6 +51,7 @@ public class CachingFileCache implements FileCache {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.handlers.file");
     public static final FileCache INSTANCE = new CachingFileCache();
+    private static final String JDK7_NO_SUCH_FILE = "java.nio.file.NoSuchFileException";
     private final int sliceSize = 1024;
     private final DirectBufferCache cache = new DirectBufferCache(sliceSize, sliceSize * 20480);
     private static final int MAX_CACHE_FILE_SIZE = 2048 * 1024;
@@ -129,16 +130,14 @@ public class CachingFileCache implements FileCache {
             final FileChannel fileChannel;
             final long length;
             try {
-                try {
-                    fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
-                } catch (FileNotFoundException e) {
-                    exchange.setResponseCode(404);
-                    completionHandler.handleComplete();
-                    return;
-                }
+                fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
                 length = fileChannel.size();
             } catch (IOException e) {
-                exchange.setResponseCode(500);
+                if (e instanceof FileNotFoundException || JDK7_NO_SUCH_FILE.equals(e.getClass().getName())) {
+                    exchange.setResponseCode(404);
+                } else {
+                    exchange.setResponseCode(500);
+                }
                 completionHandler.handleComplete();
                 return;
             }
