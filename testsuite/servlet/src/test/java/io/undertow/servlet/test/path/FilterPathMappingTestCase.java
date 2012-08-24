@@ -23,6 +23,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.servlet.ServletException;
+
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -50,7 +52,7 @@ public class FilterPathMappingTestCase {
 
 
     @BeforeClass
-    public static void setup() {
+    public static void setup() throws ServletException {
 
         final PathHandler root = new PathHandler();
         final ServletContainer container = new ServletContainer(root);

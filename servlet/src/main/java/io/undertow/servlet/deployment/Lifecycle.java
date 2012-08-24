@@ -16,47 +16,22 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.api;
+package io.undertow.servlet.deployment;
 
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
 /**
- * Manager that can be used to deploy and undeploy a servlet deployment.
+ *
+ * An object that can be started or stopped.
  *
  * @author Stuart Douglas
  */
-public interface DeploymentManager {
+public interface Lifecycle {
 
-    /**
-     * Perform the initial deployment.
-     *
-     * The builds all the internal metadata needed to support the servlet deployment, but will not actually start
-     * any servlets
-     *
-     */
-    void deploy();
-
-    /**
-     * Starts the container. Any servlets with init on startup will be created here
-     */
     void start() throws ServletException;
 
     void stop() throws ServletException;
 
-    void undeploy();
+    boolean isStarted();
 
-    State getState();
-
-    /**
-     *
-     * @return This deployments ServletContext
-     */
-    ServletContext getServletContext();
-
-    public static enum State {
-        UNDEPLOYED,
-        DEPLOYED,
-        STARTED;
-    }
 }

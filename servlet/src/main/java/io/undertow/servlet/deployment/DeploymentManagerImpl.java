@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
@@ -40,7 +41,6 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.handlers.DefaultServlet;
 import io.undertow.servlet.handlers.FilterHandler;
-import io.undertow.servlet.handlers.ManagedFilter;
 import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletMatchingHandler;
@@ -60,6 +60,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private final DeploymentInfo deployment;
     private final PathHandler pathHandler;
     private final ServletContainer servletContainer;
+
+    private volatile List<Lifecycle> lifecycleObjects;
+
     private volatile State state = State.UNDEPLOYED;
     private volatile HttpHandler servletHandler;
     private volatile ServletContextImpl servletContext;
@@ -103,7 +106,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
      * @param servletContext
      */
     private ServletMatchingHandler setupServletChains(final ServletContextImpl servletContext) {
-
+        final List<Lifecycle> lifecycles = new ArrayList<Lifecycle>();
         //create the default servlet
         HttpHandler defaultHandler = null;
         ServletHandler defaultServlet = null;
@@ -123,6 +126,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         for (Map.Entry<String, FilterInfo> entry : deployment.getFilters().entrySet()) {
             final ManagedFilter mf = new ManagedFilter(entry.getValue(), servletContext);
             managedFilterMap.put(entry.getValue(), mf);
+            lifecycles.add(mf);
             for (FilterInfo.Mapping mapping : entry.getValue().getMappings()) {
                 if (mapping.getMappingType() == FilterInfo.MappingType.URL) {
                     String path = mapping.getMapping();
@@ -137,7 +141,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         for (Map.Entry<String, ServletInfo> entry : deployment.getServlets().entrySet()) {
             ServletInfo servlet = entry.getValue();
-            final ServletHandler handler = new ServletHandler(servlet, servletContext);
+            final ManagedServlet managedServlet = new ManagedServlet(servlet, servletContext);
+            lifecycles.add(managedServlet);
+            final ServletHandler handler = new ServletHandler(managedServlet);
             servletHandlerMap.put(servlet, handler);
             for (String path : entry.getValue().getMappings()) {
                 if (path.equals("/")) {
@@ -161,7 +167,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
         if (defaultServlet == null) {
             defaultHandler = new DefaultServlet(deployment.getResourceLoader());
             final HttpHandler handler = defaultHandler;
-            defaultServlet = new ServletHandler(new ServletInfo("DefaultServlet", DefaultServlet.class , new ImmediateInstanceFactory(handler)), servletContext);
+            final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class , new ImmediateInstanceFactory(handler)), servletContext);
+            lifecycles.add(managedDefaultServlet);
+            defaultServlet = new ServletHandler(managedDefaultServlet);
         }
 
         for (final String path : pathMatches) {
@@ -247,6 +255,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
 
         servletHandler.setDefaultHandler(defaultHandler);
+
+        this.lifecycleObjects = lifecycles;
+
         return servletHandler;
     }
 
@@ -288,15 +299,20 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     @Override
-    public void start() {
+    public void start() throws ServletException {
+        for(Lifecycle object : lifecycleObjects) {
+            object.start();
+        }
         pathHandler.addPath(deployment.getContextPath(), servletHandler);
 
 
     }
 
     @Override
-    public void stop() {
-
+    public void stop() throws ServletException {
+        for(Lifecycle object : lifecycleObjects) {
+            object.stop();
+        }
     }
 
     @Override

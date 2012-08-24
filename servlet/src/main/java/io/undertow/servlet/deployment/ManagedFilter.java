@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.handlers;
+package io.undertow.servlet.deployment;
 
 import java.io.IOException;
 
@@ -35,7 +35,7 @@ import io.undertow.servlet.spec.FilterConfigImpl;
 /**
  * @author Stuart Douglas
  */
-public class ManagedFilter {
+public class ManagedFilter implements Lifecycle {
 
     private final FilterInfo filterInfo;
     private final ServletContext servletContext;
@@ -74,5 +74,10 @@ public class ManagedFilter {
         if (handle != null) {
             handle.release();
         }
+    }
+
+    @Override
+    public boolean isStarted() {
+        return started;
     }
 }

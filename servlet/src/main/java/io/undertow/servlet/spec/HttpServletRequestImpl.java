@@ -357,7 +357,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public int getServerPort() {
-        return 0;
+        return exchange.getExchange().getSourceAddress().getPort();
     }
 
     @Override
