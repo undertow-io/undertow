@@ -18,6 +18,12 @@
 
 package io.undertow.server.handlers.file;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.channels.Channel;
+import java.nio.channels.FileChannel;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
@@ -25,11 +31,6 @@ import io.undertow.util.CompletionChannelExceptionHandler;
 import io.undertow.util.CompletionChannelListener;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.nio.channels.Channel;
-import java.nio.channels.FileChannel;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.FileAccess;
@@ -169,6 +170,7 @@ public class InLineFileCache implements FileCache {
                     responseChannel.shutdownWrites();
                     if (! responseChannel.flush()) {
                         responseChannel.getWriteSetter().set(ChannelListeners.<SuspendableWriteChannel>flushingChannelListener(new CompletionChannelListener(completionHandler), new CompletionChannelExceptionHandler(completionHandler)));
+                        responseChannel.resumeWrites();
                         return;
                     }
                 } catch (IOException e) {
