@@ -53,7 +53,7 @@ public class CachingFileCache implements FileCache {
     public static final FileCache INSTANCE = new CachingFileCache();
     private static final String JDK7_NO_SUCH_FILE = "java.nio.file.NoSuchFileException";
     private final int sliceSize = 1024;
-    private final DirectBufferCache cache = new DirectBufferCache(sliceSize, sliceSize * 20480);
+    private final DirectBufferCache cache = new DirectBufferCache(sliceSize, sliceSize * 10480);
     private static final int MAX_CACHE_FILE_SIZE = 2048 * 1024;
 
     @Override
