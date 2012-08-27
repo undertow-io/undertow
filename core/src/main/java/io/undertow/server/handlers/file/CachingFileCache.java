@@ -49,12 +49,22 @@ import org.xnio.channels.SuspendableWriteChannel;
  */
 public class CachingFileCache implements FileCache {
 
+    private static final int DEFAULT_MAX_CACHE_FILE_SIZE = 2048 * 1024;
+
     private static final Logger log = Logger.getLogger("io.undertow.server.handlers.file");
-    public static final FileCache INSTANCE = new CachingFileCache();
     private static final String JDK7_NO_SUCH_FILE = "java.nio.file.NoSuchFileException";
-    private final int sliceSize = 1024;
-    private final DirectBufferCache cache = new DirectBufferCache(sliceSize, sliceSize * 10480);
-    private static final int MAX_CACHE_FILE_SIZE = 2048 * 1024;
+
+    private final DirectBufferCache cache;
+    private final long maxFileSize;
+
+    public CachingFileCache(final int sliceSize, final int maxSlices, final long maxFileSize) {
+        this.maxFileSize = maxFileSize;
+        this.cache =  new DirectBufferCache(sliceSize, sliceSize * maxSlices);
+    }
+
+    public CachingFileCache(final int sliceSize, final int maxSlices) {
+        this(sliceSize, maxSlices, DEFAULT_MAX_CACHE_FILE_SIZE);
+    }
 
     @Override
     public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
@@ -161,7 +171,7 @@ public class CachingFileCache implements FileCache {
 
             DirectBufferCache.CacheEntry entry = null;
              String path = file.getAbsolutePath();
-            if (length < MAX_CACHE_FILE_SIZE) {
+            if (length < maxFileSize) {
                 entry = cache.add(path, (int) length);
             }
 
