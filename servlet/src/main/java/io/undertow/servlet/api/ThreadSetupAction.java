@@ -18,26 +18,26 @@
 
 package io.undertow.servlet.api;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.channels.FileChannel;
-import java.util.Set;
-
-import org.xnio.Xnio;
+import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 
 /**
+ * Interface that can be implemented by classes that need to setup
+ * and thread local context before a request is processed.
  *
  * @author Stuart Douglas
  */
-public interface ResourceLoader {
+public interface ThreadSetupAction {
 
-    URL getResource(final String resource) throws MalformedURLException;
+    /**
+     * Setup any thread local context
+     *
+     * @param exchange The exchange if this
+     * @return A handle to tear down the request when the invocation is finished, or null
+     */
+    Handle setup(final BlockingHttpServerExchange exchange);
 
-    InputStream getResourceAsStream(final String resource);
+    public interface Handle {
+        void tearDown();
+    }
 
-    FileChannel getResourceAsChannel(final String resource, final Xnio xnio) throws IOException;
-
-    Set<String> getResourcePaths(final String path);
 }

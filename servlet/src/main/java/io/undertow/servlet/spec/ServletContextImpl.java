@@ -280,7 +280,12 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void addListener(final String className) {
-
+        try {
+            Class clazz = deploymentInfo.getClassLoader().loadClass(className);
+            addListener(clazz);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

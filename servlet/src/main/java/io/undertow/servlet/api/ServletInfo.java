@@ -20,6 +20,8 @@ package io.undertow.servlet.api;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -44,7 +46,7 @@ public class ServletInfo implements Cloneable {
 
     private volatile InstanceFactory<? extends Servlet> instanceFactory;
     private volatile String jspFile;
-    private volatile boolean loadOnStartup;
+    private volatile Integer loadOnStartup;
     private volatile boolean enabled;
     private volatile boolean asyncSupported;
     private volatile String runAs;
@@ -134,6 +136,18 @@ public class ServletInfo implements Cloneable {
         return this;
     }
 
+
+    public ServletInfo addMappings(final Collection<String> mappings) {
+        this.mappings.addAll(mappings);
+        return this;
+    }
+
+
+    public ServletInfo addMappings(final String ... mappings) {
+        this.mappings.addAll(Arrays.asList(mappings));
+        return this;
+    }
+
     public ServletInfo addInitParam(final String name, final String value) {
         initParams.put(name, value);
         return this;
@@ -153,11 +167,11 @@ public class ServletInfo implements Cloneable {
         return this;
     }
 
-    public boolean isLoadOnStartup() {
+    public Integer getLoadOnStartup() {
         return loadOnStartup;
     }
 
-    public ServletInfo setLoadOnStartup(final boolean loadOnStartup) {
+    public ServletInfo setLoadOnStartup(final Integer loadOnStartup) {
         this.loadOnStartup = loadOnStartup;
         return this;
     }

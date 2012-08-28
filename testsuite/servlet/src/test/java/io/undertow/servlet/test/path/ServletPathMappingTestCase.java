@@ -67,6 +67,8 @@ public class ServletPathMappingTestCase {
         ServletInfo d = new ServletInfo("/", PathMappingServlet.class)
                 .addMapping("/");
 
+        ServletInfo jsp = new ServletInfo("*.jsp", PathMappingServlet.class)
+                .addMapping("*.jsp");
 
         ServletInfo cr = new ServletInfo("contextRoot", PathMappingServlet.class)
                 .addMapping("");
@@ -77,7 +79,7 @@ public class ServletPathMappingTestCase {
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.INSTANCE)
-                .addServlets(aStar, aa, aaStar, ab, d, cr);
+                .addServlets(aStar, aa, aaStar, ab, d, cr, jsp);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -133,6 +135,12 @@ public class ServletPathMappingTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("contextRoot", response);
+
+            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/bob.jsp");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("*.jsp", response);
 
         } finally {
             client.getConnectionManager().shutdown();

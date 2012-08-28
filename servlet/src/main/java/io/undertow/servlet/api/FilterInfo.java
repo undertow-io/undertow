@@ -38,7 +38,7 @@ public class FilterInfo implements Cloneable {
 
     private final Class<? extends Filter> filterClass;
     private final String name;
-    private volatile InstanceFactory<? extends Filter> instanceFactory;
+    private final InstanceFactory<? extends Filter> instanceFactory;
 
     private final List<Mapping> mappings = new ArrayList<Mapping>();
     private final Map<String, String> initParams = new HashMap<String, String>();
@@ -67,7 +67,7 @@ public class FilterInfo implements Cloneable {
     }
 
 
-    public FilterInfo(final String name, final Class<? extends Filter> filterClass, final InstanceFactory instanceFactory) {
+    public FilterInfo(final String name, final Class<? extends Filter> filterClass, final InstanceFactory<? extends Filter> instanceFactory) {
         if (name == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("name");
         }
@@ -102,14 +102,6 @@ public class FilterInfo implements Cloneable {
     public String getName() {
         return name;
     }
-
-    public void setInstanceFactory(final InstanceFactory<? extends Filter> instanceFactory) {
-        if (instanceFactory == null) {
-            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("instanceFactory");
-        }
-        this.instanceFactory = instanceFactory;
-    }
-
     public InstanceFactory<? extends Filter> getInstanceFactory() {
         return instanceFactory;
     }
@@ -119,7 +111,7 @@ public class FilterInfo implements Cloneable {
     }
 
     public FilterInfo addUrlMapping(final String mapping) {
-        mappings.add(new Mapping(MappingType.URL, mapping, null));
+        mappings.add(new Mapping(MappingType.URL, mapping, DispatcherType.REQUEST));
         return this;
     }
 
@@ -129,7 +121,7 @@ public class FilterInfo implements Cloneable {
     }
 
     public FilterInfo addServletNameMapping(final String mapping) {
-        mappings.add(new Mapping(MappingType.SERVLET, mapping, null));
+        mappings.add(new Mapping(MappingType.SERVLET, mapping, DispatcherType.REQUEST));
         return this;
     }
 

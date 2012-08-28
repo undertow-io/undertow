@@ -42,9 +42,9 @@ public class ListenerInfo {
             javax.servlet.http.HttpSessionAttributeListener.class};
 
     private final Class<? extends EventListener> listenerClass;
-    private final InstanceFactory<? super EventListener> instanceFactory;
+    private final InstanceFactory<? extends EventListener> instanceFactory;
 
-    public ListenerInfo(final Class<? extends EventListener> listenerClass, final InstanceFactory<? super EventListener> instanceFactory) {
+    public ListenerInfo(final Class<? extends EventListener> listenerClass, final InstanceFactory<? extends EventListener> instanceFactory) {
         this.listenerClass = listenerClass;
         this.instanceFactory = instanceFactory;
         boolean ok = false;
@@ -71,7 +71,7 @@ public class ListenerInfo {
         }
     }
 
-    public InstanceFactory<? super EventListener> getInstanceFactory() {
+    public InstanceFactory<? extends EventListener> getInstanceFactory() {
         return instanceFactory;
     }
 

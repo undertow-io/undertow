@@ -19,6 +19,7 @@
 package io.undertow.servlet;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.Date;
 
 import javax.servlet.ServletException;
@@ -58,4 +59,8 @@ public interface UndertowServletLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 15003, value = "Stopping servlet %s till %s due to temporary unavailability")
     void stoppingServletUntilDueToTemporaryUnavailability(String name, Date till, @Cause UnavailableException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 15004, value = "Malformed URL exception reading resource %s")
+    void malformedUrlException(String relativePath, @Cause MalformedURLException e);
 }

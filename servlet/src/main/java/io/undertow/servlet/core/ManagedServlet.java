@@ -52,7 +52,7 @@ public class ManagedServlet implements Lifecycle {
 
 
     public synchronized void start() throws ServletException {
-        if (!started && servletInfo.isLoadOnStartup()) {
+        if (!started && servletInfo.getLoadOnStartup() != null && servletInfo.getLoadOnStartup() >= 0) {
             instanceStrategy.start();
             started = true;
         }

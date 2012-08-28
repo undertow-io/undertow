@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.api;
 
-import java.util.List;
+import java.util.Set;
 
 import javax.servlet.ServletContainerInitializer;
 
@@ -28,10 +28,12 @@ import javax.servlet.ServletContainerInitializer;
 public class ServletContainerInitializerInfo {
 
     private final Class<? extends ServletContainerInitializer> servletContainerInitializerClass;
-    private final List<Class<?>> handlesTypes;
+    private final InstanceFactory<? extends ServletContainerInitializer> instanceFactory;
+    private final Set<Class<?>> handlesTypes;
 
-    public ServletContainerInitializerInfo(final Class<? extends ServletContainerInitializer> servletContainerInitializerClass, final List<Class<?>> handlesTypes) {
+    public ServletContainerInitializerInfo(final Class<? extends ServletContainerInitializer> servletContainerInitializerClass, final InstanceFactory<? extends ServletContainerInitializer> instanceFactory, final Set<Class<?>> handlesTypes) {
         this.servletContainerInitializerClass = servletContainerInitializerClass;
+        this.instanceFactory = instanceFactory;
         this.handlesTypes = handlesTypes;
     }
 
@@ -47,8 +49,11 @@ public class ServletContainerInitializerInfo {
      *
      * @return The handled types
      */
-    public List<Class<?>> getHandlesTypes() {
+    public Set<Class<?>> getHandlesTypes() {
         return handlesTypes;
     }
 
+    public InstanceFactory<? extends ServletContainerInitializer> getInstanceFactory() {
+        return instanceFactory;
+    }
 }

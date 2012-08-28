@@ -23,10 +23,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import io.undertow.servlet.UndertowServletMessages;
 
@@ -47,7 +45,8 @@ public class DeploymentInfo implements Cloneable {
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<ListenerInfo> listeners = new ArrayList<ListenerInfo>();
-    private final Set<ServletContainerInitializerInfo> servletContainerInitializers = new HashSet<ServletContainerInitializerInfo>();
+    private final List<ServletContainerInitializerInfo> servletContainerInitializers = new ArrayList<ServletContainerInitializerInfo>();
+    private final List<ThreadSetupAction> threadSetupActions = new ArrayList<ThreadSetupAction>();
 
 
     public void validate() {
@@ -219,8 +218,17 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public Set<ServletContainerInitializerInfo> getServletContainerInitializers() {
+    public List<ServletContainerInitializerInfo> getServletContainerInitializers() {
         return servletContainerInitializers;
+    }
+
+    public DeploymentInfo addThreadSetupAction(final ThreadSetupAction action) {
+        threadSetupActions.add(action);
+        return this;
+    }
+
+    public List<ThreadSetupAction> getThreadSetupActions() {
+        return threadSetupActions;
     }
 
     @Override
@@ -242,7 +250,7 @@ public class DeploymentInfo implements Cloneable {
         }
         info.listeners.addAll(listeners);
         info.servletContainerInitializers.addAll(servletContainerInitializers);
-
+        info.threadSetupActions.addAll(threadSetupActions);
         return info;
     }
 

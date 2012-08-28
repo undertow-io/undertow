@@ -20,6 +20,8 @@ package io.undertow.servlet.handlers;
 
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 
@@ -33,17 +35,25 @@ public class ServletInitialHandler implements BlockingHttpHandler {
 
     private final BlockingHttpHandler next;
 
-    public ServletInitialHandler(final BlockingHttpHandler next) {
+    final CompositeThreadSetupAction setupAction;
+
+    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction) {
         this.next = next;
+        this.setupAction = setupAction;
     }
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange);
-        final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
-        exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
-        exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
-        next.handleRequest(exchange);
+        ThreadSetupAction.Handle handle = setupAction.setup(exchange);
+        try {
+            final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange);
+            final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
+            exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
+            exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
+            next.handleRequest(exchange);
+        } finally {
+            handle.tearDown();
+        }
     }
 
     public BlockingHttpHandler getNext() {

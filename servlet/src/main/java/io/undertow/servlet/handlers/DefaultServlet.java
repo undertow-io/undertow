@@ -22,6 +22,7 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,6 +39,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.file.DirectFileCache;
 import io.undertow.server.handlers.file.FileCache;
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.ResourceLoader;
 import io.undertow.util.CopyOnWriteMap;
 import org.xnio.IoUtils;
@@ -111,13 +113,19 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             completionHandler.handleComplete();
             return;
         }
-        URL resource = resourceLoader.getResource(exchange.getRelativePath());
-        if (resource == null) {
-            exchange.setResponseCode(404);
+        try {
+            URL resource = resourceLoader.getResource(exchange.getRelativePath());
+            if (resource == null) {
+                exchange.setResponseCode(404);
+                completionHandler.handleComplete();
+                return;
+            }
+            fileCache.serveFile(exchange, completionHandler, new File(resource.getFile()));
+        } catch (MalformedURLException e) {
+            UndertowServletLogger.REQUEST_LOGGER.malformedUrlException(exchange.getRelativePath(), e);
+            exchange.setResponseCode(500);
             completionHandler.handleComplete();
-            return;
         }
-        fileCache.serveFile(exchange, completionHandler, new File(resource.getFile()));
     }
 
     private String getPath(final HttpServletRequest request) {
