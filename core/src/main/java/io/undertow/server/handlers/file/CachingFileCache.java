@@ -27,20 +27,17 @@ import java.nio.channels.FileChannel;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.CompletionChannelExceptionHandler;
-import io.undertow.util.CompletionChannelListener;
+import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.SuspendableWriteChannel;
 
 /**
  * A file cache that caches
@@ -217,7 +214,7 @@ public class CachingFileCache implements FileCache {
             lastBuffer = buffers[buffers.length - 1];
 
             // Now that the cache is loaded, attempt to write or register a lister
-            new TransferListener(channel, completionHandler, buffers, true).handleEvent(null);
+            new TransferListener(channel, completionHandler, buffers, true).handleEvent(channel);
         }
 
         private void transfer(StreamSinkChannel channel, FileChannel fileChannel, long length) {
@@ -274,19 +271,7 @@ public class CachingFileCache implements FileCache {
                     return;
                 }
             }
-            try {
-                responseChannel.shutdownWrites();
-                if (! responseChannel.flush()) {
-                    responseChannel.getWriteSetter().set(ChannelListeners.<SuspendableWriteChannel>flushingChannelListener(new CompletionChannelListener(completionHandler), new CompletionChannelExceptionHandler(completionHandler)));
-                    responseChannel.resumeWrites();
-                    return;
-                }
-            } catch (IOException e) {
-                completionHandler.handleComplete();
-                return;
-            }
-
-            completionHandler.handleComplete();
+            HttpHandlers.flushAndCompleteRequest(responseChannel, completionHandler);
         }
     }
 }

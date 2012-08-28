@@ -18,11 +18,19 @@
 
 package io.undertow.server.handlers;
 
+import java.io.IOException;
+
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
+import io.undertow.util.CompletionChannelExceptionHandler;
+import io.undertow.util.CompletionChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.SuspendableWriteChannel;
 
 /**
  * Utility methods pertaining to HTTP handlers.
@@ -35,8 +43,8 @@ public final class HttpHandlers {
      * Safely execute a handler.  If the handler throws an exception before completing, this method will attempt
      * to set a 500 status code and complete the request.
      *
-     * @param handler the handler to execute
-     * @param exchange the HTTP exchange for the request
+     * @param handler           the handler to execute
+     * @param exchange          the HTTP exchange for the request
      * @param completionHandler the completion handler
      */
     public static void executeHandler(final HttpHandler handler, final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
@@ -46,20 +54,37 @@ public final class HttpHandlers {
             try {
                 exchange.setResponseCode(500);
                 completionHandler.handleComplete();
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+            }
         }
     }
 
     public static void handlerNotNull(final HttpHandler handler) {
-        if(handler == null) {
+        if (handler == null) {
             throw UndertowMessages.MESSAGES.handlerCannotBeNull();
         }
     }
 
 
     public static void handlerNotNull(final BlockingHttpHandler handler) {
-        if(handler == null) {
+        if (handler == null) {
             throw UndertowMessages.MESSAGES.handlerCannotBeNull();
         }
     }
+
+    public static void flushAndCompleteRequest(final StreamSinkChannel channel, final HttpCompletionHandler handler) {
+        try {
+            channel.shutdownWrites();
+            if (!channel.flush()) {
+                channel.getWriteSetter().set(ChannelListeners.<SuspendableWriteChannel>flushingChannelListener(new CompletionChannelListener(handler), new CompletionChannelExceptionHandler(handler)));
+                channel.resumeWrites();
+            } else {
+                handler.handleComplete();
+            }
+        } catch (IOException e) {
+            IoUtils.safeClose(channel);
+            handler.handleComplete();
+        }
+    }
+
 }

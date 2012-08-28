@@ -68,7 +68,7 @@ public class SimpleErrorPageHandler implements HttpHandler {
                         StringWriteChannelListener listener = new StringWriteChannelListener(errorPage) {
                             @Override
                             protected void writeDone(final StreamSinkChannel channel) {
-                                completionHandler.handleComplete();
+                                HttpHandlers.flushAndCompleteRequest(channel, completionHandler);
                             }
                         };
                         listener.setup(response);

@@ -27,6 +27,7 @@ import java.nio.channels.FileChannel;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.util.CompletionChannelExceptionHandler;
 import io.undertow.util.CompletionChannelListener;
 import io.undertow.util.Headers;
@@ -98,6 +99,7 @@ public class InLineFileCache implements FileCache {
         while (length > 0L) {
             try {
                 res = responseChannel.transferFrom(fileChannel, pos, length);
+                completionHandler.handleComplete();
             } catch (IOException e) {
                 IoUtils.safeClose(fileChannel);
                 IoUtils.safeClose(responseChannel);
@@ -113,19 +115,7 @@ public class InLineFileCache implements FileCache {
             length -= res;
         }
         IoUtils.safeClose(fileChannel);
-        try {
-            responseChannel.shutdownWrites();
-            if (! responseChannel.flush()) {
-                responseChannel.getWriteSetter().set(ChannelListeners.<SuspendableWriteChannel>flushingChannelListener(new CompletionChannelListener(completionHandler), new CompletionChannelExceptionHandler(completionHandler)));
-                responseChannel.resumeWrites();
-                return;
-            }
-        } catch (IOException e) {
-            IoUtils.safeClose(fileChannel);
-            IoUtils.safeClose(responseChannel);
-            completionHandler.handleComplete();
-            return;
-        }
+        HttpHandlers.flushAndCompleteRequest(responseChannel, completionHandler);
     }
 
     private static class TransferListener implements ChannelListener<StreamSinkChannel> {
