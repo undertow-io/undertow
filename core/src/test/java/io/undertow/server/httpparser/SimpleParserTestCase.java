@@ -109,8 +109,8 @@ public class SimpleParserTestCase {
         Assert.assertEquals("/somepath", result.fullPath);
         Assert.assertSame("HTTP/1.1", result.protocol);
         HeaderMap map = new HeaderMap();
-        map.add("Host", "www.somehost.net");
-        map.add("OtherHeader", "some value");
+        map.add("host", "www.somehost.net");
+        map.add("otherheader", "some value");
         Assert.assertEquals(map, result.headers);
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
     }

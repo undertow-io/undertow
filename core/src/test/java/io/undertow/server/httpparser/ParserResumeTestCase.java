@@ -74,10 +74,10 @@ public class ParserResumeTestCase {
         Assert.assertEquals("http://www.somehost.net/apath?key1=value1&key2=value2", result.fullPath);
         Assert.assertSame("HTTP/1.1", result.protocol);
         HeaderMap map = new HeaderMap();
-        map.add("Host", "www.somehost.net");
-        map.add("OtherHeader", "some value");
-        map.add("Hostee", "another");
-        map.add("Accept-garbage", "a");
+        map.add("host", "www.somehost.net");
+        map.add("otherheader", "some value");
+        map.add("hostee", "another");
+        map.add("accept-garbage", "a");
         Assert.assertEquals(map, result.headers);
 
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);

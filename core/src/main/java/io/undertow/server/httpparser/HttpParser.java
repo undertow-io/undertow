@@ -41,6 +41,7 @@ import static io.undertow.util.Headers.CONTENT_MD5;
 import static io.undertow.util.Headers.CONTENT_RANGE;
 import static io.undertow.util.Headers.CONTENT_TYPE;
 import static io.undertow.util.Headers.COOKIE;
+import static io.undertow.util.Headers.COOKIE2;
 import static io.undertow.util.Headers.DATE;
 import static io.undertow.util.Headers.ETAG;
 import static io.undertow.util.Headers.EXPECT;
@@ -122,6 +123,7 @@ import static io.undertow.util.Protocols.HTTP_1_1;
                 AUTHORIZATION,
                 CACHE_CONTROL,
                 COOKIE,
+                COOKIE2,
                 CONNECTION,
                 CONTENT_DISPOSITION,
                 CONTENT_ENCODING,
