@@ -18,14 +18,6 @@
 
 package io.undertow.util;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -35,10 +27,24 @@ import org.xnio.channels.ConcurrentStreamChannelAccessException;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
-import static java.util.concurrent.locks.LockSupport.*;
-import static org.xnio.Bits.*;
+import static java.util.concurrent.locks.LockSupport.park;
+import static java.util.concurrent.locks.LockSupport.parkNanos;
+import static java.util.concurrent.locks.LockSupport.unpark;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
 import static org.xnio.ChannelListeners.delegatingChannelListener;
 import static org.xnio.ChannelListeners.invokeChannelListener;
 import static org.xnio.IoUtils.safeClose;
@@ -151,11 +157,11 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                 safeClose(delegate);
             } else {
                 boolean doResume = allAreSet(val, FLAG_RESUME);
-                if (! doResume) {
+                if (!doResume && delegate.isWriteResumed()) {
                     delegate.suspendWrites();
                 }
                 delegate.getWriteSetter().set(delegatingChannelListener(this, writeSetter));
-                if (doResume) {
+                if (doResume && !delegate.isWriteResumed()) {
                     delegate.resumeWrites();
                 }
             }
