@@ -18,64 +18,12 @@
 
 package io.undertow.server.httpparser;
 
+import io.undertow.util.HttpString;
 import java.nio.ByteBuffer;
 
 import io.undertow.annotationprocessor.HttpParserConfig;
 
-import static io.undertow.util.Headers.ACCEPT;
-import static io.undertow.util.Headers.ACCEPT_CHARSET;
-import static io.undertow.util.Headers.ACCEPT_ENCODING;
-import static io.undertow.util.Headers.ACCEPT_LANGUAGE;
-import static io.undertow.util.Headers.ACCEPT_RANGES;
-import static io.undertow.util.Headers.AGE;
-import static io.undertow.util.Headers.ALLOW;
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.CACHE_CONTROL;
-import static io.undertow.util.Headers.CONNECTION;
-import static io.undertow.util.Headers.CONTENT_DISPOSITION;
-import static io.undertow.util.Headers.CONTENT_ENCODING;
-import static io.undertow.util.Headers.CONTENT_LANGUAGE;
-import static io.undertow.util.Headers.CONTENT_LENGTH;
-import static io.undertow.util.Headers.CONTENT_LOCATION;
-import static io.undertow.util.Headers.CONTENT_MD5;
-import static io.undertow.util.Headers.CONTENT_RANGE;
-import static io.undertow.util.Headers.CONTENT_TYPE;
-import static io.undertow.util.Headers.COOKIE;
-import static io.undertow.util.Headers.DATE;
-import static io.undertow.util.Headers.ETAG;
-import static io.undertow.util.Headers.EXPECT;
-import static io.undertow.util.Headers.EXPIRES;
-import static io.undertow.util.Headers.FROM;
-import static io.undertow.util.Headers.HOST;
-import static io.undertow.util.Headers.IF_MATCH;
-import static io.undertow.util.Headers.IF_MODIFIED_SINCE;
-import static io.undertow.util.Headers.IF_NONE_MATCH;
-import static io.undertow.util.Headers.IF_RANGE;
-import static io.undertow.util.Headers.IF_UNMODIFIED_SINCE;
-import static io.undertow.util.Headers.LAST_MODIFIED;
-import static io.undertow.util.Headers.LOCATION;
-import static io.undertow.util.Headers.MAX_FORWARDS;
-import static io.undertow.util.Headers.ORIGIN;
-import static io.undertow.util.Headers.PRAGMA;
-import static io.undertow.util.Headers.PROXY_AUTHENTICATE;
-import static io.undertow.util.Headers.PROXY_AUTHORIZATION;
-import static io.undertow.util.Headers.RANGE;
-import static io.undertow.util.Headers.REFERER;
-import static io.undertow.util.Headers.REFRESH;
-import static io.undertow.util.Headers.RETRY_AFTER;
-import static io.undertow.util.Headers.SERVER;
-import static io.undertow.util.Headers.SET_COOKIE;
-import static io.undertow.util.Headers.SET_COOKIE2;
-import static io.undertow.util.Headers.STRICT_TRANSPORT_SECURITY;
-import static io.undertow.util.Headers.TE;
-import static io.undertow.util.Headers.TRAILER;
-import static io.undertow.util.Headers.TRANSFER_ENCODING;
-import static io.undertow.util.Headers.UPGRADE;
-import static io.undertow.util.Headers.USER_AGENT;
-import static io.undertow.util.Headers.VARY;
-import static io.undertow.util.Headers.VIA;
-import static io.undertow.util.Headers.WARNING;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.Headers.*;
 import static io.undertow.util.Methods.CONNECT;
 import static io.undertow.util.Methods.DELETE;
 import static io.undertow.util.Methods.GET;
@@ -112,60 +60,60 @@ import static io.undertow.util.Protocols.HTTP_1_1;
                 HTTP_0_9, HTTP_1_0, HTTP_1_1
         },
         headers = {
-                ACCEPT,
-                ACCEPT_CHARSET,
-                ACCEPT_ENCODING,
-                ACCEPT_LANGUAGE,
-                ACCEPT_RANGES,
-                AGE,
-                ALLOW,
-                AUTHORIZATION,
-                CACHE_CONTROL,
-                COOKIE,
-                CONNECTION,
-                CONTENT_DISPOSITION,
-                CONTENT_ENCODING,
-                CONTENT_LANGUAGE,
-                CONTENT_LENGTH,
-                CONTENT_LOCATION,
-                CONTENT_MD5,
-                CONTENT_RANGE,
-                CONTENT_TYPE,
-                DATE,
-                ETAG,
-                EXPECT,
-                EXPIRES,
-                FROM,
-                HOST,
-                IF_MATCH,
-                IF_MODIFIED_SINCE,
-                IF_NONE_MATCH,
-                IF_RANGE,
-                IF_UNMODIFIED_SINCE,
-                LAST_MODIFIED,
-                LOCATION,
-                MAX_FORWARDS,
-                ORIGIN,
-                PRAGMA,
-                PROXY_AUTHENTICATE,
-                PROXY_AUTHORIZATION,
-                RANGE,
-                REFERER,
-                REFRESH,
-                RETRY_AFTER,
-                SERVER,
-                SET_COOKIE,
-                SET_COOKIE2,
-                STRICT_TRANSPORT_SECURITY,
-                TE,
-                TRAILER,
-                TRANSFER_ENCODING,
-                UPGRADE,
-                USER_AGENT,
-                VARY,
-                VIA,
-                WARNING,
-                WWW_AUTHENTICATE})
+                ACCEPT_STRING,
+                ACCEPT_CHARSET_STRING,
+                ACCEPT_ENCODING_STRING,
+                ACCEPT_LANGUAGE_STRING,
+                ACCEPT_RANGES_STRING,
+                AGE_STRING,
+                ALLOW_STRING,
+                AUTHORIZATION_STRING,
+                CACHE_CONTROL_STRING,
+                COOKIE_STRING,
+                CONNECTION_STRING,
+                CONTENT_DISPOSITION_STRING,
+                CONTENT_ENCODING_STRING,
+                CONTENT_LANGUAGE_STRING,
+                CONTENT_LENGTH_STRING,
+                CONTENT_LOCATION_STRING,
+                CONTENT_MD5_STRING,
+                CONTENT_RANGE_STRING,
+                CONTENT_TYPE_STRING,
+                DATE_STRING,
+                ETAG_STRING,
+                EXPECT_STRING,
+                EXPIRES_STRING,
+                FROM_STRING,
+                HOST_STRING,
+                IF_MATCH_STRING,
+                IF_MODIFIED_SINCE_STRING,
+                IF_NONE_MATCH_STRING,
+                IF_RANGE_STRING,
+                IF_UNMODIFIED_SINCE_STRING,
+                LAST_MODIFIED_STRING,
+                LOCATION_STRING,
+                MAX_FORWARDS_STRING,
+                ORIGIN_STRING,
+                PRAGMA_STRING,
+                PROXY_AUTHENTICATE_STRING,
+                PROXY_AUTHORIZATION_STRING,
+                RANGE_STRING,
+                REFERER_STRING,
+                REFRESH_STRING,
+                RETRY_AFTER_STRING,
+                SERVER_STRING,
+                SET_COOKIE_STRING,
+                SET_COOKIE2_STRING,
+                STRICT_TRANSPORT_SECURITY_STRING,
+                TE_STRING,
+                TRAILER_STRING,
+                TRANSFER_ENCODING_STRING,
+                UPGRADE_STRING,
+                USER_AGENT_STRING,
+                VARY_STRING,
+                VIA_STRING,
+                WARNING_STRING,
+                WWW_AUTHENTICATE_STRING})
 public abstract class HttpParser {
 
     public static final HttpParser INSTANCE;
@@ -213,7 +161,7 @@ public abstract class HttpParser {
         int canonicalPathStart = state.pos;
         int queryParamPos = state.queryParamPos;
         int requestEnd = state.requestEnd;
-        String nextQueryParam = state.nextHeader;
+        HttpString nextQueryParam = state.nextHeader;
         if (stringBuilder == null) {
             state.stringBuilder = stringBuilder = new StringBuilder();
         }
@@ -368,7 +316,7 @@ public abstract class HttpParser {
                         parseState = WHITESPACE;
                     } else {
                         //we have a header
-                        String nextStandardHeader = state.nextHeader;
+                        HttpString nextStandardHeader = state.nextHeader;
                         String headerValue = stringBuilder.toString();
 
                         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol

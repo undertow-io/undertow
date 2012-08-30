@@ -99,7 +99,7 @@ public class FormDataParserTestCase {
 
             @Override
             public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-                final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+                final FormDataParser parser = (FormDataParser) exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
                 try {
                     FormData data = parser.parseBlocking();
                     Iterator<String> it = data.iterator();

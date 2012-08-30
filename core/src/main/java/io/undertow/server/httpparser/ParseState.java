@@ -18,7 +18,7 @@
 
 package io.undertow.server.httpparser;
 
-import java.util.List;
+import io.undertow.util.HttpString;
 
 /**
  * The current state of the tokenizer state machine. This class is mutable and not thread safe.
@@ -52,7 +52,7 @@ public class ParseState {
 
     /**
      * If this state is a prefix or terminal match state this is set to the string
-     * that is a candiate to be matched
+     * that is a candidate to be matched
      */
     String current;
 
@@ -92,7 +92,7 @@ public class ParseState {
     /**
      * This is used to store the next header value when parsing header key / value pairs,
      */
-    String nextHeader;
+    HttpString nextHeader;
 
 
     public ParseState() {

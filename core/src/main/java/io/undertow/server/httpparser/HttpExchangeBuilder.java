@@ -23,6 +23,7 @@ import java.util.Deque;
 import java.util.Map;
 
 import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 import io.undertow.util.SecureHashMap;
 
 /**
@@ -70,7 +71,7 @@ public class HttpExchangeBuilder {
         return queryString;
     }
 
-    public void addQueryParam(final String name, final String param) {
+    public void addQueryParam(final HttpString name, final String param) {
         Deque<String> list = queryParameters.get(name);
         if(list == null) {
             queryParameters.put(name, list = new ArrayDeque<String>());

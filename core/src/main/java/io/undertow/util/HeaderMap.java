@@ -32,115 +32,65 @@ import java.util.Map;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HeaderMap implements Iterable<String> {
+public final class HeaderMap implements Iterable<HttpString> {
 
-    static class HeaderValue extends ArrayDeque<String> {
-        private final String name;
+    private final Map<HttpString, ArrayDeque<String>> values = new SecureHashMap<HttpString, ArrayDeque<String>>();
 
-        HeaderValue(final String name) {
-            super(1);
-            this.name = name;
-        }
-
-        HeaderValue(final String name, final String singleValue) {
-            this(name);
-            add(singleValue);
-        }
-
-        HeaderValue(final String name, final Collection<String> c) {
-            super(c);
-            this.name = name;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public boolean equals(final Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            final HeaderValue strings = (HeaderValue) o;
-
-            if (name != null ? !name.equals(strings.name) : strings.name != null) return false;
-            if(strings.size() != size()) return false;
-            Iterator<String> i1 = iterator();
-            Iterator<String> i2 = strings.iterator();
-            while (i1.hasNext()) {
-                String n1 = i1.next();
-                String n2 = i2.next();
-                if(!n1.equals(n2)) return false;
-            }
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            return super.hashCode();
-        }
+    public Iterator<HttpString> iterator() {
+        return values.keySet().iterator();
     }
 
-    private final Map<String, HeaderValue> values = new SecureHashMap<String, HeaderValue>();
-
-    public Iterator<String> iterator() {
-        final Iterator<HeaderValue> iterator = values.values().iterator();
-        return new Iterator<String>() {
-            public boolean hasNext() {
-                return iterator.hasNext();
-            }
-
-            public String next() {
-                return iterator.next().getName();
-            }
-
-            public void remove() {
-                iterator.remove();
-            }
-        };
-    }
-
-    public String getFirst(String headerName) {
-        final Deque<String> deque = values.get(headerName.toLowerCase(Locale.US));
+    public String getFirst(HttpString headerName) {
+        final Deque<String> deque = values.get(headerName);
         return deque == null ? null : deque.peekFirst();
     }
 
-    public String getLast(String headerName) {
-        final Deque<String> deque = values.get(headerName.toLowerCase(Locale.US));
+    public String getLast(HttpString headerName) {
+        final Deque<String> deque = values.get(headerName);
         return deque == null ? null : deque.peekLast();
     }
 
-    public Deque<String> get(String headerName) {
-        return values.get(headerName.toLowerCase(Locale.US));
+    public Deque<String> get(HttpString headerName) {
+        return values.get(headerName);
     }
 
-    public void add(String headerName, String headerValue) {
-        final String key = headerName.toLowerCase(Locale.US);
-        final HeaderValue value = values.get(key);
+    public void add(HttpString headerName, String headerValue) {
+        final ArrayDeque<String> value = values.get(headerName);
         if (value == null) {
-            values.put(key, new HeaderValue(headerName, headerValue));
+            values.put(headerName, newHeaderValue(headerValue));
         } else {
             value.add(headerValue);
         }
     }
 
-    public void addAll(String headerName, Collection<String> headerValues) {
-        final String key = headerName.toLowerCase(Locale.US);
-        final HeaderValue value = values.get(key);
+    private ArrayDeque<String> newHeaderValue(final String value) {
+        final ArrayDeque<String> deque = new ArrayDeque<String>();
+        deque.add(value);
+        return deque;
+    }
+
+    private ArrayDeque<String> newHeaderValue(final Collection<String> values) {
+        final ArrayDeque<String> deque = new ArrayDeque<String>();
+        deque.addAll(values);
+        return deque;
+    }
+
+    public void addAll(HttpString headerName, Collection<String> headerValues) {
+        final ArrayDeque<String> value = values.get(headerName);
         if (value == null) {
-            values.put(key, new HeaderValue(headerName, headerValues));
+            values.put(headerName, newHeaderValue(headerValues));
         } else {
             value.addAll(headerValues);
         }
     }
 
     public void addAll(HeaderMap other) {
-        for (Map.Entry<String, HeaderValue> entry : other.values.entrySet()) {
-            final String key = entry.getKey();
-            final HeaderValue value = entry.getValue();
-            final HeaderValue target = values.get(key);
+        for (Map.Entry<HttpString, ArrayDeque<String>> entry : other.values.entrySet()) {
+            final HttpString key = entry.getKey();
+            final ArrayDeque<String> value = entry.getValue();
+            final ArrayDeque<String> target = values.get(key);
             if (target == null) {
-                values.put(key, new HeaderValue(value.getName(), value));
+                values.put(key, newHeaderValue(value));
             } else {
                 target.addAll(value);
             }
@@ -151,23 +101,21 @@ public final class HeaderMap implements Iterable<String> {
         values.clear();
     }
 
-    public Collection<String> getHeaderNames() {
-        return new HashSet<String>(values.keySet());
+    public Collection<HttpString> getHeaderNames() {
+        return new HashSet<HttpString>(values.keySet());
     }
 
-    public void put(String headerName, String headerValue) {
-        final String key = headerName.toLowerCase(Locale.US);
-        final HeaderValue value = new HeaderValue(headerName, headerValue);
-        values.put(key, value);
+    public void put(HttpString headerName, String headerValue) {
+        final ArrayDeque<String> value = newHeaderValue(headerValue);
+        values.put(headerName, value);
     }
 
-    public void putAll(String headerName, Collection<String> headerValues) {
-        final String key = headerName.toLowerCase(Locale.US);
-        final HeaderValue deque = new HeaderValue(headerName, headerValues);
-        values.put(key, deque);
+    public void putAll(HttpString headerName, Collection<String> headerValues) {
+        final ArrayDeque<String> deque = newHeaderValue(headerValues);
+        values.put(headerName, deque);
     }
 
-    public Collection<String> remove(String headerName) {
+    public Collection<String> remove(HttpString headerName) {
         return values.remove(headerName);
     }
 
@@ -178,26 +126,19 @@ public final class HeaderMap implements Iterable<String> {
 
     }
 
-    public boolean contains(String headerName) {
-        final HeaderValue value = values.get(headerName.toLowerCase(Locale.US));
+    public boolean contains(HttpString headerName) {
+        final ArrayDeque<String> value = values.get(headerName);
         return value != null && ! value.isEmpty();
     }
 
     @Override
     public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        final HeaderMap strings = (HeaderMap) o;
-
-        if (values != null ? !values.equals(strings.values) : strings.values != null) return false;
-
-        return true;
+        return o == this;
     }
 
     @Override
     public int hashCode() {
-        return values != null ? values.hashCode() : 0;
+        return super.hashCode();
     }
 
     @Override

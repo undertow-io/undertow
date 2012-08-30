@@ -18,6 +18,7 @@
 
 package io.undertow.server;
 
+import io.undertow.util.HttpString;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -57,9 +58,9 @@ final class HttpResponseChannel implements StreamSinkChannel {
     @SuppressWarnings("unused")
     private volatile int state = STATE_START;
 
-    private Iterator<String> nameIterator;
+    private Iterator<HttpString> nameIterator;
     private String string;
-    private String headerName;
+    private HttpString headerName;
     private Iterator<String> valueIterator;
     private int charIndex;
     private Pooled<ByteBuffer> pooledBuffer;
@@ -107,12 +108,12 @@ final class HttpResponseChannel implements StreamSinkChannel {
             pooledBuffer = pool.allocate();
         }
         ByteBuffer buffer = pooledBuffer.getResource();
-        Iterator<String> nameIterator = this.nameIterator;
+        Iterator<HttpString> nameIterator = this.nameIterator;
         Iterator<String> valueIterator = this.valueIterator;
         int charIndex = this.charIndex;
         int length;
         String string = this.string;
-        String headerName = this.headerName;
+        HttpString headerName = this.headerName;
         int res;
         // BUFFER IS FLIPPED COMING IN
         if (state != STATE_START && buffer.hasRemaining()) {
@@ -181,7 +182,7 @@ final class HttpResponseChannel implements StreamSinkChannel {
                     length = headerName.length();
                     while (charIndex < length) {
                         if (buffer.hasRemaining()) {
-                            buffer.put((byte) headerName.charAt(charIndex++));
+                            buffer.put(headerName.byteAt(charIndex++));
                         } else {
                             log.trace("Buffer flush");
                             buffer.flip();
@@ -378,8 +379,8 @@ final class HttpResponseChannel implements StreamSinkChannel {
                     if(valueIterator.hasNext()) {
                         state = STATE_HDR_NAME;
                         break;
-                    }else  if (nameIterator.hasNext()) {
-                        string = nameIterator.next();
+                    } else if (nameIterator.hasNext()) {
+                        headerName = nameIterator.next();
                         valueIterator = null;
                         state = STATE_HDR_NAME;
                         break;
@@ -626,7 +627,7 @@ final class HttpResponseChannel implements StreamSinkChannel {
             if (state != 0) {
                 state = processWrite(state);
                 if (state != 0) {
-                    log.tracef("Flush false because headers aren't written yet (%d)", state);
+                    log.trace("Flush false because headers aren't written yet");
                     return false;
                 }
                 oldVal = newVal;
