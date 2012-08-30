@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.DispatcherType;
+
 import io.undertow.servlet.UndertowServletMessages;
 
 /**
@@ -44,6 +46,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile int minorVersion;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
+    private final List<FilterMappingInfo> filterMappings = new ArrayList<FilterMappingInfo>();
     private final List<ListenerInfo> listeners = new ArrayList<ListenerInfo>();
     private final List<ServletContainerInitializerInfo> servletContainerInitializers = new ArrayList<ServletContainerInitializerInfo>();
     private final List<ThreadSetupAction> threadSetupActions = new ArrayList<ThreadSetupAction>();
@@ -166,6 +169,30 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableMap(filters);
     }
 
+    public DeploymentInfo addFilterUrlMapping(final String filterName,final String mapping, DispatcherType dispatcher) {
+        filterMappings.add(new FilterMappingInfo(filterName, FilterMappingInfo.MappingType.URL, mapping, dispatcher));
+        return this;
+    }
+
+    public DeploymentInfo addFilterServletNameMapping(final String filterName, final String mapping, DispatcherType dispatcher) {
+        filterMappings.add(new FilterMappingInfo(filterName, FilterMappingInfo.MappingType.SERVLET, mapping, dispatcher));
+        return this;
+    }
+
+    public DeploymentInfo insertFilterUrlMapping(final int pos,final String filterName,final String mapping, DispatcherType dispatcher) {
+        filterMappings.add(pos, new FilterMappingInfo(filterName, FilterMappingInfo.MappingType.URL, mapping, dispatcher));
+        return this;
+    }
+
+    public DeploymentInfo insertFilterServletNameMapping(final int pos, final String filterName, final String mapping, DispatcherType dispatcher) {
+        filterMappings.add(pos, new FilterMappingInfo(filterName, FilterMappingInfo.MappingType.SERVLET, mapping, dispatcher));
+        return this;
+    }
+
+    public List<FilterMappingInfo> getFilterMappings() {
+        return Collections.unmodifiableList(filterMappings);
+    }
+
     public DeploymentInfo addListener(final ListenerInfo listener) {
         listeners.add(listener);
         return this;
@@ -248,6 +275,7 @@ public class DeploymentInfo implements Cloneable {
         for (Map.Entry<String, FilterInfo> e : filters.entrySet()) {
             info.addFilter(e.getValue().clone());
         }
+        info.filterMappings.addAll(filterMappings);
         info.listeners.addAll(listeners);
         info.servletContainerInitializers.addAll(servletContainerInitializers);
         info.threadSetupActions.addAll(threadSetupActions);

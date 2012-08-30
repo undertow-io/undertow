@@ -295,7 +295,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void addListener(final Class<? extends EventListener> listenerClass) {
-        deploymentInfo.addListener(new ListenerInfo(listenerClass));
+        ListenerInfo info =  deploymentInfo.getClassIntrospecter().createListenerInfo(listenerClass);
+        deploymentInfo.addListener(info);
     }
 
     @Override
@@ -320,6 +321,5 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void declareRoles(final String... roleNames) {
-
     }
 }

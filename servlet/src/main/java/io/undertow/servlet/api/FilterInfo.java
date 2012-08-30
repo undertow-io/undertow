@@ -19,13 +19,10 @@
 package io.undertow.servlet.api;
 
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 
 import io.undertow.servlet.UndertowServletMessages;
@@ -40,7 +37,6 @@ public class FilterInfo implements Cloneable {
     private final String name;
     private final InstanceFactory<? extends Filter> instanceFactory;
 
-    private final List<Mapping> mappings = new ArrayList<Mapping>();
     private final Map<String, String> initParams = new HashMap<String, String>();
     private volatile boolean asyncSupported;
 
@@ -90,7 +86,6 @@ public class FilterInfo implements Cloneable {
     public FilterInfo clone() {
         FilterInfo info = new FilterInfo(name, filterClass, instanceFactory)
                 .setAsyncSupported(asyncSupported);
-        info.mappings.addAll(mappings);
         info.initParams.putAll(initParams);
         return info;
     }
@@ -106,35 +101,10 @@ public class FilterInfo implements Cloneable {
         return instanceFactory;
     }
 
-    public List<Mapping> getMappings() {
-        return Collections.unmodifiableList(mappings);
-    }
-
-    public FilterInfo addUrlMapping(final String mapping) {
-        mappings.add(new Mapping(MappingType.URL, mapping, DispatcherType.REQUEST));
-        return this;
-    }
-
-    public FilterInfo addUrlMapping(final String mapping, DispatcherType dispatcher) {
-        mappings.add(new Mapping(MappingType.URL, mapping, dispatcher));
-        return this;
-    }
-
-    public FilterInfo addServletNameMapping(final String mapping) {
-        mappings.add(new Mapping(MappingType.SERVLET, mapping, DispatcherType.REQUEST));
-        return this;
-    }
-
-    public FilterInfo addServletNameMapping(final String mapping, final DispatcherType dispatcher) {
-        mappings.add(new Mapping(MappingType.SERVLET, mapping, dispatcher));
-        return this;
-    }
-
     public FilterInfo addInitParam(final String name, final String value) {
         initParams.put(name, value);
         return this;
     }
-
 
     public Map<String, String> getInitParams() {
         return Collections.unmodifiableMap(initParams);
@@ -149,34 +119,5 @@ public class FilterInfo implements Cloneable {
         return this;
     }
 
-
-    public static enum MappingType {
-        URL,
-        SERVLET;
-    }
-
-    public static class Mapping {
-        private final MappingType mappingType;
-        private final String mapping;
-        private final DispatcherType dispatcher;
-
-        public Mapping(final MappingType mappingType, final String mapping, final DispatcherType dispatcher) {
-            this.mappingType = mappingType;
-            this.mapping = mapping;
-            this.dispatcher = dispatcher;
-        }
-
-        public MappingType getMappingType() {
-            return mappingType;
-        }
-
-        public String getMapping() {
-            return mapping;
-        }
-
-        public DispatcherType getDispatcher() {
-            return dispatcher;
-        }
-    }
 
 }

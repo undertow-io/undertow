@@ -38,6 +38,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
+import io.undertow.servlet.api.FilterMappingInfo;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
@@ -137,7 +138,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         final ServletMatchingHandler servletHandler = new ServletMatchingHandler(defaultHandler);
 
-        final Map<FilterInfo, ManagedFilter> managedFilterMap = new LinkedHashMap<FilterInfo, ManagedFilter>();
+        final Map<String, ManagedFilter> managedFilterMap = new LinkedHashMap<String, ManagedFilter>();
         final Map<ServletInfo, ServletHandler> servletHandlerMap = new LinkedHashMap<ServletInfo, ServletHandler>();
         final Map<String, ServletInfo> extensionServlets = new HashMap<String, ServletInfo>();
         final Map<String, ServletInfo> pathServlets = new HashMap<String, ServletInfo>();
@@ -148,16 +149,17 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         for (Map.Entry<String, FilterInfo> entry : deployment.getFilters().entrySet()) {
             final ManagedFilter mf = new ManagedFilter(entry.getValue(), servletContext);
-            managedFilterMap.put(entry.getValue(), mf);
+            managedFilterMap.put(entry.getValue().getName(), mf);
             lifecycles.add(mf);
-            for (FilterInfo.Mapping mapping : entry.getValue().getMappings()) {
-                if (mapping.getMappingType() == FilterInfo.MappingType.URL) {
-                    String path = mapping.getMapping();
-                    if (!path.startsWith("*.")) {
-                        pathMatches.add(path);
-                    } else {
-                        extensionMatches.add(path.substring(2));
-                    }
+        }
+
+        for (FilterMappingInfo mapping : deployment.getFilterMappings()) {
+            if (mapping.getMappingType() == FilterMappingInfo.MappingType.URL) {
+                String path = mapping.getMapping();
+                if (!path.startsWith("*.")) {
+                    pathMatches.add(path);
+                } else {
+                    extensionMatches.add(path.substring(2));
                 }
             }
         }
@@ -204,31 +206,31 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 extension.put(ext, new ArrayList<ManagedFilter>());
             }
 
-            for (Map.Entry<FilterInfo, ManagedFilter> filter : managedFilterMap.entrySet()) {
-                for (final FilterInfo.Mapping filterMapping : filter.getKey().getMappings()) {
-                    if (filterMapping.getMappingType() == FilterInfo.MappingType.SERVLET) {
-                        if (targetServlet != null) {
-                            if (filterMapping.getMapping().equals(targetServlet.getName())) {
-                                noExtension.add(filter.getValue());
-                                for (List<ManagedFilter> l : extension.values()) {
-                                    l.add(filter.getValue());
-                                }
+            for (final FilterMappingInfo filterMapping : deployment.getFilterMappings()) {
+                ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
+                if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
+                    if (targetServlet != null) {
+                        if (filterMapping.getMapping().equals(targetServlet.getName())) {
+                            noExtension.add(filter);
+                            for (List<ManagedFilter> l : extension.values()) {
+                                l.add(filter);
+                            }
+                        }
+                    }
+                } else {
+                    if (path.isEmpty() || !path.startsWith("*.")) {
+                        if (isFilterApplicable(path, filterMapping.getMapping())) {
+                            noExtension.add(filter);
+                            for (List<ManagedFilter> l : extension.values()) {
+                                l.add(filter);
                             }
                         }
                     } else {
-                        if (path.isEmpty() || !path.startsWith("*.")) {
-                            if (isFilterApplicable(path, filterMapping.getMapping())) {
-                                noExtension.add(filter.getValue());
-                                for (List<ManagedFilter> l : extension.values()) {
-                                    l.add(filter.getValue());
-                                }
-                            }
-                        } else {
-                            extension.get(path.substring(2)).add(filter.getValue());
-                        }
+                        extension.get(path.substring(2)).add(filter);
                     }
                 }
             }
+
             ServletMatchingHandler.PathMatch pathMatch;
 
             if (noExtension.isEmpty()) {
@@ -286,20 +288,18 @@ public class DeploymentManagerImpl implements DeploymentManager {
             ServletInfo targetServlet = extensionServlets.get(path);
 
             final List<ManagedFilter> extension = new ArrayList<ManagedFilter>();
-
-            for (Map.Entry<FilterInfo, ManagedFilter> filter : managedFilterMap.entrySet()) {
-                for (final FilterInfo.Mapping filterMapping : filter.getKey().getMappings()) {
-                    if (filterMapping.getMappingType() == FilterInfo.MappingType.SERVLET) {
-                        if (targetServlet != null) {
-                            if (filterMapping.getMapping().equals(targetServlet.getName())) {
-                                extension.add(filter.getValue());
-                            }
+            for (final FilterMappingInfo filterMapping : deployment.getFilterMappings()) {
+                ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
+                if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
+                    if (targetServlet != null) {
+                        if (filterMapping.getMapping().equals(targetServlet.getName())) {
+                            extension.add(filter);
                         }
-                    } else {
-                        if (path.startsWith("*.")) {
-                            if (path.substring(2).equals(path)) {
-                                extension.add(filter.getValue());
-                            }
+                    }
+                } else {
+                    if (path.startsWith("*.")) {
+                        if (path.substring(2).equals(path)) {
+                            extension.add(filter);
                         }
                     }
                 }
@@ -332,7 +332,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     private ApplicationListeners createListeners() {
         final List<ManagedListener> managedListeners = new ArrayList<ManagedListener>();
-        for(final ListenerInfo listener : deployment.getListeners()) {
+        for (final ListenerInfo listener : deployment.getListeners()) {
             managedListeners.add(new ManagedListener(listener, servletContext));
         }
         return new ApplicationListeners(managedListeners, servletContext);

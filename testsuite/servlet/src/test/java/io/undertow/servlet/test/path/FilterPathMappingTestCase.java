@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
@@ -53,43 +54,41 @@ public class FilterPathMappingTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
+        DeploymentInfo builder = new DeploymentInfo();
 
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance(root);
 
-        final ServletInfo aStar = new ServletInfo("/a/*", PathMappingServlet.class)
-                .addMapping("/a/*");
+        builder.addServlet(new ServletInfo("/a/*", PathMappingServlet.class)
+                .addMapping("/a/*"));
 
-        final ServletInfo aa = new ServletInfo( "/aa", PathMappingServlet.class)
-                .addMapping("/aa");
+        builder.addServlet(new ServletInfo("/aa", PathMappingServlet.class)
+                .addMapping("/aa"));
 
-        final ServletInfo d = new ServletInfo("/", PathMappingServlet.class)
-                .addMapping("/");
+        builder.addServlet(new ServletInfo("/", PathMappingServlet.class)
+                .addMapping("/"));
 
-        final ServletInfo cr = new ServletInfo("contextRoot", PathMappingServlet.class)
-                .addMapping("");
+        builder.addServlet(new ServletInfo("contextRoot", PathMappingServlet.class)
+                .addMapping(""));
 
-        final FilterInfo f1 = new FilterInfo("/*", PathFilter.class)
-                .addUrlMapping("/*");
+        builder.addFilter(new FilterInfo("/*", PathFilter.class));
+        builder.addFilterUrlMapping("/*", "/*", DispatcherType.REQUEST);
 
-        final FilterInfo f2 = new FilterInfo("/a/*",  PathFilter.class)
-                .addUrlMapping("/a/*");
+        builder.addFilter(new FilterInfo("/a/*", PathFilter.class));
+        builder.addFilterUrlMapping("/a/*", "/a/*", DispatcherType.REQUEST);
 
-        final FilterInfo f3 = new FilterInfo("/aa", PathFilter.class)
-                .addUrlMapping("/aa");
+        builder.addFilter(new FilterInfo("/aa", PathFilter.class));
+        builder.addFilterUrlMapping("/aa", "/aa", DispatcherType.REQUEST);
 
 
-        final FilterInfo f4 = new FilterInfo("contextRoot", PathFilter.class)
-                .addServletNameMapping("contextRoot");
+        builder.addFilter(new FilterInfo("contextRoot", PathFilter.class));
+        builder.addFilterServletNameMapping("contextRoot", "contextRoot", DispatcherType.REQUEST);
 
-        final DeploymentInfo builder = new DeploymentInfo()
-                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+        builder.setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.INSTANCE)
-                .addServlets(aStar, aa, d, cr)
-                .addFilters(f1, f2, f3, f4);
+                .setResourceLoader(TestResourceLoader.INSTANCE);
 
         final DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -161,12 +160,12 @@ public class FilterPathMappingTestCase {
     private void requireHeaders(final HttpResponse result, final String... headers) {
         final Header[] resultHeaders = result.getHeaders("filter");
         final Set<String> found = new HashSet<String>(Arrays.asList(headers));
-        for(Header header : resultHeaders) {
-            if(!found.remove(header.getValue())) {
+        for (Header header : resultHeaders) {
+            if (!found.remove(header.getValue())) {
                 Assert.fail("Found unexpected header " + header.getValue());
             }
         }
-        if(!found.isEmpty()) {
+        if (!found.isEmpty()) {
             Assert.fail("header(s) not found " + found);
         }
     }
