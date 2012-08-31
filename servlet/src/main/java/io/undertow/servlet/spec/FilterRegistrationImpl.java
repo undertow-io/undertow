@@ -36,7 +36,7 @@ import io.undertow.servlet.api.FilterMappingInfo;
 /**
  * @author Stuart Douglas
  */
-public class FilterRegistrationImpl implements FilterRegistration {
+public class FilterRegistrationImpl implements FilterRegistration, FilterRegistration.Dynamic {
 
     private final FilterInfo filterInfo;
     private final DeploymentInfo deploymentInfo;
@@ -156,5 +156,10 @@ public class FilterRegistrationImpl implements FilterRegistration {
     @Override
     public Map<String, String> getInitParameters() {
         return filterInfo.getInitParams();
+    }
+
+    @Override
+    public void setAsyncSupported(final boolean isAsyncSupported) {
+        filterInfo.setAsyncSupported(isAsyncSupported);
     }
 }

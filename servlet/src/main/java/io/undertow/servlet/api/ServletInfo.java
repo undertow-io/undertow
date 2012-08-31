@@ -27,7 +27,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
+import javax.servlet.annotation.MultipartConfig;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
@@ -50,7 +52,7 @@ public class ServletInfo implements Cloneable {
     private volatile boolean enabled;
     private volatile boolean asyncSupported;
     private volatile String runAs;
-    private volatile MultipartConfig multipartConfig;
+    private volatile MultipartConfigElement multipartConfig;
 
     public ServletInfo(final String name, final Class<? extends Servlet> servletClass) {
         if (name == null) {
@@ -63,7 +65,7 @@ public class ServletInfo implements Cloneable {
             throw UndertowServletMessages.MESSAGES.servletMustImplementServlet(name, servletClass);
         }
         try {
-            final Constructor<?> ctor = servletClass.getDeclaredConstructor();
+            final Constructor<? extends Servlet> ctor = servletClass.getDeclaredConstructor();
             ctor.setAccessible(true);
             this.instanceFactory = new ConstructorInstanceFactory(ctor);
             this.name = name;
@@ -203,11 +205,11 @@ public class ServletInfo implements Cloneable {
         return this;
     }
 
-    public MultipartConfig getMultipartConfig() {
+    public MultipartConfigElement getMultipartConfig() {
         return multipartConfig;
     }
 
-    public ServletInfo setMultipartConfig(final MultipartConfig multipartConfig) {
+    public ServletInfo setMultipartConfig(final MultipartConfigElement multipartConfig) {
         this.multipartConfig = multipartConfig;
         return this;
     }

@@ -21,8 +21,10 @@ package io.undertow.servlet.spec;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.EventListener;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,9 +40,13 @@ import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.servlet.UndertowServletLogger;
+import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.FilterInfo;
+import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 
@@ -200,62 +206,104 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final String className) {
-        return null;
+        try {
+            ServletInfo servlet = new ServletInfo(servletName, (Class<? extends Servlet>) deploymentInfo.getClassLoader().loadClass(className));
+            deploymentInfo.addServlet(servlet);
+            return new ServletRegistrationImpl(servlet);
+        } catch (ClassNotFoundException e) {
+            throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e );
+        }
     }
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final Servlet servlet) {
-        return null;
+        ServletInfo s = new ServletInfo(servletName, servlet.getClass(), new ImmediateInstanceFactory<Servlet>(servlet));
+        deploymentInfo.addServlet(s);
+        return new ServletRegistrationImpl(s);
     }
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final Class<? extends Servlet> servletClass) {
-        return null;
+        ServletInfo servlet = new ServletInfo(servletName, servletClass);
+        deploymentInfo.addServlet(servlet);
+        return new ServletRegistrationImpl(servlet);
     }
 
     @Override
     public <T extends Servlet> T createServlet(final Class<T> clazz) throws ServletException {
-        return null;
+        try {
+            return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
+        } catch (InstantiationException e) {
+            throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
+        }
     }
 
     @Override
     public ServletRegistration getServletRegistration(final String servletName) {
-        return null;
+        final ServletInfo servlet = deploymentInfo.getServlets().get(servletName);
+        return new ServletRegistrationImpl(servlet);
     }
 
     @Override
     public Map<String, ? extends ServletRegistration> getServletRegistrations() {
-        return null;
+        final Map<String,  ServletRegistration> ret = new HashMap<String, ServletRegistration>();
+        for(Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
+            ret.put(entry.getKey(), new ServletRegistrationImpl(entry.getValue()));
+        }
+        return ret;
     }
 
     @Override
     public FilterRegistration.Dynamic addFilter(final String filterName, final String className) {
-        return null;
+        try {
+            FilterInfo filter = new FilterInfo(filterName, (Class<? extends Filter>) deploymentInfo.getClassLoader().loadClass(className));
+            deploymentInfo.addFilter(filter);
+            return new FilterRegistrationImpl(filter, deploymentInfo);
+        } catch (ClassNotFoundException e) {
+            throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e );
+        }
     }
 
     @Override
     public FilterRegistration.Dynamic addFilter(final String filterName, final Filter filter) {
-        return null;
+        FilterInfo f = new FilterInfo(filterName, filter.getClass(), new ImmediateInstanceFactory<Filter>(filter));
+        deploymentInfo.addFilter(f);
+        return new FilterRegistrationImpl(f, deploymentInfo);
+
     }
 
     @Override
     public FilterRegistration.Dynamic addFilter(final String filterName, final Class<? extends Filter> filterClass) {
-        return null;
+        FilterInfo filter = new FilterInfo(filterName,  filterClass);
+        deploymentInfo.addFilter(filter);
+        return new FilterRegistrationImpl(filter, deploymentInfo);
     }
 
     @Override
     public <T extends Filter> T createFilter(final Class<T> clazz) throws ServletException {
-        return null;
+        try {
+            return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
+        } catch (InstantiationException e) {
+            throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
+        }
     }
 
     @Override
     public FilterRegistration getFilterRegistration(final String filterName) {
-        return null;
+        final FilterInfo filterInfo = deploymentInfo.getFilters().get(filterName);
+        if(filterInfo == null) {
+            return null;
+        }
+        return new FilterRegistrationImpl(filterInfo, deploymentInfo);
     }
 
     @Override
     public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
-        return null;
+        final Map<String,  FilterRegistration> ret = new HashMap<String, FilterRegistration>();
+        for(Map.Entry<String, FilterInfo> entry : deploymentInfo.getFilters().entrySet()) {
+            ret.put(entry.getKey(), new FilterRegistrationImpl(entry.getValue(), deploymentInfo));
+        }
+        return ret;
     }
 
     @Override
@@ -281,7 +329,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public void addListener(final String className) {
         try {
-            Class clazz = deploymentInfo.getClassLoader().loadClass(className);
+            Class<? extends EventListener> clazz = (Class<? extends EventListener>) deploymentInfo.getClassLoader().loadClass(className);
             addListener(clazz);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
@@ -290,20 +338,19 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends EventListener> void addListener(final T t) {
-        deploymentInfo.addListener(new ListenerInfo(t.getClass(), new ImmediateInstanceFactory(t)));
+        deploymentInfo.addListener(new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t)));
     }
 
     @Override
     public void addListener(final Class<? extends EventListener> listenerClass) {
-        ListenerInfo info =  deploymentInfo.getClassIntrospecter().createListenerInfo(listenerClass);
-        deploymentInfo.addListener(info);
+        InstanceFactory<? extends EventListener> factory = deploymentInfo.getClassIntrospecter().createInstanceFactory(listenerClass);
+        deploymentInfo.addListener(new ListenerInfo(listenerClass, factory));
     }
 
     @Override
     public <T extends EventListener> T createListener(final Class<T> clazz) throws ServletException {
-        ListenerInfo info =  deploymentInfo.getClassIntrospecter().createListenerInfo(clazz);
         try {
-            return (T) info.getInstanceFactory().createInstance().getInstance();
+            return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (InstantiationException e) {
             throw new ServletException(e);
         }

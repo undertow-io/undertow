@@ -35,9 +35,6 @@ import javax.servlet.Servlet;
  */
 public interface ClassIntrospecter {
 
-    ServletInfo createServletInfo(final String name, final Class<? extends Servlet> servlet);
+    <T> InstanceFactory<T> createInstanceFactory(final Class<T> clazz);
 
-    FilterInfo createFilterInfo(final String name, final Class<? extends Filter> filter);
-
-    ListenerInfo createListenerInfo(final Class<? extends EventListener> listener);
 }

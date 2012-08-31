@@ -79,4 +79,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10013, value = "Could not instantiate %s")
     ServletException couldNotInstantiateComponent(String name, @Cause Exception e);
+
+    @Message(id = 10014, value = "Could not load class %s")
+    RuntimeException cannotLoadClass(String className, @Cause Exception e);
 }
