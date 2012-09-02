@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -213,7 +212,7 @@ public class ParserGenerator {
         if(caseInsensitive) {
             modifiedItems = new String[originalItems.length];
             for(int i = 0; i < modifiedItems.length; ++i) {
-                modifiedItems[i] = originalItems[i].toLowerCase(Locale.US);
+                modifiedItems[i] = originalItems[i].toLowerCase();
             }
         } else {
             modifiedItems = originalItems;
@@ -485,9 +484,6 @@ public class ParserGenerator {
         //load 2 copies of the current byte into the stack
         c.aload(BYTE_BUFFER_VAR);
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
-        if(caseInsensitive) {
-            c.invokestatic(Character.class.getName(), "toLowerCase", "(C)C");
-        }
         c.dup();
         c.iinc(BYTES_REMAINING_VAR, -1);
 
@@ -536,10 +532,10 @@ public class ParserGenerator {
         tokenDone(c, returnCompleteCode, stateMachine);
 
 
-        invokeState(className, c, ends.get(initial).get(), initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine, caseInsensitive);
+        invokeState(className, c, ends.get(initial).get(), initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
         for (final State s : allStates) {
             if (s.stateno >= 0) {
-                invokeState(className, c, ends.get(s).get(), s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine, caseInsensitive);
+                invokeState(className, c, ends.get(s).get(), s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
             }
         }
 
@@ -568,7 +564,7 @@ public class ParserGenerator {
         c.gotoInstruction(returnCode);
     }
 
-    private static void invokeState(final String className, final CodeAttribute c, BranchEnd methodState, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine, final boolean caseInsensitive) {
+    private static void invokeState(final String className, final CodeAttribute c, BranchEnd methodState, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine) {
         c.branchEnd(methodState);
         currentState.mark(c);
 
@@ -601,9 +597,6 @@ public class ParserGenerator {
             c.aload(BYTE_BUFFER_VAR);
             c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
             c.iinc(BYTES_REMAINING_VAR, -1);
-        }
-        if(caseInsensitive) {
-            c.invokestatic(Character.class.getName(), "toLowerCase", "(C)C");
         }
 
         c.dup();

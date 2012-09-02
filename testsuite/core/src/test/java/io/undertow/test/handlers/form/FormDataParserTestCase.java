@@ -72,7 +72,7 @@ public class FormDataParserTestCase {
         fd.setNext(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+                final FormDataParser parser = (FormDataParser) exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
                 try {
                     FormData data = parser.parse().get();
                     Iterator<String> it = data.iterator();
@@ -97,7 +97,7 @@ public class FormDataParserTestCase {
 
             @Override
             public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-                final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+                final FormDataParser parser = (FormDataParser) exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
                 try {
                     FormData data = parser.parseBlocking();
                     Iterator<String> it = data.iterator();

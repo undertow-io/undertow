@@ -22,13 +22,11 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 
 /**
  * This implementation sucks and is incomplete.  It's just here to illustrate.
- *
- * NOTE: ALL HEADER NAMES MUST BE LOWER CASE
- * This is not enforced, however if you do not follow it your code will not work.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
@@ -101,32 +99,34 @@ public final class HeaderMap implements Iterable<String> {
     }
 
     public String getFirst(String headerName) {
-        final Deque<String> deque = values.get(headerName);
+        final Deque<String> deque = values.get(headerName.toLowerCase(Locale.US));
         return deque == null ? null : deque.peekFirst();
     }
 
     public String getLast(String headerName) {
-        final Deque<String> deque = values.get(headerName);
+        final Deque<String> deque = values.get(headerName.toLowerCase(Locale.US));
         return deque == null ? null : deque.peekLast();
     }
 
     public Deque<String> get(String headerName) {
-        return values.get(headerName);
+        return values.get(headerName.toLowerCase(Locale.US));
     }
 
     public void add(String headerName, String headerValue) {
-        final HeaderValue value = values.get(headerName);
+        final String key = headerName.toLowerCase(Locale.US);
+        final HeaderValue value = values.get(key);
         if (value == null) {
-            values.put(headerName, new HeaderValue(headerName, headerValue));
+            values.put(key, new HeaderValue(headerName, headerValue));
         } else {
             value.add(headerValue);
         }
     }
 
     public void addAll(String headerName, Collection<String> headerValues) {
-        final HeaderValue value = values.get(headerName);
+        final String key = headerName.toLowerCase(Locale.US);
+        final HeaderValue value = values.get(key);
         if (value == null) {
-            values.put(headerName, new HeaderValue(headerName, headerValues));
+            values.put(key, new HeaderValue(headerName, headerValues));
         } else {
             value.addAll(headerValues);
         }
@@ -146,13 +146,15 @@ public final class HeaderMap implements Iterable<String> {
     }
 
     public void put(String headerName, String headerValue) {
+        final String key = headerName.toLowerCase(Locale.US);
         final HeaderValue value = new HeaderValue(headerName, headerValue);
-        values.put(headerName, value);
+        values.put(key, value);
     }
 
     public void putAll(String headerName, Collection<String> headerValues) {
+        final String key = headerName.toLowerCase(Locale.US);
         final HeaderValue deque = new HeaderValue(headerName, headerValues);
-        values.put(headerName, deque);
+        values.put(key, deque);
     }
 
     public Collection<String> remove(String headerName) {
@@ -167,7 +169,7 @@ public final class HeaderMap implements Iterable<String> {
     }
 
     public boolean contains(String headerName) {
-        final HeaderValue value = values.get(headerName);
+        final HeaderValue value = values.get(headerName.toLowerCase(Locale.US));
         return value != null && ! value.isEmpty();
     }
 
