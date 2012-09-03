@@ -81,7 +81,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void deploy() {
-
+        deployment.validate();
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
         this.servletContext = servletContext;
 

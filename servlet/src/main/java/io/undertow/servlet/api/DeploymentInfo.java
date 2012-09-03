@@ -29,6 +29,7 @@ import java.util.Map;
 import javax.servlet.DispatcherType;
 
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.util.DefaultClassIntrospector;
 
 /**
  * Represents a servlet deployment.
@@ -41,7 +42,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile String contextPath;
     private volatile ClassLoader classLoader;
     private volatile ResourceLoader resourceLoader;
-    private volatile ClassIntrospecter classIntrospecter;
+    private volatile ClassIntrospecter classIntrospecter = DefaultClassIntrospector.INSTANCE;
     private volatile int majorVersion = 3;
     private volatile int minorVersion;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
