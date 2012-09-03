@@ -463,7 +463,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             StreamSinkChannel oldChannel = firstChannel;
             StreamSinkChannel channel = oldChannel;
             for (ChannelWrapper wrapper : wrappers) {
-                channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(oldChannel, exchange);
+                channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(channel, exchange);
                 if (channel == null) {
                     channel = oldChannel;
                 }
