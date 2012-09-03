@@ -93,7 +93,7 @@ public class CachingFileCache implements FileCache {
         }
 
         // It's loading retry later
-        if (!entry.isEnabled()) {
+        if (!entry.enabled()) {
             exchange.getConnection().getWorker().execute(new FileWriteLoadTask(exchange, completionHandler, factory, file));
             return;
         }
@@ -106,7 +106,8 @@ public class CachingFileCache implements FileCache {
         });
 
 
-        Pooled<ByteBuffer>[] pooled = entry.buffers();
+        entry.reference();
+        LimitedBufferSlicePool.PooledByteBuffer[] pooled = entry.buffers();
         ByteBuffer[] buffers = new ByteBuffer[pooled.length];
         for (int i = 0; i < buffers.length; i++) {
             // Keep position from mutating
@@ -114,7 +115,7 @@ public class CachingFileCache implements FileCache {
         }
 
         // Transfer Inline, or register and continue transfer
-        new TransferListener(responseChannel, completionHandler, buffers, true).handleEvent(null);
+        new TransferListener(entry, completionHandler, buffers, true).handleEvent(responseChannel);
     }
 
     private class FileWriteLoadTask implements Runnable {
@@ -172,12 +173,14 @@ public class CachingFileCache implements FileCache {
                 entry = cache.add(path, (int) length);
             }
 
-            if (entry == null) {
+
+            if (entry == null || entry.buffers().length == 0 || !entry.claimEnable()) {
                 transfer(channel, fileChannel, length);
                 return;
             }
 
-            Pooled<ByteBuffer>[] pooled = entry.buffers();
+            entry.reference();
+            LimitedBufferSlicePool.PooledByteBuffer[] pooled = entry.buffers();
             ByteBuffer[] buffers = new ByteBuffer[pooled.length];
             for (int i = 0; i < buffers.length; i++) {
                 buffers[i] = pooled[i].getResource();
@@ -192,7 +195,8 @@ public class CachingFileCache implements FileCache {
                     }
                 } catch (IOException e) {
                     IoUtils.safeClose(fileChannel);
-                    cache.remove(path);
+                    entry.dereference();
+                    entry.disable();
                     exchange.setResponseCode(500);
                     completionHandler.handleComplete();
                     return;
@@ -211,10 +215,8 @@ public class CachingFileCache implements FileCache {
             }
             entry.enable();
 
-            lastBuffer = buffers[buffers.length - 1];
-
             // Now that the cache is loaded, attempt to write or register a lister
-            new TransferListener(channel, completionHandler, buffers, true).handleEvent(channel);
+            new TransferListener(entry, completionHandler, buffers, true).handleEvent(channel);
         }
 
         private void transfer(StreamSinkChannel channel, FileChannel fileChannel, long length) {
@@ -239,13 +241,13 @@ public class CachingFileCache implements FileCache {
     }
 
     private static class TransferListener implements ChannelListener<StreamSinkChannel> {
-        private final StreamSinkChannel responseChannel;
         private final HttpCompletionHandler completionHandler;
         private final ByteBuffer[] buffers;
         private final boolean recurse;
+        private DirectBufferCache.CacheEntry entry;
 
-        public TransferListener(final StreamSinkChannel responseChannel, HttpCompletionHandler completionHandler, ByteBuffer[] buffers, boolean recurse) {
-            this.responseChannel = responseChannel;
+        public TransferListener(final DirectBufferCache.CacheEntry entry, HttpCompletionHandler completionHandler, ByteBuffer[] buffers, boolean recurse) {
+            this.entry = entry;
             this.completionHandler = completionHandler;
             this.buffers = buffers;
             this.recurse = recurse;
@@ -256,22 +258,24 @@ public class CachingFileCache implements FileCache {
             while (last.remaining() > 0) {
                 long res;
                 try {
-                    res = responseChannel.write(buffers);
+                    res = channel.write(buffers);
                 } catch (IOException e) {
-                    IoUtils.safeClose(responseChannel);
+                    IoUtils.safeClose(channel);
                     completionHandler.handleComplete();
+                    entry.dereference();
                     return;
                 }
 
                 if (res == 0L) {
                     if (recurse) {
-                        responseChannel.getWriteSetter().set(new TransferListener(responseChannel, completionHandler, buffers, false));
-                        responseChannel.resumeWrites();
+                        channel.getWriteSetter().set(new TransferListener(entry, completionHandler, buffers, false));
+                        channel.resumeWrites();
                     }
                     return;
                 }
             }
-            HttpHandlers.flushAndCompleteRequest(responseChannel, completionHandler);
+            entry.dereference();
+            HttpHandlers.flushAndCompleteRequest(channel, completionHandler);
         }
     }
 }
