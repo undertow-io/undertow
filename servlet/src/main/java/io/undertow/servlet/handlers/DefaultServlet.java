@@ -22,6 +22,7 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
@@ -80,19 +81,17 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             resp.setStatus(404);
             return;
         }
-        URL resource = resourceLoader.getResource(path);
+        ServletOutputStream out = null;
+        InputStream resource = resourceLoader.getResourceAsStream(path);
+        try {
         if (resource == null) {
             resp.setStatus(404);
             return;
         }
         int read;
-        final byte[] buffer = new byte[1024];
-        BufferedInputStream in = null;
-        ServletOutputStream out = null;
-        try {
+            final byte[] buffer = new byte[1024];
             out = resp.getOutputStream();
-            in = new BufferedInputStream(new FileInputStream(resource.getFile()));
-            while ((read = in.read(buffer)) != 0) {
+            while ((read = resource.read(buffer)) != -1) {
                 out.write(buffer, 0, read);
             }
             out.flush();
@@ -100,8 +99,8 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             if (out != null) {
                 IoUtils.safeClose(out);
             }
-            if (in != null) {
-                IoUtils.safeClose(in);
+            if (resource != null) {
+                IoUtils.safeClose(resource);
             }
         }
     }

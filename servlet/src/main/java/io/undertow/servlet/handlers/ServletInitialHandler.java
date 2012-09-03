@@ -24,6 +24,7 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
+import io.undertow.servlet.spec.ServletContextImpl;
 
 /**
  * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
@@ -37,16 +38,19 @@ public class ServletInitialHandler implements BlockingHttpHandler {
 
     final CompositeThreadSetupAction setupAction;
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction) {
+    private final ServletContextImpl servletContext;
+
+    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
         this.next = next;
         this.setupAction = setupAction;
+        this.servletContext = servletContext;
     }
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
         ThreadSetupAction.Handle handle = setupAction.setup(exchange);
         try {
-            final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange);
+            final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
             final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
             exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
             exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);

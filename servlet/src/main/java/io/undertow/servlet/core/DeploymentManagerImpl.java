@@ -338,8 +338,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
         return new ApplicationListeners(managedListeners, servletContext);
     }
 
-    private static BlockingHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction) {
-        return new BlockingHandler(new ServletInitialHandler(next, setupAction));
+    private BlockingHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction) {
+        return new BlockingHandler(new ServletInitialHandler(next, setupAction, servletContext));
     }
 
     private ServletInfo resolveServletForPath(final String path, final Map<String, ServletInfo> pathServlets) {

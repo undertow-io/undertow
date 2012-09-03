@@ -47,6 +47,7 @@ import javax.servlet.http.Part;
 
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
@@ -64,6 +65,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public static final AttachmentKey<HttpServletRequestImpl> ATTACHMENT_KEY = AttachmentKey.create(HttpServletRequestImpl.class);
 
     private final BlockingHttpServerExchange exchange;
+    private final ServletContextImpl servletContext;
 
     private final HashMap<String, Object> attributes = new HashMap<String, Object>();
 
@@ -72,8 +74,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     private Cookie[] cookies;
 
-    public HttpServletRequestImpl(final BlockingHttpServerExchange exchange) {
+    public HttpServletRequestImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
+        this.servletContext = servletContext;
     }
 
     public BlockingHttpServerExchange getExchange() {
@@ -155,7 +158,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getPathInfo() {
-        return null;
+        return exchange.getExchange().getRelativePath();
     }
 
     @Override
@@ -165,12 +168,12 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getContextPath() {
-        return null;
+        return servletContext.getContextPath();
     }
 
     @Override
     public String getQueryString() {
-        return null;
+        return "";
     }
 
     @Override
@@ -195,17 +198,17 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRequestURI() {
-        return null;
+        return exchange.getExchange().getRequestURI();
     }
 
     @Override
     public StringBuffer getRequestURL() {
-        return null;
+        return new StringBuffer( exchange.getExchange().getRequestURI());
     }
 
     @Override
     public String getServletPath() {
-        return null;
+        return exchange.getExchange().getRelativePath();
     }
 
     @Override

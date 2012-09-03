@@ -52,6 +52,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<ListenerInfo> listeners = new ArrayList<ListenerInfo>();
     private final List<ServletContainerInitializerInfo> servletContainerInitializers = new ArrayList<ServletContainerInitializerInfo>();
     private final List<ThreadSetupAction> threadSetupActions = new ArrayList<ThreadSetupAction>();
+    private final Map<String, String> initParameters = new HashMap<String, String>();
 
 
     public void validate() {
@@ -262,6 +263,17 @@ public class DeploymentInfo implements Cloneable {
         return threadSetupActions;
     }
 
+
+    public DeploymentInfo addInitParameter(final String name, final String value) {
+        initParameters.put(name, value);
+        return this;
+    }
+
+
+    public Map<String, String> getInitParameters() {
+        return Collections.unmodifiableMap(initParameters);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -284,6 +296,7 @@ public class DeploymentInfo implements Cloneable {
         info.listeners.addAll(listeners);
         info.servletContainerInitializers.addAll(servletContainerInitializers);
         info.threadSetupActions.addAll(threadSetupActions);
+        info.initParameters.putAll(initParameters);
         return info;
     }
 

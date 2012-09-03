@@ -21,12 +21,13 @@ package io.undertow.servlet.spec;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterRegistration;
@@ -49,6 +50,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
+import io.undertow.servlet.util.IteratorEnumeration;
 
 /**
  * @author Stuart Douglas
@@ -58,6 +60,7 @@ public class ServletContextImpl implements ServletContext {
     private final ServletContainer servletContainer;
     private volatile DeploymentInfo deploymentInfo;
     private volatile boolean bootstrapComplete = false;
+    private final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<String, Object>();
 
     public ServletContextImpl(final ServletContainer servletContainer, final DeploymentInfo deploymentInfo) {
         this.servletContainer = servletContainer;
@@ -166,42 +169,46 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getInitParameter(final String name) {
-        return null;
+        return deploymentInfo.getInitParameters().get(name);
     }
 
     @Override
     public Enumeration<String> getInitParameterNames() {
-        return null;
+        return new IteratorEnumeration<String>(deploymentInfo.getInitParameters().keySet().iterator());
     }
 
     @Override
     public boolean setInitParameter(final String name, final String value) {
-        return false;
+        if (deploymentInfo.getInitParameters().containsKey(name)) {
+            return false;
+        }
+        deploymentInfo.getInitParameters().put(name, value);
+        return true;
     }
 
     @Override
     public Object getAttribute(final String name) {
-        return null;
+        return attributes.get(name);
     }
 
     @Override
     public Enumeration<String> getAttributeNames() {
-        return null;
+        return new IteratorEnumeration<String>(attributes.keySet().iterator());
     }
 
     @Override
     public void setAttribute(final String name, final Object object) {
-
+        attributes.put(name, object);
     }
 
     @Override
     public void removeAttribute(final String name) {
-
+        attributes.remove(name);
     }
 
     @Override
     public String getServletContextName() {
-        return null;
+        return deploymentInfo.getDeploymentName();
     }
 
     @Override
@@ -211,7 +218,7 @@ public class ServletContextImpl implements ServletContext {
             deploymentInfo.addServlet(servlet);
             return new ServletRegistrationImpl(servlet);
         } catch (ClassNotFoundException e) {
-            throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e );
+            throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e);
         }
     }
 
@@ -246,8 +253,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Map<String, ? extends ServletRegistration> getServletRegistrations() {
-        final Map<String,  ServletRegistration> ret = new HashMap<String, ServletRegistration>();
-        for(Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
+        final Map<String, ServletRegistration> ret = new HashMap<String, ServletRegistration>();
+        for (Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
             ret.put(entry.getKey(), new ServletRegistrationImpl(entry.getValue()));
         }
         return ret;
@@ -260,7 +267,7 @@ public class ServletContextImpl implements ServletContext {
             deploymentInfo.addFilter(filter);
             return new FilterRegistrationImpl(filter, deploymentInfo);
         } catch (ClassNotFoundException e) {
-            throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e );
+            throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e);
         }
     }
 
@@ -274,7 +281,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(final String filterName, final Class<? extends Filter> filterClass) {
-        FilterInfo filter = new FilterInfo(filterName,  filterClass);
+        FilterInfo filter = new FilterInfo(filterName, filterClass);
         deploymentInfo.addFilter(filter);
         return new FilterRegistrationImpl(filter, deploymentInfo);
     }
@@ -291,7 +298,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public FilterRegistration getFilterRegistration(final String filterName) {
         final FilterInfo filterInfo = deploymentInfo.getFilters().get(filterName);
-        if(filterInfo == null) {
+        if (filterInfo == null) {
             return null;
         }
         return new FilterRegistrationImpl(filterInfo, deploymentInfo);
@@ -299,8 +306,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
-        final Map<String,  FilterRegistration> ret = new HashMap<String, FilterRegistration>();
-        for(Map.Entry<String, FilterInfo> entry : deploymentInfo.getFilters().entrySet()) {
+        final Map<String, FilterRegistration> ret = new HashMap<String, FilterRegistration>();
+        for (Map.Entry<String, FilterInfo> entry : deploymentInfo.getFilters().entrySet()) {
             ret.put(entry.getKey(), new FilterRegistrationImpl(entry.getValue(), deploymentInfo));
         }
         return ret;
