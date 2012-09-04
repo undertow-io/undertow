@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
@@ -34,7 +35,6 @@ import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
-import org.xnio.Pooled;
 import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
@@ -80,7 +80,7 @@ public class CachingFileCache implements FileCache {
             return;
         }
 
-        DirectBufferCache.CacheEntry entry = cache.get(file.getAbsolutePath());
+        final DirectBufferCache.CacheEntry entry = cache.get(file.getAbsolutePath());
         if (entry == null) {
             exchange.getConnection().getWorker().execute(new FileWriteLoadTask(exchange, completionHandler, factory, file));
             return;
@@ -93,20 +93,15 @@ public class CachingFileCache implements FileCache {
         }
 
         // It's loading retry later
-        if (!entry.enabled()) {
+        if (!entry.enabled() || !entry.reference()) {
             exchange.getConnection().getWorker().execute(new FileWriteLoadTask(exchange, completionHandler, factory, file));
             return;
         }
 
+        final OneShotRefHandle refHandle = new OneShotRefHandle(entry);
         final StreamSinkChannel responseChannel = factory.create();
-        responseChannel.getCloseSetter().set(new ChannelListener<Channel>() {
-            public void handleEvent(final Channel channel) {
-                completionHandler.handleComplete();
-            }
-        });
+        registerCloseListener(responseChannel, completionHandler, refHandle);
 
-
-        entry.reference();
         LimitedBufferSlicePool.PooledByteBuffer[] pooled = entry.buffers();
         ByteBuffer[] buffers = new ByteBuffer[pooled.length];
         for (int i = 0; i < buffers.length; i++) {
@@ -115,7 +110,18 @@ public class CachingFileCache implements FileCache {
         }
 
         // Transfer Inline, or register and continue transfer
-        new TransferListener(entry, completionHandler, buffers, true).handleEvent(responseChannel);
+        new TransferListener(refHandle, completionHandler, buffers, true).handleEvent(responseChannel);
+    }
+
+    private void registerCloseListener(final StreamSinkChannel channel, final HttpCompletionHandler completionHandler, final OneShotRefHandle oneShotRefHandle) {
+        channel.getCloseSetter().set(new ChannelListener<Channel>() {
+            public void handleEvent(final Channel channel) {
+                if (oneShotRefHandle != null) {
+                    oneShotRefHandle.dereference();
+                }
+                completionHandler.handleComplete();
+            }
+        });
     }
 
     private class FileWriteLoadTask implements Runnable {
@@ -161,25 +167,28 @@ public class CachingFileCache implements FileCache {
             }
 
             final StreamSinkChannel channel = factory.create();
-            channel.getCloseSetter().set(new ChannelListener<Channel>() {
-                public void handleEvent(final Channel channel) {
-                    completionHandler.handleComplete();
-                }
-            });
 
             DirectBufferCache.CacheEntry entry = null;
-             String path = file.getAbsolutePath();
+            String path = file.getAbsolutePath();
             if (length < maxFileSize) {
                 entry = cache.add(path, (int) length);
             }
 
-
             if (entry == null || entry.buffers().length == 0 || !entry.claimEnable()) {
+                registerCloseListener(channel, completionHandler, null);
                 transfer(channel, fileChannel, length);
                 return;
             }
 
-            entry.reference();
+            if (! entry.reference()) {
+                entry.disable();
+                registerCloseListener(channel, completionHandler, null);
+                transfer(channel, fileChannel, length);
+                return;
+            }
+
+            OneShotRefHandle refHandle = new OneShotRefHandle(entry);
+            registerCloseListener(channel, completionHandler, refHandle);
             LimitedBufferSlicePool.PooledByteBuffer[] pooled = entry.buffers();
             ByteBuffer[] buffers = new ByteBuffer[pooled.length];
             for (int i = 0; i < buffers.length; i++) {
@@ -195,7 +204,7 @@ public class CachingFileCache implements FileCache {
                     }
                 } catch (IOException e) {
                     IoUtils.safeClose(fileChannel);
-                    entry.dereference();
+                    refHandle.dereference();
                     entry.disable();
                     exchange.setResponseCode(500);
                     completionHandler.handleComplete();
@@ -216,8 +225,9 @@ public class CachingFileCache implements FileCache {
             entry.enable();
 
             // Now that the cache is loaded, attempt to write or register a lister
-            new TransferListener(entry, completionHandler, buffers, true).handleEvent(channel);
+            new TransferListener(refHandle, completionHandler, buffers, true).handleEvent(channel);
         }
+
 
         private void transfer(StreamSinkChannel channel, FileChannel fileChannel, long length) {
             try {
@@ -240,14 +250,29 @@ public class CachingFileCache implements FileCache {
         }
     }
 
+    private static class OneShotRefHandle extends AtomicBoolean {
+        private final DirectBufferCache.CacheEntry entry;
+
+        public OneShotRefHandle(DirectBufferCache.CacheEntry entry) {
+            this.entry = entry;
+        }
+
+        public void dereference() {
+            if (compareAndSet(false, true)) {
+                entry.dereference();
+            }
+        }
+    }
+
     private static class TransferListener implements ChannelListener<StreamSinkChannel> {
         private final HttpCompletionHandler completionHandler;
         private final ByteBuffer[] buffers;
         private final boolean recurse;
-        private DirectBufferCache.CacheEntry entry;
+        private final OneShotRefHandle refHandle;
 
-        public TransferListener(final DirectBufferCache.CacheEntry entry, HttpCompletionHandler completionHandler, ByteBuffer[] buffers, boolean recurse) {
-            this.entry = entry;
+
+        public TransferListener(OneShotRefHandle refHandle, HttpCompletionHandler completionHandler, ByteBuffer[] buffers, boolean recurse) {
+            this.refHandle = refHandle;
             this.completionHandler = completionHandler;
             this.buffers = buffers;
             this.recurse = recurse;
@@ -261,20 +286,20 @@ public class CachingFileCache implements FileCache {
                     res = channel.write(buffers);
                 } catch (IOException e) {
                     IoUtils.safeClose(channel);
+                    refHandle.dereference();
                     completionHandler.handleComplete();
-                    entry.dereference();
                     return;
                 }
 
                 if (res == 0L) {
                     if (recurse) {
-                        channel.getWriteSetter().set(new TransferListener(entry, completionHandler, buffers, false));
+                        channel.getWriteSetter().set(new TransferListener(refHandle, completionHandler, buffers, false));
                         channel.resumeWrites();
                     }
                     return;
                 }
             }
-            entry.dereference();
+            refHandle.dereference();
             HttpHandlers.flushAndCompleteRequest(channel, completionHandler);
         }
     }

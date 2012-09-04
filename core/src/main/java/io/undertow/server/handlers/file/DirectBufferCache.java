@@ -186,31 +186,31 @@ public class DirectBufferCache {
             return enabledUpdator.compareAndSet(this, 0, 1);
         }
 
-        public int reference() {
+        public boolean reference() {
             for(;;) {
                 int refs = this.refs;
                 if (refs < 1) {
-                    return refs; // destroying
+                    return false; // destroying
                 }
 
                 if (refsUpdater.compareAndSet(this, refs++, refs)) {
-                    return refs;
+                    return true;
                 }
             }
         }
 
-        public int dereference() {
+        public boolean dereference() {
             for(;;) {
                 int refs = this.refs;
                 if (refs < 1) {
-                    return refs;  // destroying
+                    return false;  // destroying
                 }
 
                 if (refsUpdater.compareAndSet(this, refs--, refs)) {
                     if (refs == 0) {
                         destroy();
                     }
-                    return refs;
+                    return true;
                 }
             }
         }
