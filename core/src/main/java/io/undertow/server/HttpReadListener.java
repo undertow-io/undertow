@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
@@ -144,16 +145,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
                     state = null;
                     builder = null;
-                    connection.getRootHandler().handleRequest(httpServerExchange, new HttpCompletionHandler() {
-                        public void handleComplete() {
-                            try {
-                                httpServerExchange.cleanup();
-                            } finally {
-                                //mark this request as finished to allow the next request to run
-                                startNextRequestAction.completionHandler();
-                            }
-                        }
-                    });
+                    connection.getRootHandler().handleRequest(httpServerExchange, new CompletionHandler(httpServerExchange, startNextRequestAction));
 
                 } catch (Throwable t) {
                     //TODO: we should attempt to return a 500 status code in this situation
@@ -255,6 +247,28 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             nextRequestResponseChannel.openGate(permit);
             nextRequestResponseChannel = null;
             permit = null;
+        }
+    }
+
+    private static class CompletionHandler extends AtomicBoolean implements HttpCompletionHandler {
+        private final HttpServerExchange httpServerExchange;
+        private final StartNextRequestAction startNextRequestAction;
+
+        public CompletionHandler(final HttpServerExchange httpServerExchange, final StartNextRequestAction startNextRequestAction) {
+            this.httpServerExchange = httpServerExchange;
+            this.startNextRequestAction = startNextRequestAction;
+        }
+
+        public void handleComplete() {
+            if (!compareAndSet(false, true)) {
+                return;
+            }
+            try {
+                httpServerExchange.cleanup();
+            } finally {
+                //mark this request as finished to allow the next request to run
+                startNextRequestAction.completionHandler();
+            }
         }
     }
 }
