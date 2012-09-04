@@ -24,6 +24,8 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.UnavailableException;
 
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
@@ -74,8 +76,8 @@ public class ServletHandler implements BlockingHttpHandler {
                 unavailableUntilUpdater.compareAndSet(this, until, 0);
             }
         }
-        HttpServletRequestImpl request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        HttpServletResponseImpl response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+        ServletResponse response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
         final InstanceHandle<? extends Servlet> servlet = managedServlet.getServlet();
         try {
             servlet.getInstance().service(request, response);

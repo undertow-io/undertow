@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.Servlet;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -47,6 +48,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.handlers.DefaultServlet;
 import io.undertow.servlet.handlers.FilterHandler;
+import io.undertow.servlet.handlers.RequestListenerHandler;
 import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletMatchingHandler;
@@ -109,7 +111,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             //run
 
-            servletHandler = setupServletChains(servletContext, threadSetupAction);
+            servletHandler = setupServletChains(servletContext, threadSetupAction, listeners);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
@@ -128,8 +130,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
      *
      * @param servletContext
      * @param threadSetupAction
+     * @param listeners
      */
-    private ServletMatchingHandler setupServletChains(final ServletContextImpl servletContext, final CompositeThreadSetupAction threadSetupAction) {
+    private ServletMatchingHandler setupServletChains(final ServletContextImpl servletContext, final CompositeThreadSetupAction threadSetupAction, final ApplicationListeners listeners) {
         final List<Lifecycle> lifecycles = new ArrayList<Lifecycle>();
         //create the default servlet
         HttpHandler defaultHandler = null;
@@ -174,7 +177,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 if (path.equals("/")) {
                     //the default servlet
                     defaultServlet = handler;
-                    defaultHandler = servletChain(handler, threadSetupAction);
+                    defaultHandler = servletChain(handler, threadSetupAction, listeners);
                 } else if (!path.startsWith("*.")) {
                     pathMatches.add(path);
                     if (pathServlets.containsKey(path)) {
@@ -191,8 +194,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         if (defaultServlet == null) {
             defaultHandler = new DefaultServlet(deployment.getResourceLoader());
-            final HttpHandler handler = defaultHandler;
-            final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<HttpHandler>(handler)), servletContext);
+            final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>((Servlet) defaultHandler)), servletContext);
             lifecycles.add(managedDefaultServlet);
             defaultServlet = new ServletHandler(managedDefaultServlet);
         }
@@ -235,7 +237,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             if (noExtension.isEmpty()) {
                 if (targetServlet != null) {
-                    pathMatch = new ServletMatchingHandler.PathMatch(servletChain(servletHandlerMap.get(targetServlet), threadSetupAction));
+                    pathMatch = new ServletMatchingHandler.PathMatch(servletChain(servletHandlerMap.get(targetServlet), threadSetupAction, listeners));
                 } else {
                     pathMatch = new ServletMatchingHandler.PathMatch(defaultHandler);
                 }
@@ -246,7 +248,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 } else {
                     handler = new FilterHandler(noExtension, defaultServlet);
                 }
-                pathMatch = new ServletMatchingHandler.PathMatch(servletChain(handler, threadSetupAction));
+                pathMatch = new ServletMatchingHandler.PathMatch(servletChain(handler, threadSetupAction, listeners));
             }
 
             for (Map.Entry<String, List<ManagedFilter>> entry : extension.entrySet()) {
@@ -256,7 +258,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
                 if (entry.getValue().isEmpty()) {
                     if (pathServlet != null) {
-                        pathMatch = new ServletMatchingHandler.PathMatch(servletChain(servletHandlerMap.get(pathServlet), threadSetupAction));
+                        pathMatch = new ServletMatchingHandler.PathMatch(servletChain(servletHandlerMap.get(pathServlet), threadSetupAction, listeners));
                     } else {
                         pathMatch = new ServletMatchingHandler.PathMatch(defaultHandler);
                     }
@@ -267,7 +269,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     } else {
                         handler = new FilterHandler(entry.getValue(), defaultServlet);
                     }
-                    pathMatch.getExtensionMatches().put(entry.getKey(), servletChain(handler, threadSetupAction));
+                    pathMatch.getExtensionMatches().put(entry.getKey(), servletChain(handler, threadSetupAction, listeners));
                 }
             }
             if (path.endsWith("/*")) {
@@ -307,7 +309,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             if (extension.isEmpty()) {
                 if (targetServlet != null) {
-                    match.getExtensionMatches().put(path, servletChain(servletHandlerMap.get(targetServlet), threadSetupAction));
+                    match.getExtensionMatches().put(path, servletChain(servletHandlerMap.get(targetServlet), threadSetupAction, listeners));
                 } else {
                     match.getExtensionMatches().put(path, defaultHandler);
                 }
@@ -318,7 +320,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 } else {
                     handler = new FilterHandler(extension, defaultServlet);
                 }
-                match.getExtensionMatches().put(path, servletChain(handler, threadSetupAction));
+                match.getExtensionMatches().put(path, servletChain(handler, threadSetupAction, listeners));
             }
         }
 
@@ -338,8 +340,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
         return new ApplicationListeners(managedListeners, servletContext);
     }
 
-    private BlockingHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction) {
-        return new BlockingHandler(new ServletInitialHandler(next, setupAction, servletContext));
+    private BlockingHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners) {
+        return   new BlockingHandler(new ServletInitialHandler(new RequestListenerHandler(applicationListeners, next), setupAction, servletContext));
     }
 
     private ServletInfo resolveServletForPath(final String path, final Map<String, ServletInfo> pathServlets) {

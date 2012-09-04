@@ -63,4 +63,8 @@ public interface UndertowServletLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 15004, value = "Malformed URL exception reading resource %s")
     void malformedUrlException(String relativePath, @Cause MalformedURLException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 15005, value = "Error invoking method %s on listener %s")
+    void errorInvokingListener(final String method, Class<?> listenerClass, @Cause Exception e);
 }

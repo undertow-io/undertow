@@ -18,46 +18,43 @@
 
 package io.undertow.servlet.handlers;
 
+import java.util.List;
+
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletRequestEvent;
+import javax.servlet.ServletResponse;
+
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
-import io.undertow.servlet.api.ThreadSetupAction;
-import io.undertow.servlet.core.CompositeThreadSetupAction;
+import io.undertow.servlet.UndertowServletLogger;
+import io.undertow.servlet.core.ApplicationListeners;
+import io.undertow.servlet.core.ManagedListener;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 
 /**
- * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
- * and attaches them the to exchange.
- *
  * @author Stuart Douglas
  */
-public class ServletInitialHandler implements BlockingHttpHandler {
+public class RequestListenerHandler implements BlockingHttpHandler {
+
+    private final ApplicationListeners listeners;
 
     private final BlockingHttpHandler next;
 
-    final CompositeThreadSetupAction setupAction;
-
-    private final ServletContextImpl servletContext;
-
-    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
+    public RequestListenerHandler(final ApplicationListeners listeners, final BlockingHttpHandler next) {
+        this.listeners = listeners;
         this.next = next;
-        this.setupAction = setupAction;
-        this.servletContext = servletContext;
     }
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        ThreadSetupAction.Handle handle = setupAction.setup(exchange);
-        final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
-        final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
+        final ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+        listeners.requestInitialized(request);
         try {
-            exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
-            exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
             next.handleRequest(exchange);
         } finally {
-            handle.tearDown();
-            response.flushBuffer();
+            listeners.requestDestroyed(request);
         }
     }
 

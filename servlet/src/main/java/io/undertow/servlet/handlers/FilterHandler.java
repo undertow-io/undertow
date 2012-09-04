@@ -49,8 +49,8 @@ public class FilterHandler implements BlockingHttpHandler {
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        HttpServletRequestImpl request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        HttpServletResponseImpl response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+        ServletResponse response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
         FilterChainImpl filterChain = new FilterChainImpl(exchange);
         filterChain.doFilter(request, response);
     }
@@ -66,8 +66,11 @@ public class FilterHandler implements BlockingHttpHandler {
 
         @Override
         public void doFilter(final ServletRequest request, final ServletResponse response) throws IOException, ServletException {
+            final ServletRequest oldReq = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+            final ServletResponse oldResp = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
             try {
-
+                exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
+                exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
                 int index = location++;
                 if (index >= filters.size()) {
                     next.handleRequest(exchange);
@@ -84,6 +87,8 @@ public class FilterHandler implements BlockingHttpHandler {
                 throw new RuntimeException(e);
             } finally {
                 location--;
+                exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, oldReq);
+                exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, oldResp);
             }
         }
     }

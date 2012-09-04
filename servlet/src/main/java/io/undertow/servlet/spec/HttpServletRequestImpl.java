@@ -45,6 +45,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -62,7 +63,7 @@ import io.undertow.util.Headers;
  */
 public class HttpServletRequestImpl implements HttpServletRequest {
 
-    public static final AttachmentKey<HttpServletRequestImpl> ATTACHMENT_KEY = AttachmentKey.create(HttpServletRequestImpl.class);
+    public static final AttachmentKey<ServletRequest> ATTACHMENT_KEY = AttachmentKey.create(ServletRequest.class);
 
     private final BlockingHttpServerExchange exchange;
     private final ServletContextImpl servletContext;
@@ -198,12 +199,17 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRequestURI() {
-        return exchange.getExchange().getRequestURI();
+        HttpServerExchange e = exchange.getExchange();
+        String host = e.getRequestHeaders().getFirst(Headers.HOST);
+        if(host == null) {
+            host = e.getDestinationAddress().getAddress().getHostAddress();
+        }
+        return "http://" + host + e.getRequestURI();
     }
 
     @Override
     public StringBuffer getRequestURL() {
-        return new StringBuffer( exchange.getExchange().getRequestURI());
+        return new StringBuffer( getRequestURI());
     }
 
     @Override

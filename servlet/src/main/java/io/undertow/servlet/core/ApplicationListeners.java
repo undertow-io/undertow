@@ -24,10 +24,15 @@ import java.util.List;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletRequestEvent;
+import javax.servlet.ServletRequestListener;
+
+import io.undertow.servlet.UndertowServletLogger;
 
 /**
  * Class that is responsible for invoking application listeners.
- *
+ * <p/>
  * This class does not perform any context setup, the context must be setup
  * before invoking this class.
  *
@@ -37,32 +42,59 @@ public class ApplicationListeners {
 
     private final ServletContext servletContext;
     private final List<ManagedListener> servletContextListeners;
+    private final List<ManagedListener> servletRequestListeners;
 
     public ApplicationListeners(final List<ManagedListener> allListeners, final ServletContext servletContext) {
         this.servletContext = servletContext;
         List<ManagedListener> servletContextListeners = new ArrayList<ManagedListener>();
-        for(final ManagedListener listener : allListeners) {
-            if(ServletContextListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+        List<ManagedListener> servletRequestListeners = new ArrayList<ManagedListener>();
+        for (final ManagedListener listener : allListeners) {
+            if (ServletContextListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
                 servletContextListeners.add(listener);
+            }
+            if (ServletRequestListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+                servletRequestListeners.add(listener);
             }
         }
         this.servletContextListeners = servletContextListeners;
+        this.servletRequestListeners = servletRequestListeners;
     }
 
 
     public void contextInitialized() {
         final ServletContextEvent event = new ServletContextEvent(servletContext);
-        for(ManagedListener listener : servletContextListeners) {
+        for (ManagedListener listener : servletContextListeners) {
             listener.contextInitialized(event);
         }
     }
 
     public void contextDestroyed() {
         final ServletContextEvent event = new ServletContextEvent(servletContext);
-        for(ManagedListener listener : servletContextListeners) {
-            listener.contextDestroyed(event);
+        for (ManagedListener listener : servletContextListeners) {
+            try {
+                listener.contextDestroyed(event);
+            } catch (Exception e) {
+                UndertowServletLogger.REQUEST_LOGGER.errorInvokingListener("contextDestroyed", listener.getListenerInfo().getListenerClass(), e);
+            }
         }
     }
 
+    public void requestInitialized(final ServletRequest request) {
+        final ServletRequestEvent sre = new ServletRequestEvent(servletContext, request);
+        for (final ManagedListener listener : servletRequestListeners) {
+            listener.requestInitialized(sre);
+        }
+    }
+
+    public void requestDestroyed(final ServletRequest request) {
+        final ServletRequestEvent sre = new ServletRequestEvent(servletContext, request);
+        for (final ManagedListener listener : servletRequestListeners) {
+            try {
+                listener.requestDestroyed(sre);
+            } catch (Exception e) {
+                UndertowServletLogger.REQUEST_LOGGER.errorInvokingListener("requestDestroyed", listener.getListenerInfo().getListenerClass(), e);
+            }
+        }
+    }
 
 }

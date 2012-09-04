@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Locale;
 
 import javax.servlet.ServletOutputStream;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
@@ -36,7 +37,7 @@ import io.undertow.util.AttachmentKey;
  */
 public class HttpServletResponseImpl implements HttpServletResponse {
 
-    public static final AttachmentKey<HttpServletResponseImpl> ATTACHMENT_KEY = AttachmentKey.create(HttpServletResponseImpl.class);
+    public static final AttachmentKey<ServletResponse> ATTACHMENT_KEY = AttachmentKey.create(ServletResponse.class);
 
     private final BlockingHttpServerExchange exchange;
 
@@ -211,7 +212,11 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void flushBuffer() throws IOException {
-
+        if(servletOutputStream != null) {
+            servletOutputStream.flush();
+        } else if(writer != null) {
+            writer.flush();
+        }
     }
 
     @Override

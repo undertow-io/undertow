@@ -76,7 +76,7 @@ public class ServletInfo implements Cloneable {
     }
 
 
-    public ServletInfo(final String name, final Class<? extends Servlet> servletClass, final InstanceFactory instanceFactory) {
+    public ServletInfo(final String name, final Class<? extends Servlet> servletClass, final InstanceFactory<? extends Servlet> instanceFactory) {
         if (name == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("name");
         }

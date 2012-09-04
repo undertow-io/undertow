@@ -24,6 +24,8 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequestEvent;
+import javax.servlet.ServletRequestListener;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceHandle;
@@ -33,7 +35,7 @@ import io.undertow.servlet.api.ListenerInfo;
  * @author Stuart Douglas
  */
 public class ManagedListener implements Lifecycle,
-        ServletContextListener{
+        ServletContextListener, ServletRequestListener {
 
     private final ListenerInfo listenerInfo;
     private final ServletContext servletContext;
@@ -75,8 +77,8 @@ public class ManagedListener implements Lifecycle,
         return started;
     }
 
-    private EventListener instance(){
-        if(!started) {
+    private EventListener instance() {
+        if (!started) {
             try {
                 start();
             } catch (ServletException e) {
@@ -88,11 +90,21 @@ public class ManagedListener implements Lifecycle,
 
     @Override
     public void contextInitialized(final ServletContextEvent sce) {
-        ((ServletContextListener)instance()).contextInitialized(sce);
+        ((ServletContextListener) instance()).contextInitialized(sce);
     }
 
     @Override
     public void contextDestroyed(final ServletContextEvent sce) {
-        ((ServletContextListener)instance()).contextDestroyed(sce);
+        ((ServletContextListener) instance()).contextDestroyed(sce);
+    }
+
+    @Override
+    public void requestDestroyed(final ServletRequestEvent sre) {
+        ((ServletRequestListener)instance()).requestDestroyed(sre);
+    }
+
+    @Override
+    public void requestInitialized(final ServletRequestEvent sre) {
+        ((ServletRequestListener)instance()).requestInitialized(sre);
     }
 }
