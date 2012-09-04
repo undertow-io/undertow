@@ -7,6 +7,7 @@
 package io.undertow.server.handlers.file;
 
 import java.lang.reflect.Field;
+import java.security.PrivilegedAction;
 import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -312,9 +313,7 @@ public class ConcurrentDirectDeque<E>
 
         static {
             try {
-                Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-                theUnsafe.setAccessible(true);
-                UNSAFE = (Unsafe) theUnsafe.get(null);
+                UNSAFE = getUnsafe();
                 Class<?> k = Node.class;
                 prevOffset = UNSAFE.objectFieldOffset
                     (k.getDeclaredField("prev"));
@@ -1449,9 +1448,7 @@ public class ConcurrentDirectDeque<E>
         NEXT_TERMINATOR = new Node<Object>();
         NEXT_TERMINATOR.prev = NEXT_TERMINATOR;
         try {
-            Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-            theUnsafe.setAccessible(true);
-            UNSAFE = (Unsafe) theUnsafe.get(null);
+            UNSAFE = getUnsafe();
             Class<?> k = ConcurrentDirectDeque.class;
             headOffset = UNSAFE.objectFieldOffset
                 (k.getDeclaredField("head"));
@@ -1459,6 +1456,27 @@ public class ConcurrentDirectDeque<E>
                 (k.getDeclaredField("tail"));
         } catch (Exception e) {
             throw new Error(e);
+        }
+    }
+
+    private static Unsafe getUnsafe() {
+        if (System.getSecurityManager() != null) {
+            return new PrivilegedAction<Unsafe>() {
+                public Unsafe run() {
+                    return getUnsafe0();
+                }
+            }.run();
+        }
+        return getUnsafe0();
+    }
+
+    private static Unsafe getUnsafe0()  {
+        try {
+            Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
+            theUnsafe.setAccessible(true);
+            return (Unsafe) theUnsafe.get(null);
+        } catch (Throwable t) {
+            throw new RuntimeException("JDK did not allow accessing unsafe", t);
         }
     }
 }
