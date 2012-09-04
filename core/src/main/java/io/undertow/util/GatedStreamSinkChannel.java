@@ -132,10 +132,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
 
     private void exit(int oldVal, int enterFlag, final int setFlags) {
         int newVal = oldVal & ~enterFlag | setFlags;
-        while (! stateUpdater.compareAndSet(this, oldVal, newVal)) {
-            oldVal = state;
-            newVal = oldVal & ~enterFlag | setFlags;
-        }
+        stateUpdater.set(this, newVal);
         safeUnpark(lockWaiterUpdater.getAndSet(this, null));
     }
 
