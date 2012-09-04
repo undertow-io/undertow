@@ -45,7 +45,7 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     private final int maxConcurrentRequests;
 
     @SuppressWarnings("unused")
-    private volatile int runningRequestCount;
+    private volatile int runningRequestCount = 1;
 
     private static final AtomicIntegerFieldUpdater<HttpServerConnection> runningRequestCountUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpServerConnection.class, "runningRequestCount");
 
