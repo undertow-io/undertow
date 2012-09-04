@@ -195,16 +195,18 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 if (state == 3) {
                     //we start unconditionally
                     stateUpdater.set(this, 1);
-                    channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
-                    channel.resumeReads();
+                    HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, connection);
+                    channel.getReadSetter().set(listener);
+                    listener.handleEvent(channel);
                     nextRequestResponseChannel = null;
                     connection = null;
                     channel = null;
                     return;
                 } else if (state == 0 && connection.startRequest()) {
                     stateUpdater.set(this, 1);
-                    channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
-                    channel.resumeReads();
+                    HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, connection);
+                    channel.getReadSetter().set(listener);
+                    listener.handleEvent(channel);
                     nextRequestResponseChannel = null;
                     connection = null;
                     channel = null;
@@ -223,8 +225,9 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 if (state == 2) {
                     //we start unconditionally
                     stateUpdater.set(this, 1);
-                    channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
-                    channel.resumeReads();
+                    HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, connection);
+                    channel.getReadSetter().set(listener);
+                    listener.handleEvent(channel);
                     nextRequestResponseChannel = null;
                     connection = null;
                     channel = null;
