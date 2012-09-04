@@ -130,8 +130,8 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
         }
     }
 
-    private void exit(int oldVal, int enterFlag, final int setFlags) {
-        int newVal = oldVal & ~enterFlag | setFlags;
+    private void exit(int enterFlag, final int setFlags) {
+        int newVal = state & ~enterFlag | setFlags;
         stateUpdater.set(this, newVal);
         safeUnpark(lockWaiterUpdater.getAndSet(this, null));
     }
@@ -164,7 +164,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             }
             safeUnpark(waiterUpdater.getAndSet(this, null));
         } finally {
-            exit(val, FLAG_IN, 0);
+            exit(FLAG_IN, 0);
         }
     }
 
@@ -199,7 +199,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             }
             return delegate.write(src);
         } finally {
-            exit(val, FLAG_IN_WRITE, 0);
+            exit(FLAG_IN_WRITE, 0);
         }
     }
 
@@ -218,7 +218,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             }
             return delegate.write(srcs, offset, length);
         } finally {
-            exit(val, FLAG_IN_WRITE, 0);
+            exit(FLAG_IN_WRITE, 0);
         }
     }
 
@@ -233,7 +233,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             }
             return delegate.transferFrom(src, position, count);
         } finally {
-            exit(val, FLAG_IN_WRITE, 0);
+            exit(FLAG_IN_WRITE, 0);
         }
     }
 
@@ -248,7 +248,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             }
             return delegate.transferFrom(source, count, throughBuffer);
         } finally {
-            exit(val, FLAG_IN_WRITE, 0);
+            exit(FLAG_IN_WRITE, 0);
         }
     }
 
@@ -274,7 +274,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
             }
             return flushed;
         } finally {
-            exit(val, FLAG_IN, setFlags);
+            exit(FLAG_IN, setFlags);
         }
     }
 
@@ -288,7 +288,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                 delegate.suspendWrites();
             }
         } finally {
-            exit(val, FLAG_IN, 0);
+            exit(FLAG_IN, 0);
         }
     }
 
@@ -302,7 +302,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                 delegate.resumeWrites();
             }
         } finally {
-            exit(val, FLAG_IN, 0);
+            exit(FLAG_IN, 0);
         }
     }
 
@@ -323,7 +323,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                 getWriteThread().execute(ChannelListeners.getChannelListenerTask(this, writeSetter));
             }
         } finally {
-            exit(val, FLAG_IN, 0);
+            exit(FLAG_IN, 0);
         }
     }
 
@@ -341,7 +341,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                 }
             }
         } finally {
-            exit(val, FLAG_IN, setFlags);
+            exit(FLAG_IN, setFlags);
         }
     }
 
@@ -359,7 +359,7 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
                 }
             }
         } finally {
-            exit(val, FLAG_IN, 0);
+            exit(FLAG_IN, 0);
             invokeChannelListener(this, closeSetter.get());
         }
     }
