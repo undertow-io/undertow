@@ -117,7 +117,16 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 channel.suspendReads();
                 final StreamSinkChannel ourResponseChannel = this.responseChannel;
                 final Object permit = new Object();
-                final GatedStreamSinkChannel nextRequestResponseChannel = new GatedStreamSinkChannel(connection.getChannel(), permit, false, true);
+                final StreamSinkChannel nextRequestResponseChannel;
+                final Runnable responseTerminateAction;
+                if(connection.getMaxConcurrentRequests() > 1) {
+                    GatedStreamSinkChannel gatedStreamSinkChannel = new GatedStreamSinkChannel(connection.getChannel(), permit, false, true);
+                    nextRequestResponseChannel = gatedStreamSinkChannel;
+                    responseTerminateAction = new ResponseTerminateAction(gatedStreamSinkChannel, permit);
+                } else {
+                    nextRequestResponseChannel = connection.getChannel();
+                    responseTerminateAction = null;
+                }
                 final HeaderMap requestHeaders = builder.getHeaders();
                 final HeaderMap responseHeaders = new HeaderMap();
                 final Map<String, Deque<String>> parameters = builder.getQueryParameters();
@@ -126,7 +135,6 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
                 final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(channel, nextRequestResponseChannel, connection);
 
-                final Runnable responseTerminateAction = new ResponseTerminateAction(nextRequestResponseChannel, permit);
                 final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, requestHeaders, responseHeaders, parameters, method, protocol, channel, ourResponseChannel, startNextRequestAction, responseTerminateAction);
 
                 try {
@@ -165,7 +173,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     private static class StartNextRequestAction implements Runnable {
 
         private volatile PushBackStreamChannel channel;
-        private volatile GatedStreamSinkChannel nextRequestResponseChannel;
+        private volatile StreamSinkChannel nextRequestResponseChannel;
         private volatile HttpServerConnection connection;
 
         /**
@@ -179,7 +187,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         private static final AtomicIntegerFieldUpdater<StartNextRequestAction> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(StartNextRequestAction.class, "state");
 
 
-        public StartNextRequestAction(final PushBackStreamChannel channel, final GatedStreamSinkChannel nextRequestResponseChannel, final HttpServerConnection connection) {
+        public StartNextRequestAction(final PushBackStreamChannel channel, final StreamSinkChannel nextRequestResponseChannel, final HttpServerConnection connection) {
             this.channel = channel;
             this.nextRequestResponseChannel = nextRequestResponseChannel;
             this.connection = connection;

@@ -564,7 +564,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             newVal = oldVal | FLAG_RESPONSE_TERMINATED;
         } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
-        responseTerminateAction.run();
+        if(responseTerminateAction != null) {
+            responseTerminateAction.run();
+        }
     }
 
     /**

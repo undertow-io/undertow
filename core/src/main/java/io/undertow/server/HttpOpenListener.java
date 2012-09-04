@@ -42,10 +42,17 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
     /**
      * The maximum number of requests that can be processed at a time for a given connection.
      */
-    private volatile int maxConcurrentRequestsPerConnection = 1;
+    private final int maxConcurrentRequestsPerConnection;
 
     public HttpOpenListener(final Pool<ByteBuffer> pool) {
-        bufferPool = pool;
+        this(pool, 1);
+    }
+    public HttpOpenListener(final Pool<ByteBuffer> pool, int maxConcurrentRequestsPerConnection) {
+        if(maxConcurrentRequestsPerConnection <= 0) {
+            throw UndertowMessages.MESSAGES.maximumConcurrentRequestsMustBeLargerThanZero();
+        }
+        this.bufferPool = pool;
+        this.maxConcurrentRequestsPerConnection = maxConcurrentRequestsPerConnection;
     }
 
     public void handleEvent(final ConnectedStreamChannel channel) {
@@ -69,12 +76,5 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
 
     public int getMaxConcurrentRequestsPerConnection() {
         return maxConcurrentRequestsPerConnection;
-    }
-
-    public void setMaxConcurrentRequestsPerConnection(final int maxConcurrentRequestsPerConnection) {
-        if(maxConcurrentRequestsPerConnection <= 0) {
-            throw UndertowMessages.MESSAGES.maximumConcurrentRequestsMustBeLargerThanZero();
-        }
-        this.maxConcurrentRequestsPerConnection = maxConcurrentRequestsPerConnection;
     }
 }
