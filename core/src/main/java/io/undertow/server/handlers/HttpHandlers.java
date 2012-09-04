@@ -20,6 +20,7 @@ package io.undertow.server.handlers;
 
 import java.io.IOException;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
@@ -52,6 +53,7 @@ public final class HttpHandlers {
             handler.handleRequest(exchange, completionHandler);
         } catch (Throwable t) {
             try {
+                UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
                 exchange.setResponseCode(500);
                 completionHandler.handleComplete();
             } catch (Throwable ignored) {

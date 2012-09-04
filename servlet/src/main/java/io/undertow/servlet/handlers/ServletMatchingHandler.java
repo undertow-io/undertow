@@ -84,7 +84,7 @@ public class ServletMatchingHandler implements HttpHandler {
                 }
             }
         }
-        defaultHandler.handleRequest(exchange, completionHandler);
+        HttpHandlers.executeHandler(defaultHandler, exchange, completionHandler);
     }
 
     private void handleMatch(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final String path, final PathMatch match) {
