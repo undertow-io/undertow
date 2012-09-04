@@ -20,33 +20,27 @@ package io.undertow.server.handlers.file;
 
 import static io.undertow.server.handlers.file.LimitedBufferSlicePool.PooledByteBuffer;
 
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import io.undertow.util.SecureHashMap;
 import org.xnio.BufferAllocator;
 
 /**
  * @author Jason T. Greene
  */
 public class DirectBufferCache {
-    private static final PooledByteBuffer[] EMPTY_BUFFERS = new PooledByteBuffer[0];
-    private static final PooledByteBuffer[] INIT_BUFFERS = new PooledByteBuffer[0];
-
+    private static final int SAMPLE_INTERVAL = 5;
 
     private final LimitedBufferSlicePool pool;
-    private final ConcurrentHashMap<String, CacheEntry> cache;
+    private final SecureHashMap<String, CacheEntry> cache;
     private ConcurrentDirectDeque<CacheEntry> accessQueue;
     private final int sliceSize;
 
     public DirectBufferCache(int sliceSize, int max) {
-        this(sliceSize, max, Runtime.getRuntime().availableProcessors());
-    }
-
-    public DirectBufferCache(int sliceSize, int max, int concurrency) {
         this.sliceSize = sliceSize;
         this.pool = new LimitedBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, sliceSize, max, 1);
-        this.cache = new ConcurrentHashMap<String, CacheEntry>(16, 67, concurrency);
+        this.cache = new SecureHashMap<String, CacheEntry>(16);
         this.accessQueue = new ConcurrentDirectDeque<CacheEntry>();
     }
 
@@ -71,7 +65,7 @@ public class DirectBufferCache {
             return null;
         }
 
-        if (cacheEntry.hit() % 5 == 0) {
+        if (cacheEntry.hit() % SAMPLE_INTERVAL == 0) {
             bumpAccess(cacheEntry);
 
             if (! cacheEntry.allocate()) {
@@ -134,13 +128,16 @@ public class DirectBufferCache {
     }
 
     public static final class CacheEntry {
+        private static final PooledByteBuffer[] EMPTY_BUFFERS = new PooledByteBuffer[0];
+        private static final PooledByteBuffer[] INIT_BUFFERS = new PooledByteBuffer[0];
+        private static final Object CLAIM_TOKEN = new Object();
+
         private static final AtomicIntegerFieldUpdater<CacheEntry> hitsUpdater = AtomicIntegerFieldUpdater.newUpdater(CacheEntry.class, "hits");
         private static final AtomicIntegerFieldUpdater<CacheEntry> refsUpdater = AtomicIntegerFieldUpdater.newUpdater(CacheEntry.class, "refs");
         private static final AtomicIntegerFieldUpdater<CacheEntry> enabledUpdator = AtomicIntegerFieldUpdater.newUpdater(CacheEntry.class, "enabled");
 
         private static final AtomicReferenceFieldUpdater<CacheEntry, PooledByteBuffer[]> bufsUpdater = AtomicReferenceFieldUpdater.newUpdater(CacheEntry.class, PooledByteBuffer[].class, "buffers");
         private static final AtomicReferenceFieldUpdater<CacheEntry, Object> tokenUpdator = AtomicReferenceFieldUpdater.newUpdater(CacheEntry.class, Object.class, "accessToken");
-        private static final Object CLAIM_TOKEN = new Object();
 
         private final String path;
         private final int size;
@@ -150,8 +147,6 @@ public class DirectBufferCache {
         private volatile int hits = 1;
         private volatile Object accessToken;
         private volatile int enabled;
-
-
 
         private CacheEntry(String path, int size, DirectBufferCache cache) {
             this.path = path;
@@ -291,6 +286,4 @@ public class DirectBufferCache {
         }
 
     }
-
-
 }
