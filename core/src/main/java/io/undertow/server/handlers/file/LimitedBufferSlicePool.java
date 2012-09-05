@@ -1,8 +1,7 @@
 /*
- * JBoss, Home of Professional Open Source
- *
- * Copyright 2010 Red Hat, Inc. and/or its affiliates, and individual
- * contributors as indicated by the @author tags.
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2012 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +23,6 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -41,13 +39,23 @@ import org.xnio.BufferAllocator;
 public final class LimitedBufferSlicePool {
 
     private static AtomicIntegerFieldUpdater regionUpdater = AtomicIntegerFieldUpdater.newUpdater(LimitedBufferSlicePool.class, "regionsUsed");
-
+    private static final Class<?> queueClass;
     private final Queue<Slice> sliceQueue;
     private final BufferAllocator<ByteBuffer> allocator;
     private final int bufferSize;
     private final int buffersPerRegion;
     private final int maxRegions;
     private volatile int regionsUsed;
+
+    static {
+        Class<?> c = ConcurrentLinkedQueue.class;
+        try {
+            c = Class.forName("java.util.concurrent.LinkedTransferQueue");
+        } catch (Exception ignore) {
+
+        }
+        queueClass = c;
+    }
 
     /**
      * Construct a new instance.
@@ -67,13 +75,13 @@ public final class LimitedBufferSlicePool {
         buffersPerRegion = maxRegionSize / bufferSize;
         this.bufferSize = bufferSize;
         this.allocator = allocator;
-        Queue<Slice> queue;
         try {
-            queue = new LinkedTransferQueue<Slice>();
-        } catch (Throwable ignored) {
-            queue = new ConcurrentLinkedQueue<Slice>();
+            sliceQueue = (Queue<Slice>) queueClass.newInstance();
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
         }
-        sliceQueue = queue;
         this.maxRegions = maxRegions;
     }
 
