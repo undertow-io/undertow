@@ -18,235 +18,272 @@
 
 package io.undertow.server.handlers.file;
 
-import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import static io.undertow.server.handlers.file.LimitedBufferSlicePool.PooledByteBuffer;
 
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import io.undertow.util.SecureHashMap;
 import org.xnio.BufferAllocator;
-import org.xnio.ByteBufferSlicePool;
-import org.xnio.Pooled;
-
 
 /**
  * @author Jason T. Greene
  */
 public class DirectBufferCache {
-    @SuppressWarnings("unchecked")
-    private static final Pooled<ByteBuffer>[] EMPTY_BUFFERS = new Pooled[0];
+    private static final int SAMPLE_INTERVAL = 5;
 
-    private final ByteBufferSlicePool pool;
-    private final AtomicInteger use = new AtomicInteger();
-    private final int max;
+    private final LimitedBufferSlicePool pool;
+    private final SecureHashMap<String, CacheEntry> cache;
+    private ConcurrentDirectDeque<CacheEntry> accessQueue;
     private final int sliceSize;
-    private final int segmentShift;
-    private final Segment[] segments;
 
     public DirectBufferCache(int sliceSize, int max) {
-        this(sliceSize, max, Runtime.getRuntime().availableProcessors());
-    }
-
-    public DirectBufferCache(int sliceSize, int max, int concurrency) {
         this.sliceSize = sliceSize;
-        this.max = max;
-        this.pool = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, sliceSize, max);
-        int shift = 1;
-        while (concurrency > (shift <<= 1)) {}
-        segmentShift = 32 - shift;
-        segments = new Segment[shift];
-        for (int i = 0; i < segments.length; i++) {
-            segments[i] = new Segment(shift);
-        }
-    }
-
-    private static int hash(int h) {
-        // Spread bits to regularize both segment and index locations,
-        // using variant of single-word Wang/Jenkins hash.
-        h += (h <<  15) ^ 0xffffcd7d;
-        h ^= (h >>> 10);
-        h += (h <<   3);
-        h ^= (h >>>  6);
-        h += (h <<   2) + (h << 14);
-        return h ^ (h >>> 16);
+        this.pool = new LimitedBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, sliceSize, max, 1);
+        this.cache = new SecureHashMap<String, CacheEntry>(16);
+        this.accessQueue = new ConcurrentDirectDeque<CacheEntry>();
     }
 
     public CacheEntry add(String path, int size) {
-        Segment[] segments = this.segments;
-        return segments[hash(path.hashCode()) >>> segmentShift & (segments.length - 1)].add(path, size);
+        CacheEntry value = cache.get(path);
+        if (value == null) {
+            value = new CacheEntry(path, size, this);
+            CacheEntry result = cache.putIfAbsent(path, value);
+            if (result != null) {
+                value = result;
+            } else {
+                bumpAccess(value);
+            }
+        }
+
+        return value;
     }
 
     public CacheEntry get(String path) {
-        Segment[] segments = this.segments;
-        return segments[hash(path.hashCode()) >>> segmentShift & (segments.length - 1)].get(path);
-    }
-
-    public void remove(String path) {
-        Segment[] segments = this.segments;
-        segments[hash(path.hashCode()) >>> segmentShift & (segments.length - 1)].remove(path);
-    }
-
-    private static class MaxLinkedMap<K, V> extends LinkedHashMap<K, V> {
-        private int max;
-
-        public MaxLinkedMap(int max) {
-            super(3, 0.66f, false);
-            this.max = max;
+        CacheEntry cacheEntry = cache.get(path);
+        if (cacheEntry == null) {
+            return null;
         }
 
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-            return size() > max;
+        if (cacheEntry.hit() % SAMPLE_INTERVAL == 0) {
+            bumpAccess(cacheEntry);
+
+            if (! cacheEntry.allocate()) {
+                // Try and make room
+                int reclaimSize = cacheEntry.size();
+                for (CacheEntry oldest : accessQueue) {
+                    if (oldest == cacheEntry) {
+                        continue;
+                    }
+
+                    if (oldest.buffers().length > 0) {
+                        reclaimSize -= oldest.size();
+                    }
+
+                    this.remove(oldest.path());
+
+                    if (reclaimSize <= 0) {
+                        break;
+                    }
+                }
+
+                // Maybe lucky?
+                cacheEntry.allocate();
+            }
         }
+
+        return cacheEntry;
     }
 
-    private static class CacheMap extends MaxLinkedMap<String, CacheEntry> {
-        private CacheMap(int max) {
-            super(max);
-        }
-
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, CacheEntry> eldest) {
-            if (super.removeEldestEntry(eldest))  {
-                CacheEntry value = eldest.getValue();
-                value.destroy();
-                return true;
+    private void bumpAccess(CacheEntry cacheEntry) {
+        Object prevToken = cacheEntry.claimToken();
+        if (prevToken != Boolean.FALSE) {
+            if (prevToken != null) {
+                accessQueue.removeToken(prevToken);
             }
 
-            return false;
+            Object token = null;
+            try {
+                token = accessQueue.offerLastAndReturnToken(cacheEntry);
+            } catch (Throwable t) {
+                // In case of disaster (OOME), we need to release the claim, so leave it aas null
+            }
+
+            if (! cacheEntry.setToken(token) && token != null) { // Always set if null
+                accessQueue.removeToken(token);
+            }
         }
     }
 
-    public class CacheEntry {
-        private final int size;
-        private volatile Pooled<ByteBuffer>[] buffers;
-        private volatile boolean enabled;
-        private volatile long time;
 
-        public CacheEntry(int size, Pooled<ByteBuffer>[] buffers) {
+    public void remove(String path) {
+        CacheEntry remove = cache.remove(path);
+        if (remove != null) {
+            Object old = remove.clearToken();
+            if (old != null) {
+                accessQueue.removeToken(old);
+            }
+            remove.dereference();
+        }
+    }
+
+    public static final class CacheEntry {
+        private static final PooledByteBuffer[] EMPTY_BUFFERS = new PooledByteBuffer[0];
+        private static final PooledByteBuffer[] INIT_BUFFERS = new PooledByteBuffer[0];
+        private static final Object CLAIM_TOKEN = new Object();
+
+        private static final AtomicIntegerFieldUpdater<CacheEntry> hitsUpdater = AtomicIntegerFieldUpdater.newUpdater(CacheEntry.class, "hits");
+        private static final AtomicIntegerFieldUpdater<CacheEntry> refsUpdater = AtomicIntegerFieldUpdater.newUpdater(CacheEntry.class, "refs");
+        private static final AtomicIntegerFieldUpdater<CacheEntry> enabledUpdator = AtomicIntegerFieldUpdater.newUpdater(CacheEntry.class, "enabled");
+
+        private static final AtomicReferenceFieldUpdater<CacheEntry, PooledByteBuffer[]> bufsUpdater = AtomicReferenceFieldUpdater.newUpdater(CacheEntry.class, PooledByteBuffer[].class, "buffers");
+        private static final AtomicReferenceFieldUpdater<CacheEntry, Object> tokenUpdator = AtomicReferenceFieldUpdater.newUpdater(CacheEntry.class, Object.class, "accessToken");
+
+        private final String path;
+        private final int size;
+        private final DirectBufferCache cache;
+        private volatile PooledByteBuffer[] buffers = INIT_BUFFERS;
+        private volatile int refs = 1;
+        private volatile int hits = 1;
+        private volatile Object accessToken;
+        private volatile int enabled;
+
+        private CacheEntry(String path, int size, DirectBufferCache cache) {
+            this.path = path;
             this.size = size;
-            this.buffers = buffers;
+            this.cache = cache;
         }
 
         public int size() {
             return size;
         }
 
-        public Pooled<ByteBuffer>[] buffers() {
+        public PooledByteBuffer[] buffers() {
             return buffers;
         }
 
-        public boolean isEnabled() {
-            return enabled;
+        public int hit() {
+            return hitsUpdater.incrementAndGet(this);
         }
 
-        public long time() {
-            return time;
+        public String path() {
+            return path;
         }
 
-        public void setTime(int time) {
-            this.time  = time;
+        public boolean enabled() {
+            return enabled == 2;
         }
 
         public void enable() {
-            this.enabled = true;
+            this.enabled = 2;
         }
 
-        public void destroy() {
-            enabled = false;
+        public void disable() {
+            this.enabled = 0;
+        }
 
-            for (Pooled<ByteBuffer> buffer : buffers()) {
-                buffer.free();
-                use.getAndAdd(-sliceSize);
+        public boolean claimEnable() {
+            return enabledUpdator.compareAndSet(this, 0, 1);
+        }
+
+        public boolean reference() {
+            for(;;) {
+                int refs = this.refs;
+                if (refs < 1) {
+                    return false; // destroying
+                }
+
+                if (refsUpdater.compareAndSet(this, refs++, refs)) {
+                    return true;
+                }
             }
-            buffers = EMPTY_BUFFERS;
         }
 
-    }
+        public boolean dereference() {
+            for(;;) {
+                int refs = this.refs;
+                if (refs < 1) {
+                    return false;  // destroying
+                }
 
-    private class Segment {
-        private final LinkedHashMap<String, CacheEntry> cache;
-        private final LinkedHashMap<String, Integer> candidates;
-
-        private Segment(int concurrency) {
-            int limit = Math.max(100, max / sliceSize / concurrency);
-            cache = new CacheMap(limit);
-            candidates = new MaxLinkedMap<String, Integer>(limit);
+                if (refsUpdater.compareAndSet(this, refs--, refs)) {
+                    if (refs == 0) {
+                        destroy();
+                    }
+                    return true;
+                }
+            }
         }
 
-        public synchronized CacheEntry get(String path) {
-            return cache.get(path);
-        }
+        public boolean allocate() {
+            if (buffers.length > 0)
+                return true;
 
-        public synchronized CacheEntry add(String path, int size) {
-            CacheEntry entry = cache.get(path);
-            if (entry != null)
-                return null;
-
-            Integer i = candidates.get(path);
-            int count = i == null ? 0 : i.intValue();
-
-            if (count > 5) {
-                candidates.remove(path);
-                entry = addCacheEntry(path, size);
-            }  else {
-                candidates.put(path, Integer.valueOf(++count));
+            if (! bufsUpdater.compareAndSet(this, INIT_BUFFERS, EMPTY_BUFFERS)) {
+                return true;
             }
 
-            return entry;
-        }
+            int reserveSize = size;
+            int n = 1;
+            DirectBufferCache bufferCache = cache;
+            while ((reserveSize -= bufferCache.sliceSize) > 0) {
+                n++;
+            }
 
-        private boolean reserveSpace(int size) {
-            boolean reserved = false;
-            while (!reserved) {
-                int inUse = use.get();
-                if (inUse + size > max) {
+            // Try to avoid mutations
+            LimitedBufferSlicePool slicePool = bufferCache.pool;
+            if (! slicePool.canAllocate(n)) {
+                this.buffers = INIT_BUFFERS;
+                return false;
+            }
+
+            PooledByteBuffer[] buffers = new PooledByteBuffer[n];
+            for (int i = 0; i < n; i++) {
+                PooledByteBuffer allocate = slicePool.allocate();
+                if (allocate == null) {
+                    while (--i >= 0) {
+                        buffers[i].free();
+                    }
+
+                    this.buffers = INIT_BUFFERS;
                     return false;
                 }
 
-                reserved = use.compareAndSet(inUse, inUse + size);
+                buffers[i] = allocate;
             }
 
+            this.buffers = buffers;
             return true;
         }
 
-        private CacheEntry addCacheEntry(String path, int size) {
-            int reserveSize = sliceSize;
-            while (reserveSize < size) {
-                reserveSize += sliceSize;
+        private void destroy() {
+            this.buffers = EMPTY_BUFFERS;
+            for (PooledByteBuffer buffer : buffers) {
+                buffer.free();
             }
-
-            Iterator<CacheEntry> iterator = cache.values().iterator();
-            boolean reserved = reserveSpace(reserveSize);
-            while (!reserved && iterator.hasNext()) {
-                CacheEntry value = iterator.next();
-                iterator.remove();
-                value.destroy();
-                reserved = reserveSpace(reserveSize);
-            }
-
-            if (!reserved) {
-                return null;
-            }
-
-            int num = reserveSize / sliceSize;
-            @SuppressWarnings("unchecked")
-            Pooled<ByteBuffer>[] buffers = new Pooled[num];
-            for (int i = 0; i < num; i++) {
-                buffers[i] = pool.allocate();
-            }
-
-            CacheEntry result = new CacheEntry(size, buffers);
-            cache.put(path, result);
-
-            return result;
-
         }
 
-        public void remove(String path) {
-            CacheEntry remove = cache.remove(path);
-            if (remove != null)
-                remove.destroy();
+        Object claimToken() {
+            for (;;) {
+                Object current = this.accessToken;
+                if (current == CLAIM_TOKEN) {
+                    return Boolean.FALSE;
+                }
+
+                if (tokenUpdator.compareAndSet(this, current, CLAIM_TOKEN)) {
+                    return current;
+                }
+            }
         }
+
+        boolean setToken(Object token) {
+            return tokenUpdator.compareAndSet(this, CLAIM_TOKEN, token);
+        }
+
+        Object clearToken() {
+            Object old = tokenUpdator.getAndSet(this, null);
+            return old == CLAIM_TOKEN ? null : old;
+        }
+
     }
 }
