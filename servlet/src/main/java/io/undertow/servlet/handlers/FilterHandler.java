@@ -19,9 +19,11 @@
 package io.undertow.servlet.handlers;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import javax.servlet.DispatcherType;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
@@ -32,40 +34,54 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
+import io.undertow.util.AttachmentKey;
 
 /**
  * @author Stuart Douglas
  */
 public class FilterHandler implements BlockingHttpHandler {
 
-    private final List<ManagedFilter> filters;
+    public static final AttachmentKey<DispatcherType> DISPATCHER_TYPE_ATTACHMENT_KEY = AttachmentKey.create(DispatcherType.class);
+
+    private final Map<DispatcherType, List<ManagedFilter>> filters;
 
     private final BlockingHttpHandler next;
 
-    public FilterHandler(final List<ManagedFilter> filters, final BlockingHttpHandler next) {
+    public FilterHandler(final Map<DispatcherType, List<ManagedFilter>> filters, final BlockingHttpHandler next) {
         this.next = next;
-        this.filters = new ArrayList<ManagedFilter>(filters);
+        this.filters = new HashMap<DispatcherType, List<ManagedFilter>>(filters);
     }
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
         ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         ServletResponse response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
-        FilterChainImpl filterChain = new FilterChainImpl(exchange);
-        filterChain.doFilter(request, response);
+
+        final List<ManagedFilter> filters = this.filters.get(exchange.getExchange().getAttachment(DISPATCHER_TYPE_ATTACHMENT_KEY));
+        if(filters == null) {
+            next.handleRequest(exchange);
+        } else {
+            final FilterChainImpl filterChain = new FilterChainImpl(exchange, filters, next);
+            filterChain.doFilter(request, response);
+        }
     }
 
-    private class FilterChainImpl implements FilterChain {
+    private static class FilterChainImpl implements FilterChain {
 
         int location = 0;
         final BlockingHttpServerExchange exchange;
+        final List<ManagedFilter> filters;
+        final BlockingHttpHandler next;
 
-        private FilterChainImpl(final BlockingHttpServerExchange exchange) {
+        private FilterChainImpl(final BlockingHttpServerExchange exchange, final List<ManagedFilter> filters, final BlockingHttpHandler next) {
             this.exchange = exchange;
+            this.filters = filters;
+            this.next = next;
         }
 
         @Override
         public void doFilter(final ServletRequest request, final ServletResponse response) throws IOException, ServletException {
+
             final ServletRequest oldReq = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
             final ServletResponse oldResp = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
             try {

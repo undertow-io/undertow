@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.handlers;
 
+import javax.servlet.DispatcherType;
+
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.api.ThreadSetupAction;
@@ -51,6 +53,9 @@ public class ServletInitialHandler implements BlockingHttpHandler {
         ThreadSetupAction.Handle handle = setupAction.setup(exchange);
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
+        if(exchange.getExchange().getAttachment(FilterHandler.DISPATCHER_TYPE_ATTACHMENT_KEY) == null) {
+            exchange.getExchange().putAttachment(FilterHandler.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.REQUEST);
+        }
         try {
             exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
             exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.DispatcherType;
 import javax.servlet.Servlet;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
@@ -202,10 +203,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
         for (final String path : pathMatches) {
             ServletInfo targetServlet = resolveServletForPath(path, pathServlets);
 
-            final List<ManagedFilter> noExtension = new ArrayList<ManagedFilter>();
-            final Map<String, List<ManagedFilter>> extension = new HashMap<String, List<ManagedFilter>>();
+            final Map<DispatcherType, List<ManagedFilter>> noExtension = new HashMap<DispatcherType, List<ManagedFilter>>();
+            final Map<String, Map<DispatcherType, List<ManagedFilter>>> extension = new HashMap<String, Map<DispatcherType, List<ManagedFilter>>>();
             for (String ext : extensionMatches) {
-                extension.put(ext, new ArrayList<ManagedFilter>());
+                extension.put(ext, new HashMap<DispatcherType, List<ManagedFilter>>());
             }
 
             for (final FilterMappingInfo filterMapping : deployment.getFilterMappings()) {
@@ -213,22 +214,22 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
                     if (targetServlet != null) {
                         if (filterMapping.getMapping().equals(targetServlet.getName())) {
-                            noExtension.add(filter);
-                            for (List<ManagedFilter> l : extension.values()) {
-                                l.add(filter);
+                            addToListMap(noExtension, filterMapping.getDispatcher(), filter);
+                            for (Map<DispatcherType, List<ManagedFilter>> l : extension.values()) {
+                                addToListMap(l, filterMapping.getDispatcher(), filter);
                             }
                         }
                     }
                 } else {
                     if (path.isEmpty() || !path.startsWith("*.")) {
                         if (isFilterApplicable(path, filterMapping.getMapping())) {
-                            noExtension.add(filter);
-                            for (List<ManagedFilter> l : extension.values()) {
-                                l.add(filter);
+                            addToListMap(noExtension, filterMapping.getDispatcher(), filter);
+                            for (Map<DispatcherType, List<ManagedFilter>> l : extension.values()) {
+                                addToListMap(l, filterMapping.getDispatcher(), filter);
                             }
                         }
                     } else {
-                        extension.get(path.substring(2)).add(filter);
+                        addToListMap(extension.get(path.substring(2)), filterMapping.getDispatcher(), filter);
                     }
                 }
             }
@@ -251,7 +252,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 pathMatch = new ServletMatchingHandler.PathMatch(servletChain(handler, threadSetupAction, listeners));
             }
 
-            for (Map.Entry<String, List<ManagedFilter>> entry : extension.entrySet()) {
+            for (Map.Entry<String, Map<DispatcherType, List<ManagedFilter>>> entry : extension.entrySet()) {
                 ServletInfo pathServlet = targetServlet;
                 if (targetServlet == null) {
                     pathServlet = extensionServlets.get(entry.getKey());
@@ -289,19 +290,19 @@ public class DeploymentManagerImpl implements DeploymentManager {
         for (final String path : extensionMatches) {
             ServletInfo targetServlet = extensionServlets.get(path);
 
-            final List<ManagedFilter> extension = new ArrayList<ManagedFilter>();
+            final Map<DispatcherType, List<ManagedFilter>> extension = new HashMap<DispatcherType, List<ManagedFilter>>();
             for (final FilterMappingInfo filterMapping : deployment.getFilterMappings()) {
                 ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
                 if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
                     if (targetServlet != null) {
                         if (filterMapping.getMapping().equals(targetServlet.getName())) {
-                            extension.add(filter);
+                            addToListMap(extension, filterMapping.getDispatcher(), filter);
                         }
                     }
                 } else {
                     if (path.startsWith("*.")) {
                         if (path.substring(2).equals(path)) {
-                            extension.add(filter);
+                            addToListMap(extension, filterMapping.getDispatcher(), filter);
                         }
                     }
                 }
@@ -408,4 +409,12 @@ public class DeploymentManagerImpl implements DeploymentManager {
     public ServletContext getServletContext() {
         return servletContext;
     }
+
+     private static <K, V> void addToListMap(final Map<K, List<V>> map, final K key, final V value) {
+         List<V> list = map.get(key);
+         if(list == null) {
+             map.put(key,  list = new ArrayList<V>());
+         }
+         list.add(value);
+     }
 }
