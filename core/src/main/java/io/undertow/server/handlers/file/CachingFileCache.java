@@ -96,6 +96,8 @@ public class CachingFileCache implements FileCache {
         final StreamSinkChannel responseChannel;
         final ByteBuffer[] buffers;
 
+
+        boolean ok = false;
         try {
             responseChannel = factory.create();
             LimitedBufferSlicePool.PooledByteBuffer[] pooled = entry.buffers();
@@ -104,18 +106,15 @@ public class CachingFileCache implements FileCache {
                 // Keep position from mutating
                 buffers[i] = pooled[i].getResource().duplicate();
             }
-        } catch (Throwable t)  {
-            entry.dereference();
-            safeSetResponse(exchange, 500);
-            safeComplete(completionHandler);
-
-            if (t instanceof Error) {
-                throw (Error) t;
+            ok = true;
+        } finally {
+            if (!ok) {
+                entry.dereference();
             }
-            return;
         }
 
         // Transfer Inline, or register and continue transfer
+        // Pass off the entry dereference call to the listener
         new TransferListener(entry, exchange, completionHandler, buffers, true).handleEvent(responseChannel);
     }
 
@@ -181,29 +180,25 @@ public class CachingFileCache implements FileCache {
             }
 
             ByteBuffer[] buffers;
+            boolean ok = false;
             try {
                 buffers =  populateBuffers(fileChannel, length, entry);
                 if (buffers == null ) {
+                    // File I/O exception, cleanup required
                     return;
                 }
                 entry.enable();
-            } catch (Throwable t) {
-                entry.dereference();
-                entry.disable();
-                exchange.setResponseCode(500);
-                completionHandler.handleComplete();
-
-                if (t instanceof Error) {
-                    throw (Error) t;
-                }
-
-                log.debug("Exception thrown during buffer population", t);
-                return;
+                ok = true;
             } finally {
                 IoUtils.safeClose(fileChannel);
+                if (!ok) {
+                    entry.dereference();
+                    entry.disable();
+                }
             }
 
             // Now that the cache is loaded, attempt to write or register a lister
+            // Also, pass off entry dereference to the listener
             new TransferListener(entry, exchange, completionHandler, buffers, true).handleEvent(channel);
         }
 
@@ -223,10 +218,8 @@ public class CachingFileCache implements FileCache {
                     }
                 } catch (IOException e) {
                     IoUtils.safeClose(fileChannel);
-                    entry.disable();
-                    entry.dereference();
-                    safeSetResponse(exchange, 500);
-                    safeComplete(completionHandler);
+                    exchange.setResponseCode(500);
+                    completionHandler.handleComplete();
                     return null;
                 }
             }
@@ -264,20 +257,6 @@ public class CachingFileCache implements FileCache {
         }
     }
 
-    private static void safeSetResponse(HttpServerExchange exchange, int status) {
-        try {
-            exchange.setResponseCode(status);
-        } catch (Throwable t) {
-        }
-    }
-
-      private static void safeComplete(HttpCompletionHandler handler) {
-        try {
-            handler.handleComplete();
-        } catch (Throwable t) {
-        }
-    }
-
     private static class TransferListener implements ChannelListener<StreamSinkChannel> {
         private final HttpCompletionHandler completionHandler;
         private final ByteBuffer[] buffers;
@@ -294,6 +273,7 @@ public class CachingFileCache implements FileCache {
         }
 
         public void handleEvent(final StreamSinkChannel channel) {
+            boolean dereference = true;
             try {
                 ByteBuffer last = buffers[buffers.length - 1];
                 while (last.remaining() > 0) {
@@ -309,25 +289,18 @@ public class CachingFileCache implements FileCache {
 
                     if (res == 0L) {
                         if (recurse) {
-                            channel.getWriteSetter().set(new TransferListener(entry, exchange,completionHandler, buffers, false));
+                            channel.getWriteSetter().set(new TransferListener(entry, exchange, completionHandler, buffers, false));
                             channel.resumeWrites();
                         }
+                        dereference = false; // Entry still in-use
                         return;
                     }
                 }
-            } catch (Throwable t) {
-                IoUtils.safeClose(channel);
-                entry.dereference();
-                safeSetResponse(exchange, 500);
-                safeComplete(completionHandler);
-                if (t instanceof Error) {
-                    throw (Error) t;
+            } finally {
+                if (dereference) {
+                    entry.dereference();
                 }
-
-                log.debug("Exception thrown during buffer write", t);
-                return;
             }
-            entry.dereference();
             HttpHandlers.flushAndCompleteRequest(channel, completionHandler);
         }
     }
