@@ -27,6 +27,17 @@ import io.undertow.util.SecureHashMap;
 import org.xnio.BufferAllocator;
 
 /**
+ * A non-blocking buffer cache where entries are indexed by a path and are made up of a
+ * subsequence of blocks in a fixed large direct buffer. An ideal application is
+ * a file system cache, where the path corresponds to a file location.
+ *
+ * <p>To reduce contention, entry allocation and eviction execute in a sampling
+ * fashion (entry hits modulo N). Eviction follows an LRU approach (oldest sampled
+ * entries are removed first) when the cache is out of capacity</p>
+ *
+ * <p>In order to expedite reclamation, cache entries are reference counted as
+ * opposed to garbage collected.</p>
+ *
  * @author Jason T. Greene
  */
 public class DirectBufferCache {
@@ -34,14 +45,20 @@ public class DirectBufferCache {
 
     private final LimitedBufferSlicePool pool;
     private final SecureHashMap<String, CacheEntry> cache;
-    private ConcurrentDirectDeque<CacheEntry> accessQueue;
+    private final ConcurrentDirectDeque<CacheEntry> accessQueue;
     private final int sliceSize;
 
     public DirectBufferCache(int sliceSize, int max) {
         this.sliceSize = sliceSize;
         this.pool = new LimitedBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, sliceSize, max, 1);
         this.cache = new SecureHashMap<String, CacheEntry>(16);
-        this.accessQueue = new ConcurrentDirectDeque<CacheEntry>();
+        ConcurrentDirectDeque<CacheEntry> accessQueue;
+        try {
+            accessQueue = new FastConcurrentDirectDeque<CacheEntry>();
+        } catch (Throwable t) {
+            accessQueue = new PortableConcurrentDirectDeque<CacheEntry>();
+        }
+        this.accessQueue = accessQueue;
     }
 
     public CacheEntry add(String path, int size) {
