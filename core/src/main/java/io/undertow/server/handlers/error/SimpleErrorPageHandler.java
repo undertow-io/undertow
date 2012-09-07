@@ -28,6 +28,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.channels.ChannelFactory;
@@ -65,6 +66,9 @@ public class SimpleErrorPageHandler implements HttpHandler {
                     if (factory != null) {
                         final StreamSinkChannel response = factory.create();
                         final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getResponseCode() + " - " + StatusCodes.getReason(exchange.getResponseCode()) + "</body></html>";
+                        //we don't want any headers from the original request hanging around
+                        exchange.getResponseHeaders().clear();
+                        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + errorPage.length());
                         StringWriteChannelListener listener = new StringWriteChannelListener(errorPage) {
                             @Override
                             protected void writeDone(final StreamSinkChannel channel) {

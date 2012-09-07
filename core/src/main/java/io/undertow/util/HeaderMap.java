@@ -147,6 +147,10 @@ public final class HeaderMap implements Iterable<String> {
         }
     }
 
+    public void clear() {
+        values.clear();
+    }
+
     public Collection<String> getHeaderNames() {
         return new HashSet<String>(values.keySet());
     }
