@@ -20,7 +20,9 @@ package io.undertow.util;
 
 import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
@@ -143,6 +145,10 @@ public final class HeaderMap implements Iterable<String> {
                 target.addAll(value);
             }
         }
+    }
+
+    public Collection<String> getHeaderNames() {
+        return new HashSet<String>(values.keySet());
     }
 
     public void put(String headerName, String headerValue) {

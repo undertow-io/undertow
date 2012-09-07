@@ -20,7 +20,9 @@ package io.undertow.servlet.spec;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Locale;
 
 import javax.servlet.ServletOutputStream;
@@ -31,6 +33,7 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.Headers;
 
 /**
  * @author Stuart Douglas
@@ -125,32 +128,32 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setStatus(final int sc) {
-
+        exchange.getExchange().setResponseCode(sc);
     }
 
     @Override
     public void setStatus(final int sc, final String sm) {
-
+        setStatus(sc);
     }
 
     @Override
     public int getStatus() {
-        return 0;
+        return exchange.getExchange().getResponseCode();
     }
 
     @Override
     public String getHeader(final String name) {
-        return null;
+        return exchange.getExchange().getResponseHeaders().getFirst(name);
     }
 
     @Override
     public Collection<String> getHeaders(final String name) {
-        return null;
+        return new ArrayList<String>(exchange.getExchange().getResponseHeaders().get(name));
     }
 
     @Override
     public Collection<String> getHeaderNames() {
-        return null;
+        return exchange.getExchange().getResponseHeaders().getHeaderNames();
     }
 
     @Override
@@ -192,12 +195,12 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentLength(final int len) {
-
+        exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
     }
 
     @Override
     public void setContentType(final String type) {
-
+        exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, type);
     }
 
     @Override
@@ -226,7 +229,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public boolean isCommitted() {
-        return false;
+        return exchange.getExchange().isResponseStarted();
     }
 
     @Override
