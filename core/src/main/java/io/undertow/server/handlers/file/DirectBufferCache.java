@@ -180,7 +180,14 @@ public class DirectBufferCache {
         }
 
         public int hit() {
-            return hitsUpdater.incrementAndGet(this);
+            for (;;) {
+                int i = hits;
+
+                if (hitsUpdater.weakCompareAndSet(this, i, ++i)) {
+                    return i;
+                }
+
+            }
         }
 
         public String path() {
