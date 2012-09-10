@@ -64,11 +64,12 @@ public class SimpleErrorPageHandler implements HttpHandler {
                 if (codes == null ? exchange.getResponseCode() >= 400 : codes.contains(Integer.valueOf(exchange.getResponseCode()))) {
                     final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
                     if (factory != null) {
-                        final StreamSinkChannel response = factory.create();
                         final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getResponseCode() + " - " + StatusCodes.getReason(exchange.getResponseCode()) + "</body></html>";
                         //we don't want any headers from the original request hanging around
                         exchange.getResponseHeaders().clear();
                         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + errorPage.length());
+
+                        final StreamSinkChannel response = factory.create();
                         StringWriteChannelListener listener = new StringWriteChannelListener(errorPage) {
                             @Override
                             protected void writeDone(final StreamSinkChannel channel) {
