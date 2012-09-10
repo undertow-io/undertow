@@ -23,10 +23,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import javax.servlet.ServletException;
@@ -40,9 +39,9 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.file.DirectFileCache;
 import io.undertow.server.handlers.file.FileCache;
-import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.ResourceLoader;
 import io.undertow.util.CopyOnWriteMap;
+import io.undertow.util.Headers;
 import org.xnio.IoUtils;
 
 /**
@@ -68,8 +67,11 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     private final Set<String> allowed = Collections.newSetFromMap(new CopyOnWriteMap<String, Boolean>());
     private final Set<String> disallowed = Collections.newSetFromMap(new CopyOnWriteMap<String, Boolean>());
 
-    public DefaultServlet(final ResourceLoader resourceLoader) {
+    private final List<String> welcomePages;
+
+    public DefaultServlet(final ResourceLoader resourceLoader, final List<String> welcomePages) {
         this.resourceLoader = resourceLoader;
+        this.welcomePages = welcomePages;
         allowed.addAll(Arrays.asList(DEFAULT_ALLOWED_EXTENSIONS));
         disallowed.addAll(Arrays.asList(DEFAULT_DISALLOWED_EXTENSIONS));
     }
@@ -82,25 +84,27 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             return;
         }
         ServletOutputStream out = null;
-        InputStream resource = resourceLoader.getResourceAsStream(path);
-        try {
+        final File resource = resourceLoader.getResource(path);
         if (resource == null) {
             resp.setStatus(404);
             return;
-        }
-        int read;
-            final byte[] buffer = new byte[1024];
-            out = resp.getOutputStream();
-            while ((read = resource.read(buffer)) != -1) {
-                out.write(buffer, 0, read);
-            }
-            out.flush();
-        } finally {
-            if (out != null) {
-                IoUtils.safeClose(out);
-            }
-            if (resource != null) {
-                IoUtils.safeClose(resource);
+        } else if (resource.isDirectory()) {
+            handleWelcomePage(req, resp, resource);
+        } else {
+            InputStream in = new BufferedInputStream(new FileInputStream(resource));
+            try {
+                int read;
+                final byte[] buffer = new byte[1024];
+                out = resp.getOutputStream();
+                while ((read = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, read);
+                }
+                out.flush();
+            } finally {
+                if (out != null) {
+                    IoUtils.safeClose(out);
+                }
+                IoUtils.safeClose(in);
             }
         }
     }
@@ -112,19 +116,58 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             completionHandler.handleComplete();
             return;
         }
-        try {
-            URL resource = resourceLoader.getResource(exchange.getRelativePath());
-            if (resource == null) {
-                exchange.setResponseCode(404);
-                completionHandler.handleComplete();
-                return;
+        File resource = resourceLoader.getResource(exchange.getRelativePath());
+        if (resource == null) {
+            exchange.setResponseCode(404);
+            completionHandler.handleComplete();
+            return;
+        } else if (resource.isDirectory()) {
+            handleWelcomePage(exchange, completionHandler, resource);
+        } else {
+            fileCache.serveFile(exchange, completionHandler, resource);
+        }
+    }
+
+    private void handleWelcomePage(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File resource) {
+        final String found = findWelcomeResource(resource);
+        if (found != null) {
+            exchange.setResponseCode(302);
+            StringBuilder newLocation = new StringBuilder(exchange.getRequestURL());
+            if (newLocation.charAt(newLocation.length() - 1) != '/') {
+                newLocation.append('/');
             }
-            fileCache.serveFile(exchange, completionHandler, new File(resource.getFile()));
-        } catch (MalformedURLException e) {
-            UndertowServletLogger.REQUEST_LOGGER.malformedUrlException(exchange.getRelativePath(), e);
-            exchange.setResponseCode(500);
+            newLocation.append(found);
+            exchange.getResponseHeaders().put(Headers.LOCATION, newLocation.toString());
+            completionHandler.handleComplete();
+        } else {
+            exchange.setResponseCode(404);
             completionHandler.handleComplete();
         }
+    }
+
+    private void handleWelcomePage(final HttpServletRequest req, final HttpServletResponse resp, final File resource) {
+        final String found = findWelcomeResource(resource);
+        if (found != null) {
+            resp.setStatus(302);
+            StringBuffer newLocation = req.getRequestURL();
+            if (newLocation.charAt(newLocation.length() - 1) != '/') {
+                newLocation.append('/');
+            }
+            newLocation.append(found);
+            resp.addHeader(Headers.LOCATION, newLocation.toString());
+        } else {
+            resp.setStatus(404);
+        }
+    }
+
+    private String findWelcomeResource(final File resource) {
+        for (String i : welcomePages) {
+            final File res = new File(resource + File.separator + i);
+            if (res.exists()) {
+                return i;
+            }
+        }
+        return null;
     }
 
     private String getPath(final HttpServletRequest request) {
@@ -139,11 +182,21 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     }
 
     private boolean isAllowed(String path) {
-        int ext = path.lastIndexOf('.');
+        int pos = path.lastIndexOf('/');
+        final String lastSegment;
+        if (pos == -1) {
+            lastSegment = path;
+        } else {
+            lastSegment = path.substring(pos + 1);
+        }
+        if(lastSegment.isEmpty()) {
+            return true;
+        }
+        int ext = lastSegment.lastIndexOf('.');
         if (ext == -1) {
             return defaultAllowed;
         }
-        final String extension = path.substring(ext + 1, path.length());
+        final String extension = lastSegment.substring(ext + 1, lastSegment.length());
         if (defaultAllowed) {
             return !disallowed.contains(extension);
         } else {

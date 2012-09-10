@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.api;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -33,11 +34,13 @@ import org.xnio.Xnio;
  */
 public interface ResourceLoader {
 
-    URL getResource(final String resource) throws MalformedURLException;
+    /**
+     * Gets the resource at the specified location, as long as it exists.
+     *
+     *
+     * @param resource The resource to load, relative to the servlet context root
+     * @return The file, or null if it does not exist
+     */
+    File getResource(final String resource);
 
-    InputStream getResourceAsStream(final String resource);
-
-    FileChannel getResourceAsChannel(final String resource, final Xnio xnio) throws IOException;
-
-    Set<String> getResourcePaths(final String path);
 }

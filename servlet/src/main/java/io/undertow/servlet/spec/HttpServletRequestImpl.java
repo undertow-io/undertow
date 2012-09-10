@@ -199,17 +199,12 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRequestURI() {
-        HttpServerExchange e = exchange.getExchange();
-        String host = e.getRequestHeaders().getFirst(Headers.HOST);
-        if(host == null) {
-            host = e.getDestinationAddress().getAddress().getHostAddress();
-        }
-        return "http://" + host + e.getRequestURI();
+        return exchange.getExchange().getRequestPath();
     }
 
     @Override
     public StringBuffer getRequestURL() {
-        return new StringBuffer( getRequestURI());
+        return new StringBuffer(exchange.getExchange().getRequestURL());
     }
 
     @Override

@@ -78,7 +78,7 @@ public class ServletPathMappingTestCase {
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.INSTANCE)
+                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .addServlets(aStar, aa, aaStar, ab, d, cr, jsp);
 
         DeploymentManager manager = container.addDeployment(builder);

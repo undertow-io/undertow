@@ -18,12 +18,17 @@
 
 package io.undertow.servlet.spec;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -104,17 +109,44 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Set<String> getResourcePaths(final String path) {
-        return deploymentInfo.getResourceLoader().getResourcePaths(path);
+        final File resource =  deploymentInfo.getResourceLoader().getResource(path);
+        if(resource == null || !resource.isDirectory()) {
+            return null;
+        }
+        final String first;
+        if(path.charAt(path.length() - 1) == '/') {
+            first = path;
+        } else {
+            first = path + '/';
+        }
+        final Set<String> resources = new HashSet<String>();
+        for(String res : resource.list()) {
+            resources.add(first + res);
+        }
+        return resources;
     }
 
     @Override
     public URL getResource(final String path) throws MalformedURLException {
-        return deploymentInfo.getResourceLoader().getResource(path);
+        File resource =  deploymentInfo.getResourceLoader().getResource(path);
+        if(resource == null) {
+            return null;
+        }
+        return resource.toURL();
     }
 
     @Override
     public InputStream getResourceAsStream(final String path) {
-        return deploymentInfo.getResourceLoader().getResourceAsStream(path);
+        File resource =  deploymentInfo.getResourceLoader().getResource(path);
+        if(resource == null) {
+            return null;
+        }
+        try {
+            return new BufferedInputStream(new FileInputStream(resource));
+        } catch (FileNotFoundException e) {
+            //should never happen, as the resource loader should return null in this case
+            return null;
+        }
     }
 
     @Override

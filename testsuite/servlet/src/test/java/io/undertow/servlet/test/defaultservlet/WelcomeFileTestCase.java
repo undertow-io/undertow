@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.test;
+package io.undertow.servlet.test.defaultservlet;
 
 import java.io.IOException;
 
@@ -27,6 +27,8 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.path.PathMappingServlet;
+import io.undertow.servlet.test.path.ServletPathMappingTestCase;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.shared.DefaultServer;
@@ -43,7 +45,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class SimpleServletServerTestCase {
+public class WelcomeFileTestCase {
 
 
     @BeforeClass
@@ -52,16 +54,13 @@ public class SimpleServletServerTestCase {
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance(root);
 
-        ServletInfo s = new ServletInfo("servlet", SimpleServlet.class)
-                .addMapping("/aa");
-
         DeploymentInfo builder = new DeploymentInfo()
-                .setClassLoader(SimpleServletServerTestCase.class.getClassLoader())
-                .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
+                .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlet(s);
+                .setResourceLoader(new TestResourceLoader(WelcomeFileTestCase.class))
+                .addWelcomePages("doesnotexist.html", "index.html");
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -71,14 +70,15 @@ public class SimpleServletServerTestCase {
     }
 
     @Test
-    public void testSimpleHttpServlet() throws IOException {
+    public void testWelcomeRedirect() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/aa");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(SimpleServlet.HELLO_WORLD, response);
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.contains("Redirected home page"));
+
         } finally {
             client.getConnectionManager().shutdown();
         }

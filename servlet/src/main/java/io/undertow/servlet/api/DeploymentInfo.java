@@ -53,6 +53,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<ServletContainerInitializerInfo> servletContainerInitializers = new ArrayList<ServletContainerInitializerInfo>();
     private final List<ThreadSetupAction> threadSetupActions = new ArrayList<ThreadSetupAction>();
     private final Map<String, String> initParameters = new HashMap<String, String>();
+    private final List<String> welcomePages = new ArrayList<String>();
 
 
     public void validate() {
@@ -274,6 +275,25 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableMap(initParameters);
     }
 
+    public DeploymentInfo addWelcomePages(final String welcomePage) {
+        this.welcomePages.add(welcomePage);
+        return this;
+    }
+
+    public DeploymentInfo addWelcomePages(final String ... welcomePages) {
+        this.welcomePages.addAll(Arrays.asList(welcomePages));
+        return this;
+    }
+
+    public DeploymentInfo addWelcomePages(final Collection<String> welcomePages) {
+        this.welcomePages.addAll(welcomePages);
+        return this;
+    }
+
+    public List<String> getWelcomePages() {
+        return Collections.unmodifiableList(welcomePages);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -297,6 +317,7 @@ public class DeploymentInfo implements Cloneable {
         info.servletContainerInitializers.addAll(servletContainerInitializers);
         info.threadSetupActions.addAll(threadSetupActions);
         info.initParameters.putAll(initParameters);
+        info.welcomePages.addAll(welcomePages);
         return info;
     }
 

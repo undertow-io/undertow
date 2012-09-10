@@ -66,7 +66,12 @@ public class DeploymentManagerImpl implements DeploymentManager {
     /**
      * The original deployment information, this is
      */
-    private final DeploymentInfo deployment;
+    private final DeploymentInfo originalDeployment;
+
+    /**
+     * Current delpoyment, this may be modified by SCI's
+     */
+    private volatile DeploymentInfo deployment;
     private final PathHandler pathHandler;
     private final ServletContainer servletContainer;
 
@@ -77,13 +82,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private volatile ServletContextImpl servletContext;
 
     public DeploymentManagerImpl(final DeploymentInfo deployment, final PathHandler pathHandler, final ServletContainer servletContainer) {
-        this.deployment = deployment;
+        this.originalDeployment = deployment;
         this.pathHandler = pathHandler;
         this.servletContainer = servletContainer;
     }
 
     @Override
     public void deploy() {
+        this.deployment = originalDeployment.clone();
         deployment.validate();
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
         this.servletContext = servletContext;
@@ -194,7 +200,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
 
         if (defaultServlet == null) {
-            defaultHandler = new DefaultServlet(deployment.getResourceLoader());
+            defaultHandler = new DefaultServlet(deployment.getResourceLoader(), deployment.getWelcomePages());
             final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>((Servlet) defaultHandler)), servletContext);
             lifecycles.add(managedDefaultServlet);
             defaultServlet = new ServletHandler(managedDefaultServlet);

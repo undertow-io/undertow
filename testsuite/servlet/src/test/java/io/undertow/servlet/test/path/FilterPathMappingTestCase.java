@@ -88,7 +88,7 @@ public class FilterPathMappingTestCase {
                 .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.INSTANCE);
+                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER);
 
         final DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

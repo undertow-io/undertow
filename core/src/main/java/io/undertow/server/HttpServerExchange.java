@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import io.undertow.UndertowMessages;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import org.jboss.logging.Logger;
@@ -293,6 +294,19 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void setCanonicalPath(final String canonicalPath) {
         this.canonicalPath = canonicalPath;
+    }
+
+    /**
+     * Reconstructs the complete URL as seen by the user. This includes scheme, host name etc,
+     * but does not include query string.
+     *
+     */
+    public String getRequestURL() {
+        String host = getRequestHeaders().getFirst(Headers.HOST);
+        if(host == null) {
+            host = getDestinationAddress().getAddress().getHostAddress();
+        }
+        return getRequestScheme() + "://" + host + getRequestURI();
     }
 
     /**
