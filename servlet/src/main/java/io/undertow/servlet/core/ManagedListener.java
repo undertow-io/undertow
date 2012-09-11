@@ -21,11 +21,18 @@ package io.undertow.servlet.core;
 import java.util.EventListener;
 
 import javax.servlet.ServletContext;
+import javax.servlet.ServletContextAttributeEvent;
+import javax.servlet.ServletContextAttributeListener;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequestAttributeEvent;
+import javax.servlet.ServletRequestAttributeListener;
 import javax.servlet.ServletRequestEvent;
 import javax.servlet.ServletRequestListener;
+import javax.servlet.http.HttpSessionAttributeListener;
+import javax.servlet.http.HttpSessionBindingEvent;
+import javax.servlet.http.HttpSessionEvent;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceHandle;
@@ -34,8 +41,7 @@ import io.undertow.servlet.api.ListenerInfo;
 /**
  * @author Stuart Douglas
  */
-public class ManagedListener implements Lifecycle,
-        ServletContextListener, ServletRequestListener {
+public class ManagedListener implements Lifecycle {
 
     private final ListenerInfo listenerInfo;
     private final ServletContext servletContext;
@@ -77,7 +83,7 @@ public class ManagedListener implements Lifecycle,
         return started;
     }
 
-    private EventListener instance() {
+    public EventListener instance() {
         if (!started) {
             try {
                 start();
@@ -88,23 +94,4 @@ public class ManagedListener implements Lifecycle,
         return handle.getInstance();
     }
 
-    @Override
-    public void contextInitialized(final ServletContextEvent sce) {
-        ((ServletContextListener) instance()).contextInitialized(sce);
-    }
-
-    @Override
-    public void contextDestroyed(final ServletContextEvent sce) {
-        ((ServletContextListener) instance()).contextDestroyed(sce);
-    }
-
-    @Override
-    public void requestDestroyed(final ServletRequestEvent sre) {
-        ((ServletRequestListener)instance()).requestDestroyed(sre);
-    }
-
-    @Override
-    public void requestInitialized(final ServletRequestEvent sre) {
-        ((ServletRequestListener)instance()).requestInitialized(sre);
-    }
 }

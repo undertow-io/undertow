@@ -384,15 +384,20 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public String getRemoteHost() {
         return exchange.getExchange().getSourceAddress().getHostName();
     }
-
     @Override
-    public void setAttribute(final String name, final Object o) {
-        attributes.put(name, o);
+    public void setAttribute(final String name, final Object object) {
+        Object existing = attributes.put(name, object);
+        if (existing != null) {
+            servletContext.getDeployment().getApplicationListeners().servletRequestAttributeReplaced(this, name, existing);
+        } else {
+            servletContext.getDeployment().getApplicationListeners().servletRequestAttributeAdded(this, name, object);
+        }
     }
 
     @Override
     public void removeAttribute(final String name) {
-        attributes.remove(name);
+        Object exiting = attributes.remove(name);
+        servletContext.getDeployment().getApplicationListeners().servletRequestAttributeRemoved(this, name, exiting);
     }
 
     @Override

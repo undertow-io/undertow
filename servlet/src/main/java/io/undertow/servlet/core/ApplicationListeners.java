@@ -22,11 +22,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.ServletContext;
+import javax.servlet.ServletContextAttributeEvent;
+import javax.servlet.ServletContextAttributeListener;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletRequest;
+import javax.servlet.ServletRequestAttributeEvent;
+import javax.servlet.ServletRequestAttributeListener;
 import javax.servlet.ServletRequestEvent;
 import javax.servlet.ServletRequestListener;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSessionAttributeListener;
+import javax.servlet.http.HttpSessionListener;
 
 import io.undertow.servlet.UndertowServletLogger;
 
@@ -38,33 +45,77 @@ import io.undertow.servlet.UndertowServletLogger;
  *
  * @author Stuart Douglas
  */
-public class ApplicationListeners {
+public class ApplicationListeners implements Lifecycle {
 
     private final ServletContext servletContext;
+    private final List<ManagedListener> allListeners;
     private final List<ManagedListener> servletContextListeners;
+    private final List<ManagedListener> servletContextAttributeListeners;
     private final List<ManagedListener> servletRequestListeners;
+    private final List<ManagedListener> servletRequestAttributeListeners;
+    private final List<ManagedListener> httpSessionListeners;
+    private final List<ManagedListener> httpSessionAttributeListeners;
+    private volatile boolean started = false;
 
     public ApplicationListeners(final List<ManagedListener> allListeners, final ServletContext servletContext) {
         this.servletContext = servletContext;
         List<ManagedListener> servletContextListeners = new ArrayList<ManagedListener>();
+        List<ManagedListener> servletContextAttributeListeners = new ArrayList<ManagedListener>();
         List<ManagedListener> servletRequestListeners = new ArrayList<ManagedListener>();
+        List<ManagedListener> servletRequestAttributeListeners = new ArrayList<ManagedListener>();
+        List<ManagedListener> httpSessionListeners = new ArrayList<ManagedListener>();
+        List<ManagedListener> httpSessionAttributeListeners = new ArrayList<ManagedListener>();
         for (final ManagedListener listener : allListeners) {
             if (ServletContextListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
                 servletContextListeners.add(listener);
             }
+            if (ServletContextAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+                servletContextAttributeListeners.add(listener);
+            }
             if (ServletRequestListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
                 servletRequestListeners.add(listener);
             }
+            if (ServletRequestAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+                servletRequestAttributeListeners.add(listener);
+            }
+            if (HttpSessionListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+                httpSessionListeners.add(listener);
+            }
+            if (HttpSessionAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+                httpSessionAttributeListeners.add(listener);
+            }
         }
         this.servletContextListeners = servletContextListeners;
+        this.servletContextAttributeListeners = servletContextAttributeListeners;
         this.servletRequestListeners = servletRequestListeners;
+        this.servletRequestAttributeListeners = servletRequestAttributeListeners;
+        this.httpSessionListeners = httpSessionListeners;
+        this.httpSessionAttributeListeners = httpSessionAttributeListeners;
+        this.allListeners = allListeners;
     }
 
+    public void start() {
+        started = true;
+    }
+
+    public void stop() {
+        if (started) {
+            started = false;
+            for (final ManagedListener listener : allListeners) {
+                listener.stop();
+            }
+        }
+    }
+
+    @Override
+    public boolean isStarted() {
+        return started;
+    }
 
     public void contextInitialized() {
         final ServletContextEvent event = new ServletContextEvent(servletContext);
         for (ManagedListener listener : servletContextListeners) {
-            listener.contextInitialized(event);
+            this.<ServletContextListener>get(listener).contextInitialized(event);
         }
     }
 
@@ -72,17 +123,38 @@ public class ApplicationListeners {
         final ServletContextEvent event = new ServletContextEvent(servletContext);
         for (ManagedListener listener : servletContextListeners) {
             try {
-                listener.contextDestroyed(event);
+                this.<ServletContextListener>get(listener).contextDestroyed(event);
             } catch (Exception e) {
                 UndertowServletLogger.REQUEST_LOGGER.errorInvokingListener("contextDestroyed", listener.getListenerInfo().getListenerClass(), e);
             }
         }
     }
 
+    public void servletContextAttributeAdded(final String name, final Object value) {
+        final ServletContextAttributeEvent sre = new ServletContextAttributeEvent(servletContext, name, value);
+        for (final ManagedListener listener : servletRequestListeners) {
+            this.<ServletContextAttributeListener>get(listener).attributeAdded(sre);
+        }
+    }
+
+    public void servletContextAttributeRemoved(final String name, final Object value) {
+        final ServletContextAttributeEvent sre = new ServletContextAttributeEvent(servletContext, name, value);
+        for (final ManagedListener listener : servletRequestListeners) {
+            this.<ServletContextAttributeListener>get(listener).attributeRemoved(sre);
+        }
+    }
+
+    public void servletContextAttributeReplaced(final String name, final Object value) {
+        final ServletContextAttributeEvent sre = new ServletContextAttributeEvent(servletContext, name, value);
+        for (final ManagedListener listener : servletRequestListeners) {
+            this.<ServletContextAttributeListener>get(listener).attributeReplaced(sre);
+        }
+    }
+
     public void requestInitialized(final ServletRequest request) {
         final ServletRequestEvent sre = new ServletRequestEvent(servletContext, request);
         for (final ManagedListener listener : servletRequestListeners) {
-            listener.requestInitialized(sre);
+            this.<ServletRequestListener>get(listener).requestInitialized(sre);
         }
     }
 
@@ -90,11 +162,37 @@ public class ApplicationListeners {
         final ServletRequestEvent sre = new ServletRequestEvent(servletContext, request);
         for (final ManagedListener listener : servletRequestListeners) {
             try {
-                listener.requestDestroyed(sre);
+                this.<ServletRequestListener>get(listener).requestDestroyed(sre);
             } catch (Exception e) {
                 UndertowServletLogger.REQUEST_LOGGER.errorInvokingListener("requestDestroyed", listener.getListenerInfo().getListenerClass(), e);
             }
         }
+    }
+
+    public void servletRequestAttributeAdded(final HttpServletRequest request, final String name, final Object value) {
+        final ServletRequestAttributeEvent sre = new ServletRequestAttributeEvent(servletContext, request, name, value);
+        for (final ManagedListener listener : servletRequestListeners) {
+            this.<ServletRequestAttributeListener>get(listener).attributeAdded(sre);
+        }
+    }
+
+    public void servletRequestAttributeRemoved(final HttpServletRequest request, final String name, final Object value) {
+        final ServletRequestAttributeEvent sre = new ServletRequestAttributeEvent(servletContext, request, name, value);
+        for (final ManagedListener listener : servletRequestListeners) {
+            this.<ServletRequestAttributeListener>get(listener).attributeRemoved(sre);
+        }
+    }
+
+    public void servletRequestAttributeReplaced(final HttpServletRequest request, final String name, final Object value) {
+        final ServletRequestAttributeEvent sre = new ServletRequestAttributeEvent(servletContext, request, name, value);
+        for (final ManagedListener listener : servletRequestListeners) {
+            this.<ServletRequestAttributeListener>get(listener).attributeReplaced(sre);
+        }
+    }
+
+
+    private <T> T get(final ManagedListener listener) {
+        return (T) listener.instance();
     }
 
 }

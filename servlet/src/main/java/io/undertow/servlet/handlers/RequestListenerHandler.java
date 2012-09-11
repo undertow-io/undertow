@@ -18,20 +18,12 @@
 
 package io.undertow.servlet.handlers;
 
-import java.util.List;
-
 import javax.servlet.ServletRequest;
-import javax.servlet.ServletRequestEvent;
-import javax.servlet.ServletResponse;
 
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
-import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.core.ApplicationListeners;
-import io.undertow.servlet.core.ManagedListener;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
-import io.undertow.servlet.spec.HttpServletResponseImpl;
-import io.undertow.servlet.spec.ServletContextImpl;
 
 /**
  * @author Stuart Douglas

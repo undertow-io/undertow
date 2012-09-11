@@ -50,9 +50,8 @@ public interface DeploymentManager {
 
     /**
      *
-     * @return This deployments ServletContext
      */
-    ServletContext getServletContext();
+    Deployment getDeployment();
 
     public static enum State {
         UNDEPLOYED,

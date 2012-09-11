@@ -47,7 +47,9 @@ import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ListenerInfo;
@@ -63,13 +65,18 @@ import io.undertow.servlet.util.IteratorEnumeration;
 public class ServletContextImpl implements ServletContext {
 
     private final ServletContainer servletContainer;
-    private volatile DeploymentInfo deploymentInfo;
-    private volatile boolean bootstrapComplete = false;
+    private final Deployment deployment;
+    private final DeploymentInfo deploymentInfo;
     private final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<String, Object>();
 
-    public ServletContextImpl(final ServletContainer servletContainer, final DeploymentInfo deploymentInfo) {
+
+    private volatile boolean bootstrapComplete = false;
+
+
+    public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
-        this.deploymentInfo = deploymentInfo;
+        this.deployment = deployment;
+        this.deploymentInfo = deployment.getDeploymentInfo();
     }
 
     @Override
@@ -79,7 +86,11 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletContext getContext(final String uripath) {
-        return servletContainer.getDeploymentByPath(uripath).getServletContext();
+        DeploymentManager deploymentByPath = servletContainer.getDeploymentByPath(uripath);
+        if (deploymentByPath == null) {
+            return null;
+        }
+        return deploymentByPath.getDeployment().getServletContext();
     }
 
     @Override
@@ -109,18 +120,18 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Set<String> getResourcePaths(final String path) {
-        final File resource =  deploymentInfo.getResourceLoader().getResource(path);
-        if(resource == null || !resource.isDirectory()) {
+        final File resource = deploymentInfo.getResourceLoader().getResource(path);
+        if (resource == null || !resource.isDirectory()) {
             return null;
         }
         final String first;
-        if(path.charAt(path.length() - 1) == '/') {
+        if (path.charAt(path.length() - 1) == '/') {
             first = path;
         } else {
             first = path + '/';
         }
         final Set<String> resources = new HashSet<String>();
-        for(String res : resource.list()) {
+        for (String res : resource.list()) {
             resources.add(first + res);
         }
         return resources;
@@ -128,8 +139,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public URL getResource(final String path) throws MalformedURLException {
-        File resource =  deploymentInfo.getResourceLoader().getResource(path);
-        if(resource == null) {
+        File resource = deploymentInfo.getResourceLoader().getResource(path);
+        if (resource == null) {
             return null;
         }
         return resource.toURL();
@@ -137,8 +148,8 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public InputStream getResourceAsStream(final String path) {
-        File resource =  deploymentInfo.getResourceLoader().getResource(path);
-        if(resource == null) {
+        File resource = deploymentInfo.getResourceLoader().getResource(path);
+        if (resource == null) {
             return null;
         }
         try {
@@ -230,12 +241,18 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void setAttribute(final String name, final Object object) {
-        attributes.put(name, object);
+        Object existing = attributes.put(name, object);
+        if (existing != null) {
+            deployment.getApplicationListeners().servletContextAttributeReplaced(name, existing);
+        } else {
+            deployment.getApplicationListeners().servletContextAttributeAdded(name, object);
+        }
     }
 
     @Override
     public void removeAttribute(final String name) {
-        attributes.remove(name);
+        Object exiting = attributes.remove(name);
+        deployment.getApplicationListeners().servletContextAttributeRemoved(name, exiting);
     }
 
     @Override
@@ -407,5 +424,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void declareRoles(final String... roleNames) {
+    }
+
+    public Deployment getDeployment() {
+        return deployment;
     }
 }

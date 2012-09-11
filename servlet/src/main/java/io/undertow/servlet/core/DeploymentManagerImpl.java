@@ -37,6 +37,7 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
@@ -71,15 +72,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
     /**
      * Current delpoyment, this may be modified by SCI's
      */
-    private volatile DeploymentInfo deployment;
     private final PathHandler pathHandler;
     private final ServletContainer servletContainer;
 
-    private volatile List<Lifecycle> lifecycleObjects;
-
+    private volatile DeploymentImpl deployment;
     private volatile State state = State.UNDEPLOYED;
-    private volatile HttpHandler servletHandler;
-    private volatile ServletContextImpl servletContext;
 
     public DeploymentManagerImpl(final DeploymentInfo deployment, final PathHandler pathHandler, final ServletContainer servletContainer) {
         this.originalDeployment = deployment;
@@ -89,14 +86,16 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void deploy() {
-        this.deployment = originalDeployment.clone();
-        deployment.validate();
+        DeploymentInfo deploymentInfo =  originalDeployment.clone();
+        deploymentInfo.validate();
+        final DeploymentImpl deployment = new DeploymentImpl(deploymentInfo);
+        this.deployment = deployment;
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
-        this.servletContext = servletContext;
+        deployment.setServletContext(servletContext);
 
         final List<ThreadSetupAction> setup = new ArrayList<ThreadSetupAction>();
-        setup.add(new ContextClassLoaderSetupAction(deployment.getClassLoader()));
-        setup.addAll(deployment.getThreadSetupActions());
+        setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
+        setup.addAll(deploymentInfo.getThreadSetupActions());
         final CompositeThreadSetupAction threadSetupAction = new CompositeThreadSetupAction(setup);
 
         //TODO: this is just a temporary hack, this will probably change a lot
@@ -104,7 +103,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         try {
 
             //first run the SCI's
-            for (final ServletContainerInitializerInfo sci : deployment.getServletContainerInitializers()) {
+            for (final ServletContainerInitializerInfo sci : deploymentInfo.getServletContainerInitializers()) {
                 final InstanceHandle<? extends ServletContainerInitializer> instance = sci.getInstanceFactory().createInstance();
                 try {
                     instance.getInstance().onStartup(sci.getHandlesTypes(), servletContext);
@@ -114,11 +113,13 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
 
             final ApplicationListeners listeners = createListeners();
+            deployment.setApplicationListeners(listeners);
             listeners.contextInitialized();
 
             //run
 
-            servletHandler = setupServletChains(servletContext, threadSetupAction, listeners);
+            ServletMatchingHandler handler = setupServletChains(servletContext, threadSetupAction, listeners);
+            deployment.setServletHandler(handler);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
@@ -157,13 +158,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final Set<String> pathMatches = new HashSet<String>();
         final Set<String> extensionMatches = new HashSet<String>();
 
-        for (Map.Entry<String, FilterInfo> entry : deployment.getFilters().entrySet()) {
+        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
+        for (Map.Entry<String, FilterInfo> entry : deploymentInfo.getFilters().entrySet()) {
             final ManagedFilter mf = new ManagedFilter(entry.getValue(), servletContext);
             managedFilterMap.put(entry.getValue().getName(), mf);
             lifecycles.add(mf);
         }
 
-        for (FilterMappingInfo mapping : deployment.getFilterMappings()) {
+        for (FilterMappingInfo mapping : deploymentInfo.getFilterMappings()) {
             if (mapping.getMappingType() == FilterMappingInfo.MappingType.URL) {
                 String path = mapping.getMapping();
                 if (!path.startsWith("*.")) {
@@ -174,7 +176,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
         }
 
-        for (Map.Entry<String, ServletInfo> entry : deployment.getServlets().entrySet()) {
+        for (Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
             ServletInfo servlet = entry.getValue();
             final ManagedServlet managedServlet = new ManagedServlet(servlet, servletContext);
             lifecycles.add(managedServlet);
@@ -200,7 +202,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
 
         if (defaultServlet == null) {
-            defaultHandler = new DefaultServlet(deployment.getResourceLoader(), deployment.getWelcomePages());
+            defaultHandler = new DefaultServlet(deploymentInfo.getResourceLoader(), deploymentInfo.getWelcomePages());
             final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>((Servlet) defaultHandler)), servletContext);
             lifecycles.add(managedDefaultServlet);
             defaultServlet = new ServletHandler(managedDefaultServlet);
@@ -215,7 +217,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 extension.put(ext, new HashMap<DispatcherType, List<ManagedFilter>>());
             }
 
-            for (final FilterMappingInfo filterMapping : deployment.getFilterMappings()) {
+            for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
                 ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
                 if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
                     if (targetServlet != null) {
@@ -297,7 +299,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             ServletInfo targetServlet = extensionServlets.get(path);
 
             final Map<DispatcherType, List<ManagedFilter>> extension = new HashMap<DispatcherType, List<ManagedFilter>>();
-            for (final FilterMappingInfo filterMapping : deployment.getFilterMappings()) {
+            for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
                 ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
                 if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
                     if (targetServlet != null) {
@@ -333,7 +335,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         servletHandler.setDefaultHandler(defaultHandler);
 
-        this.lifecycleObjects = lifecycles;
+        deployment.addLifecycleObjects(lifecycles);
 
         return servletHandler;
     }
@@ -341,14 +343,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     private ApplicationListeners createListeners() {
         final List<ManagedListener> managedListeners = new ArrayList<ManagedListener>();
-        for (final ListenerInfo listener : deployment.getListeners()) {
-            managedListeners.add(new ManagedListener(listener, servletContext));
+        for (final ListenerInfo listener : deployment.getDeploymentInfo().getListeners()) {
+            managedListeners.add(new ManagedListener(listener, deployment.getServletContext()));
         }
-        return new ApplicationListeners(managedListeners, servletContext);
+        return new ApplicationListeners(managedListeners, deployment.getServletContext());
     }
 
     private BlockingHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners) {
-        return   new BlockingHandler(new ServletInitialHandler(new RequestListenerHandler(applicationListeners, next), setupAction, servletContext));
+        return   new BlockingHandler(new ServletInitialHandler(new RequestListenerHandler(applicationListeners, next), setupAction, deployment.getServletContext()));
     }
 
     private ServletInfo resolveServletForPath(final String path, final Map<String, ServletInfo> pathServlets) {
@@ -386,24 +388,26 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void start() throws ServletException {
-        for (Lifecycle object : lifecycleObjects) {
+        for (Lifecycle object : deployment.getLifecycleObjects()) {
             object.start();
         }
-        pathHandler.addPath(deployment.getContextPath(), servletHandler);
+        pathHandler.addPath(deployment.getDeploymentInfo().getContextPath(), deployment.getServletHandler());
 
 
     }
 
     @Override
     public void stop() throws ServletException {
-        for (Lifecycle object : lifecycleObjects) {
+        for (Lifecycle object : deployment.getLifecycleObjects()) {
             object.stop();
         }
     }
 
     @Override
     public void undeploy() {
-
+        deployment.getApplicationListeners().contextDestroyed();
+        deployment.getApplicationListeners().stop();
+        deployment = null;
     }
 
     @Override
@@ -412,11 +416,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     @Override
-    public ServletContext getServletContext() {
-        return servletContext;
+    public Deployment getDeployment() {
+        return deployment;
     }
 
-     private static <K, V> void addToListMap(final Map<K, List<V>> map, final K key, final V value) {
+    private static <K, V> void addToListMap(final Map<K, List<V>> map, final K key, final V value) {
          List<V> list = map.get(key);
          if(list == null) {
              map.put(key,  list = new ArrayList<V>());
