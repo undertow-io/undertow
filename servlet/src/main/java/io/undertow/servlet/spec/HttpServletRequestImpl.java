@@ -402,7 +402,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Locale getLocale() {
-        return null;
+        return Locale.getDefault();
     }
 
     @Override

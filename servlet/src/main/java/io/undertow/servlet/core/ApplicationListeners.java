@@ -132,21 +132,21 @@ public class ApplicationListeners implements Lifecycle {
 
     public void servletContextAttributeAdded(final String name, final Object value) {
         final ServletContextAttributeEvent sre = new ServletContextAttributeEvent(servletContext, name, value);
-        for (final ManagedListener listener : servletRequestListeners) {
+        for (final ManagedListener listener : servletContextAttributeListeners) {
             this.<ServletContextAttributeListener>get(listener).attributeAdded(sre);
         }
     }
 
     public void servletContextAttributeRemoved(final String name, final Object value) {
         final ServletContextAttributeEvent sre = new ServletContextAttributeEvent(servletContext, name, value);
-        for (final ManagedListener listener : servletRequestListeners) {
+        for (final ManagedListener listener : servletContextAttributeListeners) {
             this.<ServletContextAttributeListener>get(listener).attributeRemoved(sre);
         }
     }
 
     public void servletContextAttributeReplaced(final String name, final Object value) {
         final ServletContextAttributeEvent sre = new ServletContextAttributeEvent(servletContext, name, value);
-        for (final ManagedListener listener : servletRequestListeners) {
+        for (final ManagedListener listener : servletContextAttributeListeners) {
             this.<ServletContextAttributeListener>get(listener).attributeReplaced(sre);
         }
     }
@@ -171,21 +171,21 @@ public class ApplicationListeners implements Lifecycle {
 
     public void servletRequestAttributeAdded(final HttpServletRequest request, final String name, final Object value) {
         final ServletRequestAttributeEvent sre = new ServletRequestAttributeEvent(servletContext, request, name, value);
-        for (final ManagedListener listener : servletRequestListeners) {
+        for (final ManagedListener listener : servletRequestAttributeListeners) {
             this.<ServletRequestAttributeListener>get(listener).attributeAdded(sre);
         }
     }
 
     public void servletRequestAttributeRemoved(final HttpServletRequest request, final String name, final Object value) {
         final ServletRequestAttributeEvent sre = new ServletRequestAttributeEvent(servletContext, request, name, value);
-        for (final ManagedListener listener : servletRequestListeners) {
+        for (final ManagedListener listener : servletRequestAttributeListeners) {
             this.<ServletRequestAttributeListener>get(listener).attributeRemoved(sre);
         }
     }
 
     public void servletRequestAttributeReplaced(final HttpServletRequest request, final String name, final Object value) {
         final ServletRequestAttributeEvent sre = new ServletRequestAttributeEvent(servletContext, request, name, value);
-        for (final ManagedListener listener : servletRequestListeners) {
+        for (final ManagedListener listener : servletRequestAttributeListeners) {
             this.<ServletRequestAttributeListener>get(listener).attributeReplaced(sre);
         }
     }
