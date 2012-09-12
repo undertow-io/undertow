@@ -72,6 +72,7 @@
         <version.org.jboss.logmanager>1.4.0.Beta1</version.org.jboss.logmanager>
         <version.org.jboss.logging.processor>1.0.3.Final</version.org.jboss.logging.processor>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec>1.0.2.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec>
+        <version.checkstyle.plugin>2.9.1</version.checkstyle.plugin>
 
         <!-- Surefire args -->
         <surefire.jpda.args/>
