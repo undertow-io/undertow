@@ -25,17 +25,21 @@ import java.util.List;
 import io.undertow.test.utils.FileUtils;
 import junit.framework.Assert;
 import org.junit.Test;
+import org.xnio.BufferAllocator;
+import org.xnio.ByteBufferSlicePool;
 
 /**
  * @author Stuart Douglas
  */
 public class MimeDecodingTestCase {
 
+    ByteBufferSlicePool bufferPool = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 512, 512 * 6);
+
     @Test
-    public void testSimpleMimeDecodingWithPreamble() throws Mime.MalformedMessageException {
+    public void testSimpleMimeDecodingWithPreamble() throws MultipartParser.MalformedMessageException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime1.txt"));
         TestPartHandler handler = new TestPartHandler();
-        Mime.ParseState parser = Mime.beginParse(handler, "unique-boundary-1".getBytes());
+        MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes());
 
         ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
         parser.parse(buf);
@@ -48,10 +52,10 @@ public class MimeDecodingTestCase {
     }
 
     @Test
-    public void testSimpleMimeDecodingWithoutPreamble() throws Mime.MalformedMessageException {
+    public void testSimpleMimeDecodingWithoutPreamble() throws MultipartParser.MalformedMessageException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime2.txt"));
         TestPartHandler handler = new TestPartHandler();
-        Mime.ParseState parser = Mime.beginParse(handler, "unique-boundary-1".getBytes());
+        MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes());
 
         ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
         parser.parse(buf);
@@ -63,7 +67,54 @@ public class MimeDecodingTestCase {
         Assert.assertEquals("text/plain", handler.parts.get(0).map.get(Headers.CONTENT_TYPE).getFirst());
     }
 
-    private static class TestPartHandler implements Mime.PartHandler {
+    @Test
+    public void testBase64MimeDecoding() throws MultipartParser.MalformedMessageException {
+        final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime3.txt"));
+        TestPartHandler handler = new TestPartHandler();
+        MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes());
+
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
+        parser.parse(buf);
+        Assert.assertTrue(parser.isComplete());
+        Assert.assertEquals(2, handler.parts.size());
+        Assert.assertEquals("This is some base64 text.", handler.parts.get(0).data.toString());
+        Assert.assertEquals("This is some more base64 text.", handler.parts.get(1).data.toString());
+
+        Assert.assertEquals("text/plain", handler.parts.get(0).map.get(Headers.CONTENT_TYPE).getFirst());
+    }
+
+    @Test
+    public void testBase64MimeDecodingWithSmallBuffers() throws MultipartParser.MalformedMessageException {
+        final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime3.txt"));
+        TestPartHandler handler = new TestPartHandler();
+        MultipartParser.ParseState parser = MultipartParser.beginParse(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 6, 6 * 6), handler, "unique-boundary-1".getBytes());
+
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
+        parser.parse(buf);
+        Assert.assertTrue(parser.isComplete());
+        Assert.assertEquals(2, handler.parts.size());
+        Assert.assertEquals("This is some base64 text.", handler.parts.get(0).data.toString());
+        Assert.assertEquals("This is some more base64 text.", handler.parts.get(1).data.toString());
+
+        Assert.assertEquals("text/plain", handler.parts.get(0).map.get(Headers.CONTENT_TYPE).getFirst());
+    }
+
+    @Test
+    public void testQuotedPrintable() throws MultipartParser.MalformedMessageException {
+        final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime4.txt"));
+        TestPartHandler handler = new TestPartHandler();
+        MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "someboundarytext".getBytes());
+
+        ByteBuffer buf = ByteBuffer.wrap(data.getBytes());
+        parser.parse(buf);
+        Assert.assertTrue(parser.isComplete());
+        Assert.assertEquals(1, handler.parts.size());
+        Assert.assertEquals("time=money.", handler.parts.get(0).data.toString());
+
+        Assert.assertEquals("text/plain", handler.parts.get(0).map.get(Headers.CONTENT_TYPE).getFirst());
+    }
+
+    private static class TestPartHandler implements MultipartParser.PartHandler {
 
         private List<Part> parts = new ArrayList<Part>();
         private Part current;

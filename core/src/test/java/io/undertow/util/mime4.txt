@@ -1,0 +1,6 @@
+--someboundarytext
+Content-type: text/plain
+Content-Transfer-encoding: quoted-printable
+
+time=3Dmoney.
+--someboundarytext--

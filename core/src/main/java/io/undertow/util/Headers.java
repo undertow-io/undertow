@@ -108,4 +108,7 @@ public final class Headers {
     public static final String KEEP_ALIVE = "keep-alive";
     public static final String CLOSE = "close";
 
+    //MIME header used in multipart file uploads
+    public static final String CONTENT_TRANSFER_ENCODING = "Content-Transfer-Encoding";
+
 }
