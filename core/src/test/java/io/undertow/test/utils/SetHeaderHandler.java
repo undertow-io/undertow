@@ -16,31 +16,28 @@
  * limitations under the License.
  */
 
-package io.undertow.test.runner;
+package io.undertow.test.utils;
 
-import java.io.IOException;
-
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 
 /**
  * @author Stuart Douglas
  */
-public class BlockingStringHandler implements BlockingHttpHandler {
+public class SetHeaderHandler implements HttpHandler {
 
+    private final String header;
     private final String value;
 
-    public BlockingStringHandler(final String value) {
+    public SetHeaderHandler(final String header, final String value) {
+        this.header = header;
         this.value = value;
     }
 
     @Override
-    public void handleRequest(final BlockingHttpServerExchange exchange) {
-        try {
-            exchange.getOutputStream().write(value.getBytes());
-            exchange.getOutputStream().close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+        exchange.getResponseHeaders().put(header, value);
+        completionHandler.handleComplete();
     }
 }

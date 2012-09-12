@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.test.runner;
+package io.undertow.test.utils;
 
 import java.io.IOException;
 import java.net.Inet4Address;

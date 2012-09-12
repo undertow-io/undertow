@@ -21,8 +21,8 @@ package io.undertow.test.handlers.error;
 import java.io.IOException;
 
 import io.undertow.server.handlers.error.SimpleErrorPageHandler;
-import io.undertow.test.runner.DefaultServer;
-import io.undertow.test.runner.HttpClientUtils;
+import io.undertow.test.utils.DefaultServer;
+import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;

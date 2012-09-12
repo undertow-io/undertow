@@ -21,9 +21,9 @@ package io.undertow.test.handlers.encoding;
 import java.io.IOException;
 
 import io.undertow.server.handlers.encoding.EncodingHandler;
-import io.undertow.test.runner.DefaultServer;
-import io.undertow.test.runner.HttpClientUtils;
-import io.undertow.test.runner.SetHeaderHandler;
+import io.undertow.test.utils.DefaultServer;
+import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.test.utils.SetHeaderHandler;
 import io.undertow.util.Headers;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
