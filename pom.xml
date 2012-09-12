@@ -86,8 +86,6 @@
         <module>parser-generator</module>
         <module>core</module>
         <module>servlet</module>
-        <module>testsuite/shared</module>
-        <module>testsuite</module>
     </modules>
 
     <build>
