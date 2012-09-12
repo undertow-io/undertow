@@ -30,6 +30,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
+import io.undertow.util.ImmediateIoFuture;
 import org.xnio.AbstractIoFuture;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
@@ -79,7 +80,7 @@ public class FormEncodedDataHandler implements HttpHandler {
         private final FormData data = new FormData();
         private final StringBuilder builder = new StringBuilder();
         private String name = null;
-        private volatile FormIoFuture ioFuture;
+        private volatile ImmediateIoFuture<FormData> ioFuture;
 
         //0= parsing name
         //1=parsing name, decode required
@@ -180,10 +181,10 @@ public class FormEncodedDataHandler implements HttpHandler {
         @Override
         public IoFuture<FormData> parse() {
             if (ioFuture == null) {
-                FormIoFuture created = null;
+                ImmediateIoFuture<FormData> created = null;
                 synchronized (this) {
                     if (ioFuture == null) {
-                        ioFuture = created = new FormIoFuture();
+                        ioFuture = created = new ImmediateIoFuture<FormData>();
 
                     }
                 }
@@ -206,10 +207,10 @@ public class FormEncodedDataHandler implements HttpHandler {
         @Override
         public FormData parseBlocking() throws IOException {
             if (ioFuture == null) {
-                FormIoFuture created = null;
+                ImmediateIoFuture<FormData> created = null;
                 synchronized (this) {
                     if (ioFuture == null) {
-                        ioFuture = created = new FormIoFuture();
+                        ioFuture = created = new ImmediateIoFuture<FormData>();
 
                     }
                 }
@@ -228,18 +229,6 @@ public class FormEncodedDataHandler implements HttpHandler {
                 }
             }
             return ioFuture.get();
-        }
-    }
-
-    private static class FormIoFuture extends AbstractIoFuture<FormData> {
-        @Override
-        public boolean setResult(final FormData result) {
-            return super.setResult(result);
-        }
-
-        @Override
-        public boolean setException(final IOException exception) {
-            return super.setException(exception);
         }
     }
 

@@ -94,4 +94,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5013, value = "IOException reading from channel")
     void ioExceptionReadingFromChannel(@Cause IOException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5014, value = "Connection terminated parsing multipart data")
+    void connectionTerminatedReadingMultiPartData();
 }

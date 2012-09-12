@@ -247,6 +247,7 @@ public class MultipartParser {
                             retBuffer.position(pos);
                             retBuffer.limit(buffer.position() - boundary.length);
                             encodingHandler.handle(partHandler, retBuffer);
+                            partHandler.endPart();
                             subState = -1;
                         }
                     } else if (b == boundary[0]) {

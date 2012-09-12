@@ -79,6 +79,8 @@
 
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
+        <version.org.apache.httpmime>4.0.1</version.org.apache.httpmime>
+        <version.org.apache.httpcomponents>4.1.3</version.org.apache.httpcomponents>
     </properties>
 
     <modules>
@@ -223,7 +225,14 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.1.3</version>
+                <version>${version.org.apache.httpcomponents}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpmime</artifactId>
+                <version>${version.org.apache.httpmime}</version>
                 <scope>test</scope>
             </dependency>
 

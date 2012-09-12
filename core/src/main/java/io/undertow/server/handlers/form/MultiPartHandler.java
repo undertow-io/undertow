@@ -19,8 +19,8 @@
 package io.undertow.server.handlers.form;
 
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.nio.ByteBuffer;
+import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -29,9 +29,10 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
-import org.xnio.AbstractIoFuture;
-import org.xnio.ChannelListener;
+import io.undertow.util.ImmediateIoFuture;
+import io.undertow.util.MultipartParser;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
@@ -46,14 +47,18 @@ public class MultiPartHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
+    private volatile Executor executor;
+
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
-        if (mimeType != null && mimeType.equals(MULTIPART_FORM_DATA)) {
-            exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, new MultiPartUploadHandler(exchange, completionHandler));
+        if (mimeType != null && mimeType.startsWith(MULTIPART_FORM_DATA)) {
+            String boundary = Headers.extractTokenFromHeader(mimeType, "boundary");
+            exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, new MultiPartUploadHandler(exchange, completionHandler, boundary));
         }
         HttpHandlers.executeHandler(next, exchange, completionHandler);
     }
+
 
     public HttpHandler getNext() {
         return next;
@@ -64,132 +69,49 @@ public class MultiPartHandler implements HttpHandler {
         this.next = next;
     }
 
-    private static final class MultiPartUploadHandler implements ChannelListener<StreamSourceChannel>, FormDataParser {
+    public Executor getExecutor() {
+        return executor;
+    }
+
+    public void setExecutor(final Executor executor) {
+        this.executor = executor;
+    }
+
+    private final class MultiPartUploadHandler implements FormDataParser, Runnable, MultipartParser.PartHandler {
 
         private final HttpServerExchange exchange;
         private final HttpCompletionHandler completionHandler;
         private final FormData data = new FormData();
+        private final String boundary;
+        private volatile ImmediateIoFuture<FormData> ioFuture;
+
+        //0=form data
+        int currentType = 0;
         private final StringBuilder builder = new StringBuilder();
-        private String name = null;
-        private volatile FormIoFuture ioFuture;
+        private String currentName;
 
-        //0= parsing name
-        //1=parsing name, decode required
-        //2=parsing value
-        //3=parsing value, decode required
-        //4=finished
-        private int state = 0;
 
-        private MultiPartUploadHandler(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+        private MultiPartUploadHandler(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final String boundary) {
             this.exchange = exchange;
             this.completionHandler = completionHandler;
-        }
-
-        @Override
-        public void handleEvent(final StreamSourceChannel channel) {
-            int c = 0;
-            final Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-            try {
-                final ByteBuffer buffer = pooled.getResource();
-                do {
-                    c = channel.read(buffer);
-                    if (c > 0) {
-                        buffer.flip();
-                        while (buffer.hasRemaining()) {
-                            byte n = buffer.get();
-                            switch (state) {
-                                case 0: {
-                                    if (n == '=') {
-                                        name = builder.toString();
-                                        builder.setLength(0);
-                                        state = 2;
-                                    } else if (n == '%' || n == '+') {
-                                        state = 1;
-                                        builder.append((char) n);
-                                    } else {
-                                        builder.append((char) n);
-                                    }
-                                    break;
-                                }
-                                case 1: {
-                                    if (n == '=') {
-                                        name = URLDecoder.decode(builder.toString(), "UTF-8");
-                                        builder.setLength(0);
-                                        state = 2;
-                                    } else {
-                                        builder.append((char) n);
-                                    }
-                                    break;
-                                }
-                                case 2: {
-                                    if (n == '&') {
-                                        data.add(name, builder.toString());
-                                        builder.setLength(0);
-                                        state = 0;
-                                    } else if (n == '%' || n == '+') {
-                                        state = 3;
-                                        builder.append((char) n);
-                                    } else {
-                                        builder.append((char) n);
-                                    }
-                                    break;
-                                }
-                                case 3: {
-                                    if (n == '&') {
-                                        data.add(name, URLDecoder.decode(builder.toString(), "UTF-8"));
-                                        builder.setLength(0);
-                                        state = 0;
-                                    } else {
-                                        builder.append((char) n);
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } while (c > 0);
-                if (c == -1) {
-                    if (state == 2) {
-                        data.add(name, builder.toString());
-                    } else if (state == 3) {
-                        data.add(name, URLDecoder.decode(builder.toString(), "UTF-8"));
-                    }
-                    state = 4;
-                    ioFuture.setResult(data);
-                }
-            } catch (IOException e) {
-                ioFuture.setException(e);
-                IoUtils.safeClose(channel);
-                UndertowLogger.REQUEST_LOGGER.ioExceptionReadingFromChannel(e);
-                completionHandler.handleComplete();
-
-            } finally {
-                pooled.free();
-            }
+            this.boundary = boundary;
         }
 
 
         @Override
         public IoFuture<FormData> parse() {
             if (ioFuture == null) {
-                FormIoFuture created = null;
+                ImmediateIoFuture<FormData> created = null;
                 synchronized (this) {
                     if (ioFuture == null) {
-                        ioFuture = created = new FormIoFuture();
+                        ioFuture = created = new ImmediateIoFuture<FormData>();
 
                     }
                 }
                 if (created != null) {
-                    StreamSourceChannel channel = exchange.getRequestChannel();
-                    if (channel == null) {
-                        created.setException(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
-                    } else {
-                        handleEvent(channel);
-                        if (state != 4) {
-                            channel.getReadSetter().set(this);
-                            channel.resumeReads();
-                        }
-                    }
+                    //we need to delegate to a thread pool
+                    //as we parse with blocking operations
+                    (executor == null ? exchange.getConnection().getWorker() : executor).execute(this);
                 }
             }
             return ioFuture;
@@ -198,40 +120,77 @@ public class MultiPartHandler implements HttpHandler {
         @Override
         public FormData parseBlocking() throws IOException {
             if (ioFuture == null) {
-                FormIoFuture created = null;
+                ImmediateIoFuture<FormData> created = null;
                 synchronized (this) {
                     if (ioFuture == null) {
-                        ioFuture = created = new FormIoFuture();
+                        ioFuture = created = new ImmediateIoFuture<FormData>();
 
                     }
                 }
                 if (created != null) {
-                    StreamSourceChannel channel = exchange.getRequestChannel();
-                    if (channel == null) {
-                        created.setException(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
-                    } else {
-                        while (state != 4) {
-                            handleEvent(channel);
-                            if (state != 4) {
-                                channel.awaitReadable();
-                            }
-                        }
-                    }
+                    run();
                 }
             }
             return ioFuture.get();
         }
-    }
 
-    private static class FormIoFuture extends AbstractIoFuture<FormData> {
         @Override
-        public boolean setResult(final FormData result) {
-            return super.setResult(result);
+        public void run() {
+
+            final MultipartParser.ParseState parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes());
+            final Pooled<ByteBuffer> resource = exchange.getConnection().getBufferPool().allocate();
+            StreamSourceChannel requestChannel = exchange.getRequestChannel();
+            if (requestChannel == null) {
+                ioFuture.setException(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
+                return;
+            }
+            final ByteBuffer buf = resource.getResource();
+            try {
+                while (!parser.isComplete()) {
+                    buf.clear();
+                    requestChannel.awaitReadable();
+                    int c = requestChannel.read(buf);
+                    buf.flip();
+                    if (c == -1) {
+                        IoUtils.safeClose(requestChannel);
+                        UndertowLogger.REQUEST_LOGGER.connectionTerminatedReadingMultiPartData();
+                        completionHandler.handleComplete();
+                    } else if (c != 0) {
+                        parser.parse(buf);
+                    }
+                }
+            } catch (IOException e) {
+                ioFuture.setException(e);
+            } catch (MultipartParser.MalformedMessageException e) {
+                ioFuture.setException(new IOException(e));
+            } finally {
+                resource.free();
+                ioFuture.setResult(data);
+            }
         }
 
         @Override
-        public boolean setException(final IOException exception) {
-            return super.setException(exception);
+        public void beginPart(final HeaderMap headers) {
+            final String disposition = headers.getFirst(Headers.CONTENT_DISPOSITION);
+            if (disposition != null) {
+                if(disposition.startsWith("form-data")) {
+                    currentName = Headers.extractQuotedValueFromHeader(disposition, "name");
+                }
+            }
+        }
+
+        @Override
+        public void data(final ByteBuffer buffer) {
+            while (buffer.hasRemaining()) {
+                builder.append((char)buffer.get());
+            }
+        }
+
+        @Override
+        public void endPart() {
+            data.put(currentName, builder.toString());
+            builder.setLength(0);
         }
     }
+
 }

@@ -111,4 +111,71 @@ public final class Headers {
     //MIME header used in multipart file uploads
     public static final String CONTENT_TRANSFER_ENCODING = "Content-Transfer-Encoding";
 
+
+    /**
+     * Extracts a token from a header that has a given key. For instance if the header is
+     * <p/>
+     * content-type=multipart/form-data boundary=myboundary
+     * and the key is boundary the myboundary will be returned.
+     *
+     * @param header The header
+     * @param key    The key that identifies the token to extract
+     * @return The token, or null if it was not found
+     */
+    public static String extractTokenFromHeader(final String header, final String key) {
+        int pos = header.indexOf(key + '=');
+        if (pos == -1) {
+            return null;
+        }
+        int end;
+        int start = pos + key.length() + 1;
+        for (end = start; end < header.length(); ++end) {
+            char c = header.charAt(end);
+            if (c == ' ' || c == '\t') {
+                break;
+            }
+        }
+        return header.substring(start, end);
+    }
+
+    /**
+     * Extracts a quoted value from a header that has a given key. For instance if the header is
+     * <p/>
+     * content-disposition=form-data; name="my field"
+     * and the key is name then "my field" will be returned without the quotes.
+     *
+     * @param header The header
+     * @param key    The key that identifies the token to extract
+     * @return The token, or null if it was not found
+     */
+    public static String extractQuotedValueFromHeader(final String header, final String key) {
+        int pos = header.indexOf(key + '=');
+        if (pos == -1) {
+            return null;
+        }
+
+        int end;
+        int start = pos + key.length() + 1;
+        boolean quotes = false;
+        if (header.charAt(start) == '"') {
+            start++;
+            for (end = start; end < header.length(); ++end) {
+                char c = header.charAt(end);
+                if (c == '"') {
+                    break;
+                }
+            }
+            return header.substring(start, end);
+
+        } else {
+            //no quotes
+            for (end = start; end < header.length(); ++end) {
+                char c = header.charAt(end);
+                if (c == ' ' || c == '\t') {
+                    break;
+                }
+            }
+            return header.substring(start, end);
+        }
+    }
 }
