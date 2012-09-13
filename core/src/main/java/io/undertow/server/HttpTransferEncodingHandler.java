@@ -18,6 +18,7 @@
 
 package io.undertow.server;
 
+import io.undertow.UndertowMessages;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.ChunkedStreamSinkChannel;
@@ -275,7 +276,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
     private static ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler) {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
-                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channel, chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool()));
+                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channel, chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool(), false));
             }
         };
     }
@@ -301,10 +302,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             public void handleEvent(final FixedLengthStreamSourceChannel fixedLengthChannel) {
                 long remaining = fixedLengthChannel.getRemaining();
                 if (remaining > 0L) {
-                    // keep it simple - set up an async drain
-                    channel.getReadSetter().set(ChannelListeners.drainListener(remaining, terminateRequestListener(exchange), ChannelListeners.closingChannelExceptionHandler()));
-                    channel.resumeReads();
-                    return;
+                    throw UndertowMessages.MESSAGES.requestWasNotFullyConsumed();
                 }
                 exchange.terminateRequest();
             }
@@ -314,7 +312,11 @@ public class HttpTransferEncodingHandler implements HttpHandler {
     private static ChannelListener<ChunkedStreamSourceChannel> chunkedDrainListener(final StreamSourceChannel channel, final HttpServerExchange exchange) {
         return new ChannelListener<ChunkedStreamSourceChannel>() {
             public void handleEvent(final ChunkedStreamSourceChannel chunkedStreamSourceChannel) {
-                channel.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, terminateRequestListener(exchange), ChannelListeners.closingChannelExceptionHandler()));
+                if(!chunkedStreamSourceChannel.isFinished()) {
+                    throw UndertowMessages.MESSAGES.requestWasNotFullyConsumed();
+                } else {
+                    exchange.terminateRequest();
+                }
             }
         };
     }

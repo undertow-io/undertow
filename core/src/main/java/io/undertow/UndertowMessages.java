@@ -81,4 +81,6 @@ public interface UndertowMessages {
     @Message(id = 18, value = "Form value is a String, use getValue() instead")
     IllegalStateException formValueIsAString();
 
+    @Message(id = 19, value = "Request was not fully consumed")
+    RuntimeException requestWasNotFullyConsumed();
 }

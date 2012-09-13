@@ -19,6 +19,8 @@
 package io.undertow.test.handlers;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Random;
 
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.handlers.blocking.BlockingHandler;
@@ -65,6 +67,7 @@ public class ChunkedRequestTransferCodingTestCase {
                     } else if (connection.getChannel() != exchange.getExchange().getConnection().getChannel()) {
                         exchange.getOutputStream().write("Connection not persistent".getBytes());
                         exchange.getOutputStream().close();
+                        exchange.getExchange().setResponseCode(500);
                         return;
                     }
                     String m = HttpClientUtils.readResponse(exchange.getInputStream());
@@ -72,6 +75,7 @@ public class ChunkedRequestTransferCodingTestCase {
                     exchange.getInputStream().close();
                     exchange.getOutputStream().close();
                 } catch (IOException e) {
+                    exchange.getExchange().setResponseCode(500);
                     throw new RuntimeException(e);
                 }
             }
@@ -95,11 +99,31 @@ public class ChunkedRequestTransferCodingTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
+
             generateMessage(1000);
             post.setEntity(new StringEntity(message) {
                 @Override
                 public long getContentLength() {
                     return -1;
+                }
+
+                @Override
+                public boolean isChunked() {
+                    return true;
+                }
+
+                @Override
+                public void writeTo(OutputStream outstream) throws IOException {
+                    int l = 0;
+                    int i = 0;
+                    Random random = new Random(1000);
+                    while (i < message.length()) {
+                        i += random.nextInt(100);
+                        i = Math.min(i, message.length());
+                        outstream.write(message.getBytes(), l, i - l);
+                        l = i;
+                        ++i;
+                    }
                 }
             });
             result = client.execute(post);

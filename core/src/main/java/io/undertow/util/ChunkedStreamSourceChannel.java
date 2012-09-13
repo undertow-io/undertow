@@ -52,6 +52,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
     private final PushBackStreamChannel delegate;
     private final boolean configurable;
     private final Pool<ByteBuffer> bufferPool;
+    private final boolean delegateClose;
 
     //byte buffer for raw unchunked data that has been read from the channel
     private volatile Pooled<ByteBuffer> rawData;
@@ -75,17 +76,18 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
 
     private static final AtomicLongFieldUpdater<ChunkedStreamSourceChannel> stateUpdater = AtomicLongFieldUpdater.newUpdater(ChunkedStreamSourceChannel.class, "state");
 
-    public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener, final Pool<ByteBuffer> bufferPool) {
-        this(delegate, false, bufferPool, finishListener);
+    public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener, final Pool<ByteBuffer> bufferPool, boolean delegateClose) {
+        this(delegate, false, bufferPool, finishListener, delegateClose);
     }
 
-    public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final boolean configurable, final Pool<ByteBuffer> bufferPool, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener) {
+    public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final boolean configurable, final Pool<ByteBuffer> bufferPool, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener, boolean delegateClose) {
         this.bufferPool = bufferPool;
         this.finishListener = finishListener;
         this.delegate = delegate;
         delegate.getReadSetter().set(ChannelListeners.delegatingChannelListener(ChunkedStreamSourceChannel.this, readSetter));
         this.configurable = configurable;
         stateUpdater.set(this, FLAG_READING_LENGTH);
+        this.delegateClose = delegateClose;
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
@@ -125,7 +127,8 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             final Pooled<ByteBuffer> buffer = rawData;
             if (buffer != null) {
                 final ByteBuffer buf = buffer.getResource();
-                if (buf.remaining() > count) {
+                long chunkInBuffer = Math.min(buf.remaining(), chunkRemaining);
+                if (chunkInBuffer > count) {
                     //it won't fit
                     int orig = buf.limit();
                     buf.limit((int) (buf.position() + count));
@@ -140,19 +143,26 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                     chunkRemaining -= written;
                     return written;
                 } else if (buf.hasRemaining()) {
-                    int written = 0;
-                    long c;
-                    do {
-                        c = target.write(buf, pos);
-                        written += c;
-                        pos += c;
-                    } while (buf.hasRemaining() && c > 0);
-                    chunkRemaining -= written;
-                    if (buf.hasRemaining()) {
-                        return written;
+
+                    int orig = buf.limit();
+                    buf.limit((int) (buf.position() + chunkInBuffer));
+                    try {
+                        int written = 0;
+                        long c;
+                        do {
+                            c = target.write(buf, pos);
+                            written += c;
+                            pos += c;
+                        } while (buf.hasRemaining() && c > 0);
+                        chunkRemaining -= written;
+                        if (buf.hasRemaining()) {
+                            return written;
+                        }
+                        read += written;
+                        remaining -= written;
+                    } finally {
+                        buf.limit(orig);
                     }
-                    read += written;
-                    remaining -= written;
                 }
             }
             //there is still more to read
@@ -172,15 +182,15 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                 if (c == -1) {
                     newVal |= FLAG_FINISHED;
                 }
-                if (chunkRemaining == 0) {
-                    newVal |= FLAG_READING_NEWLINE;
-                }
+            }
+            if (chunkRemaining == 0) {
+                newVal |= FLAG_READING_NEWLINE;
             }
             return read;
 
         } finally {
             //buffer will be freed if not needed in exitRead
-            exitRead(chunkRemaining, newVal & (FLAG_FINISHED | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE), ~newVal & (FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE));
+            exitRead(chunkRemaining, newVal);
         }
     }
 
@@ -220,7 +230,8 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             final Pooled<ByteBuffer> buffer = rawData;
             if (buffer != null) {
                 final ByteBuffer buf = buffer.getResource();
-                if (buf.remaining() > count) {
+                long chunkInBuffer = Math.min(buf.remaining(), chunkRemaining);
+                if (chunkInBuffer > count) {
                     //it won't fit
                     int orig = buf.limit();
                     buf.limit((int) (buf.position() + count));
@@ -234,18 +245,24 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                     chunkRemaining -= written;
                     return written;
                 } else if (buf.hasRemaining()) {
-                    int written = 0;
-                    long c = 0;
-                    do {
-                        c = target.write(buf);
-                        written += c;
-                    } while (buf.hasRemaining() && c > 0);
-                    chunkRemaining -= written;
-                    if (buf.hasRemaining()) {
-                        return written;
+                    int orig = buf.limit();
+                    buf.limit((int) (buf.position() + chunkInBuffer));
+                    try {
+                        int written = 0;
+                        long c = 0;
+                        do {
+                            c = target.write(buf);
+                            written += c;
+                        } while (buf.hasRemaining() && c > 0);
+                        chunkRemaining -= written;
+                        if (buf.hasRemaining()) {
+                            return written;
+                        }
+                        read += written;
+                        remaining -= written;
+                    } finally {
+                        buf.limit(orig);
                     }
-                    read += written;
-                    remaining -= written;
                 }
             }
             //there is still more to read
@@ -264,15 +281,16 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                 if (c == -1) {
                     newVal |= FLAG_FINISHED;
                 }
-                if (chunkRemaining == 0) {
-                    newVal |= FLAG_READING_NEWLINE;
-                }
+            }
+
+            if (chunkRemaining == 0) {
+                newVal |= FLAG_READING_NEWLINE;
             }
             return read;
 
         } finally {
             //buffer will be freed if not needed in exitRead
-            exitRead(chunkRemaining, newVal & (FLAG_FINISHED | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE), ~newVal & (FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE));
+            exitRead(chunkRemaining, newVal);
         }
     }
 
@@ -322,7 +340,10 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
 
         final int originalLimit = dst.limit();
         try {
-            if (anyAreSet(newVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_FINISHED)) {
+            if (anyAreSet(newVal, FLAG_FINISHED)) {
+                return -1;
+            }
+            if (anyAreSet(newVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE)) {
                 //we did not manage to read anything except chunking overhead
                 return 0;
             }
@@ -334,8 +355,9 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             final Pooled<ByteBuffer> buffer = rawData;
             if (buffer != null) {
                 final ByteBuffer buf = buffer.getResource();
+                long chunkInBuffer = Math.min(buf.remaining(), chunkRemaining);
                 int remaining = dst.remaining();
-                if (chunkRemaining > remaining) {
+                if (chunkInBuffer > remaining) {
                     //it won't fit
                     int orig = buf.limit();
                     buf.limit(buf.position() + remaining);
@@ -345,14 +367,14 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                     return remaining;
                 } else {
                     int old = buf.limit();
-                    buf.limit((int) Math.min(old, buf.position() + chunkRemaining));
+                    buf.limit((int) Math.min(old, buf.position() + chunkInBuffer));
                     try {
                         dst.put(buf);
                     } finally {
                         buf.limit(old);
                     }
-                    read += chunkRemaining;
-                    chunkRemaining = 0;
+                    read += chunkInBuffer;
+                    chunkRemaining -= chunkInBuffer;
                 }
             }
             //there is still more to read
@@ -373,16 +395,17 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                 if (c == -1) {
                     newVal |= FLAG_FINISHED;
                 }
-                if (chunkRemaining == 0) {
-                    newVal |= FLAG_READING_NEWLINE;
-                }
+            }
+
+            if (chunkRemaining == 0) {
+                newVal |= FLAG_READING_NEWLINE;
             }
             return read;
 
         } finally {
             //buffer will be freed if not needed in exitRead
             dst.limit(originalLimit);
-            exitRead(chunkRemaining, newVal & (FLAG_FINISHED | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE), ~newVal & (FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE));
+            exitRead(chunkRemaining, newVal);
         }
     }
 
@@ -405,11 +428,19 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
         if (buffer == null) {
             buffer = this.rawData = bufferPool.allocate();
             buffer.getResource().clear();
+            int c = delegate.read(buffer.getResource());
+            buffer.getResource().flip();
+            if (c == -1) {
+                newVal |= FLAG_FINISHED;
+                return newVal;
+            } else if (c == 0) {
+                return newVal;
+            }
         }
         ByteBuffer buf = buffer.getResource();
-        buf.compact();
 
-        if (allAreClear(newVal, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE) && chunkRemaining == 0) {
+
+        if (allAreClear(newVal, FLAG_READING_NEWLINE | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE) && chunkRemaining == 0) {
             newVal |= FLAG_FINISHED;
             return newVal;
         }
@@ -445,7 +476,6 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                 }
             }
             if (anyAreSet(newVal, FLAG_READING_LENGTH)) {
-                buf.compact();
                 int c = delegate.read(buf);
                 buf.flip();
                 if (c == -1) {
@@ -480,7 +510,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             //we may have read to far
             if (buf.hasRemaining()) {
                 delegate.unget(buffer);
-                buffer = null;
+                rawData = null;
             }
         }
         //ok, we are done, return the state so the real read method can handle the chunked data
@@ -538,7 +568,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             return;
         }
         try {
-            if (false) {
+            if (delegateClose) {
                 // propagate close if configured to do so
                 delegate.shutdownReads();
             }
@@ -683,15 +713,14 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
 
     /**
      * Exit a read method.
-     *
      */
-    private void exitRead( long chunkSize, long setFlags, long clearFlags) {
+    private void exitRead(long chunkSize, long newFlags) {
         long oldVal;
         long newVal;
         do {
             oldVal = state;
-            newVal = (oldVal | setFlags & ~clearFlags & (chunkSize | ~MASK_COUNT)) & ~FLAG_READ_ENTERED;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal)) ;
+            newVal = ((newFlags & ~MASK_COUNT) | chunkSize)  & ~FLAG_READ_ENTERED;
+        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
         if (rawData != null && !rawData.getResource().hasRemaining()) {
             rawData.free();
             rawData = null;
@@ -704,6 +733,10 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             callFinish();
         }
 
+    }
+
+    public boolean isFinished() {
+        return anyAreSet(state, FLAG_FINISHED);
     }
 
     private void callFinish() {
