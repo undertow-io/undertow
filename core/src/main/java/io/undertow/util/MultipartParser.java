@@ -299,7 +299,7 @@ public class MultipartParser {
     }
 
 
-    private static interface Encoding {
+    private interface Encoding {
         void handle(final PartHandler handler, final ByteBuffer rawData);
     }
 

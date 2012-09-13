@@ -37,7 +37,7 @@ import io.undertow.util.SecureHashMap;
 public final class FormData implements Iterable<String> {
 
 
-    public static interface FormValue {
+    public interface FormValue {
 
         /**
          * @return the simple string value.
