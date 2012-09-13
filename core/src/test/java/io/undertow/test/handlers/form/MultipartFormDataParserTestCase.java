@@ -18,25 +18,31 @@
 
 package io.undertow.test.handlers.form;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.server.handlers.file.DirectFileCache;
+import io.undertow.server.handlers.file.FileHandler;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.FormEncodedDataHandler;
 import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.test.utils.DefaultServer;
+import io.undertow.test.utils.FileUtils;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
 import junit.textui.TestRunner;
@@ -46,10 +52,12 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -57,22 +65,11 @@ import org.junit.runners.Parameterized;
 /**
  * @author Stuart Douglas
  */
-@RunWith(DefaultServer.Parameterized.class)
+@RunWith(DefaultServer.class)
 public class MultipartFormDataParserTestCase {
 
-    static class AggregateRunner extends TestRunner {
-
-    }
-
-    private final HttpHandler rootHandler;
-
-    public MultipartFormDataParserTestCase(final HttpHandler rootHandler) {
-        this.rootHandler = rootHandler;
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> handlerChains() {
-        List<Object[]> ret = new ArrayList<Object[]>();
+    @BeforeClass
+    public static void setup() {
         final MultiPartHandler fd = new MultiPartHandler();
         fd.setNext(new HttpHandler() {
             @Override
@@ -80,10 +77,16 @@ public class MultipartFormDataParserTestCase {
                 final FormDataParser parser = (FormDataParser) exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
                 try {
                     FormData data = parser.parse().get();
-                    Iterator<String> it = data.iterator();
-                    while (it.hasNext()) {
-                        String fd = it.next();
-                        exchange.getResponseHeaders().addAll(fd, data.get(fd));
+                    exchange.setResponseCode(500);
+                    if (data.getFirst("formValue").getValue().equals("myValue")) {
+                        FormData.FormValue file = data.getFirst("file");
+                        if (file.isFile()) {
+                            if (file.getFile() != null) {
+                                if (FileUtils.readFile(file.getFile()).startsWith("file contents")) {
+                                    exchange.setResponseCode(200);
+                                }
+                            }
+                        }
                     }
                     completionHandler.handleComplete();
                 } catch (IOException e) {
@@ -92,58 +95,24 @@ public class MultipartFormDataParserTestCase {
                 }
             }
         });
-        ret.add(new Object[]{fd});
-        final BlockingHandler blocking = new BlockingHandler();
-
-        final MultiPartHandler bf = new MultiPartHandler();
-        bf.setNext(blocking);
-        blocking.setRootHandler(new BlockingHttpHandler() {
-
-
-            @Override
-            public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-                final FormDataParser parser = (FormDataParser) exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
-                try {
-                    FormData data = parser.parseBlocking();
-                    Iterator<String> it = data.iterator();
-                    while (it.hasNext()) {
-                        String fd = it.next();
-                        exchange.getExchange().getResponseHeaders().addAll(fd, data.get(fd));
-                    }
-                } catch (IOException e) {
-                    exchange.getExchange().setResponseCode(500);
-                }
-            }
-        });
-        ret.add(new Object[]{bf});
-        return ret;
-
+        DefaultServer.setRootHandler(fd);
     }
 
     @Test
-    public void testFormDataParsing() throws Exception {
-        runTest(new BasicNameValuePair("name", "A Value"));
-        runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
-
-    }
-
-    private void runTest(final NameValuePair ... pairs) throws Exception{
-        DefaultServer.setRootHandler(rootHandler);
+    public void testFileUpload() throws Exception {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
 
-            final List<NameValuePair> data = new ArrayList<NameValuePair>();
-            data.addAll(Arrays.asList(pairs));
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
             //post.setHeader(Headers.CONTENT_TYPE, MultiPartHandler.MULTIPART_FORM_DATA);
             MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
-            for(NameValuePair part : pairs) {
-                entity.addPart(part.getName(), new StringBody( part.getValue(), "text/plain", Charset.forName("UTF-8")));
-            }
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", Charset.forName("UTF-8")));
+            entity.addPart("file", new FileBody(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile())));
+
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            checkResult(data,  result);
             HttpClientUtils.readResponse(result);
 
 
@@ -152,10 +121,5 @@ public class MultipartFormDataParserTestCase {
         }
     }
 
-    private void checkResult(final List<NameValuePair> data, final HttpResponse result) {
-        for(NameValuePair vp : data) {
-            Assert.assertEquals(vp.getValue(), result.getHeaders(vp.getName())[0].getValue());
-        }
-    }
 
 }

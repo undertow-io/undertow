@@ -98,4 +98,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5014, value = "Connection terminated parsing multipart data")
     void connectionTerminatedReadingMultiPartData();
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5015, value = "Cannot remove uploaded file %s")
+    void cannotRemoveUploadedFile(File file);
 }

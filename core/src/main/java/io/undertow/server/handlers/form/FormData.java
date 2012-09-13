@@ -18,151 +18,166 @@
 
 package io.undertow.server.handlers.form;
 
+import java.io.File;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.Map;
 
+import io.undertow.UndertowMessages;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.SecureHashMap;
 
 /**
  * Representation of form data.
- *
+ * <p/>
  * TODO: add representation of multipart data
- *
  */
 public final class FormData implements Iterable<String> {
 
 
-    static class FormValue extends ArrayDeque<String> {
-        private final String name;
+    public static interface FormValue {
 
-        FormValue(final String name) {
-            super(1);
-            this.name = name;
+        /**
+         * @return the simple string value.
+         * @throws IllegalStateException If this is not a simple string value
+         */
+        String getValue();
+
+        /**
+         * Returns true if this is a file and not a simple string
+         *
+         * @return
+         */
+        boolean isFile();
+
+        /**
+         * @return The temp file that the file data was saved to
+         * @throws IllegalStateException if this is not a file
+         */
+        File getFile();
+
+        /**
+         *
+         * @return The filename specified in the disposition header.
+         */
+        String getFileName();
+
+        /**
+         * @return The headers that were present in the multipart request, or null if this was not a multipart request
+         */
+        HeaderMap getHeaders();
+
+
+    }
+
+
+    static class FormValueImpl implements FormValue {
+
+        private final String value;
+        private final String fileName;
+        private final File file;
+        private final HeaderMap headers;
+
+        FormValueImpl(String value, HeaderMap headers) {
+            this.value = value;
+            this.headers = headers;
+            this.file = null;
+            this.fileName = null;
         }
 
-        FormValue(final String name, final String singleValue) {
-            this(name);
-            add(singleValue);
+        FormValueImpl(File file, final String fileName, HeaderMap headers) {
+            this.file = file;
+            this.headers = headers;
+            this.fileName = fileName;
+            this.value = null;
         }
 
-        FormValue(final String name, final Collection<String> c) {
-            super(c);
-            this.name = name;
-        }
-
-        public String getName() {
-            return name;
-        }
 
         @Override
-        public boolean equals(final Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            final FormValue strings = (FormValue) o;
-
-            if (name != null ? !name.equals(strings.name) : strings.name != null) return false;
-            if(strings.size() != size()) return false;
-            Iterator<String> i1 = iterator();
-            Iterator<String> i2 = strings.iterator();
-            while (i1.hasNext()) {
-                String n1 = i1.next();
-                String n2 = i2.next();
-                if(!n1.equals(n2)) return false;
+        public String getValue() {
+            if (value == null) {
+                throw UndertowMessages.MESSAGES.formValueIsAFile();
             }
-            return true;
+            return value;
         }
 
         @Override
-        public int hashCode() {
-            return super.hashCode();
+        public boolean isFile() {
+            return file != null;
+        }
+
+        @Override
+        public File getFile() {
+            if (file == null) {
+                throw UndertowMessages.MESSAGES.formValueIsAString();
+            }
+            return file;
+        }
+
+        @Override
+        public HeaderMap getHeaders() {
+            return headers;
+        }
+
+        public String getFileName() {
+            return fileName;
         }
     }
 
-    private final Map<String, FormValue> values = new SecureHashMap<String, FormValue>();
+    private final Map<String, Deque<FormValue>> values = new SecureHashMap<String, Deque<FormValue>>();
 
     public Iterator<String> iterator() {
-        final Iterator<FormValue> iterator = values.values().iterator();
-        return new Iterator<String>() {
-            public boolean hasNext() {
-                return iterator.hasNext();
-            }
-
-            public String next() {
-                return iterator.next().getName();
-            }
-
-            public void remove() {
-                iterator.remove();
-            }
-        };
+        return values.keySet().iterator();
     }
 
-    public String getFirst(String name) {
-        final Deque<String> deque = values.get(name);
+    public FormValue getFirst(String name) {
+        final Deque<FormValue> deque = values.get(name);
         return deque == null ? null : deque.peekFirst();
     }
 
-    public String getLast(String name) {
-        final Deque<String> deque = values.get(name);
+    public FormValue getLast(String name) {
+        final Deque<FormValue> deque = values.get(name);
         return deque == null ? null : deque.peekLast();
     }
 
-    public Deque<String> get(String name) {
+    public Deque<FormValue> get(String name) {
         return values.get(name);
     }
 
     public void add(String name, String value) {
-        final FormValue values = this.values.get(name);
+        add(name, value, null);
+    }
+    public void add(String name, String value, final HeaderMap headers) {
+        Deque<FormValue> values = this.values.get(name);
         if (values == null) {
-            this.values.put(name, new FormValue(name, value));
-        } else {
-            values.add(value);
+            this.values.put(name, values = new ArrayDeque<FormValue>(1));
         }
+        values.add(new FormValueImpl(value, headers));
     }
 
-    public void addAll(String name, Collection<String> formValues) {
-        final FormValue value = values.get(name);
-        if (value == null) {
-            values.put(name, new FormValue(name, formValues));
-        } else {
-            value.addAll(formValues);
+    public void add(String name, File value, String fileName, final HeaderMap headers) {
+        Deque<FormValue> values = this.values.get(name);
+        if (values == null) {
+            this.values.put(name, values = new ArrayDeque<FormValue>(1));
         }
+        values.add(new FormValueImpl(value, fileName, headers));
     }
 
-    public void addAll(FormData other) {
-        for (Map.Entry<String, FormValue> entry : other.values.entrySet()) {
-            final String key = entry.getKey();
-            final FormValue value = entry.getValue();
-            final FormValue target = values.get(key);
-            if (target == null) {
-                values.put(key, new FormValue(value.getName(), value));
-            } else {
-                target.addAll(value);
-            }
-        }
+    public void put(String name, String value, final HeaderMap headers) {
+        Deque<FormValue> values = new ArrayDeque<FormValue>(1);
+        this.values.put(name, values);
+        values.add(new FormValueImpl(value, headers));
     }
 
-    public void put(String name, String formValue) {
-        final FormValue value = new FormValue(name, formValue);
-        values.put(name, value);
-    }
-
-    public void putAll(String name, Collection<String> formValue) {
-        final FormValue deque = new FormValue(name, formValue);
-        values.put(name, deque);
-    }
-
-    public Collection<String> remove(String name) {
+    public Deque<FormValue> remove(String name) {
         return values.remove(name);
     }
 
     public boolean contains(String name) {
-        final FormValue value = values.get(name);
-        return value != null && ! value.isEmpty();
+        final Deque<FormValue> value = values.get(name);
+        return value != null && !value.isEmpty();
     }
 
     @Override

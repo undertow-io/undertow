@@ -78,7 +78,9 @@ public class FormDataParserTestCase {
                     Iterator<String> it = data.iterator();
                     while (it.hasNext()) {
                         String fd = it.next();
-                        exchange.getResponseHeaders().addAll(fd, data.get(fd));
+                        for (FormData.FormValue val : data.get(fd)) {
+                            exchange.getResponseHeaders().add(fd, val.getValue());
+                        }
                     }
                     completionHandler.handleComplete();
                 } catch (IOException e) {
@@ -103,7 +105,9 @@ public class FormDataParserTestCase {
                     Iterator<String> it = data.iterator();
                     while (it.hasNext()) {
                         String fd = it.next();
-                        exchange.getExchange().getResponseHeaders().addAll(fd, data.get(fd));
+                        for (FormData.FormValue val : data.get(fd)) {
+                            exchange.getExchange().getResponseHeaders().add(fd, val.getValue());
+                        }
                     }
                 } catch (IOException e) {
                     exchange.getExchange().setResponseCode(500);
@@ -122,7 +126,7 @@ public class FormDataParserTestCase {
 
     }
 
-    private void runTest(final NameValuePair ... pairs) throws Exception{
+    private void runTest(final NameValuePair... pairs) throws Exception {
         DefaultServer.setRootHandler(rootHandler);
         DefaultHttpClient client = new DefaultHttpClient();
         try {
@@ -134,7 +138,7 @@ public class FormDataParserTestCase {
             post.setEntity(new UrlEncodedFormEntity(data));
             HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            checkResult(data,  result);
+            checkResult(data, result);
             HttpClientUtils.readResponse(result);
 
 
@@ -144,7 +148,7 @@ public class FormDataParserTestCase {
     }
 
     private void checkResult(final List<NameValuePair> data, final HttpResponse result) {
-        for(NameValuePair vp : data) {
+        for (NameValuePair vp : data) {
             Assert.assertEquals(vp.getValue(), result.getHeaders(vp.getName())[0].getValue());
         }
     }

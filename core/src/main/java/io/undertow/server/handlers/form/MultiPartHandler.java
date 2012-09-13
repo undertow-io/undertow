@@ -18,8 +18,12 @@
 
 package io.undertow.server.handlers.form;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
@@ -33,12 +37,16 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.ImmediateIoFuture;
 import io.undertow.util.MultipartParser;
+import org.xnio.FileAccess;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
+import org.xnio.Xnio;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
+ * TODO: upload limits
+ *
  * @author Stuart Douglas
  */
 public class MultiPartHandler implements HttpHandler {
@@ -49,14 +57,36 @@ public class MultiPartHandler implements HttpHandler {
 
     private volatile Executor executor;
 
+    private volatile File tempFileLocation = new File(System.getProperty("java.io.tmpdir"));
+
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (mimeType != null && mimeType.startsWith(MULTIPART_FORM_DATA)) {
             String boundary = Headers.extractTokenFromHeader(mimeType, "boundary");
-            exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, new MultiPartUploadHandler(exchange, completionHandler, boundary));
+            final MultiPartUploadHandler multiPartUploadHandler = new MultiPartUploadHandler(exchange, completionHandler, boundary);
+            exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, multiPartUploadHandler);
+
+            HttpHandlers.executeHandler(next, exchange, new HttpCompletionHandler() {
+                @Override
+                public void handleComplete() {
+                    try {
+                        completionHandler.handleComplete();
+                    } finally {
+                        for (final File file : multiPartUploadHandler.getCreatedFiles()) {
+                            if (file.exists()) {
+                                if (!file.delete()) {
+                                    UndertowLogger.REQUEST_LOGGER.cannotRemoveUploadedFile(file);
+                                }
+                            }
+                        }
+                    }
+
+                }
+            });
+        } else {
+            HttpHandlers.executeHandler(next, exchange, completionHandler);
         }
-        HttpHandlers.executeHandler(next, exchange, completionHandler);
     }
 
 
@@ -77,18 +107,31 @@ public class MultiPartHandler implements HttpHandler {
         this.executor = executor;
     }
 
+    public File getTempFileLocation() {
+        return tempFileLocation;
+    }
+
+    public void setTempFileLocation(File tempFileLocation) {
+        this.tempFileLocation = tempFileLocation;
+    }
+
     private final class MultiPartUploadHandler implements FormDataParser, Runnable, MultipartParser.PartHandler {
 
         private final HttpServerExchange exchange;
         private final HttpCompletionHandler completionHandler;
         private final FormData data = new FormData();
         private final String boundary;
+        private final List<File> createdFiles = new ArrayList<File>();
         private volatile ImmediateIoFuture<FormData> ioFuture;
 
         //0=form data
         int currentType = 0;
         private final StringBuilder builder = new StringBuilder();
         private String currentName;
+        private String fileName;
+        private File file;
+        private FileChannel fileChannel;
+        private HeaderMap headers;
 
 
         private MultiPartUploadHandler(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final String boundary) {
@@ -171,26 +214,66 @@ public class MultiPartHandler implements HttpHandler {
 
         @Override
         public void beginPart(final HeaderMap headers) {
+            this.headers = headers;
             final String disposition = headers.getFirst(Headers.CONTENT_DISPOSITION);
             if (disposition != null) {
-                if(disposition.startsWith("form-data")) {
+                if (disposition.startsWith("form-data")) {
                     currentName = Headers.extractQuotedValueFromHeader(disposition, "name");
+                    fileName = Headers.extractQuotedValueFromHeader(disposition, "filename");
+                    if (fileName != null) {
+                        try {
+                            file = File.createTempFile("undertow", "upload", tempFileLocation);
+                            createdFiles.add(file);
+                            fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_WRITE);
+                        } catch (IOException e) {
+                            ioFuture.setException(e);
+                            throw new RuntimeException(e);
+                        }
+                    }
                 }
             }
         }
 
         @Override
         public void data(final ByteBuffer buffer) {
-            while (buffer.hasRemaining()) {
-                builder.append((char)buffer.get());
+            if (file == null) {
+                builder.ensureCapacity(builder.length() + buffer.remaining());
+                while (buffer.hasRemaining()) {
+                    builder.append((char) buffer.get());
+                }
+            } else {
+                try {
+                    fileChannel.write(buffer);
+                } catch (IOException e) {
+                    ioFuture.setException(e);
+                    throw new RuntimeException(e);
+                }
             }
         }
 
         @Override
         public void endPart() {
-            data.put(currentName, builder.toString());
-            builder.setLength(0);
+            if (file != null) {
+                data.add(currentName, file, fileName, headers);
+                file = null;
+                try {
+                    fileChannel.close();
+                    fileChannel = null;
+                } catch (IOException e) {
+                    ioFuture.setException(e);
+                    throw new RuntimeException(e);
+                }
+            } else {
+                data.add(currentName, builder.toString(), headers);
+                builder.setLength(0);
+            }
         }
+
+
+        public List<File> getCreatedFiles() {
+            return createdFiles;
+        }
+
     }
 
 }

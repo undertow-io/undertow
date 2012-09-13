@@ -45,9 +45,25 @@ public class FileUtils {
     }
 
     public static String readFile(URL url) {
+        try {
+            return readFile(url.openStream());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String readFile(final File file) {
+        try {
+            return readFile(new FileInputStream(file));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String readFile(InputStream file) {
         BufferedInputStream stream = null;
         try {
-            stream = new BufferedInputStream(url.openStream());
+            stream = new BufferedInputStream(file);
             byte[] buff = new byte[1024];
             StringBuilder builder = new StringBuilder();
             int read = -1;
@@ -67,6 +83,7 @@ public class FileUtils {
             }
         }
     }
+
 
 
 

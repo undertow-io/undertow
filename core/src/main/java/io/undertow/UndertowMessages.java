@@ -74,4 +74,11 @@ public interface UndertowMessages {
 
     @Message(id = 16, value = "Could not add cookie as cookie handler was not present in the handler chain")
     IllegalStateException cookieHandlerNotPresent();
+
+    @Message(id = 17, value = "Form value is a file, use getFile() instead")
+    IllegalStateException formValueIsAFile();
+
+    @Message(id = 18, value = "Form value is a String, use getValue() instead")
+    IllegalStateException formValueIsAString();
+
 }
