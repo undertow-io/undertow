@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
 import io.undertow.server.httpparser.HttpExchangeBuilder;
 import io.undertow.server.httpparser.HttpParser;
 import io.undertow.server.httpparser.ParseState;
@@ -34,6 +35,7 @@ import io.undertow.util.HeaderMap;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
+import org.xnio.OptionMap;
 import org.xnio.Pooled;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
@@ -53,6 +55,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     private volatile HttpExchangeBuilder builder;
 
     private final HttpServerConnection connection;
+
 
     HttpReadListener(final StreamSinkChannel responseChannel, final HttpServerConnection connection) {
         this.responseChannel = responseChannel;
@@ -137,7 +140,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(channel, nextRequestResponseChannel, connection);
 
                 final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, requestHeaders, responseHeaders, parameters, method, protocol, channel, ourResponseChannel, startNextRequestAction, responseTerminateAction);
-
+                httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
                 try {
                     httpServerExchange.setRequestScheme("http"); //todo: determine if this is https
                     httpServerExchange.setRequestURI(builder.getFullPath());

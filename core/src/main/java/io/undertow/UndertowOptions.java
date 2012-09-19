@@ -1,0 +1,45 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2012 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.undertow;
+
+import io.undertow.util.AttachmentKey;
+import org.xnio.Option;
+import org.xnio.OptionMap;
+
+/**
+ * @author Stuart Douglas
+ */
+public class UndertowOptions {
+
+    public static final AttachmentKey<OptionMap> ATTACHMENT_KEY = AttachmentKey.create(OptionMap.class);
+
+    /**
+     * The maximum size in bytes of a http request header.
+     */
+    public static Option<Integer> MAX_HEADER_SIZE = Option.simple(UndertowOptions.class, "MAX_HEADER_SIZE", Integer.class);
+
+    /**
+     * The maximum number of pipelined requests that the server will process at once. Defaults to 1
+     */
+    public static Option<Integer> MAX_REQUESTS_PER_CONNECTION = Option.simple(UndertowOptions.class, "MAX_REQUESTS_PER_CONNECTION", Integer.class);
+
+    private UndertowOptions() {
+
+    }
+}

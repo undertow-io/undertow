@@ -22,7 +22,9 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import org.xnio.ChannelListener;
+import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
@@ -39,28 +41,23 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
 
     private volatile HttpHandler rootHandler;
 
-    /**
-     * The maximum number of requests that can be processed at a time for a given connection.
-     */
-    private final int maxConcurrentRequestsPerConnection;
+    private volatile OptionMap undertowOptions;
 
     public HttpOpenListener(final Pool<ByteBuffer> pool) {
-        this(pool, 1);
+        this(pool, OptionMap.EMPTY);
     }
-    public HttpOpenListener(final Pool<ByteBuffer> pool, int maxConcurrentRequestsPerConnection) {
-        if(maxConcurrentRequestsPerConnection <= 0) {
-            throw UndertowMessages.MESSAGES.maximumConcurrentRequestsMustBeLargerThanZero();
-        }
+
+    public HttpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
+        this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
-        this.maxConcurrentRequestsPerConnection = maxConcurrentRequestsPerConnection;
     }
 
     public void handleEvent(final ConnectedStreamChannel channel) {
-        if(UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
+        if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(channel);
-        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, maxConcurrentRequestsPerConnection);
+        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions);
         HttpReadListener readListener = new HttpReadListener(channel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);
@@ -74,7 +71,14 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
         this.rootHandler = rootHandler;
     }
 
-    public int getMaxConcurrentRequestsPerConnection() {
-        return maxConcurrentRequestsPerConnection;
+    public OptionMap getUndertowOptions() {
+        return undertowOptions;
+    }
+
+    public void setUndertowOptions(final OptionMap undertowOptions) {
+        if(undertowOptions == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+        }
+        this.undertowOptions = undertowOptions;
     }
 }

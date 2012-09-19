@@ -23,10 +23,12 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import io.undertow.UndertowOptions;
 import io.undertow.util.AbstractAttachable;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
+import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
@@ -43,17 +45,19 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     private final Pool<ByteBuffer> bufferPool;
     private final HttpHandler rootHandler;
     private final int maxConcurrentRequests;
+    private final OptionMap undertowOptions;
 
     @SuppressWarnings("unused")
     private volatile int runningRequestCount = 1;
 
     private static final AtomicIntegerFieldUpdater<HttpServerConnection> runningRequestCountUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpServerConnection.class, "runningRequestCount");
 
-    HttpServerConnection(ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final int maxConcurrentRequests) {
+    HttpServerConnection(ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions) {
         this.channel = channel;
         this.bufferPool = bufferPool;
         this.rootHandler = rootHandler;
-        this.maxConcurrentRequests = maxConcurrentRequests;
+        this.undertowOptions = undertowOptions;
+        this.maxConcurrentRequests = undertowOptions.get(UndertowOptions.MAX_REQUESTS_PER_CONNECTION, 1);
         closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
     }
 
@@ -159,5 +163,9 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
      */
     public int getMaxConcurrentRequests() {
         return maxConcurrentRequests;
+    }
+
+    public OptionMap getUndertowOptions() {
+        return undertowOptions;
     }
 }
