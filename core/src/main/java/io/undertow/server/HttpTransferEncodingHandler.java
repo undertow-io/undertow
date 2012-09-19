@@ -18,9 +18,12 @@
 
 package io.undertow.server;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.util.BrokenStreamSourceChannel;
 import io.undertow.util.ChunkedStreamSinkChannel;
 import io.undertow.util.ChunkedStreamSourceChannel;
 import io.undertow.util.HeaderMap;
@@ -125,10 +128,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 exchange.terminateRequest();
             } else {
                 // fixed-length content - add a wrapper for a fixed-length stream
-                if (persistentConnection) {
-                    // but only if the connection is persistent; else why bother?
-                    exchange.addRequestWrapper(fixedLengthStreamSourceChannelWrapper(ourCompletionHandler, contentLength));
-                }
+                exchange.addRequestWrapper(fixedLengthStreamSourceChannelWrapper(ourCompletionHandler, contentLength));
             }
         } else if (hasTransferEncoding) {
             if (transferEncoding.equalsIgnoreCase(Headers.IDENTITY)) {
@@ -276,7 +276,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
     private static ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler) {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
-                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channel, chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool(), false));
+                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channel, chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool(), false, maxEntitySize(exchange)));
             }
         };
     }
@@ -284,6 +284,10 @@ public class HttpTransferEncodingHandler implements HttpHandler {
     private static ChannelWrapper<StreamSourceChannel> fixedLengthStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler, final long contentLength) {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
+                final long max = maxEntitySize(exchange);
+                if(contentLength > max) {
+                    return new BrokenStreamSourceChannel(UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getSourceAddress(), max), channel);
+                }
                 return ourCompletionHandler.setRequestStream(new FixedLengthStreamSourceChannel(channel, contentLength, false, fixedLengthDrainListener(channel, exchange), null));
             }
         };
@@ -302,9 +306,10 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             public void handleEvent(final FixedLengthStreamSourceChannel fixedLengthChannel) {
                 long remaining = fixedLengthChannel.getRemaining();
                 if (remaining > 0L) {
-                    throw UndertowMessages.MESSAGES.requestWasNotFullyConsumed();
+                    UndertowLogger.REQUEST_LOGGER.requestWasNotFullyConsumed();
+                } else {
+                    exchange.terminateRequest();
                 }
-                exchange.terminateRequest();
             }
         };
     }
@@ -313,7 +318,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         return new ChannelListener<ChunkedStreamSourceChannel>() {
             public void handleEvent(final ChunkedStreamSourceChannel chunkedStreamSourceChannel) {
                 if(!chunkedStreamSourceChannel.isFinished()) {
-                    throw UndertowMessages.MESSAGES.requestWasNotFullyConsumed();
+                    UndertowLogger.REQUEST_LOGGER.requestWasNotFullyConsumed();
                 } else {
                     exchange.terminateRequest();
                 }
@@ -354,5 +359,9 @@ public class HttpTransferEncodingHandler implements HttpHandler {
     public void setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+    }
+
+    private static long maxEntitySize(final HttpServerExchange exchange) {
+        return exchange.getAttachment(UndertowOptions.ATTACHMENT_KEY).get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
     }
 }

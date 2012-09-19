@@ -48,10 +48,6 @@ import static org.xnio.IoUtils.safeClose;
  */
 final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
-    /**
-     * The default size we allow for the HTTP header.
-     */
-    public static final int DEFAULT_MAX_HEADER_SIZE = 50000;
 
     private final StreamSinkChannel responseChannel;
 
@@ -67,7 +63,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     HttpReadListener(final StreamSinkChannel responseChannel, final HttpServerConnection connection) {
         this.responseChannel = responseChannel;
         this.connection = connection;
-        maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, DEFAULT_MAX_HEADER_SIZE);
+        maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
     }
 
     public void handleEvent(final PushBackStreamChannel channel) {

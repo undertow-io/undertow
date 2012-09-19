@@ -643,24 +643,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             return;
         } else {
             try {
-                // Attempt a nice shutdown.
-                long res;
-                do {
-                    res = Channels.drain(requestChannel, Long.MAX_VALUE);
-                } while (res > 0);
-                if (res == 0) {
-                    requestChannel.getReadSetter().set(ChannelListeners.<StreamSourceChannel>drainListener(Long.MAX_VALUE, new ChannelListener<SuspendableReadChannel>() {
-                        public void handleEvent(final SuspendableReadChannel channel) {
-                            channel.suspendReads();
-                            channel.getReadSetter().set(null);
-                            IoUtils.safeShutdownReads(channel);
-                        }
-                    }, ChannelListeners.closingChannelExceptionHandler()));
-                    requestChannel.resumeReads();
-                } else {
-                    assert res == -1;
-                    requestChannel.shutdownReads();
-                }
+                //we do not attempt to drain the read side, as one of the reasons this could
+                //be happening is because the request was too large
+                requestChannel.shutdownReads();
                 responseChannel.shutdownWrites();
                 if (!responseChannel.flush()) {
                     responseChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(new ChannelListener<StreamSinkChannel>() {

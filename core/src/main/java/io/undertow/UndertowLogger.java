@@ -108,4 +108,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5016, value = "Connection from %s terminated as request header was larger than %s")
     void requestHeaderWasTooLarge(SocketAddress address, int size);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5017, value = "Request was not fully consumed")
+    void requestWasNotFullyConsumed();
 }

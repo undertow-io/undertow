@@ -22,12 +22,17 @@ import java.io.IOException;
 
 import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.blocking.BlockingHandler;
+import io.undertow.server.handlers.blocking.BlockingHttpHandler;
+import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -41,19 +46,37 @@ import org.xnio.OptionMap;
 @RunWith(DefaultServer.class)
 public class MaxRequestSizeTestCase {
 
+    public static final String A_MESSAGE = "A message";
+
     @BeforeClass
     public static void setup() {
-        DefaultServer.setRootHandler(ResponseCodeHandler.HANDLE_200);
+        final BlockingHandler blockingHandler = DefaultServer.newBlockingHandler();
+        DefaultServer.setRootHandler(blockingHandler);
+        blockingHandler.setRootHandler(new BlockingHttpHandler() {
+            @Override
+            public void handleRequest(final BlockingHttpServerExchange exchange) {
+                try {
+                    String m = HttpClientUtils.readResponse(exchange.getInputStream());
+                    Assert.assertEquals(A_MESSAGE, m);
+                    exchange.getInputStream().close();
+                    exchange.getOutputStream().close();
+                } catch (IOException e) {
+                    exchange.getExchange().setResponseCode(500);
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     @Test
-    public void testMaxRequestSize() throws IOException {
+    public void testMaxRequestHeaderSize() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
         try {
             final DefaultHttpClient client = new DefaultHttpClient();
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
-            get.addHeader(Headers.CONNECTION, "close");
-            HttpResponse result = client.execute(get);
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            post.setEntity(new StringEntity(A_MESSAGE));
+            post.addHeader(Headers.CONNECTION, "close");
+            HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
@@ -61,9 +84,7 @@ public class MaxRequestSizeTestCase {
             DefaultServer.setUndertowOptions(maxSize);
 
             try {
-                get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
-                get.addHeader(Headers.CONNECTION, "close");
-                result = client.execute(get);
+                client.execute(post);
                 Assert.fail("request should have been too big");
             } catch (IOException e) {
                 //expected
@@ -71,9 +92,7 @@ public class MaxRequestSizeTestCase {
 
             maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
             DefaultServer.setUndertowOptions(maxSize);
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
-            get.addHeader(Headers.CONNECTION, "close");
-            result = client.execute(get);
+            result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
@@ -82,4 +101,38 @@ public class MaxRequestSizeTestCase {
         }
     }
 
+    @Test
+    public void testMaxRequestEntitySize() throws IOException {
+        OptionMap existing = DefaultServer.getUndertowOptions();
+        try {
+            final DefaultHttpClient client = new DefaultHttpClient();
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            post.setEntity(new StringEntity(A_MESSAGE));
+            post.addHeader(Headers.CONNECTION, "close");
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            OptionMap maxSize = OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) A_MESSAGE.length() - 1);
+            DefaultServer.setUndertowOptions(maxSize);
+
+            post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            post.setEntity(new StringEntity(A_MESSAGE));
+            result = client.execute(post);
+            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
+            DefaultServer.setUndertowOptions(maxSize);
+            post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            post.setEntity(new StringEntity(A_MESSAGE));
+            post.addHeader(Headers.CONNECTION, "close");
+            result = client.execute(post);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+        } finally {
+            DefaultServer.setUndertowOptions(existing);
+        }
+    }
 }

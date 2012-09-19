@@ -25,6 +25,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
+import io.undertow.UndertowMessages;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -65,6 +66,8 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
     @SuppressWarnings("unused")
     private volatile long state;
 
+    private volatile long remainingAllowed;
+
     private static final long FLAG_READ_ENTERED = 1L << 63L;
     private static final long FLAG_CLOSED = 1L << 62L;
     private static final long FLAG_SUS_RES_SHUT = 1L << 61L;
@@ -76,11 +79,11 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
 
     private static final AtomicLongFieldUpdater<ChunkedStreamSourceChannel> stateUpdater = AtomicLongFieldUpdater.newUpdater(ChunkedStreamSourceChannel.class, "state");
 
-    public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener, final Pool<ByteBuffer> bufferPool, boolean delegateClose) {
-        this(delegate, false, bufferPool, finishListener, delegateClose);
+    public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener, final Pool<ByteBuffer> bufferPool, boolean delegateClose, final long maxLength) {
+        this(delegate, false, bufferPool, finishListener, delegateClose, maxLength);
     }
 
-    public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final boolean configurable, final Pool<ByteBuffer> bufferPool, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener, boolean delegateClose) {
+    public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final boolean configurable, final Pool<ByteBuffer> bufferPool, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener, boolean delegateClose, final long maxLength) {
         this.bufferPool = bufferPool;
         this.finishListener = finishListener;
         this.delegate = delegate;
@@ -88,9 +91,11 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
         this.configurable = configurable;
         stateUpdater.set(this, FLAG_READING_LENGTH);
         this.delegateClose = delegateClose;
+        this.remainingAllowed = maxLength;
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
+        checkMaxLength();
         final long oldVal = enterRead();
         //we have read the last chunk, we just return EOF
         if (anyAreSet(oldVal, FLAG_FINISHED)) {
@@ -141,6 +146,8 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                     } while (buf.hasRemaining() && c > 0);
                     buf.limit(orig);
                     chunkRemaining -= written;
+
+                    updateRemainingAllowed(written);
                     return written;
                 } else if (buf.hasRemaining()) {
 
@@ -186,6 +193,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             if (chunkRemaining == 0) {
                 newVal |= FLAG_READING_NEWLINE;
             }
+            updateRemainingAllowed(read);
             return read;
 
         } finally {
@@ -194,7 +202,21 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
         }
     }
 
+    private void updateRemainingAllowed(final int written) throws IOException {
+        remainingAllowed-= written;
+        if(remainingAllowed <0) {
+            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge();
+        }
+    }
+
+    private void checkMaxLength() throws IOException {
+        if(remainingAllowed <0) {
+            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge();
+        }
+    }
+
     public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
+        checkMaxLength();
         final long oldVal = enterRead();
         //we have read the last chunk, we just return EOF
         if (anyAreSet(oldVal, FLAG_FINISHED)) {
@@ -243,6 +265,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                     } while (buf.hasRemaining() && c > 0);
                     buf.limit(orig);
                     chunkRemaining -= written;
+                    updateRemainingAllowed(written);
                     return written;
                 } else if (buf.hasRemaining()) {
                     int orig = buf.limit();
@@ -286,6 +309,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             if (chunkRemaining == 0) {
                 newVal |= FLAG_READING_NEWLINE;
             }
+            updateRemainingAllowed(read);
             return read;
 
         } finally {
@@ -316,6 +340,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
     }
 
     public int read(final ByteBuffer dst) throws IOException {
+        checkMaxLength();
         final long oldVal = enterRead();
         //we have read the last chunk, we just return EOF
         if (anyAreSet(oldVal, FLAG_FINISHED)) {
@@ -364,6 +389,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                     dst.put(buf);
                     buf.limit(orig);
                     chunkRemaining -= remaining;
+                    updateRemainingAllowed(remaining);
                     return remaining;
                 } else {
                     int old = buf.limit();
@@ -400,6 +426,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             if (chunkRemaining == 0) {
                 newVal |= FLAG_READING_NEWLINE;
             }
+            updateRemainingAllowed(read);
             return read;
 
         } finally {

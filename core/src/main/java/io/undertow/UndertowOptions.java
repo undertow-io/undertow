@@ -32,7 +32,18 @@ public class UndertowOptions {
     /**
      * The maximum size in bytes of a http request header.
      */
-    public static Option<Integer> MAX_HEADER_SIZE = Option.simple(UndertowOptions.class, "MAX_HEADER_SIZE", Integer.class);
+    public static final Option<Integer> MAX_HEADER_SIZE = Option.simple(UndertowOptions.class, "MAX_HEADER_SIZE", Integer.class);
+    /**
+     * The default size we allow for the HTTP header.
+     */
+    public static final int DEFAULT_MAX_HEADER_SIZE = 50 * 1024;
+
+    /**
+     * The maximum size of the HTTP entity body.
+     */
+    public static final Option<Long> MAX_ENTITY_SIZE = Option.simple(UndertowOptions.class, "MAX_HEADER_SIZE", Long.class);
+
+    public static final long DEFAULT_MAX_ENTITY_SIZE = 10 * 1024 * 1024;
 
     /**
      * The maximum number of pipelined requests that the server will process at once. Defaults to 1

@@ -20,8 +20,10 @@ package io.undertow.test.handlers;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.Random;
 
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
@@ -39,6 +41,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 /**
  * @author Stuart Douglas
@@ -65,9 +68,9 @@ public class ChunkedRequestTransferCodingTestCase {
                     if (connection == null) {
                         connection = exchange.getExchange().getConnection();
                     } else if (connection.getChannel() != exchange.getExchange().getConnection().getChannel()) {
+                        exchange.getExchange().setResponseCode(500);
                         exchange.getOutputStream().write("Connection not persistent".getBytes());
                         exchange.getOutputStream().close();
-                        exchange.getExchange().setResponseCode(500);
                         return;
                     }
                     String m = HttpClientUtils.readResponse(exchange.getInputStream());
@@ -84,8 +87,8 @@ public class ChunkedRequestTransferCodingTestCase {
 
     @Test
     public void testChunkedRequest() throws IOException {
+        connection = null;
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
-        post.setEntity(new StringEntity("This is a test"));
         DefaultHttpClient client = new DefaultHttpClient();
         try {
             generateMessage(1);
@@ -132,6 +135,36 @@ public class ChunkedRequestTransferCodingTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
+    }
+
+    @Test
+    public void testMaxRequestSizeChunkedRequest() throws IOException {
+        connection = null;
+        OptionMap existing = DefaultServer.getUndertowOptions();
+        HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
+        DefaultHttpClient client = new DefaultHttpClient();
+        try {
+            generateMessage(1);
+            post.setEntity(new StringEntity(message) {
+                @Override
+                public long getContentLength() {
+                    return -1;
+                }
+            });
+            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, 3l));
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            connection = null;
+            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) message.length()));
+            result = client.execute(post);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+        } finally {
+            DefaultServer.setUndertowOptions(existing);
+        }
+        client.getConnectionManager().shutdown();
     }
 
 

@@ -19,6 +19,7 @@
 package io.undertow;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 
 import org.jboss.logging.Message;
 import org.jboss.logging.MessageBundle;
@@ -81,6 +82,9 @@ public interface UndertowMessages {
     @Message(id = 18, value = "Form value is a String, use getValue() instead")
     IllegalStateException formValueIsAString();
 
-    @Message(id = 19, value = "Request was not fully consumed")
-    RuntimeException requestWasNotFullyConsumed();
+    @Message(id = 19, value = "Connection from %s terminated as request entity was larger than %s")
+    IOException requestEntityWasTooLarge(SocketAddress address, long size);
+
+    @Message(id = 20, value = "Connection terminated as request was too large")
+    IOException requestEntityWasTooLarge();
 }
