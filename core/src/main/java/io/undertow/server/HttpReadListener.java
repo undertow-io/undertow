@@ -35,7 +35,6 @@ import io.undertow.util.HeaderMap;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.Pooled;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
@@ -49,6 +48,11 @@ import static org.xnio.IoUtils.safeClose;
  */
 final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
+    /**
+     * The default size we allow for the HTTP header.
+     */
+    public static final int DEFAULT_MAX_HEADER_SIZE = 50000;
+
     private final StreamSinkChannel responseChannel;
 
     private volatile ParseState state;
@@ -56,10 +60,14 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
     private final HttpServerConnection connection;
 
+    private volatile int read = 0;
+    private final int maxRequestSize;
+
 
     HttpReadListener(final StreamSinkChannel responseChannel, final HttpServerConnection connection) {
         this.responseChannel = responseChannel;
         this.connection = connection;
+        maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, DEFAULT_MAX_HEADER_SIZE);
     }
 
     public void handleEvent(final PushBackStreamChannel channel) {
@@ -113,6 +121,12 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 free = false;
                 channel.unget(pooled);
             }
+            int total = read + res - remaining;
+            read = total;
+            if (read > maxRequestSize) {
+                UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
+                IoUtils.safeClose(connection);
+            }
 
             if (state.isComplete()) {
                 // we remove ourselves as the read listener from the channel;
@@ -123,7 +137,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 final Object permit = new Object();
                 final StreamSinkChannel nextRequestResponseChannel;
                 final Runnable responseTerminateAction;
-                if(connection.getMaxConcurrentRequests() > 1) {
+                if (connection.getMaxConcurrentRequests() > 1) {
                     GatedStreamSinkChannel gatedStreamSinkChannel = new GatedStreamSinkChannel(connection.getChannel(), permit, false, true);
                     nextRequestResponseChannel = gatedStreamSinkChannel;
                     responseTerminateAction = new ResponseTerminateAction(gatedStreamSinkChannel, permit);
@@ -221,7 +235,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             int state;
             do {
                 state = stateUpdater.get(this);
-                if(state == 1) {
+                if (state == 1) {
                     return;
                 }
                 if (state == 2) {

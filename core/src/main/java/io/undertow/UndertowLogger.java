@@ -20,7 +20,9 @@ package io.undertow;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.SocketAddress;
 
+import io.undertow.server.HttpServerConnection;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Cause;
 import org.jboss.logging.LogMessage;
@@ -102,4 +104,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5015, value = "Cannot remove uploaded file %s")
     void cannotRemoveUploadedFile(File file);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5016, value = "Connection from %s terminated as request header was larger than %s")
+    void requestHeaderWasTooLarge(SocketAddress address, int size);
 }

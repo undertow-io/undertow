@@ -163,6 +163,14 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return blockingExecutorService;
     }
 
+    public static OptionMap getUndertowOptions() {
+        return openListener.getUndertowOptions();
+    }
+
+    public static void setUndertowOptions(final OptionMap options) {
+        openListener.setUndertowOptions(options);
+    }
+
     public static class Parameterized extends org.junit.runners.Parameterized {
 
         public Parameterized(Class<?> klass) throws Throwable {
