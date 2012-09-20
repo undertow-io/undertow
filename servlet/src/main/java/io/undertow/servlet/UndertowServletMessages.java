@@ -18,6 +18,9 @@
 
 package io.undertow.servlet;
 
+import java.io.File;
+import java.io.IOException;
+
 import javax.servlet.Filter;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
@@ -82,4 +85,10 @@ public interface UndertowServletMessages {
 
     @Message(id = 10014, value = "Could not load class %s")
     RuntimeException cannotLoadClass(String className, @Cause Exception e);
+
+    @Message(id = 10015, value = "Could not delete file %s")
+    IOException deleteFailed(File file);
+
+    @Message(id = 10016, value = "Not a multi part request")
+    ServletException notAMultiPartRequest();
 }

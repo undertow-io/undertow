@@ -23,11 +23,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Deque;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -47,6 +49,9 @@ import javax.servlet.http.Part;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.util.EmptyEnumeration;
@@ -55,6 +60,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
+import io.undertow.util.MultipartParser;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -74,6 +80,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     private BufferedReader reader;
 
     private Cookie[] cookies;
+    private volatile List<Part> parts = null;
 
     public HttpServletRequestImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
@@ -91,11 +98,11 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Cookie[] getCookies() {
-        if(cookies == null) {
+        if (cookies == null) {
             Map<String, io.undertow.server.handlers.Cookie> cookies = io.undertow.server.handlers.Cookie.getRequestCookies(exchange.getExchange());
             Cookie[] value = new Cookie[cookies.size()];
             int i = 0;
-            for(Map.Entry<String, io.undertow.server.handlers.Cookie> entry : cookies.entrySet()) {
+            for (Map.Entry<String, io.undertow.server.handlers.Cookie> entry : cookies.entrySet()) {
                 io.undertow.server.handlers.Cookie cookie = entry.getValue();
                 Cookie c = new Cookie(cookie.getName(), cookie.getValue());
                 c.setDomain(cookie.getDomain());
@@ -114,11 +121,11 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public long getDateHeader(final String name) {
         String header = exchange.getExchange().getRequestHeaders().getFirst(name);
-        if(header == null) {
+        if (header == null) {
             return -1;
         }
         Date date = DateUtils.parseDate(header);
-        if(date == null) {
+        if (date == null) {
             throw UndertowServletMessages.MESSAGES.headerCannotBeConvertedToDate(header);
         }
         return date.getTime();
@@ -127,7 +134,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public String getHeader(final String name) {
         HeaderMap headers = exchange.getExchange().getRequestHeaders();
-        if(headers == null) {
+        if (headers == null) {
             return null;
         }
         return headers.getFirst(name);
@@ -136,7 +143,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Enumeration<String> getHeaders(final String name) {
         Deque<String> headers = exchange.getExchange().getRequestHeaders().get(name);
-        if(headers == null) {
+        if (headers == null) {
             return EmptyEnumeration.instance();
         }
         return new IteratorEnumeration<String>(headers.iterator());
@@ -259,12 +266,43 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Collection<Part> getParts() throws IOException, ServletException {
-        return null;
+        if (parts == null) {
+            loadParts();
+        }
+        return parts;
     }
 
     @Override
     public Part getPart(final String name) throws IOException, ServletException {
+        if (parts == null) {
+            loadParts();
+        }
+        for (Part part : parts) {
+            if (part.getName().equals(name)) {
+                return part;
+            }
+        }
         return null;
+    }
+
+    private synchronized void loadParts() throws IOException, ServletException {
+        if (parts == null) {
+            final List<Part> parts = new ArrayList<Part>();
+            String mimeType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+            if (mimeType != null && mimeType.startsWith(MultiPartHandler.MULTIPART_FORM_DATA)) {
+                final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+                final FormData value = parser.parseBlocking();
+                for(final String namedPart : value) {
+                    for(FormData.FormValue part : value.get(namedPart)) {
+                        //TODO: non-file parts?
+                        parts.add(new PartImpl(namedPart, part));
+                    }
+                }
+            } else {
+                throw UndertowServletMessages.MESSAGES.notAMultiPartRequest();
+            }
+            this.parts = parts;
+        }
     }
 
     @Override
@@ -304,7 +342,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public ServletInputStream getInputStream() throws IOException {
         if (servletInputStream == null) {
-            if(reader != null) {
+            if (reader != null) {
                 throw UndertowServletMessages.MESSAGES.getReaderAlreadyCalled();
             }
             servletInputStream = new ServletInputStreamImpl(exchange.getInputStream());
@@ -315,7 +353,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public String getParameter(final String name) {
         Deque<String> params = exchange.getExchange().getQueryParameters().get(name);
-        if(params == null) {
+        if (params == null) {
             return null;
         }
         return params.getFirst();
@@ -329,7 +367,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public String[] getParameterValues(final String name) {
         Deque<String> params = exchange.getExchange().getQueryParameters().get(name);
-        if(params == null) {
+        if (params == null) {
             return null;
         }
         return params.toArray(new String[params.size()]);
@@ -337,8 +375,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Map<String, String[]> getParameterMap() {
-        final Map<String, String[] > ret = new HashMap<String, String[]>();
-        for(Map.Entry<String, Deque<String>> entry : exchange.getExchange().getQueryParameters().entrySet()) {
+        final Map<String, String[]> ret = new HashMap<String, String[]>();
+        for (Map.Entry<String, Deque<String>> entry : exchange.getExchange().getQueryParameters().entrySet()) {
             ret.put(entry.getKey(), entry.getValue().toArray(new String[entry.getValue().size()]));
         }
         return ret;
@@ -367,7 +405,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public BufferedReader getReader() throws IOException {
         if (reader == null) {
-            if(servletInputStream != null) {
+            if (servletInputStream != null) {
                 throw UndertowServletMessages.MESSAGES.getInputStreamAlreadyCalled();
             }
             reader = new BufferedReader(new InputStreamReader(exchange.getInputStream()));
@@ -384,6 +422,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public String getRemoteHost() {
         return exchange.getExchange().getSourceAddress().getHostName();
     }
+
     @Override
     public void setAttribute(final String name, final Object object) {
         Object existing = attributes.put(name, object);
