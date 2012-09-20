@@ -52,6 +52,8 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartHandler;
+import io.undertow.server.session.Session;
+import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.util.EmptyEnumeration;
@@ -61,6 +63,7 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.MultipartParser;
+import org.xnio.IoFuture;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -74,6 +77,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     private final BlockingHttpServerExchange exchange;
     private final ServletContextImpl servletContext;
 
+
     private final HashMap<String, Object> attributes = new HashMap<String, Object>();
 
     private ServletInputStream servletInputStream;
@@ -81,6 +85,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     private Cookie[] cookies;
     private volatile List<Part> parts = null;
+    private HttpSessionImpl httpSession;
 
     public HttpServletRequestImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
@@ -221,12 +226,26 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public HttpSession getSession(final boolean create) {
-        return null;
+        if (httpSession == null) {
+            Session session = exchange.getExchange().getAttachment(Session.ATTACHMENT_KEY);
+            if (session != null) {
+                httpSession = new HttpSessionImpl(session, servletContext, servletContext.getDeployment().getApplicationListeners(), exchange.getExchange(), false);
+            } else if (create) {
+                final SessionManager sessionManager = exchange.getExchange().getAttachment(SessionManager.ATTACHMENT_KEY);
+                try {
+                    Session newSession = sessionManager.createSession(exchange.getExchange()).get();
+                    httpSession = new HttpSessionImpl(newSession, servletContext, servletContext.getDeployment().getApplicationListeners(), exchange.getExchange(), true);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return httpSession;
     }
 
     @Override
     public HttpSession getSession() {
-        return null;
+        return getSession(true);
     }
 
     @Override
@@ -292,8 +311,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
             if (mimeType != null && mimeType.startsWith(MultiPartHandler.MULTIPART_FORM_DATA)) {
                 final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
                 final FormData value = parser.parseBlocking();
-                for(final String namedPart : value) {
-                    for(FormData.FormValue part : value.get(namedPart)) {
+                for (final String namedPart : value) {
+                    for (FormData.FormValue part : value.get(namedPart)) {
                         //TODO: non-file parts?
                         parts.add(new PartImpl(namedPart, part));
                     }

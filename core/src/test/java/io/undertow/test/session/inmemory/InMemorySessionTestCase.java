@@ -62,7 +62,7 @@ public class InMemorySessionTestCase {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
                     try {
-                        Session session = (Session) exchange.getAttachment(Session.ATTACHMENT_KEY);
+                        Session session = exchange.getAttachment(Session.ATTACHMENT_KEY);
                         if(session == null) {
                             final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
                             session = manager.createSession(exchange).get();

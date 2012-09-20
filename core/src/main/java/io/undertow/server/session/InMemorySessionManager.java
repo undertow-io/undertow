@@ -178,7 +178,7 @@ public class InMemorySessionManager implements SessionManager {
         }
 
         @Override
-        public IoFuture<Void> setAttribute(final String name, final Object value) {
+        public IoFuture<Object> setAttribute(final String name, final Object value) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
@@ -191,11 +191,11 @@ public class InMemorySessionManager implements SessionManager {
                     listener.attributeUpdated(sess.session, name, value);
                 }
             }
-            return new FinishedIoFuture<Void>(null);
+            return new FinishedIoFuture<Object>(existing);
         }
 
         @Override
-        public IoFuture<Void> removeAttribute(final String name) {
+        public IoFuture<Object> removeAttribute(final String name) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
@@ -204,7 +204,7 @@ public class InMemorySessionManager implements SessionManager {
             for (SessionListener listener : listeners) {
                 listener.attributeRemoved(sess.session, name);
             }
-            return new FinishedIoFuture<Void>(null);
+            return new FinishedIoFuture<Object>(existing);
         }
         @Override
         public IoFuture<Void> invalidate(final HttpServerExchange exchange) {

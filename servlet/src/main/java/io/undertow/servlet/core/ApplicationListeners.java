@@ -32,7 +32,10 @@ import javax.servlet.ServletRequestAttributeListener;
 import javax.servlet.ServletRequestEvent;
 import javax.servlet.ServletRequestListener;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionAttributeListener;
+import javax.servlet.http.HttpSessionBindingEvent;
+import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
 
 import io.undertow.servlet.UndertowServletLogger;
@@ -187,6 +190,41 @@ public class ApplicationListeners implements Lifecycle {
         final ServletRequestAttributeEvent sre = new ServletRequestAttributeEvent(servletContext, request, name, value);
         for (final ManagedListener listener : servletRequestAttributeListeners) {
             this.<ServletRequestAttributeListener>get(listener).attributeReplaced(sre);
+        }
+    }
+
+    public void sessionCreated(final HttpSession session) {
+        final HttpSessionEvent sre = new HttpSessionEvent(session);
+        for (final ManagedListener listener : httpSessionListeners) {
+            this.<HttpSessionListener>get(listener).sessionCreated(sre);
+        }
+    }
+
+    public void sessionDestroyed(final HttpSession session) {
+        final HttpSessionEvent sre = new HttpSessionEvent(session);
+        for (final ManagedListener listener : httpSessionListeners) {
+            this.<HttpSessionListener>get(listener).sessionDestroyed(sre);
+        }
+    }
+
+    public void httpSessionAttributeAdded(final HttpSession session, final String name, final Object value) {
+        final HttpSessionBindingEvent sre = new HttpSessionBindingEvent(session, name, value);
+        for (final ManagedListener listener : servletRequestAttributeListeners) {
+            this.<HttpSessionAttributeListener>get(listener).attributeAdded(sre);
+        }
+    }
+
+    public void httpSessionAttributeRemoved(final HttpSession session, final String name, final Object value) {
+        final HttpSessionBindingEvent sre = new HttpSessionBindingEvent(session, name, value);
+        for (final ManagedListener listener : servletRequestAttributeListeners) {
+            this.<HttpSessionAttributeListener>get(listener).attributeRemoved(sre);
+        }
+    }
+
+    public void httpSessionAttributeReplaced(final HttpSession session, final String name, final Object value) {
+        final HttpSessionBindingEvent sre = new HttpSessionBindingEvent(session, name, value);
+        for (final ManagedListener listener : servletRequestAttributeListeners) {
+            this.<HttpSessionAttributeListener>get(listener).attributeReplaced(sre);
         }
     }
 

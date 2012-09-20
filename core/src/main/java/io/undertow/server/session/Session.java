@@ -20,6 +20,7 @@ package io.undertow.server.session;
 
 import java.util.Set;
 
+import io.undertow.util.AttachmentKey;
 import org.xnio.IoFuture;
 import io.undertow.server.HttpServerExchange;
 
@@ -36,17 +37,17 @@ import io.undertow.server.HttpServerExchange;
  */
 public interface Session {
 
-    String ATTACHMENT_KEY = "io.undertow.session.Session";
+    AttachmentKey<Session> ATTACHMENT_KEY = AttachmentKey.create(Session.class);
 
     /**
      * Returns a string containing the unique identifier assigned
      * to this session. The identifier is assigned
      * by the servlet container and is implementation dependent.
      *
+     * @return a string specifying the identifier
+     *         assigned to this session
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
-     * @return a string specifying the identifier
-     * assigned to this session
      */
     String getId();
 
@@ -62,12 +63,12 @@ public interface Session {
      * Returns the time when this session was created, measured
      * in milliseconds since midnight January 1, 1970 GMT.
      *
+     * @return a <code>long</code> specifying
+     *         when this session was created,
+     *         expressed in
+     *         milliseconds since 1/1/1970 GMT
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
-     * @return a <code>long</code> specifying
-     * when this session was created,
-     * expressed in
-     * milliseconds since 1/1/1970 GMT
      */
     long getCreationTime();
 
@@ -80,13 +81,13 @@ public interface Session {
      * a value associated with the session, do not affect the access
      * time.
      *
+     * @return a <code>long</code>
+     *         representing the last time
+     *         the client sent a request associated
+     *         with this session, expressed in
+     *         milliseconds since 1/1/1970 GMT
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
-     * @return a <code>long</code>
-     * representing the last time
-     * the client sent a request associated
-     * with this session, expressed in
-     * milliseconds since 1/1/1970 GMT
      */
     long getLastAccessedTime();
 
@@ -110,9 +111,9 @@ public interface Session {
      * A negative time indicates the session should never timeout.
      *
      * @return an integer specifying the number of
-     * seconds this session remains open
-     * between client requests
-     * @see        #setMaxInactiveInterval
+     *         seconds this session remains open
+     *         between client requests
+     * @see #setMaxInactiveInterval
      */
     int getMaxInactiveInterval();
 
@@ -121,9 +122,9 @@ public interface Session {
      * <code>null</code> if no object is bound under the name.
      *
      * @param name a string specifying the name of the object
+     * @return the object with the specified name
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
-     * @return the object with the specified name
      */
     IoFuture<Object> getAttribute(String name);
 
@@ -131,12 +132,12 @@ public interface Session {
      * Returns an <code>Set</code> of <code>String</code> objects
      * containing the names of all the objects bound to this session.
      *
+     * @return an <code>Set</code> of
+     *         <code>String</code> objects specifying the
+     *         names of all the objects bound to
+     *         this session
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
-     * @return an <code>Set</code> of
-     * <code>String</code> objects specifying the
-     * names of all the objects bound to
-     * this session
      */
     IoFuture<Set<String>> getAttributeNames();
 
@@ -153,9 +154,10 @@ public interface Session {
      * @param name  the name to which the object is bound;
      *              cannot be null
      * @param value the object to be bound
+     * @return An IOFuture containing the previous value
      * @throws IllegalStateException if this method is called on an invalidated session
      */
-    IoFuture<Void> setAttribute(final String name, Object value);
+    IoFuture<Object> setAttribute(final String name, Object value);
 
     /**
      * Removes the object bound with the specified name from
@@ -166,7 +168,7 @@ public interface Session {
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
      */
-    IoFuture<Void> removeAttribute(final String name);
+    IoFuture<Object> removeAttribute(final String name);
 
     /**
      * Invalidates this session then unbinds any objects bound

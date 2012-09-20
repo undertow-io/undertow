@@ -27,7 +27,6 @@ import java.util.Collection;
 import javax.servlet.http.Part;
 
 import io.undertow.server.handlers.form.FormData;
-import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.Headers;
 
