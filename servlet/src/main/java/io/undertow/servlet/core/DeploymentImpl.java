@@ -27,6 +27,7 @@ import java.util.List;
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.spec.ServletContextImpl;
 
 /**
@@ -44,17 +45,18 @@ public class DeploymentImpl implements Deployment {
     private volatile ApplicationListeners applicationListeners;
     private volatile ServletContextImpl servletContext;
     private volatile HttpHandler servletHandler;
+    private volatile ServletPathMatches servletPaths;
 
 
     public DeploymentImpl(final DeploymentInfo deploymentInfo) {
         this.deploymentInfo = deploymentInfo;
     }
 
-    public void setApplicationListeners(final ApplicationListeners applicationListeners) {
+    void setApplicationListeners(final ApplicationListeners applicationListeners) {
         this.applicationListeners = applicationListeners;
     }
 
-    public void setServletContext(final ServletContextImpl servletContext) {
+    void setServletContext(final ServletContextImpl servletContext) {
         this.servletContext = servletContext;
     }
 
@@ -78,19 +80,27 @@ public class DeploymentImpl implements Deployment {
         return servletHandler;
     }
 
-    public void setServletHandler(final HttpHandler servletHandler) {
+    void setServletHandler(final HttpHandler servletHandler) {
         this.servletHandler = servletHandler;
     }
 
-    public void addLifecycleObjects(final Collection<Lifecycle> objects) {
+    void addLifecycleObjects(final Collection<Lifecycle> objects) {
         lifecycleObjects.addAll(objects);
     }
 
-    public void addLifecycleObjects(final Lifecycle ... objects) {
+    void addLifecycleObjects(final Lifecycle ... objects) {
         lifecycleObjects.addAll(Arrays.asList(objects));
     }
 
     public List<Lifecycle> getLifecycleObjects() {
         return Collections.unmodifiableList(lifecycleObjects);
+    }
+
+    public ServletPathMatches getServletPaths() {
+        return servletPaths;
+    }
+
+    void setServletPaths(final ServletPathMatches servletPaths) {
+        this.servletPaths = servletPaths;
     }
 }

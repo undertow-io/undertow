@@ -29,12 +29,10 @@ import java.util.Set;
 import javax.servlet.DispatcherType;
 import javax.servlet.Servlet;
 import javax.servlet.ServletContainerInitializer;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
@@ -54,6 +52,7 @@ import io.undertow.servlet.handlers.RequestListenerHandler;
 import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletMatchingHandler;
+import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 
@@ -86,7 +85,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void deploy() {
-        DeploymentInfo deploymentInfo =  originalDeployment.clone();
+        DeploymentInfo deploymentInfo = originalDeployment.clone();
         deploymentInfo.validate();
         final DeploymentImpl deployment = new DeploymentImpl(deploymentInfo);
         this.deployment = deployment;
@@ -118,8 +117,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             //run
 
-            ServletMatchingHandler handler = setupServletChains(servletContext, threadSetupAction, listeners);
-            deployment.setServletHandler(handler);
+            ServletPathMatches matches = setupServletChains(servletContext, threadSetupAction, listeners);
+            deployment.setServletPaths(matches);
+            deployment.setServletHandler(new ServletMatchingHandler(matches));
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
@@ -140,19 +140,15 @@ public class DeploymentManagerImpl implements DeploymentManager {
      * @param threadSetupAction
      * @param listeners
      */
-    private ServletMatchingHandler setupServletChains(final ServletContextImpl servletContext, final CompositeThreadSetupAction threadSetupAction, final ApplicationListeners listeners) {
+    private ServletPathMatches setupServletChains(final ServletContextImpl servletContext, final CompositeThreadSetupAction threadSetupAction, final ApplicationListeners listeners) {
         final List<Lifecycle> lifecycles = new ArrayList<Lifecycle>();
         //create the default servlet
-        HttpHandler defaultHandler = null;
+        ServletInitialHandler defaultHandler = null;
         ServletHandler defaultServlet = null;
 
-
-        final ServletMatchingHandler servletHandler = new ServletMatchingHandler(defaultHandler);
-
         final Map<String, ManagedFilter> managedFilterMap = new LinkedHashMap<String, ManagedFilter>();
-        final Map<ServletInfo, ServletHandler> servletHandlerMap = new LinkedHashMap<ServletInfo, ServletHandler>();
-        final Map<String, ServletInfo> extensionServlets = new HashMap<String, ServletInfo>();
-        final Map<String, ServletInfo> pathServlets = new HashMap<String, ServletInfo>();
+        final Map<String, ServletHandler> extensionServlets = new HashMap<String, ServletHandler>();
+        final Map<String, ServletHandler> pathServlets = new HashMap<String, ServletHandler>();
 
 
         final Set<String> pathMatches = new HashSet<String>();
@@ -181,7 +177,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
             final ManagedServlet managedServlet = new ManagedServlet(servlet, servletContext);
             lifecycles.add(managedServlet);
             final ServletHandler handler = new ServletHandler(managedServlet);
-            servletHandlerMap.put(servlet, handler);
             for (String path : entry.getValue().getMappings()) {
                 if (path.equals("/")) {
                     //the default servlet
@@ -192,24 +187,32 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     if (pathServlets.containsKey(path)) {
                         throw UndertowServletMessages.MESSAGES.twoServletsWithSameMapping(path);
                     }
-                    pathServlets.put(path, entry.getValue());
+                    pathServlets.put(path, handler);
                 } else {
                     String ext = path.substring(2);
                     extensionMatches.add(ext);
-                    extensionServlets.put(ext, entry.getValue());
+                    extensionServlets.put(ext, handler);
                 }
             }
         }
 
         if (defaultServlet == null) {
-            defaultHandler = new DefaultServlet(deploymentInfo.getResourceLoader(), deploymentInfo.getWelcomePages());
-            final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>((Servlet) defaultHandler)), servletContext);
+            DefaultServlet defaultInstance = new DefaultServlet(deploymentInfo.getResourceLoader(), deploymentInfo.getWelcomePages());
+            final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>(defaultInstance)), servletContext);
             lifecycles.add(managedDefaultServlet);
             defaultServlet = new ServletHandler(managedDefaultServlet);
+            defaultHandler = new ServletInitialHandler(new RequestListenerHandler(listeners, defaultServlet), defaultInstance, threadSetupAction, servletContext);
         }
 
+        final ServletPathMatches.Builder builder = ServletPathMatches.builder();
+
+        boolean defaultServletSupplied = false;
+
         for (final String path : pathMatches) {
-            ServletInfo targetServlet = resolveServletForPath(path, pathServlets);
+            if (path.equals("/*")) {
+                defaultServletSupplied = true;
+            }
+            ServletHandler targetServlet = resolveServletForPath(path, pathServlets);
 
             final Map<DispatcherType, List<ManagedFilter>> noExtension = new HashMap<DispatcherType, List<ManagedFilter>>();
             final Map<String, Map<DispatcherType, List<ManagedFilter>>> extension = new HashMap<String, Map<DispatcherType, List<ManagedFilter>>>();
@@ -221,7 +224,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
                 if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
                     if (targetServlet != null) {
-                        if (filterMapping.getMapping().equals(targetServlet.getName())) {
+                        if (filterMapping.getMapping().equals(targetServlet.getManagedServlet().getServletInfo().getName())) {
                             addToListMap(noExtension, filterMapping.getDispatcher(), filter);
                             for (Map<DispatcherType, List<ManagedFilter>> l : extension.values()) {
                                 addToListMap(l, filterMapping.getDispatcher(), filter);
@@ -242,102 +245,91 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
             }
 
-            ServletMatchingHandler.PathMatch pathMatch;
-
+            final ServletInitialHandler initialHandler;
             if (noExtension.isEmpty()) {
                 if (targetServlet != null) {
-                    pathMatch = new ServletMatchingHandler.PathMatch(servletChain(servletHandlerMap.get(targetServlet), threadSetupAction, listeners));
+                    initialHandler = servletChain(targetServlet, threadSetupAction, listeners);
                 } else {
-                    pathMatch = new ServletMatchingHandler.PathMatch(defaultHandler);
+                    initialHandler = defaultHandler;
                 }
             } else {
                 FilterHandler handler;
                 if (targetServlet != null) {
-                    handler = new FilterHandler(noExtension, servletHandlerMap.get(targetServlet));
+                    handler = new FilterHandler(noExtension, targetServlet);
                 } else {
                     handler = new FilterHandler(noExtension, defaultServlet);
                 }
-                pathMatch = new ServletMatchingHandler.PathMatch(servletChain(handler, threadSetupAction, listeners));
+                initialHandler = servletChain(handler, threadSetupAction, listeners);
             }
 
-            for (Map.Entry<String, Map<DispatcherType, List<ManagedFilter>>> entry : extension.entrySet()) {
-                ServletInfo pathServlet = targetServlet;
-                if (targetServlet == null) {
-                    pathServlet = extensionServlets.get(entry.getKey());
-                }
-                if (entry.getValue().isEmpty()) {
-                    if (pathServlet != null) {
-                        pathMatch = new ServletMatchingHandler.PathMatch(servletChain(servletHandlerMap.get(pathServlet), threadSetupAction, listeners));
-                    } else {
-                        pathMatch = new ServletMatchingHandler.PathMatch(defaultHandler);
-                    }
-                } else {
-                    FilterHandler handler;
-                    if (pathServlet != null) {
-                        handler = new FilterHandler(entry.getValue(), servletHandlerMap.get(pathServlet));
-                    } else {
-                        handler = new FilterHandler(entry.getValue(), defaultServlet);
-                    }
-                    pathMatch.getExtensionMatches().put(entry.getKey(), servletChain(handler, threadSetupAction, listeners));
-                }
-            }
             if (path.endsWith("/*")) {
-                servletHandler.getPrefixMatches().put(path.substring(0, path.length() - 2), pathMatch);
+                String prefix = path.substring(0, path.length() - 2);
+                builder.addPrefixMatch(prefix, initialHandler);
+
+                for (Map.Entry<String, Map<DispatcherType, List<ManagedFilter>>> entry : extension.entrySet()) {
+                    ServletHandler pathServlet = targetServlet;
+                    if (targetServlet == null) {
+                        pathServlet = extensionServlets.get(entry.getKey());
+                    }
+                    if (!entry.getValue().isEmpty()) {
+                        FilterHandler handler;
+                        if (pathServlet != null) {
+                            handler = new FilterHandler(entry.getValue(), pathServlet);
+                        } else {
+                            handler = new FilterHandler(entry.getValue(), defaultServlet);
+                        }
+                        builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, threadSetupAction, listeners));
+                    }
+                }
             } else if (path.isEmpty()) {
-                servletHandler.getExactPathMatches().put("/", pathMatch);
+                builder.addExactMatch("/", initialHandler);
             } else {
-                servletHandler.getExactPathMatches().put(path, pathMatch);
+                builder.addExactMatch(path, initialHandler);
             }
         }
-        ServletMatchingHandler.PathMatch match = servletHandler.getPrefixMatches().get("");
-        if (match == null) {
-            match = new ServletMatchingHandler.PathMatch(defaultHandler);
-            servletHandler.getPrefixMatches().put("", match);
+        if (!defaultServletSupplied) {
+            builder.addPrefixMatch("", defaultHandler);
         }
 
+        //now handle extension matches for the default path
         for (final String path : extensionMatches) {
-            ServletInfo targetServlet = extensionServlets.get(path);
+            ServletHandler targetServlet = extensionServlets.get(path);
 
             final Map<DispatcherType, List<ManagedFilter>> extension = new HashMap<DispatcherType, List<ManagedFilter>>();
             for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
                 ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
                 if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
                     if (targetServlet != null) {
-                        if (filterMapping.getMapping().equals(targetServlet.getName())) {
+                        if (filterMapping.getMapping().equals(targetServlet.getManagedServlet().getServletInfo().getName())) {
                             addToListMap(extension, filterMapping.getDispatcher(), filter);
                         }
                     }
                 } else {
-                    if (path.startsWith("*.")) {
-                        if (path.substring(2).equals(path)) {
+                    if (filterMapping.getMapping().startsWith("*.")) {
+                        if (filterMapping.getMapping().substring(2).equals(path)) {
                             addToListMap(extension, filterMapping.getDispatcher(), filter);
                         }
                     }
                 }
             }
 
-            if (extension.isEmpty()) {
-                if (targetServlet != null) {
-                    match.getExtensionMatches().put(path, servletChain(servletHandlerMap.get(targetServlet), threadSetupAction, listeners));
-                } else {
-                    match.getExtensionMatches().put(path, defaultHandler);
-                }
-            } else {
+            if (extension.isEmpty() && targetServlet != null) {
+                builder.addExtensionMatch("", path, servletChain(targetServlet, threadSetupAction, listeners));
+            } else if (!extension.isEmpty()) {
                 FilterHandler handler;
                 if (targetServlet != null) {
-                    handler = new FilterHandler(extension, servletHandlerMap.get(targetServlet));
+                    handler = new FilterHandler(extension, targetServlet);
                 } else {
                     handler = new FilterHandler(extension, defaultServlet);
                 }
-                match.getExtensionMatches().put(path, servletChain(handler, threadSetupAction, listeners));
+                builder.addExtensionMatch("", path, servletChain(handler, threadSetupAction, listeners));
             }
         }
 
-        servletHandler.setDefaultHandler(defaultHandler);
+        builder.setDefaultServlet(defaultHandler);
 
         deployment.addLifecycleObjects(lifecycles);
-
-        return servletHandler;
+        return builder.build();
     }
 
 
@@ -349,17 +341,17 @@ public class DeploymentManagerImpl implements DeploymentManager {
         return new ApplicationListeners(managedListeners, deployment.getServletContext());
     }
 
-    private BlockingHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners) {
-        return   new BlockingHandler(new ServletInitialHandler(new RequestListenerHandler(applicationListeners, next), setupAction, deployment.getServletContext()));
+    private ServletInitialHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners) {
+        return new ServletInitialHandler(new RequestListenerHandler(applicationListeners, next), setupAction, deployment.getServletContext());
     }
 
-    private ServletInfo resolveServletForPath(final String path, final Map<String, ServletInfo> pathServlets) {
+    private ServletHandler resolveServletForPath(final String path, final Map<String, ServletHandler> pathServlets) {
         if (pathServlets.containsKey(path)) {
             return pathServlets.get(path);
         }
         String match = null;
-        ServletInfo servlet = null;
-        for (final Map.Entry<String, ServletInfo> entry : pathServlets.entrySet()) {
+        ServletHandler servlet = null;
+        for (final Map.Entry<String, ServletHandler> entry : pathServlets.entrySet()) {
             String key = entry.getKey();
             if (key.endsWith("/*")) {
                 final String base = key.substring(0, key.length() - 2);
@@ -421,10 +413,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private static <K, V> void addToListMap(final Map<K, List<V>> map, final K key, final V value) {
-         List<V> list = map.get(key);
-         if(list == null) {
-             map.put(key,  list = new ArrayList<V>());
-         }
-         list.add(value);
-     }
+        List<V> list = map.get(key);
+        if (list == null) {
+            map.put(key, list = new ArrayList<V>());
+        }
+        list.add(value);
+    }
 }

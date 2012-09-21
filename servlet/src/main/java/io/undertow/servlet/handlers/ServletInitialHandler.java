@@ -18,8 +18,17 @@
 
 package io.undertow.servlet.handlers;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import javax.servlet.DispatcherType;
 
+import io.undertow.UndertowLogger;
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.api.ThreadSetupAction;
@@ -32,21 +41,63 @@ import io.undertow.servlet.spec.ServletContextImpl;
  * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
  * and attaches them the to exchange.
  *
+ * This is both an async and a blocking handler, if it recieves an asyncrounous request it translates it to a blocking
+ * request before continuing
+ *
  * @author Stuart Douglas
  */
-public class ServletInitialHandler implements BlockingHttpHandler {
+public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     private final BlockingHttpHandler next;
+    private final HttpHandler asyncPath;
 
     final CompositeThreadSetupAction setupAction;
 
     private final ServletContextImpl servletContext;
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
+    private volatile Executor executor;
+    private volatile BlockingHttpHandler handler;
+
+    private static final AtomicReferenceFieldUpdater<ServletInitialHandler, Executor> executorUpdater = AtomicReferenceFieldUpdater.newUpdater(ServletInitialHandler.class, Executor.class, "executor");
+
+    public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
         this.next = next;
+        this.asyncPath = asyncPath;
         this.setupAction = setupAction;
         this.servletContext = servletContext;
     }
+
+    public ServletInitialHandler(final BlockingHttpHandler next,  final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
+        this(next, null, setupAction, servletContext);
+    }
+
+    @Override
+    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+        if(asyncPath != null) {
+            //if the next handler is the default servlet we just execute it directly
+            HttpHandlers.executeHandler(asyncPath, exchange, completionHandler);
+            return;
+        }
+        final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange);
+        final Executor executor = this.executor;
+        (executor == null ? exchange.getConnection().getWorker() : executor).execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final BlockingHttpHandler handler = ServletInitialHandler.this;
+                    handler.handleRequest(blockingExchange);
+                } catch (Throwable t) {
+                    if (!exchange.isResponseStarted()) {
+                        exchange.setResponseCode(500);
+                    }
+                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", blockingExchange);
+                } finally {
+                    completionHandler.handleComplete();
+                }
+            }
+        });
+    }
+
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
@@ -64,6 +115,29 @@ public class ServletInitialHandler implements BlockingHttpHandler {
             handle.tearDown();
             response.flushBuffer();
         }
+    }
+
+    public Executor getExecutor() {
+        return executor;
+    }
+
+    /**
+     * Sets the executor used by this handler. The old executor will not be shut down.
+     *
+     * @param executor The executor to use
+     * @return The previous executor
+     */
+    public Executor setExecutor(final Executor executor) {
+        return executorUpdater.getAndSet(this, executor);
+    }
+
+    public BlockingHttpHandler getHandler() {
+        return handler;
+    }
+
+    public void setRootHandler(final BlockingHttpHandler rootHandler) {
+        HttpHandlers.handlerNotNull(rootHandler);
+        this.handler = rootHandler;
     }
 
     public BlockingHttpHandler getNext() {

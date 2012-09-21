@@ -95,4 +95,8 @@ public class ServletHandler implements BlockingHttpHandler {
             servlet.release();
         }
     }
+
+    public ManagedServlet getManagedServlet() {
+        return managedServlet;
+    }
 }

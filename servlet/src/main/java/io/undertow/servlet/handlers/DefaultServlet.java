@@ -37,6 +37,7 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.file.DirectFileCache;
 import io.undertow.server.handlers.file.FileCache;
 import io.undertow.servlet.api.ResourceLoader;

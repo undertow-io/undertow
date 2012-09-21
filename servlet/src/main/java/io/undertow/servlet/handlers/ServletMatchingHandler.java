@@ -34,11 +34,10 @@ import io.undertow.util.CopyOnWriteMap;
  */
 public class ServletMatchingHandler implements HttpHandler {
 
-    private final ConcurrentMap<String, PathMatch> exactPathMatches = new CopyOnWriteMap<String, PathMatch>();
-
-    private final ConcurrentMap<String, PathMatch> prefixMatches = new CopyOnWriteMap<String, PathMatch>();
 
     private volatile int cacheSize = 1024;
+
+    private volatile ServletPathMatches paths;
 
     /**
      * Caches an exact match that does not return an error code, to allow for faster matching of paths.
@@ -47,11 +46,10 @@ public class ServletMatchingHandler implements HttpHandler {
      */
     private volatile ConcurrentMap<String, HttpHandler> cache = new BoundedConcurrentHashMap<String, HttpHandler>(cacheSize);
 
-    private volatile HttpHandler defaultHandler;
-
-    public ServletMatchingHandler(final HttpHandler defaultHandler) {
-        this.defaultHandler = defaultHandler;
+    public ServletMatchingHandler(final ServletPathMatches paths) {
+        this.paths = paths;
     }
+
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
@@ -64,57 +62,15 @@ public class ServletMatchingHandler implements HttpHandler {
             }
         }
         final String path = exchange.getRelativePath();
-        PathMatch match = exactPathMatches.get(path);
-        if (match != null) {
-            handleMatch(exchange, completionHandler, path, match);
-            return;
-        }
-        match = prefixMatches.get(path);
-        if (match != null) {
-            handleMatch(exchange, completionHandler, path, match);
-            return;
-        }
-        for (int i = path.length() -1; i >= 0; --i) {
-            if (path.charAt(i) == '/') {
-                final String part = path.substring(0, i);
-                match = prefixMatches.get(part);
-                if (match != null) {
-                    handleMatch(exchange, completionHandler, path, match);
-                    return;
-                }
-            }
-        }
-        HttpHandlers.executeHandler(defaultHandler, exchange, completionHandler);
+        invokeAndCache(path, paths.getServletHandler(path), exchange, completionHandler);
     }
 
-    private void handleMatch(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final String path, final PathMatch match) {
-        if (match.extensionMatches.isEmpty()) {
-            invokeAndCache(path, match.defaultHandler, exchange, completionHandler);
-        } else {
-            int c = path.lastIndexOf('.');
-            if (c == -1) {
-                invokeAndCache(path, match.defaultHandler, exchange, completionHandler);
-            } else {
-                final String ext = path.substring(c + 1, path.length());
-                HttpHandler handler = match.extensionMatches.get(ext);
-                if (handler != null) {
-                    invokeAndCache(path, handler, exchange, completionHandler);
-                } else {
-                    invokeAndCache(path, match.defaultHandler, exchange, completionHandler);
-                }
-            }
-        }
-    }
 
     private void invokeAndCache(final String path, final HttpHandler handler, final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         if (cacheSize != 0) {
             cache.put(path, handler);
         }
-        if (handler == null) {
-            HttpHandlers.executeHandler(defaultHandler, exchange, completionHandler);
-        } else {
-            HttpHandlers.executeHandler(handler, exchange, completionHandler);
-        }
+        HttpHandlers.executeHandler(handler, exchange, completionHandler);
     }
 
     public int getCacheSize() {
@@ -126,40 +82,12 @@ public class ServletMatchingHandler implements HttpHandler {
         this.cacheSize = cacheSize;
     }
 
-    public HttpHandler getDefaultHandler() {
-        return defaultHandler;
+    public ServletPathMatches getPaths() {
+        return paths;
     }
 
-    public void setDefaultHandler(final HttpHandler defaultHandler) {
-        HttpHandlers.handlerNotNull(defaultHandler);
-        this.defaultHandler = defaultHandler;
-    }
-
-    public ConcurrentMap<String, PathMatch> getPrefixMatches() {
-        return prefixMatches;
-    }
-
-    public ConcurrentMap<String, PathMatch> getExactPathMatches() {
-        return exactPathMatches;
-    }
-
-    public static class PathMatch {
-
-        private final ConcurrentMap<String, HttpHandler> extensionMatches = new CopyOnWriteMap<String, HttpHandler>();
-        private volatile HttpHandler defaultHandler;
-
-        public PathMatch(final HttpHandler defaultHandler) {
-            this.defaultHandler = defaultHandler;
-        }
-
-        public ConcurrentMap<String, HttpHandler> getExtensionMatches() {
-            return extensionMatches;
-        }
-
-        public HttpHandler getDefaultHandler() {
-            return defaultHandler;
-        }
-
+    public void setPaths(final ServletPathMatches paths) {
+        this.paths = paths;
     }
 
 }

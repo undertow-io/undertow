@@ -209,21 +209,21 @@ public class ApplicationListeners implements Lifecycle {
 
     public void httpSessionAttributeAdded(final HttpSession session, final String name, final Object value) {
         final HttpSessionBindingEvent sre = new HttpSessionBindingEvent(session, name, value);
-        for (final ManagedListener listener : servletRequestAttributeListeners) {
+        for (final ManagedListener listener : httpSessionAttributeListeners) {
             this.<HttpSessionAttributeListener>get(listener).attributeAdded(sre);
         }
     }
 
     public void httpSessionAttributeRemoved(final HttpSession session, final String name, final Object value) {
         final HttpSessionBindingEvent sre = new HttpSessionBindingEvent(session, name, value);
-        for (final ManagedListener listener : servletRequestAttributeListeners) {
+        for (final ManagedListener listener : httpSessionAttributeListeners) {
             this.<HttpSessionAttributeListener>get(listener).attributeRemoved(sre);
         }
     }
 
     public void httpSessionAttributeReplaced(final HttpSession session, final String name, final Object value) {
         final HttpSessionBindingEvent sre = new HttpSessionBindingEvent(session, name, value);
-        for (final ManagedListener listener : servletRequestAttributeListeners) {
+        for (final ManagedListener listener : httpSessionAttributeListeners) {
             this.<HttpSessionAttributeListener>get(listener).attributeReplaced(sre);
         }
     }
