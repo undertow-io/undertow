@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
 
@@ -30,9 +31,12 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
+import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.AttachmentList;
+import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 
 /**
@@ -53,12 +57,13 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void addCookie(final Cookie cookie) {
-
+        final AttachmentList<io.undertow.server.handlers.Cookie> cookies = exchange.getExchange().getAttachment(io.undertow.server.handlers.Cookie.RESPONSE_COOKIES);
+        cookies.add(new io.undertow.server.handlers.Cookie(cookie.getName(), cookie.getValue()));
     }
 
     @Override
     public boolean containsHeader(final String name) {
-        return false;
+        return exchange.getExchange().getResponseHeaders().contains(name);
     }
 
     @Override
@@ -98,12 +103,12 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setDateHeader(final String name, final long date) {
-
+        exchange.getExchange().getResponseHeaders().put(name, DateUtils.toDateString(new Date(date)));
     }
 
     @Override
     public void addDateHeader(final String name, final long date) {
-
+        exchange.getExchange().getResponseHeaders().add(name, DateUtils.toDateString(new Date(date)));
     }
 
     @Override
