@@ -83,6 +83,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     private Cookie[] cookies;
     private volatile List<Part> parts = null;
     private HttpSessionImpl httpSession;
+    private AsyncContextImpl asyncContext = null;
 
     public HttpServletRequestImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
@@ -507,17 +508,17 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public AsyncContext startAsync() throws IllegalStateException {
-        return null;
+        return asyncContext = new AsyncContextImpl(exchange.getExchange(), exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
     }
 
     @Override
     public AsyncContext startAsync(final ServletRequest servletRequest, final ServletResponse servletResponse) throws IllegalStateException {
-        return null;
+        return asyncContext = new AsyncContextImpl(exchange.getExchange(), servletRequest, servletResponse);
     }
 
     @Override
     public boolean isAsyncStarted() {
-        return false;
+        return asyncContext != null;
     }
 
     @Override
@@ -527,7 +528,10 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public AsyncContext getAsyncContext() {
-        return null;
+        if(asyncContext == null) {
+            throw UndertowServletMessages.MESSAGES.asyncNotStarted();
+        }
+        return asyncContext;
     }
 
     @Override

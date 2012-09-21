@@ -94,4 +94,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10017, value = "Request was neither the original request object or a ServletRequestWrapper")
     IllegalArgumentException requestNoOfCorrectType();
+
+    @Message(id = 10018, value = "Asyn not started")
+    IllegalStateException asyncNotStarted();
 }
