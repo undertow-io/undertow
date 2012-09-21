@@ -212,6 +212,7 @@ public abstract class HttpParser {
         int parseState = state.parseState;
         int canonicalPathStart = state.pos;
         int queryParamPos = state.queryParamPos;
+        int requestEnd = state.requestEnd;
         String nextQueryParam = state.nextHeader;
         if (stringBuilder == null) {
             state.stringBuilder = stringBuilder = new StringBuilder();
@@ -221,14 +222,17 @@ public abstract class HttpParser {
             --remaining;
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
+                    final String path = stringBuilder.toString();
                     if(parseState < QUERY_PARAM_NAME) {
-                        final String path = stringBuilder.toString();
                         builder.fullPath = path;
                         if (parseState < HOST_DONE) {
                             builder.relativePath = path;
                         } else {
                             builder.relativePath = path.substring(canonicalPathStart);
                         }
+                        builder.queryString = "";
+                    } else {
+                        builder.queryString = path.substring(requestEnd);
                     }
                     if (parseState == QUERY_PARAM_NAME) {
                         builder.addQueryParam(stringBuilder.substring(queryParamPos), "");
@@ -241,6 +245,7 @@ public abstract class HttpParser {
                     state.pos = 0;
                     state.nextHeader = null;
                     state.queryParamPos = 0;
+                    state.requestEnd = 0;
                     return remaining;
                 }
             } else {
@@ -265,6 +270,7 @@ public abstract class HttpParser {
                     }
                     parseState = QUERY_PARAM_NAME;
                     queryParamPos = stringBuilder.length() + 1;
+                    requestEnd = queryParamPos;
                 } else if (next == '=' && parseState == QUERY_PARAM_NAME) {
                     parseState = QUERY_PARAM_VALUE;
                     nextQueryParam = stringBuilder.substring(queryParamPos);
@@ -289,6 +295,7 @@ public abstract class HttpParser {
         state.pos = canonicalPathStart;
         state.nextHeader = nextQueryParam;
         state.queryParamPos = queryParamPos;
+        state.requestEnd = requestEnd;
         return remaining;
     }
 

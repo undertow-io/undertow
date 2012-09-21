@@ -69,6 +69,11 @@ public class ParseState {
     int queryParamPos;
 
     /**
+     * The end of the request string, and start of the query string
+     */
+    int requestEnd;
+
+    /**
      * If this is in {@link #NO_STATE} then this holds the current token that has been read so far.
      */
     StringBuilder stringBuilder;

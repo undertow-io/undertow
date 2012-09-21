@@ -183,7 +183,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getQueryString() {
-        return "";
+        return exchange.getExchange().getQueryString();
     }
 
     @Override

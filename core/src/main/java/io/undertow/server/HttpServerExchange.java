@@ -100,6 +100,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private volatile String resolvedPath = "/";
 
+    /**
+     * the query string
+     */
+    private volatile String queryString;
+
     private static final ChannelWrapper<StreamSourceChannel>[] NO_SOURCE_WRAPPERS = new ChannelWrapper[0];
     private static final ChannelWrapper<StreamSinkChannel>[] NO_SINK_WRAPPERS = new ChannelWrapper[0];
 
@@ -294,6 +299,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void setCanonicalPath(final String canonicalPath) {
         this.canonicalPath = canonicalPath;
+    }
+
+    public String getQueryString() {
+        return queryString;
+    }
+
+    public void setQueryString(final String queryString) {
+        this.queryString = queryString;
     }
 
     /**

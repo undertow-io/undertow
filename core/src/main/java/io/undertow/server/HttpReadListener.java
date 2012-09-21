@@ -156,6 +156,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     httpServerExchange.setRequestURI(builder.getFullPath());
                     httpServerExchange.setRelativePath(builder.getRelativePath());
                     httpServerExchange.setRequestPath(builder.getRelativePath());
+                    httpServerExchange.setQueryString(builder.getQueryString());
 
                     state = null;
                     builder = null;
@@ -189,6 +190,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
          * 2=previous request finished, but request not started
          * 3=completion handler run, but next request not started
          */
+        @SuppressWarnings("unused")
         private volatile int state = 0;
         private static final AtomicIntegerFieldUpdater<StartNextRequestAction> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(StartNextRequestAction.class, "state");
 
