@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.test;
+package io.undertow.servlet.test.dispatcher;
 
 import java.io.IOException;
 
@@ -25,14 +25,17 @@ import javax.servlet.ServletException;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.servlet.test.SimpleServletServerTestCase;
+import io.undertow.servlet.test.runner.HttpClientUtils;
 import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,9 +45,8 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(ServletServer.class)
-public class ListenerTestCase {
+public class DispatcherIncludeTestCase {
 
-    static DeploymentManager manager;
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -59,13 +61,16 @@ public class ListenerTestCase {
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .addServlet(
-                        new ServletInfo("servlet", MessageServlet.class)
-                                .addMapping("/aa")
-                )
-                .addListener(new ListenerInfo(TestListener.class));
+                        new ServletInfo("include", MessageServlet.class)
+                                .addInitParam(MessageServlet.MESSAGE, "included")
+                                .addMapping("/include"))
+                .addServlet(
+                        new ServletInfo("dispatcher", IncludeServlet.class)
+                                .addMapping("/dispatch"))
+                ;
 
 
-        manager = container.addDeployment(builder);
+        DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         manager.start();
 
@@ -73,26 +78,17 @@ public class ListenerTestCase {
     }
 
     @Test
-    public void testServletContextInitialized() throws IOException {
-        Assert.assertNotNull(TestListener.servletContextInitializedEvent);
-    }
-
-    @Test
-    public void testServletContextAttributeListener() throws IOException {
-        ServletContextImpl sc = manager.getDeployment().getServletContext();
-        sc.setAttribute("test", "1");
-        Assert.assertNotNull(TestListener.servletContextAttributeEvent);
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getName(), "test");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getValue(), "1");
-        sc.setAttribute("test", "2");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getName(), "test");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getValue(), "1");
-        sc.setAttribute("test", "3");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getName(), "test");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getValue(), "2");
-        sc.removeAttribute("test");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getName(), "test");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getValue(), "3");
+    public void testSimpleInclude() throws IOException {
+        DefaultHttpClient client = new DefaultHttpClient();
+        try {
+            HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/dispatch");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(IncludeServlet.MESSAGE + "included", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
 

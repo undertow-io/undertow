@@ -29,7 +29,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.runner.HttpClientUtils;
-import io.undertow.servlet.test.runner.ServletServer;
+import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import org.apache.http.HttpResponse;
@@ -47,13 +47,16 @@ import org.junit.runner.RunWith;
 public class SimpleServletServerTestCase {
 
 
+    public static final String HELLO_WORLD = "Hello World";
+
     @BeforeClass
     public static void setup() throws ServletException {
 
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance(root);
 
-        ServletInfo s = new ServletInfo("servlet", SimpleServlet.class)
+        ServletInfo s = new ServletInfo("servlet", MessageServlet.class)
+                .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
                 .addMapping("/aa");
 
         DeploymentInfo builder = new DeploymentInfo()
@@ -79,7 +82,7 @@ public class SimpleServletServerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(SimpleServlet.HELLO_WORLD, response);
+            Assert.assertEquals(HELLO_WORLD, response);
         } finally {
             client.getConnectionManager().shutdown();
         }
