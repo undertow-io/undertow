@@ -96,6 +96,7 @@ public class DeploymentImpl implements Deployment {
         return Collections.unmodifiableList(lifecycleObjects);
     }
 
+    @Override
     public ServletPathMatches getServletPaths() {
         return servletPaths;
     }

@@ -20,6 +20,7 @@ package io.undertow.servlet.api;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.core.ApplicationListeners;
+import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.spec.ServletContextImpl;
 
 /**
@@ -34,4 +35,6 @@ public interface Deployment {
     ServletContextImpl getServletContext();
 
     HttpHandler getServletHandler();
+
+    ServletPathMatches getServletPaths();
 }

@@ -47,7 +47,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
@@ -55,15 +54,12 @@ import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
-import io.undertow.util.MultipartParser;
-import org.xnio.IoFuture;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -475,7 +471,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public RequestDispatcher getRequestDispatcher(final String path) {
-        return null;
+        return new RequestDispatcherImpl(servletContext.getDeployment().getServletPaths().getServletHandler(path));
     }
 
     @Override

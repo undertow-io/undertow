@@ -91,4 +91,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10016, value = "Not a multi part request")
     ServletException notAMultiPartRequest();
+
+    @Message(id = 10017, value = "Request was neither the original request object or a ServletRequestWrapper")
+    IllegalArgumentException requestNoOfCorrectType();
 }

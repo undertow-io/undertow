@@ -40,7 +40,7 @@ import io.undertow.servlet.spec.ServletContextImpl;
 /**
  * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
  * and attaches them the to exchange.
- *
+ * <p/>
  * This is both an async and a blocking handler, if it recieves an asyncrounous request it translates it to a blocking
  * request before continuing
  *
@@ -67,13 +67,13 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         this.servletContext = servletContext;
     }
 
-    public ServletInitialHandler(final BlockingHttpHandler next,  final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
+    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
         this(next, null, setupAction, servletContext);
     }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        if(asyncPath != null) {
+        if (asyncPath != null) {
             //if the next handler is the default servlet we just execute it directly
             HttpHandlers.executeHandler(asyncPath, exchange, completionHandler);
             return;
@@ -102,18 +102,23 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
         ThreadSetupAction.Handle handle = setupAction.setup(exchange);
-        final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
-        final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
-        if(exchange.getExchange().getAttachment(FilterHandler.DISPATCHER_TYPE_ATTACHMENT_KEY) == null) {
+        if (exchange.getExchange().getAttachment(FilterHandler.DISPATCHER_TYPE_ATTACHMENT_KEY) == null) {
             exchange.getExchange().putAttachment(FilterHandler.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.REQUEST);
         }
-        try {
-            exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
-            exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
+        boolean first = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY) == null;
+        if (first) {
+            final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
+            final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
+            try {
+                exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
+                exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
+                next.handleRequest(exchange);
+            } finally {
+                handle.tearDown();
+                response.flushBuffer();
+            }
+        } else {
             next.handleRequest(exchange);
-        } finally {
-            handle.tearDown();
-            response.flushBuffer();
         }
     }
 
