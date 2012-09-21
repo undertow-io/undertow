@@ -62,7 +62,7 @@ public class InMemorySessionManager implements SessionManager {
         for (SessionListener listener : listeners) {
             listener.sessionCreated(session, serverExchange);
         }
-        final SessionCookieConfig config = (SessionCookieConfig) serverExchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
+        final SessionCookieConfig config = serverExchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
         if(config != null) {
             config.setSessionCookie(serverExchange, session);
         } else {
@@ -214,7 +214,7 @@ public class InMemorySessionManager implements SessionManager {
                     listener.sessionDestroyed(sess.session, exchange, false);
                 }
             }
-            final SessionCookieConfig config = (SessionCookieConfig) exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
+            final SessionCookieConfig config = exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
             if(config != null) {
                 config.clearCookie(exchange, this);
             } else {

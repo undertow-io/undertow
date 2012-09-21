@@ -20,6 +20,7 @@ package io.undertow.server.session;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
+import io.undertow.util.AttachmentKey;
 
 /**
  * Encapsulation of session cookie configuration. This removes the need for the session manager to
@@ -29,7 +30,7 @@ import io.undertow.server.handlers.Cookie;
  */
 public class SessionCookieConfig {
 
-    public static final String ATTACHMENT_KEY = "io.undertow.session.SessionCookie";
+    public static final AttachmentKey<SessionCookieConfig> ATTACHMENT_KEY = AttachmentKey.create(SessionCookieConfig.class);
 
     public static final String DEFAULT_SESSION_ID = "JSESSIONID";
 

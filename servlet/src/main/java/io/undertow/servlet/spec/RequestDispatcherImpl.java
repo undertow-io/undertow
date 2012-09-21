@@ -47,7 +47,27 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
     @Override
     public void forward(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
+        final BlockingHttpServerExchange exchange= getExchange(request);
 
+        final ServletRequest oldRequest = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+        final ServletResponse oldResponse = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.INCLUDE);
+        try {
+            try {
+                exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
+                exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
+                handler.handleRequest(exchange);
+            } catch (ServletException e) {
+                throw e;
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } finally {
+            exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, oldRequest);
+            exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, oldResponse);
+        }
     }
 
     @Override

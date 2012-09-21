@@ -69,6 +69,7 @@ public class ServletContextImpl implements ServletContext {
     private final Deployment deployment;
     private final DeploymentInfo deploymentInfo;
     private final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<String, Object>();
+    private final SessionCookieConfigImpl sessionCookieConfig = new SessionCookieConfigImpl();
 
 
     private volatile boolean bootstrapComplete = false;
@@ -370,7 +371,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public SessionCookieConfig getSessionCookieConfig() {
-        return null;
+        return sessionCookieConfig;
     }
 
     @Override
