@@ -221,12 +221,14 @@ public abstract class HttpParser {
             --remaining;
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
-                    final String path = stringBuilder.toString();
-                    builder.fullPath = path;
-                    if (parseState < HOST_DONE) {
-                        builder.relativePath = path;
-                    } else {
-                        builder.relativePath = path.substring(canonicalPathStart);
+                    if(parseState < QUERY_PARAM_NAME) {
+                        final String path = stringBuilder.toString();
+                        builder.fullPath = path;
+                        if (parseState < HOST_DONE) {
+                            builder.relativePath = path;
+                        } else {
+                            builder.relativePath = path.substring(canonicalPathStart);
+                        }
                     }
                     if (parseState == QUERY_PARAM_NAME) {
                         builder.addQueryParam(stringBuilder.substring(queryParamPos), "");
@@ -254,6 +256,13 @@ public abstract class HttpParser {
                 } else if (parseState == FIRST_COLON || parseState == FIRST_SLASH) {
                     parseState = START;
                 } else if (next == '?' && (parseState == START || parseState == HOST_DONE)) {
+                    final String path = stringBuilder.toString();
+                    builder.fullPath = path;
+                    if (parseState < HOST_DONE) {
+                        builder.relativePath = path;
+                    } else {
+                        builder.relativePath = path.substring(canonicalPathStart);
+                    }
                     parseState = QUERY_PARAM_NAME;
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '=' && parseState == QUERY_PARAM_NAME) {

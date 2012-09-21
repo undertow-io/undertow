@@ -19,6 +19,9 @@
 package io.undertow.test.handlers.path;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.Map;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
@@ -78,7 +81,7 @@ public class PathTestCase {
             runPathTest(client, "/path/subpath/", "/subpath", "/");
             runPathTest(client, "/path/subpath/foo", "/subpath", "/foo");
             runPathTest(client, "/a", "/a", "");
-            runPathTest(client, "/aa", "/aa", "");
+            runPathTest(client, "/aa?a=b", "/aa", "", Collections.singletonMap("a", "b"));
 
 
 
@@ -88,6 +91,9 @@ public class PathTestCase {
     }
 
     private void runPathTest(DefaultHttpClient client, String path, String expectedMatch, String expectedRemaining) throws IOException {
+        runPathTest(client, path, expectedMatch, expectedRemaining, Collections.<String, String>emptyMap());
+    }
+    private void runPathTest(DefaultHttpClient client, String path, String expectedMatch, String expectedRemaining, Map<String, String> queryParams) throws IOException {
         HttpResponse result;HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + path);
         result = client.execute(get);
         Assert.assertEquals(200, result.getStatusLine().getStatusCode());
@@ -96,6 +102,10 @@ public class PathTestCase {
         header = result.getHeaders(PATH);
         Assert.assertEquals(expectedRemaining, header[0].getValue());
         HttpClientUtils.readResponse(result);
+        for(Map.Entry<String, String> entry : queryParams.entrySet()) {
+            header = result.getHeaders(entry.getKey());
+            Assert.assertEquals(entry.getValue(), header[0].getValue());
+        }
     }
 
     private static class RemainingPathHandler implements HttpHandler {
@@ -110,6 +120,9 @@ public class PathTestCase {
         public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
             exchange.getResponseHeaders().add(MATCHED, matched);
             exchange.getResponseHeaders().add(PATH, exchange.getRelativePath());
+            for(Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
+                exchange.getResponseHeaders().put(param.getKey(), param.getValue().getFirst());
+            }
             completionHandler.handleComplete();
         }
     }
