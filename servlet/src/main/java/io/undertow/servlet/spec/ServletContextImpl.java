@@ -55,6 +55,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
@@ -162,12 +163,17 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public RequestDispatcher getRequestDispatcher(final String path) {
-        return new RequestDispatcherImpl(deployment.getServletPaths().getServletHandler(path));
+        return new RequestDispatcherImpl(deployment.getServletPaths().getServletHandlerByPath(path));
     }
 
     @Override
     public RequestDispatcher getNamedDispatcher(final String name) {
-        return null;
+        ServletInitialHandler handler = deployment.getServletPaths().getServletHandlerByName(name);
+        if (handler != null) {
+            return new RequestDispatcherImpl(handler);
+        } else {
+            return null;
+        }
     }
 
     @Override

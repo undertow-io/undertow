@@ -34,14 +34,11 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
-import io.undertow.util.AttachmentKey;
 
 /**
  * @author Stuart Douglas
  */
 public class FilterHandler implements BlockingHttpHandler {
-
-    public static final AttachmentKey<DispatcherType> DISPATCHER_TYPE_ATTACHMENT_KEY = AttachmentKey.create(DispatcherType.class);
 
     private final Map<DispatcherType, List<ManagedFilter>> filters;
 
@@ -57,7 +54,7 @@ public class FilterHandler implements BlockingHttpHandler {
         ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         ServletResponse response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
 
-        final List<ManagedFilter> filters = this.filters.get(exchange.getExchange().getAttachment(DISPATCHER_TYPE_ATTACHMENT_KEY));
+        final List<ManagedFilter> filters = this.filters.get(exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY));
         if(filters == null) {
             next.handleRequest(exchange);
         } else {

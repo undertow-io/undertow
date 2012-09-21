@@ -36,7 +36,12 @@ public class IncludeServlet extends HttpServlet {
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         resp.getWriter().write(MESSAGE);
-        RequestDispatcher dispatcher = req.getRequestDispatcher("/include");
+        RequestDispatcher dispatcher;
+        if (req.getHeader("name") != null) {
+            dispatcher = req.getServletContext().getNamedDispatcher(req.getHeader("include"));
+        } else {
+            dispatcher = req.getRequestDispatcher(req.getHeader("include"));
+        }
         dispatcher.include(req, resp);
     }
 }

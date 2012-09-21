@@ -75,9 +75,13 @@ public class DispatcherIncludeTestCase {
                                 .addInitParam(MessageFilter.MESSAGE, "Not Included"))
                 .addFilter(
                         new FilterInfo("inc", MessageFilter.class)
-                                .addInitParam(MessageFilter.MESSAGE, "Filtered!"))
+                                .addInitParam(MessageFilter.MESSAGE, "Path!"))
+                .addFilter(
+                        new FilterInfo("nameFilter", MessageFilter.class)
+                                .addInitParam(MessageFilter.MESSAGE, "Name!"))
                 .addFilterUrlMapping("notIncluded", "/include", DispatcherType.REQUEST)
-                .addFilterUrlMapping("inc", "/include", DispatcherType.INCLUDE);
+                .addFilterUrlMapping("inc", "/include", DispatcherType.INCLUDE)
+                .addFilterServletNameMapping("nameFilter", "include", DispatcherType.INCLUDE);
 
 
         DeploymentManager manager = container.addDeployment(builder);
@@ -88,14 +92,31 @@ public class DispatcherIncludeTestCase {
     }
 
     @Test
-    public void testSimpleInclude() throws IOException {
+    public void testPathBasedInclude() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
             HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/dispatch");
+            get.setHeader("include", "/include");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "Filtered!included", response);
+            Assert.assertEquals(IncludeServlet.MESSAGE + "Path!Name!included", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testNameBasedInclude() throws IOException {
+        DefaultHttpClient client = new DefaultHttpClient();
+        try {
+            HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/dispatch");
+            get.setHeader("include", "include");
+            get.setHeader("name", "true");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(IncludeServlet.MESSAGE + "Name!included", response);
         } finally {
             client.getConnectionManager().shutdown();
         }

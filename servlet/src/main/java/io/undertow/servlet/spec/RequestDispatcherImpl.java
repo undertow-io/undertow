@@ -31,7 +31,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.handlers.FilterHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.util.DelegatingHttpServletResponse;
 
@@ -57,7 +56,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
         final ServletRequest oldRequest = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         final ServletResponse oldResponse = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
-        exchange.getExchange().putAttachment(FilterHandler.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.INCLUDE);
+        exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.INCLUDE);
         try {
             try {
                 exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);

@@ -28,7 +28,6 @@ import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
-import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.api.ThreadSetupAction;
@@ -102,8 +101,8 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
         ThreadSetupAction.Handle handle = setupAction.setup(exchange);
-        if (exchange.getExchange().getAttachment(FilterHandler.DISPATCHER_TYPE_ATTACHMENT_KEY) == null) {
-            exchange.getExchange().putAttachment(FilterHandler.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.REQUEST);
+        if (exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY) == null) {
+            exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.REQUEST);
         }
         boolean first = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY) == null;
         if (first) {

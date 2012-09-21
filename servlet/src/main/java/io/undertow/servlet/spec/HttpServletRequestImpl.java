@@ -69,6 +69,7 @@ import io.undertow.util.Headers;
 public class HttpServletRequestImpl implements HttpServletRequest {
 
     public static final AttachmentKey<ServletRequest> ATTACHMENT_KEY = AttachmentKey.create(ServletRequest.class);
+    public static final AttachmentKey<DispatcherType> DISPATCHER_TYPE_ATTACHMENT_KEY = AttachmentKey.create(DispatcherType.class);
 
     private final BlockingHttpServerExchange exchange;
     private final ServletContextImpl servletContext;
@@ -471,7 +472,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public RequestDispatcher getRequestDispatcher(final String path) {
-        return new RequestDispatcherImpl(servletContext.getDeployment().getServletPaths().getServletHandler(path));
+        return new RequestDispatcherImpl(servletContext.getDeployment().getServletPaths().getServletHandlerByPath(path));
     }
 
     @Override
@@ -501,7 +502,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public ServletContext getServletContext() {
-        return null;
+        return servletContext;
     }
 
     @Override
@@ -531,6 +532,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public DispatcherType getDispatcherType() {
-        return null;
+        return exchange.getExchange().getAttachment(DISPATCHER_TYPE_ATTACHMENT_KEY);
     }
 }

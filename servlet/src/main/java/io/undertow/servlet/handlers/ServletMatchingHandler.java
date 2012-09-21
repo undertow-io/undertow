@@ -25,7 +25,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.util.BoundedConcurrentHashMap;
-import io.undertow.util.CopyOnWriteMap;
 
 /**
  * Handler that resolves servlet paths
@@ -62,7 +61,7 @@ public class ServletMatchingHandler implements HttpHandler {
             }
         }
         final String path = exchange.getRelativePath();
-        invokeAndCache(path, paths.getServletHandler(path), exchange, completionHandler);
+        invokeAndCache(path, paths.getServletHandlerByPath(path), exchange, completionHandler);
     }
 
 

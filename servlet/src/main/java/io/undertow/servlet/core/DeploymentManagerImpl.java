@@ -147,6 +147,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         ServletHandler defaultServlet = null;
 
         final Map<String, ManagedFilter> managedFilterMap = new LinkedHashMap<String, ManagedFilter>();
+        final Map<String, ServletHandler> allServlets = new HashMap<String, ServletHandler>();
         final Map<String, ServletHandler> extensionServlets = new HashMap<String, ServletHandler>();
         final Map<String, ServletHandler> pathServlets = new HashMap<String, ServletHandler>();
 
@@ -177,6 +178,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             final ManagedServlet managedServlet = new ManagedServlet(servlet, servletContext);
             lifecycles.add(managedServlet);
             final ServletHandler handler = new ServletHandler(managedServlet);
+            allServlets.put(entry.getKey(), handler);
             for (String path : entry.getValue().getMappings()) {
                 if (path.equals("/")) {
                     //the default servlet
@@ -325,6 +327,26 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 builder.addExtensionMatch("", path, servletChain(handler, threadSetupAction, listeners));
             }
         }
+
+        //now setup name based mappings
+        //these are used for name based dispatch
+        for (Map.Entry<String, ServletHandler> entry : allServlets.entrySet()) {
+            final Map<DispatcherType, List<ManagedFilter>> filters = new HashMap<DispatcherType, List<ManagedFilter>>();
+            for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
+                ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
+                if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
+                    if (filterMapping.getMapping().equals(entry.getKey())) {
+                        addToListMap(filters, filterMapping.getDispatcher(), filter);
+                    }
+                }
+            }
+            if(filters.isEmpty()) {
+                builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), threadSetupAction, listeners));
+            } else {
+                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filters, entry.getValue()), threadSetupAction, listeners));
+            }
+        }
+
 
         builder.setDefaultServlet(defaultHandler);
 

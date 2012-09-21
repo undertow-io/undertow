@@ -32,15 +32,22 @@ public class ServletPathMatches {
 
     private final Map<String, PathMatch> prefixMatches;
 
+    private final Map<String, ServletInitialHandler> nameMatches;
+
     private final ServletInitialHandler defaultServlet;
 
-    public ServletPathMatches(final Map<String, ServletInitialHandler> exactPathMatches, final Map<String, PathMatch> prefixMatches, final ServletInitialHandler defaultServlet) {
+    public ServletPathMatches(final Map<String, ServletInitialHandler> exactPathMatches, final Map<String, PathMatch> prefixMatches, final Map<String, ServletInitialHandler> nameMatches, final ServletInitialHandler defaultServlet) {
         this.exactPathMatches = exactPathMatches;
         this.prefixMatches = prefixMatches;
+        this.nameMatches = nameMatches;
         this.defaultServlet = defaultServlet;
     }
 
-    public ServletInitialHandler getServletHandler(final String path) {
+    public ServletInitialHandler getServletHandlerByName(final String name) {
+        return nameMatches.get(name);
+    }
+
+    public ServletInitialHandler getServletHandlerByPath(final String path) {
         ServletInitialHandler exact = exactPathMatches.get(path);
         if (exact != null) {
             return exact;
@@ -90,6 +97,8 @@ public class ServletPathMatches {
 
         private final Map<String, PathMatch> prefixMatches = new HashMap<String, PathMatch>();
 
+        private final Map<String, ServletInitialHandler> nameMatches = new HashMap<String, ServletInitialHandler>();
+
         private ServletInitialHandler defaultServlet;
 
         public void addExactMatch(final String exactMatch, final ServletInitialHandler match) {
@@ -112,6 +121,10 @@ public class ServletPathMatches {
             m.extensionMatches.put(extension, match);
         }
 
+        public void addNameMatch(final String name, final ServletInitialHandler match) {
+            nameMatches.put(name, match);
+        }
+
         public ServletInitialHandler getDefaultServlet() {
             return defaultServlet;
         }
@@ -121,7 +134,7 @@ public class ServletPathMatches {
         }
 
         public ServletPathMatches build() {
-            return new ServletPathMatches(exactPathMatches, prefixMatches, defaultServlet);
+            return new ServletPathMatches(exactPathMatches, prefixMatches, nameMatches, defaultServlet);
         }
 
     }
