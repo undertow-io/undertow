@@ -20,16 +20,19 @@ package io.undertow.servlet.test.dispatcher;
 
 import java.io.IOException;
 
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletServerTestCase;
 import io.undertow.servlet.test.runner.HttpClientUtils;
 import io.undertow.servlet.test.runner.ServletServer;
+import io.undertow.servlet.test.util.MessageFilter;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
@@ -67,7 +70,14 @@ public class DispatcherIncludeTestCase {
                 .addServlet(
                         new ServletInfo("dispatcher", IncludeServlet.class)
                                 .addMapping("/dispatch"))
-                ;
+                .addFilter(
+                        new FilterInfo("notIncluded", MessageFilter.class)
+                                .addInitParam(MessageFilter.MESSAGE, "Not Included"))
+                .addFilter(
+                        new FilterInfo("inc", MessageFilter.class)
+                                .addInitParam(MessageFilter.MESSAGE, "Filtered!"))
+                .addFilterUrlMapping("notIncluded", "/include", DispatcherType.REQUEST)
+                .addFilterUrlMapping("inc", "/include", DispatcherType.INCLUDE);
 
 
         DeploymentManager manager = container.addDeployment(builder);
@@ -85,7 +95,7 @@ public class DispatcherIncludeTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "included", response);
+            Assert.assertEquals(IncludeServlet.MESSAGE + "Filtered!included", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
