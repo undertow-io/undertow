@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import io.undertow.util.WorkerDispatcher;
 import org.jboss.logging.Logger;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
@@ -97,7 +99,7 @@ public class PermanentFileCache implements FileCache {
             return;
         }
         final StreamSinkChannel response = factory.create();
-        response.getWorker().execute(new FileWriteTask(completionHandler, response, fileChannel, length));
+        WorkerDispatcher.dispatch(exchange, new FileWriteTask(completionHandler, response, fileChannel, length));
     }
 
     private static class FileWriteTask implements Runnable {

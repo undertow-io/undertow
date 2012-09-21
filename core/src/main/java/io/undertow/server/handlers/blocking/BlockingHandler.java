@@ -25,6 +25,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.WorkerDispatcher;
 
 /**
  * A {@link HttpHandler} that initiates a blocking request.
@@ -57,7 +58,7 @@ public final class BlockingHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange);
         final Executor executor = this.executor;
-        (executor == null ? exchange.getConnection().getWorker() : executor).execute(new Runnable() {
+        Runnable runnable = new Runnable() {
             @Override
             public void run() {
                 try {
@@ -74,7 +75,12 @@ public final class BlockingHandler implements HttpHandler {
                     completionHandler.handleComplete();
                 }
             }
-        });
+        };
+        if(executor == null) {
+            WorkerDispatcher.dispatch(exchange, runnable);
+        } else {
+            executor.execute(runnable);
+        }
     }
 
     public Executor getExecutor() {

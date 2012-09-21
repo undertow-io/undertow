@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.WorkerDispatcher;
 
 import static org.xnio.Bits.longBitMask;
 
@@ -138,7 +139,7 @@ public final class RequestLimitingHandler implements HttpHandler {
                 // now bump up the counter by one; this *could* put us over the max if it changed in the meantime but that's OK
                 newVal = stateUpdater.getAndIncrement(this);
                 current = (int) (newVal & MASK_CURRENT);
-                request.exchange.getConnection().getWorker().execute(request);
+                WorkerDispatcher.dispatch(request.exchange, request);
             }
         }
         return oldMax;
@@ -205,7 +206,7 @@ public final class RequestLimitingHandler implements HttpHandler {
             } finally {
                 final QueuedRequest task = queue.poll();
                 if (task != null) {
-                    exchange.getConnection().getWorker().execute(task);
+                    WorkerDispatcher.dispatch(exchange, task);
                 } else {
                     decrementRequests();
                 }

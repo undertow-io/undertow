@@ -31,6 +31,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.WorkerDispatcher;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
@@ -77,7 +78,7 @@ public class CachingFileCache implements FileCache {
         final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
         final DirectBufferCache.CacheEntry entry = cache.get(file.getAbsolutePath());
         if (entry == null) {
-            exchange.getConnection().getWorker().execute(new FileWriteLoadTask(exchange, completionHandler, factory, file));
+            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, factory, file));
             return;
         }
 
@@ -89,7 +90,7 @@ public class CachingFileCache implements FileCache {
 
         // It's loading retry later
         if (!entry.enabled() || !entry.reference()) {
-            exchange.getConnection().getWorker().execute(new FileWriteLoadTask(exchange, completionHandler, factory, file));
+            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, factory, file));
             return;
         }
 

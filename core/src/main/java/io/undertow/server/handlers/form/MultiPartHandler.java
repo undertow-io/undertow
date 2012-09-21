@@ -37,6 +37,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.ImmediateIoFuture;
 import io.undertow.util.MultipartParser;
+import io.undertow.util.WorkerDispatcher;
 import org.xnio.FileAccess;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
@@ -154,7 +155,11 @@ public class MultiPartHandler implements HttpHandler {
                 if (created != null) {
                     //we need to delegate to a thread pool
                     //as we parse with blocking operations
-                    (executor == null ? exchange.getConnection().getWorker() : executor).execute(this);
+                    if(executor == null) {
+                        WorkerDispatcher.dispatch(exchange, this);
+                    } else {
+                        executor.execute(this);
+                    }
                 }
             }
             return ioFuture;

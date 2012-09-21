@@ -29,6 +29,7 @@ import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.WorkerDispatcher;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
@@ -53,7 +54,7 @@ public class DirectFileCache implements FileCache {
         // ignore request body
         IoUtils.safeShutdownReads(exchange.getRequestChannel());
 
-        exchange.getConnection().getWorker().execute(new FileWriteTask(exchange, completionHandler, file));
+        WorkerDispatcher.dispatch(exchange, new FileWriteTask(exchange, completionHandler, file));
     }
 
     private static class FileWriteTask implements Runnable {

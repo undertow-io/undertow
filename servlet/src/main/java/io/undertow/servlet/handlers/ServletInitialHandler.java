@@ -35,6 +35,7 @@ import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.WorkerDispatcher;
 
 /**
  * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
@@ -79,7 +80,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         }
         final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange);
         final Executor executor = this.executor;
-        (executor == null ? exchange.getConnection().getWorker() : executor).execute(new Runnable() {
+        Runnable runnable = new Runnable() {
             @Override
             public void run() {
                 try {
@@ -94,7 +95,12 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                     completionHandler.handleComplete();
                 }
             }
-        });
+        };
+        if(executor == null) {
+            WorkerDispatcher.dispatch(exchange, runnable);
+        } else {
+            executor.execute(runnable);
+        }
     }
 
 
