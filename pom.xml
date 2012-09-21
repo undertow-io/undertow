@@ -67,7 +67,7 @@
 
         <version.org.jboss.classfilewriter>1.0.4.Final</version.org.jboss.classfilewriter>
         <version.junit>4.8.2</version.junit>
-        <version.xnio>3.1.0.Beta5</version.xnio>
+        <version.xnio>3.1.0.Beta6</version.xnio>
         <version.org.jboss.logging>3.1.1.GA</version.org.jboss.logging>
         <version.org.jboss.logmanager>1.4.0.Beta1</version.org.jboss.logmanager>
         <version.org.jboss.logging.processor>1.0.3.Final</version.org.jboss.logging.processor>
