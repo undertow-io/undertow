@@ -35,6 +35,10 @@ public class SessionCookieConfigImpl implements SessionCookieConfig {
     private volatile boolean secure;
     private volatile int maxAge;
 
+    public SessionCookieConfigImpl(final String path) {
+        this.path = path;
+    }
+
     public String getName() {
         return name;
     }
