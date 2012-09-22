@@ -67,7 +67,14 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
 
     @Override
     public Set<String> addMapping(final String... urlPatterns) {
-        return null;
+        final Set<String> ret = new HashSet<String>();
+        for(String pattern : urlPatterns) {
+            if(servletInfo.getMappings().contains(pattern)) {
+                ret.add(pattern);
+                servletInfo.addMapping(pattern);
+            }
+        }
+        return ret;
     }
 
     @Override

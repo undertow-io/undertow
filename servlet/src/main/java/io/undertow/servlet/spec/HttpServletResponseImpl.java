@@ -19,6 +19,7 @@
 package io.undertow.servlet.spec;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -48,11 +49,16 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     private final BlockingHttpServerExchange exchange;
 
-    private ServletOutputStream servletOutputStream;
+    private ServletOutputStreamImpl servletOutputStream;
     private PrintWriter writer;
+    private Integer bufferSize;
 
     public HttpServletResponseImpl(final BlockingHttpServerExchange exchange) {
         this.exchange = exchange;
+    }
+
+    public BlockingHttpServerExchange getExchange() {
+        return exchange;
     }
 
     @Override
@@ -173,11 +179,15 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public ServletOutputStream getOutputStream() throws IOException {
+        if (writer != null) {
+            throw UndertowServletMessages.MESSAGES.getWriterAlreadyCalled();
+        }
         if (servletOutputStream == null) {
-            if(writer != null) {
-                throw UndertowServletMessages.MESSAGES.getWriterAlreadyCalled();
+            if (bufferSize == null) {
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this);
+            } else {
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this, bufferSize);
             }
-            servletOutputStream = new ServletOutputStreamImpl(exchange.getOutputStream());
         }
         return servletOutputStream;
     }
@@ -185,10 +195,15 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public PrintWriter getWriter() throws IOException {
         if (writer == null) {
-            if(servletOutputStream != null) {
+            if (servletOutputStream != null) {
                 throw UndertowServletMessages.MESSAGES.getOutputStreamAlreadyCalled();
             }
-            writer = new PrintWriter(exchange.getOutputStream());
+            if (bufferSize == null) {
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this);
+            } else {
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this, bufferSize);
+            }
+            writer = new PrintWriter(new OutputStreamWriter(servletOutputStream));
         }
         return writer;
     }
@@ -210,26 +225,32 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setBufferSize(final int size) {
-
+        if (servletOutputStream != null) {
+            servletOutputStream.setBufferSize(size);
+        }
+        this.bufferSize = size;
     }
 
     @Override
     public int getBufferSize() {
-        return 0;
+        //todo: fix this
+        return bufferSize;
     }
 
     @Override
     public void flushBuffer() throws IOException {
-        if(servletOutputStream != null) {
-            servletOutputStream.flush();
-        } else if(writer != null) {
+        if (writer != null) {
             writer.flush();
+        } else if (servletOutputStream != null) {
+            servletOutputStream.flush();
         }
     }
 
     @Override
     public void resetBuffer() {
-
+        if (servletOutputStream != null) {
+            servletOutputStream.resetBuffer();
+        }
     }
 
     @Override
@@ -239,7 +260,11 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void reset() {
-
+        if (servletOutputStream != null) {
+            servletOutputStream.resetBuffer();
+        }
+        exchange.getExchange().getResponseHeaders().clear();
+        exchange.getExchange().setResponseCode(200);
     }
 
     @Override

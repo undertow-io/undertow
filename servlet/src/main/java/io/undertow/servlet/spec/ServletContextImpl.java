@@ -69,7 +69,7 @@ public class ServletContextImpl implements ServletContext {
     private final Deployment deployment;
     private final DeploymentInfo deploymentInfo;
     private final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<String, Object>();
-    private final SessionCookieConfigImpl sessionCookieConfig = new SessionCookieConfigImpl();
+    private final SessionCookieConfigImpl sessionCookieConfig;
 
 
     private volatile boolean bootstrapComplete = false;
@@ -79,6 +79,7 @@ public class ServletContextImpl implements ServletContext {
         this.servletContainer = servletContainer;
         this.deployment = deployment;
         this.deploymentInfo = deployment.getDeploymentInfo();
+        sessionCookieConfig = new SessionCookieConfigImpl(deployment.getDeploymentInfo().getContextPath());
     }
 
     @Override
