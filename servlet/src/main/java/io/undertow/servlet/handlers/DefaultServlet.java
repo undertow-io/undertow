@@ -100,7 +100,6 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
                 while ((read = in.read(buffer)) != -1) {
                     out.write(buffer, 0, read);
                 }
-                out.flush();
             } finally {
                 if (out != null) {
                     IoUtils.safeClose(out);
