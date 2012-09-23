@@ -210,23 +210,28 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 state = stateUpdater.get(this);
                 if (state == 3) {
                     //we start unconditionally
-                    stateUpdater.set(this, 1);
-                    channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
-                    channel.resumeReads();
-                    nextRequestResponseChannel = null;
-                    connection = null;
-                    channel = null;
+                    startNextRequest();
                     return;
                 } else if (state == 0 && connection.startRequest()) {
-                    stateUpdater.set(this, 1);
-                    channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
-                    channel.resumeReads();
-                    nextRequestResponseChannel = null;
-                    connection = null;
-                    channel = null;
+                    startNextRequest();
                     return;
                 }
             } while (!stateUpdater.compareAndSet(this, state, 2));
+        }
+
+        private void startNextRequest() {
+            stateUpdater.set(this, 1);
+            final PushBackStreamChannel channel = this.channel;
+            channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
+            channel.getReadThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    channel.resumeReads();
+                }
+            });
+            nextRequestResponseChannel = null;
+            connection = null;
+            this.channel = null;
         }
 
         public void completionHandler() {
@@ -238,12 +243,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 }
                 if (state == 2) {
                     //we start unconditionally
-                    stateUpdater.set(this, 1);
-                    channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
-                    channel.resumeReads();
-                    nextRequestResponseChannel = null;
-                    connection = null;
-                    channel = null;
+                    startNextRequest();
                     return;
                 }
             } while (!stateUpdater.compareAndSet(this, state, 3));
