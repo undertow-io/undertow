@@ -276,4 +276,17 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     public Locale getLocale() {
         return null;
     }
+
+    public void responseDone() {
+        if(writer != null) {
+            writer.close();
+        }
+        if(servletOutputStream != null) {
+            try {
+                servletOutputStream.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
 }

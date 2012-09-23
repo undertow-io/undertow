@@ -135,7 +135,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         if (buffer != null && buffer.position() != 0) {
             writeBuffer();
         }
-        if(channel == null) {
+        if (channel == null) {
             channel = channelFactory.create();
         }
         Channels.flushBlocking(channel);
@@ -143,7 +143,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
     private void writeBuffer() throws IOException {
         buffer.flip();
-        if(channel == null) {
+        if (channel == null) {
             channel = channelFactory.create();
         }
         Channels.writeBlocking(channel, buffer);
@@ -156,23 +156,26 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      */
     public void close() throws IOException {
         if (closed) return;
-        closed = true;
-        if(!writeStarted && channel == null) {
-            if(buffer == null) {
-                servletResponse.setHeader(Headers.CONTENT_LENGTH, "0");
-            } else {
-                servletResponse.setHeader(Headers.CONTENT_LENGTH, "" + buffer.position());
+        try {
+            closed = true;
+            if (!writeStarted && channel == null) {
+                if (buffer == null) {
+                    servletResponse.setHeader(Headers.CONTENT_LENGTH, "0");
+                } else {
+                    servletResponse.setHeader(Headers.CONTENT_LENGTH, "" + buffer.position());
+                }
             }
-        }
-        writeBuffer();
-        StreamSinkChannel channel = this.channel;
-        channel.shutdownWrites();
-        Channels.flushBlocking(channel);
-        if (pooledBuffer != null) {
-            pooledBuffer.free();
-            buffer = null;
-        } else {
-            buffer = null;
+            writeBuffer();
+            StreamSinkChannel channel = this.channel;
+            channel.shutdownWrites();
+            Channels.flushBlocking(channel);
+        } finally {
+            if (pooledBuffer != null) {
+                pooledBuffer.free();
+                buffer = null;
+            } else {
+                buffer = null;
+            }
         }
     }
 

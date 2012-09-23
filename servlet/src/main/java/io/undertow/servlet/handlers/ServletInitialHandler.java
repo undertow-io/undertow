@@ -120,7 +120,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 next.handleRequest(exchange);
             } finally {
                 handle.tearDown();
-                response.flushBuffer();
+                response.responseDone();
             }
         } else {
             next.handleRequest(exchange);
