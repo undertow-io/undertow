@@ -90,13 +90,18 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                     if (!exchange.isResponseStarted()) {
                         exchange.setResponseCode(500);
                     }
-                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", blockingExchange);
+                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        UndertowLogger.REQUEST_LOGGER.debugf(t, "Servlet request failed %s", blockingExchange);
+                    } else {
+                        UndertowLogger.REQUEST_LOGGER.errorf("Servlet request failed %s", blockingExchange);
+                    }
                 } finally {
                     completionHandler.handleComplete();
                 }
             }
         };
-        if(executor == null) {
+
+        if (executor == null) {
             WorkerDispatcher.dispatch(exchange, runnable);
         } else {
             executor.execute(runnable);
