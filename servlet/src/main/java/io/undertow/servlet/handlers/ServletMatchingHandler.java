@@ -18,13 +18,10 @@
 
 package io.undertow.servlet.handlers;
 
-import java.util.concurrent.ConcurrentMap;
-
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
-import io.undertow.util.BoundedConcurrentHashMap;
 
 /**
  * Handler that resolves servlet paths
@@ -33,52 +30,16 @@ import io.undertow.util.BoundedConcurrentHashMap;
  */
 public class ServletMatchingHandler implements HttpHandler {
 
-
-    private volatile int cacheSize = 1024;
-
     private volatile ServletPathMatches paths;
-
-    /**
-     * Caches an exact match that does not return an error code, to allow for faster matching of paths.
-     * <p/>
-     * If cache size is set to zero this is not used
-     */
-    private volatile ConcurrentMap<String, HttpHandler> cache = new BoundedConcurrentHashMap<String, HttpHandler>(cacheSize);
 
     public ServletMatchingHandler(final ServletPathMatches paths) {
         this.paths = paths;
     }
 
-
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        final boolean cacheEnabled = cacheSize > 0;
-        if (cacheEnabled) {
-            final HttpHandler handler = cache.get(exchange.getRelativePath());
-            if (handler != null) {
-                HttpHandlers.executeHandler(handler, exchange, completionHandler);
-                return;
-            }
-        }
         final String path = exchange.getRelativePath();
-        invokeAndCache(path, paths.getServletHandlerByPath(path), exchange, completionHandler);
-    }
-
-
-    private void invokeAndCache(final String path, final HttpHandler handler, final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        if (cacheSize != 0) {
-            cache.put(path, handler);
-        }
-        HttpHandlers.executeHandler(handler, exchange, completionHandler);
-    }
-
-    public int getCacheSize() {
-        return cacheSize;
-    }
-
-    public void setCacheSize(final int cacheSize) {
-        this.cache = new BoundedConcurrentHashMap<String, HttpHandler>(cacheSize);
-        this.cacheSize = cacheSize;
+        HttpHandlers.executeHandler(paths.getServletHandlerByPath(path), exchange, completionHandler);
     }
 
     public ServletPathMatches getPaths() {
