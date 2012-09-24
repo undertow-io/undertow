@@ -98,12 +98,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 }
             }
         };
-
-        if (executor == null) {
-            WorkerDispatcher.dispatch(exchange, runnable);
-        } else {
-            executor.execute(runnable);
-        }
+        WorkerDispatcher.dispatch(executor, exchange, runnable);
     }
 
 

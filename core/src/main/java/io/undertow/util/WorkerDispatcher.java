@@ -18,11 +18,11 @@
 
 package io.undertow.util;
 
+import java.util.concurrent.Executor;
+
 import io.undertow.server.HttpServerExchange;
 
 /**
- *
- *
  * @author Stuart Douglas
  */
 public class WorkerDispatcher {
@@ -30,12 +30,12 @@ public class WorkerDispatcher {
     private static final ThreadLocal<Boolean> executingInWorker = new ThreadLocal<Boolean>();
 
 
-    public static void dispatch(final HttpServerExchange exchange, final Runnable runnable) {
+    public static void dispatch(final Executor executor, final HttpServerExchange exchange, final Runnable runnable) {
         Boolean executing = executingInWorker.get();
-        if(executing != null && executing) {
+        if (executing != null && executing) {
             runnable.run();
         } else {
-            exchange.getConnection().getWorker().submit(new Runnable() {
+            (executor != null ? executor : exchange.getConnection().getWorker()).execute(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -47,6 +47,10 @@ public class WorkerDispatcher {
                 }
             });
         }
+    }
+
+    public static void dispatch(final HttpServerExchange exchange, final Runnable runnable) {
+        dispatch(null, exchange, runnable);
     }
 
     private WorkerDispatcher() {
