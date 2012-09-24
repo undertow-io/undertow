@@ -25,6 +25,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 import javax.servlet.DispatcherType;
 
@@ -45,6 +47,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile ClassIntrospecter classIntrospecter = DefaultClassIntrospector.INSTANCE;
     private volatile int majorVersion = 3;
     private volatile int minorVersion;
+    private volatile InstanceFactory<Executor> executorFactory;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -294,6 +297,20 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(welcomePages);
     }
 
+    public InstanceFactory<Executor> getExecutorFactory() {
+        return executorFactory;
+    }
+
+    /**
+     * Sets the factory that is used to create the {@link ExecutorService} that is used to run servlet
+     * invocations.
+     *
+     * @param executorFactory The executor factory
+     */
+    public void setExecutorFactory(final InstanceFactory<Executor> executorFactory) {
+        this.executorFactory = executorFactory;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -318,6 +335,7 @@ public class DeploymentInfo implements Cloneable {
         info.threadSetupActions.addAll(threadSetupActions);
         info.initParameters.putAll(initParameters);
         info.welcomePages.addAll(welcomePages);
+        info.executorFactory = executorFactory;
         return info;
     }
 

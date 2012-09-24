@@ -19,7 +19,6 @@
 package io.undertow.servlet.handlers;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.servlet.DispatcherType;
 
@@ -55,20 +54,19 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     private final ServletContextImpl servletContext;
 
-    private volatile Executor executor;
     private volatile BlockingHttpHandler handler;
+    private final Executor executor;
 
-    private static final AtomicReferenceFieldUpdater<ServletInitialHandler, Executor> executorUpdater = AtomicReferenceFieldUpdater.newUpdater(ServletInitialHandler.class, Executor.class, "executor");
-
-    public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
+    public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final Executor executor) {
         this.next = next;
         this.asyncPath = asyncPath;
         this.setupAction = setupAction;
         this.servletContext = servletContext;
+        this.executor = executor;
     }
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
-        this(next, null, setupAction, servletContext);
+    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final Executor executor) {
+        this(next, null, setupAction, servletContext, executor);
     }
 
     @Override
@@ -134,16 +132,6 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     public Executor getExecutor() {
         return executor;
-    }
-
-    /**
-     * Sets the executor used by this handler. The old executor will not be shut down.
-     *
-     * @param executor The executor to use
-     * @return The previous executor
-     */
-    public Executor setExecutor(final Executor executor) {
-        return executorUpdater.getAndSet(this, executor);
     }
 
     public BlockingHttpHandler getHandler() {

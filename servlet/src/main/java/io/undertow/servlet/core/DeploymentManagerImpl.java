@@ -25,13 +25,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Servlet;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletException;
 
-import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.servlet.UndertowServletMessages;
@@ -77,6 +77,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     private volatile DeploymentImpl deployment;
     private volatile State state = State.UNDEPLOYED;
+    private volatile InstanceHandle<Executor> executor;
+
 
     public DeploymentManagerImpl(final DeploymentInfo deployment, final PathHandler pathHandler, final ServletContainer servletContainer) {
         this.originalDeployment = deployment;
@@ -87,6 +89,15 @@ public class DeploymentManagerImpl implements DeploymentManager {
     @Override
     public void deploy() {
         DeploymentInfo deploymentInfo = originalDeployment.clone();
+
+        //create the executor, if it exists
+        if (deploymentInfo.getExecutorFactory() != null) {
+            try {
+                executor = deploymentInfo.getExecutorFactory().createInstance();
+            } catch (InstantiationException e) {
+                throw new RuntimeException(e);
+            }
+        }
         deploymentInfo.validate();
         final DeploymentImpl deployment = new DeploymentImpl(deploymentInfo);
         this.deployment = deployment;
@@ -204,7 +215,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>(defaultInstance)), servletContext);
             lifecycles.add(managedDefaultServlet);
             defaultServlet = new ServletHandler(managedDefaultServlet);
-            defaultHandler = new ServletInitialHandler(new RequestListenerHandler(listeners, defaultServlet), defaultInstance, threadSetupAction, servletContext);
+            defaultHandler = new ServletInitialHandler(new RequestListenerHandler(listeners, defaultServlet), defaultInstance, threadSetupAction, servletContext, executor == null ? null : executor.getInstance());
         }
 
         final ServletPathMatches.Builder builder = ServletPathMatches.builder();
@@ -341,7 +352,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     }
                 }
             }
-            if(filters.isEmpty()) {
+            if (filters.isEmpty()) {
                 builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), threadSetupAction, listeners));
             } else {
                 builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filters, entry.getValue()), threadSetupAction, listeners));
@@ -365,7 +376,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private ServletInitialHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners) {
-        return new ServletInitialHandler(new RequestListenerHandler(applicationListeners, next), setupAction, deployment.getServletContext());
+        return new ServletInitialHandler(new RequestListenerHandler(applicationListeners, next), setupAction, deployment.getServletContext(), executor == null ? null : executor.getInstance());
     }
 
     private ServletHandler resolveServletForPath(final String path, final Map<String, ServletHandler> pathServlets) {
@@ -419,9 +430,13 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void undeploy() {
-        deployment.getApplicationListeners().contextDestroyed();
-        deployment.getApplicationListeners().stop();
-        deployment = null;
+        try {
+            deployment.getApplicationListeners().contextDestroyed();
+            deployment.getApplicationListeners().stop();
+            deployment = null;
+        } finally {
+            executor.release();
+        }
     }
 
     @Override
