@@ -61,7 +61,11 @@ public class MaxRequestSizeTestCase {
                     exchange.getInputStream().close();
                     exchange.getOutputStream().close();
                 } catch (IOException e) {
-                    exchange.getExchange().setResponseCode(500);
+                    try {
+                        exchange.getExchange().setResponseCode(500);
+                    } catch (Exception ignore) {
+
+                    }
                     throw new RuntimeException(e);
                 }
             }
