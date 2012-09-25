@@ -30,6 +30,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -133,6 +134,7 @@ public class ChunkedRequestTransferCodingTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
         } finally {
+
             client.getConnectionManager().shutdown();
         }
     }
@@ -142,6 +144,7 @@ public class ChunkedRequestTransferCodingTestCase {
         connection = null;
         OptionMap existing = DefaultServer.getUndertowOptions();
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
+        post.setHeader(HttpHeaders.CONNECTION, "close");
         DefaultHttpClient client = new DefaultHttpClient();
         try {
             generateMessage(1);
@@ -163,8 +166,8 @@ public class ChunkedRequestTransferCodingTestCase {
 
         } finally {
             DefaultServer.setUndertowOptions(existing);
+            client.getConnectionManager().shutdown();
         }
-        client.getConnectionManager().shutdown();
     }
 
 
