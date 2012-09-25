@@ -122,6 +122,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             if (read > maxRequestSize) {
                 UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
                 IoUtils.safeClose(connection);
+                return;
             }
 
             if (state.isComplete()) {
