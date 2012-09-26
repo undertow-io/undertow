@@ -30,6 +30,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.util.Headers;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -79,6 +80,7 @@ public class ChunkedRequestTransferCodingTestCase {
                     exchange.getInputStream().close();
                     exchange.getOutputStream().close();
                 } catch (IOException e) {
+                    exchange.getExchange().getResponseHeaders().put(Headers.CONNECTION, "close");
                     exchange.getExchange().setResponseCode(500);
                     throw new RuntimeException(e);
                 }
