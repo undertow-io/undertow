@@ -44,8 +44,8 @@ public interface ServletContainer {
 
     public static class Factory {
 
-        public static ServletContainer newInstance(PathHandler rootContext) {
-            return new ServletContainerImpl(rootContext);
+        public static ServletContainer newInstance() {
+            return new ServletContainerImpl();
         };
 
     }

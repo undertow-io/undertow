@@ -38,14 +38,9 @@ import io.undertow.servlet.api.ServletContainer;
  */
 public class ServletContainerImpl implements ServletContainer {
 
-    private final PathHandler rootContext;
 
     private final Map<String, DeploymentManager> deployments = Collections.synchronizedMap(new HashMap<String, DeploymentManager>());
     private final Map<String, DeploymentManager> deploymentsByPath = Collections.synchronizedMap(new HashMap<String, DeploymentManager>());
-
-    public ServletContainerImpl(final PathHandler rootContext) {
-        this.rootContext = rootContext;
-    }
 
     @Override
     public Collection<String> listDeployments() {
@@ -55,7 +50,7 @@ public class ServletContainerImpl implements ServletContainer {
     @Override
     public DeploymentManager addDeployment(final DeploymentInfo deployment) {
         final DeploymentInfo dep = deployment.clone();
-        DeploymentManager deploymentManager = new DeploymentManagerImpl(dep, rootContext, this);
+        DeploymentManager deploymentManager = new DeploymentManagerImpl(dep, this);
         deployments.put(dep.getDeploymentName(), deploymentManager);
         deploymentsByPath.put(dep.getContextPath(), deploymentManager);
         return deploymentManager;

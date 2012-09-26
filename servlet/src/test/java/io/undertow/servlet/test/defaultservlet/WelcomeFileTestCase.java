@@ -29,7 +29,6 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
 import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.runner.HttpClientUtils;
-import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import org.apache.http.HttpResponse;
@@ -51,7 +50,7 @@ public class WelcomeFileTestCase {
     public static void setup() throws ServletException {
 
         final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance(root);
+        final ServletContainer container = ServletContainer.Factory.newInstance();
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
@@ -63,7 +62,7 @@ public class WelcomeFileTestCase {
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
-        manager.start();
+        root.addPath(builder.getContextPath(), manager.start());
 
         ServletServer.setRootHandler(root);
     }

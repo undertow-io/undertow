@@ -50,7 +50,7 @@ public class ListenerTestCase {
     public static void setup() throws ServletException {
 
         final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance(root);
+        final ServletContainer container = ServletContainer.Factory.newInstance();
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletServerTestCase.class.getClassLoader())
@@ -67,7 +67,7 @@ public class ListenerTestCase {
 
         manager = container.addDeployment(builder);
         manager.deploy();
-        manager.start();
+        root.addPath(builder.getContextPath(), manager.start());
 
         ServletServer.setRootHandler(root);
     }

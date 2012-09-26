@@ -53,7 +53,7 @@ public class SimpleServletServerTestCase {
     public static void setup() throws ServletException {
 
         final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance(root);
+        final ServletContainer container = ServletContainer.Factory.newInstance();
 
         ServletInfo s = new ServletInfo("servlet", MessageServlet.class)
                 .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
@@ -69,7 +69,7 @@ public class SimpleServletServerTestCase {
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
-        manager.start();
+        root.addPath(builder.getContextPath(), manager.start());
 
         ServletServer.setRootHandler(root);
     }

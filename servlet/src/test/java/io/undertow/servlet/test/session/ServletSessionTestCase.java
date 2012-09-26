@@ -57,7 +57,7 @@ public class ServletSessionTestCase {
         cookieHandler.setNext(session);
         final PathHandler path = new PathHandler();
         session.setNext(path);
-        final ServletContainer container = ServletContainer.Factory.newInstance(path);
+        final ServletContainer container = ServletContainer.Factory.newInstance();
 
         ServletInfo s = new ServletInfo("servlet", SessionServlet.class)
                 .addMapping("/aa");
@@ -72,7 +72,7 @@ public class ServletSessionTestCase {
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
-        manager.start();
+        path.addPath(builder.getContextPath(), manager.start());
 
         ServletServer.setRootHandler(cookieHandler);
     }

@@ -21,6 +21,8 @@ package io.undertow.servlet.api;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
+import io.undertow.server.HttpHandler;
+
 /**
  * Manager that can be used to deploy and undeploy a servlet deployment.
  *
@@ -38,9 +40,11 @@ public interface DeploymentManager {
     void deploy();
 
     /**
-     * Starts the container. Any servlets with init on startup will be created here
+     * Starts the container. Any Servlets with init on startup will be created here. This method returns the servlet
+     * path handler, which must then be added into the appropriate place in the path handler tree.
+     *
      */
-    void start() throws ServletException;
+    HttpHandler start() throws ServletException;
 
     void stop() throws ServletException;
 

@@ -58,7 +58,7 @@ public class FilterPathMappingTestCase {
         DeploymentInfo builder = new DeploymentInfo();
 
         final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance(root);
+        final ServletContainer container = ServletContainer.Factory.newInstance();
 
         builder.addServlet(new ServletInfo("/a/*", PathMappingServlet.class)
                 .addMapping("/a/*"));
@@ -93,7 +93,7 @@ public class FilterPathMappingTestCase {
 
         final DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
-        manager.start();
+        root.addPath(builder.getContextPath(), manager.start());
 
         ServletServer.setRootHandler(root);
     }

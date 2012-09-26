@@ -29,7 +29,6 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.runner.HttpClientUtils;
-import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import org.apache.http.HttpResponse;
@@ -51,7 +50,7 @@ public class ServletPathMappingTestCase {
     public static void setup() throws ServletException {
 
         final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance(root);
+        final ServletContainer container = ServletContainer.Factory.newInstance();
 
         ServletInfo aStar = new ServletInfo("/a/*", PathMappingServlet.class)
                 .addMapping("/a/*");
@@ -84,7 +83,7 @@ public class ServletPathMappingTestCase {
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
-        manager.start();
+        root.addPath(builder.getContextPath(), manager.start());
 
         ServletServer.setRootHandler(root);
     }

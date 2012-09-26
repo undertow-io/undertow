@@ -32,6 +32,7 @@ import javax.servlet.Servlet;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletException;
 
+import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.servlet.UndertowServletMessages;
@@ -69,20 +70,18 @@ public class DeploymentManagerImpl implements DeploymentManager {
      */
     private final DeploymentInfo originalDeployment;
 
+    private final ServletContainer servletContainer;
+
     /**
      * Current delpoyment, this may be modified by SCI's
      */
-    private final PathHandler pathHandler;
-    private final ServletContainer servletContainer;
-
     private volatile DeploymentImpl deployment;
     private volatile State state = State.UNDEPLOYED;
     private volatile InstanceHandle<Executor> executor;
 
 
-    public DeploymentManagerImpl(final DeploymentInfo deployment, final PathHandler pathHandler, final ServletContainer servletContainer) {
+    public DeploymentManagerImpl(final DeploymentInfo deployment, final ServletContainer servletContainer) {
         this.originalDeployment = deployment;
-        this.pathHandler = pathHandler;
         this.servletContainer = servletContainer;
     }
 
@@ -413,12 +412,12 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     @Override
-    public void start() throws ServletException {
+    public HttpHandler start() throws ServletException {
         for (Lifecycle object : deployment.getLifecycleObjects()) {
             object.start();
         }
         ServletSessionCookieConfigHandler sessionCookieConfigHandler = new ServletSessionCookieConfigHandler(deployment.getServletHandler(), deployment.getServletContext());
-        pathHandler.addPath(deployment.getDeploymentInfo().getContextPath(), sessionCookieConfigHandler);
+        return sessionCookieConfigHandler;
     }
 
     @Override
