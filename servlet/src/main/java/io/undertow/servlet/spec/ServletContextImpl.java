@@ -233,7 +233,7 @@ public class ServletContextImpl implements ServletContext {
         if (deploymentInfo.getInitParameters().containsKey(name)) {
             return false;
         }
-        deploymentInfo.getInitParameters().put(name, value);
+        deploymentInfo.addInitParameter(name, value);
         return true;
     }
 
@@ -273,7 +273,7 @@ public class ServletContextImpl implements ServletContext {
         try {
             ServletInfo servlet = new ServletInfo(servletName, (Class<? extends Servlet>) deploymentInfo.getClassLoader().loadClass(className));
             deploymentInfo.addServlet(servlet);
-            return new ServletRegistrationImpl(servlet);
+            return new ServletRegistrationImpl(servlet, deploymentInfo);
         } catch (ClassNotFoundException e) {
             throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e);
         }
@@ -283,14 +283,14 @@ public class ServletContextImpl implements ServletContext {
     public ServletRegistration.Dynamic addServlet(final String servletName, final Servlet servlet) {
         ServletInfo s = new ServletInfo(servletName, servlet.getClass(), new ImmediateInstanceFactory<Servlet>(servlet));
         deploymentInfo.addServlet(s);
-        return new ServletRegistrationImpl(s);
+        return new ServletRegistrationImpl(s, deploymentInfo);
     }
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final Class<? extends Servlet> servletClass) {
         ServletInfo servlet = new ServletInfo(servletName, servletClass);
         deploymentInfo.addServlet(servlet);
-        return new ServletRegistrationImpl(servlet);
+        return new ServletRegistrationImpl(servlet, deploymentInfo);
     }
 
     @Override
@@ -299,20 +299,22 @@ public class ServletContextImpl implements ServletContext {
             return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (InstantiationException e) {
             throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
+        } catch (NoSuchMethodException e) {
+            throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
         }
     }
 
     @Override
     public ServletRegistration getServletRegistration(final String servletName) {
         final ServletInfo servlet = deploymentInfo.getServlets().get(servletName);
-        return new ServletRegistrationImpl(servlet);
+        return new ServletRegistrationImpl(servlet, deploymentInfo);
     }
 
     @Override
     public Map<String, ? extends ServletRegistration> getServletRegistrations() {
         final Map<String, ServletRegistration> ret = new HashMap<String, ServletRegistration>();
         for (Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
-            ret.put(entry.getKey(), new ServletRegistrationImpl(entry.getValue()));
+            ret.put(entry.getKey(), new ServletRegistrationImpl(entry.getValue(), deploymentInfo));
         }
         return ret;
     }
@@ -348,6 +350,8 @@ public class ServletContextImpl implements ServletContext {
         try {
             return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (InstantiationException e) {
+            throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
+        } catch (NoSuchMethodException e) {
             throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
         }
     }
@@ -407,7 +411,12 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void addListener(final Class<? extends EventListener> listenerClass) {
-        InstanceFactory<? extends EventListener> factory = deploymentInfo.getClassIntrospecter().createInstanceFactory(listenerClass);
+        InstanceFactory<? extends EventListener> factory = null;
+        try {
+            factory = deploymentInfo.getClassIntrospecter().createInstanceFactory(listenerClass);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException(e);
+        }
         deploymentInfo.addListener(new ListenerInfo(listenerClass, factory));
     }
 
@@ -416,7 +425,9 @@ public class ServletContextImpl implements ServletContext {
         try {
             return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (InstantiationException e) {
-            throw new ServletException(e);
+            throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
+        } catch (NoSuchMethodException e) {
+            throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
         }
     }
 

@@ -29,6 +29,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -56,17 +57,22 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     private volatile BlockingHttpHandler handler;
     private final Executor executor;
+    /**
+     * The information about the target5 servlet. This may be null.
+     */
+    private final ServletInfo servletInfo;
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final Executor executor) {
+    public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final Executor executor, final ServletInfo servletInfo) {
         this.next = next;
         this.asyncPath = asyncPath;
         this.setupAction = setupAction;
         this.servletContext = servletContext;
         this.executor = executor;
+        this.servletInfo = servletInfo;
     }
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final Executor executor) {
-        this(next, null, setupAction, servletContext, executor);
+    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final Executor executor, final ServletInfo servletInfo) {
+        this(next, null, setupAction, servletContext, executor, servletInfo);
     }
 
     @Override
@@ -140,5 +146,9 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     public BlockingHttpHandler getNext() {
         return next;
+    }
+
+    public ServletInfo getServletInfo() {
+        return servletInfo;
     }
 }

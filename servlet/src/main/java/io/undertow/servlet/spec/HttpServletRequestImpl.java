@@ -22,6 +22,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,6 +62,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
+import org.xnio.LocalSocketAddress;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -168,7 +171,11 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public int getIntHeader(final String name) {
-        return Integer.parseInt(getHeader(name));
+        String header = getHeader(name);
+        if(header == null) {
+            return -1;
+        }
+        return Integer.parseInt(header);
     }
 
     @Override
@@ -420,7 +427,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getServerName() {
-        return null;
+        return exchange.getExchange().getSourceAddress().getHostName();
     }
 
     @Override
@@ -502,12 +509,22 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getLocalAddr() {
+        SocketAddress address =  exchange.getExchange().getConnection().getLocalAddress();
+        if(address instanceof InetSocketAddress) {
+            return ((InetSocketAddress)address).getHostName();
+        } else if( address instanceof LocalSocketAddress) {
+            return ((LocalSocketAddress)address).getName();
+        }
         return null;
     }
 
     @Override
     public int getLocalPort() {
-        return 0;
+        SocketAddress address =  exchange.getExchange().getConnection().getLocalAddress();
+        if(address instanceof InetSocketAddress) {
+            return ((InetSocketAddress)address).getPort();
+        }
+        return -1;
     }
 
     @Override

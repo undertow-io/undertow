@@ -27,6 +27,7 @@ import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletRegistration;
 import javax.servlet.ServletSecurityElement;
 
+import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletInfo;
 
 /**
@@ -35,9 +36,11 @@ import io.undertow.servlet.api.ServletInfo;
 public class ServletRegistrationImpl implements ServletRegistration, ServletRegistration.Dynamic {
 
     private final ServletInfo servletInfo;
+    private final DeploymentInfo deploymentInfo;
 
-    public ServletRegistrationImpl(final ServletInfo servletInfo) {
+    public ServletRegistrationImpl(final ServletInfo servletInfo, final DeploymentInfo deploymentInfo) {
         this.servletInfo = servletInfo;
+        this.deploymentInfo = deploymentInfo;
     }
 
     @Override
@@ -68,8 +71,12 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
     @Override
     public Set<String> addMapping(final String... urlPatterns) {
         final Set<String> ret = new HashSet<String>();
+        final Set<String> existing = new HashSet<String>();
+        for(ServletInfo s : deploymentInfo.getServlets().values()){
+            existing.addAll(s.getMappings());
+        }
         for(String pattern : urlPatterns) {
-            if(servletInfo.getMappings().contains(pattern)) {
+            if(!existing.contains(pattern)) {
                 ret.add(pattern);
                 servletInfo.addMapping(pattern);
             }

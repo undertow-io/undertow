@@ -40,6 +40,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.file.DirectFileCache;
 import io.undertow.server.handlers.file.FileCache;
+import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.ResourceLoader;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
@@ -60,7 +61,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     private static final String[] DEFAULT_ALLOWED_EXTENSIONS = {"js", "css", "png", "jpg", "gif", "html", "htm"};
     private static final String[] DEFAULT_DISALLOWED_EXTENSIONS = {"class", "jar", "war", "zip", "xml"};
 
-    private final ResourceLoader resourceLoader;
+    private final Deployment deployment;
     private volatile FileCache fileCache = DirectFileCache.INSTANCE;
 
     private volatile boolean defaultAllowed = false;
@@ -70,8 +71,8 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
 
     private final List<String> welcomePages;
 
-    public DefaultServlet(final ResourceLoader resourceLoader, final List<String> welcomePages) {
-        this.resourceLoader = resourceLoader;
+    public DefaultServlet(final Deployment deployment, final List<String> welcomePages) {
+        this.deployment = deployment;
         this.welcomePages = welcomePages;
         allowed.addAll(Arrays.asList(DEFAULT_ALLOWED_EXTENSIONS));
         disallowed.addAll(Arrays.asList(DEFAULT_DISALLOWED_EXTENSIONS));
@@ -85,7 +86,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             return;
         }
         ServletOutputStream out = null;
-        final File resource = resourceLoader.getResource(path);
+        final File resource = deployment.getDeploymentInfo().getResourceLoader().getResource(path);
         if (resource == null) {
             resp.setStatus(404);
             return;
@@ -116,7 +117,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             completionHandler.handleComplete();
             return;
         }
-        File resource = resourceLoader.getResource(exchange.getRelativePath());
+        File resource = deployment.getDeploymentInfo().getResourceLoader().getResource(exchange.getRelativePath());
         if (resource == null) {
             exchange.setResponseCode(404);
             completionHandler.handleComplete();
@@ -129,7 +130,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     }
 
     private void handleWelcomePage(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File resource) {
-        final String found = findWelcomeResource(resource);
+        final String found = findWelcomeResource(resource, exchange.getRelativePath().endsWith("/") ? exchange.getRelativePath() : exchange.getRelativePath() + "/");
         if (found != null) {
             exchange.setResponseCode(302);
             StringBuilder newLocation = new StringBuilder(exchange.getRequestURL());
@@ -146,7 +147,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     }
 
     private void handleWelcomePage(final HttpServletRequest req, final HttpServletResponse resp, final File resource) {
-        final String found = findWelcomeResource(resource);
+        final String found = findWelcomeResource(resource, req.getPathInfo().endsWith("/") ? req.getPathInfo() : req.getPathInfo() + "/");
         if (found != null) {
             resp.setStatus(302);
             StringBuffer newLocation = req.getRequestURL();
@@ -160,10 +161,17 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         }
     }
 
-    private String findWelcomeResource(final File resource) {
+    private String findWelcomeResource(final File resource, final String path) {
         for (String i : welcomePages) {
             final File res = new File(resource + File.separator + i);
             if (res.exists()) {
+                return i;
+            }
+        }
+
+        for (String i : welcomePages) {
+            final ServletInitialHandler handler = deployment.getServletPaths().getServletHandlerByPath(path + i);
+            if(handler.getServletInfo() != null) {
                 return i;
             }
         }

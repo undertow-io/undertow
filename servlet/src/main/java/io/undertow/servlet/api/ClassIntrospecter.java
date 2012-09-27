@@ -35,6 +35,6 @@ import javax.servlet.Servlet;
  */
 public interface ClassIntrospecter {
 
-    <T> InstanceFactory<T> createInstanceFactory(final Class<T> clazz);
+    <T> InstanceFactory<T> createInstanceFactory(final Class<T> clazz) throws NoSuchMethodException;
 
 }
