@@ -62,27 +62,10 @@ public class ServletServer extends BlockJUnit4ClassRunner {
     private static Xnio xnio;
 
     /**
-     * The executor service that is provided to
-     */
-    private static ExecutorService blockingExecutorService;
-
-    /**
      * @return The base URL that can be used to make connections to this server
      */
     public static String getDefaultServerAddress() {
         return "http://" + getHostAddress(DEFAULT) + ":" + getHostPort(DEFAULT);
-    }
-
-    /**
-     * This method returns a new blocking handler. The executor service it uses has its lifecycle controlled
-     * by the test framework, so should not be shut down between tests.
-     *
-     * @return A new blocking handler
-     */
-    public static BlockingHandler newBlockingHandler() {
-        final BlockingHandler ret = new BlockingHandler();
-        ret.setExecutor(blockingExecutorService);
-        return ret;
     }
 
     public ServletServer(Class<?> klass) throws InitializationError {
@@ -105,7 +88,6 @@ public class ServletServer extends BlockJUnit4ClassRunner {
             first = false;
             xnio = Xnio.getInstance("nio", ServletServer.class.getClassLoader());
             try {
-                blockingExecutorService = Executors.newFixedThreadPool(10);
                 worker = xnio.createWorker(OptionMap.builder()
                         .set(Options.WORKER_WRITE_THREADS, 4)
                         .set(Options.WORKER_READ_THREADS, 4)
@@ -134,7 +116,6 @@ public class ServletServer extends BlockJUnit4ClassRunner {
                 public void testRunFinished(final Result result) throws Exception {
                     server.close();
                     worker.shutdown();
-                    blockingExecutorService.shutdownNow();
                 }
             });
         }
@@ -157,10 +138,6 @@ public class ServletServer extends BlockJUnit4ClassRunner {
 
     private static int getHostPort(String serverName) {
         return Integer.getInteger(serverName + ".server.port", 7777);
-    }
-
-    public static ExecutorService getBlockingExecutorService() {
-        return blockingExecutorService;
     }
 
     public static class Parameterized extends org.junit.runners.Parameterized {

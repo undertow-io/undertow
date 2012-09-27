@@ -19,18 +19,24 @@
 package io.undertow.util;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
 
 import io.undertow.server.HttpServerExchange;
 
 /**
+ *
+ * Class that deals with a worker thread pools
+ *
  * @author Stuart Douglas
  */
 public class WorkerDispatcher {
 
     private static final ThreadLocal<Boolean> executingInWorker = new ThreadLocal<Boolean>();
 
+    public static final AttachmentKey<Executor> EXECUTOR_ATTACHMENT_KEY = AttachmentKey.create(Executor.class);
 
-    public static void dispatch(final Executor executor, final HttpServerExchange exchange, final Runnable runnable) {
+    public static void dispatch( final HttpServerExchange exchange, final Runnable runnable) {
+        Executor executor = exchange.getAttachment(EXECUTOR_ATTACHMENT_KEY);
         Boolean executing = executingInWorker.get();
         if (executing != null && executing) {
             runnable.run();
@@ -47,10 +53,6 @@ public class WorkerDispatcher {
                 }
             });
         }
-    }
-
-    public static void dispatch(final HttpServerExchange exchange, final Runnable runnable) {
-        dispatch(null, exchange, runnable);
     }
 
     private WorkerDispatcher() {

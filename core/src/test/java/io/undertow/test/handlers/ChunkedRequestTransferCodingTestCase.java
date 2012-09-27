@@ -61,7 +61,7 @@ public class ChunkedRequestTransferCodingTestCase {
 
     @BeforeClass
     public static void setup() {
-        final BlockingHandler blockingHandler = DefaultServer.newBlockingHandler();
+        final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(new BlockingHttpHandler() {
             @Override

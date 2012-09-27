@@ -20,6 +20,7 @@ package io.undertow.server.session;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -165,6 +166,7 @@ public class InMemorySessionManager implements SessionManager {
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
+            sess.lastAccessed = new Date().getTime();
             return new FinishedIoFuture<Object>(sess.attributes.get(name));
         }
 
@@ -174,6 +176,7 @@ public class InMemorySessionManager implements SessionManager {
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
+            sess.lastAccessed = new Date().getTime();
             return new FinishedIoFuture<Set<String>>(sess.attributes.keySet());
         }
 
@@ -191,6 +194,7 @@ public class InMemorySessionManager implements SessionManager {
                     listener.attributeUpdated(sess.session, name, value);
                 }
             }
+            sess.lastAccessed = new Date().getTime();
             return new FinishedIoFuture<Object>(existing);
         }
 
@@ -204,11 +208,15 @@ public class InMemorySessionManager implements SessionManager {
             for (SessionListener listener : listeners) {
                 listener.attributeRemoved(sess.session, name);
             }
+            sess.lastAccessed = new Date().getTime();
             return new FinishedIoFuture<Object>(existing);
         }
         @Override
         public IoFuture<Void> invalidate(final HttpServerExchange exchange) {
             final InMemorySession sess = sessions.remove(sessionId);
+            if(sess == null) {
+                throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
+            }
             if (sess != null) {
                 for (SessionListener listener : listeners) {
                     listener.sessionDestroyed(sess.session, exchange, false);

@@ -107,4 +107,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10021, value = "Path %s must start with a /")
     MalformedURLException pathMustStartWithSlash(String path);
+
+    @Message(id = 10022, value = "Session is invalid")
+    IllegalStateException sessionIsInvalid();
 }

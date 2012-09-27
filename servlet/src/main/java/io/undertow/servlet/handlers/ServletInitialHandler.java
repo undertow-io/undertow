@@ -56,7 +56,6 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
     private final ServletContextImpl servletContext;
 
     private volatile BlockingHttpHandler handler;
-    private final Executor executor;
     /**
      * The information about the target5 servlet. This may be null.
      */
@@ -67,7 +66,6 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         this.asyncPath = asyncPath;
         this.setupAction = setupAction;
         this.servletContext = servletContext;
-        this.executor = executor;
         this.servletInfo = servletInfo;
     }
 
@@ -83,7 +81,6 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
             return;
         }
         final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange);
-        final Executor executor = this.executor;
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -100,7 +97,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 }
             }
         };
-        WorkerDispatcher.dispatch(executor, exchange, runnable);
+        WorkerDispatcher.dispatch(exchange, runnable);
     }
 
 
@@ -125,10 +122,6 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         } else {
             next.handleRequest(exchange);
         }
-    }
-
-    public Executor getExecutor() {
-        return executor;
     }
 
     public BlockingHttpHandler getHandler() {

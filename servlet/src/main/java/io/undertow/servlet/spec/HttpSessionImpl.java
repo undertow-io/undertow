@@ -26,8 +26,10 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionContext;
 
+import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
+import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.util.IteratorEnumeration;
 import org.xnio.IoFuture;
@@ -42,6 +44,7 @@ public class HttpSessionImpl implements HttpSession {
     private final ApplicationListeners applicationListeners;
     private final HttpServerExchange exchange;
     private final boolean newSession;
+    private volatile boolean invalid;
 
     public HttpSessionImpl(final Session session, final ServletContext servletContext, final ApplicationListeners applicationListeners, final HttpServerExchange exchange, final boolean newSession) {
         this.session = session;
@@ -162,11 +165,15 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public void invalidate() {
+        invalid = true;
         session.invalidate(exchange);
     }
 
     @Override
     public boolean isNew() {
+        if(invalid) {
+            throw UndertowServletMessages.MESSAGES.sessionIsInvalid();
+        }
         return newSession;
     }
 }
