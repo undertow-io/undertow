@@ -55,6 +55,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.core.ManagedListener;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
@@ -142,6 +143,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public URL getResource(final String path) throws MalformedURLException {
+        if(!path.startsWith("/")) {
+            throw UndertowServletMessages.MESSAGES.pathMustStartWithSlash(path);
+        }
         File resource = deploymentInfo.getResourceLoader().getResource(path);
         if (resource == null) {
             return null;
@@ -249,11 +253,19 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void setAttribute(final String name, final Object object) {
-        Object existing = attributes.put(name, object);
-        if (existing != null) {
-            deployment.getApplicationListeners().servletContextAttributeReplaced(name, existing);
+
+        if (object == null) {
+            Object existing = attributes.remove(name);
+            if (existing != null) {
+                deployment.getApplicationListeners().servletContextAttributeRemoved(name, existing);
+            }
         } else {
-            deployment.getApplicationListeners().servletContextAttributeAdded(name, object);
+            Object existing = attributes.put(name, object);
+            if (existing != null) {
+                deployment.getApplicationListeners().servletContextAttributeReplaced(name, existing);
+            } else {
+                deployment.getApplicationListeners().servletContextAttributeAdded(name, object);
+            }
         }
     }
 
@@ -406,7 +418,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends EventListener> void addListener(final T t) {
-        deploymentInfo.addListener(new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t)));
+        ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t));
+        deploymentInfo.addListener(listener);
+        deployment.getApplicationListeners().addListener(new ManagedListener(listener, deployment.getServletContext()));
     }
 
     @Override
@@ -417,7 +431,9 @@ public class ServletContextImpl implements ServletContext {
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException(e);
         }
-        deploymentInfo.addListener(new ListenerInfo(listenerClass, factory));
+        final ListenerInfo listener = new ListenerInfo(listenerClass, factory);
+        deploymentInfo.addListener(listener);
+        deployment.getApplicationListeners().addListener(new ManagedListener(listener, deployment.getServletContext()));
     }
 
     @Override

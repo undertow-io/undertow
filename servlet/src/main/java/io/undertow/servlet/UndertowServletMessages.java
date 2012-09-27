@@ -20,6 +20,7 @@ package io.undertow.servlet;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 
 import javax.servlet.Filter;
 import javax.servlet.Servlet;
@@ -103,4 +104,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10020, value = "Content has been written")
     IllegalStateException contentHasBeenWritten();
+
+    @Message(id = 10021, value = "Path %s must start with a /")
+    MalformedURLException pathMustStartWithSlash(String path);
 }

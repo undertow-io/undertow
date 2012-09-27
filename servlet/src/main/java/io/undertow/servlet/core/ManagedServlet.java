@@ -21,6 +21,7 @@ package io.undertow.servlet.core;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.SingleThreadModel;
+import javax.servlet.UnavailableException;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceFactory;
@@ -40,6 +41,7 @@ public class ManagedServlet implements Lifecycle {
 
     private volatile boolean started = false;
     private final InstanceStrategy instanceStrategy;
+    private volatile boolean permanentlyUnavailable = false;
 
     public ManagedServlet(final ServletInfo servletInfo, final ServletContextImpl servletContext) {
         this.servletInfo = servletInfo;
@@ -52,9 +54,19 @@ public class ManagedServlet implements Lifecycle {
 
 
     public synchronized void start() throws ServletException {
-        if (!started && servletInfo.getLoadOnStartup() != null && servletInfo.getLoadOnStartup() >= 0) {
-            instanceStrategy.start();
-            started = true;
+        if(permanentlyUnavailable) {
+            return;
+        }
+        try {
+            if (!started && servletInfo.getLoadOnStartup() != null && servletInfo.getLoadOnStartup() >= 0) {
+                instanceStrategy.start();
+                started = true;
+            }
+        } catch (UnavailableException e) {
+            if (e.isPermanent()) {
+                permanentlyUnavailable = true;
+                stop();
+            }
         }
     }
 
@@ -68,6 +80,14 @@ public class ManagedServlet implements Lifecycle {
     @Override
     public boolean isStarted() {
         return started;
+    }
+
+    public boolean isPermanentlyUnavailable() {
+        return permanentlyUnavailable;
+    }
+
+    public void setPermanentlyUnavailable(final boolean permanentlyUnavailable) {
+        this.permanentlyUnavailable = permanentlyUnavailable;
     }
 
     public InstanceHandle<? extends Servlet> getServlet() throws ServletException {
@@ -201,4 +221,6 @@ public class ManagedServlet implements Lifecycle {
 
         }
     }
+
+
 }

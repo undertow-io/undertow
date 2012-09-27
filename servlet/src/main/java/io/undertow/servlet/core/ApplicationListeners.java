@@ -20,6 +20,7 @@ package io.undertow.servlet.core;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextAttributeEvent;
@@ -62,39 +63,38 @@ public class ApplicationListeners implements Lifecycle {
 
     public ApplicationListeners(final List<ManagedListener> allListeners, final ServletContext servletContext) {
         this.servletContext = servletContext;
-        List<ManagedListener> servletContextListeners = new ArrayList<ManagedListener>();
-        List<ManagedListener> servletContextAttributeListeners = new ArrayList<ManagedListener>();
-        List<ManagedListener> servletRequestListeners = new ArrayList<ManagedListener>();
-        List<ManagedListener> servletRequestAttributeListeners = new ArrayList<ManagedListener>();
-        List<ManagedListener> httpSessionListeners = new ArrayList<ManagedListener>();
-        List<ManagedListener> httpSessionAttributeListeners = new ArrayList<ManagedListener>();
+        servletContextListeners = new CopyOnWriteArrayList<ManagedListener>();
+        servletContextAttributeListeners = new CopyOnWriteArrayList<ManagedListener>();
+        servletRequestListeners = new CopyOnWriteArrayList<ManagedListener>();
+        servletRequestAttributeListeners = new CopyOnWriteArrayList<ManagedListener>();
+        httpSessionListeners = new CopyOnWriteArrayList<ManagedListener>();
+        httpSessionAttributeListeners = new CopyOnWriteArrayList<ManagedListener>();
+        this.allListeners = new CopyOnWriteArrayList<ManagedListener>();
         for (final ManagedListener listener : allListeners) {
-            if (ServletContextListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
-                servletContextListeners.add(listener);
-            }
-            if (ServletContextAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
-                servletContextAttributeListeners.add(listener);
-            }
-            if (ServletRequestListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
-                servletRequestListeners.add(listener);
-            }
-            if (ServletRequestAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
-                servletRequestAttributeListeners.add(listener);
-            }
-            if (HttpSessionListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
-                httpSessionListeners.add(listener);
-            }
-            if (HttpSessionAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
-                httpSessionAttributeListeners.add(listener);
-            }
+            addListener(listener);
         }
-        this.servletContextListeners = servletContextListeners;
-        this.servletContextAttributeListeners = servletContextAttributeListeners;
-        this.servletRequestListeners = servletRequestListeners;
-        this.servletRequestAttributeListeners = servletRequestAttributeListeners;
-        this.httpSessionListeners = httpSessionListeners;
-        this.httpSessionAttributeListeners = httpSessionAttributeListeners;
-        this.allListeners = allListeners;
+    }
+
+    public void addListener(final ManagedListener listener) {
+        if (ServletContextListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+            servletContextListeners.add(listener);
+        }
+        if (ServletContextAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+            servletContextAttributeListeners.add(listener);
+        }
+        if (ServletRequestListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+            servletRequestListeners.add(listener);
+        }
+        if (ServletRequestAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+            servletRequestAttributeListeners.add(listener);
+        }
+        if (HttpSessionListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+            httpSessionListeners.add(listener);
+        }
+        if (HttpSessionAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+            httpSessionAttributeListeners.add(listener);
+        }
+        this.allListeners.add(listener);
     }
 
     public void start() {
