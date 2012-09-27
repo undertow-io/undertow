@@ -169,6 +169,8 @@ public final class Headers {
     public static final String CONTENT_TRANSFER_ENCODING_STRING = "Content-Transfer-Encoding";
     public static final HttpString CONTENT_TRANSFER_ENCODING = new HttpString(CONTENT_TRANSFER_ENCODING_STRING);
 
+    // Authentication Schemes
+    public static final String BASIC = "Basic";
 
     /**
      * Extracts a token from a header that has a given key. For instance if the header is

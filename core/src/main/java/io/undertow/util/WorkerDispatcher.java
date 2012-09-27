@@ -19,7 +19,6 @@
 package io.undertow.util;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
 
 import io.undertow.server.HttpServerExchange;
 import org.xnio.channels.StreamSourceChannel;
