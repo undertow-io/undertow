@@ -72,13 +72,22 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
     public Set<String> addMapping(final String... urlPatterns) {
         final Set<String> ret = new HashSet<String>();
         final Set<String> existing = new HashSet<String>();
-        for(ServletInfo s : deploymentInfo.getServlets().values()){
-            existing.addAll(s.getMappings());
+        for (ServletInfo s : deploymentInfo.getServlets().values()) {
+            if(!s.getName().equals(servletInfo.getName())) {
+                existing.addAll(s.getMappings());
+            }
         }
-        for(String pattern : urlPatterns) {
-            if(!existing.contains(pattern)) {
+        for (String pattern : urlPatterns) {
+            if (existing.contains(pattern)) {
                 ret.add(pattern);
-                servletInfo.addMapping(pattern);
+            }
+        }
+        //only update if no changes have been made
+        if (ret.isEmpty()) {
+            for (String pattern : urlPatterns) {
+                if(!servletInfo.getMappings().contains(pattern)) {
+                    servletInfo.addMapping(pattern);
+                }
             }
         }
         return ret;
