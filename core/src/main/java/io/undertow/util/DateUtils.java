@@ -35,7 +35,7 @@ public class DateUtils {
 
     private static final TimeZone GMT_ZONE = TimeZone.getTimeZone("GMT");
 
-    private static final String RFC1123_PATTERN = "EEE, dd MMM yyyyy HH:mm:ss z";
+    private static final String RFC1123_PATTERN = "EEE, dd MMM yyyy HH:mm:ss z";
 
     private static final String RFC1036_PATTERN = "EEEEEEEEE, dd-MMM-yy HH:mm:ss z";
 
