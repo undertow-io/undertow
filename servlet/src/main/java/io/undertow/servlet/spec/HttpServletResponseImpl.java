@@ -32,6 +32,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
+import io.undertow.server.ChannelWrapper;
 import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
@@ -39,6 +40,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
+import org.xnio.channels.StreamSinkChannel;
 
 /**
  * @author Stuart Douglas
@@ -174,7 +176,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String getContentType() {
-        return null;
+        return exchange.getExchange().getResponseHeaders().getFirst(Headers.CONTENT_TYPE);
     }
 
     @Override
@@ -289,4 +291,5 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             }
         }
     }
+
 }

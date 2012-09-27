@@ -372,7 +372,7 @@ public abstract class HttpParser {
                         String headerValue = stringBuilder.toString();
 
                         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
-                        builder.headers.put(nextStandardHeader, headerValue);
+                        builder.headers.add(nextStandardHeader, headerValue);
 
                         state.nextHeader = null;
 

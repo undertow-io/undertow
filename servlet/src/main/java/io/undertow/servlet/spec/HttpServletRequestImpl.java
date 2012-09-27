@@ -103,15 +103,24 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public Cookie[] getCookies() {
         if (cookies == null) {
             Map<String, io.undertow.server.handlers.Cookie> cookies = io.undertow.server.handlers.Cookie.getRequestCookies(exchange.getExchange());
+            if(cookies.isEmpty()) {
+                return null;
+            }
             Cookie[] value = new Cookie[cookies.size()];
             int i = 0;
             for (Map.Entry<String, io.undertow.server.handlers.Cookie> entry : cookies.entrySet()) {
                 io.undertow.server.handlers.Cookie cookie = entry.getValue();
                 Cookie c = new Cookie(cookie.getName(), cookie.getValue());
-                c.setDomain(cookie.getDomain());
+                if(cookie.getDomain() != null) {
+                    c.setDomain(cookie.getDomain());
+                }
                 c.setHttpOnly(cookie.isHttpOnly());
-                c.setMaxAge(cookie.getMaxAge());
-                c.setPath(cookie.getPath());
+                if(cookie.getMaxAge() != null) {
+                    c.setMaxAge(cookie.getMaxAge());
+                }
+                if(cookie.getPath() != null) {
+                    c.setPath(cookie.getPath());
+                }
                 c.setSecure(cookie.isSecure());
                 c.setVersion(cookie.getVersion());
                 value[i++] = c;
