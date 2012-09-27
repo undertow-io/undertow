@@ -19,9 +19,11 @@
 package io.undertow.server.handlers;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 
 import io.undertow.UndertowLogger;
@@ -126,51 +128,83 @@ public class CookieHandler implements HttpHandler {
     }
 
 
-    private static void addResponseCookieToExchange(final Cookie cookie, final HttpServerExchange exchange) {
-        if (exchange.isResponseStarted()) {
-            UndertowLogger.REQUEST_LOGGER.couldNotSendSessionCookieAsResponseAlreadyStarted();
-            return;
+    private static String getCookieString(final Cookie cookie) {
+        switch (cookie.getVersion()) {
+            case 0:
+                return getVersion0CookieString(cookie);
+            case 1:
+            default:
+                return addVersion1ResponseCookieToExchange(cookie);
         }
-        String headerName = Headers.SET_COOKIE;
+    }
+
+    private static String getVersion0CookieString(final Cookie cookie) {
         final StringBuilder header = new StringBuilder(cookie.getName());
-        header.append("=\"");
+        header.append("=");
         header.append(cookie.getValue());
-        header.append("\"; ");
-        if (cookie.getVersion() == 1) {
-            header.append("Version=\"1\"; ");
-            headerName = Headers.SET_COOKIE2;
-        }
+
         if (cookie.getPath() != null) {
-            header.append("Path=");
+            header.append("; path=");
             header.append(cookie.getPath());
-            header.append("; ");
         }
         if (cookie.getDomain() != null) {
-            header.append("Domain=");
+            header.append("; domain=");
             header.append(cookie.getDomain());
-            header.append("; ");
         }
         if (cookie.isDiscard()) {
-            header.append("Discard; ");
+            header.append("; Discard");
         }
         if (cookie.isSecure()) {
-            header.append("Secure; ");
+            header.append("; Secure");
         }
         if (cookie.isHttpOnly()) {
-            header.append("HttpOnly; ");
-        }
-        if (cookie.getMaxAge() != null) {
-            header.append("Max-Age=");
-            header.append(cookie.getMaxAge());
-            header.append("; ");
+            header.append("; HttpOnly");
         }
         if (cookie.getExpires() != null) {
-            header.append("Expires=");
+            header.append("; Expires=");
             header.append(DateUtils.toDateString(cookie.getExpires()));
-            header.append("; ");
+        } else if (cookie.getMaxAge() != null) {
+            Date expires = new Date();
+            expires.setTime(expires.getTime() + cookie.getMaxAge());
+            header.append("; Expires=");
+            header.append(DateUtils.toDateString(expires));
         }
-        exchange.getResponseHeaders().add(headerName, header.toString());
+        return header.toString();
 
+    }
+
+    private static String addVersion1ResponseCookieToExchange(final Cookie cookie) {
+
+        final StringBuilder header = new StringBuilder(cookie.getName());
+        header.append("=");
+        header.append(cookie.getValue());
+        header.append("; Version=\"1\"");
+        if (cookie.getPath() != null) {
+            header.append("; Path=");
+            header.append(cookie.getPath());
+        }
+        if (cookie.getDomain() != null) {
+            header.append("; Domain=");
+            header.append(cookie.getDomain());
+        }
+        if (cookie.isDiscard()) {
+            header.append("; Discard");
+        }
+        if (cookie.isSecure()) {
+            header.append("; Secure");
+        }
+        if (cookie.isHttpOnly()) {
+            header.append("; HttpOnly");
+        }
+        if (cookie.getMaxAge() != null) {
+            header.append("; Max-Age=");
+            header.append(cookie.getMaxAge());
+        }
+        if (cookie.getExpires() != null) {
+            header.append("; Expires=");
+            header.append(DateUtils.toDateString(cookie.getExpires()));
+        }
+        return header.toString();
     }
 
     public HttpHandler getNext() {
@@ -190,10 +224,18 @@ public class CookieHandler implements HttpHandler {
         public StreamSinkChannel wrap(final StreamSinkChannel channel, final HttpServerExchange exchange) {
 
             final List<Cookie> cookies = exchange.getAttachmentList(Cookie.RESPONSE_COOKIES);
-            for (Cookie cookie : cookies) {
-                addResponseCookieToExchange(cookie, exchange);
+            if (!cookies.isEmpty()) {
+                StringBuilder builder = new StringBuilder();
+                ListIterator<Cookie> it = cookies.listIterator();
+                while (it.hasNext()) {
+                    Cookie cookie = it.next();
+                    builder.append(getCookieString(cookie));
+                    if (it.hasNext()) {
+                        builder.append(", ");
+                    }
+                }
+                exchange.getResponseHeaders().put(Headers.SET_COOKIE, builder.toString());
             }
-
             return channel;
         }
     }
