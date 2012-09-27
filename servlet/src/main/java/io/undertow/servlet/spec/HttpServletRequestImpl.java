@@ -31,9 +31,12 @@ import java.util.Date;
 import java.util.Deque;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
@@ -106,7 +109,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public Cookie[] getCookies() {
         if (cookies == null) {
             Map<String, io.undertow.server.handlers.Cookie> cookies = io.undertow.server.handlers.Cookie.getRequestCookies(exchange.getExchange());
-            if(cookies.isEmpty()) {
+            if (cookies.isEmpty()) {
                 return null;
             }
             Cookie[] value = new Cookie[cookies.size()];
@@ -114,14 +117,14 @@ public class HttpServletRequestImpl implements HttpServletRequest {
             for (Map.Entry<String, io.undertow.server.handlers.Cookie> entry : cookies.entrySet()) {
                 io.undertow.server.handlers.Cookie cookie = entry.getValue();
                 Cookie c = new Cookie(cookie.getName(), cookie.getValue());
-                if(cookie.getDomain() != null) {
+                if (cookie.getDomain() != null) {
                     c.setDomain(cookie.getDomain());
                 }
                 c.setHttpOnly(cookie.isHttpOnly());
-                if(cookie.getMaxAge() != null) {
+                if (cookie.getMaxAge() != null) {
                     c.setMaxAge(cookie.getMaxAge());
                 }
-                if(cookie.getPath() != null) {
+                if (cookie.getPath() != null) {
                     c.setPath(cookie.getPath());
                 }
                 c.setSecure(cookie.isSecure());
@@ -172,7 +175,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public int getIntHeader(final String name) {
         String header = getHeader(name);
-        if(header == null) {
+        if (header == null) {
             return -1;
         }
         return Integer.parseInt(header);
@@ -387,23 +390,75 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public String getParameter(final String name) {
         Deque<String> params = exchange.getExchange().getQueryParameters().get(name);
         if (params == null) {
-            return null;
+            if (exchange.getExchange().getRequestMethod().equalsIgnoreCase("POST")) {
+                final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+                if (parser != null) {
+                    try {
+                        FormData.FormValue res = parser.parseBlocking().getFirst(name);
+                        if (res == null) {
+                            return null;
+                        } else {
+                            return res.getValue();
+                        }
+
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
         }
         return params.getFirst();
     }
 
     @Override
     public Enumeration<String> getParameterNames() {
-        return new IteratorEnumeration<String>(exchange.getExchange().getQueryParameters().keySet().iterator());
+        final Set<String> parameterNames = new HashSet<String>(exchange.getExchange().getQueryParameters().keySet());
+        if (exchange.getExchange().getRequestMethod().equalsIgnoreCase("POST")) {
+            final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+            if (parser != null) {
+                try {
+                    FormData formData = parser.parseBlocking();
+                    Iterator<String> it = formData.iterator();
+                    while (it.hasNext()) {
+                        parameterNames.add(it.next());
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return new IteratorEnumeration<String>(parameterNames.iterator());
     }
 
     @Override
     public String[] getParameterValues(final String name) {
+        final List<String> ret = new ArrayList<String>();
         Deque<String> params = exchange.getExchange().getQueryParameters().get(name);
-        if (params == null) {
+        if (params != null) {
+            ret.addAll(params);
+        }
+        if (exchange.getExchange().getRequestMethod().equalsIgnoreCase("POST")) {
+            final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+            if (parser != null) {
+                try {
+                    Deque<FormData.FormValue> res = parser.parseBlocking().get(name);
+                    if (res == null) {
+                        return null;
+                    } else {
+                        for (FormData.FormValue value : res) {
+                            ret.add(value.getValue());
+                        }
+                    }
+
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        if (ret.isEmpty()) {
             return null;
         }
-        return params.toArray(new String[params.size()]);
+        return ret.toArray(new String[ret.size()]);
     }
 
     @Override
@@ -509,20 +564,20 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getLocalAddr() {
-        SocketAddress address =  exchange.getExchange().getConnection().getLocalAddress();
-        if(address instanceof InetSocketAddress) {
-            return ((InetSocketAddress)address).getHostName();
-        } else if( address instanceof LocalSocketAddress) {
-            return ((LocalSocketAddress)address).getName();
+        SocketAddress address = exchange.getExchange().getConnection().getLocalAddress();
+        if (address instanceof InetSocketAddress) {
+            return ((InetSocketAddress) address).getHostName();
+        } else if (address instanceof LocalSocketAddress) {
+            return ((LocalSocketAddress) address).getName();
         }
         return null;
     }
 
     @Override
     public int getLocalPort() {
-        SocketAddress address =  exchange.getExchange().getConnection().getLocalAddress();
-        if(address instanceof InetSocketAddress) {
-            return ((InetSocketAddress)address).getPort();
+        SocketAddress address = exchange.getExchange().getConnection().getLocalAddress();
+        if (address instanceof InetSocketAddress) {
+            return ((InetSocketAddress) address).getPort();
         }
         return -1;
     }
@@ -554,7 +609,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public AsyncContext getAsyncContext() {
-        if(asyncContext == null) {
+        if (asyncContext == null) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }
         return asyncContext;
