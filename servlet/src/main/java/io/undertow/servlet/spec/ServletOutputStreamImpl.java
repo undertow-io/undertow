@@ -165,7 +165,12 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                     servletResponse.setHeader(Headers.CONTENT_LENGTH, "" + buffer.position());
                 }
             }
-            writeBuffer();
+            if(buffer != null) {
+                writeBuffer();
+            }
+            if (channel == null) {
+                channel = channelFactory.create();
+            }
             StreamSinkChannel channel = this.channel;
             channel.shutdownWrites();
             Channels.flushBlocking(channel);

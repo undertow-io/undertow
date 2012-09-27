@@ -434,7 +434,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
             deployment.getApplicationListeners().stop();
             deployment = null;
         } finally {
-            executor.release();
+            if (executor != null) {
+                executor.release();
+            }
         }
     }
 
