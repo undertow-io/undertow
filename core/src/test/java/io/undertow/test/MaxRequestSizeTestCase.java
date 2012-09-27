@@ -36,6 +36,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
@@ -44,6 +45,7 @@ import org.xnio.OptionMap;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@Ignore
 public class MaxRequestSizeTestCase {
 
     public static final String A_MESSAGE = "A message";
