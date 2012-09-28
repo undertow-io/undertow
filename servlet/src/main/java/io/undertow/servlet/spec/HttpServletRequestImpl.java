@@ -62,6 +62,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -90,10 +91,12 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     private volatile List<Part> parts = null;
     private HttpSessionImpl httpSession;
     private AsyncContextImpl asyncContext = null;
+    private Map<String, Deque<String>> queryParameters;
 
     public HttpServletRequestImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
         this.servletContext = servletContext;
+        this.queryParameters = exchange.getExchange().getQueryParameters();
     }
 
     public BlockingHttpServerExchange getExchange() {
@@ -388,7 +391,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getParameter(final String name) {
-        Deque<String> params = exchange.getExchange().getQueryParameters().get(name);
+        Deque<String> params = queryParameters.get(name);
         if (params == null) {
             if (exchange.getExchange().getRequestMethod().equalsIgnoreCase("POST")) {
                 final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
@@ -406,13 +409,14 @@ public class HttpServletRequestImpl implements HttpServletRequest {
                     }
                 }
             }
+            return null;
         }
         return params.getFirst();
     }
 
     @Override
     public Enumeration<String> getParameterNames() {
-        final Set<String> parameterNames = new HashSet<String>(exchange.getExchange().getQueryParameters().keySet());
+        final Set<String> parameterNames = new HashSet<String>(queryParameters.keySet());
         if (exchange.getExchange().getRequestMethod().equalsIgnoreCase("POST")) {
             final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
             if (parser != null) {
@@ -433,7 +437,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public String[] getParameterValues(final String name) {
         final List<String> ret = new ArrayList<String>();
-        Deque<String> params = exchange.getExchange().getQueryParameters().get(name);
+        Deque<String> params = queryParameters.get(name);
         if (params != null) {
             ret.addAll(params);
         }
@@ -464,8 +468,40 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Map<String, String[]> getParameterMap() {
         final Map<String, String[]> ret = new HashMap<String, String[]>();
-        for (Map.Entry<String, Deque<String>> entry : exchange.getExchange().getQueryParameters().entrySet()) {
+        for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
             ret.put(entry.getKey(), entry.getValue().toArray(new String[entry.getValue().size()]));
+        }
+        if (exchange.getExchange().getRequestMethod().equalsIgnoreCase("POST")) {
+            final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+            if (parser != null) {
+                try {
+                    FormData formData = parser.parseBlocking();
+                    Iterator<String> it = formData.iterator();
+                    while (it.hasNext()) {
+                        final String name = it.next();
+                        Deque<FormData.FormValue> val = formData.get(name);
+                        if (ret.containsKey(name)) {
+                            String[] existing = ret.get(name);
+                            String[] array = new String[val.size() + existing.length];
+                            System.arraycopy(existing, 0, array, 0, existing.length);
+                            int i = existing.length;
+                            for (final FormData.FormValue v : val) {
+                                array[i++] = v.getValue();
+                            }
+                            ret.put(name, array);
+                        } else {
+                            String[] array = new String[val.size()];
+                            int i = 0;
+                            for (final FormData.FormValue v : val) {
+                                array[i++] = v.getValue();
+                            }
+                            ret.put(name, array);
+                        }
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
         return ret;
     }
@@ -544,7 +580,18 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public RequestDispatcher getRequestDispatcher(final String path) {
-        return new RequestDispatcherImpl(servletContext.getDeployment().getServletPaths().getServletHandlerByPath(path));
+        String realPath;
+        if(path.startsWith("/")) {
+            realPath = path;
+        } else {
+            String current = exchange.getExchange().getRelativePath();
+            int lastSlash = current.lastIndexOf("/");
+            if(lastSlash != -1) {
+                current = current.substring(0, lastSlash + 1);
+            }
+            realPath = CanonicalPathUtils.canonicalize(current + path);
+        }
+        return new RequestDispatcherImpl(realPath, servletContext.getContextPath(), servletContext.getDeployment().getServletPaths().getServletHandlerByPath(realPath));
     }
 
     @Override
@@ -618,5 +665,13 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public DispatcherType getDispatcherType() {
         return exchange.getExchange().getAttachment(DISPATCHER_TYPE_ATTACHMENT_KEY);
+    }
+
+    public Map<String, Deque<String>> getQueryParameters() {
+        return queryParameters;
+    }
+
+    public void setQueryParameters(final Map<String, Deque<String>> queryParameters) {
+        this.queryParameters = queryParameters;
     }
 }

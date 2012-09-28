@@ -253,6 +253,9 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         if (servletOutputStream != null) {
             servletOutputStream.resetBuffer();
         }
+        if(writer != null) {
+            writer = new PrintWriter(new OutputStreamWriter(servletOutputStream));
+        }
     }
 
     @Override
@@ -262,9 +265,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void reset() {
-        if (servletOutputStream != null) {
-            servletOutputStream.resetBuffer();
-        }
+        resetBuffer();
         exchange.getExchange().getResponseHeaders().clear();
         exchange.getExchange().setResponseCode(200);
     }

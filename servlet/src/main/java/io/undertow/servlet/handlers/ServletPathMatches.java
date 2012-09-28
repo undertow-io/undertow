@@ -57,7 +57,15 @@ public class ServletPathMatches {
             return  handleMatch(path, match);
         }
         for (int i = path.length() -1; i >= 0; --i) {
-            if (path.charAt(i) == '/') {
+            final char c = path.charAt(i);
+            if(c == '?') {
+                //there was a query string, check the exact matches again
+                final String part = path.substring(0, i);
+                exact = exactPathMatches.get(part);
+                if (exact != null) {
+                    return exact;
+                }
+            } else if (c == '/') {
                 final String part = path.substring(0, i);
                 match = prefixMatches.get(part);
                 if (match != null) {
