@@ -27,6 +27,7 @@ import java.util.Map;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletRequestWrapper;
@@ -34,6 +35,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
@@ -46,11 +48,11 @@ import io.undertow.servlet.util.DelegatingHttpServletResponse;
 public class RequestDispatcherImpl implements RequestDispatcher {
 
     private final String path;
-    private final String servletContext;
+    private final ServletContextImpl servletContext;
     private final ServletInitialHandler handler;
     private final boolean named;
 
-    public RequestDispatcherImpl(final String path, final String servletContext, final ServletInitialHandler handler) {
+    public RequestDispatcherImpl(final String path, final ServletContextImpl servletContext, final ServletInitialHandler handler) {
         this.path = path;
         this.servletContext = servletContext;
         this.handler = handler;
@@ -58,19 +60,19 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     }
 
 
-    public RequestDispatcherImpl(final ServletInitialHandler handler) {
+    public RequestDispatcherImpl(final ServletInitialHandler handler, final ServletContextImpl servletContext) {
         this.handler = handler;
         this.named = true;
-        this.servletContext = null;
+        this.servletContext = servletContext;
         this.path = null;
     }
 
     @Override
     public void forward(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
-        final BlockingHttpServerExchange exchange = getExchange(request);
+        HttpServletRequestImpl requestImpl = getRequestImpl(request);
+        final BlockingHttpServerExchange exchange = requestImpl.getExchange();
         response.resetBuffer();
 
-        HttpServletRequestImpl requestImpl = getRequestImpl(request);
 
         final ServletRequest oldRequest = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         final ServletResponse oldResponse = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
@@ -96,7 +98,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 newQueryString = newServletPath.substring(qsPos + 1);
                 newServletPath = newServletPath.substring(0, qsPos);
             }
-            String newRequestUri = servletContext + newServletPath;
+            String newRequestUri = servletContext.getContextPath() + newServletPath;
 
             //todo: a more efficent impl
             Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
@@ -120,8 +122,8 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             requestImpl.getExchange().getExchange().setQueryString(newQueryString);
             requestImpl.getExchange().getExchange().setRequestPath(newRequestUri);
             requestImpl.getExchange().getExchange().setRequestURI(newRequestUri);
+            requestImpl.setServletContext(servletContext);
         }
-
 
         try {
             try {
@@ -140,24 +142,12 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, oldResponse);
         }
     }
-
-    private HttpServletRequestImpl getRequestImpl(final ServletRequest request) {
-        final HttpServletRequestImpl requestImpl;
-        if (request instanceof HttpServletRequestImpl) {
-            requestImpl = (HttpServletRequestImpl) request;
-        } else if (request instanceof HttpServletRequestWrapper) {
-            requestImpl = (HttpServletRequestImpl) ((HttpServletRequestWrapper) request).getRequest();
-        } else {
-            throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
-        }
-        return requestImpl;
-    }
-
     @Override
     public void include(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
-        final BlockingHttpServerExchange exchange = getExchange(request);
 
         HttpServletRequestImpl requestImpl = getRequestImpl(request);
+        final HttpServletResponseImpl responseImpl = getResponseImpl(response);
+        final BlockingHttpServerExchange exchange =requestImpl.getExchange();
 
         final ServletRequest oldRequest = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         final ServletResponse oldResponse = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
@@ -184,7 +174,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 newQueryString = newServletPath.substring(qsPos + 1);
                 newServletPath = newServletPath.substring(0, qsPos);
             }
-            String newRequestUri = servletContext + newServletPath;
+            String newRequestUri = servletContext.getContextPath() + newServletPath;
 
             //todo: a more efficent impl
             Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
@@ -210,8 +200,12 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             //request.setAttribute(INCLUDE_PATH_INFO, path);
             request.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
         }
+        boolean inInclude = responseImpl.isInsideInclude();
+        responseImpl.setInsideInclude(true);
 
+        ServletContextImpl oldContext = (ServletContextImpl) requestImpl.getServletContext();
         try {
+            requestImpl.setServletContext(servletContext);
             try {
                 exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
                 exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
@@ -224,6 +218,8 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 throw new RuntimeException(e);
             }
         } finally {
+            responseImpl.setInsideInclude(inInclude);
+            requestImpl.setServletContext(oldContext);
             exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, oldRequest);
             exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, oldResponse);
             if (!named) {
@@ -237,14 +233,34 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         }
     }
 
-    private BlockingHttpServerExchange getExchange(final ServletRequest request) {
+
+
+    private HttpServletRequestImpl getRequestImpl(final ServletRequest request) {
+        final HttpServletRequestImpl requestImpl;
         if (request instanceof HttpServletRequestImpl) {
-            return ((HttpServletRequestImpl) request).getExchange();
-        } else if (request instanceof ServletRequestWrapper) {
-            return getExchange(((ServletRequestWrapper) request).getRequest());
+            requestImpl = (HttpServletRequestImpl) request;
+        } else if (request instanceof HttpServletRequestWrapper) {
+            requestImpl = (HttpServletRequestImpl) ((HttpServletRequestWrapper) request).getRequest();
         } else {
-            throw UndertowServletMessages.MESSAGES.requestNoOfCorrectType();
+            throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
         }
+        return requestImpl;
     }
+
+
+
+
+    private HttpServletResponseImpl getResponseImpl(final ServletResponse response) {
+        final HttpServletResponseImpl requestImpl;
+        if (response instanceof HttpServletResponseImpl) {
+            requestImpl = (HttpServletResponseImpl) response;
+        } else if (response instanceof HttpServletResponseWrapper) {
+            requestImpl = (HttpServletResponseImpl) ((HttpServletResponseWrapper) response).getResponse();
+        } else {
+            throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
+        }
+        return requestImpl;
+    }
+
 
 }

@@ -79,7 +79,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public static final AttachmentKey<DispatcherType> DISPATCHER_TYPE_ATTACHMENT_KEY = AttachmentKey.create(DispatcherType.class);
 
     private final BlockingHttpServerExchange exchange;
-    private final ServletContextImpl servletContext;
+    private volatile ServletContextImpl servletContext;
 
 
     private final HashMap<String, Object> attributes = new HashMap<String, Object>();
@@ -362,6 +362,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public void setCharacterEncoding(final String env) throws UnsupportedEncodingException {
 
+
     }
 
     @Override
@@ -591,7 +592,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
             }
             realPath = CanonicalPathUtils.canonicalize(current + path);
         }
-        return new RequestDispatcherImpl(realPath, servletContext.getContextPath(), servletContext.getDeployment().getServletPaths().getServletHandlerByPath(realPath));
+        return new RequestDispatcherImpl(realPath, servletContext, servletContext.getDeployment().getServletPaths().getServletHandlerByPath(realPath));
     }
 
     @Override
@@ -673,5 +674,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     public void setQueryParameters(final Map<String, Deque<String>> queryParameters) {
         this.queryParameters = queryParameters;
+    }
+
+    public void setServletContext(final ServletContextImpl servletContext) {
+        this.servletContext = servletContext;
     }
 }

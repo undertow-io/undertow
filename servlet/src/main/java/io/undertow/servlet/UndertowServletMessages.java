@@ -26,6 +26,7 @@ import javax.servlet.Filter;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 
 import io.undertow.servlet.api.DeploymentManager;
 import org.jboss.logging.Cause;
@@ -114,4 +115,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10023, value = "Request %s was not original or a wrapper")
     IllegalArgumentException requestWasNotOriginalOrWrapper(ServletRequest request);
+
+    @Message(id = 10024, value = "Response %s was not original or a wrapper")
+    IllegalArgumentException responseWasNotOriginalOrWrapper(ServletResponse response);
 }

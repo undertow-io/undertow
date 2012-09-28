@@ -54,6 +54,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     private ServletOutputStreamImpl servletOutputStream;
     private PrintWriter writer;
     private Integer bufferSize;
+    private boolean insideInclude = false;
 
     public HttpServletResponseImpl(final BlockingHttpServerExchange exchange) {
         this.exchange = exchange;
@@ -65,6 +66,9 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void addCookie(final Cookie cookie) {
+        if(insideInclude){
+            return;
+        }
         final AttachmentList<io.undertow.server.handlers.Cookie> cookies = exchange.getExchange().getAttachment(io.undertow.server.handlers.Cookie.RESPONSE_COOKIES);
         cookies.add(new io.undertow.server.handlers.Cookie(cookie.getName(), cookie.getValue()));
     }
@@ -111,41 +115,65 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setDateHeader(final String name, final long date) {
+        if(insideInclude){
+            return;
+        }
         exchange.getExchange().getResponseHeaders().put(name, DateUtils.toDateString(new Date(date)));
     }
 
     @Override
     public void addDateHeader(final String name, final long date) {
+        if(insideInclude){
+            return;
+        }
         exchange.getExchange().getResponseHeaders().add(name, DateUtils.toDateString(new Date(date)));
     }
 
     @Override
     public void setHeader(final String name, final String value) {
+        if(insideInclude){
+            return;
+        }
         exchange.getExchange().getResponseHeaders().put(name, value);
     }
 
     @Override
     public void addHeader(final String name, final String value) {
+        if(insideInclude){
+            return;
+        }
         exchange.getExchange().getResponseHeaders().add(name, value);
     }
 
     @Override
     public void setIntHeader(final String name, final int value) {
+        if(insideInclude){
+            return;
+        }
         exchange.getExchange().getResponseHeaders().put(name, "" + value);
     }
 
     @Override
     public void addIntHeader(final String name, final int value) {
+        if(insideInclude){
+            return;
+        }
         exchange.getExchange().getResponseHeaders().add(name, "" + value);
     }
 
     @Override
     public void setStatus(final int sc) {
+        if(insideInclude){
+            return;
+        }
         exchange.getExchange().setResponseCode(sc);
     }
 
     @Override
     public void setStatus(final int sc, final String sm) {
+        if(insideInclude){
+            return;
+        }
         setStatus(sc);
     }
 
@@ -212,16 +240,25 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setCharacterEncoding(final String charset) {
+        if(insideInclude){
+            return;
+        }
 
     }
 
     @Override
     public void setContentLength(final int len) {
+        if(insideInclude){
+            return;
+        }
         exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
     }
 
     @Override
     public void setContentType(final String type) {
+        if(insideInclude){
+            return;
+        }
         exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, type);
     }
 
@@ -293,4 +330,11 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         }
     }
 
+    public boolean isInsideInclude() {
+        return insideInclude;
+    }
+
+    public void setInsideInclude(final boolean insideInclude) {
+        this.insideInclude = insideInclude;
+    }
 }
