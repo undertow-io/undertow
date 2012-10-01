@@ -20,7 +20,6 @@ package io.undertow.util;
 
 import java.util.ArrayDeque;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;

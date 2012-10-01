@@ -28,7 +28,8 @@ import java.security.Principal;
  */
 public class SecurityContext {
 
-    static AttachmentKey<SecurityContext> ATTACHMENT_KEY = AttachmentKey.create(SecurityContext.class);
+    // TODO - May reduce back to default
+    public static AttachmentKey<SecurityContext> ATTACHMENT_KEY = AttachmentKey.create(SecurityContext.class);
 
     private AuthenticationState authenticationState;
     private Principal authenticatedPrincipal;

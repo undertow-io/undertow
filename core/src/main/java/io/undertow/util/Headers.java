@@ -171,6 +171,7 @@ public final class Headers {
 
     // Authentication Schemes
     public static final String BASIC = "Basic";
+    public static final String NEGOTIATE = "Negotiate";
 
     /**
      * Extracts a token from a header that has a given key. For instance if the header is

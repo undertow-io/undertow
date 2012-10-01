@@ -163,7 +163,10 @@ public class BasicAuthenticationHandler implements HttpHandler {
 
         public void handleComplete() {
             SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-            if (context.getAuthenticationState() == AuthenticationState.REQUIRED) {
+            AuthenticationState authenticationState = context.getAuthenticationState();
+            // TODO Including Failed in this check to allow a subsequent attemp, may prefer a utility method somethere
+            // e.g. shouldSendChallenge()
+            if (authenticationState == AuthenticationState.REQUIRED || authenticationState == AuthenticationState.FAILED) {
                 exchange.getResponseHeaders().add(WWW_AUTHENTICATE, challenge);
                 exchange.setResponseCode(CODE_401.getCode());
             }
