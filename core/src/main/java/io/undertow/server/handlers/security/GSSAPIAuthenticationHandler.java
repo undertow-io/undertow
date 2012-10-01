@@ -17,8 +17,6 @@
  */
 package io.undertow.server.handlers.security;
 
-import static io.undertow.util.Base64.base64Decode;
-import static io.undertow.util.Base64.encode;
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.HOST;
 import static io.undertow.util.Headers.NEGOTIATE;
@@ -42,6 +40,7 @@ import java.util.Deque;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 
+import org.apache.commons.codec.binary.Base64;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
@@ -100,7 +99,7 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
                 for (String current : authHeaders) {
                     if (current.startsWith(NEGOTIATE_PREFIX)) {
                         String base64Challenge = current.substring(NEGOTIATE_PREFIX.length());
-                        byte[] challenge = base64Decode(base64Challenge).getBytes(UTF_8);
+                        byte[] challenge = Base64.decodeBase64(base64Challenge);
 
                         dispatch(exchange, new GSSAPIRunnable(exchange, wrapperCompletionHandler, challenge));
 
@@ -150,9 +149,11 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
                 Subject server = subjectFactory.getSubjectForHost(getHostName(exchange));
                 Subject.doAs(server, new AcceptSecurityContext(exchange, challenge));
             } catch (GeneralSecurityException e) {
+                e.printStackTrace();
                 SecurityContext secContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
                 secContext.setAuthenticationState(AuthenticationState.FAILED);
             } catch (PrivilegedActionException e) {
+                e.printStackTrace();
                 SecurityContext secContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
                 secContext.setAuthenticationState(AuthenticationState.FAILED);
             }
@@ -222,8 +223,9 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
             if (negContext != null) {
                 byte[] responseChallenge = negContext.useResponseToken();
                 if (responseChallenge != null) {
+                    System.out.println("Sending existing challenge.");
                     HeaderMap headers = exchange.getResponseHeaders();
-                    headers.add(WWW_AUTHENTICATE, NEGOTIATE_PREFIX + new String(encode(responseChallenge), UTF_8));
+                    headers.add(WWW_AUTHENTICATE, NEGOTIATE_PREFIX + Base64.encodeBase64String(responseChallenge));
                     if (authenticationState != AuthenticationState.AUTHENTICATED) {
                         exchange.setResponseCode(CODE_401.getCode());
                     }
@@ -235,6 +237,7 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
 
             // An in-progress authentication didn't take this handle call so check if a new challenge is needed.
             if (authenticationState == AuthenticationState.REQUIRED || authenticationState == AuthenticationState.FAILED) {
+                System.out.println("Sending new challenge.");
                 exchange.getResponseHeaders().add(WWW_AUTHENTICATE, NEGOTIATE);
                 exchange.setResponseCode(CODE_401.getCode());
             }
