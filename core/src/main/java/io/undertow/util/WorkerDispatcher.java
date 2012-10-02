@@ -22,6 +22,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 
 import io.undertow.server.HttpServerExchange;
+import org.xnio.channels.StreamSourceChannel;
 
 /**
  * Class that deals with a worker thread pools
@@ -36,7 +37,7 @@ public class WorkerDispatcher {
 
     public static void dispatch(final HttpServerExchange exchange, final Runnable runnable) {
         Executor executor = exchange.getAttachment(EXECUTOR_ATTACHMENT_KEY);
-        if(executor == null) {
+        if (executor == null) {
             executor = exchange.getConnection().getWorker();
         }
         final Executor executing = executingInWorker.get();
@@ -58,18 +59,23 @@ public class WorkerDispatcher {
         }
     }
 
-    public static void forceDispatch(final Executor executor, final Runnable runnable) {
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    executingInWorker.set(executor);
-                    runnable.run();
-                } finally {
-                    executingInWorker.remove();
+    public static void forceDispatch(final StreamSourceChannel channel, final Runnable runnable) {
+        final Executor executing = executingInWorker.get();
+        if (executing == null) {
+            channel.getReadThread().execute(runnable);
+        } else {
+            executing.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        executingInWorker.set(executing);
+                        runnable.run();
+                    } finally {
+                        executingInWorker.remove();
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     private WorkerDispatcher() {

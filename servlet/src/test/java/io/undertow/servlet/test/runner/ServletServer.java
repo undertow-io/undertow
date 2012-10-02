@@ -93,8 +93,8 @@ public class ServletServer extends BlockJUnit4ClassRunner {
                         .set(Options.WORKER_READ_THREADS, 4)
                         .set(Options.CONNECTION_HIGH_WATER, 1000000)
                         .set(Options.CONNECTION_LOW_WATER, 1000000)
-                        .set(Options.WORKER_TASK_CORE_THREADS, 10)
-                        .set(Options.WORKER_TASK_MAX_THREADS, 12)
+                        .set(Options.WORKER_TASK_CORE_THREADS, 30)
+                        .set(Options.WORKER_TASK_MAX_THREADS, 32)
                         .set(Options.TCP_NODELAY, true)
                         .set(Options.CORK, true)
                         .getMap());

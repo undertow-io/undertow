@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.util.HeaderMap;
+import io.undertow.util.StatusCodes;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -147,7 +148,7 @@ final class HttpResponseChannel implements StreamSinkChannel {
                     buffer.put((byte) (code / 10 % 10 + '0'));
                     buffer.put((byte) (code % 10 + '0'));
                     buffer.put((byte) ' ');
-                    string = "Put Response String Here"; // <-- TODO
+                    string = StatusCodes.getReason(code);
                     length = string.length();
                     for (charIndex = 0; charIndex < length; charIndex ++) {
                         buffer.put((byte) string.charAt(charIndex));

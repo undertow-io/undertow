@@ -104,23 +104,26 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
         ThreadSetupAction.Handle handle = setupAction.setup(exchange);
-        if (exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY) == null) {
-            exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.REQUEST);
-        }
-        boolean first = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY) == null;
-        if (first) {
-            final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
-            final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
-            try {
-                exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
-                exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
-                next.handleRequest(exchange);
-            } finally {
-                handle.tearDown();
-                response.responseDone();
+        try {
+            if (exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY) == null) {
+                exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.REQUEST);
             }
-        } else {
-            next.handleRequest(exchange);
+            boolean first = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY) == null;
+            if (first) {
+                final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
+                final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
+                try {
+                    exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
+                    exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
+                    next.handleRequest(exchange);
+                } finally {
+                    response.responseDone();
+                }
+            } else {
+                next.handleRequest(exchange);
+            }
+        } finally {
+            handle.tearDown();
         }
     }
 

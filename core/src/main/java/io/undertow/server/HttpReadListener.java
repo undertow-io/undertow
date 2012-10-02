@@ -23,7 +23,9 @@ import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
@@ -60,7 +62,6 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     private volatile int read = 0;
     private final int maxRequestSize;
 
-
     HttpReadListener(final StreamSinkChannel responseChannel, final HttpServerConnection connection) {
         this.responseChannel = responseChannel;
         this.connection = connection;
@@ -70,106 +71,110 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     public void handleEvent(final PushBackStreamChannel channel) {
         final Pooled<ByteBuffer> pooled = connection.getBufferPool().allocate();
         final ByteBuffer buffer = pooled.getResource();
-        buffer.clear();
         boolean free = true;
+
         try {
-            final int res;
-            try {
-                res = channel.read(buffer);
-            } catch (IOException e) {
-                if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                    UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
-                }
-                safeClose(channel);
-                return;
-            }
-            if (res == 0) {
-                channel.resumeReads();
-                return;
-            }
-            if (res == -1) {
+            int res;
+            do {
+                buffer.clear();
                 try {
-                    channel.shutdownReads();
-                    final StreamSinkChannel responseChannel = this.responseChannel;
-                    responseChannel.shutdownWrites();
-                    // will return false if there's a response queued ahead of this one, so we'll set up a listener then
-                    if (!responseChannel.flush()) {
-                        responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
-                        responseChannel.resumeWrites();
-                    }
+                    res = channel.read(buffer);
                 } catch (IOException e) {
                     if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                        UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
+                        UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
                     }
-                    // fuck it, it's all ruined
-                    IoUtils.safeClose(channel);
+                    safeClose(channel);
                     return;
                 }
-                return;
-            }
-            //TODO: we need to handle parse errors
-            buffer.flip();
-            if (state == null) {
-                state = new ParseState();
-                builder = new HttpExchangeBuilder();
-            }
-            int remaining = HttpParser.INSTANCE.handle(buffer, res, state, builder);
-            if (remaining > 0) {
-                free = false;
-                channel.unget(pooled);
-            }
-            int total = read + res - remaining;
-            read = total;
-            if (read > maxRequestSize) {
-                UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
-                IoUtils.safeClose(connection);
-                return;
-            }
-
-            if (state.isComplete()) {
-                // we remove ourselves as the read listener from the channel;
-                // if the http handler doesn't set any then reads will suspend, which is the right thing to do
-                channel.getReadSetter().set(null);
-                channel.suspendReads();
-                final StreamSinkChannel ourResponseChannel = this.responseChannel;
-                final Object permit = new Object();
-                final StreamSinkChannel nextRequestResponseChannel;
-                final Runnable responseTerminateAction;
-                if (connection.getMaxConcurrentRequests() > 1) {
-                    GatedStreamSinkChannel gatedStreamSinkChannel = new GatedStreamSinkChannel(connection.getChannel(), permit, false, true);
-                    nextRequestResponseChannel = gatedStreamSinkChannel;
-                    responseTerminateAction = new ResponseTerminateAction(gatedStreamSinkChannel, permit);
-                } else {
-                    nextRequestResponseChannel = connection.getChannel();
-                    responseTerminateAction = null;
+                if (res == 0) {
+                    if(!channel.isReadResumed()) {
+                        channel.getReadSetter().set(this);
+                        channel.resumeReads();
+                    }
+                    return;
                 }
-                final HeaderMap requestHeaders = builder.getHeaders();
-                final HeaderMap responseHeaders = new HeaderMap();
-                final Map<String, Deque<String>> parameters = builder.getQueryParameters();
-                final String method = builder.getMethod();
-                final String protocol = builder.getProtocol();
-
-                final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(channel, nextRequestResponseChannel, connection);
-
-                final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, requestHeaders, responseHeaders, parameters, method, protocol, channel, ourResponseChannel, startNextRequestAction, responseTerminateAction);
-                httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
-                try {
-                    httpServerExchange.setRequestScheme("http"); //todo: determine if this is https
-                    httpServerExchange.setRequestURI(builder.getFullPath());
-                    httpServerExchange.setRelativePath(builder.getRelativePath());
-                    httpServerExchange.setRequestPath(builder.getRelativePath());
-                    httpServerExchange.setQueryString(builder.getQueryString());
-
-                    state = null;
-                    builder = null;
-                    connection.getRootHandler().handleRequest(httpServerExchange, new CompletionHandler(httpServerExchange, startNextRequestAction));
-
-                } catch (Throwable t) {
-                    //TODO: we should attempt to return a 500 status code in this situation
-                    UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
-                    IoUtils.safeClose(nextRequestResponseChannel);
-                    IoUtils.safeClose(channel);
+                if (res == -1) {
+                    try {
+                        channel.shutdownReads();
+                        final StreamSinkChannel responseChannel = this.responseChannel;
+                        responseChannel.shutdownWrites();
+                        // will return false if there's a response queued ahead of this one, so we'll set up a listener then
+                        if (!responseChannel.flush()) {
+                            responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
+                            responseChannel.resumeWrites();
+                        }
+                    } catch (IOException e) {
+                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                            UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
+                        }
+                        // fuck it, it's all ruined
+                        IoUtils.safeClose(channel);
+                        return;
+                    }
+                    return;
                 }
+                //TODO: we need to handle parse errors
+                buffer.flip();
+                if (state == null) {
+                    state = new ParseState();
+                    builder = new HttpExchangeBuilder();
+                }
+                int remaining = HttpParser.INSTANCE.handle(buffer, res, state, builder);
+                if (remaining > 0) {
+                    free = false;
+                    channel.unget(pooled);
+                }
+                int total = read + res - remaining;
+                read = total;
+                if (read > maxRequestSize) {
+                    UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
+                    IoUtils.safeClose(connection);
+                    return;
+                }
+            } while (!state.isComplete());
+
+            // we remove ourselves as the read listener from the channel;
+            // if the http handler doesn't set any then reads will suspend, which is the right thing to do
+            channel.getReadSetter().set(null);
+            channel.suspendReads();
+            final StreamSinkChannel ourResponseChannel = this.responseChannel;
+            final Object permit = new Object();
+            final StreamSinkChannel nextRequestResponseChannel;
+            final Runnable responseTerminateAction;
+            if (connection.getMaxConcurrentRequests() > 1) {
+                GatedStreamSinkChannel gatedStreamSinkChannel = new GatedStreamSinkChannel(connection.getChannel(), permit, false, true);
+                nextRequestResponseChannel = gatedStreamSinkChannel;
+                responseTerminateAction = new ResponseTerminateAction(gatedStreamSinkChannel, permit);
+            } else {
+                nextRequestResponseChannel = connection.getChannel();
+                responseTerminateAction = null;
+            }
+            final HeaderMap requestHeaders = builder.getHeaders();
+            final HeaderMap responseHeaders = new HeaderMap();
+            final Map<String, Deque<String>> parameters = builder.getQueryParameters();
+            final String method = builder.getMethod();
+            final String protocol = builder.getProtocol();
+
+            final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(channel, nextRequestResponseChannel, connection);
+
+            final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, requestHeaders, responseHeaders, parameters, method, protocol, channel, ourResponseChannel, startNextRequestAction, responseTerminateAction);
+            httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
+            try {
+                httpServerExchange.setRequestScheme("http"); //todo: determine if this is https
+                httpServerExchange.setRequestURI(builder.getFullPath());
+                httpServerExchange.setRelativePath(builder.getRelativePath());
+                httpServerExchange.setRequestPath(builder.getRelativePath());
+                httpServerExchange.setQueryString(builder.getQueryString());
+
+                state = null;
+                builder = null;
+                connection.getRootHandler().handleRequest(httpServerExchange, new CompletionHandler(httpServerExchange, startNextRequestAction));
+
+            } catch (Throwable t) {
+                //TODO: we should attempt to return a 500 status code in this situation
+                UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
+                IoUtils.safeClose(nextRequestResponseChannel);
+                IoUtils.safeClose(channel);
             }
         } finally {
             if (free) pooled.free();
@@ -211,24 +216,28 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             do {
                 state = stateUpdater.get(this);
                 if (state == 3) {
-                    //we start unconditionally
-                    startNextRequest();
-                    return;
+                    if(stateUpdater.compareAndSet(this, state, 1)) {
+                        startNextRequest();
+                        return;
+                    }
                 } else if (state == 0 && connection.startRequest()) {
-                    startNextRequest();
-                    return;
-                } else if(state == 1) {
+                    if(stateUpdater.compareAndSet(this, state, 1)) {
+                        startNextRequest();
+                        return;
+                    }
+                } else if (state == 1) {
                     return;
                 }
             } while (!stateUpdater.compareAndSet(this, state, 2));
         }
 
         private void startNextRequest() {
-            stateUpdater.set(this, 1);
             final PushBackStreamChannel channel = this.channel;
             final HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, connection);
-            channel.getReadSetter().set(listener);
-            WorkerDispatcher.forceDispatch(channel.getWorker(), new DoNextRequestRead(listener, channel));
+            if(channel.isReadResumed()) {
+                channel.suspendReads();
+            }
+            WorkerDispatcher.forceDispatch(channel, new DoNextRequestRead(listener, channel));
             nextRequestResponseChannel = null;
             connection = null;
             this.channel = null;
@@ -242,9 +251,10 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     return;
                 }
                 if (state == 2) {
-                    //we start unconditionally
-                    startNextRequest();
-                    return;
+                    if(stateUpdater.compareAndSet(this, state, 1)) {
+                        startNextRequest();
+                        return;
+                    }
                 }
             } while (!stateUpdater.compareAndSet(this, state, 3));
         }
