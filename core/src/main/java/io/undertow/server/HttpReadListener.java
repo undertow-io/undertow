@@ -32,6 +32,7 @@ import io.undertow.server.httpparser.HttpParser;
 import io.undertow.server.httpparser.ParseState;
 import io.undertow.util.GatedStreamSinkChannel;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.WorkerDispatcher;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -216,6 +217,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 } else if (state == 0 && connection.startRequest()) {
                     startNextRequest();
                     return;
+                } else if(state == 1) {
+                    return;
                 }
             } while (!stateUpdater.compareAndSet(this, state, 2));
         }
@@ -223,13 +226,9 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         private void startNextRequest() {
             stateUpdater.set(this, 1);
             final PushBackStreamChannel channel = this.channel;
-            channel.getReadSetter().set(new HttpReadListener(nextRequestResponseChannel, connection));
-            channel.getReadThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    channel.resumeReads();
-                }
-            });
+            final HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, connection);
+            channel.getReadSetter().set(listener);
+            WorkerDispatcher.forceDispatch(channel.getWorker(), new DoNextRequestRead(listener, channel));
             nextRequestResponseChannel = null;
             connection = null;
             this.channel = null;
@@ -248,6 +247,21 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     return;
                 }
             } while (!stateUpdater.compareAndSet(this, state, 3));
+        }
+
+        private static class DoNextRequestRead implements Runnable {
+            private final HttpReadListener listener;
+            private final PushBackStreamChannel channel;
+
+            public DoNextRequestRead(HttpReadListener listener, PushBackStreamChannel channel) {
+                this.listener = listener;
+                this.channel = channel;
+            }
+
+            @Override
+            public void run() {
+                listener.handleEvent(channel);
+            }
         }
     }
 

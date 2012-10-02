@@ -24,28 +24,31 @@ import java.util.concurrent.ScheduledExecutorService;
 import io.undertow.server.HttpServerExchange;
 
 /**
- *
  * Class that deals with a worker thread pools
  *
  * @author Stuart Douglas
  */
 public class WorkerDispatcher {
 
-    private static final ThreadLocal<Boolean> executingInWorker = new ThreadLocal<Boolean>();
+    private static final ThreadLocal<Executor> executingInWorker = new ThreadLocal<Executor>();
 
     public static final AttachmentKey<Executor> EXECUTOR_ATTACHMENT_KEY = AttachmentKey.create(Executor.class);
 
-    public static void dispatch( final HttpServerExchange exchange, final Runnable runnable) {
+    public static void dispatch(final HttpServerExchange exchange, final Runnable runnable) {
         Executor executor = exchange.getAttachment(EXECUTOR_ATTACHMENT_KEY);
-        Boolean executing = executingInWorker.get();
-        if (executing != null && executing) {
+        if(executor == null) {
+            executor = exchange.getConnection().getWorker();
+        }
+        final Executor executing = executingInWorker.get();
+        if (executing == executor) {
             runnable.run();
         } else {
-            (executor != null ? executor : exchange.getConnection().getWorker()).execute(new Runnable() {
+            final Executor e = executor;
+            executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        executingInWorker.set(true);
+                        executingInWorker.set(e);
                         runnable.run();
                     } finally {
                         executingInWorker.remove();
@@ -53,6 +56,20 @@ public class WorkerDispatcher {
                 }
             });
         }
+    }
+
+    public static void forceDispatch(final Executor executor, final Runnable runnable) {
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    executingInWorker.set(executor);
+                    runnable.run();
+                } finally {
+                    executingInWorker.remove();
+                }
+            }
+        });
     }
 
     private WorkerDispatcher() {

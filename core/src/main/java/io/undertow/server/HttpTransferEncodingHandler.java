@@ -108,7 +108,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         if (hasTransferEncoding) {
             transferEncoding = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
         }
-        if (!transferEncoding.equalsIgnoreCase(Headers.IDENTITY)) {
+        if (hasTransferEncoding && !transferEncoding.equalsIgnoreCase(Headers.IDENTITY)) {
             exchange.addRequestWrapper(chunkedStreamSourceChannelWrapper(ourCompletionHandler));
         } else if (hasContentLength) {
             final long contentLength;
