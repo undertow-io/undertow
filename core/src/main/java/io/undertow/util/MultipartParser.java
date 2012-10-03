@@ -219,7 +219,7 @@ public class MultipartParser {
                     if (subState != 1) {
                         throw new MalformedMessageException();
                     }
-                    headers.put(currentHeaderName.trim(), currentString.toString().trim());
+                    headers.put(new HttpString(currentHeaderName.trim()), currentString.toString().trim());
                     state = 1;
                     subState = 0;
                     currentString = null;

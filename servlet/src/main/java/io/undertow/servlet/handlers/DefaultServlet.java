@@ -155,7 +155,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
                 newLocation.append('/');
             }
             newLocation.append(found);
-            resp.addHeader(Headers.LOCATION, newLocation.toString());
+            resp.addHeader(Headers.LOCATION_STRING, newLocation.toString());
         } else {
             resp.setStatus(404);
         }

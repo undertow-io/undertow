@@ -23,12 +23,15 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.servlet.http.Part;
 
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 
 /**
  * @author Stuart Douglas
@@ -77,16 +80,20 @@ public class PartImpl implements Part {
 
     @Override
     public String getHeader(final String name) {
-        return formValue.getHeaders().getFirst(name);
+        return formValue.getHeaders().getFirst(new HttpString(name));
     }
 
     @Override
     public Collection<String> getHeaders(final String name) {
-        return formValue.getHeaders().get(name);
+        return formValue.getHeaders().get(new HttpString(name));
     }
 
     @Override
     public Collection<String> getHeaderNames() {
-        return formValue.getHeaders().getHeaderNames();
+        final Set<String> ret = new HashSet<String>();
+        for(HttpString i : formValue.getHeaders().getHeaderNames()) {
+            ret.add(i.toString());
+        }
+        return ret;
     }
 }

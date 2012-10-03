@@ -16,14 +16,67 @@
  * limitations under the License.
  */
 
-package io.undertow.server.httpparser;
+package io.undertow.server;
 
-import io.undertow.util.HttpString;
 import java.nio.ByteBuffer;
 
 import io.undertow.annotationprocessor.HttpParserConfig;
+import io.undertow.util.HttpString;
 
-import static io.undertow.util.Headers.*;
+import static io.undertow.util.Headers.ACCEPT_CHARSET_STRING;
+import static io.undertow.util.Headers.ACCEPT_ENCODING_STRING;
+import static io.undertow.util.Headers.ACCEPT_LANGUAGE_STRING;
+import static io.undertow.util.Headers.ACCEPT_RANGES_STRING;
+import static io.undertow.util.Headers.ACCEPT_STRING;
+import static io.undertow.util.Headers.AGE_STRING;
+import static io.undertow.util.Headers.ALLOW_STRING;
+import static io.undertow.util.Headers.AUTHORIZATION_STRING;
+import static io.undertow.util.Headers.CACHE_CONTROL_STRING;
+import static io.undertow.util.Headers.CONNECTION_STRING;
+import static io.undertow.util.Headers.CONTENT_DISPOSITION_STRING;
+import static io.undertow.util.Headers.CONTENT_ENCODING_STRING;
+import static io.undertow.util.Headers.CONTENT_LANGUAGE_STRING;
+import static io.undertow.util.Headers.CONTENT_LENGTH_STRING;
+import static io.undertow.util.Headers.CONTENT_LOCATION_STRING;
+import static io.undertow.util.Headers.CONTENT_MD5_STRING;
+import static io.undertow.util.Headers.CONTENT_RANGE_STRING;
+import static io.undertow.util.Headers.CONTENT_TYPE_STRING;
+import static io.undertow.util.Headers.COOKIE_STRING;
+import static io.undertow.util.Headers.DATE_STRING;
+import static io.undertow.util.Headers.ETAG_STRING;
+import static io.undertow.util.Headers.EXPECT_STRING;
+import static io.undertow.util.Headers.EXPIRES_STRING;
+import static io.undertow.util.Headers.FROM_STRING;
+import static io.undertow.util.Headers.HOST_STRING;
+import static io.undertow.util.Headers.IF_MATCH_STRING;
+import static io.undertow.util.Headers.IF_MODIFIED_SINCE_STRING;
+import static io.undertow.util.Headers.IF_NONE_MATCH_STRING;
+import static io.undertow.util.Headers.IF_RANGE_STRING;
+import static io.undertow.util.Headers.IF_UNMODIFIED_SINCE_STRING;
+import static io.undertow.util.Headers.LAST_MODIFIED_STRING;
+import static io.undertow.util.Headers.LOCATION_STRING;
+import static io.undertow.util.Headers.MAX_FORWARDS_STRING;
+import static io.undertow.util.Headers.ORIGIN_STRING;
+import static io.undertow.util.Headers.PRAGMA_STRING;
+import static io.undertow.util.Headers.PROXY_AUTHENTICATE_STRING;
+import static io.undertow.util.Headers.PROXY_AUTHORIZATION_STRING;
+import static io.undertow.util.Headers.RANGE_STRING;
+import static io.undertow.util.Headers.REFERER_STRING;
+import static io.undertow.util.Headers.REFRESH_STRING;
+import static io.undertow.util.Headers.RETRY_AFTER_STRING;
+import static io.undertow.util.Headers.SERVER_STRING;
+import static io.undertow.util.Headers.SET_COOKIE2_STRING;
+import static io.undertow.util.Headers.SET_COOKIE_STRING;
+import static io.undertow.util.Headers.STRICT_TRANSPORT_SECURITY_STRING;
+import static io.undertow.util.Headers.TE_STRING;
+import static io.undertow.util.Headers.TRAILER_STRING;
+import static io.undertow.util.Headers.TRANSFER_ENCODING_STRING;
+import static io.undertow.util.Headers.UPGRADE_STRING;
+import static io.undertow.util.Headers.USER_AGENT_STRING;
+import static io.undertow.util.Headers.VARY_STRING;
+import static io.undertow.util.Headers.VIA_STRING;
+import static io.undertow.util.Headers.WARNING_STRING;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE_STRING;
 import static io.undertow.util.Methods.CONNECT;
 import static io.undertow.util.Methods.DELETE;
 import static io.undertow.util.Methods.GET;
@@ -131,7 +184,7 @@ public abstract class HttpParser {
     /**
      * This method is implemented by a generated subclass
      */
-    public abstract int handle(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpExchangeBuilder builder);
+    public abstract int handle(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpServerExchange builder);
 
 
     /**
@@ -155,13 +208,13 @@ public abstract class HttpParser {
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final int handlePath(ByteBuffer buffer, int remaining, ParseState state, HttpExchangeBuilder builder) {
+    final int handlePath(ByteBuffer buffer, int remaining, ParseState state, HttpServerExchange builder) {
         StringBuilder stringBuilder = state.stringBuilder;
         int parseState = state.parseState;
         int canonicalPathStart = state.pos;
         int queryParamPos = state.queryParamPos;
         int requestEnd = state.requestEnd;
-        HttpString nextQueryParam = state.nextHeader;
+        String nextQueryParam = state.nextHeader;
         if (stringBuilder == null) {
             state.stringBuilder = stringBuilder = new StringBuilder();
         }
@@ -172,15 +225,15 @@ public abstract class HttpParser {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
                     if(parseState < QUERY_PARAM_NAME) {
-                        builder.fullPath = path;
+                        builder.setRequestURI(path);
                         if (parseState < HOST_DONE) {
-                            builder.relativePath = path;
+                            builder.setParsedRequestPath(path);
                         } else {
-                            builder.relativePath = path.substring(canonicalPathStart);
+                            builder.setParsedRequestPath(path.substring(canonicalPathStart));
                         }
-                        builder.queryString = "";
+                        builder.setQueryString("");
                     } else {
-                        builder.queryString = path.substring(requestEnd);
+                        builder.setQueryString(path.substring(requestEnd));
                     }
                     if (parseState == QUERY_PARAM_NAME) {
                         builder.addQueryParam(stringBuilder.substring(queryParamPos), "");
@@ -210,11 +263,11 @@ public abstract class HttpParser {
                     parseState = START;
                 } else if (next == '?' && (parseState == START || parseState == HOST_DONE)) {
                     final String path = stringBuilder.toString();
-                    builder.fullPath = path;
+                    builder.setRequestURI(path);
                     if (parseState < HOST_DONE) {
-                        builder.relativePath = path;
+                        builder.setParsedRequestPath(path);
                     } else {
-                        builder.relativePath = path.substring(canonicalPathStart);
+                        builder.setParsedRequestPath(path.substring(canonicalPathStart));
                     }
                     parseState = QUERY_PARAM_NAME;
                     queryParamPos = stringBuilder.length() + 1;
@@ -266,7 +319,7 @@ public abstract class HttpParser {
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final int handleHeaderValue(ByteBuffer buffer, int remaining, ParseState state, HttpExchangeBuilder builder) {
+    final int handleHeaderValue(ByteBuffer buffer, int remaining, ParseState state, HttpServerExchange builder) {
         StringBuilder stringBuilder = state.stringBuilder;
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
@@ -316,11 +369,11 @@ public abstract class HttpParser {
                         parseState = WHITESPACE;
                     } else {
                         //we have a header
-                        HttpString nextStandardHeader = state.nextHeader;
+                        String nextStandardHeader = state.nextHeader;
                         String headerValue = stringBuilder.toString();
 
                         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
-                        builder.headers.add(nextStandardHeader, headerValue);
+                        builder.getRequestHeaders().add(new HttpString(nextStandardHeader), headerValue);
 
                         state.nextHeader = null;
 
@@ -348,7 +401,7 @@ public abstract class HttpParser {
         return remaining;
     }
 
-    protected int handleAfterVersion(ByteBuffer buffer, int remaining, ParseState state, HttpExchangeBuilder builder) {
+    protected int handleAfterVersion(ByteBuffer buffer, int remaining, ParseState state, HttpServerExchange builder) {
         boolean newLine = state.leftOver == '\n';
         while (remaining > 0) {
             final byte next = buffer.get();

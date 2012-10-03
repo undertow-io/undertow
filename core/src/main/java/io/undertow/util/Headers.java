@@ -19,7 +19,7 @@
 package io.undertow.util;
 
 /**
- * NOTE: if you add a new header here you must also add it to {@link io.undertow.server.httpparser.HttpParser}
+ * NOTE: if you add a new header here you must also add it to {@link io.undertow.server.HttpParser}
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
@@ -166,7 +166,8 @@ public final class Headers {
     public static final HttpString CLOSE = new HttpString("close");
 
     //MIME header used in multipart file uploads
-    public static final String CONTENT_TRANSFER_ENCODING = "Content-Transfer-Encoding";
+    public static final String CONTENT_TRANSFER_ENCODING_STRING = "Content-Transfer-Encoding";
+    public static final HttpString CONTENT_TRANSFER_ENCODING = new HttpString(CONTENT_TRANSFER_ENCODING_STRING);
 
 
     /**

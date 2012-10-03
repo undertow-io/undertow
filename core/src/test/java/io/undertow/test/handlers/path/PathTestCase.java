@@ -29,6 +29,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.util.HttpString;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -118,10 +119,10 @@ public class PathTestCase {
 
         @Override
         public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
-            exchange.getResponseHeaders().add(MATCHED, matched);
-            exchange.getResponseHeaders().add(PATH, exchange.getRelativePath());
+            exchange.getResponseHeaders().add(new HttpString(MATCHED), matched);
+            exchange.getResponseHeaders().add(new HttpString(PATH), exchange.getRelativePath());
             for(Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
-                exchange.getResponseHeaders().put(param.getKey(), param.getValue().getFirst());
+                exchange.getResponseHeaders().put(new HttpString(param.getKey()), param.getValue().getFirst());
             }
             completionHandler.handleComplete();
         }

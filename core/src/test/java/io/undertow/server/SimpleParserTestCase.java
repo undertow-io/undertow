@@ -16,13 +16,17 @@
  * limitations under the License.
  */
 
-package io.undertow.server.httpparser;
+package io.undertow.server;
 
 import java.nio.ByteBuffer;
 
+import io.undertow.server.HttpParser;
+import io.undertow.server.ParseState;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 import org.junit.Assert;
 import org.junit.Test;
+import sun.reflect.ReflectionFactory;
 
 /**
  * Basic test of the HTTP parser functionality.
@@ -67,10 +71,10 @@ public class SimpleParserTestCase {
         byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
-        HttpExchangeBuilder result = new HttpExchangeBuilder();
+        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
-        Assert.assertEquals("/somepath", result.relativePath);
-        Assert.assertEquals("http://www.somehost.net/somepath", result.fullPath);
+        Assert.assertEquals("/somepath", result.getRelativePath());
+        Assert.assertEquals("http://www.somehost.net/somepath", result.getRequestURI());
     }
 
     @Test
@@ -78,10 +82,10 @@ public class SimpleParserTestCase {
         byte[] in = "GET\t/aa\tHTTP/1.1\n\n\n".getBytes();
 
         final ParseState context = new ParseState();
-        HttpExchangeBuilder result = new HttpExchangeBuilder();
+        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
         Assert.assertTrue(context.isComplete());
-        Assert.assertEquals("/aa", result.relativePath);
+        Assert.assertEquals("/aa", result.getRelativePath());
     }
 
     @Test
@@ -89,32 +93,32 @@ public class SimpleParserTestCase {
         byte[] in = "GET\thttp://www.somehost.net/somepath?a=b&b=c&d&e&f=\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
-        HttpExchangeBuilder result = new HttpExchangeBuilder();
+        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
-        Assert.assertEquals("/somepath", result.relativePath);
-        Assert.assertEquals("http://www.somehost.net/somepath", result.fullPath);
-        Assert.assertEquals("a=b&b=c&d&e&f=", result.queryString);
-        Assert.assertEquals("b", result.queryParameters.get("a").getFirst());
-        Assert.assertEquals("c", result.queryParameters.get("b").getFirst());
-        Assert.assertEquals("", result.queryParameters.get("d").getFirst());
-        Assert.assertEquals("", result.queryParameters.get("e").getFirst());
-        Assert.assertEquals("", result.queryParameters.get("f").getFirst());
+        Assert.assertEquals("/somepath", result.getRelativePath());
+        Assert.assertEquals("http://www.somehost.net/somepath", result.getRequestURI());
+        Assert.assertEquals("a=b&b=c&d&e&f=", result.getQueryString());
+        Assert.assertEquals("b", result.getQueryParameters().get("a").getFirst());
+        Assert.assertEquals("c", result.getQueryParameters().get("b").getFirst());
+        Assert.assertEquals("", result.getQueryParameters().get("d").getFirst());
+        Assert.assertEquals("", result.getQueryParameters().get("e").getFirst());
+        Assert.assertEquals("", result.getQueryParameters().get("f").getFirst());
 
     }
 
     private void runTest(final byte[] in) {
         final ParseState context = new ParseState();
-        HttpExchangeBuilder result = new HttpExchangeBuilder();
+        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
-        Assert.assertSame("GET", result.method);
-        Assert.assertEquals("/somepath", result.fullPath);
-        Assert.assertSame("HTTP/1.1", result.protocol);
-        HeaderMap map = new HeaderMap();
-        map.add("Host", "www.somehost.net");
-        map.add("OtherHeader", "some value");
-        Assert.assertEquals(map, result.headers);
+        Assert.assertSame("GET", result.getRequestMethod());
+        Assert.assertEquals("/somepath", result.getRequestURI());
+        Assert.assertSame("HTTP/1.1", result.getProtocol());
+
+        Assert.assertEquals(2, result.getRequestHeaders().getHeaderNames().size());
+        Assert.assertEquals("www.somehost.net", result.getRequestHeaders().getFirst(new HttpString("Host")));
+        Assert.assertEquals("some value", result.getRequestHeaders().getFirst(new HttpString("OtherHeader")));
+
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
     }
-
 
 }

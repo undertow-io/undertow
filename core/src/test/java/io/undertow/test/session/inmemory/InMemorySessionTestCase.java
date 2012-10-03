@@ -32,6 +32,7 @@ import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionManager;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.util.HttpString;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -69,7 +70,7 @@ public class InMemorySessionTestCase {
                             session.setAttribute(COUNT, 0);
                         }
                         Integer count = (Integer)session.getAttribute(COUNT).get();
-                        exchange.getResponseHeaders().add(COUNT, count.toString());
+                        exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());
                         session.setAttribute(COUNT, ++count);
                         HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_200, exchange, completionHandler);
                     } catch (IOException e) {

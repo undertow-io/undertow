@@ -20,8 +20,10 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -30,6 +32,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import org.jboss.logging.Logger;
@@ -60,10 +63,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final Logger log = Logger.getLogger(HttpServerExchange.class);
 
     private final HttpServerConnection connection;
-    private final HeaderMap requestHeaders;
-    private final HeaderMap responseHeaders;
+    private final HeaderMap requestHeaders = new HeaderMap();
+    private final HeaderMap responseHeaders = new HeaderMap();
 
-    private final Map<String, Deque<String>> queryParameters;
+    private final Map<String, Deque<String>> queryParameters = new HashMap<String, Deque<String>>(0);
 
     private final StreamSinkChannel underlyingResponseChannel;
     private final StreamSourceChannel underlyingRequestChannel;
@@ -71,7 +74,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final Runnable requestTerminateAction;
     private final Runnable responseTerminateAction;
 
-    private final String protocol;
+    private String protocol;
 
     // mutable state
 
@@ -122,15 +125,15 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_CLEANUP = 1 << 13;
 
-    HttpServerExchange(final HttpServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, final Map<String, Deque<String>> queryParameters, final String requestMethod, final String protocol, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel, final Runnable requestTerminateAction, final Runnable responseTerminateAction) {
+    HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel, final Runnable requestTerminateAction, final Runnable responseTerminateAction) {
         this.connection = connection;
-        this.requestHeaders = requestHeaders;
-        this.responseHeaders = responseHeaders;
-        this.queryParameters = queryParameters;
-        this.requestMethod = requestMethod;
-        this.protocol = protocol;
         this.underlyingRequestChannel = requestChannel;
-        this.underlyingResponseChannel = new HttpResponseChannel(responseChannel, connection.getBufferPool(), this);
+        if(connection == null) {
+            //just for unit tests
+            this.underlyingResponseChannel = null;
+        } else {
+            this.underlyingResponseChannel = new HttpResponseChannel(responseChannel, connection.getBufferPool(), this);
+        }
         this.requestTerminateAction = requestTerminateAction;
         this.responseTerminateAction = responseTerminateAction;
     }
@@ -142,6 +145,15 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public String getProtocol() {
         return protocol;
+    }
+
+    /**
+     * Sets the http protocol
+     *
+     * @param protocol
+     */
+    public void setProtocol(final String protocol) {
+        this.protocol = protocol;
     }
 
     /**
@@ -209,8 +221,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Gets the request URI, including hostname, protocol etc if specified by the client.
-     *
+     * <p/>
      * In most cases this will be equal to {@link #requestPath}
+     *
      * @return The request URI
      */
     public String getRequestURI() {
@@ -266,6 +279,15 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * internal method used by the parser to set both the request and relative
+     * path fields
+     */
+    void setParsedRequestPath(final String requestPath) {
+        this.relativePath = requestPath;
+        this.requestPath = requestPath;
+    }
+
+    /**
      * Get the resolved path.
      *
      * @return the resolved path
@@ -312,11 +334,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Reconstructs the complete URL as seen by the user. This includes scheme, host name etc,
      * but does not include query string.
-     *
      */
     public String getRequestURL() {
         String host = getRequestHeaders().getFirst(Headers.HOST);
-        if(host == null) {
+        if (host == null) {
             host = getDestinationAddress().getAddress().getHostAddress();
         }
         return getRequestScheme() + "://" + host + getRequestURI();
@@ -387,6 +408,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Map<String, Deque<String>> getQueryParameters() {
         return queryParameters;
+    }
+
+    void addQueryParam(final String name, final String param) {
+        Deque<String> list = queryParameters.get(name);
+        if (list == null) {
+            queryParameters.put(name, list = new ArrayDeque<String>());
+        }
+        list.add(param);
     }
 
     /**
@@ -591,7 +620,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             newVal = oldVal | FLAG_RESPONSE_TERMINATED;
         } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
-        if(responseTerminateAction != null) {
+        if (responseTerminateAction != null) {
             responseTerminateAction.run();
         }
     }
@@ -679,4 +708,5 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
     }
+
 }

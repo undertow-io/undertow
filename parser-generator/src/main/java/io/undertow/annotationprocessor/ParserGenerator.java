@@ -47,10 +47,10 @@ import org.jboss.classfilewriter.util.DescriptorUtils;
 public class ParserGenerator {
 
     //class names
-    public static final String PARSE_STATE_CLASS = "io.undertow.server.httpparser.ParseState";
+    public static final String PARSE_STATE_CLASS = "io.undertow.server.ParseState";
     public static final String PARSE_STATE_DESCRIPTOR = DescriptorUtils.makeDescriptor(PARSE_STATE_CLASS);
-    public static final String HTTP_EXCHANGE_BUILDER_CLASS = "io.undertow.server.httpparser.HttpExchangeBuilder";
-    public static final String HTTP_EXCHANGE_BUILDER_DESCRIPTOR = DescriptorUtils.makeDescriptor(HTTP_EXCHANGE_BUILDER_CLASS);
+    public static final String HTTP_EXCHANGE_CLASS = "io.undertow.server.HttpServerExchange";
+    public static final String HTTP_EXCHANGE_DESCRIPTOR = DescriptorUtils.makeDescriptor(HTTP_EXCHANGE_CLASS);
 
 
     //state machine states
@@ -102,7 +102,7 @@ public class ParserGenerator {
         createStateMachine(httpVersions, className, file, sctor, fieldCounter, HANDLE_HTTP_VERSION, new VersionStateMachine(), false);
         createStateMachine(standardHeaders, className, file, sctor, fieldCounter, HANDLE_HEADER, new HeaderStateMachine(), true);
 
-        final ClassMethod handle = file.addMethod(Modifier.PUBLIC, "handle", "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR);
+        final ClassMethod handle = file.addMethod(Modifier.PUBLIC, "handle", "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR);
         createHandleBody(className, handle);
 
 
@@ -126,7 +126,7 @@ public class ParserGenerator {
         c.branchEnd(method.get());
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HTTP_VERB, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_HTTP_VERB, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
@@ -137,7 +137,7 @@ public class ParserGenerator {
         c.branchEnd(path.get());
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_PATH, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_PATH, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
@@ -146,7 +146,7 @@ public class ParserGenerator {
         c.branchEnd(http.get());
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HTTP_VERSION, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_HTTP_VERSION, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
@@ -154,7 +154,7 @@ public class ParserGenerator {
         c.branchEnd(afterVersion.get());
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_AFTER_VERSION, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_AFTER_VERSION, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
@@ -169,7 +169,7 @@ public class ParserGenerator {
         CodeLocation headerStart = c.mark();
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HEADER, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_HEADER, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
@@ -183,7 +183,7 @@ public class ParserGenerator {
         c.branchEnd(headerValue.get());
         c.aload(0);
         c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HEADER_VALUE, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR});
+        c.invokespecial(className, HANDLE_HEADER_VALUE, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
         c.dup();
         c.istore(BYTES_REMAINING_VAR);
         returnSet.add(c.ifeq());
@@ -234,7 +234,7 @@ public class ParserGenerator {
 
         final int noStates = stateCounter.get();
 
-        final ClassMethod handle = file.addMethod(Modifier.PRIVATE, methodName, "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_BUILDER_DESCRIPTOR);
+        final ClassMethod handle = file.addMethod(Modifier.PRIVATE, methodName, "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR);
         writeStateMachine(className, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, caseInsensitive);
     }
 
@@ -546,7 +546,7 @@ public class ParserGenerator {
                 "[B",
                 "I",
                 PARSE_STATE_DESCRIPTOR,
-                HTTP_EXCHANGE_BUILDER_DESCRIPTOR,
+                HTTP_EXCHANGE_DESCRIPTOR,
                 "I",
                 "I",
                 DescriptorUtils.makeDescriptor(String.class),
@@ -864,7 +864,7 @@ public class ParserGenerator {
         public void handleOtherToken(final CodeAttribute c) {
             c.aload(HTTP_EXCHANGE_BUILDER);
             c.swap();
-            c.putfield(HTTP_EXCHANGE_BUILDER_CLASS, "method", DescriptorUtils.makeDescriptor(String.class));
+            c.invokevirtual(HTTP_EXCHANGE_CLASS, "setRequestMethod", "(Ljava/lang/String;)V");
         }
 
         @Override
@@ -892,7 +892,7 @@ public class ParserGenerator {
         public void handleOtherToken(final CodeAttribute c) {
             c.aload(HTTP_EXCHANGE_BUILDER);
             c.swap();
-            c.putfield(HTTP_EXCHANGE_BUILDER_CLASS, "protocol", DescriptorUtils.makeDescriptor(String.class));
+            c.invokevirtual(HTTP_EXCHANGE_CLASS, "setProtocol", "(Ljava/lang/String;)V");
         }
 
         @Override

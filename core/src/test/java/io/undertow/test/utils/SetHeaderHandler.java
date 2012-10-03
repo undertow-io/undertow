@@ -21,6 +21,7 @@ package io.undertow.test.utils;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HttpString;
 
 /**
  * @author Stuart Douglas
@@ -37,7 +38,7 @@ public class SetHeaderHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        exchange.getResponseHeaders().put(header, value);
+        exchange.getResponseHeaders().put(new HttpString(header), value);
         completionHandler.handleComplete();
     }
 }

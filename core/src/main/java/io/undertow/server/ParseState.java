@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.server.httpparser;
+package io.undertow.server;
 
 import io.undertow.util.HttpString;
 
@@ -92,7 +92,7 @@ public class ParseState {
     /**
      * This is used to store the next header value when parsing header key / value pairs,
      */
-    HttpString nextHeader;
+    String nextHeader;
 
 
     public ParseState() {

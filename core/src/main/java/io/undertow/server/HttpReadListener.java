@@ -20,20 +20,12 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Deque;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReference;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.server.httpparser.HttpExchangeBuilder;
-import io.undertow.server.httpparser.HttpParser;
-import io.undertow.server.httpparser.ParseState;
 import io.undertow.util.GatedStreamSinkChannel;
-import io.undertow.util.HeaderMap;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -54,18 +46,35 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
     private final StreamSinkChannel responseChannel;
 
-    private volatile ParseState state;
-    private volatile HttpExchangeBuilder builder;
+    private ParseState state = new ParseState();
+    private HttpServerExchange httpServerExchange;
+    private StartNextRequestAction startNextRequestAction;
 
     private final HttpServerConnection connection;
 
     private volatile int read = 0;
     private final int maxRequestSize;
 
-    HttpReadListener(final StreamSinkChannel responseChannel, final HttpServerConnection connection) {
+    HttpReadListener(final StreamSinkChannel responseChannel, final PushBackStreamChannel requestChannel, final HttpServerConnection connection) {
         this.responseChannel = responseChannel;
         this.connection = connection;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
+
+        final StreamSinkChannel nextRequestResponseChannel;
+        final Runnable responseTerminateAction;
+        if (connection.getMaxConcurrentRequests() > 1) {
+            final Object permit = new Object();
+            GatedStreamSinkChannel gatedStreamSinkChannel = new GatedStreamSinkChannel(connection.getChannel(), permit, false, true);
+            nextRequestResponseChannel = gatedStreamSinkChannel;
+            responseTerminateAction = new ResponseTerminateAction(gatedStreamSinkChannel, permit);
+        } else {
+            nextRequestResponseChannel = connection.getChannel();
+            responseTerminateAction = null;
+        }
+        final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(requestChannel, nextRequestResponseChannel, connection);
+        httpServerExchange = new HttpServerExchange(connection,  requestChannel, this.responseChannel, startNextRequestAction, responseTerminateAction);
+        this.startNextRequestAction = startNextRequestAction;
+
     }
 
     public void handleEvent(final PushBackStreamChannel channel) {
@@ -115,11 +124,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 }
                 //TODO: we need to handle parse errors
                 buffer.flip();
-                if (state == null) {
-                    state = new ParseState();
-                    builder = new HttpExchangeBuilder();
-                }
-                int remaining = HttpParser.INSTANCE.handle(buffer, res, state, builder);
+                int remaining = HttpParser.INSTANCE.handle(buffer, res, state, httpServerExchange);
                 if (remaining > 0) {
                     free = false;
                     channel.unget(pooled);
@@ -137,44 +142,20 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             // if the http handler doesn't set any then reads will suspend, which is the right thing to do
             channel.getReadSetter().set(null);
             channel.suspendReads();
-            final StreamSinkChannel ourResponseChannel = this.responseChannel;
-            final Object permit = new Object();
-            final StreamSinkChannel nextRequestResponseChannel;
-            final Runnable responseTerminateAction;
-            if (connection.getMaxConcurrentRequests() > 1) {
-                GatedStreamSinkChannel gatedStreamSinkChannel = new GatedStreamSinkChannel(connection.getChannel(), permit, false, true);
-                nextRequestResponseChannel = gatedStreamSinkChannel;
-                responseTerminateAction = new ResponseTerminateAction(gatedStreamSinkChannel, permit);
-            } else {
-                nextRequestResponseChannel = connection.getChannel();
-                responseTerminateAction = null;
-            }
-            final HeaderMap requestHeaders = builder.getHeaders();
-            final HeaderMap responseHeaders = new HeaderMap();
-            final Map<String, Deque<String>> parameters = builder.getQueryParameters();
-            final String method = builder.getMethod();
-            final String protocol = builder.getProtocol();
 
-            final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(channel, nextRequestResponseChannel, connection);
-
-            final HttpServerExchange httpServerExchange = new HttpServerExchange(connection, requestHeaders, responseHeaders, parameters, method, protocol, channel, ourResponseChannel, startNextRequestAction, responseTerminateAction);
+            final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
             try {
                 httpServerExchange.setRequestScheme("http"); //todo: determine if this is https
-                httpServerExchange.setRequestURI(builder.getFullPath());
-                httpServerExchange.setRelativePath(builder.getRelativePath());
-                httpServerExchange.setRequestPath(builder.getRelativePath());
-                httpServerExchange.setQueryString(builder.getQueryString());
-
                 state = null;
-                builder = null;
+                this.httpServerExchange = null;
                 connection.getRootHandler().handleRequest(httpServerExchange, new CompletionHandler(httpServerExchange, startNextRequestAction));
 
             } catch (Throwable t) {
                 //TODO: we should attempt to return a 500 status code in this situation
                 UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
-                IoUtils.safeClose(nextRequestResponseChannel);
                 IoUtils.safeClose(channel);
+                IoUtils.safeClose(connection);
             }
         } finally {
             if (free) pooled.free();
@@ -233,7 +214,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
         private void startNextRequest() {
             final PushBackStreamChannel channel = this.channel;
-            final HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, connection);
+            final HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, channel, connection);
             if(channel.isReadResumed()) {
                 channel.suspendReads();
             }

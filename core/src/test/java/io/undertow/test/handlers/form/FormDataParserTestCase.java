@@ -37,6 +37,7 @@ import io.undertow.server.handlers.form.FormEncodedDataHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import junit.textui.TestRunner;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -79,7 +80,7 @@ public class FormDataParserTestCase {
                     while (it.hasNext()) {
                         String fd = it.next();
                         for (FormData.FormValue val : data.get(fd)) {
-                            exchange.getResponseHeaders().add(fd, val.getValue());
+                            exchange.getResponseHeaders().add(new HttpString(fd), val.getValue());
                         }
                     }
                     completionHandler.handleComplete();
@@ -106,7 +107,7 @@ public class FormDataParserTestCase {
                     while (it.hasNext()) {
                         String fd = it.next();
                         for (FormData.FormValue val : data.get(fd)) {
-                            exchange.getExchange().getResponseHeaders().add(fd, val.getValue());
+                            exchange.getExchange().getResponseHeaders().add(new HttpString(fd), val.getValue());
                         }
                     }
                 } catch (IOException e) {
@@ -134,7 +135,7 @@ public class FormDataParserTestCase {
             final List<NameValuePair> data = new ArrayList<NameValuePair>();
             data.addAll(Arrays.asList(pairs));
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
-            post.setHeader(Headers.CONTENT_TYPE, FormEncodedDataHandler.APPLICATION_X_WWW_FORM_URLENCODED);
+            post.setHeader(Headers.CONTENT_TYPE_STRING, FormEncodedDataHandler.APPLICATION_X_WWW_FORM_URLENCODED);
             post.setEntity(new UrlEncodedFormEntity(data));
             HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());

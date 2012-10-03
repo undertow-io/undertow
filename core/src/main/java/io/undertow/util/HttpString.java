@@ -38,7 +38,7 @@ import static java.util.Arrays.copyOfRange;
  */
 public final class HttpString implements Comparable<HttpString>, Serializable {
     private final byte[] bytes;
-    private transient final int hashCode;
+    private final transient int hashCode;
     private transient String string;
 
     private static final Field hashCodeField;
@@ -70,7 +70,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     /**
      * Construct a new instance.
      *
-     * @param bytes the byte array to copy
+     * @param bytes  the byte array to copy
      * @param offset the offset into the array to start copying
      * @param length the number of bytes to copy
      */
@@ -96,7 +96,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     public HttpString(final String string) {
         final int len = string.length();
         final byte[] bytes = new byte[len];
-        for (int i = 0; i < len; i ++) {
+        for (int i = 0; i < len; i++) {
             char c = string.charAt(i);
             if (c > 0xff) {
                 throw new IllegalArgumentException("Invalid string contents");
@@ -124,7 +124,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     public static HttpString tryFromString(String string) {
         final int len = string.length();
         final byte[] bytes = new byte[len];
-        for (int i = 0; i < len; i ++) {
+        for (int i = 0; i < len; i++) {
             char c = string.charAt(i);
             if (c > 0xff) {
                 return null;
@@ -139,22 +139,26 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      *
      * @return the string length
      */
-    public int length() { return bytes.length; }
+    public int length() {
+        return bytes.length;
+    }
 
     /**
      * Get the byte at an index.
      *
      * @return the byte at an index
      */
-    public byte byteAt(int idx) { return bytes[idx]; }
+    public byte byteAt(int idx) {
+        return bytes[idx];
+    }
 
     /**
      * Copy {@code len} bytes from this string at offset {@code srcOffs} to the given array at the given offset.
      *
      * @param srcOffs the source offset
-     * @param dst the destination
-     * @param offs the destination offset
-     * @param len the number of bytes to copy
+     * @param dst     the destination
+     * @param offs    the destination offset
+     * @param len     the number of bytes to copy
      */
     public void copyTo(int srcOffs, byte[] dst, int offs, int len) {
         arraycopy(bytes, srcOffs, dst, offs, len);
@@ -163,9 +167,9 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     /**
      * Copy {@code len} bytes from this string to the given array at the given offset.
      *
-     * @param dst the destination
+     * @param dst  the destination
      * @param offs the destination offset
-     * @param len the number of bytes
+     * @param len  the number of bytes
      */
     public void copyTo(byte[] dst, int offs, int len) {
         copyTo(0, dst, offs, len);
@@ -174,7 +178,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     /**
      * Copy all the bytes from this string to the given array at the given offset.
      *
-     * @param dst the destination
+     * @param dst  the destination
      * @param offs the destination offset
      */
     public void copyTo(byte[] dst, int offs) {
@@ -224,7 +228,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     public int compareTo(final HttpString other) {
         final int len = Math.min(bytes.length, other.bytes.length);
         int res;
-        for (int i = 0; i < len; i ++) {
+        for (int i = 0; i < len; i++) {
             res = signum(higher(bytes[i]) - higher(other.bytes[i]));
             if (res != 0) return res;
         }
@@ -289,13 +293,13 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
             switch (remaining) {
                 case 3:
                     tmp ^= higher(bytes[position + 2]) << 16;
-                // fall through
+                    // fall through
                 case 2:
                     tmp ^= higher(bytes[position + 1]) << 8;
-                // fall through
+                    // fall through
                 case 1:
                     tmp ^= higher(bytes[position]);
-                // fall through
+                    // fall through
                 default:
                     tmp *= 0xcc9e2d51;
                     tmp = rotateLeft(tmp, 15);
@@ -326,7 +330,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     private static boolean bytesAreEquivalent(final byte[] a, final byte[] b) {
         assert a.length == b.length;
         final int len = a.length;
-        for (int i = 0; i < len; i ++) {
+        for (int i = 0; i < len; i++) {
             if (higher(a[i]) != higher(b[i])) {
                 return false;
             }

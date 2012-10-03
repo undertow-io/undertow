@@ -47,9 +47,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
     protected final ChannelFactory<StreamSinkChannel> channelFactory;
     private final HttpServletResponseImpl servletResponse;
-    private volatile boolean closed;
-    private volatile ByteBuffer buffer;
-    private volatile Pooled<ByteBuffer> pooledBuffer;
+    private boolean closed;
+    private ByteBuffer buffer;
+    private Pooled<ByteBuffer> pooledBuffer;
     private Integer bufferSize;
     private boolean writeStarted;
     private StreamSinkChannel channel;

@@ -16,11 +16,14 @@
  * limitations under the License.
  */
 
-package io.undertow.server.httpparser;
+package io.undertow.server;
 
 import java.nio.ByteBuffer;
 
+import io.undertow.server.HttpParser;
+import io.undertow.server.ParseState;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -49,7 +52,7 @@ public class ParserResumeTestCase {
     public void testOneCharacterAtATime() {
         byte[] in = DATA.getBytes();
         final ParseState context = new ParseState();
-        HttpExchangeBuilder result = new HttpExchangeBuilder();
+        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         while (context.state != ParseState.PARSE_COMPLETE) {
             HttpParser.INSTANCE.handle(buffer, 1, context, result);
@@ -59,7 +62,7 @@ public class ParserResumeTestCase {
 
     private void testResume(final int split, byte[] in) {
         final ParseState context = new ParseState();
-        HttpExchangeBuilder result = new HttpExchangeBuilder();
+        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         int left = HttpParser.INSTANCE.handle(buffer, split, context, result);
         Assert.assertEquals(0, left);
@@ -68,22 +71,22 @@ public class ParserResumeTestCase {
         Assert.assertEquals(4, left);
     }
 
-    private void runAssertions(final HttpExchangeBuilder result, final ParseState context) {
-        Assert.assertSame("POST", result.method);
-        Assert.assertEquals("/apath", result.relativePath);
-        Assert.assertEquals("http://www.somehost.net/apath", result.fullPath);
-        Assert.assertSame("HTTP/1.1", result.protocol);
-        HeaderMap map = new HeaderMap();
-        map.add("Host", "www.somehost.net");
-        map.add("OtherHeader", "some value");
-        map.add("Hostee", "another");
-        map.add("Accept-garbage", "a");
-        Assert.assertEquals(map, result.headers);
+    private void runAssertions(final HttpServerExchange result, final ParseState context) {
+        Assert.assertSame("POST", result.getRequestMethod());
+        Assert.assertEquals("/apath", result.getRelativePath());
+        Assert.assertEquals("http://www.somehost.net/apath", result.getRequestURI());
+        Assert.assertSame("HTTP/1.1", result.getProtocol());
+
+        Assert.assertEquals(4, result.getRequestHeaders().getHeaderNames().size());
+        Assert.assertEquals("www.somehost.net", result.getRequestHeaders().getFirst(new HttpString("Host")));
+        Assert.assertEquals("some value", result.getRequestHeaders().getFirst(new HttpString("OtherHeader")));
+        Assert.assertEquals("another", result.getRequestHeaders().getFirst(new HttpString("Hostee")));
+        Assert.assertEquals("a", result.getRequestHeaders().getFirst(new HttpString("Accept-garbage")));
 
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
-        Assert.assertEquals("key1=value1&key2=value2", result.queryString);
-        Assert.assertEquals("value1", result.queryParameters.get("key1").getFirst());
-        Assert.assertEquals("value2", result.queryParameters.get("key2").getFirst());
+        Assert.assertEquals("key1=value1&key2=value2", result.getQueryString());
+        Assert.assertEquals("value1", result.getQueryParameters().get("key1").getFirst());
+        Assert.assertEquals("value2", result.getQueryParameters().get("key2").getFirst());
     }
 
 }

@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -58,7 +57,7 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
         }
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(channel);
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions);
-        HttpReadListener readListener = new HttpReadListener(channel, connection);
+        HttpReadListener readListener = new HttpReadListener(channel, pushBackStreamChannel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);
     }

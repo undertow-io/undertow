@@ -66,6 +66,7 @@ import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import org.xnio.LocalSocketAddress;
 
 /**
@@ -141,7 +142,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public long getDateHeader(final String name) {
-        String header = exchange.getExchange().getRequestHeaders().getFirst(name);
+        String header = exchange.getExchange().getRequestHeaders().getFirst(new HttpString(name));
         if (header == null) {
             return -1;
         }
@@ -154,6 +155,10 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getHeader(final String name) {
+        return getHeader(new HttpString(name));
+    }
+
+    public String getHeader(final HttpString name) {
         HeaderMap headers = exchange.getExchange().getRequestHeaders();
         if (headers == null) {
             return null;
@@ -161,9 +166,10 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         return headers.getFirst(name);
     }
 
+
     @Override
     public Enumeration<String> getHeaders(final String name) {
-        Deque<String> headers = exchange.getExchange().getRequestHeaders().get(name);
+        Deque<String> headers = exchange.getExchange().getRequestHeaders().get(new HttpString(name));
         if (headers == null) {
             return EmptyEnumeration.instance();
         }
@@ -172,7 +178,11 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Enumeration<String> getHeaderNames() {
-        return new IteratorEnumeration<String>(exchange.getExchange().getRequestHeaders().iterator());
+        final Set<String> headers = new HashSet<String>();
+        for(final HttpString i : exchange.getExchange().getRequestHeaders()) {
+            headers.add(i.toString());
+        }
+        return new IteratorEnumeration<String>(headers.iterator());
     }
 
     @Override

@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletResponse;
@@ -36,10 +37,12 @@ import io.undertow.server.ChannelWrapper;
 import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
@@ -75,7 +78,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public boolean containsHeader(final String name) {
-        return exchange.getExchange().getResponseHeaders().contains(name);
+        return exchange.getExchange().getResponseHeaders().contains(new HttpString(name));
     }
 
     @Override
@@ -115,22 +118,21 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setDateHeader(final String name, final long date) {
-        if(insideInclude){
-            return;
-        }
-        exchange.getExchange().getResponseHeaders().put(name, DateUtils.toDateString(new Date(date)));
+        setHeader(name, DateUtils.toDateString(new Date(date)));
     }
 
     @Override
     public void addDateHeader(final String name, final long date) {
-        if(insideInclude){
-            return;
-        }
-        exchange.getExchange().getResponseHeaders().add(name, DateUtils.toDateString(new Date(date)));
+        addHeader(name, DateUtils.toDateString(new Date(date)));
     }
 
     @Override
     public void setHeader(final String name, final String value) {
+        setHeader(new HttpString(name), value);
+    }
+
+
+    public void setHeader(final HttpString name, final String value) {
         if(insideInclude){
             return;
         }
@@ -139,6 +141,10 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void addHeader(final String name, final String value) {
+        addHeader(new HttpString(name), value);
+    }
+
+    public void addHeader(final HttpString name, final String value) {
         if(insideInclude){
             return;
         }
@@ -147,18 +153,12 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setIntHeader(final String name, final int value) {
-        if(insideInclude){
-            return;
-        }
-        exchange.getExchange().getResponseHeaders().put(name, "" + value);
+        addHeader(name, Integer.toString(value));
     }
 
     @Override
     public void addIntHeader(final String name, final int value) {
-        if(insideInclude){
-            return;
-        }
-        exchange.getExchange().getResponseHeaders().add(name, "" + value);
+        addHeader(name, Integer.toString(value));
     }
 
     @Override
@@ -184,17 +184,21 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String getHeader(final String name) {
-        return exchange.getExchange().getResponseHeaders().getFirst(name);
+        return exchange.getExchange().getResponseHeaders().getFirst(new HttpString(name));
     }
 
     @Override
     public Collection<String> getHeaders(final String name) {
-        return new ArrayList<String>(exchange.getExchange().getResponseHeaders().get(name));
+        return new ArrayList<String>(exchange.getExchange().getResponseHeaders().get(new HttpString(name)));
     }
 
     @Override
     public Collection<String> getHeaderNames() {
-        return exchange.getExchange().getResponseHeaders().getHeaderNames();
+        final Set<String> headers = new HashSet<String>();
+        for(final HttpString i : exchange.getExchange().getResponseHeaders()) {
+            headers.add(i.toString());
+        }
+        return headers;
     }
 
     @Override

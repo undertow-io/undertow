@@ -82,7 +82,7 @@ public class MaxRequestSizeTestCase {
             final DefaultHttpClient client = new DefaultHttpClient();
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
-            post.addHeader(Headers.CONNECTION, "close");
+            post.addHeader(Headers.CONNECTION_STRING, "close");
             HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
@@ -115,7 +115,7 @@ public class MaxRequestSizeTestCase {
             final DefaultHttpClient client = new DefaultHttpClient();
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
-            post.addHeader(Headers.CONNECTION, "close");
+            post.addHeader(Headers.CONNECTION_STRING, "close");
             HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
@@ -133,7 +133,7 @@ public class MaxRequestSizeTestCase {
             DefaultServer.setUndertowOptions(maxSize);
             post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
-            post.addHeader(Headers.CONNECTION, "close");
+            post.addHeader(Headers.CONNECTION_STRING, "close");
             result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
