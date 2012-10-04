@@ -159,6 +159,7 @@ public class AsyncContextImpl implements AsyncContext {
     public void dispatch(final ServletContext context, final String path) {
 
         HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(servletRequest);
+        HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(servletResponse);
         final ServletInitialHandler handler;
         final BlockingHttpServerExchange exchange = requestImpl.getExchange();
 
@@ -201,6 +202,7 @@ public class AsyncContextImpl implements AsyncContext {
         requestImpl.getExchange().getExchange().setRequestPath(newRequestUri);
         requestImpl.getExchange().getExchange().setRequestURI(newRequestUri);
         requestImpl.setServletContext((ServletContextImpl) context);
+        responseImpl.setServletContext((ServletContextImpl) context);
 
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         handler = deployment.getServletPaths().getServletHandlerByPath(newServletPath);

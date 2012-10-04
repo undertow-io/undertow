@@ -42,6 +42,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
+import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -55,14 +56,16 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     public static final AttachmentKey<ServletResponse> ATTACHMENT_KEY = AttachmentKey.create(ServletResponse.class);
 
     private final BlockingHttpServerExchange exchange;
+    private volatile ServletContextImpl servletContext;
 
     private ServletOutputStreamImpl servletOutputStream;
     private PrintWriter writer;
     private Integer bufferSize;
     private boolean insideInclude = false;
 
-    public HttpServletResponseImpl(final BlockingHttpServerExchange exchange) {
+    public HttpServletResponseImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
+        this.servletContext = servletContext;
     }
 
     public BlockingHttpServerExchange getExchange() {
@@ -105,7 +108,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendError(final int sc, final String msg) throws IOException {
-        if(exchange.getExchange().isResponseStarted()) {
+        if (exchange.getExchange().isResponseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         exchange.getExchange().setResponseCode(sc);
@@ -116,7 +119,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendError(final int sc) throws IOException {
-        if(exchange.getExchange().isResponseStarted()) {
+        if (exchange.getExchange().isResponseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         exchange.getExchange().setResponseCode(sc);
@@ -126,7 +129,24 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendRedirect(final String location) throws IOException {
-
+        setStatus(302);
+        String realPath;
+        if (location.startsWith("/")) {
+            realPath = location;
+        } else {
+            String current = exchange.getExchange().getRelativePath();
+            int lastSlash = current.lastIndexOf("/");
+            if (lastSlash != -1) {
+                current = current.substring(0, lastSlash + 1);
+            }
+            realPath = servletContext.getContextPath() + CanonicalPathUtils.canonicalize(current + location);
+        }
+        String host = exchange.getExchange().getRequestHeaders().getFirst(Headers.HOST);
+        if (host == null) {
+            host = exchange.getExchange().getDestinationAddress().getAddress().getHostAddress();
+        }
+        String loc = exchange.getExchange().getRequestScheme() + "://" + host + realPath;
+        exchange.getExchange().getResponseHeaders().put(Headers.LOCATION, loc);
     }
 
     @Override
@@ -355,6 +375,10 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     public void setInsideInclude(final boolean insideInclude) {
         this.insideInclude = insideInclude;
+    }
+
+    public void setServletContext(final ServletContextImpl servletContext) {
+        this.servletContext = servletContext;
     }
 
     public static HttpServletResponseImpl getResponseImpl(final ServletResponse response) {

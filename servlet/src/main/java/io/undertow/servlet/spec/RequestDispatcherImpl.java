@@ -61,6 +61,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     @Override
     public void forward(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
         HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(request);
+        final HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
         final BlockingHttpServerExchange exchange = requestImpl.getExchange();
         response.resetBuffer();
 
@@ -114,6 +115,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             requestImpl.getExchange().getExchange().setRequestPath(newRequestUri);
             requestImpl.getExchange().getExchange().setRequestURI(newRequestUri);
             requestImpl.setServletContext(servletContext);
+            responseImpl.setServletContext(servletContext);
         }
 
         try {
@@ -194,9 +196,10 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         boolean inInclude = responseImpl.isInsideInclude();
         responseImpl.setInsideInclude(true);
 
-        ServletContextImpl oldContext = (ServletContextImpl) requestImpl.getServletContext();
+        ServletContextImpl oldContext = requestImpl.getServletContext();
         try {
             requestImpl.setServletContext(servletContext);
+            responseImpl.setServletContext(servletContext);
             try {
                 exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
                 exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
@@ -211,6 +214,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         } finally {
             responseImpl.setInsideInclude(inInclude);
             requestImpl.setServletContext(oldContext);
+            responseImpl.setServletContext(oldContext);
             exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, oldRequest);
             exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, oldResponse);
             if (!named) {
