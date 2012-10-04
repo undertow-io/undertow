@@ -30,7 +30,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 
-import java.nio.charset.Charset;
+import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
@@ -40,7 +40,6 @@ import java.util.Deque;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 
-import org.apache.commons.codec.binary.Base64;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
@@ -59,7 +58,6 @@ import org.ietf.jgss.GSSManager;
  */
 public class GSSAPIAuthenticationHandler implements HttpHandler {
 
-    private static final Charset UTF_8 = Charset.forName("UTF-8");
     private static final String NEGOTIATE_PREFIX = NEGOTIATE + " ";
 
     private final HttpHandler next;
@@ -99,13 +97,15 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
                 for (String current : authHeaders) {
                     if (current.startsWith(NEGOTIATE_PREFIX)) {
                         String base64Challenge = current.substring(NEGOTIATE_PREFIX.length());
-                        byte[] challenge = Base64.decodeBase64(base64Challenge);
+                        try {
+                            byte[] challenge = Base64.decode(base64Challenge);
 
-                        dispatch(exchange, new GSSAPIRunnable(exchange, wrapperCompletionHandler, challenge));
-
-                        // The request has now potentially been dispatched to a different worker thread, the run method
-                        // within GSSAPIRunnable is now responsible for ensuring the request continues.
-                        return;
+                            dispatch(exchange, new GSSAPIRunnable(exchange, wrapperCompletionHandler, challenge));
+                            // The request has now potentially been dispatched to a different worker thread, the run method
+                            // within GSSAPIRunnable is now responsible for ensuring the request continues.
+                            return;
+                        } catch (IOException e) {
+                        }
                     }
                 }
             }
@@ -225,7 +225,7 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
                 if (responseChallenge != null) {
                     System.out.println("Sending existing challenge.");
                     HeaderMap headers = exchange.getResponseHeaders();
-                    headers.add(WWW_AUTHENTICATE, NEGOTIATE_PREFIX + Base64.encodeBase64String(responseChallenge));
+                    headers.add(WWW_AUTHENTICATE, NEGOTIATE_PREFIX + Base64.encodeBytes(responseChallenge));
                     if (authenticationState != AuthenticationState.AUTHENTICATED) {
                         exchange.setResponseCode(CODE_401.getCode());
                     }

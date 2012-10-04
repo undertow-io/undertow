@@ -17,7 +17,6 @@
  */
 package io.undertow.server.handlers.security;
 
-import static io.undertow.util.Base64.base64Decode;
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.BASIC;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
@@ -28,6 +27,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Deque;
@@ -44,6 +44,8 @@ import javax.security.auth.callback.UnsupportedCallbackException;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 public class BasicAuthenticationHandler implements HttpHandler {
+
+    private static Charset UTF_8 = Charset.forName("UTF-8");
 
     private final HttpHandler next;
     private final String challenge;
@@ -75,9 +77,13 @@ public class BasicAuthenticationHandler implements HttpHandler {
                 for (String current : authHeaders) {
                     if (current.startsWith(BASIC_PREFIX)) {
                         String base64Challenge = current.substring(PREFIX_LENGTH);
-                        String plainChallenge = base64Decode(base64Challenge);
-                        int colonPos = plainChallenge.indexOf(COLON);
-                        if (colonPos > -1) {
+                        String plainChallenge = null;
+                        try {
+                            plainChallenge = new String(Base64.decode(base64Challenge), UTF_8);
+                        } catch (IOException e) {
+                        }
+                        int colonPos;
+                        if (plainChallenge != null && (colonPos = plainChallenge.indexOf(COLON)) > -1) {
                             String userName = plainChallenge.substring(0, colonPos);
                             String password = plainChallenge.substring(colonPos + 1);
                             dispatch(exchange,

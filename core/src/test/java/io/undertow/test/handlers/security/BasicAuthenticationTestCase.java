@@ -17,7 +17,6 @@
  */
 package io.undertow.test.handlers.security;
 
-import static io.undertow.util.Base64.encode;
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.BASIC;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
@@ -30,6 +29,7 @@ import io.undertow.server.handlers.security.SecurityEndHandler;
 import io.undertow.server.handlers.security.SecurityInitialHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -41,6 +41,7 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -116,13 +117,13 @@ public class BasicAuthenticationTestCase {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE);
+        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
         assertEquals(1, values.length);
         assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
 
         client = new DefaultHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
-        get.addHeader(AUTHORIZATION, BASIC + " " + new String(encode("userOne:passwordOne".getBytes())));
+        get.addHeader(AUTHORIZATION.toString(), BASIC + " " + Base64.encodeBase64String("userOne:passwordOne".getBytes()));
         result = client.execute(get);
         assertEquals(200, result.getStatusLine().getStatusCode());
 
@@ -138,10 +139,12 @@ public class BasicAuthenticationTestCase {
      */
     private static class ResponseHandler implements HttpHandler {
 
+        static final HttpString PROCESSED_BY = new HttpString("ProcessedBy");
+
         @Override
         public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
             HeaderMap responseHeader = exchange.getResponseHeaders();
-            responseHeader.add("ProcessedBy", "ResponseHandler");
+            responseHeader.add(PROCESSED_BY, "ResponseHandler");
 
             completionHandler.handleComplete();
         }
