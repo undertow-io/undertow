@@ -22,25 +22,16 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
-import javax.servlet.ServletRequestWrapper;
 import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
 
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
-import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletInitialHandler;
-import io.undertow.servlet.util.DelegatingHttpServletResponse;
 
 /**
  * @author Stuart Douglas
@@ -69,14 +60,14 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
     @Override
     public void forward(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
-        HttpServletRequestImpl requestImpl = getRequestImpl(request);
+        HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(request);
         final BlockingHttpServerExchange exchange = requestImpl.getExchange();
         response.resetBuffer();
 
 
         final ServletRequest oldRequest = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         final ServletResponse oldResponse = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
-        exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.INCLUDE);
+        exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.FORWARD);
 
         Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
 
@@ -145,8 +136,8 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     @Override
     public void include(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
 
-        HttpServletRequestImpl requestImpl = getRequestImpl(request);
-        final HttpServletResponseImpl responseImpl = getResponseImpl(response);
+        HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(request);
+        final HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
         final BlockingHttpServerExchange exchange =requestImpl.getExchange();
 
         final ServletRequest oldRequest = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
@@ -231,35 +222,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 requestImpl.setQueryParameters(queryParameters);
             }
         }
-    }
-
-
-
-    private HttpServletRequestImpl getRequestImpl(final ServletRequest request) {
-        final HttpServletRequestImpl requestImpl;
-        if (request instanceof HttpServletRequestImpl) {
-            requestImpl = (HttpServletRequestImpl) request;
-        } else if (request instanceof HttpServletRequestWrapper) {
-            requestImpl = (HttpServletRequestImpl) ((HttpServletRequestWrapper) request).getRequest();
-        } else {
-            throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
-        }
-        return requestImpl;
-    }
-
-
-
-
-    private HttpServletResponseImpl getResponseImpl(final ServletResponse response) {
-        final HttpServletResponseImpl requestImpl;
-        if (response instanceof HttpServletResponseImpl) {
-            requestImpl = (HttpServletResponseImpl) response;
-        } else if (response instanceof HttpServletResponseWrapper) {
-            requestImpl = (HttpServletResponseImpl) ((HttpServletResponseWrapper) response).getResponse();
-        } else {
-            throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
-        }
-        return requestImpl;
     }
 
 

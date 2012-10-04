@@ -33,6 +33,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.core.ManagedServlet;
+import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 
@@ -46,6 +47,7 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 public class ServletHandler implements BlockingHttpHandler {
 
     private final ManagedServlet managedServlet;
+    private final boolean asyncSupported;
 
     private static final AtomicLongFieldUpdater<ServletHandler> unavailableUntilUpdater = AtomicLongFieldUpdater.newUpdater(ServletHandler.class, "unavailableUntil");
 
@@ -53,8 +55,8 @@ public class ServletHandler implements BlockingHttpHandler {
     private volatile long unavailableUntil = 0;
 
     public ServletHandler(final ManagedServlet managedServlet) {
-
         this.managedServlet = managedServlet;
+        this.asyncSupported = managedServlet.getServletInfo().isAsyncSupported();
     }
 
     @Override
@@ -65,7 +67,7 @@ public class ServletHandler implements BlockingHttpHandler {
             return;
         }
 
-        long until = unavailableUntilUpdater.get(this);
+        long until = unavailableUntil;
         if (until != 0) {
             UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 503 for servlet %s due to temporary unavailability", managedServlet.getServletInfo().getName());
             if (System.currentTimeMillis() < until) {
@@ -74,6 +76,9 @@ public class ServletHandler implements BlockingHttpHandler {
             } else {
                 unavailableUntilUpdater.compareAndSet(this, until, 0);
             }
+        }
+        if(!asyncSupported) {
+            exchange.getExchange().putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, false);
         }
         ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         ServletResponse response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);

@@ -41,13 +41,13 @@ import java.util.Set;
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
@@ -642,18 +642,25 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public ServletContext getServletContext() {
+    public ServletContextImpl getServletContext() {
         return servletContext;
     }
 
     @Override
     public AsyncContext startAsync() throws IllegalStateException {
-        return asyncContext = new AsyncContextImpl(exchange.getExchange(), exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
+        if(!isAsyncSupported()) {
+            throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
+        }
+        return asyncContext = new AsyncContextImpl(exchange, exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
     }
 
     @Override
     public AsyncContext startAsync(final ServletRequest servletRequest, final ServletResponse servletResponse) throws IllegalStateException {
-        return asyncContext = new AsyncContextImpl(exchange.getExchange(), servletRequest, servletResponse);
+
+        if(!isAsyncSupported()) {
+            throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
+        }
+        return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse);
     }
 
     @Override
@@ -668,7 +675,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
-    public AsyncContext getAsyncContext() {
+    public AsyncContextImpl getAsyncContext() {
         if (asyncContext == null) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }
@@ -690,5 +697,26 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     public void setServletContext(final ServletContextImpl servletContext) {
         this.servletContext = servletContext;
+    }
+
+    /**
+     * called when the outstanding async request is dispatched
+     */
+    public void asyncInitialRequestDone() {
+        asyncContext.initialRequestDone();
+        asyncContext = null;
+    }
+
+
+    public static HttpServletRequestImpl getRequestImpl(final ServletRequest request) {
+        final HttpServletRequestImpl requestImpl;
+        if (request instanceof HttpServletRequestImpl) {
+            requestImpl = (HttpServletRequestImpl) request;
+        } else if (request instanceof HttpServletRequestWrapper) {
+            requestImpl = getRequestImpl(((HttpServletRequestWrapper) request).getRequest());
+        } else {
+            throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
+        }
+        return requestImpl;
     }
 }

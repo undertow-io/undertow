@@ -102,6 +102,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
         setup.addAll(deploymentInfo.getThreadSetupActions());
         final CompositeThreadSetupAction threadSetupAction = new CompositeThreadSetupAction(setup);
+        deployment.setThreadSetupAction(threadSetupAction);
 
         //TODO: this is just a temporary hack, this will probably change a lot
         ThreadSetupAction.Handle handle = threadSetupAction.setup(null);

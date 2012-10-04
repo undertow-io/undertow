@@ -46,6 +46,7 @@ public class DeploymentImpl implements Deployment {
     private volatile ServletContextImpl servletContext;
     private volatile HttpHandler servletHandler;
     private volatile ServletPathMatches servletPaths;
+    private volatile CompositeThreadSetupAction threadSetupAction;
 
 
     public DeploymentImpl(final DeploymentInfo deploymentInfo) {
@@ -103,5 +104,13 @@ public class DeploymentImpl implements Deployment {
 
     void setServletPaths(final ServletPathMatches servletPaths) {
         this.servletPaths = servletPaths;
+    }
+
+    public CompositeThreadSetupAction getThreadSetupAction() {
+        return threadSetupAction;
+    }
+
+    public void setThreadSetupAction(final CompositeThreadSetupAction threadSetupAction) {
+        this.threadSetupAction = threadSetupAction;
     }
 }

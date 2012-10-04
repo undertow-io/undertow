@@ -31,7 +31,7 @@ public interface ThreadSetupAction {
     /**
      * Setup any thread local context
      *
-     * @param exchange The exchange if this
+     * @param exchange The exchange, this may be null
      * @return A handle to tear down the request when the invocation is finished, or null
      */
     Handle setup(final BlockingHttpServerExchange exchange);

@@ -118,4 +118,10 @@ public interface UndertowServletMessages {
 
     @Message(id = 10024, value = "Response %s was not original or a wrapper")
     IllegalArgumentException responseWasNotOriginalOrWrapper(ServletResponse response);
+
+    @Message(id = 10025, value = "Async request already dispatched")
+    IllegalStateException asyncRequestAlreadyDispatched();
+
+    @Message(id = 10026, value = "Async is not supported for this request, as not all filters or Servlets were marked as supporting async")
+    IllegalStateException startAsyncNotAllowed();
 }

@@ -32,6 +32,7 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 
 import io.undertow.server.ChannelWrapper;
 import io.undertow.server.HttpCompletionHandler;
@@ -70,7 +71,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void addCookie(final Cookie cookie) {
-        if(insideInclude){
+        if (insideInclude) {
             return;
         }
         final AttachmentList<io.undertow.server.handlers.Cookie> cookies = exchange.getExchange().getAttachment(io.undertow.server.handlers.Cookie.RESPONSE_COOKIES);
@@ -134,7 +135,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
 
     public void setHeader(final HttpString name, final String value) {
-        if(insideInclude){
+        if (insideInclude) {
             return;
         }
         exchange.getExchange().getResponseHeaders().put(name, value);
@@ -146,7 +147,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void addHeader(final HttpString name, final String value) {
-        if(insideInclude){
+        if (insideInclude) {
             return;
         }
         exchange.getExchange().getResponseHeaders().add(name, value);
@@ -164,7 +165,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setStatus(final int sc) {
-        if(insideInclude){
+        if (insideInclude) {
             return;
         }
         exchange.getExchange().setResponseCode(sc);
@@ -172,7 +173,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setStatus(final int sc, final String sm) {
-        if(insideInclude){
+        if (insideInclude) {
             return;
         }
         setStatus(sc);
@@ -196,7 +197,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public Collection<String> getHeaderNames() {
         final Set<String> headers = new HashSet<String>();
-        for(final HttpString i : exchange.getExchange().getResponseHeaders()) {
+        for (final HttpString i : exchange.getExchange().getResponseHeaders()) {
             headers.add(i.toString());
         }
         return headers;
@@ -245,7 +246,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setCharacterEncoding(final String charset) {
-        if(insideInclude){
+        if (insideInclude) {
             return;
         }
 
@@ -253,7 +254,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentLength(final int len) {
-        if(insideInclude){
+        if (insideInclude) {
             return;
         }
         exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
@@ -261,7 +262,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentType(final String type) {
-        if(insideInclude){
+        if (insideInclude) {
             return;
         }
         exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, type);
@@ -295,7 +296,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         if (servletOutputStream != null) {
             servletOutputStream.resetBuffer();
         }
-        if(writer != null) {
+        if (writer != null) {
             writer = new PrintWriter(new OutputStreamWriter(servletOutputStream));
         }
     }
@@ -323,10 +324,10 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void responseDone(final HttpCompletionHandler handler) {
-        if(writer != null) {
+        if (writer != null) {
             writer.close();
         }
-        if(servletOutputStream != null) {
+        if (servletOutputStream != null) {
             try {
                 servletOutputStream.closeAsync(handler);
             } catch (IOException e) {
@@ -341,5 +342,17 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     public void setInsideInclude(final boolean insideInclude) {
         this.insideInclude = insideInclude;
+    }
+
+    public static HttpServletResponseImpl getResponseImpl(final ServletResponse response) {
+        final HttpServletResponseImpl requestImpl;
+        if (response instanceof HttpServletResponseImpl) {
+            requestImpl = (HttpServletResponseImpl) response;
+        } else if (response instanceof HttpServletResponseWrapper) {
+            requestImpl = getResponseImpl(((HttpServletResponseWrapper) response).getResponse());
+        } else {
+            throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
+        }
+        return requestImpl;
     }
 }

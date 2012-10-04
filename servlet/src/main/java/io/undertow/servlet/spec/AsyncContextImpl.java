@@ -18,18 +18,31 @@
 
 package io.undertow.servlet.spec;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncListener;
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
 
-import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.servlet.UndertowServletLogger;
+import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.Deployment;
+import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.core.CompositeThreadSetupAction;
+import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.WorkerDispatcher;
 import org.xnio.XnioExecutor;
 
 /**
@@ -40,27 +53,36 @@ public class AsyncContextImpl implements AsyncContext {
     public static final AttachmentKey<Boolean> ASYNC_SUPPORTED = AttachmentKey.create(Boolean.class);
     public static final AttachmentKey<Executor> ASYNC_EXECUTOR = AttachmentKey.create(Executor.class);
 
-    private final HttpServerExchange exchange;
+    private final BlockingHttpServerExchange exchange;
     private final ServletRequest servletRequest;
     private final ServletResponse servletResponse;
-    private final TimeoutTask timeoutTask = new TimeoutTask(this);
+    private final TimeoutTask timeoutTask = new TimeoutTask();
+
+    //todo: make default configurable
+    private volatile long timeout = 120000;
 
     private volatile XnioExecutor.Key timeoutKey;
 
-    public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse) {
+    private Runnable dispatchAction;
+    private boolean dispatched;
+    private boolean initialRequestDone;
+
+    public AsyncContextImpl(final BlockingHttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse) {
         this.exchange = exchange;
         this.servletRequest = servletRequest;
         this.servletResponse = servletResponse;
     }
 
-    private void updateTimeout() {
+    public void updateTimeout() {
         XnioExecutor.Key key = this.timeoutKey;
         if (key != null) {
             if (!key.remove()) {
                 return;
             }
         }
-        this.timeoutKey = exchange.getWriteThread().executeAfter(timeoutTask, 10, TimeUnit.MINUTES);
+        if (timeout > 0) {
+            this.timeoutKey = exchange.getExchange().getWriteThread().executeAfter(timeoutTask, timeout, TimeUnit.MILLISECONDS);
+        }
     }
 
     @Override
@@ -81,28 +103,146 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public void dispatch() {
+        final HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(servletRequest);
+        final ServletInitialHandler handler;
+        Deployment deployment = requestImpl.getServletContext().getDeployment();
+        if (servletRequest instanceof HttpServletRequest) {
+            handler = deployment.getServletPaths().getServletHandlerByPath(((HttpServletRequest) servletRequest).getRequestURI());
+        } else {
+            handler = deployment.getServletPaths().getServletHandlerByPath(exchange.getExchange().getRelativePath());
+        }
 
+        final BlockingHttpServerExchange exchange = requestImpl.getExchange();
+
+        exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.ASYNC);
+
+        exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, servletRequest);
+        exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, servletResponse);
+
+        dispatchAsyncRequest(requestImpl, handler, exchange);
+    }
+
+    private void dispatchAsyncRequest(final HttpServletRequestImpl requestImpl, final ServletInitialHandler handler, final BlockingHttpServerExchange exchange) {
+        Executor executor = exchange.getExchange().getAttachment(ASYNC_EXECUTOR);
+        if (executor == null) {
+            executor = exchange.getExchange().getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
+        }
+        if (executor == null) {
+            executor = exchange.getExchange().getConnection().getWorker();
+        }
+
+        final Executor e = executor;
+        doDispatch(new Runnable() {
+            @Override
+            public void run() {
+                e.execute(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        try {
+                            handler.handleRequest(requestImpl.getExchange());
+                        } catch (Exception e) {
+                            //ignore
+                        }
+                    }
+                });
+            }
+        });
     }
 
     @Override
     public void dispatch(final String path) {
-
+        dispatch(servletRequest.getServletContext(), path);
     }
 
     @Override
     public void dispatch(final ServletContext context, final String path) {
 
+        HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(servletRequest);
+        final ServletInitialHandler handler;
+        final BlockingHttpServerExchange exchange = requestImpl.getExchange();
+
+        exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.ASYNC);
+
+        requestImpl.setAttribute(ASYNC_REQUEST_URI, requestImpl.getRequestURI());
+        requestImpl.setAttribute(ASYNC_CONTEXT_PATH, requestImpl.getContextPath());
+        requestImpl.setAttribute(ASYNC_SERVLET_PATH, requestImpl.getServletPath());
+        requestImpl.setAttribute(ASYNC_QUERY_STRING, requestImpl.getQueryString());
+
+        String newQueryString = "";
+        int qsPos = path.indexOf("?");
+        String newServletPath = path;
+        if (qsPos != -1) {
+            newQueryString = newServletPath.substring(qsPos + 1);
+            newServletPath = newServletPath.substring(0, qsPos);
+        }
+        String newRequestUri = context.getContextPath() + newServletPath;
+
+        //todo: a more efficent impl
+        Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
+        for (String part : newQueryString.split("&")) {
+            String name = part;
+            String value = "";
+            int equals = part.indexOf('=');
+            if (equals != -1) {
+                name = part.substring(0, equals);
+                value = part.substring(equals + 1);
+            }
+            Deque<String> queue = newQueryParameters.get(name);
+            if (queue == null) {
+                newQueryParameters.put(name, queue = new ArrayDeque<String>(1));
+            }
+            queue.add(value);
+        }
+        requestImpl.setQueryParameters(newQueryParameters);
+
+        requestImpl.getExchange().getExchange().setRelativePath(newServletPath);
+        requestImpl.getExchange().getExchange().setQueryString(newQueryString);
+        requestImpl.getExchange().getExchange().setRequestPath(newRequestUri);
+        requestImpl.getExchange().getExchange().setRequestURI(newRequestUri);
+        requestImpl.setServletContext((ServletContextImpl) context);
+
+        Deployment deployment = requestImpl.getServletContext().getDeployment();
+        handler = deployment.getServletPaths().getServletHandlerByPath(newServletPath);
+
+        dispatchAsyncRequest(requestImpl, handler, exchange);
     }
 
     @Override
     public void complete() {
-
+        doDispatch(new Runnable() {
+            @Override
+            public void run() {
+                HttpServletResponseImpl response = HttpServletResponseImpl.getResponseImpl(servletResponse);
+                response.responseDone(exchange.getCompletionHandler());
+            }
+        });
     }
 
     @Override
     public void start(final Runnable run) {
+        Executor executor = exchange.getExchange().getAttachment(ASYNC_EXECUTOR);
+        if (executor == null) {
+            executor = exchange.getExchange().getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
+        }
+        if (executor == null) {
+            executor = exchange.getExchange().getConnection().getWorker();
+        }
+        final CompositeThreadSetupAction setup = HttpServletRequestImpl.getRequestImpl(servletRequest).getServletContext().getDeployment().getThreadSetupAction();
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                ThreadSetupAction.Handle handle = setup.setup(null);
+                try {
+                    run.run();
+                } finally {
+                    handle.tearDown();
+                }
+            }
+        });
 
     }
+
 
     @Override
     public void addListener(final AsyncListener listener) {
@@ -121,25 +261,54 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public void setTimeout(final long timeout) {
-
+        this.timeout = timeout;
     }
 
     @Override
     public long getTimeout() {
-        return 0;
+        return timeout;
     }
 
-    private static final class TimeoutTask implements Runnable {
-
-        private final AsyncContextImpl asyncContext;
-
-        private TimeoutTask(final AsyncContextImpl asyncContext) {
-            this.asyncContext = asyncContext;
+    /**
+     * Called by the container when the initial request is finished.
+     * If this request has a dispatch or complete call pending then
+     * this will be started.
+     */
+    public synchronized void initialRequestDone() {
+        initialRequestDone = true;
+        if (dispatchAction != null) {
+            dispatchAction.run();
+        } else {
+            updateTimeout();
         }
+    }
+
+    private synchronized void doDispatch(final Runnable runnable) {
+        if (dispatched) {
+            throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
+        }
+        dispatched = true;
+        if (initialRequestDone) {
+            runnable.run();
+        } else {
+            this.dispatchAction = runnable;
+        }
+        if (timeoutKey != null) {
+            timeoutKey.remove();
+        }
+    }
+
+
+    private final class TimeoutTask implements Runnable {
 
         @Override
         public void run() {
-
+            synchronized (AsyncContextImpl.this) {
+                if (!dispatched) {
+                    UndertowServletLogger.REQUEST_LOGGER.debug("Async request timed out");
+                    complete();
+                }
+            }
         }
     }
 }

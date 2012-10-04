@@ -16,28 +16,30 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.api;
+package io.undertow.servlet.test.async;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.servlet.core.ApplicationListeners;
-import io.undertow.servlet.core.CompositeThreadSetupAction;
-import io.undertow.servlet.handlers.ServletPathMatches;
-import io.undertow.servlet.spec.ServletContextImpl;
+import java.io.IOException;
+
+import javax.servlet.AsyncContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * @author Stuart Douglas
  */
-public interface Deployment {
+public class AsyncServlet extends HttpServlet {
 
-    DeploymentInfo getDeploymentInfo();
-
-    ApplicationListeners getApplicationListeners();
-
-    ServletContextImpl getServletContext();
-
-    HttpHandler getServletHandler();
-
-    ServletPathMatches getServletPaths();
-
-    CompositeThreadSetupAction getThreadSetupAction();
+    @Override
+    protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+        final AsyncContext context = req.startAsync();
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                context.dispatch("/message");
+            }
+        });
+        t.start();
+    }
 }
