@@ -214,7 +214,12 @@ public class AsyncContextImpl implements AsyncContext {
             @Override
             public void run() {
                 HttpServletResponseImpl response = HttpServletResponseImpl.getResponseImpl(servletResponse);
-                response.responseDone(exchange.getCompletionHandler());
+                HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
+                try {
+                    request.getServletContext().getDeployment().getApplicationListeners().requestDestroyed(request);
+                } finally {
+                    response.responseDone(exchange.getCompletionHandler());
+                }
             }
         });
     }

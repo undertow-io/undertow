@@ -49,7 +49,18 @@ public class RequestListenerHandler implements BlockingHttpHandler {
             try {
                 next.handleRequest(exchange);
             } finally {
-                listeners.requestDestroyed(request);
+                if (!request.isAsyncStarted()) {
+                    listeners.requestDestroyed(request);
+                }
+            }
+        } else if (type == DispatcherType.ASYNC) {
+            final ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+            try {
+                next.handleRequest(exchange);
+            } finally {
+                if (!request.isAsyncStarted()) {
+                    listeners.requestDestroyed(request);
+                }
             }
         } else {
             next.handleRequest(exchange);
