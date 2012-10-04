@@ -68,7 +68,10 @@ public class FilterHandler implements BlockingHttpHandler {
         ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         ServletResponse response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
         DispatcherType dispatcher = exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
-        exchange.getExchange().putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, asyncSupported.get(dispatcher));
+        Boolean supported = asyncSupported.get(dispatcher);
+        if(supported != null && ! supported) {
+            exchange.getExchange().putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, false    );
+        }
 
         final List<ManagedFilter> filters = this.filters.get(dispatcher);
         if(filters == null) {
