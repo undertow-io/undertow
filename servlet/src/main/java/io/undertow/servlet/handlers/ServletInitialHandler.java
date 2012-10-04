@@ -145,10 +145,13 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         //outer runnable will call the completion handler
         final HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
         final HttpServletResponseImpl response = HttpServletResponseImpl.getResponseImpl(exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
-        if(!request.isAsyncStarted()) {
-            response.responseDone(exchange.getCompletionHandler());
-        } else {
-            request.asyncInitialRequestDone();
+        //the response may have been completed if sendError was invoked
+        if (!exchange.getExchange().isComplete()) {
+            if (!request.isAsyncStarted()) {
+                response.responseDone(exchange.getCompletionHandler());
+            } else {
+                request.asyncInitialRequestDone();
+            }
         }
     }
 

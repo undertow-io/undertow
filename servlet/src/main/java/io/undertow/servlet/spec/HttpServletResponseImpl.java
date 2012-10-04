@@ -105,12 +105,23 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendError(final int sc, final String msg) throws IOException {
+        if(exchange.getExchange().isResponseStarted()) {
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+        }
+        exchange.getExchange().setResponseCode(sc);
+        //todo: is this the best way to handle errors?
+        exchange.getCompletionHandler().handleComplete();
 
     }
 
     @Override
     public void sendError(final int sc) throws IOException {
-
+        if(exchange.getExchange().isResponseStarted()) {
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+        }
+        exchange.getExchange().setResponseCode(sc);
+        //todo: is this the best way to handle errors?
+        exchange.getCompletionHandler().handleComplete();
     }
 
     @Override

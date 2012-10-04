@@ -110,6 +110,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private volatile String queryString;
 
+    private boolean complete = false;
+
     private static final ChannelWrapper<StreamSourceChannel>[] NO_SOURCE_WRAPPERS = new ChannelWrapper[0];
     private static final ChannelWrapper<StreamSinkChannel>[] NO_SINK_WRAPPERS = new ChannelWrapper[0];
 
@@ -455,8 +457,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         return requestWrappers != null;
     }
 
-    StreamSourceChannel getUnderlyingRequestChannel() {
-        return underlyingRequestChannel;
+    /**
+     * Returns true if the completion handler for this exchange has been invoked, and the request is considered
+     * finished.
+     */
+    public boolean isComplete() {
+        return complete;
     }
 
     /**
@@ -672,6 +678,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         //
         // The only thing we can do is to determine if the request and reply were both terminated; if not,
         // consume the request body nicely, send whatever HTTP response we have, and close down the connection.
+        complete = true;
         int oldVal, newVal;
         do {
             oldVal = state;
