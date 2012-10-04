@@ -19,9 +19,11 @@
 package io.undertow.server.handlers.encoding;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
@@ -30,6 +32,7 @@ import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
+import io.undertow.util.QValueParser;
 
 /**
  * Handler that serves as the basis for content encoding implementations.
@@ -68,133 +71,59 @@ public class EncodingHandler implements HttpHandler {
             }
             return;
         }
-        boolean identityProhibited = false;
-        final List<ParsedEncoding> found = new ArrayList<ParsedEncoding>();
-        ParsedEncoding current = null;
+        final List<Set<QValueParser.QValueResult>> found = QValueParser.parse(res);
+        for(Set<QValueParser.QValueResult> result : found) {
+            List<Encoding> available = new ArrayList<Encoding>();
+            boolean includesIdentity = false;
+            boolean isQValue0 = false;
 
-        for (final String header : res) {
-            final int l = header.length();
-            //we do not use a string builder
-            //we just keep track of where the current string starts and call substring()
-            int stringStart = 0;
-            for (int i = 0; i < l; ++i) {
-                char c = header.charAt(i);
-                switch (c) {
-                    case ',': {
-                        if (current != null &&
-                                (i - stringStart > 2 && header.charAt(stringStart) == 'q' &&
-                                        header.charAt(stringStart + 1) == '=')) {
-                            //if this is a valid qvalue
-                            current.qvalue = header.substring(stringStart + 2, i);
-                            if (current.encoding.equals("*")) {
-                                if (handleDefault(found, current)) {
-                                    identityProhibited = true;
-                                }
-                            }
-                            current = null;
-                        } else if (stringStart != i) {
-                            current = handleNewEncoding(found, header, stringStart, i);
-                        }
-                        stringStart = i + 1;
-                        break;
-                    }
-                    case ';': {
-                        if (stringStart != i) {
-                            current = handleNewEncoding(found, header, stringStart, i);
-                            stringStart = i + 1;
-                        }
-                        break;
-                    }
-                    case ' ': {
-                        if (stringStart != i) {
-                            if (current != null &&
-                                    (i - stringStart > 2 && header.charAt(stringStart) == 'q' &&
-                                            header.charAt(stringStart + 1) == '=')) {
-                                //if this is a valid qvalue
-                                current.qvalue = header.substring(stringStart + 2, i);
-                                if (current.encoding.equals("*")) {
-                                    if (handleDefault(found, current)) {
-                                        identityProhibited = true;
-                                    }
-                                }
-                            } else {
-                                current = handleNewEncoding(found, header, stringStart, i);
-                            }
-                        }
-                        stringStart = i + 1;
-                    }
-                }
-            }
-
-            if (stringStart != l) {
-                if (current != null &&
-                        (l - stringStart > 2 && header.charAt(stringStart) == 'q' &&
-                                header.charAt(stringStart + 1) == '=')) {
-                    //if this is a valid qvalue
-                    current.qvalue = header.substring(stringStart + 2, l);
-                    if (current.encoding.equals("*")) {
-                        if (handleDefault(found, current)) {
-                            identityProhibited = true;
-                        }
-                    }
+            for(final QValueParser.QValueResult value : result) {
+                Encoding encoding;
+                if(value.getValue().equals("*")) {
+                    includesIdentity = true;
+                    encoding = new Encoding(identityHandler, 0);
                 } else {
-                    current = handleNewEncoding(found, header, stringStart, l);
+                    encoding = encodingMap.get(value.getValue());
+                }
+                if(isZero(value.getQvalue()) ) {
+                    isQValue0 = true;
+                }
+                if(encoding != null) {
+                    available.add(encoding);
                 }
             }
-        }
-        int size = found.size();
-        if (size == 0) {
-            if (identityProhibited || identityHandler == null) {
-                HttpHandlers.executeHandler(noEncodingHandler, exchange, completionHandler);
+            if(isQValue0) {
+                if(includesIdentity) {
+                    HttpHandlers.executeHandler(noEncodingHandler, exchange, completionHandler);
+                    return;
+                } else {
+                    HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
+                    return;
+                }
+            } else if(!available.isEmpty()) {
+                Collections.sort(available, Collections.reverseOrder());
+                HttpHandlers.executeHandler(available.get(0).handler, exchange, completionHandler);
                 return;
             }
-            HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
-        } else if (size == 1) {
-            HttpHandlers.executeHandler(found.get(0).handler.handler, exchange, completionHandler);
-        } else {
-            ParsedEncoding max = found.get(0);
-            for (int i = 1; i < size; ++i) {
-                ParsedEncoding o = found.get(i);
-                if (o.compareTo(max) > 0) {
-                    max = o;
-                }
-            }
-            HttpHandlers.executeHandler(max.handler.handler, exchange, completionHandler);
         }
+        HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
     }
 
-    private ParsedEncoding handleNewEncoding(final List<ParsedEncoding> found, final String header, final int stringStart, final int i) {
-        final ParsedEncoding current;
-        current = new ParsedEncoding();
-        current.encoding = header.substring(stringStart, i);
-        final Encoding handler = encodingMap.get(current.encoding);
-        if (handler != null) {
-            current.handler = handler;
-            found.add(current);
-        }
-        return current;
-    }
-
-    private boolean handleDefault(final List<ParsedEncoding> found, final ParsedEncoding current) {
+    private boolean isZero(String qvalue) {
         //we ignore * without a qvalue
-        if (current.qvalue != null) {
-            int length = Math.min(5, current.qvalue.length());
+        if (qvalue != null) {
+            int length = Math.min(5, qvalue.length());
             //we need to find out if this is prohibiting identity
             //encoding (q=0). Otherwise we just treat it as the identity encoding
             boolean zero = true;
             for (int j = 0; j < length; ++j) {
                 if (j == 1) continue;//decimal point
-                if (current.qvalue.charAt(j) != '0') {
+                if (qvalue.charAt(j) != '0') {
                     zero = false;
                     break;
                 }
             }
-            if (zero) {
-                return true;
-            } else {
-                current.handler = new Encoding(identityHandler, 0);
-                found.add(current);
-            }
+            return zero;
         }
         return false;
     }
@@ -242,57 +171,4 @@ public class EncodingHandler implements HttpHandler {
             return priority - o.priority;
         }
     }
-
-    private static class ParsedEncoding implements Comparable<ParsedEncoding> {
-        String encoding;
-
-        /**
-         * we keep the qvalue as a string to avoid parsing the double.
-         * <p/>
-         * This should give both performance and also possible security improvements
-         */
-        String qvalue;
-        Encoding handler;
-
-        @Override
-        public int compareTo(final ParsedEncoding other) {
-            //we compare the strings as if they were decimal values.
-            //we know they can only be
-
-            final String t = qvalue;
-            final String o = other.qvalue;
-            if (t == null && o == null) {
-                //neither of them has a q value
-                //we compare them via the server specified default precedence
-                //note that encoding is never null here, a * without a q value is meaningless
-                //and will be discarded before this
-                return handler.compareTo(other.handler);
-            }
-
-            if (o == null) {
-                return 1;
-            } else if (t == null) {
-                return -1;
-            }
-
-            final int tl = t.length();
-            final int ol = o.length();
-            //we only compare the first 5 characters as per spec
-            for (int i = 0; i < 5; ++i) {
-                if (tl == i || ol == i) {
-                    return ol - tl; //longer one is higher
-                }
-                if (i == 1) continue; // this is just the decimal point
-                final int tc = t.charAt(i);
-                final int oc = o.charAt(i);
-
-                int res = tc - oc;
-                if (res != 0) {
-                    return res;
-                }
-            }
-            return 0;
-        }
-    }
-
 }

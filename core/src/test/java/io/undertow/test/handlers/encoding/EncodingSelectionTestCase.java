@@ -137,7 +137,7 @@ public class EncodingSelectionTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(HEADER);
-            Assert.assertEquals("compress", header[0].getValue());
+            Assert.assertEquals("bzip", header[0].getValue());
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
