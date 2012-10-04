@@ -26,7 +26,11 @@ import javax.servlet.ServletOutputStream;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.util.CompletionChannelExceptionHandler;
 import io.undertow.util.Headers;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
@@ -204,12 +208,73 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         }
         if (buffer != null) {
             buffer.flip();
-            HttpHandlers.writeFlushAndCompleteRequest(pooledBuffer, channel, handler);
+            try {
+                int res = 0;
+                do {
+                    res = channel.write(buffer);
+                    if(!buffer.hasRemaining()) {
+                        if(pooledBuffer != null) {
+                            pooledBuffer.free();
+                        }
+                        HttpHandlers.flushAndCompleteRequest(channel, handler);
+                        return;
+                    }
+                } while (res > 0);
+
+                if(res == 0) {
+                    channel.getWriteSetter().set( new ChannelListener<StreamSinkChannel>() {
+                        public void handleEvent(final StreamSinkChannel channel) {
+                            int result;
+                            boolean ok = false;
+                            do {
+                                try {
+                                    result = channel.write(buffer);
+                                    ok = true;
+                                } catch (IOException e) {
+                                    channel.suspendWrites();
+                                    IoUtils.safeClose(channel);
+                                    handler.handleComplete();
+                                    return;
+                                } finally {
+                                    if (! ok) {
+                                        if(pooledBuffer != null) {
+                                            pooledBuffer.free();
+                                        }
+                                    }
+                                }
+                                if (result == 0) {
+                                    return;
+                                }
+                                if(result == -1) {
+                                    channel.suspendWrites();
+                                    IoUtils.safeClose(channel);
+                                    handler.handleComplete();
+                                }
+                            } while (buffer.hasRemaining());
+                            if(pooledBuffer != null) {
+                                pooledBuffer.free();
+                            }
+                            HttpHandlers.flushAndCompleteRequest(channel, handler);
+                        }
+
+                    });
+                    channel.resumeWrites();
+                } else if(res == -1) {
+                    IoUtils.safeClose(channel);
+                    handler.handleComplete();
+                } else {
+                    buffer = null;
+                    pooledBuffer = null;
+                }
+            } catch (IOException e) {
+                IoUtils.safeClose(channel);
+                handler.handleComplete();
+            }
         } else {
             HttpHandlers.flushAndCompleteRequest(channel, handler);
+            buffer = null;
+            pooledBuffer = null;
         }
-        buffer = null;
-        pooledBuffer = null;
     }
 
 
