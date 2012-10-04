@@ -19,6 +19,7 @@
 package io.undertow.servlet.spec;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncListener;
@@ -26,11 +27,10 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
+import org.xnio.XnioExecutor;
 
 /**
  * @author Stuart Douglas
@@ -43,6 +43,9 @@ public class AsyncContextImpl implements AsyncContext {
     private final HttpServerExchange exchange;
     private final ServletRequest servletRequest;
     private final ServletResponse servletResponse;
+    private final TimeoutTask timeoutTask = new TimeoutTask(this);
+
+    private volatile XnioExecutor.Key timeoutKey;
 
     public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse) {
         this.exchange = exchange;
@@ -50,6 +53,15 @@ public class AsyncContextImpl implements AsyncContext {
         this.servletResponse = servletResponse;
     }
 
+    private void updateTimeout() {
+        XnioExecutor.Key key = this.timeoutKey;
+        if (key != null) {
+            if (!key.remove()) {
+                return;
+            }
+        }
+        this.timeoutKey = exchange.getWriteThread().executeAfter(timeoutTask, 10, TimeUnit.MINUTES);
+    }
 
     @Override
     public ServletRequest getRequest() {
@@ -115,5 +127,19 @@ public class AsyncContextImpl implements AsyncContext {
     @Override
     public long getTimeout() {
         return 0;
+    }
+
+    private static final class TimeoutTask implements Runnable {
+
+        private final AsyncContextImpl asyncContext;
+
+        private TimeoutTask(final AsyncContextImpl asyncContext) {
+            this.asyncContext = asyncContext;
+        }
+
+        @Override
+        public void run() {
+
+        }
     }
 }

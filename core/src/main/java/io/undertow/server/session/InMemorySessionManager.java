@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -31,6 +32,8 @@ import org.xnio.FinishedIoFuture;
 import org.xnio.IoFuture;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.SecureHashMap;
+import org.xnio.XnioExecutor;
+import org.xnio.XnioWorker;
 
 /**
  * The default in memory session manager. This basically just stores sessions in an in memory hash map.
@@ -49,26 +52,25 @@ public class InMemorySessionManager implements SessionManager {
 
     /**
      * 30 minute default
-     *
-     *
      */
     private volatile int defaultSessionTimeout = 30 * 60;
 
     @Override
     public IoFuture<Session> createSession(final HttpServerExchange serverExchange) {
         final String sessionID = sessionIdGenerator.createSessionId();
-        final Session session = new SessionImpl(sessionID);
+        final SessionImpl session = new SessionImpl(sessionID, serverExchange.getWriteThread(), serverExchange.getConnection().getWorker());
         InMemorySession im = new InMemorySession(session, defaultSessionTimeout);
         sessions.put(sessionID, im);
         for (SessionListener listener : listeners) {
             listener.sessionCreated(session, serverExchange);
         }
         final SessionCookieConfig config = serverExchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
-        if(config != null) {
+        if (config != null) {
             config.setSessionCookie(serverExchange, session);
         } else {
             UndertowLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
         }
+        session.bumpTimeout();
         return new FinishedIoFuture<Session>(session);
     }
 
@@ -110,9 +112,38 @@ public class InMemorySessionManager implements SessionManager {
 
         private final String sessionId;
 
-        private SessionImpl(final String sessionId) {
+        final XnioExecutor executor;
+        final XnioWorker worker;
+
+        volatile XnioExecutor.Key cancelKey;
+
+        final Runnable cancelTask = new Runnable() {
+            @Override
+            public void run() {
+                worker.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        invalidate(null);
+                    }
+                });
+            }
+        };
+
+        private SessionImpl(final String sessionId, final XnioExecutor executor, final XnioWorker worker) {
             this.sessionId = sessionId;
+            this.executor = executor;
+            this.worker = worker;
         }
+
+        void bumpTimeout() {
+            if (cancelKey != null) {
+                if (!cancelKey.remove()) {
+                    return;
+                }
+            }
+            cancelKey = executor.executeAfter(cancelTask, getMaxInactiveInterval(), TimeUnit.SECONDS);
+        }
+
 
         @Override
         public String getId() {
@@ -149,6 +180,7 @@ public class InMemorySessionManager implements SessionManager {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             sess.maxInactiveInterval = interval;
+            bumpTimeout();
         }
 
         @Override
@@ -167,6 +199,7 @@ public class InMemorySessionManager implements SessionManager {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             sess.lastAccessed = new Date().getTime();
+            bumpTimeout();
             return new FinishedIoFuture<Object>(sess.attributes.get(name));
         }
 
@@ -177,6 +210,7 @@ public class InMemorySessionManager implements SessionManager {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             sess.lastAccessed = new Date().getTime();
+            bumpTimeout();
             return new FinishedIoFuture<Set<String>>(sess.attributes.keySet());
         }
 
@@ -195,6 +229,7 @@ public class InMemorySessionManager implements SessionManager {
                 }
             }
             sess.lastAccessed = new Date().getTime();
+            bumpTimeout();
             return new FinishedIoFuture<Object>(existing);
         }
 
@@ -209,21 +244,21 @@ public class InMemorySessionManager implements SessionManager {
                 listener.attributeRemoved(sess.session, name);
             }
             sess.lastAccessed = new Date().getTime();
+            bumpTimeout();
             return new FinishedIoFuture<Object>(existing);
         }
+
         @Override
         public IoFuture<Void> invalidate(final HttpServerExchange exchange) {
             final InMemorySession sess = sessions.remove(sessionId);
-            if(sess == null) {
+            if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
             }
-            if (sess != null) {
-                for (SessionListener listener : listeners) {
-                    listener.sessionDestroyed(sess.session, exchange, false);
-                }
+            for (SessionListener listener : listeners) {
+                listener.sessionDestroyed(sess.session, exchange, false);
             }
             final SessionCookieConfig config = exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
-            if(config != null) {
+            if (config != null) {
                 config.clearCookie(exchange, this);
             } else {
                 UndertowLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
@@ -243,7 +278,7 @@ public class InMemorySessionManager implements SessionManager {
      */
     private static class InMemorySession {
 
-        private final Session session;
+        final Session session;
 
         InMemorySession(final Session session, int maxInactiveInterval) {
             this.session = session;
@@ -251,9 +286,9 @@ public class InMemorySessionManager implements SessionManager {
             this.maxInactiveInterval = maxInactiveInterval;
         }
 
-        private final ConcurrentMap<String, Object> attributes = new SecureHashMap<String, Object>();
-        private volatile long lastAccessed;
-        private final long creationTime;
-        private volatile int maxInactiveInterval;
+        final ConcurrentMap<String, Object> attributes = new SecureHashMap<String, Object>();
+        volatile long lastAccessed;
+        final long creationTime;
+        volatile int maxInactiveInterval;
     }
 }
