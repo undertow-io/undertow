@@ -166,6 +166,7 @@ public class HttpSessionImpl implements HttpSession {
     @Override
     public void invalidate() {
         invalid = true;
+        applicationListeners.sessionDestroyed(this);
         session.invalidate(exchange);
     }
 

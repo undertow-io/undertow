@@ -81,7 +81,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public static final AttachmentKey<DispatcherType> DISPATCHER_TYPE_ATTACHMENT_KEY = AttachmentKey.create(DispatcherType.class);
 
     private final BlockingHttpServerExchange exchange;
-    private volatile ServletContextImpl servletContext;
+    private ServletContextImpl servletContext;
 
 
     private final HashMap<String, Object> attributes = new HashMap<String, Object>();
@@ -90,7 +90,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     private BufferedReader reader;
 
     private Cookie[] cookies;
-    private volatile List<Part> parts = null;
+    private List<Part> parts = null;
     private HttpSessionImpl httpSession;
     private AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
@@ -266,6 +266,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
                 try {
                     Session newSession = sessionManager.createSession(exchange.getExchange()).get();
                     httpSession = new HttpSessionImpl(newSession, servletContext, servletContext.getDeployment().getApplicationListeners(), exchange.getExchange(), true);
+                    servletContext.getDeployment().getApplicationListeners().sessionCreated(httpSession);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -335,7 +336,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         return null;
     }
 
-    private synchronized void loadParts() throws IOException, ServletException {
+    private void loadParts() throws IOException, ServletException {
         if (parts == null) {
             final List<Part> parts = new ArrayList<Part>();
             String mimeType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
