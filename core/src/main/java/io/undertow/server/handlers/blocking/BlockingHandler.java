@@ -18,7 +18,6 @@
 
 package io.undertow.server.handlers.blocking;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.undertow.UndertowLogger;
@@ -49,7 +48,7 @@ public final class BlockingHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange);
+        final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange, completionHandler);
         Runnable runnable = new Runnable() {
             @Override
             public void run() {

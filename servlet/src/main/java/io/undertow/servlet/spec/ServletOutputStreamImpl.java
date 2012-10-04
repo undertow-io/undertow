@@ -19,26 +19,18 @@
 package io.undertow.servlet.spec;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.OutputStream;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.servlet.ServletOutputStream;
 
-import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.Headers;
-import org.xnio.Bits;
 import org.xnio.Pooled;
 import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
-import org.xnio.channels.ConcurrentStreamChannelAccessException;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.WriteTimeoutException;
-import org.xnio.streams.ChannelOutputStream;
 
 /**
  * @author Stuart Douglas
@@ -165,7 +157,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                     servletResponse.setHeader(Headers.CONTENT_LENGTH, "" + buffer.position());
                 }
             }
-            if(buffer != null) {
+            if (buffer != null) {
                 writeBuffer();
             }
             if (channel == null) {
@@ -182,6 +174,42 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                 buffer = null;
             }
         }
+    }
+
+    /**
+     * Closes the stream, and writes the data, possibly using an async background writes.
+     * <p/>
+     * Once everything is written out the completion handle will be called. If the stream is
+     * already closed then the completion handler is invoked immediately.
+     *
+     * @param handler
+     * @throws IOException
+     */
+    public void closeAsync(final HttpCompletionHandler handler) throws IOException {
+        if (closed) {
+            handler.handleComplete();
+            return;
+        }
+        closed = true;
+        if (!writeStarted && channel == null) {
+            if (buffer == null) {
+                servletResponse.setHeader(Headers.CONTENT_LENGTH, "0");
+            } else {
+                servletResponse.setHeader(Headers.CONTENT_LENGTH, "" + buffer.position());
+            }
+        }
+
+        if (channel == null) {
+            channel = channelFactory.create();
+        }
+        if (buffer != null) {
+            buffer.flip();
+            HttpHandlers.writeFlushAndCompleteRequest(pooledBuffer, channel, handler);
+        } else {
+            HttpHandlers.flushAndCompleteRequest(channel, handler);
+        }
+        buffer = null;
+        pooledBuffer = null;
     }
 
 

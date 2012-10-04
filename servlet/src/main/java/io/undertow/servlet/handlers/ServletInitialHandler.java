@@ -80,7 +80,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
             HttpHandlers.executeHandler(asyncPath, exchange, completionHandler);
             return;
         }
-        final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange);
+        final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange, completionHandler);
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -88,12 +88,14 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                     final BlockingHttpHandler handler = ServletInitialHandler.this;
                     handler.handleRequest(blockingExchange);
                 } catch (Throwable t) {
-                    if (!exchange.isResponseStarted()) {
-                        exchange.setResponseCode(500);
+                    try {
+                        if (!exchange.isResponseStarted()) {
+                            exchange.setResponseCode(500);
+                        }
+                        UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", blockingExchange);
+                    } finally {
+                        completionHandler.handleComplete();
                     }
-                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", blockingExchange);
-                } finally {
-                    completionHandler.handleComplete();
                 }
             }
         };
@@ -103,28 +105,42 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        ThreadSetupAction.Handle handle = setupAction.setup(exchange);
+        boolean first = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY) == null;
+        if (first) {
+            handleFirstRequest(exchange);
+        } else {
+            handleDispatchedRequest(exchange);
+        }
+
+    }
+
+
+    private void handleDispatchedRequest(final BlockingHttpServerExchange exchange) throws Exception {
+        final ThreadSetupAction.Handle handle = setupAction.setup(exchange);
         try {
-            if (exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY) == null) {
-                exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.REQUEST);
-            }
-            boolean first = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY) == null;
-            if (first) {
-                final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
-                final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
-                try {
-                    exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
-                    exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
-                    next.handleRequest(exchange);
-                } finally {
-                    response.responseDone();
-                }
-            } else {
-                next.handleRequest(exchange);
-            }
+            next.handleRequest(exchange);
         } finally {
             handle.tearDown();
         }
+    }
+
+    private void handleFirstRequest(final BlockingHttpServerExchange exchange) throws Exception {
+        exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.REQUEST);
+        final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange);
+        HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
+        ThreadSetupAction.Handle handle = setupAction.setup(exchange);
+        try {
+            exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
+            exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
+            next.handleRequest(exchange);
+        } finally {
+            handle.tearDown();
+        }
+        //exceptions that can be handled will not be propagated to this point, they will
+        //be handled by other handlers in the chain. If an exception propages to this point
+        //this is does not matter that the response is not finished here, as the
+        //outer runnable will call it
+        response.responseDone(exchange.getCompletionHandler());
     }
 
     public BlockingHttpHandler getHandler() {

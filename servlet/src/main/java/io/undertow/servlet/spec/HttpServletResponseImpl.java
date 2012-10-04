@@ -34,6 +34,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.ChannelWrapper;
+import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
@@ -321,13 +322,13 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         return null;
     }
 
-    public void responseDone() {
+    public void responseDone(final HttpCompletionHandler handler) {
         if(writer != null) {
             writer.close();
         }
         if(servletOutputStream != null) {
             try {
-                servletOutputStream.close();
+                servletOutputStream.closeAsync(handler);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

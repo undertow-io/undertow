@@ -23,6 +23,7 @@ import java.io.BufferedOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.streams.ChannelInputStream;
 import org.xnio.streams.ChannelOutputStream;
@@ -41,11 +42,13 @@ import org.xnio.streams.ChannelOutputStream;
 public final class BlockingHttpServerExchange {
 
     private final HttpServerExchange exchange;
+    private final HttpCompletionHandler completionHandler;
     private OutputStream out;
     private InputStream in;
 
-    public BlockingHttpServerExchange(final HttpServerExchange exchange) {
+    public BlockingHttpServerExchange(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         this.exchange = exchange;
+        this.completionHandler = completionHandler;
     }
 
     /**
@@ -70,4 +73,7 @@ public final class BlockingHttpServerExchange {
         return in;
     }
 
+    public HttpCompletionHandler getCompletionHandler() {
+        return completionHandler;
+    }
 }

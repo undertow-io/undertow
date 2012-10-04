@@ -19,6 +19,7 @@
 package io.undertow.server.handlers;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -28,8 +29,10 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.util.CompletionChannelExceptionHandler;
 import io.undertow.util.CompletionChannelListener;
+import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
+import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.SuspendableWriteChannel;
 
@@ -81,6 +84,37 @@ public final class HttpHandlers {
                 channel.getWriteSetter().set(ChannelListeners.<SuspendableWriteChannel>flushingChannelListener(new CompletionChannelListener(handler), new CompletionChannelExceptionHandler(handler)));
                 channel.resumeWrites();
             } else {
+                handler.handleComplete();
+            }
+        } catch (IOException e) {
+            IoUtils.safeClose(channel);
+            handler.handleComplete();
+        }
+    }
+
+    public static void writeFlushAndCompleteRequest(final Pooled<ByteBuffer> pooled, final StreamSinkChannel channel, final HttpCompletionHandler handler) {
+        ByteBuffer buffer = pooled.getResource();
+        try {
+            int res = 0;
+            do {
+                res = channel.write(buffer);
+                if(!buffer.hasRemaining()) {
+                    pooled.free();
+                    flushAndCompleteRequest(channel, handler);
+                    return;
+                }
+            } while (res > 0);
+            if(res == 0) {
+                ChannelListener<StreamSinkChannel> listener = ChannelListeners.writingChannelListener(pooled, new ChannelListener<StreamSinkChannel>() {
+                    @Override
+                    public void handleEvent(final StreamSinkChannel channel) {
+                        flushAndCompleteRequest(channel, handler);
+                    }
+                }, new CompletionChannelExceptionHandler(handler));
+                channel.getWriteSetter().set(listener);
+                channel.resumeWrites();
+            } else if(res == -1) {
+                IoUtils.safeClose(channel);
                 handler.handleComplete();
             }
         } catch (IOException e) {
