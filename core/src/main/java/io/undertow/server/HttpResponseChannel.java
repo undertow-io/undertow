@@ -20,6 +20,7 @@ package io.undertow.server;
 
 import io.undertow.util.HttpString;
 import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
@@ -103,7 +104,19 @@ final class HttpResponseChannel implements StreamSinkChannel {
         return closeSetter;
     }
 
-    private int processWrite(int state) throws IOException {
+    /**
+     * Handles writing out the header data. It can also take a byte buffer of user
+     * data, to enable both user data and headers to be written out in a single operation,
+     * which has a noticable performance impact.
+     *
+     * It is up to the caller to note the current position of this buffer before and after they
+     * call this method, and use this to figure out how many bytes (if any) have been written.
+     * @param state
+     * @param userData
+     * @return
+     * @throws IOException
+     */
+    private int processWrite(int state, final ByteBuffer userData) throws IOException {
         if (state == STATE_START) {
             pooledBuffer = pool.allocate();
         }
@@ -419,13 +432,25 @@ final class HttpResponseChannel implements StreamSinkChannel {
                     this.valueIterator = null;
                     this.string = null;
                     buffer.flip();
-                    do {
-                        res = delegate.write(buffer);
-                        if (res == 0) {
-                            log.trace("Continuation");
-                            return STATE_BUF_FLUSH;
-                        }
-                    } while (buffer.hasRemaining());
+                    //for performance reasons we use a gather write if there is user data
+                    if(userData == null) {
+                        do {
+                            res = delegate.write(buffer);
+                            if (res == 0) {
+                                log.trace("Continuation");
+                                return STATE_BUF_FLUSH;
+                            }
+                        } while (buffer.hasRemaining());
+                    } else {
+                        ByteBuffer[] b = {buffer, userData};
+                        do {
+                            long r = delegate.write(b);
+                            if (r == 0) {
+                                log.trace("Continuation");
+                                return STATE_BUF_FLUSH;
+                            }
+                        } while (buffer.hasRemaining());
+                    }
                     // fall thru
                 }
                 case STATE_BUF_FLUSH: {
@@ -452,12 +477,16 @@ final class HttpResponseChannel implements StreamSinkChannel {
             newVal = oldVal | FLAG_ENTERED;
         } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
         int state = oldVal & MASK_STATE;
+        int alreadyWritten = 0;
+        int originalRemaining = - 1;
         try {
             if (state != 0) {
-                state = processWrite(state);
+                originalRemaining = src.remaining();
+                state = processWrite(state, src);
                 if (state != 0) {
                     return 0;
                 }
+                alreadyWritten = originalRemaining - src.remaining();
                 oldVal = newVal;
                 newVal = oldVal & ~MASK_STATE | state;
                 while (! stateUpdater.compareAndSet(this, oldVal, newVal)) {
@@ -469,7 +498,10 @@ final class HttpResponseChannel implements StreamSinkChannel {
                     throw new ClosedChannelException();
                 }
             }
-            return delegate.write(src);
+            if(alreadyWritten != originalRemaining) {
+                return delegate.write(src) + alreadyWritten;
+            }
+            return alreadyWritten;
         } finally {
             oldVal = newVal;
             newVal = oldVal & ~FLAG_ENTERED & ~MASK_STATE | state;
@@ -500,7 +532,8 @@ final class HttpResponseChannel implements StreamSinkChannel {
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
-                state = processWrite(state);
+                //todo: use gathering write here
+                state = processWrite(state, null);
                 if (state != 0) {
                     return 0;
                 }
@@ -542,7 +575,7 @@ final class HttpResponseChannel implements StreamSinkChannel {
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
-                state = processWrite(state);
+                state = processWrite(state, null);
                 if (state != 0) {
                     return 0;
                 }
@@ -585,7 +618,7 @@ final class HttpResponseChannel implements StreamSinkChannel {
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
-                state = processWrite(state);
+                state = processWrite(state, null);
                 if (state != 0) {
                     return 0;
                 }
@@ -625,7 +658,7 @@ final class HttpResponseChannel implements StreamSinkChannel {
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
-                state = processWrite(state);
+                state = processWrite(state, null);
                 if (state != 0) {
                     log.trace("Flush false because headers aren't written yet");
                     return false;
