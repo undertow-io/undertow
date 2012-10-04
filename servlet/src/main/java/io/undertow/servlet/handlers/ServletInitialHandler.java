@@ -61,7 +61,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
      */
     private final ServletInfo servletInfo;
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final Executor executor, final ServletInfo servletInfo) {
+    public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ServletInfo servletInfo) {
         this.next = next;
         this.asyncPath = asyncPath;
         this.setupAction = setupAction;
@@ -69,8 +69,8 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         this.servletInfo = servletInfo;
     }
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final Executor executor, final ServletInfo servletInfo) {
-        this(next, null, setupAction, servletContext, executor, servletInfo);
+    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ServletInfo servletInfo) {
+        this(next, null, setupAction, servletContext, servletInfo);
     }
 
     @Override
@@ -111,7 +111,6 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         } else {
             handleDispatchedRequest(exchange);
         }
-
     }
 
 

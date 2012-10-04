@@ -19,50 +19,46 @@
 package io.undertow.server.handlers;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.WorkerDispatcher;
 
 /**
- * Handler that sets the current executor to use for blocking operations.
- *
- * If this executor is null than any previously set executor will be null and the
- * XNIO worker will be used instead;
- *
+ * Handler that adds an attachment to the request
  *
  * @author Stuart Douglas
  */
-public class WorkerSelectionHandler implements HttpHandler {
+public class AttachmentHandler<T> implements HttpHandler {
 
-    private volatile Executor executor;
+    private final AttachmentKey<T> key;
+    private volatile T instance;
     private volatile HttpHandler next;
-    private final AtomicReferenceFieldUpdater<WorkerSelectionHandler, Executor> executorUpdater = AtomicReferenceFieldUpdater.newUpdater(WorkerSelectionHandler.class, Executor.class, "executor");
 
-    public WorkerSelectionHandler(final HttpHandler next, final Executor executor) {
+    public AttachmentHandler(final AttachmentKey<T> key, final HttpHandler next, final T instance) {
         this.next = next;
-        this.executor = executor;
+        this.key = key;
+        this.instance = instance;
     }
 
-    public WorkerSelectionHandler(final HttpHandler next) {
-        this(next, null);
+    public AttachmentHandler(final AttachmentKey<T> key, final HttpHandler next) {
+        this(key, next, null);
     }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        exchange.putAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY, executor);
+        exchange.putAttachment(key, instance);
         HttpHandlers.executeHandler(next, exchange, completionHandler);
     }
 
-    public Executor getExecutor() {
-        return executor;
+    public T getInstance() {
+        return instance;
     }
 
-    public Executor setExecutor(final Executor executor) {
-        return executorUpdater.getAndSet(this, executor);
+    public void setInstance(final T instance) {
+        this.instance = instance;
     }
 
     public HttpHandler getNext() {

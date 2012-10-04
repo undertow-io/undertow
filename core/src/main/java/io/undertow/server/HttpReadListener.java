@@ -218,7 +218,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             if(channel.isReadResumed()) {
                 channel.suspendReads();
             }
-            WorkerDispatcher.forceDispatch(channel, new DoNextRequestRead(listener, channel));
+            WorkerDispatcher.dispatchNextRequest(channel, new DoNextRequestRead(listener, channel));
             nextRequestResponseChannel = null;
             connection = null;
             this.channel = null;

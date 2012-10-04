@@ -48,6 +48,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile int majorVersion = 3;
     private volatile int minorVersion;
     private volatile InstanceFactory<Executor> executorFactory;
+    private volatile InstanceFactory<Executor> asyncExecutorFactory;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -306,10 +307,26 @@ public class DeploymentInfo implements Cloneable {
      * Sets the factory that is used to create the {@link ExecutorService} that is used to run servlet
      * invocations.
      *
+     * If this is null then the current executor is used, which is generally the XNIO worker pool
+     *
      * @param executorFactory The executor factory
      */
     public void setExecutorFactory(final InstanceFactory<Executor> executorFactory) {
         this.executorFactory = executorFactory;
+    }
+    /**
+     * Sets the factory that is used to create the {@link ExecutorService} that is used to run async tasks.
+     *
+     * If this is null then {@link #executorFactory} is used, if this is also null then the default is used
+     *
+     * @param executorFactory The executor factory
+     */
+    public InstanceFactory<Executor> getAsyncExecutorFactory() {
+        return asyncExecutorFactory;
+    }
+
+    public void setAsyncExecutorFactory(final InstanceFactory<Executor> asyncExecutorFactory) {
+        this.asyncExecutorFactory = asyncExecutorFactory;
     }
 
     @Override
@@ -337,6 +354,7 @@ public class DeploymentInfo implements Cloneable {
         info.initParameters.putAll(initParameters);
         info.welcomePages.addAll(welcomePages);
         info.executorFactory = executorFactory;
+        info.asyncExecutorFactory = asyncExecutorFactory;
         return info;
     }
 

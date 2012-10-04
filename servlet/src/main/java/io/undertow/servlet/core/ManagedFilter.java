@@ -80,4 +80,8 @@ public class ManagedFilter implements Lifecycle {
     public boolean isStarted() {
         return started;
     }
+
+    public FilterInfo getFilterInfo() {
+        return filterInfo;
+    }
 }

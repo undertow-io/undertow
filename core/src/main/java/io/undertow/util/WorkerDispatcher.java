@@ -59,7 +59,34 @@ public class WorkerDispatcher {
         }
     }
 
-    public static void forceDispatch(final StreamSourceChannel channel, final Runnable runnable) {
+    /**
+     * Forces a task dispatch with the specified executor
+     * @param executor The executor to use
+     * @param runnable The runnable
+     */
+    public static void dispatch(final Executor executor, final Runnable runnable) {
+        final Executor e = executor;
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    executingInWorker.set(e);
+                    runnable.run();
+                } finally {
+                    executingInWorker.remove();
+                }
+            }
+        });
+    }
+
+    /**
+     * Dispatches the next request in the current exectutor. If there is no current executor then the
+     * channels read thread is used.
+     *
+     * @param channel  The channel that will be used for the next request
+     * @param runnable The task to run
+     */
+    public static void dispatchNextRequest(final StreamSourceChannel channel, final Runnable runnable) {
         final Executor executing = executingInWorker.get();
         if (executing == null) {
             channel.getReadThread().execute(runnable);

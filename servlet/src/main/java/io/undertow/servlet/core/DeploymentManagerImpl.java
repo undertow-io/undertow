@@ -33,6 +33,7 @@ import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletException;
 
 import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.AttachmentHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
@@ -54,8 +55,10 @@ import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletMatchingHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.handlers.ServletSessionCookieConfigHandler;
+import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
+import io.undertow.util.WorkerDispatcher;
 
 /**
  * The deployment manager. This manager is responsible for controlling the lifecycle of a servlet deployment.
@@ -77,6 +80,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private volatile DeploymentImpl deployment;
     private volatile State state = State.UNDEPLOYED;
     private volatile InstanceHandle<Executor> executor;
+    private volatile InstanceHandle<Executor> asyncExecutor;
 
 
     public DeploymentManagerImpl(final DeploymentInfo deployment, final ServletContainer servletContainer) {
@@ -88,14 +92,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
     public void deploy() {
         DeploymentInfo deploymentInfo = originalDeployment.clone();
 
-        //create the executor, if it exists
-        if (deploymentInfo.getExecutorFactory() != null) {
-            try {
-                executor = deploymentInfo.getExecutorFactory().createInstance();
-            } catch (InstantiationException e) {
-                throw new RuntimeException(e);
-            }
-        }
         deploymentInfo.validate();
         final DeploymentImpl deployment = new DeploymentImpl(deploymentInfo);
         this.deployment = deployment;
@@ -209,11 +205,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
 
         if (defaultServlet == null) {
-            DefaultServlet defaultInstance = new DefaultServlet( deployment, deploymentInfo.getWelcomePages());
+            DefaultServlet defaultInstance = new DefaultServlet(deployment, deploymentInfo.getWelcomePages());
             final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>(defaultInstance)), servletContext);
             lifecycles.add(managedDefaultServlet);
             defaultServlet = new ServletHandler(managedDefaultServlet);
-            defaultHandler = new ServletInitialHandler(new RequestListenerHandler(listeners, defaultServlet), defaultInstance, threadSetupAction, servletContext, executor == null ? null : executor.getInstance(), null);
+            defaultHandler = new ServletInitialHandler(new RequestListenerHandler(listeners, defaultServlet), defaultInstance, threadSetupAction, servletContext, null);
         }
 
         final ServletPathMatches.Builder builder = ServletPathMatches.builder();
@@ -374,7 +370,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private ServletInitialHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners, final ServletInfo servletInfo) {
-        return new ServletInitialHandler(new RequestListenerHandler(applicationListeners, next), setupAction, deployment.getServletContext(), executor == null ? null : executor.getInstance(), servletInfo);
+        return new ServletInitialHandler(new RequestListenerHandler(applicationListeners, next), setupAction, deployment.getServletContext(), servletInfo);
     }
 
     private ServletHandler resolveServletForPath(final String path, final Map<String, ServletHandler> pathServlets) {
@@ -415,28 +411,56 @@ public class DeploymentManagerImpl implements DeploymentManager {
         for (Lifecycle object : deployment.getLifecycleObjects()) {
             object.start();
         }
-        ServletSessionCookieConfigHandler sessionCookieConfigHandler = new ServletSessionCookieConfigHandler(deployment.getServletHandler(), deployment.getServletContext());
-        return sessionCookieConfigHandler;
+        HttpHandler root = new ServletSessionCookieConfigHandler(deployment.getServletHandler(), deployment.getServletContext());
+
+        //create the executor, if it exists
+        if (deployment.getDeploymentInfo().getExecutorFactory() != null) {
+            try {
+                executor = deployment.getDeploymentInfo().getExecutorFactory().createInstance();
+                root = new AttachmentHandler<Executor>(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY, root, executor.getInstance());
+            } catch (InstantiationException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        if (deployment.getDeploymentInfo().getExecutorFactory() != null) {
+            if (deployment.getDeploymentInfo().getAsyncExecutorFactory() != null) {
+                try {
+                    asyncExecutor = deployment.getDeploymentInfo().getAsyncExecutorFactory().createInstance();
+                    root = new AttachmentHandler<Executor>(AsyncContextImpl.ASYNC_EXECUTOR, root, asyncExecutor.getInstance());
+                } catch (InstantiationException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+        }
+
+
+        return root;
     }
 
     @Override
     public void stop() throws ServletException {
-        for (Lifecycle object : deployment.getLifecycleObjects()) {
-            object.stop();
+        try {
+            for (Lifecycle object : deployment.getLifecycleObjects()) {
+                object.stop();
+            }
+        } finally {
+            if (executor != null) {
+                executor.release();
+            }
+            if(asyncExecutor != null) {
+                asyncExecutor.release();
+            }
+            executor = null;
+            asyncExecutor = null;
         }
     }
 
     @Override
     public void undeploy() {
-        try {
-            deployment.getApplicationListeners().contextDestroyed();
-            deployment.getApplicationListeners().stop();
-            deployment = null;
-        } finally {
-            if (executor != null) {
-                executor.release();
-            }
-        }
+        deployment.getApplicationListeners().contextDestroyed();
+        deployment.getApplicationListeners().stop();
+        deployment = null;
     }
 
     @Override

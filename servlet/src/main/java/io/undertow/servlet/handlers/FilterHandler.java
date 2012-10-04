@@ -32,6 +32,7 @@ import javax.servlet.ServletResponse;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.core.ManagedFilter;
+import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 
@@ -41,20 +42,35 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 public class FilterHandler implements BlockingHttpHandler {
 
     private final Map<DispatcherType, List<ManagedFilter>> filters;
+    private final Map<DispatcherType, Boolean> asyncSupported;
 
     private final BlockingHttpHandler next;
 
     public FilterHandler(final Map<DispatcherType, List<ManagedFilter>> filters, final BlockingHttpHandler next) {
         this.next = next;
         this.filters = new HashMap<DispatcherType, List<ManagedFilter>>(filters);
+        Map<DispatcherType, Boolean> asyncSupported = new HashMap<DispatcherType, Boolean>();
+        for(Map.Entry<DispatcherType, List<ManagedFilter>> entry : filters.entrySet()) {
+            boolean supported = true;
+            for(ManagedFilter i : entry.getValue()) {
+                if(!i.getFilterInfo().isAsyncSupported()) {
+                    supported = false;
+                    break;
+                }
+            }
+            asyncSupported.put(entry.getKey(), supported);
+        }
+        this.asyncSupported = asyncSupported;
     }
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
         ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         ServletResponse response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        DispatcherType dispatcher = exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
+        exchange.getExchange().putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, asyncSupported.get(dispatcher));
 
-        final List<ManagedFilter> filters = this.filters.get(exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY));
+        final List<ManagedFilter> filters = this.filters.get(dispatcher);
         if(filters == null) {
             next.handleRequest(exchange);
         } else {

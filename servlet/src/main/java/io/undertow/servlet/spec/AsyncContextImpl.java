@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.spec;
 
+import java.util.concurrent.Executor;
+
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncListener;
 import javax.servlet.ServletContext;
@@ -28,11 +30,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
 
 /**
  * @author Stuart Douglas
  */
 public class AsyncContextImpl implements AsyncContext {
+
+    public static final AttachmentKey<Boolean> ASYNC_SUPPORTED = AttachmentKey.create(Boolean.class);
+    public static final AttachmentKey<Executor> ASYNC_EXECUTOR = AttachmentKey.create(Executor.class);
 
     private final HttpServerExchange exchange;
     private final ServletRequest servletRequest;
