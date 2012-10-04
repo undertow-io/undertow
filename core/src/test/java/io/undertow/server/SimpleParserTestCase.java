@@ -24,6 +24,8 @@ import io.undertow.server.HttpParser;
 import io.undertow.server.ParseState;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 import org.junit.Assert;
 import org.junit.Test;
 import sun.reflect.ReflectionFactory;
@@ -106,13 +108,40 @@ public class SimpleParserTestCase {
 
     }
 
+    @Test
+    public void testSameHttpStringReturned() {
+        byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nAccept-Charset:\tsome\n \t  value\n\r\n".getBytes();
+
+        final ParseState context1 = new ParseState();
+        HttpServerExchange result1 = new HttpServerExchange(null, null, null, null, null);
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context1, result1);
+
+        final ParseState context2 = new ParseState();
+        HttpServerExchange result2 = new HttpServerExchange(null, null, null, null, null);
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context2, result2);
+
+        Assert.assertSame(result1.getProtocol(), result2.getProtocol());
+        Assert.assertSame(result1.getRequestMethod(), result2.getRequestMethod());
+
+        for(final HttpString header: result1.getRequestHeaders().getHeaderNames()) {
+            boolean found = false;
+            for(final HttpString header2: result1.getRequestHeaders().getHeaderNames()) {
+                if(header == header2){
+                    found = true;
+                    break;
+                }
+            }
+            Assert.assertTrue("Could not found header " + header, found);
+        }
+    }
+
     private void runTest(final byte[] in) {
         final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
-        Assert.assertSame("GET", result.getRequestMethod());
+        Assert.assertEquals(Methods.GET, result.getRequestMethod());
         Assert.assertEquals("/somepath", result.getRequestURI());
-        Assert.assertSame("HTTP/1.1", result.getProtocol());
+        Assert.assertEquals(Protocols.HTTP_1_1, result.getProtocol());
 
         Assert.assertEquals(2, result.getRequestHeaders().getHeaderNames().size());
         Assert.assertEquals("www.somehost.net", result.getRequestHeaders().getFirst(new HttpString("Host")));

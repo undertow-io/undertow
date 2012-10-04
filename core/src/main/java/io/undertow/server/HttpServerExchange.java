@@ -74,12 +74,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final Runnable requestTerminateAction;
     private final Runnable responseTerminateAction;
 
-    private String protocol;
+    private HttpString protocol;
 
     // mutable state
 
     private volatile int state = 200;
-    private volatile String requestMethod;
+    private volatile HttpString requestMethod;
     private volatile String requestScheme;
     /**
      * The original request URI. This will include the host name if it was specified by the client
@@ -143,7 +143,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @return the request protocol string
      */
-    public String getProtocol() {
+    public HttpString getProtocol() {
         return protocol;
     }
 
@@ -152,7 +152,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param protocol
      */
-    public void setProtocol(final String protocol) {
+    public void setProtocol(final HttpString protocol) {
         this.protocol = protocol;
     }
 
@@ -188,7 +188,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @return the HTTP request method
      */
-    public String getRequestMethod() {
+    public HttpString getRequestMethod() {
         return requestMethod;
     }
 
@@ -197,7 +197,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param requestMethod the HTTP request method
      */
-    public void setRequestMethod(final String requestMethod) {
+    public void setRequestMethod(final HttpString requestMethod) {
         this.requestMethod = requestMethod;
     }
 

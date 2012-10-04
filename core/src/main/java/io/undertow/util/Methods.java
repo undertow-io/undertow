@@ -29,12 +29,23 @@ public final class Methods {
     private Methods() {
     }
 
-    public static final String OPTIONS = "OPTIONS";
-    public static final String GET = "GET";
-    public static final String HEAD = "HEAD";
-    public static final String POST = "POST";
-    public static final String PUT = "PUT";
-    public static final String DELETE = "DELETE";
-    public static final String TRACE = "TRACE";
-    public static final String CONNECT = "CONNECT";
+    public static final String OPTIONS_STRING = "OPTIONS";
+    public static final String GET_STRING = "GET";
+    public static final String HEAD_STRING = "HEAD";
+    public static final String POST_STRING = "POST";
+    public static final String PUT_STRING = "PUT";
+    public static final String DELETE_STRING = "DELETE";
+    public static final String TRACE_STRING = "TRACE";
+    public static final String CONNECT_STRING = "CONNECT";
+
+    public static final HttpString OPTIONS = new HttpString(OPTIONS_STRING);
+    public static final HttpString GET = new HttpString(GET_STRING);
+    public static final HttpString HEAD = new HttpString(HEAD_STRING);
+    public static final HttpString POST = new HttpString(POST_STRING);
+    public static final HttpString PUT = new HttpString(PUT_STRING);
+    public static final HttpString DELETE = new HttpString(DELETE_STRING);
+    public static final HttpString TRACE = new HttpString(TRACE_STRING);
+    public static final HttpString CONNECT = new HttpString(CONNECT_STRING);
+
+
 }

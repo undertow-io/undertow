@@ -31,6 +31,7 @@ import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.util.CompletionChannelExceptionHandler;
 import io.undertow.util.CompletionChannelListener;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -53,7 +54,7 @@ public class InLineFileCache implements FileCache {
     public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
         // ignore request body
         IoUtils.safeShutdownReads(exchange.getRequestChannel());
-        final String method = exchange.getRequestMethod();
+        final HttpString method = exchange.getRequestMethod();
         final FileChannel fileChannel;
         long length;
         try {
@@ -72,11 +73,11 @@ public class InLineFileCache implements FileCache {
             return;
         }
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
-        if (method.equalsIgnoreCase(Methods.HEAD)) {
+        if (method.equals(Methods.HEAD)) {
             completionHandler.handleComplete();
             return;
         }
-        if (! method.equalsIgnoreCase(Methods.GET)) {
+        if (! method.equals(Methods.GET)) {
             exchange.setResponseCode(500);
             completionHandler.handleComplete();
             return;

@@ -67,6 +67,7 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 import org.xnio.LocalSocketAddress;
 
 /**
@@ -196,7 +197,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getMethod() {
-        return exchange.getExchange().getRequestMethod();
+        return exchange.getExchange().getRequestMethod().toString();
     }
 
     @Override
@@ -404,7 +405,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public String getParameter(final String name) {
         Deque<String> params = queryParameters.get(name);
         if (params == null) {
-            if (exchange.getExchange().getRequestMethod().equalsIgnoreCase("POST")) {
+            if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
                 final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
                 if (parser != null) {
                     try {
@@ -428,7 +429,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Enumeration<String> getParameterNames() {
         final Set<String> parameterNames = new HashSet<String>(queryParameters.keySet());
-        if (exchange.getExchange().getRequestMethod().equalsIgnoreCase("POST")) {
+        if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
             final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
             if (parser != null) {
                 try {
@@ -452,7 +453,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         if (params != null) {
             ret.addAll(params);
         }
-        if (exchange.getExchange().getRequestMethod().equalsIgnoreCase("POST")) {
+        if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
             final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
             if (parser != null) {
                 try {
@@ -482,7 +483,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
             ret.put(entry.getKey(), entry.getValue().toArray(new String[entry.getValue().size()]));
         }
-        if (exchange.getExchange().getRequestMethod().equalsIgnoreCase("POST")) {
+        if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
             final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
             if (parser != null) {
                 try {
@@ -519,7 +520,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getProtocol() {
-        return exchange.getExchange().getProtocol();
+        return exchange.getExchange().getProtocol().toString();
     }
 
     @Override

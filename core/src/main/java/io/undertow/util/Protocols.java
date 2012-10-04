@@ -31,13 +31,24 @@ public final class Protocols {
     /**
      * HTTP 0.9.
      */
-    public static final String HTTP_0_9 = "HTTP/0.9";
+    public static final String HTTP_0_9_STRING = "HTTP/0.9";
     /**
      * HTTP 1.0.
      */
-    public static final String HTTP_1_0 = "HTTP/1.0";
+    public static final String HTTP_1_0_STRING = "HTTP/1.0";
     /**
      * HTTP 1.1.
      */
-    public static final String HTTP_1_1 = "HTTP/1.1";
+    public static final String HTTP_1_1_STRING = "HTTP/1.1";
+
+
+    public static final HttpString HTTP_0_9 = new HttpString(HTTP_0_9_STRING);
+    /**
+     * HTTP 1.0.
+     */
+    public static final HttpString HTTP_1_0 = new HttpString(HTTP_1_0_STRING);
+    /**
+     * HTTP 1.1.
+     */
+    public static final HttpString HTTP_1_1 = new HttpString(HTTP_1_1_STRING);
 }

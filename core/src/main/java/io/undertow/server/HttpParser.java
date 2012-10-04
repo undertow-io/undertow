@@ -77,17 +77,17 @@ import static io.undertow.util.Headers.VARY_STRING;
 import static io.undertow.util.Headers.VIA_STRING;
 import static io.undertow.util.Headers.WARNING_STRING;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE_STRING;
-import static io.undertow.util.Methods.CONNECT;
-import static io.undertow.util.Methods.DELETE;
-import static io.undertow.util.Methods.GET;
-import static io.undertow.util.Methods.HEAD;
-import static io.undertow.util.Methods.OPTIONS;
-import static io.undertow.util.Methods.POST;
-import static io.undertow.util.Methods.PUT;
-import static io.undertow.util.Methods.TRACE;
-import static io.undertow.util.Protocols.HTTP_0_9;
-import static io.undertow.util.Protocols.HTTP_1_0;
-import static io.undertow.util.Protocols.HTTP_1_1;
+import static io.undertow.util.Methods.CONNECT_STRING;
+import static io.undertow.util.Methods.DELETE_STRING;
+import static io.undertow.util.Methods.GET_STRING;
+import static io.undertow.util.Methods.HEAD_STRING;
+import static io.undertow.util.Methods.OPTIONS_STRING;
+import static io.undertow.util.Methods.POST_STRING;
+import static io.undertow.util.Methods.PUT_STRING;
+import static io.undertow.util.Methods.TRACE_STRING;
+import static io.undertow.util.Protocols.HTTP_0_9_STRING;
+import static io.undertow.util.Protocols.HTTP_1_0_STRING;
+import static io.undertow.util.Protocols.HTTP_1_1_STRING;
 
 /**
  * The basic HTTP parser. The actual parser is a sub class of this class that is generated as part of
@@ -101,16 +101,16 @@ import static io.undertow.util.Protocols.HTTP_1_1;
  * @author Stuart Douglas
  */
 @HttpParserConfig(methods = {
-        OPTIONS,
-        GET,
-        HEAD,
-        POST,
-        PUT,
-        DELETE,
-        TRACE,
-        CONNECT},
+        OPTIONS_STRING,
+        GET_STRING,
+        HEAD_STRING,
+        POST_STRING,
+        PUT_STRING,
+        DELETE_STRING,
+        TRACE_STRING,
+        CONNECT_STRING},
         protocols = {
-                HTTP_0_9, HTTP_1_0, HTTP_1_1
+                HTTP_0_9_STRING, HTTP_1_0_STRING, HTTP_1_1_STRING
         },
         headers = {
                 ACCEPT_STRING,
@@ -214,7 +214,7 @@ public abstract class HttpParser {
         int canonicalPathStart = state.pos;
         int queryParamPos = state.queryParamPos;
         int requestEnd = state.requestEnd;
-        String nextQueryParam = state.nextHeader;
+        String nextQueryParam = state.nextQueryParam;
         if (stringBuilder == null) {
             state.stringBuilder = stringBuilder = new StringBuilder();
         }
@@ -294,7 +294,7 @@ public abstract class HttpParser {
         state.stringBuilder = stringBuilder;
         state.parseState = parseState;
         state.pos = canonicalPathStart;
-        state.nextHeader = nextQueryParam;
+        state.nextQueryParam = nextQueryParam;
         state.queryParamPos = queryParamPos;
         state.requestEnd = requestEnd;
         return remaining;
@@ -369,11 +369,11 @@ public abstract class HttpParser {
                         parseState = WHITESPACE;
                     } else {
                         //we have a header
-                        String nextStandardHeader = state.nextHeader;
+                        HttpString nextStandardHeader = state.nextHeader;
                         String headerValue = stringBuilder.toString();
 
                         //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
-                        builder.getRequestHeaders().add(new HttpString(nextStandardHeader), headerValue);
+                        builder.getRequestHeaders().add(nextStandardHeader, headerValue);
 
                         state.nextHeader = null;
 

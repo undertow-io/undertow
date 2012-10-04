@@ -51,6 +51,8 @@ public class ParserGenerator {
     public static final String PARSE_STATE_DESCRIPTOR = DescriptorUtils.makeDescriptor(PARSE_STATE_CLASS);
     public static final String HTTP_EXCHANGE_CLASS = "io.undertow.server.HttpServerExchange";
     public static final String HTTP_EXCHANGE_DESCRIPTOR = DescriptorUtils.makeDescriptor(HTTP_EXCHANGE_CLASS);
+    public static final String HTTP_STRING_CLASS = "io.undertow.util.HttpString";
+    public static final String HTTP_STRING_DESCRIPTOR = DescriptorUtils.makeDescriptor(HTTP_STRING_CLASS);
 
 
     //state machine states
@@ -209,9 +211,9 @@ public class ParserGenerator {
     private static void createStateMachine(final String[] originalItems, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter, final String methodName, final CustomStateMachine stateMachine, final boolean caseInsensitive) {
 
         final String[] modifiedItems;
-        if(caseInsensitive) {
+        if (caseInsensitive) {
             modifiedItems = new String[originalItems.length];
-            for(int i = 0; i < modifiedItems.length; ++i) {
+            for (int i = 0; i < modifiedItems.length; ++i) {
                 modifiedItems[i] = originalItems[i].toLowerCase();
             }
         } else {
@@ -235,7 +237,7 @@ public class ParserGenerator {
         final int noStates = stateCounter.get();
 
         final ClassMethod handle = file.addMethod(Modifier.PRIVATE, methodName, "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR);
-        writeStateMachine(className, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, caseInsensitive);
+        writeStateMachine(className, file, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, caseInsensitive, sctor);
     }
 
     private static void createStateField(final State state, final ClassFile file, final CodeAttribute sc) {
@@ -245,6 +247,18 @@ public class ParserGenerator {
             sc.ldc("ISO-8859-1");
             sc.invokevirtual(String.class.getName(), "getBytes", "(Ljava/lang/String;)[B");
             sc.putstatic(file.getName(), state.fieldName, "[B");
+        }
+        if (state.httpStringFieldName != null) {
+            file.addField(AccessFlag.STATIC | AccessFlag.FINAL | AccessFlag.PRIVATE, state.httpStringFieldName, HTTP_STRING_DESCRIPTOR);
+            sc.newInstruction(HTTP_STRING_CLASS);
+            sc.dup();
+            if (state.terminalState != null) {
+                sc.ldc(state.terminalState);
+            } else {
+                sc.ldc(state.soFar);
+            }
+            sc.invokespecial(HTTP_STRING_CLASS, "<init>", "(Ljava/lang/String;)V");
+            sc.putstatic(file.getName(), state.httpStringFieldName, HTTP_STRING_DESCRIPTOR);
         }
     }
 
@@ -276,9 +290,10 @@ public class ParserGenerator {
         } else {
             state.stateno = stateCounter.incrementAndGet();
         }
+        state.httpStringFieldName = "HTTP_STRING_" + fieldCounter.incrementAndGet();
     }
 
-    private static void writeStateMachine(final String className, final CodeAttribute c, final State initial, final List<State> allStates, int noStates, final CustomStateMachine stateMachine, final boolean caseInsensitive) {
+    private static void writeStateMachine(final String className, final ClassFile file, final CodeAttribute c, final State initial, final List<State> allStates, int noStates, final CustomStateMachine stateMachine, final boolean caseInsensitive, final ClassMethod sctor) {
 
         final List<State> states = new ArrayList<State>();
         states.add(initial);
@@ -295,7 +310,7 @@ public class ParserGenerator {
         c.istore(CURRENT_STATE_VAR);
         c.getfield(PARSE_STATE_CLASS, "pos", "I");
         c.istore(STATE_POS_VAR);
-        c.getfield(PARSE_STATE_CLASS, "current", "Ljava/lang/String;");
+        c.getfield(PARSE_STATE_CLASS, "current", HTTP_STRING_DESCRIPTOR);
         c.astore(STATE_CURRENT_VAR);
         c.getfield(PARSE_STATE_CLASS, "currentBytes", "[B");
         c.astore(STATE_CURRENT_BYTES_VAR);
@@ -341,7 +356,7 @@ public class ParserGenerator {
         c.iload(STATE_POS_VAR);
         c.putfield(PARSE_STATE_CLASS, "pos", "I");
         c.aload(STATE_CURRENT_VAR);
-        c.putfield(PARSE_STATE_CLASS, "current", DescriptorUtils.makeDescriptor(String.class));
+        c.putfield(PARSE_STATE_CLASS, "current", HTTP_STRING_DESCRIPTOR);
         c.aload(STATE_CURRENT_BYTES_VAR);
         c.putfield(PARSE_STATE_CLASS, "currentBytes", "[B");
         c.aload(STATE_STRING_BUILDER_VAR);
@@ -361,7 +376,7 @@ public class ParserGenerator {
         c.iconst(0);
         c.putfield(PARSE_STATE_CLASS, "pos", "I");
         c.aconstNull();
-        c.putfield(PARSE_STATE_CLASS, "current", DescriptorUtils.makeDescriptor(String.class));
+        c.putfield(PARSE_STATE_CLASS, "current", HTTP_STRING_DESCRIPTOR);
         c.aconstNull();
         c.putfield(PARSE_STATE_CLASS, "currentBytes", "[B");
         c.aconstNull();
@@ -379,7 +394,7 @@ public class ParserGenerator {
         //load 3 copies of the current byte into the stack
         c.aload(BYTE_BUFFER_VAR);
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
-        if(caseInsensitive) {
+        if (caseInsensitive) {
             c.invokestatic(Character.class.getName(), "toLowerCase", "(C)C");
         }
         c.dup();
@@ -431,6 +446,7 @@ public class ParserGenerator {
         c.newInstruction(StringBuilder.class);
         c.dup();
         c.aload(STATE_CURRENT_VAR);
+        c.invokevirtual(HTTP_STRING_CLASS, "toString", "()Ljava/lang/String;");
         c.iconst(0);
         c.iload(STATE_POS_VAR);
         c.invokevirtual(String.class.getName(), "substring", "(II)Ljava/lang/String;");
@@ -456,10 +472,12 @@ public class ParserGenerator {
         c.iload(STATE_POS_VAR);
         BranchEnd correctLength = c.ifIcmpeq();
 
-        c.aload(STATE_CURRENT_VAR);
+        c.newInstruction(HTTP_STRING_CLASS);
+        c.dup();
+        c.aload(STATE_CURRENT_BYTES_VAR);
         c.iconst(0);
         c.iload(STATE_POS_VAR);
-        c.invokevirtual(String.class.getName(), "substring", "(II)Ljava/lang/String;");
+        c.invokespecial(HTTP_STRING_CLASS, "<init>", "([BII)V");
         stateMachine.handleOtherToken(c);
         //TODO: exit if it returns null
         //decrease the available bytes
@@ -527,15 +545,20 @@ public class ParserGenerator {
         c.invokevirtual(StringBuilder.class.getName(), "toString", "()Ljava/lang/String;");
         c.aconstNull();
         c.astore(STATE_STRING_BUILDER_VAR);
+
+        c.newInstruction(HTTP_STRING_CLASS);
+        c.dupX1();
+        c.swap();
+        c.invokespecial(HTTP_STRING_CLASS, "<init>", "(Ljava/lang/String;)V");
         stateMachine.handleOtherToken(c);
         //TODO: exit if it returns null
         tokenDone(c, returnCompleteCode, stateMachine);
 
 
-        invokeState(className, c, ends.get(initial).get(), initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
+        invokeState(className, file, c, ends.get(initial).get(), initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
         for (final State s : allStates) {
             if (s.stateno >= 0) {
-                invokeState(className, c, ends.get(s).get(), s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
+                invokeState(className, file, c, ends.get(s).get(), s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
             }
         }
 
@@ -564,7 +587,7 @@ public class ParserGenerator {
         c.gotoInstruction(returnCode);
     }
 
-    private static void invokeState(final String className, final CodeAttribute c, BranchEnd methodState, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine) {
+    private static void invokeState(final String className, final ClassFile file, final CodeAttribute c, BranchEnd methodState, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine) {
         c.branchEnd(methodState);
         currentState.mark(c);
 
@@ -663,16 +686,12 @@ public class ParserGenerator {
         }
 
         if (!currentState.soFar.equals("")) {
-            c.ldc(currentState.soFar);
-            if (currentState.finalState) {
-                stateMachine.handleStateMachineMatchedToken(c);
-            } else {
-                stateMachine.handleOtherToken(c);
-            }
+            c.getstatic(file.getName(), currentState.httpStringFieldName, HTTP_STRING_DESCRIPTOR);
+            stateMachine.handleStateMachineMatchedToken(c);
             //TODO: exit if it returns null
             tokenDone(c, returnCompleteCode, stateMachine);
         } else {
-            if(stateMachine.initialNewlineMeansRequestDone()) {
+            if (stateMachine.initialNewlineMeansRequestDone()) {
                 c.iconst('\n');
                 parseDone = c.ifIcmpeq();
             } else {
@@ -691,7 +710,7 @@ public class ParserGenerator {
                 //prefix match
                 c.iconst(state.stateno);
                 c.istore(CURRENT_STATE_VAR);
-                c.ldc(state.terminalState);
+                c.getstatic(className, state.httpStringFieldName, HTTP_STRING_DESCRIPTOR);
                 c.astore(STATE_CURRENT_VAR);
                 c.getstatic(className, state.fieldName, "[B");
                 c.astore(STATE_CURRENT_BYTES_VAR);
@@ -705,7 +724,7 @@ public class ParserGenerator {
                 state.jumpTo(c);
             }
         }
-        if(parseDone != null) {
+        if (parseDone != null) {
             c.branchEnd(parseDone);
 
             c.aload(PARSE_STATE_VAR);
@@ -752,6 +771,7 @@ public class ParserGenerator {
         Integer stateno;
         String terminalState;
         String fieldName;
+        String httpStringFieldName;
         /**
          * If this state represents a possible final state
          */
@@ -824,14 +844,14 @@ public class ParserGenerator {
         public void handleOtherToken(final CodeAttribute c) {
             c.aload(PARSE_STATE_VAR);
             c.swap();
-            c.putfield(PARSE_STATE_CLASS, "nextHeader", DescriptorUtils.makeDescriptor(String.class));
+            c.putfield(PARSE_STATE_CLASS, "nextHeader", HTTP_STRING_DESCRIPTOR);
         }
 
         @Override
         public void handleStateMachineMatchedToken(final CodeAttribute c) {
             c.aload(PARSE_STATE_VAR);
             c.swap();
-            c.putfield(PARSE_STATE_CLASS, "nextHeader", DescriptorUtils.makeDescriptor(String.class));
+            c.putfield(PARSE_STATE_CLASS, "nextHeader", HTTP_STRING_DESCRIPTOR);
         }
 
         @Override
@@ -857,14 +877,16 @@ public class ParserGenerator {
 
         @Override
         public void handleStateMachineMatchedToken(final CodeAttribute c) {
-            handleOtherToken(c);
+            c.aload(HTTP_EXCHANGE_BUILDER);
+            c.swap();
+            c.invokevirtual(HTTP_EXCHANGE_CLASS, "setRequestMethod", "(" + HTTP_STRING_DESCRIPTOR + ")V");
         }
 
         @Override
         public void handleOtherToken(final CodeAttribute c) {
             c.aload(HTTP_EXCHANGE_BUILDER);
             c.swap();
-            c.invokevirtual(HTTP_EXCHANGE_CLASS, "setRequestMethod", "(Ljava/lang/String;)V");
+            c.invokevirtual(HTTP_EXCHANGE_CLASS, "setRequestMethod", "(" + HTTP_STRING_DESCRIPTOR + ")V");
         }
 
         @Override
@@ -892,12 +914,14 @@ public class ParserGenerator {
         public void handleOtherToken(final CodeAttribute c) {
             c.aload(HTTP_EXCHANGE_BUILDER);
             c.swap();
-            c.invokevirtual(HTTP_EXCHANGE_CLASS, "setProtocol", "(Ljava/lang/String;)V");
+            c.invokevirtual(HTTP_EXCHANGE_CLASS, "setProtocol", "(" + HTTP_STRING_DESCRIPTOR + ")V");
         }
 
         @Override
         public void handleStateMachineMatchedToken(final CodeAttribute c) {
-            handleOtherToken(c);
+            c.aload(HTTP_EXCHANGE_BUILDER);
+            c.swap();
+            c.invokevirtual(HTTP_EXCHANGE_CLASS, "setProtocol", "(" + HTTP_STRING_DESCRIPTOR + ")V");
         }
 
         @Override

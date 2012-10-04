@@ -24,6 +24,8 @@ import io.undertow.server.HttpParser;
 import io.undertow.server.ParseState;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -72,10 +74,10 @@ public class ParserResumeTestCase {
     }
 
     private void runAssertions(final HttpServerExchange result, final ParseState context) {
-        Assert.assertSame("POST", result.getRequestMethod());
+        Assert.assertEquals(Methods.POST, result.getRequestMethod());
         Assert.assertEquals("/apath", result.getRelativePath());
         Assert.assertEquals("http://www.somehost.net/apath", result.getRequestURI());
-        Assert.assertSame("HTTP/1.1", result.getProtocol());
+        Assert.assertEquals(Protocols.HTTP_1_1, result.getProtocol());
 
         Assert.assertEquals(4, result.getRequestHeaders().getHeaderNames().size());
         Assert.assertEquals("www.somehost.net", result.getRequestHeaders().getFirst(new HttpString("Host")));

@@ -54,7 +54,7 @@ public class ParseState {
      * If this state is a prefix or terminal match state this is set to the string
      * that is a candidate to be matched
      */
-    String current;
+    HttpString current;
 
     /**
      * The bytes version of {@link #current}
@@ -92,12 +92,13 @@ public class ParseState {
     /**
      * This is used to store the next header value when parsing header key / value pairs,
      */
-    String nextHeader;
+    HttpString nextHeader;
+
+    String nextQueryParam;
 
 
     public ParseState() {
         this.parseState = 0;
-        this.current = null;
         this.pos = 0;
     }
 

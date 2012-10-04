@@ -28,6 +28,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.WorkerDispatcher;
 import org.jboss.logging.Logger;
@@ -72,7 +73,7 @@ public class DirectFileCache implements FileCache {
         @Override
         public void run() {
 
-            final String method = exchange.getRequestMethod();
+            final HttpString method = exchange.getRequestMethod();
             final FileChannel fileChannel;
             final long length;
             try {
@@ -91,11 +92,11 @@ public class DirectFileCache implements FileCache {
                 return;
             }
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
-            if (method.equalsIgnoreCase(Methods.HEAD)) {
+            if (method.equals(Methods.HEAD)) {
                 completionHandler.handleComplete();
                 return;
             }
-            if (!method.equalsIgnoreCase(Methods.GET)) {
+            if (!method.equals(Methods.GET)) {
                 exchange.setResponseCode(500);
                 completionHandler.handleComplete();
                 return;
