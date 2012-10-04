@@ -18,10 +18,16 @@
 
 package io.undertow.server;
 
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.undertow.annotationprocessor.HttpParserConfig;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 
 import static io.undertow.util.Headers.ACCEPT_CHARSET_STRING;
 import static io.undertow.util.Headers.ACCEPT_ENCODING_STRING;
@@ -224,7 +230,7 @@ public abstract class HttpParser {
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
-                    if(parseState < QUERY_PARAM_NAME) {
+                    if (parseState < QUERY_PARAM_NAME) {
                         builder.setRequestURI(path);
                         if (parseState < HOST_DONE) {
                             builder.setParsedRequestPath(path);
@@ -429,6 +435,35 @@ public abstract class HttpParser {
             state.leftOver = '\n';
         }
         return remaining;
+    }
+
+    /**
+     * This is a bit of hack to enable the parser to get access to the HttpString's that are sorted
+     * in the static fields of the relevant classes. This means that in most cases a HttpString comparison
+     * will take the fast path == route, as they will be the same object
+     *
+     * @return
+     */
+    protected static Map<String, HttpString> httpStrings() {
+        final Map<String, HttpString> results = new HashMap<String, HttpString>();
+        final Class[] classs = {Headers.class, Methods.class, Protocols.class};
+
+        for (Class<?> c : classs) {
+            for (Field field : c.getDeclaredFields()) {
+                if (field.getType().equals(HttpString.class)) {
+                    field.setAccessible(true);
+                    HttpString result = null;
+                    try {
+                        result = (HttpString) field.get(null);
+                        results.put(result.toString(), result);
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }
+        return results;
+
     }
 
 }

@@ -74,10 +74,10 @@ public class ParserResumeTestCase {
     }
 
     private void runAssertions(final HttpServerExchange result, final ParseState context) {
-        Assert.assertEquals(Methods.POST, result.getRequestMethod());
+        Assert.assertSame(Methods.POST, result.getRequestMethod());
         Assert.assertEquals("/apath", result.getRelativePath());
         Assert.assertEquals("http://www.somehost.net/apath", result.getRequestURI());
-        Assert.assertEquals(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
 
         Assert.assertEquals(4, result.getRequestHeaders().getHeaderNames().size());
         Assert.assertEquals("www.somehost.net", result.getRequestHeaders().getFirst(new HttpString("Host")));

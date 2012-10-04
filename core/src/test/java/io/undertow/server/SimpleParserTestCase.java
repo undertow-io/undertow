@@ -139,9 +139,9 @@ public class SimpleParserTestCase {
         final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
-        Assert.assertEquals(Methods.GET, result.getRequestMethod());
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
         Assert.assertEquals("/somepath", result.getRequestURI());
-        Assert.assertEquals(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
 
         Assert.assertEquals(2, result.getRequestHeaders().getHeaderNames().size());
         Assert.assertEquals("www.somehost.net", result.getRequestHeaders().getFirst(new HttpString("Host")));

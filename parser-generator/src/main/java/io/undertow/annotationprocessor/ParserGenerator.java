@@ -68,6 +68,7 @@ public class ParserGenerator {
     public static final int HEADER_VALUE = 5;
     public static final int PARSE_COMPLETE = 6;
 
+    private static final int CONSTRUCTOR_HTTP_STRING_MAP_VAR = 1;
 
     private static final int BYTE_BUFFER_VAR = 1;
     private static final int BYTES_REMAINING_VAR = 2;
@@ -99,6 +100,8 @@ public class ParserGenerator {
 
         final ClassMethod sctor = file.addMethod(AccessFlag.PUBLIC | AccessFlag.STATIC, "<clinit>", "V");
         final AtomicInteger fieldCounter = new AtomicInteger(1);
+        sctor.getCodeAttribute().invokestatic(existingClassName, "httpStrings", "()" + DescriptorUtils.makeDescriptor(Map.class));
+        sctor.getCodeAttribute().astore(CONSTRUCTOR_HTTP_STRING_MAP_VAR);
 
         createStateMachine(httpVerbs, className, file, sctor, fieldCounter, HANDLE_HTTP_VERB, new VerbStateMachine(), false);
         createStateMachine(httpVersions, className, file, sctor, fieldCounter, HANDLE_HTTP_VERSION, new VersionStateMachine(), false);
@@ -250,6 +253,25 @@ public class ParserGenerator {
         }
         if (state.httpStringFieldName != null) {
             file.addField(AccessFlag.STATIC | AccessFlag.FINAL | AccessFlag.PRIVATE, state.httpStringFieldName, HTTP_STRING_DESCRIPTOR);
+
+            //first we try and get the string from the map of known HTTP strings
+            //this means that the result we store will be the same object as the
+            //constants that are referenced in the handlers
+            //if this fails we just create a new http string
+            sc.aload(CONSTRUCTOR_HTTP_STRING_MAP_VAR);
+            if (state.terminalState != null) {
+                sc.ldc(state.terminalState);
+            } else {
+                sc.ldc(state.soFar);
+            }
+            sc.invokeinterface(Map.class.getName(), "get", "(Ljava/lang/Object;)Ljava/lang/Object;");
+            sc.dup();
+            BranchEnd end = sc.ifnull();
+            sc.checkcast(HTTP_STRING_CLASS);
+            sc.putstatic(file.getName(), state.httpStringFieldName, HTTP_STRING_DESCRIPTOR);
+            BranchEnd done = sc.gotoInstruction();
+            sc.branchEnd(end);
+            sc.pop();
             sc.newInstruction(HTTP_STRING_CLASS);
             sc.dup();
             if (state.terminalState != null) {
@@ -259,6 +281,7 @@ public class ParserGenerator {
             }
             sc.invokespecial(HTTP_STRING_CLASS, "<init>", "(Ljava/lang/String;)V");
             sc.putstatic(file.getName(), state.httpStringFieldName, HTTP_STRING_DESCRIPTOR);
+            sc.branchEnd(done);
         }
     }
 
