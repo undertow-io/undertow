@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.handlers;
 
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletRequest;
 
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
@@ -41,12 +42,17 @@ public class RequestListenerHandler implements BlockingHttpHandler {
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        final ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        listeners.requestInitialized(request);
-        try {
+        DispatcherType type = exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
+        if (type == DispatcherType.REQUEST) {
+            final ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+            listeners.requestInitialized(request);
+            try {
+                next.handleRequest(exchange);
+            } finally {
+                listeners.requestDestroyed(request);
+            }
+        } else {
             next.handleRequest(exchange);
-        } finally {
-            listeners.requestDestroyed(request);
         }
     }
 

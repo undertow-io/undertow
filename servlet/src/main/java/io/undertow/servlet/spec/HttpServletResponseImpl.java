@@ -333,6 +333,8 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        } else {
+            handler.handleComplete();
         }
     }
 
