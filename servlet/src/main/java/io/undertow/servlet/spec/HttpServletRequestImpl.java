@@ -35,6 +35,7 @@ import java.util.Deque;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IllformedLocaleException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -212,8 +213,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getPathInfo() {
-        ServletPathMatch match =  exchange.getExchange().getAttachment(ServletPathMatch.ATTACHMENT_KEY);
-        if(match != null) {
+        ServletPathMatch match = exchange.getExchange().getAttachment(ServletPathMatch.ATTACHMENT_KEY);
+        if (match != null) {
             return match.getRemaining();
         }
         return null;
@@ -266,8 +267,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getServletPath() {
-        ServletPathMatch match =  exchange.getExchange().getAttachment(ServletPathMatch.ATTACHMENT_KEY);
-        if(match != null) {
+        ServletPathMatch match = exchange.getExchange().getAttachment(ServletPathMatch.ATTACHMENT_KEY);
+        if (match != null) {
             return match.getMatched();
         }
         return "";
@@ -387,7 +388,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getCharacterEncoding() {
-        if(characterEncoding != null) {
+        if (characterEncoding != null) {
             return characterEncoding.name();
         }
         String contentType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
@@ -399,7 +400,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void setCharacterEncoding(final String env) throws UnsupportedEncodingException {
-        if(readStarted) {
+        if (readStarted) {
             return;
         }
         try {
@@ -589,10 +590,10 @@ public class HttpServletRequestImpl implements HttpServletRequest {
                 String contentType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
                 if (contentType != null) {
                     String c = Headers.extractTokenFromHeader(contentType, "charset");
-                    if(c != null) {
+                    if (c != null) {
                         try {
                             charSet = Charset.forName(c);
-                        } catch (UnsupportedCharsetException e){
+                        } catch (UnsupportedCharsetException e) {
                             throw new UnsupportedEncodingException();
                         }
                     }
@@ -647,9 +648,11 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         for (List<QValueParser.QValueResult> qvalueResult : parsedResults) {
             for (QValueParser.QValueResult res : qvalueResult) {
                 if (!res.isQValueZero()) {
-                    Locale e = Locale.forLanguageTag(res.getValue());
-                    if (e != null) {
+                    try {
+                        Locale e = new Locale.Builder().setLanguageTag(res.getValue()).build();
                         ret.add(e);
+                    } catch (IllformedLocaleException ignore) {
+
                     }
                 }
             }
