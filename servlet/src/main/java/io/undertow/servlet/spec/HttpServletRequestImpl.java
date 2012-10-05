@@ -24,6 +24,8 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -59,6 +61,7 @@ import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionManager;
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
@@ -82,6 +85,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public static final AttachmentKey<ServletRequest> ATTACHMENT_KEY = AttachmentKey.create(ServletRequest.class);
     public static final AttachmentKey<DispatcherType> DISPATCHER_TYPE_ATTACHMENT_KEY = AttachmentKey.create(DispatcherType.class);
 
+    private static final Charset DEFAULT_CHARSET = Charset.forName("ISO-8859-1");
+
     private final BlockingHttpServerExchange exchange;
     private ServletContextImpl servletContext;
 
@@ -96,6 +101,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     private HttpSessionImpl httpSession;
     private AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
+    private Charset characterEncoding;
 
     public HttpServletRequestImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
@@ -182,7 +188,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Enumeration<String> getHeaderNames() {
         final Set<String> headers = new HashSet<String>();
-        for(final HttpString i : exchange.getExchange().getRequestHeaders()) {
+        for (final HttpString i : exchange.getExchange().getRequestHeaders()) {
             headers.add(i.toString());
         }
         return new IteratorEnumeration<String>(headers.iterator());
@@ -370,13 +376,23 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getCharacterEncoding() {
-        return null;
+        if (characterEncoding != null) {
+            return characterEncoding.name();
+        }
+        String contentType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+        if (contentType == null) {
+            return null;
+        }
+        return Headers.extractTokenFromHeader(contentType, "charset");
     }
 
     @Override
     public void setCharacterEncoding(final String env) throws UnsupportedEncodingException {
-
-
+        try {
+            characterEncoding = Charset.forName(env);
+        } catch (UnsupportedCharsetException e) {
+            throw new UnsupportedEncodingException();
+        }
     }
 
     @Override
@@ -547,7 +563,24 @@ public class HttpServletRequestImpl implements HttpServletRequest {
             if (servletInputStream != null) {
                 throw UndertowServletMessages.MESSAGES.getInputStreamAlreadyCalled();
             }
-            reader = new BufferedReader(new InputStreamReader(exchange.getInputStream()));
+            Charset charSet = DEFAULT_CHARSET;
+            if (characterEncoding != null) {
+                charSet = DEFAULT_CHARSET;
+            } else {
+                String contentType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+                if (contentType != null) {
+                    String c = Headers.extractTokenFromHeader(contentType, "charset");
+                    if(c != null) {
+                        try {
+                            charSet = Charset.forName(c);
+                        } catch (UnsupportedCharsetException e){
+                            throw new UnsupportedEncodingException();
+                        }
+                    }
+                }
+            }
+
+            reader = new BufferedReader(new InputStreamReader(exchange.getInputStream(), charSet));
         }
         return reader;
     }
@@ -586,16 +619,16 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Enumeration<Locale> getLocales() {
         final Deque<String> acceptLanguage = exchange.getExchange().getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
-        if(acceptLanguage == null || acceptLanguage.isEmpty()) {
+        if (acceptLanguage == null || acceptLanguage.isEmpty()) {
             return new IteratorEnumeration<Locale>(Collections.singleton(Locale.getDefault()).iterator());
         }
         final List<Locale> ret = new ArrayList<Locale>();
         final List<List<QValueParser.QValueResult>> parsedResults = QValueParser.parse(acceptLanguage);
-        for(List<QValueParser.QValueResult> qvalueResult : parsedResults) {
-            for(QValueParser.QValueResult res : qvalueResult) {
-                if(!res.isQValueZero()) {
+        for (List<QValueParser.QValueResult> qvalueResult : parsedResults) {
+            for (QValueParser.QValueResult res : qvalueResult) {
+                if (!res.isQValueZero()) {
                     Locale e = Locale.forLanguageTag(res.getValue());
-                    if(e != null) {
+                    if (e != null) {
                         ret.add(e);
                     }
                 }
@@ -612,12 +645,12 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public RequestDispatcher getRequestDispatcher(final String path) {
         String realPath;
-        if(path.startsWith("/")) {
+        if (path.startsWith("/")) {
             realPath = path;
         } else {
             String current = exchange.getExchange().getRelativePath();
             int lastSlash = current.lastIndexOf("/");
-            if(lastSlash != -1) {
+            if (lastSlash != -1) {
                 current = current.substring(0, lastSlash + 1);
             }
             realPath = CanonicalPathUtils.canonicalize(current + path);
@@ -667,7 +700,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public AsyncContext startAsync() throws IllegalStateException {
-        if(!isAsyncSupported()) {
+        if (!isAsyncSupported()) {
             throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
         }
         return asyncContext = new AsyncContextImpl(exchange, exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
@@ -676,7 +709,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public AsyncContext startAsync(final ServletRequest servletRequest, final ServletResponse servletResponse) throws IllegalStateException {
 
-        if(!isAsyncSupported()) {
+        if (!isAsyncSupported()) {
             throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
         }
         return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse);
