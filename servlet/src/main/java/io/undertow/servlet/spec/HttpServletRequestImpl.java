@@ -35,7 +35,6 @@ import java.util.Deque;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IllformedLocaleException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -73,6 +72,7 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.LocaleUtils;
 import io.undertow.util.Methods;
 import io.undertow.util.QValueParser;
 import org.xnio.LocalSocketAddress;
@@ -648,12 +648,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         for (List<QValueParser.QValueResult> qvalueResult : parsedResults) {
             for (QValueParser.QValueResult res : qvalueResult) {
                 if (!res.isQValueZero()) {
-                    try {
-                        Locale e = new Locale.Builder().setLanguageTag(res.getValue()).build();
-                        ret.add(e);
-                    } catch (IllformedLocaleException ignore) {
-
-                    }
+                    Locale e = LocaleUtils.getLocaleFromString(res.getValue());
+                    ret.add(e);
                 }
             }
         }
