@@ -41,6 +41,7 @@ import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.handlers.ServletInitialHandler;
+import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.XnioExecutor;
@@ -107,9 +108,9 @@ public class AsyncContextImpl implements AsyncContext {
         final ServletInitialHandler handler;
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         if (servletRequest instanceof HttpServletRequest) {
-            handler = deployment.getServletPaths().getServletHandlerByPath(((HttpServletRequest) servletRequest).getRequestURI());
+            handler = deployment.getServletPaths().getServletHandlerByPath(((HttpServletRequest) servletRequest).getRequestURI()).getHandler();
         } else {
-            handler = deployment.getServletPaths().getServletHandlerByPath(exchange.getExchange().getRelativePath());
+            handler = deployment.getServletPaths().getServletHandlerByPath(exchange.getExchange().getRelativePath()).getHandler();
         }
 
         final BlockingHttpServerExchange exchange = requestImpl.getExchange();
@@ -205,7 +206,9 @@ public class AsyncContextImpl implements AsyncContext {
         responseImpl.setServletContext((ServletContextImpl) context);
 
         Deployment deployment = requestImpl.getServletContext().getDeployment();
-        handler = deployment.getServletPaths().getServletHandlerByPath(newServletPath);
+        ServletPathMatch info = deployment.getServletPaths().getServletHandlerByPath(newServletPath);
+        requestImpl.getExchange().getExchange().putAttachment(ServletPathMatch.ATTACHMENT_KEY, info);
+        handler = info.getHandler();
 
         dispatchAsyncRequest(requestImpl, handler, exchange);
     }

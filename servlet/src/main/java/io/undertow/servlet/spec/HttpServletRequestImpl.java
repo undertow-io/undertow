@@ -63,6 +63,7 @@ import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
@@ -210,7 +211,11 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getPathInfo() {
-        return exchange.getExchange().getRelativePath();
+        ServletPathMatch match =  exchange.getExchange().getAttachment(ServletPathMatch.ATTACHMENT_KEY);
+        if(match != null) {
+            return match.getRemaining();
+        }
+        return null;
     }
 
     @Override
@@ -260,7 +265,11 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getServletPath() {
-        return exchange.getExchange().getRelativePath();
+        ServletPathMatch match =  exchange.getExchange().getAttachment(ServletPathMatch.ATTACHMENT_KEY);
+        if(match != null) {
+            return match.getMatched();
+        }
+        return "";
     }
 
     @Override
@@ -376,9 +385,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getCharacterEncoding() {
-        if (characterEncoding != null) {
-            return characterEncoding.name();
-        }
         String contentType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (contentType == null) {
             return null;

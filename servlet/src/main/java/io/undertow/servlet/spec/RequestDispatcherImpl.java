@@ -19,6 +19,7 @@
 package io.undertow.servlet.spec;
 
 import java.io.IOException;
+import java.nio.file.PathMatcher;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
@@ -32,6 +33,7 @@ import javax.servlet.ServletResponse;
 
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.handlers.ServletInitialHandler;
+import io.undertow.servlet.handlers.ServletPathMatch;
 
 /**
  * @author Stuart Douglas
@@ -41,12 +43,14 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     private final String path;
     private final ServletContextImpl servletContext;
     private final ServletInitialHandler handler;
+    private final ServletPathMatch pathMatch;
     private final boolean named;
 
-    public RequestDispatcherImpl(final String path, final ServletContextImpl servletContext, final ServletInitialHandler handler) {
+    public RequestDispatcherImpl(final String path, final ServletContextImpl servletContext, final ServletPathMatch match) {
         this.path = path;
         this.servletContext = servletContext;
-        this.handler = handler;
+        this.pathMatch = match;
+        this.handler = match.getHandler();
         this.named = false;
     }
 
@@ -56,6 +60,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         this.named = true;
         this.servletContext = servletContext;
         this.path = null;
+        this.pathMatch = null;
     }
 
     @Override
@@ -79,7 +84,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 request.setAttribute(FORWARD_REQUEST_URI, requestImpl.getRequestURI());
                 request.setAttribute(FORWARD_CONTEXT_PATH, requestImpl.getContextPath());
                 request.setAttribute(FORWARD_SERVLET_PATH, requestImpl.getServletPath());
-                //request.setAttribute(FORWARD_PATH_INFO, path);
+                request.setAttribute(FORWARD_PATH_INFO, requestImpl.getPathInfo());
                 request.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
             }
 
@@ -114,6 +119,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             requestImpl.getExchange().getExchange().setQueryString(newQueryString);
             requestImpl.getExchange().getExchange().setRequestPath(newRequestUri);
             requestImpl.getExchange().getExchange().setRequestURI(newRequestUri);
+            requestImpl.getExchange().getExchange().putAttachment(ServletPathMatch.ATTACHMENT_KEY, pathMatch);
             requestImpl.setServletContext(servletContext);
             responseImpl.setServletContext(servletContext);
         }
@@ -190,7 +196,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             request.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
             request.setAttribute(INCLUDE_CONTEXT_PATH, servletContext);
             request.setAttribute(INCLUDE_SERVLET_PATH, newServletPath);
-            //request.setAttribute(INCLUDE_PATH_INFO, path);
+            request.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
             request.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
         }
         boolean inInclude = responseImpl.isInsideInclude();

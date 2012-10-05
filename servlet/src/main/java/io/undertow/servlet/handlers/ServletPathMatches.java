@@ -19,6 +19,7 @@
 package io.undertow.servlet.handlers;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 /**
@@ -28,7 +29,7 @@ import java.util.Map;
  */
 public class ServletPathMatches {
 
-    private final Map<String, ServletInitialHandler> exactPathMatches;
+    private final Map<String, ServletPathMatch> exactPathMatches;
 
     private final Map<String, PathMatch> prefixMatches;
 
@@ -37,24 +38,29 @@ public class ServletPathMatches {
     private final ServletInitialHandler defaultServlet;
 
     public ServletPathMatches(final Map<String, ServletInitialHandler> exactPathMatches, final Map<String, PathMatch> prefixMatches, final Map<String, ServletInitialHandler> nameMatches, final ServletInitialHandler defaultServlet) {
-        this.exactPathMatches = exactPathMatches;
         this.prefixMatches = prefixMatches;
         this.nameMatches = nameMatches;
         this.defaultServlet = defaultServlet;
+        Map<String, ServletPathMatch> newExactPathMatches = new HashMap<String, ServletPathMatch>();
+        for(Map.Entry<String, ServletInitialHandler> entry : exactPathMatches.entrySet()) {
+            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey(), null));
+        }
+        this.exactPathMatches = newExactPathMatches;
+
     }
 
     public ServletInitialHandler getServletHandlerByName(final String name) {
         return nameMatches.get(name);
     }
 
-    public ServletInitialHandler getServletHandlerByPath(final String path) {
-        ServletInitialHandler exact = exactPathMatches.get(path);
+    public ServletPathMatch getServletHandlerByPath(final String path) {
+        ServletPathMatch exact = exactPathMatches.get(path);
         if (exact != null) {
             return exact;
         }
         PathMatch match = prefixMatches.get(path);
         if (match != null) {
-            return  handleMatch(path, match);
+            return  handleMatch(path, match, path, null);
         }
         for (int i = path.length() -1; i >= 0; --i) {
             final char c = path.charAt(i);
@@ -69,27 +75,27 @@ public class ServletPathMatches {
                 final String part = path.substring(0, i);
                 match = prefixMatches.get(part);
                 if (match != null) {
-                    return  handleMatch(path, match);
+                    return  handleMatch(path, match, part, part.substring(i));
                 }
             }
         }
-        return defaultServlet;
+        return new ServletPathMatch(defaultServlet, "", path);
     }
 
-    private ServletInitialHandler handleMatch(final String path, final PathMatch match) {
+    private ServletPathMatch handleMatch(final String path, final PathMatch match, String matched, String remaining) {
         if (match.extensionMatches.isEmpty()) {
-            return match.defaultHandler;
+            return new ServletPathMatch(match.defaultHandler, matched, remaining);
         } else {
             int c = path.lastIndexOf('.');
             if (c == -1) {
-                return match.defaultHandler;
+                return new ServletPathMatch(match.defaultHandler, matched, remaining);
             } else {
                 final String ext = path.substring(c + 1, path.length());
                 ServletInitialHandler handler = match.extensionMatches.get(ext);
                 if (handler != null) {
-                    return handler;
+                    return new ServletPathMatch(handler, matched, remaining);
                 } else {
-                    return match.defaultHandler;
+                    return new ServletPathMatch(match.defaultHandler, matched, remaining);
                 }
             }
         }
@@ -156,6 +162,6 @@ public class ServletPathMatches {
         public PathMatch(final ServletInitialHandler defaultHandler) {
             this.defaultHandler = defaultHandler;
         }
-
     }
+
 }

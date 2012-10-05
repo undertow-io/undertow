@@ -39,7 +39,9 @@ public class ServletMatchingHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final String path = exchange.getRelativePath();
-        HttpHandlers.executeHandler(paths.getServletHandlerByPath(path), exchange, completionHandler);
+        ServletPathMatch info = paths.getServletHandlerByPath(path);
+        exchange.putAttachment(ServletPathMatch.ATTACHMENT_KEY, info);
+        HttpHandlers.executeHandler(info.getHandler(), exchange, completionHandler);
     }
 
     public ServletPathMatches getPaths() {
