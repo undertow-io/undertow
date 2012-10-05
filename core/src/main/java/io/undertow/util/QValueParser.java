@@ -47,7 +47,7 @@ public class QValueParser {
      * @param headers The headers
      * @return The q value results
      */
-    public static List<Set<QValueResult>> parse(Deque<String> headers) {
+    public static List<List<QValueResult>> parse(Deque<String> headers) {
         final List<QValueResult> found = new ArrayList<QValueResult>();
         QValueResult current = null;
         for (final String header : headers) {
@@ -107,13 +107,13 @@ public class QValueParser {
         }
         Collections.sort(found, Collections.reverseOrder());
         String currentQValue = null;
-        List<Set<QValueResult>> values = new ArrayList<Set<QValueResult>>();
-        Set<QValueResult> currentSet = null;
+        List<List<QValueResult>> values = new ArrayList<List<QValueResult>>();
+        List<QValueResult> currentSet = null;
 
         for(QValueResult val : found) {
             if(!val.qvalue.equals(currentQValue)) {
                 currentQValue = val.qvalue;
-                currentSet = new HashSet<QValueResult>();
+                currentSet = new ArrayList<QValueResult>();
                 values.add(currentSet);
             }
             currentSet.add(val);
@@ -190,5 +190,26 @@ public class QValueParser {
             }
             return 0;
         }
+
+
+        public boolean isQValueZero() {
+            //we ignore * without a qvalue
+            if (qvalue != null) {
+                int length = Math.min(5, qvalue.length());
+                //we need to find out if this is prohibiting identity
+                //encoding (q=0). Otherwise we just treat it as the identity encoding
+                boolean zero = true;
+                for (int j = 0; j < length; ++j) {
+                    if (j == 1) continue;//decimal point
+                    if (qvalue.charAt(j) != '0') {
+                        zero = false;
+                        break;
+                    }
+                }
+                return zero;
+            }
+            return false;
+        }
+
     }
 }

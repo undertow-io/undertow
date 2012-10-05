@@ -71,8 +71,8 @@ public class EncodingHandler implements HttpHandler {
             }
             return;
         }
-        final List<Set<QValueParser.QValueResult>> found = QValueParser.parse(res);
-        for(Set<QValueParser.QValueResult> result : found) {
+        final List<List<QValueParser.QValueResult>> found = QValueParser.parse(res);
+        for(List<QValueParser.QValueResult> result : found) {
             List<Encoding> available = new ArrayList<Encoding>();
             boolean includesIdentity = false;
             boolean isQValue0 = false;
@@ -85,7 +85,7 @@ public class EncodingHandler implements HttpHandler {
                 } else {
                     encoding = encodingMap.get(value.getValue());
                 }
-                if(isZero(value.getQvalue()) ) {
+                if(value.isQValueZero()) {
                     isQValue0 = true;
                 }
                 if(encoding != null) {
@@ -109,24 +109,6 @@ public class EncodingHandler implements HttpHandler {
         HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
     }
 
-    private boolean isZero(String qvalue) {
-        //we ignore * without a qvalue
-        if (qvalue != null) {
-            int length = Math.min(5, qvalue.length());
-            //we need to find out if this is prohibiting identity
-            //encoding (q=0). Otherwise we just treat it as the identity encoding
-            boolean zero = true;
-            for (int j = 0; j < length; ++j) {
-                if (j == 1) continue;//decimal point
-                if (qvalue.charAt(j) != '0') {
-                    zero = false;
-                    break;
-                }
-            }
-            return zero;
-        }
-        return false;
-    }
 
     public HttpHandler getIdentityHandler() {
         return identityHandler;

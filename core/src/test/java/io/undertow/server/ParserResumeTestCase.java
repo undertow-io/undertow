@@ -79,11 +79,11 @@ public class ParserResumeTestCase {
         Assert.assertEquals("http://www.somehost.net/apath", result.getRequestURI());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
 
-        Assert.assertEquals(4, result.getRequestHeaders().getHeaderNames().size());
         Assert.assertEquals("www.somehost.net", result.getRequestHeaders().getFirst(new HttpString("Host")));
         Assert.assertEquals("some value", result.getRequestHeaders().getFirst(new HttpString("OtherHeader")));
         Assert.assertEquals("another", result.getRequestHeaders().getFirst(new HttpString("Hostee")));
         Assert.assertEquals("a", result.getRequestHeaders().getFirst(new HttpString("Accept-garbage")));
+        Assert.assertEquals(4, result.getRequestHeaders().getHeaderNames().size());
 
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
         Assert.assertEquals("key1=value1&key2=value2", result.getQueryString());

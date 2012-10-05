@@ -27,6 +27,7 @@ import java.net.SocketAddress;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Deque;
 import java.util.Enumeration;
@@ -68,6 +69,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
+import io.undertow.util.QValueParser;
 import org.xnio.LocalSocketAddress;
 
 /**
@@ -531,12 +533,12 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getServerName() {
-        return exchange.getExchange().getSourceAddress().getHostName();
+        return exchange.getExchange().getDestinationAddress().getHostName();
     }
 
     @Override
     public int getServerPort() {
-        return exchange.getExchange().getSourceAddress().getPort();
+        return exchange.getExchange().getDestinationAddress().getPort();
     }
 
     @Override
@@ -583,7 +585,23 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Enumeration<Locale> getLocales() {
-        return null;
+        final Deque<String> acceptLanguage = exchange.getExchange().getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
+        if(acceptLanguage == null || acceptLanguage.isEmpty()) {
+            return new IteratorEnumeration<Locale>(Collections.singleton(Locale.getDefault()).iterator());
+        }
+        final List<Locale> ret = new ArrayList<Locale>();
+        final List<List<QValueParser.QValueResult>> parsedResults = QValueParser.parse(acceptLanguage);
+        for(List<QValueParser.QValueResult> qvalueResult : parsedResults) {
+            for(QValueParser.QValueResult res : qvalueResult) {
+                if(!res.isQValueZero()) {
+                    Locale e = Locale.forLanguageTag(res.getValue());
+                    if(e != null) {
+                        ret.add(e);
+                    }
+                }
+            }
+        }
+        return new IteratorEnumeration<Locale>(ret.iterator());
     }
 
     @Override
