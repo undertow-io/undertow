@@ -103,6 +103,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     private AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
     private Charset characterEncoding;
+    private boolean readStarted;
 
     public HttpServletRequestImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
@@ -354,6 +355,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     private void loadParts() throws IOException, ServletException {
+        readStarted = true;
         if (parts == null) {
             final List<Part> parts = new ArrayList<Part>();
             String mimeType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
@@ -385,6 +387,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getCharacterEncoding() {
+        if(characterEncoding != null) {
+            return characterEncoding.name();
+        }
         String contentType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (contentType == null) {
             return null;
@@ -394,6 +399,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void setCharacterEncoding(final String env) throws UnsupportedEncodingException {
+        if(readStarted) {
+            return;
+        }
         try {
             characterEncoding = Charset.forName(env);
         } catch (UnsupportedCharsetException e) {
@@ -423,6 +431,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
             }
             servletInputStream = new ServletInputStreamImpl(exchange.getInputStream());
         }
+        readStarted = true;
         return servletInputStream;
     }
 
@@ -431,6 +440,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         Deque<String> params = queryParameters.get(name);
         if (params == null) {
             if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
+                readStarted = true;
                 final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
                 if (parser != null) {
                     try {
@@ -455,6 +465,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public Enumeration<String> getParameterNames() {
         final Set<String> parameterNames = new HashSet<String>(queryParameters.keySet());
         if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
+            readStarted = true;
             final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
             if (parser != null) {
                 try {
@@ -479,6 +490,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
             ret.addAll(params);
         }
         if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
+            readStarted = true;
             final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
             if (parser != null) {
                 try {
@@ -509,6 +521,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
             ret.put(entry.getKey(), entry.getValue().toArray(new String[entry.getValue().size()]));
         }
         if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
+            readStarted = true;
             final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
             if (parser != null) {
                 try {
@@ -588,6 +601,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
             reader = new BufferedReader(new InputStreamReader(exchange.getInputStream(), charSet));
         }
+        readStarted = true;
         return reader;
     }
 
