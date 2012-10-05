@@ -124,4 +124,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10026, value = "Async is not supported for this request, as not all filters or Servlets were marked as supporting async")
     IllegalStateException startAsyncNotAllowed();
+
+    @Message(id = 10027, value = "Not implemented")
+    IllegalStateException notImplemented();
 }

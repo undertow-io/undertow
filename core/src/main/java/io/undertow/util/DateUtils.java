@@ -56,6 +56,13 @@ public class DateUtils {
         return dateFormat.format(date);
     }
 
+
+    public static String toOldCookieDateString(final Date date) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat(OLD_COOKIE_PATTERN, LOCALE_US);
+        dateFormat.setTimeZone(GMT_ZONE);
+        return dateFormat.format(date);
+    }
+
     /**
      * Attempts to pass a HTTP date.
      *

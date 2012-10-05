@@ -20,6 +20,7 @@ package io.undertow.server.session;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
 import io.undertow.util.AttachmentKey;
 
 /**
@@ -51,22 +52,22 @@ public class SessionCookieConfig {
 
 
     public void setSessionCookie(final HttpServerExchange exchange, final Session session) {
-        Cookie cookie = new Cookie(cookieName, session.getId())
+        Cookie cookie = new CookieImpl(cookieName, session.getId())
                 .setPath(path)
                 .setDomain(domain)
                 .setDiscard(discard)
                 .setSecure(secure);
-        Cookie.addResponseCookie(exchange, cookie);
+        CookieImpl.addResponseCookie(exchange, cookie);
 
     }
 
     public void clearCookie(final HttpServerExchange exchange, final Session session) {
-        Cookie cookie = new Cookie(cookieName, session.getId())
+        Cookie cookie = new CookieImpl(cookieName, session.getId())
                 .setPath(path)
                 .setDomain(domain)
                 .setDiscard(discard)
                 .setSecure(secure)
                 .setMaxAge(0);
-        Cookie.addResponseCookie(exchange, cookie);
+        CookieImpl.addResponseCookie(exchange, cookie);
     }
 }

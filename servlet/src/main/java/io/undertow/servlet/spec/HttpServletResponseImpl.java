@@ -78,7 +78,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             return;
         }
         final AttachmentList<io.undertow.server.handlers.Cookie> cookies = exchange.getExchange().getAttachment(io.undertow.server.handlers.Cookie.RESPONSE_COOKIES);
-        cookies.add(new io.undertow.server.handlers.Cookie(cookie.getName(), cookie.getValue()));
+        cookies.add(new ServletCookieAdaptor(cookie));
     }
 
     @Override

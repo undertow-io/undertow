@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
-import io.undertow.UndertowLogger;
 import io.undertow.server.ChannelWrapper;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
@@ -42,6 +41,9 @@ import org.xnio.channels.StreamSinkChannel;
  */
 public class CookieHandler implements HttpHandler {
 
+    public static final String DOMAIN = "$Domain";
+    public static final String VERSION = "$Version";
+    public static final String PATH = "$Path";
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
     @Override
@@ -78,12 +80,14 @@ public class CookieHandler implements HttpHandler {
         int state = 0;
         String name = null;
         int start = 0;
+        final Map<String, String> cookies = new HashMap<String, String>();
+        final Map<String, String> additional = new HashMap<String, String>();
         for (int i = 0; i < cookie.length(); ++i) {
             char c = cookie.charAt(i);
             switch (state) {
                 case 0: {
                     //eat leading whitespace
-                    if (c == ' ' || c == '\t') {
+                    if (c == ' ' || c == '\t' || c == ';') {
                         start = i + 1;
                         break;
                     }
@@ -101,7 +105,11 @@ public class CookieHandler implements HttpHandler {
                 case 2: {
                     if (c == ';') {
                         final String value = cookie.substring(start, i);
-                        parsedCookies.put(name, new Cookie(name, value));
+                        if (name.startsWith("$")) {
+                            additional.put(name, value);
+                        } else {
+                            cookies.put(name, value);
+                        }
                         state = 0;
                         start = i + 1;
                     } else if (c == '"') {
@@ -113,7 +121,11 @@ public class CookieHandler implements HttpHandler {
                 case 3: {
                     if (c == '"') {
                         final String value = cookie.substring(start, i);
-                        parsedCookies.put(name, new Cookie(name, value));
+                        if (name.startsWith("$")) {
+                            additional.put(name, value);
+                        } else {
+                            cookies.put(name, value);
+                        }
                         state = 0;
                         start = i + 1;
                     }
@@ -123,7 +135,25 @@ public class CookieHandler implements HttpHandler {
         }
         if (state == 2) {
             final String value = cookie.substring(start);
-            parsedCookies.put(name, new Cookie(name, value));
+            if (name.startsWith("$")) {
+                additional.put(name, value);
+            } else {
+                cookies.put(name, value);
+            }
+        }
+
+        for (final Map.Entry<String, String> entry : cookies.entrySet()) {
+            Cookie c = new CookieImpl(entry.getKey(), entry.getValue());
+            if (additional.containsKey(DOMAIN)) {
+                c.setDomain(additional.get(DOMAIN));
+            }
+            if (additional.containsKey(VERSION)) {
+                c.setVersion(Integer.parseInt(additional.get(VERSION)));
+            }
+            if (additional.containsKey(PATH)) {
+                c.setPath(additional.get(PATH));
+            }
+            parsedCookies.put(c.getName(), c);
         }
     }
 
@@ -131,14 +161,14 @@ public class CookieHandler implements HttpHandler {
     private static String getCookieString(final Cookie cookie) {
         switch (cookie.getVersion()) {
             case 0:
-                return getVersion0CookieString(cookie);
+                return addVersion0ResponseCookieToExchange(cookie);
             case 1:
             default:
                 return addVersion1ResponseCookieToExchange(cookie);
         }
     }
 
-    private static String getVersion0CookieString(final Cookie cookie) {
+    private static String addVersion0ResponseCookieToExchange(final Cookie cookie) {
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
         header.append(cookie.getValue());
@@ -162,12 +192,19 @@ public class CookieHandler implements HttpHandler {
         }
         if (cookie.getExpires() != null) {
             header.append("; Expires=");
-            header.append(DateUtils.toDateString(cookie.getExpires()));
+            header.append(DateUtils.toOldCookieDateString(cookie.getExpires()));
         } else if (cookie.getMaxAge() != null) {
-            Date expires = new Date();
-            expires.setTime(expires.getTime() + cookie.getMaxAge());
-            header.append("; Expires=");
-            header.append(DateUtils.toDateString(expires));
+            if (cookie.getMaxAge() == 0) {
+                Date expires = new Date();
+                expires.setTime(0);
+                header.append("; Expires=");
+                header.append(DateUtils.toOldCookieDateString(expires));
+            } else if (cookie.getMaxAge() > 0) {
+                Date expires = new Date();
+                expires.setTime(expires.getTime() + cookie.getMaxAge());
+                header.append("; Expires=");
+                header.append(DateUtils.toOldCookieDateString(expires));
+            }
         }
         return header.toString();
 
@@ -178,7 +215,7 @@ public class CookieHandler implements HttpHandler {
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
         header.append(cookie.getValue());
-        header.append("; Version=\"1\"");
+        header.append("; Version=1");
         if (cookie.getPath() != null) {
             header.append("; Path=");
             header.append(cookie.getPath());
@@ -197,8 +234,10 @@ public class CookieHandler implements HttpHandler {
             header.append("; HttpOnly");
         }
         if (cookie.getMaxAge() != null) {
-            header.append("; Max-Age=");
-            header.append(cookie.getMaxAge());
+            if (cookie.getMaxAge() >= 0) {
+                header.append("; Max-Age=");
+                header.append(cookie.getMaxAge());
+            }
         }
         if (cookie.getExpires() != null) {
             header.append("; Expires=");

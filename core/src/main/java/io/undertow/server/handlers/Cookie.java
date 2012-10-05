@@ -33,130 +33,46 @@ import io.undertow.util.AttachmentList;
  * @see CookieHandler
  * @author Stuart Douglas
  */
-public class Cookie {
+public interface Cookie {
 
-    public static final AttachmentKey<Map<String, Cookie>> REQUEST_COOKIES = AttachmentKey.create(Map.class);
-    public static final AttachmentKey<AttachmentList<Cookie>> RESPONSE_COOKIES = AttachmentKey.createList(Cookie.class);
+    AttachmentKey<Map<String, Cookie>> REQUEST_COOKIES = AttachmentKey.create(Map.class);
+    AttachmentKey<AttachmentList<Cookie>> RESPONSE_COOKIES = AttachmentKey.createList(Cookie.class);
 
-    private final String name;
-    private volatile String value;
-    private volatile String path;
-    private volatile String domain;
-    private volatile Integer maxAge;
-    private volatile Date expires;
-    private volatile boolean discard;
-    private volatile boolean secure;
-    private volatile boolean httpOnly;
-    private volatile int version = 0;
+    String getName();
 
+    String getValue();
 
-    public Cookie(final String name, final String value) {
-        this.name = name;
-        this.value = value;
-    }
+    Cookie setValue(final String value);
 
-    public Cookie(final String name) {
-        this.name = name;
-    }
+    String getPath();
 
-    public static Map<String, Cookie> getRequestCookies(final HttpServerExchange exchange) {
-        return  exchange.getAttachment(REQUEST_COOKIES);
-    }
+    Cookie setPath(final String path);
 
-    public static List<Cookie> getResponseCookies(final HttpServerExchange exchange) {
-        return exchange.getAttachment(RESPONSE_COOKIES);
-    }
+    String getDomain();
 
-    public static void addResponseCookie(final HttpServerExchange exchange, final Cookie cookie) {
-        List<Cookie> cookies = exchange.getAttachment(RESPONSE_COOKIES);
-        if(cookies == null) {
-            throw UndertowMessages.MESSAGES.cookieHandlerNotPresent();
-        }
-        cookies.add(cookie);
-    }
+    Cookie setDomain(final String domain);
 
-    public String getName() {
-        return name;
-    }
+    Integer getMaxAge();
 
-    public String getValue() {
-        return value;
-    }
+    Cookie setMaxAge(final Integer maxAge);
 
-    public Cookie setValue(final String value) {
-        this.value = value;
-        return this;
-    }
+    boolean isDiscard();
 
-    public String getPath() {
-        return path;
-    }
+    Cookie setDiscard(final boolean discard);
 
-    public Cookie setPath(final String path) {
-        this.path = path;
-        return this;
-    }
+    boolean isSecure();
 
-    public String getDomain() {
-        return domain;
-    }
+    Cookie setSecure(final boolean secure);
 
-    public Cookie setDomain(final String domain) {
-        this.domain = domain;
-        return this;
-    }
+    int getVersion();
 
-    public Integer getMaxAge() {
-        return maxAge;
-    }
+    Cookie setVersion(final int version);
 
-    public Cookie setMaxAge(final Integer maxAge) {
-        this.maxAge = maxAge;
-        return this;
-    }
+    boolean isHttpOnly();
 
-    public boolean isDiscard() {
-        return discard;
-    }
+    Cookie setHttpOnly(final boolean httpOnly);
 
-    public Cookie setDiscard(final boolean discard) {
-        this.discard = discard;
-        return this;
-    }
+    Date getExpires();
 
-    public boolean isSecure() {
-        return secure;
-    }
-
-    public Cookie setSecure(final boolean secure) {
-        this.secure = secure;
-        return this;
-    }
-
-    public int getVersion() {
-        return version;
-    }
-
-    public Cookie setVersion(final int version) {
-        this.version = version;
-        return this;
-    }
-
-    public boolean isHttpOnly() {
-        return httpOnly;
-    }
-
-    public Cookie setHttpOnly(final boolean httpOnly) {
-        this.httpOnly = httpOnly;
-        return this;
-    }
-
-    public Date getExpires() {
-        return expires;
-    }
-
-    public Cookie setExpires(final Date expires) {
-        this.expires = expires;
-        return this;
-    }
+    Cookie setExpires(final Date expires);
 }

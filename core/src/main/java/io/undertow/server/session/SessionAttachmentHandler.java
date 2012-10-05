@@ -27,6 +27,7 @@ import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import org.xnio.IoFuture;
@@ -103,7 +104,7 @@ public class SessionAttachmentHandler implements HttpHandler {
     }
 
     private String findSessionId(final HttpServerExchange exchange) {
-        Map<String, Cookie> cookies = Cookie.getRequestCookies(exchange);
+        Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
         if(cookies != null) {
             Cookie sessionId = cookies.get(cookieName);
             if(sessionId != null) {

@@ -55,13 +55,13 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 
+import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionManager;
-import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.util.EmptyEnumeration;
@@ -123,7 +123,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Cookie[] getCookies() {
         if (cookies == null) {
-            Map<String, io.undertow.server.handlers.Cookie> cookies = io.undertow.server.handlers.Cookie.getRequestCookies(exchange.getExchange());
+            Map<String, io.undertow.server.handlers.Cookie> cookies = CookieImpl.getRequestCookies(exchange.getExchange());
             if (cookies.isEmpty()) {
                 return null;
             }
