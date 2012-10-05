@@ -19,7 +19,6 @@
 package io.undertow.servlet.spec;
 
 import java.io.IOException;
-import java.nio.file.PathMatcher;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
