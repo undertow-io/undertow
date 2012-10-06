@@ -68,8 +68,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  */
 
 public class PortableConcurrentDirectDeque<E>
-    extends AbstractCollection<E>
-    implements ConcurrentDirectDeque<E>, Deque<E>, java.io.Serializable {
+    extends ConcurrentDirectDeque<E> implements Deque<E>, java.io.Serializable {
 
     /*
      * This is an implementation of a concurrent lock-free deque

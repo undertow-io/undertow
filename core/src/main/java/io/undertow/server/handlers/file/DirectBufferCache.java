@@ -52,13 +52,7 @@ public class DirectBufferCache {
         this.sliceSize = sliceSize;
         this.pool = new LimitedBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, sliceSize, max, 1);
         this.cache = new SecureHashMap<String, CacheEntry>(16);
-        ConcurrentDirectDeque<CacheEntry> accessQueue;
-        try {
-            accessQueue = new FastConcurrentDirectDeque<CacheEntry>();
-        } catch (Throwable t) {
-            accessQueue = new PortableConcurrentDirectDeque<CacheEntry>();
-        }
-        this.accessQueue = accessQueue;
+        this.accessQueue = ConcurrentDirectDeque.newInstance();
     }
 
     public CacheEntry add(String path, int size) {

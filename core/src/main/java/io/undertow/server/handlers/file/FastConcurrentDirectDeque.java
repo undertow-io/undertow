@@ -72,8 +72,7 @@ import sun.misc.Unsafe;
  */
 
 public class FastConcurrentDirectDeque<E>
-    extends AbstractCollection<E>
-    implements ConcurrentDirectDeque<E>, Deque<E>, Serializable {
+    extends ConcurrentDirectDeque<E> implements Deque<E>, Serializable {
 
     /*
      * This is an implementation of a concurrent lock-free deque
