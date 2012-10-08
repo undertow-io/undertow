@@ -23,6 +23,7 @@ import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.WebSocketVersionNotSupportedException;
@@ -51,7 +52,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
-        if (!exchange.getRequestMethod().equals(HttpString.tryFromString("GET"))) {
+        if (!exchange.getRequestMethod().equals(Methods.GET)) {
             // Only GET is supported to start the handshake
             exchange.setResponseCode(403);
             completionHandler.handleComplete();

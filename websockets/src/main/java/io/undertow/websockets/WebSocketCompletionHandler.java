@@ -15,24 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.undertow.websockets;
 
 /**
- * Handler that handles {@link WebSocketExchange}'s
  * 
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public interface WebSocketHandler {
+public interface WebSocketCompletionHandler {
 
     /**
-     * Handle the {@link WebSocketExchange}
-     * 
-     * @param exchange
-     *          The {@link WebSocketExchange} to handle
-     * @param completionHandler
-     *          The {@link WebSocketCompletionHandler} to notify once the handling of {@link WebSocketExchange}
-     *          was done
+     * Signify completion of the request handler's execution.
      */
-    void handleRequest(WebSocketExchange exchange, WebSocketCompletionHandler completionHandler);
+    void handleComplete();
 }

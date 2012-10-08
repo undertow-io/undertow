@@ -172,7 +172,7 @@ public abstract class WebSocketServerHandshaker {
             //
             // TODO: Review this later
             ConnectedStreamChannel channel = exchange.upgradeChannel();
-            WebSocketServerConnection connection = new WebSocketServerConnection(channel, exchange.getConnection().getBufferPool(), null, exchange.getConnection().getUndertowOptions());
+            WebSocketServerConnection connection = new WebSocketServerConnection(version, getWebSocketUrl(), channel, exchange.getConnection().getBufferPool(), null, exchange.getConnection().getUndertowOptions());
             listener.setConnection(connection);
 
             final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(channel);

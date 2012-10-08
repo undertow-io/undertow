@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 
 import io.undertow.util.AbstractAttachable;
 import io.undertow.websockets.WebSocketHandler;
+import io.undertow.websockets.WebSocketVersion;
 
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;
@@ -22,12 +23,16 @@ public final class WebSocketServerConnection extends AbstractAttachable implemen
     private final WebSocketHandler rootHandler;
     private final OptionMap undertowOptions;
     private final Setter<WebSocketServerConnection> closeSetter;
+    private final WebSocketVersion version;
+    private final String wsUrl;
 
-    WebSocketServerConnection(ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final WebSocketHandler rootHandler, final OptionMap undertowOptions) {
+    WebSocketServerConnection(WebSocketVersion version, String wsUrl, ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final WebSocketHandler rootHandler, final OptionMap undertowOptions) {
         this.channel = channel;
         this.bufferPool = bufferPool;
         this.rootHandler = rootHandler;
         this.undertowOptions = undertowOptions;
+        this.version = version;
+        this.wsUrl = wsUrl;
         closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
     }
     /**
@@ -36,6 +41,23 @@ public final class WebSocketServerConnection extends AbstractAttachable implemen
      */
     public WebSocketHandler getRootHandler() {
         return rootHandler;
+    }
+
+    /**
+     * Return the {@link WebSocketVersion} which is used by this {@link WebSocketServerConnection}.
+     * 
+     */
+    public WebSocketVersion getVersion() {
+        return version;
+    }
+
+    /**
+     * Return the url of the WebSocket endpoint.
+     * 
+     * @return wsUrl The URL of this WebSocket connection endpoint.
+     */
+    public String getWebSocketUrl() {
+        return wsUrl;
     }
 
     /**
