@@ -34,7 +34,6 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.runner.HttpClientUtils;
-import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import org.apache.http.Header;

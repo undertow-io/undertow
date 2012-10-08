@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;

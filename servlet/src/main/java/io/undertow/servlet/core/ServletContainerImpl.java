@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;

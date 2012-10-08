@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 
 import io.undertow.server.HttpParser;
 import io.undertow.server.ParseState;
-import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;

@@ -32,7 +32,6 @@ import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.file.DirectFileCache;
 import io.undertow.server.handlers.file.FileCache;
-import io.undertow.util.Headers;
 
 /**
  * Handler that serves up a file from disk to serve as an error page.

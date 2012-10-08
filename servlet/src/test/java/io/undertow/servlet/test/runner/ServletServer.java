@@ -21,13 +21,10 @@ package io.undertow.servlet.test.runner;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
 import io.undertow.server.HttpTransferEncodingHandler;
-import io.undertow.server.handlers.blocking.BlockingHandler;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;

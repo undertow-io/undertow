@@ -20,7 +20,6 @@ package io.undertow.servlet.api;
 
 import java.util.Collection;
 
-import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.core.ServletContainerImpl;
 
 /**

@@ -19,15 +19,9 @@
 package io.undertow.servlet.test.util;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
-import java.nio.channels.FileChannel;
-import java.util.Set;
 
 import io.undertow.servlet.api.ResourceLoader;
-import org.xnio.FileAccess;
-import org.xnio.Xnio;
 
 /**
  * @author Stuart Douglas
