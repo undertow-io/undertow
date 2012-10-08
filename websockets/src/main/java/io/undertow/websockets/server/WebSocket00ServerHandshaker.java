@@ -2,6 +2,7 @@ package io.undertow.websockets.server;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketReadListener;
@@ -12,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -62,8 +64,8 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
     protected WebSocketReadListener readListener(HttpServerExchange exchange) throws WebSocketHandshakeException {
         HeaderMap requestHeader = exchange.getRequestHeaders();
         // Serve the WebSocket handshake request.
-        if (!"Upgrade".equalsIgnoreCase(requestHeader.getFirst(HttpString.tryFromString("Connection")))
-                || !"WebSocket".equalsIgnoreCase(requestHeader.getFirst(HttpString.tryFromString("Upgrade")))) {
+        if (!"Upgrade".equalsIgnoreCase(requestHeader.getFirst(Headers.CONNECTION))
+                || !"WebSocket".equalsIgnoreCase(requestHeader.getFirst(Headers.UPGRADE))) {
             throw new WebSocketHandshakeException("Not a WebSocket handshake request: missing upgrade in the headers");
         }
 
@@ -71,8 +73,8 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
         boolean isHixie76 = requestHeader.contains(HttpString.tryFromString("Sec-WebSocket-Key1")) && requestHeader.contains(HttpString.tryFromString("Sec-WebSocket-Key2"));
 
         HeaderMap responseHeader = exchange.getResponseHeaders();
-        responseHeader.add(HttpString.tryFromString("Upgrade"), "WebSocket");
-        responseHeader.add(HttpString.tryFromString("Connection"), "Upgrade");
+        responseHeader.add(Headers.UPGRADE, "WebSocket");
+        responseHeader.add(Headers.CONNECTION, "Upgrade");
 
         // Fill in the headers and contents depending on handshake method.
         if (isHixie76) {
@@ -104,13 +106,9 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
                     }
                 }
             } catch (IOException e) {
-                throw new WebSocketHandshakeException("Uanble to read request payload", e);
+                throw new WebSocketHandshakeException("Unable to read request payload", e);
             } finally {
-                try {
-                    channel.close();
-                } catch (IOException e) {
-                    // ignore on close
-                }
+                IoUtils.safeClose(channel);
             }
             
             buf.flip();
@@ -136,16 +134,12 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
                     }
                 }
             } finally {
-                try {
-                    ch.close();
-                } catch (IOException e) {
-                    // ignore on close
-                }
+                IoUtils.safeClose(ch);
             }
             
         } else {
             // Old Hixie 75 handshake method has not challenge, so no need to generate one
-            responseHeader.add(HttpString.tryFromString("WebSocket-Origin"), requestHeader.getFirst(HttpString.tryFromString("Origin")));
+            responseHeader.add(HttpString.tryFromString("WebSocket-Origin"), requestHeader.getFirst(Headers.ORIGIN));
             responseHeader.add(HttpString.tryFromString("WebSocket-Location"), getWebSocketUrl());
             String protocol = requestHeader.getFirst(HttpString.tryFromString("WebSocket-Protocol"));
             if (protocol != null) {
