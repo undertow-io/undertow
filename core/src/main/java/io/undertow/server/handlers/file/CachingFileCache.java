@@ -22,9 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;

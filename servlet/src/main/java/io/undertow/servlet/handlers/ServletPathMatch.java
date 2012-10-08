@@ -18,7 +18,6 @@
 
 package io.undertow.servlet.handlers;
 
-import io.undertow.server.HttpHandler;
 import io.undertow.util.AttachmentKey;
 
 /**

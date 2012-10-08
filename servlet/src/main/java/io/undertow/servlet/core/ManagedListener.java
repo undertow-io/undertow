@@ -21,18 +21,7 @@ package io.undertow.servlet.core;
 import java.util.EventListener;
 
 import javax.servlet.ServletContext;
-import javax.servlet.ServletContextAttributeEvent;
-import javax.servlet.ServletContextAttributeListener;
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequestAttributeEvent;
-import javax.servlet.ServletRequestAttributeListener;
-import javax.servlet.ServletRequestEvent;
-import javax.servlet.ServletRequestListener;
-import javax.servlet.http.HttpSessionAttributeListener;
-import javax.servlet.http.HttpSessionBindingEvent;
-import javax.servlet.http.HttpSessionEvent;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceHandle;

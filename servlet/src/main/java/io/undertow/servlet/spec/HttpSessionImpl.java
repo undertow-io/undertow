@@ -26,13 +26,11 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionContext;
 
-import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.util.IteratorEnumeration;
-import org.xnio.IoFuture;
 
 /**
  * @author Stuart Douglas

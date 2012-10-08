@@ -31,7 +31,6 @@ import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
 import io.undertow.util.ImmediateIoFuture;
-import org.xnio.AbstractIoFuture;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;

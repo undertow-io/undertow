@@ -20,7 +20,6 @@ package io.undertow.server;
 
 import io.undertow.util.HttpString;
 import java.io.IOException;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;

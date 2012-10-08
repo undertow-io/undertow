@@ -28,7 +28,6 @@ import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
-import org.xnio.channels.FixedLengthStreamSourceChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 

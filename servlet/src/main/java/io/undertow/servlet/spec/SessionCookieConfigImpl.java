@@ -20,8 +20,6 @@ package io.undertow.servlet.spec;
 
 import javax.servlet.SessionCookieConfig;
 
-import io.undertow.server.HttpServerExchange;
-
 /**
  * @author Stuart Douglas
  */

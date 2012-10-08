@@ -23,11 +23,8 @@ import javax.servlet.ServletContext;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.session.SessionCookieConfig;
-import io.undertow.server.session.SessionManager;
-import io.undertow.util.AttachmentList;
 
 /**
  * @author Stuart Douglas
