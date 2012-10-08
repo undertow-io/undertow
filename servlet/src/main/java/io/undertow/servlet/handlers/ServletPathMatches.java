@@ -19,7 +19,6 @@
 package io.undertow.servlet.handlers;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 
 /**

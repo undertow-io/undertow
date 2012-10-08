@@ -18,7 +18,6 @@
 
 package io.undertow.servlet.api;
 
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
 import io.undertow.server.HttpHandler;

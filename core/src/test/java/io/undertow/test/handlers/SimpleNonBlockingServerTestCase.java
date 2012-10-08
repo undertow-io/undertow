@@ -20,9 +20,6 @@ package io.undertow.test.handlers;
 
 import java.io.IOException;
 
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.SetHeaderHandler;
 import org.apache.http.Header;

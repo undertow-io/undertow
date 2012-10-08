@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
 
-import io.undertow.server.HttpServerConnection;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Cause;
 import org.jboss.logging.LogMessage;
