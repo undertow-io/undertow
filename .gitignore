@@ -8,4 +8,5 @@ target
 local-test
 out
 lib
+bin
 

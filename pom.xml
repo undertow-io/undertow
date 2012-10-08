@@ -67,6 +67,7 @@
 
         <version.org.jboss.classfilewriter>1.0.4.Final</version.org.jboss.classfilewriter>
         <version.junit>4.8.2</version.junit>
+        <version.easymock>3.1</version.easymock>
         <version.xnio>3.1.0.Beta6</version.xnio>
         <version.io.undertow.jastow>1.0.0.Alpha1</version.io.undertow.jastow>
         <version.org.jboss.logging>3.1.1.GA</version.org.jboss.logging>
@@ -93,6 +94,7 @@
         <module>core</module>
         <module>servlet</module>
         <module>jsp</module>
+        <module>websockets</module>
     </modules>
 
     <build>
@@ -227,6 +229,14 @@
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>${version.junit}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.easymock</groupId>
+                <artifactId>easymock</artifactId>
+                <version>${version.easymock}</version>
+                <scope>test</scope>
             </dependency>
 
             <dependency>
