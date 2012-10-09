@@ -28,25 +28,23 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
+import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 
-import io.undertow.server.ChannelWrapper;
 import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.util.IteratorEnumeration;
+import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import org.xnio.channels.StreamSinkChannel;
 
 /**
  * @author Stuart Douglas
@@ -113,18 +111,22 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         }
         exchange.getExchange().setResponseCode(sc);
         //todo: is this the best way to handle errors?
-        exchange.getCompletionHandler().handleComplete();
+        final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
+        if (location != null) {
+            RequestDispatcherImpl requestDispatcher = new RequestDispatcherImpl(location, servletContext);
+            try {
+                requestDispatcher.error(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(ServletInitialHandler.CURRENT_SERVLET).getName(), msg);
+            } catch (ServletException e) {
+                throw new RuntimeException(e);
+            }
+            responseDone(exchange.getCompletionHandler());
+        }
 
     }
 
     @Override
     public void sendError(final int sc) throws IOException {
-        if (exchange.getExchange().isResponseStarted()) {
-            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
-        }
-        exchange.getExchange().setResponseCode(sc);
-        //todo: is this the best way to handle errors?
-        exchange.getCompletionHandler().handleComplete();
+        sendError(sc, null);
     }
 
     @Override

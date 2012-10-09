@@ -19,6 +19,7 @@
 package io.undertow.servlet.handlers;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
@@ -32,7 +33,9 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
+import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.WorkerDispatcher;
 
 /**
@@ -45,6 +48,8 @@ import io.undertow.util.WorkerDispatcher;
  * @author Stuart Douglas
  */
 public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
+
+    public static final AttachmentKey<ServletInfo> CURRENT_SERVLET = AttachmentKey.create(ServletInfo.class);
 
     private final BlockingHttpHandler next;
     private final HttpHandler asyncPath;
@@ -86,14 +91,8 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                     final BlockingHttpHandler handler = ServletInitialHandler.this;
                     handler.handleRequest(blockingExchange);
                 } catch (Throwable t) {
-                    try {
-                        if (!exchange.isResponseStarted()) {
-                            exchange.setResponseCode(500);
-                        }
-                        UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", blockingExchange);
-                    } finally {
-                        completionHandler.handleComplete();
-                    }
+                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Internal error handling servlet request %s", blockingExchange.getExchange().getRequestURI());
+                    completionHandler.handleComplete();
                 }
             }
         };
@@ -103,12 +102,18 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        DispatcherType dispatcher = exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
-        boolean first = dispatcher == null || dispatcher == DispatcherType.ASYNC;
-        if (first) {
-            handleFirstRequest(exchange, dispatcher);
-        } else {
-            handleDispatchedRequest(exchange);
+        ServletInfo old = exchange.getExchange().getAttachment(CURRENT_SERVLET);
+        try {
+            exchange.getExchange().putAttachment(CURRENT_SERVLET, servletInfo);
+            DispatcherType dispatcher = exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
+            boolean first = dispatcher == null || dispatcher == DispatcherType.ASYNC;
+            if (first) {
+                handleFirstRequest(exchange, dispatcher);
+            } else {
+                handleDispatchedRequest(exchange);
+            }
+        } finally {
+            exchange.getExchange().putAttachment(CURRENT_SERVLET, old);
         }
     }
 
@@ -122,11 +127,11 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         }
     }
 
-    private void handleFirstRequest(final BlockingHttpServerExchange exchange, final DispatcherType dispatcher) throws Exception {
+    private void handleFirstRequest(final BlockingHttpServerExchange exchange, final DispatcherType dispatcherType) throws Exception {
 
         ThreadSetupAction.Handle handle = setupAction.setup(exchange);
         try {
-            if (dispatcher == null) {
+            if (dispatcherType == null) {
                 final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
                 HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
                 exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.REQUEST);
@@ -134,6 +139,33 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
             }
             next.handleRequest(exchange);
+            if (!exchange.getExchange().isResponseStarted() && exchange.getExchange().getResponseCode() >= 400) {
+                String location = servletContext.getDeployment().getErrorPages().getErrorLocation(exchange.getExchange().getResponseCode());
+                if (location != null) {
+                    RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
+                    dispatcher.error(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), servletInfo.getName());
+                }
+            }
+        } catch (Throwable t) {
+
+            if (!exchange.getExchange().isResponseStarted()) {
+                exchange.getExchange().setResponseCode(500);
+                exchange.getExchange().getResponseHeaders().clear();
+                String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
+                if (location == null && t instanceof ServletException) {
+                    location = servletContext.getDeployment().getErrorPages().getErrorLocation(t.getCause());
+                }
+                if (location != null) {
+                    RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
+                    try {
+                        dispatcher.error(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), servletInfo.getName(), t);
+                    } catch (Exception e) {
+                        UndertowLogger.REQUEST_LOGGER.errorf(e, "Exception while generating error page %s", location);
+                    }
+                } else {
+                    UndertowLogger.REQUEST_LOGGER.debugf(t, "Servlet request failed %s", exchange);
+                }
+            }
         } finally {
             handle.tearDown();
         }

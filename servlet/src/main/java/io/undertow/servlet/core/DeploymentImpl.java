@@ -47,6 +47,7 @@ public class DeploymentImpl implements Deployment {
     private volatile HttpHandler servletHandler;
     private volatile ServletPathMatches servletPaths;
     private volatile CompositeThreadSetupAction threadSetupAction;
+    private volatile ErrorPages errorPages;
 
 
     public DeploymentImpl(final DeploymentInfo deploymentInfo) {
@@ -112,5 +113,13 @@ public class DeploymentImpl implements Deployment {
 
     public void setThreadSetupAction(final CompositeThreadSetupAction threadSetupAction) {
         this.threadSetupAction = threadSetupAction;
+    }
+
+    public ErrorPages getErrorPages() {
+        return errorPages;
+    }
+
+    public void setErrorPages(final ErrorPages errorPages) {
+        this.errorPages = errorPages;
     }
 }

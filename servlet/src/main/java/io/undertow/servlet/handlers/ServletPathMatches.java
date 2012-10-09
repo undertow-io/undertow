@@ -19,7 +19,6 @@
 package io.undertow.servlet.handlers;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 
 /**
@@ -75,7 +74,7 @@ public class ServletPathMatches {
                 final String part = path.substring(0, i);
                 match = prefixMatches.get(part);
                 if (match != null) {
-                    return  handleMatch(path, match, part, part.substring(i));
+                    return  handleMatch(path, match, part, path.substring(i));
                 }
             }
         }

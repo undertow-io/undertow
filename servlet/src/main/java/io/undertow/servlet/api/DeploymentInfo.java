@@ -58,7 +58,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<ThreadSetupAction> threadSetupActions = new ArrayList<ThreadSetupAction>();
     private final Map<String, String> initParameters = new HashMap<String, String>();
     private final List<String> welcomePages = new ArrayList<String>();
-
+    private final List<ErrorPage> errorPages = new ArrayList<ErrorPage>();
 
     public void validate() {
         if (deploymentName == null) {
@@ -299,6 +299,25 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(welcomePages);
     }
 
+    public DeploymentInfo addErrorPage(final ErrorPage errorPage) {
+        this.errorPages.add(errorPage);
+        return this;
+    }
+
+    public DeploymentInfo addErrorPages(final ErrorPage ... errorPages) {
+        this.errorPages.addAll(Arrays.asList(errorPages));
+        return this;
+    }
+
+    public DeploymentInfo addErrorPages(final Collection<ErrorPage> errorPages) {
+        this.errorPages.addAll(errorPages);
+        return this;
+    }
+
+    public List<ErrorPage> getErrorPages() {
+        return Collections.unmodifiableList(errorPages);
+    }
+
     public InstanceFactory<Executor> getExecutorFactory() {
         return executorFactory;
     }
@@ -353,6 +372,7 @@ public class DeploymentInfo implements Cloneable {
         info.threadSetupActions.addAll(threadSetupActions);
         info.initParameters.putAll(initParameters);
         info.welcomePages.addAll(welcomePages);
+        info.errorPages.addAll(errorPages);
         info.executorFactory = executorFactory;
         info.asyncExecutorFactory = asyncExecutorFactory;
         return info;

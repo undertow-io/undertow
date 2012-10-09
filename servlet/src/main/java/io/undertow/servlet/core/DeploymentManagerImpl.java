@@ -39,6 +39,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.FilterMappingInfo;
 import io.undertow.servlet.api.InstanceHandle;
@@ -121,7 +122,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             final ApplicationListeners listeners = createListeners();
             deployment.setApplicationListeners(listeners);
             listeners.contextInitialized();
-
+            initializeErrorPages(deployment, deploymentInfo);
             //run
 
             ServletPathMatches matches = setupServletChains(servletContext, threadSetupAction, listeners);
@@ -132,6 +133,20 @@ public class DeploymentManagerImpl implements DeploymentManager {
         } finally {
             handle.tearDown();
         }
+    }
+
+    private void initializeErrorPages(final DeploymentImpl deployment, final DeploymentInfo deploymentInfo) {
+        final Map<Integer, String> codes = new HashMap<Integer, String>();
+        final Map<Class<? extends Throwable>, String> exceptions = new HashMap<Class<? extends Throwable>, String>();
+
+        for(final ErrorPage page : deploymentInfo.getErrorPages()) {
+            if(page.getExceptionType() != null) {
+                exceptions.put(page.getExceptionType(), page.getLocation());
+            } else {
+                codes.put(page.getErrorCode(), page.getLocation());
+            }
+        }
+        deployment.setErrorPages(new ErrorPages(codes, exceptions));
     }
 
     /**

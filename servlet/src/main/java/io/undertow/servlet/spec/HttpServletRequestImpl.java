@@ -674,7 +674,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
             }
             realPath = CanonicalPathUtils.canonicalize(current + path);
         }
-        return new RequestDispatcherImpl(realPath, servletContext, servletContext.getDeployment().getServletPaths().getServletHandlerByPath(realPath));
+        return new RequestDispatcherImpl(realPath, servletContext);
     }
 
     @Override

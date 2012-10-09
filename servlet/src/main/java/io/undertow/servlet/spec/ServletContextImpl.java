@@ -169,7 +169,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public RequestDispatcher getRequestDispatcher(final String path) {
-        return new RequestDispatcherImpl(path, deployment.getServletContext(), deployment.getServletPaths().getServletHandlerByPath(path));
+        return new RequestDispatcherImpl(path, deployment.getServletContext());
     }
 
     @Override

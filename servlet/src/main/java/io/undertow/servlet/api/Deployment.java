@@ -21,6 +21,7 @@ package io.undertow.servlet.api;
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
+import io.undertow.servlet.core.ErrorPages;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.spec.ServletContextImpl;
 
@@ -40,4 +41,6 @@ public interface Deployment {
     ServletPathMatches getServletPaths();
 
     CompositeThreadSetupAction getThreadSetupAction();
+
+    ErrorPages getErrorPages();
 }

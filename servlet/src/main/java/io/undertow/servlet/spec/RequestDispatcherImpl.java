@@ -45,11 +45,11 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     private final ServletPathMatch pathMatch;
     private final boolean named;
 
-    public RequestDispatcherImpl(final String path, final ServletContextImpl servletContext, final ServletPathMatch match) {
+    public RequestDispatcherImpl(final String path, final ServletContextImpl servletContext) {
         this.path = path;
         this.servletContext = servletContext;
-        this.pathMatch = match;
-        this.handler = match.getHandler();
+        this.pathMatch = servletContext.getDeployment().getServletPaths().getServletHandlerByPath(path);
+        this.handler = pathMatch.getHandler();
         this.named = false;
     }
 
@@ -140,12 +140,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, oldResponse);
         }
     }
+
     @Override
     public void include(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
 
         HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(request);
         final HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
-        final BlockingHttpServerExchange exchange =requestImpl.getExchange();
+        final BlockingHttpServerExchange exchange = requestImpl.getExchange();
 
         final ServletRequest oldRequest = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         final ServletResponse oldResponse = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
@@ -233,5 +234,92 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         }
     }
 
+    public void error(final ServletRequest request, final ServletResponse response, final String servletName, final String message) throws ServletException, IOException {
+        error(request, response, servletName, null, message);
+    }
 
+    public void error(final ServletRequest request, final ServletResponse response, final String servletName) throws ServletException, IOException {
+        error(request, response, servletName, null, null);
+    }
+
+    public void error(final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception) throws ServletException, IOException {
+        error(request, response, servletName, exception, exception.getMessage());
+    }
+
+
+    private void error(final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception, final String message) throws ServletException, IOException {
+        HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(request);
+        final HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
+        final BlockingHttpServerExchange exchange = requestImpl.getExchange();
+        response.resetBuffer();
+
+
+        final ServletRequest oldRequest = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+        final ServletResponse oldResponse = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.ERROR);
+
+
+        //only update if this is the first forward
+        request.setAttribute(ERROR_REQUEST_URI, requestImpl.getRequestURI());
+        request.setAttribute(ERROR_SERVLET_NAME, servletName);
+        if (exception != null) {
+            request.setAttribute(ERROR_EXCEPTION, exception);
+            request.setAttribute(ERROR_EXCEPTION_TYPE, exception.getClass());
+        }
+        request.setAttribute(ERROR_MESSAGE, message);
+        request.setAttribute(ERROR_STATUS_CODE, exchange.getExchange().getResponseCode());
+
+        String newQueryString = "";
+        int qsPos = path.indexOf("?");
+        String newServletPath = path;
+        if (qsPos != -1) {
+            newQueryString = newServletPath.substring(qsPos + 1);
+            newServletPath = newServletPath.substring(0, qsPos);
+        }
+        String newRequestUri = servletContext.getContextPath() + newServletPath;
+
+        //todo: a more efficent impl
+        Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
+        for (String part : newQueryString.split("&")) {
+            String name = part;
+            String value = "";
+            int equals = part.indexOf('=');
+            if (equals != -1) {
+                name = part.substring(0, equals);
+                value = part.substring(equals + 1);
+            }
+            Deque<String> queue = newQueryParameters.get(name);
+            if (queue == null) {
+                newQueryParameters.put(name, queue = new ArrayDeque<String>(1));
+            }
+            queue.add(value);
+        }
+        requestImpl.setQueryParameters(newQueryParameters);
+
+        requestImpl.getExchange().getExchange().setRelativePath(newServletPath);
+        requestImpl.getExchange().getExchange().setQueryString(newQueryString);
+        requestImpl.getExchange().getExchange().setRequestPath(newRequestUri);
+        requestImpl.getExchange().getExchange().setRequestURI(newRequestUri);
+        requestImpl.getExchange().getExchange().putAttachment(ServletPathMatch.ATTACHMENT_KEY, pathMatch);
+        requestImpl.setServletContext(servletContext);
+        responseImpl.setServletContext(servletContext);
+
+
+        try {
+            try {
+                exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
+                exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
+                handler.handleRequest(exchange);
+            } catch (ServletException e) {
+                throw e;
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } finally {
+            exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, oldRequest);
+            exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, oldResponse);
+        }
+    }
 }
