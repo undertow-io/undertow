@@ -111,14 +111,13 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         if (!isAllowed(exchange.getRelativePath())) {
+            //we don't call the completion handler, as we allow the initial handler to do error handling
             exchange.setResponseCode(404);
-            completionHandler.handleComplete();
             return;
         }
         File resource = deployment.getDeploymentInfo().getResourceLoader().getResource(exchange.getRelativePath());
         if (resource == null) {
             exchange.setResponseCode(404);
-            completionHandler.handleComplete();
             return;
         } else if (resource.isDirectory()) {
             handleWelcomePage(exchange, completionHandler, resource);

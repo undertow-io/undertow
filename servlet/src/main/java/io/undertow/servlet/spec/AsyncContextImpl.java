@@ -67,11 +67,13 @@ public class AsyncContextImpl implements AsyncContext {
     private Runnable dispatchAction;
     private boolean dispatched;
     private boolean initialRequestDone;
+    private Thread initiatingThread;
 
     public AsyncContextImpl(final BlockingHttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse) {
         this.exchange = exchange;
         this.servletRequest = servletRequest;
         this.servletResponse = servletResponse;
+        initiatingThread = Thread.currentThread();
     }
 
     public void updateTimeout() {
@@ -214,19 +216,29 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     @Override
-    public void complete() {
-        doDispatch(new Runnable() {
-            @Override
-            public void run() {
-                HttpServletResponseImpl response = HttpServletResponseImpl.getResponseImpl(servletResponse);
-                HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
-                try {
-                    request.getServletContext().getDeployment().getApplicationListeners().requestDestroyed(request);
-                } finally {
-                    response.responseDone(exchange.getCompletionHandler());
-                }
+    public synchronized void complete() {
+        if (!initialRequestDone && Thread.currentThread() == initiatingThread) {
+            //the context was stopped in the same request context it was started, we don't do anything
+            if (dispatched) {
+                throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
             }
-        });
+            dispatched = true;
+            HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
+            request.asyncInitialRequestDone();
+        } else {
+            doDispatch(new Runnable() {
+                @Override
+                public void run() {
+                    HttpServletResponseImpl response = HttpServletResponseImpl.getResponseImpl(servletResponse);
+                    HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
+                    try {
+                        request.getServletContext().getDeployment().getApplicationListeners().requestDestroyed(request);
+                    } finally {
+                        response.responseDone(exchange.getCompletionHandler());
+                    }
+                }
+            });
+        }
     }
 
     @Override
@@ -291,6 +303,7 @@ public class AsyncContextImpl implements AsyncContext {
         } else {
             updateTimeout();
         }
+        initiatingThread = null;
     }
 
     private synchronized void doDispatch(final Runnable runnable) {

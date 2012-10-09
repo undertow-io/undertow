@@ -81,7 +81,13 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         if (asyncPath != null) {
             //if the next handler is the default servlet we just execute it directly
             HttpHandlers.executeHandler(asyncPath, exchange, completionHandler);
-            return;
+            //this is not great, but as the file was not found we need to do error handling
+            //so re just run the request again but via the normal servlet path
+            //todo: fix this, we should just be able to run the error handling code without copy/pasting heaps of
+            //code
+            if (exchange.getResponseCode() != 404) {
+                return;
+            }
         }
         final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange, completionHandler);
         Runnable runnable = new Runnable() {
