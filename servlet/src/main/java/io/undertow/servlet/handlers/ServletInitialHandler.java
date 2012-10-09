@@ -31,6 +31,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
+import io.undertow.servlet.core.ManagedServlet;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
@@ -60,20 +61,20 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     private volatile BlockingHttpHandler handler;
     /**
-     * The information about the target5 servlet. This may be null.
+     * The target servlet
      */
-    private final ServletInfo servletInfo;
+    private final ManagedServlet managedServlet;
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ServletInfo servletInfo) {
+    public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ManagedServlet managedServlet) {
         this.next = next;
         this.asyncPath = asyncPath;
         this.setupAction = setupAction;
         this.servletContext = servletContext;
-        this.servletInfo = servletInfo;
+        this.managedServlet = managedServlet;
     }
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ServletInfo servletInfo) {
-        this(next, null, setupAction, servletContext, servletInfo);
+    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ManagedServlet managedServlet) {
+        this(next, null, setupAction, servletContext, managedServlet);
     }
 
     @Override
@@ -110,7 +111,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
         ServletInfo old = exchange.getExchange().getAttachment(CURRENT_SERVLET);
         try {
-            exchange.getExchange().putAttachment(CURRENT_SERVLET, servletInfo);
+            exchange.getExchange().putAttachment(CURRENT_SERVLET, managedServlet.getServletInfo());
             DispatcherType dispatcher = exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
             boolean first = dispatcher == null || dispatcher == DispatcherType.ASYNC;
             if (first) {
@@ -149,7 +150,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 String location = servletContext.getDeployment().getErrorPages().getErrorLocation(exchange.getExchange().getResponseCode());
                 if (location != null) {
                     RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
-                    dispatcher.error(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), servletInfo.getName());
+                    dispatcher.error(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), managedServlet.getServletInfo().getName());
                 }
             }
         } catch (Throwable t) {
@@ -164,7 +165,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 if (location != null) {
                     RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
                     try {
-                        dispatcher.error(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), servletInfo.getName(), t);
+                        dispatcher.error(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), managedServlet.getServletInfo().getName(), t);
                     } catch (Exception e) {
                         UndertowLogger.REQUEST_LOGGER.errorf(e, "Exception while generating error page %s", location);
                     }
@@ -204,7 +205,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         return next;
     }
 
-    public ServletInfo getServletInfo() {
-        return servletInfo;
+    public ManagedServlet getManagedServlet() {
+        return managedServlet;
     }
 }

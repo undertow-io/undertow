@@ -168,7 +168,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
 
         for (String i : welcomePages) {
             final ServletInitialHandler handler = deployment.getServletPaths().getServletHandlerByPath(path + i).getHandler();
-            if(handler.getServletInfo() != null) {
+            if(handler.getManagedServlet() != null) {
                 return i;
             }
         }

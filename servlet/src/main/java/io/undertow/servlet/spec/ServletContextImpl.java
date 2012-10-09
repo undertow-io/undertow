@@ -119,7 +119,11 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getMimeType(final String file) {
-        return null;
+        int pos = file.lastIndexOf('.');
+        if(pos == -1) {
+            return deployment.getMimeExtensionMappings().get(file);
+        }
+        return deployment.getMimeExtensionMappings().get(file.substring(pos));
     }
 
     @Override
@@ -184,7 +188,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Servlet getServlet(final String name) throws ServletException {
-        return null;
+        return deployment.getServletPaths().getServletHandlerByName(name).getManagedServlet().getServlet().getInstance();
     }
 
     @Override
