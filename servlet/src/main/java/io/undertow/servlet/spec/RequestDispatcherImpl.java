@@ -194,7 +194,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             requestImpl.setQueryParameters(newQueryParameters);
 
             request.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
-            request.setAttribute(INCLUDE_CONTEXT_PATH, servletContext);
+            request.setAttribute(INCLUDE_CONTEXT_PATH, servletContext.getContextPath());
             request.setAttribute(INCLUDE_SERVLET_PATH, newServletPath);
             request.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
             request.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
