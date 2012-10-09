@@ -22,7 +22,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.api.Deployment;
@@ -48,6 +50,7 @@ public class DeploymentImpl implements Deployment {
     private volatile ServletPathMatches servletPaths;
     private volatile CompositeThreadSetupAction threadSetupAction;
     private volatile ErrorPages errorPages;
+    private volatile Map<String, String> mimeExtensionMappings;
 
 
     public DeploymentImpl(final DeploymentInfo deploymentInfo) {
@@ -121,5 +124,14 @@ public class DeploymentImpl implements Deployment {
 
     public void setErrorPages(final ErrorPages errorPages) {
         this.errorPages = errorPages;
+    }
+
+    @Override
+    public Map<String, String> getMimeExtensionMappings() {
+        return mimeExtensionMappings;
+    }
+
+    public void setMimeExtensionMappings(final Map<String, String> mimeExtensionMappings) {
+        this.mimeExtensionMappings = Collections.unmodifiableMap(new HashMap<String, String>(mimeExtensionMappings));
     }
 }

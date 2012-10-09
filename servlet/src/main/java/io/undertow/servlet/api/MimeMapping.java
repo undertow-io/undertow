@@ -18,33 +18,23 @@
 
 package io.undertow.servlet.api;
 
-import java.util.Map;
-
-import io.undertow.server.HttpHandler;
-import io.undertow.servlet.core.ApplicationListeners;
-import io.undertow.servlet.core.CompositeThreadSetupAction;
-import io.undertow.servlet.core.ErrorPages;
-import io.undertow.servlet.handlers.ServletPathMatches;
-import io.undertow.servlet.spec.ServletContextImpl;
-
 /**
  * @author Stuart Douglas
  */
-public interface Deployment {
+public class MimeMapping {
+    private final String extension;
+    private final String mimeType;
 
-    DeploymentInfo getDeploymentInfo();
+    public MimeMapping(final String extension, final String mimeType) {
+        this.extension = extension;
+        this.mimeType = mimeType;
+    }
 
-    ApplicationListeners getApplicationListeners();
+    public String getExtension() {
+        return extension;
+    }
 
-    ServletContextImpl getServletContext();
-
-    HttpHandler getServletHandler();
-
-    ServletPathMatches getServletPaths();
-
-    CompositeThreadSetupAction getThreadSetupAction();
-
-    ErrorPages getErrorPages();
-
-    Map<String, String> getMimeExtensionMappings();
+    public String getMimeType() {
+        return mimeType;
+    }
 }

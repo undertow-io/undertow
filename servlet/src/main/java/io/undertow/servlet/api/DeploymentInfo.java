@@ -59,6 +59,7 @@ public class DeploymentInfo implements Cloneable {
     private final Map<String, String> initParameters = new HashMap<String, String>();
     private final List<String> welcomePages = new ArrayList<String>();
     private final List<ErrorPage> errorPages = new ArrayList<ErrorPage>();
+    private final List<MimeMapping> mimeMappings = new ArrayList<MimeMapping>();
 
     public void validate() {
         if (deploymentName == null) {
@@ -316,6 +317,26 @@ public class DeploymentInfo implements Cloneable {
 
     public List<ErrorPage> getErrorPages() {
         return Collections.unmodifiableList(errorPages);
+    }
+
+
+    public DeploymentInfo addMimeMapping(final MimeMapping mimeMappings) {
+        this.mimeMappings.add(mimeMappings);
+        return this;
+    }
+
+    public DeploymentInfo addMimeMappings(final MimeMapping ... mimeMappings) {
+        this.mimeMappings.addAll(Arrays.asList(mimeMappings));
+        return this;
+    }
+
+    public DeploymentInfo addMimeMappings(final Collection<MimeMapping> mimeMappings) {
+        this.mimeMappings.addAll(mimeMappings);
+        return this;
+    }
+
+    public List<MimeMapping> getMimeMappings() {
+        return Collections.unmodifiableList(mimeMappings);
     }
 
     public InstanceFactory<Executor> getExecutorFactory() {
