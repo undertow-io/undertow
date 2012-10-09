@@ -85,8 +85,8 @@ public interface UndertowMessages {
     @Message(id = 19, value = "Connection from %s terminated as request entity was larger than %s")
     IOException requestEntityWasTooLarge(SocketAddress address, long size);
 
-    @Message(id = 20, value = "Connection terminated as request was too large")
-    IOException requestEntityWasTooLarge();
+    @Message(id = 20, value = "Connection terminated as request was larger than %s")
+    IOException requestEntityWasTooLarge(long size);
 
     @Message(id = 21, value = "Session already invalidated")
     IllegalStateException sessionAlreadyInvalidated();

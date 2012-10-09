@@ -66,6 +66,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
     @SuppressWarnings("unused")
     private volatile long state;
 
+    private final long maxSize;
     private volatile long remainingAllowed;
 
     private static final long FLAG_READ_ENTERED = 1L << 63L;
@@ -92,6 +93,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
         stateUpdater.set(this, FLAG_READING_LENGTH);
         this.delegateClose = delegateClose;
         this.remainingAllowed = maxLength;
+        this.maxSize = maxLength;
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
@@ -205,13 +207,13 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
     private void updateRemainingAllowed(final int written) throws IOException {
         remainingAllowed-= written;
         if(remainingAllowed <0) {
-            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge();
+            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxSize);
         }
     }
 
     private void checkMaxLength() throws IOException {
         if(remainingAllowed <0) {
-            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge();
+            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxSize);
         }
     }
 
