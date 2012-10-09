@@ -153,7 +153,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 }
             }
         } catch (Throwable t) {
-
+            HttpServletRequestImpl.getRequestImpl(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY)).onAsyncError(t);
             if (!exchange.getExchange().isResponseStarted()) {
                 exchange.getExchange().setResponseCode(500);
                 exchange.getExchange().getResponseHeaders().clear();

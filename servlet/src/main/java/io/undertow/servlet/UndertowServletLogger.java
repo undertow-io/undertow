@@ -67,4 +67,8 @@ public interface UndertowServletLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 15005, value = "Error invoking method %s on listener %s")
     void errorInvokingListener(final String method, Class<?> listenerClass, @Cause Exception e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 15006, value = "IOException dispatching async event")
+    void ioExceptionDispatchingAsyncEvent(@Cause IOException e);
 }

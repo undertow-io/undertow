@@ -38,6 +38,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
+import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.handlers.ServletInitialHandler;
@@ -58,6 +59,7 @@ public class AsyncContextImpl implements AsyncContext {
     private final ServletRequest servletRequest;
     private final ServletResponse servletResponse;
     private final TimeoutTask timeoutTask = new TimeoutTask();
+
 
     //todo: make default configurable
     private volatile long timeout = 120000;
@@ -110,7 +112,7 @@ public class AsyncContextImpl implements AsyncContext {
         final ServletInitialHandler handler;
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         if (servletRequest instanceof HttpServletRequest) {
-            handler = deployment.getServletPaths().getServletHandlerByPath(((HttpServletRequest) servletRequest).getRequestURI()).getHandler();
+            handler = deployment.getServletPaths().getServletHandlerByPath(((HttpServletRequest) servletRequest).getServletPath()).getHandler();
         } else {
             handler = deployment.getServletPaths().getServletHandlerByPath(exchange.getExchange().getRelativePath()).getHandler();
         }
@@ -217,6 +219,12 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public synchronized void complete() {
+        HttpServletRequestImpl.getRequestImpl(servletRequest).onAsyncComplete();
+        completeInternal();
+    }
+
+    public synchronized void completeInternal() {
+
         if (!initialRequestDone && Thread.currentThread() == initiatingThread) {
             //the context was stopped in the same request context it was started, we don't do anything
             if (dispatched) {
@@ -268,17 +276,24 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public void addListener(final AsyncListener listener) {
-
+        HttpServletRequestImpl.getRequestImpl(servletRequest).addAsyncListener(listener);
     }
 
     @Override
     public void addListener(final AsyncListener listener, final ServletRequest servletRequest, final ServletResponse servletResponse) {
-
+        HttpServletRequestImpl.getRequestImpl(servletRequest).addAsyncListener(listener, servletRequest, servletResponse);
     }
 
     @Override
     public <T extends AsyncListener> T createListener(final Class<T> clazz) throws ServletException {
-        return null;
+        try {
+            InstanceFactory<T> factory = ((ServletContextImpl) this.servletRequest.getServletContext()).getDeployment().getDeploymentInfo().getClassIntrospecter().createInstanceFactory(clazz);
+            return factory.createInstance().getInstance();
+        } catch (NoSuchMethodException e) {
+            throw new ServletException(e);
+        } catch (InstantiationException e) {
+            throw new ServletException(e);
+        }
     }
 
     @Override
@@ -329,9 +344,11 @@ public class AsyncContextImpl implements AsyncContext {
             synchronized (AsyncContextImpl.this) {
                 if (!dispatched) {
                     UndertowServletLogger.REQUEST_LOGGER.debug("Async request timed out");
-                    complete();
+                    HttpServletRequestImpl.getRequestImpl(servletRequest).onAsyncTimeout();
+                    completeInternal();
                 }
             }
         }
     }
+
 }
