@@ -959,7 +959,7 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
 
         public boolean hasNext() {
             while (next == null) {
-                if (tableIdx == table.array.length()) {
+                if (tableIdx == table.array.length() && tableIterator == null) {
                     return false;
                 }
                 if (tableIterator == null) {
@@ -1011,7 +1011,7 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
 
         public boolean hasNext() {
             while (next == NONEXISTENT) {
-                if (tableIdx == table.array.length()) {
+                if (tableIdx == table.array.length() && tableIterator == null)  {
                     return false;
                 }
                 if (tableIterator == null) {
