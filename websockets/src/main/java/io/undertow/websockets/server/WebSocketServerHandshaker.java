@@ -20,16 +20,18 @@ package io.undertow.websockets.server;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 
 import org.jboss.logging.Logger;
+import org.xnio.ChannelListener;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
-import io.undertow.websockets.WebSocketReadListener;
 import io.undertow.websockets.WebSocketVersion;
 
 /**
@@ -162,22 +164,19 @@ public abstract class WebSocketServerHandshaker {
      * @throws WebSocketHandshakeException
      *          Thrown if the handshake fails for what-ever reason.
      */
-    public final void handshake(HttpServerExchange exchange) throws WebSocketHandshakeException {
+    public final WebSocketChannel handshake(HttpServerExchange exchange) throws WebSocketHandshakeException {
         if (WEBSOCKET_LOGGER.isDebugEnabled()) {
             WEBSOCKET_LOGGER.debug("WS Version " + version.name() + " server handshake");
         }
-        WebSocketReadListener listener = readListener(exchange);
         try {
             // Upgrade connection
             //
-            // TODO: Review this later
+            // TODO: Fix this
             ConnectedStreamChannel channel = exchange.upgradeChannel();
-            WebSocketServerConnection connection = new WebSocketServerConnection(version, getWebSocketUrl(), channel, exchange.getConnection().getBufferPool(), null, exchange.getConnection().getUndertowOptions());
-            listener.setConnection(connection);
+            WebSocketChannel wsChannel = null;
 
-            final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(channel);
-            pushBackStreamChannel.getReadSetter().set(listener);
-            listener.handleEvent(pushBackStreamChannel);
+            return wsChannel;
+            
         } catch (Exception e) {
             throw new WebSocketHandshakeException("Error while perform the WebSocket Handshake", e);
         }
@@ -196,5 +195,5 @@ public abstract class WebSocketServerHandshaker {
      * @throws WebSocketHandshakeException
      *          Get thrown if the {@link HttpServerExchange} does not contain all needed data to generate the {@link WebSocketReadListener}.
      */
-    protected abstract WebSocketReadListener readListener(HttpServerExchange exchange) throws WebSocketHandshakeException;
+    protected abstract ChannelListener<PushBackStreamChannel> readListener(HttpServerExchange exchange) throws WebSocketHandshakeException;
 }

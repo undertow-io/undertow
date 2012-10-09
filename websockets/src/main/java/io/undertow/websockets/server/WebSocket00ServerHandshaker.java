@@ -5,14 +5,15 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.websockets.WebSocketHandshakeException;
-import io.undertow.websockets.WebSocketReadListener;
 import io.undertow.websockets.WebSocketUtils;
 import io.undertow.websockets.WebSocketVersion;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
+import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -60,7 +61,7 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
 
 
     @Override
-    protected WebSocketReadListener readListener(HttpServerExchange exchange) throws WebSocketHandshakeException {
+    protected ChannelListener<PushBackStreamChannel> readListener(HttpServerExchange exchange) throws WebSocketHandshakeException {
         HeaderMap requestHeader = exchange.getRequestHeaders();
         // Serve the WebSocket handshake request.
         if (!"Upgrade".equalsIgnoreCase(requestHeader.getFirst(Headers.CONNECTION))

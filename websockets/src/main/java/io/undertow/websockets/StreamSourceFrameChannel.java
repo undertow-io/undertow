@@ -1,0 +1,120 @@
+package io.undertow.websockets;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+import io.undertow.websockets.frame.WebSocketFrameType;
+
+import org.xnio.ChannelListener.Setter;
+import org.xnio.ChannelListener.SimpleSetter;
+import org.xnio.ChannelListeners;
+import org.xnio.Option;
+import org.xnio.XnioExecutor;
+import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSourceChannel;
+
+public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
+
+    private WebSocketFrameType type = null;
+    private final StreamSourceChannel channel;
+    private final WebSocketChannel wsChannel;
+    private SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
+    private volatile boolean closed;
+    
+    public StreamSourceFrameChannel(StreamSourceChannel channel, WebSocketChannel wsChannel) {
+        this.channel = channel;
+        this.wsChannel = wsChannel;
+    }
+
+    /**
+     * Return the {@link WebSocketFrameType} or <code>null</code> if its not known at the calling time.
+     * 
+     * 
+     */
+    public WebSocketFrameType getType() {
+        return type;
+    }
+
+    @Override
+    public Setter<? extends StreamSourceChannel> getReadSetter() {
+        return channel.getReadSetter();
+    }
+
+    @Override
+    public XnioWorker getWorker() {
+        return channel.getWorker();
+    }
+
+    @Override
+    public void close() throws IOException {
+        if(wsChannel.receiver.compareAndSet(this, null)) {
+            closed = true;
+            ChannelListeners.invokeChannelListener(this, closeSetter.get());
+        }
+    }
+
+    @Override
+    public void suspendReads() {
+        channel.suspendReads();
+    }
+
+    @Override
+    public void resumeReads() {
+        channel.resumeReads();
+    }
+
+    @Override
+    public boolean isReadResumed() {
+        return channel.isReadResumed();
+    }
+
+    @Override
+    public void wakeupReads() {
+        channel.wakeupReads();
+    }
+
+    @Override
+    public void shutdownReads() throws IOException {
+        channel.shutdownReads();
+    }
+
+    @Override
+    public void awaitReadable() throws IOException {
+        channel.awaitReadable();
+    }
+
+    @Override
+    public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
+        channel.awaitReadable(time, timeUnit);
+    }
+
+    @Override
+    public XnioExecutor getReadThread() {
+        return channel.getReadThread();
+    }
+
+    @Override
+    public boolean isOpen() {
+        return !closed && channel.isOpen();
+    }
+
+    @Override
+    public boolean supportsOption(Option<?> option) {
+        return channel.supportsOption(option);
+    }
+
+    @Override
+    public <T> T getOption(Option<T> option) throws IOException {
+        return channel.getOption(option);
+    }
+
+    @Override
+    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+        return channel.setOption(option, value);
+    }
+
+    @Override
+    public Setter<? extends StreamSourceChannel> getCloseSetter() {
+        return closeSetter;
+    }
+}
