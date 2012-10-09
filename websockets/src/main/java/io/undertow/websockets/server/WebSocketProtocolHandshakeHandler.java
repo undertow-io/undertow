@@ -22,6 +22,7 @@ package io.undertow.websockets.server;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.websockets.WebSocketHandshakeException;
@@ -94,7 +95,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
             protocol = "wss";
         }
         // TODO: Store the header names somewhere global and use these static fields to lookup.
-        return protocol + "://" + exchange.getRequestHeaders().getLast(HttpString.tryFromString("Host")) + path;
+        return protocol + "://" + exchange.getRequestHeaders().getLast(Headers.HOST) + path;
     }
 
 }

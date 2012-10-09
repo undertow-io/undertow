@@ -17,35 +17,24 @@
  */
 package io.undertow.websockets.frame;
 
-
-import java.nio.ByteBuffer;
-
-import org.xnio.Buffers;
+import io.undertow.websockets.WebSocketCompletionHandler;
 
 /**
- * Binary WebSocket frame. See <a href="http://tools.ietf.org/html/rfc6455#section-5.6">rfc6455 5.6. Data Frames</a> for
- * more details.
+ * Handler that handles {@link WebSocketFrameExchange}'s
  * 
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public class BinaryWebSocketFrame extends WebSocketFrame {
+public interface WebSocketFrameHandler {
 
-    public BinaryWebSocketFrame() {
-        this(Buffers.EMPTY_BYTE_BUFFER);
-    }
-
-    public BinaryWebSocketFrame(ByteBuffer data) {
-        this(true, data);
-    }
-
-    public BinaryWebSocketFrame(boolean finalFragment, ByteBuffer binaryData) {
-        super(finalFragment, binaryData);
-    }
-
-    @Override
-    public WebSocketFrameType getType() {
-        return WebSocketFrameType.BINARY;
-    }
-
+    /**
+     * Handle the {@link WebSocketFrameExchange}
+     * 
+     * @param exchange
+     *          The {@link WebSocketFrameExchange} to handle
+     * @param completionHandler
+     *          The {@link WebSocketCompletionHandler} to notify once the handling of {@link WebSocketExchange}
+     *          was done
+     */
+    void handleRequest(WebSocketFrameExchange exchange, WebSocketCompletionHandler completionHandler);
 }

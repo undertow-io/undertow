@@ -6,12 +6,11 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketReadListener;
+import io.undertow.websockets.WebSocketUtils;
 import io.undertow.websockets.WebSocketVersion;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
@@ -121,7 +120,7 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
 
             input.flip();
 
-            ByteBuffer md5 = md5(input);
+            ByteBuffer md5 = WebSocketUtils.md5(input);
 
             // create a new Channel to write the response back to the client
             StreamSinkChannel ch = exchange.getResponseChannelFactory().create();
@@ -151,19 +150,6 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
         return null;
     }
     
-    /**
-     * Generate the MD5 hash out of the given {@link ByteBuffer}
-     *
-     */
-    private final static ByteBuffer md5(ByteBuffer buffer) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(buffer);
-            return ByteBuffer.wrap(md.digest());
-        } catch (NoSuchAlgorithmException e) {
-            // Should never happen
-            throw new InternalError("MD5 not supported on this platform");
-        }
-    }
+
 
 }

@@ -33,7 +33,7 @@ import io.undertow.websockets.server.WebSocketServerConnection;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public final class WebSocketExchange extends AbstractAttachable {
+public class WebSocketExchange extends AbstractAttachable {
 
     private final StreamSinkChannel underlyingResponseChannel;
     private final StreamSourceChannel underlyingRequestChannel;

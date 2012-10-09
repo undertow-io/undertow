@@ -18,8 +18,9 @@
 package io.undertow.websockets.frame;
 
 
+import io.undertow.websockets.WebSocketUtils;
+
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 
 /**
  * 
@@ -30,7 +31,6 @@ import java.nio.charset.Charset;
  */
 public class CloseWebSocketFrame extends WebSocketFrame {
 
-    private final static Charset UTF_8 = Charset.forName("UTF-8");
 
     /**
      * Creates a new close frame with closing status code and reason text
@@ -45,14 +45,11 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      */
     public CloseWebSocketFrame(boolean finalFragment, short statusCode, String reasonText) {
         super(finalFragment);
-
-        byte[] reasonBytes = reasonText.getBytes(UTF_8);
-        
-        // TODO: Take care when a pool is used
-        ByteBuffer binaryData = ByteBuffer.allocate(2 + reasonBytes.length);
+        ByteBuffer buffer = WebSocketUtils.fromUtf8String(reasonText);
+        ByteBuffer binaryData = ByteBuffer.allocate(2 + buffer.remaining());
         binaryData.putShort(statusCode);
-        if (reasonBytes.length > 0) {
-            binaryData.put(reasonBytes);
+        if (buffer.remaining() > 0) {
+            binaryData.put(buffer);
         }
         binaryData.flip();
         setBinaryData(binaryData);
@@ -86,18 +83,27 @@ public class CloseWebSocketFrame extends WebSocketFrame {
      * text is not supplied, an empty string is returned.
      */
     public String getReasonText() {
-        ByteBuffer binaryData = getBinaryData();
-        if (binaryData == null || binaryData.capacity() <= 2) {
+        ByteBuffer buffer = getBinaryData();
+        if (buffer == null || buffer.capacity() <= 2) {
             return "";
         }        
-        binaryData.position(2);
+        buffer.position(2);
 
-        byte[] data = new byte[binaryData.remaining()];
-        binaryData.get(data);
-        String reasonText = new String(data, UTF_8);
-        
-        binaryData.position(0);
+        if (buffer.hasArray()) {
+            // if its backed by an array just safe one byte-copy operation and
+            // directly use the backed array
+            return new String(buffer.array(), buffer.arrayOffset(), buffer.remaining(), WebSocketUtils.UTF_8);
+        } else {
+            // not backed by a byte array so need to bulk transfer the data
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            buffer.position(0);
+            return new String(bytes, WebSocketUtils.UTF_8);
+        }
+    }
 
-        return reasonText;
+    @Override
+    public WebSocketFrameType getType() {
+        return WebSocketFrameType.CLOSE;
     }
 }

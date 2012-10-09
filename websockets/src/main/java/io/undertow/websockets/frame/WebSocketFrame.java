@@ -78,7 +78,7 @@ public abstract class WebSocketFrame {
      * @param data      The {@link ByteBuffer} which represent the binary data of this {@link WebSocketFrame}. If
      *                  <code>null</code> is used, it will just set the data to an empty {@link ByteBuffer}.
      */
-    protected void setBinaryData(ByteBuffer data) {
+    protected final void setBinaryData(ByteBuffer data) {
         if (data == null) {
             this.data = Buffers.EMPTY_BYTE_BUFFER;
         } else {
@@ -93,4 +93,9 @@ public abstract class WebSocketFrame {
     public final boolean isFinalFragment() {
         return finalFragment;
     }
+
+    /**
+     * Return the {@link WebSocketFrameType} for the implemented {@link WebSocketFrame}
+     */
+    public abstract WebSocketFrameType getType();
 }
