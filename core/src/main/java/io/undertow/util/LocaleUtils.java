@@ -29,7 +29,7 @@ public class LocaleUtils {
         if (localeString == null) {
             return null;
         }
-        final String[] parts = localeString.split("_");
+        final String[] parts = localeString.split("-");
         if(parts.length == 1) {
             return new Locale(localeString, "");
         } else if(parts.length == 2) {

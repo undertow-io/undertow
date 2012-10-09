@@ -689,7 +689,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getLocalName() {
-        return null;
+        return exchange.getExchange().getDestinationAddress().getHostName();
     }
 
     @Override
