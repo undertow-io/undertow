@@ -42,6 +42,7 @@ import io.undertow.servlet.util.DefaultClassIntrospector;
 public class DeploymentInfo implements Cloneable {
 
     private volatile String deploymentName;
+    private volatile String displayName;
     private volatile String contextPath;
     private volatile ClassLoader classLoader;
     private volatile ResourceLoader resourceLoader;
@@ -95,6 +96,14 @@ public class DeploymentInfo implements Cloneable {
     public DeploymentInfo setDeploymentName(final String deploymentName) {
         this.deploymentName = deploymentName;
         return this;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(final String displayName) {
+        this.displayName = displayName;
     }
 
     public String getContextPath() {
@@ -396,6 +405,7 @@ public class DeploymentInfo implements Cloneable {
         for (Map.Entry<String, FilterInfo> e : filters.entrySet()) {
             info.addFilter(e.getValue().clone());
         }
+        info.displayName = displayName;
         info.filterUrlMappings.addAll(filterUrlMappings);
         info.filterServletNameMappings.addAll(filterServletNameMappings);
         info.listeners.addAll(listeners);

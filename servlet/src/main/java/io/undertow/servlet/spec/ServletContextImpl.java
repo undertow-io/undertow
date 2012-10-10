@@ -281,7 +281,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServletContextName() {
-        return deploymentInfo.getDeploymentName();
+        return deploymentInfo.getDisplayName();
     }
 
     @Override
