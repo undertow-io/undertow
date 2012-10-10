@@ -123,7 +123,7 @@ public class ServletContextImpl implements ServletContext {
         if(pos == -1) {
             return deployment.getMimeExtensionMappings().get(file);
         }
-        return deployment.getMimeExtensionMappings().get(file.substring(pos));
+        return deployment.getMimeExtensionMappings().get(file.substring(pos +1));
     }
 
     @Override

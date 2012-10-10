@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.core;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,6 +31,7 @@ import java.util.concurrent.Executor;
 import javax.servlet.DispatcherType;
 import javax.servlet.Servlet;
 import javax.servlet.ServletContainerInitializer;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
 import io.undertow.server.HttpHandler;
@@ -125,6 +127,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             listeners.contextInitialized();
             initializeErrorPages(deployment, deploymentInfo);
             initializeMimeMappings(deployment, deploymentInfo);
+            initializeTempDir(servletContext, deploymentInfo);
             //run
 
             ServletPathMatches matches = setupServletChains(servletContext, threadSetupAction, listeners);
@@ -134,6 +137,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
             throw new RuntimeException(e);
         } finally {
             handle.tearDown();
+        }
+    }
+
+    private void initializeTempDir(final ServletContextImpl servletContext, final DeploymentInfo deploymentInfo) {
+        if(deploymentInfo.getTempDir() != null) {
+            servletContext.setAttribute(ServletContext.TEMPDIR, deploymentInfo.getTempDir());
+        } else {
+            servletContext.setAttribute(ServletContext.TEMPDIR, new File(SecurityActions.getSystemProperty("java.io.tmpdir")));
         }
     }
 

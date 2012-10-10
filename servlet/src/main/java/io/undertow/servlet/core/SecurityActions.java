@@ -75,4 +75,17 @@ final class SecurityActions {
             });
         }
     }
+
+
+    static String getSystemProperty(final String prop) {
+        if (System.getSecurityManager() == null) {
+           return System.getProperty(prop);
+        } else {
+            return (String) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                public Object run() {
+                    return System.getProperty(prop);
+                }
+            });
+        }
+    }
 }

@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.api;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -49,6 +50,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile int minorVersion;
     private volatile InstanceFactory<Executor> executorFactory;
     private volatile InstanceFactory<Executor> asyncExecutorFactory;
+    private volatile File tempDir;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -369,6 +371,14 @@ public class DeploymentInfo implements Cloneable {
         this.asyncExecutorFactory = asyncExecutorFactory;
     }
 
+    public File getTempDir() {
+        return tempDir;
+    }
+
+    public void setTempDir(final File tempDir) {
+        this.tempDir = tempDir;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -394,8 +404,10 @@ public class DeploymentInfo implements Cloneable {
         info.initParameters.putAll(initParameters);
         info.welcomePages.addAll(welcomePages);
         info.errorPages.addAll(errorPages);
+        info.mimeMappings.addAll(mimeMappings);
         info.executorFactory = executorFactory;
         info.asyncExecutorFactory = asyncExecutorFactory;
+        info.tempDir = tempDir;
         return info;
     }
 
