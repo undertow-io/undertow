@@ -74,4 +74,10 @@ public interface SessionManager {
      */
     void setDefaultSessionTimeout(final int timeout);
 
+    /**
+     * Sets the last accessed time for the session
+     * @param sessionId The session id
+     */
+    void updateLastAccessedTime(final String sessionId);
+
 }

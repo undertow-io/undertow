@@ -20,7 +20,6 @@ package io.undertow.server.session;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -28,10 +27,10 @@ import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import org.xnio.FinishedIoFuture;
-import org.xnio.IoFuture;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.SecureHashMap;
+import org.xnio.FinishedIoFuture;
+import org.xnio.IoFuture;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
 
@@ -70,6 +69,7 @@ public class InMemorySessionManager implements SessionManager {
         } else {
             UndertowLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
         }
+        im.lastAccessed = System.currentTimeMillis();
         session.bumpTimeout();
         return new FinishedIoFuture<Session>(session);
     }
@@ -80,7 +80,6 @@ public class InMemorySessionManager implements SessionManager {
         if (sess == null) {
             return new FinishedIoFuture<Session>(null);
         } else {
-            sess.lastAccessed = System.currentTimeMillis();
             return new FinishedIoFuture<Session>(sess.session);
         }
     }
@@ -105,6 +104,14 @@ public class InMemorySessionManager implements SessionManager {
         defaultSessionTimeout = timeout;
     }
 
+    @Override
+    public void updateLastAccessedTime(final String sessionId) {
+        final InMemorySession sess = sessions.get(sessionId);
+        if (sess != null) {
+            sess.lastAccessed = System.currentTimeMillis();
+        }
+    }
+
     /**
      * session implementation for the in memory session manager
      */
@@ -115,7 +122,7 @@ public class InMemorySessionManager implements SessionManager {
         final XnioExecutor executor;
         final XnioWorker worker;
 
-        volatile XnioExecutor.Key cancelKey;
+        XnioExecutor.Key cancelKey;
 
         final Runnable cancelTask = new Runnable() {
             @Override
@@ -135,7 +142,7 @@ public class InMemorySessionManager implements SessionManager {
             this.worker = worker;
         }
 
-        void bumpTimeout() {
+        synchronized void bumpTimeout() {
             if (cancelKey != null) {
                 if (!cancelKey.remove()) {
                     return;
@@ -198,7 +205,6 @@ public class InMemorySessionManager implements SessionManager {
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
-            sess.lastAccessed = new Date().getTime();
             bumpTimeout();
             return new FinishedIoFuture<Object>(sess.attributes.get(name));
         }
@@ -209,7 +215,6 @@ public class InMemorySessionManager implements SessionManager {
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
-            sess.lastAccessed = new Date().getTime();
             bumpTimeout();
             return new FinishedIoFuture<Set<String>>(sess.attributes.keySet());
         }
@@ -228,7 +233,6 @@ public class InMemorySessionManager implements SessionManager {
                     listener.attributeUpdated(sess.session, name, value);
                 }
             }
-            sess.lastAccessed = new Date().getTime();
             bumpTimeout();
             return new FinishedIoFuture<Object>(existing);
         }
@@ -243,7 +247,6 @@ public class InMemorySessionManager implements SessionManager {
             for (SessionListener listener : listeners) {
                 listener.attributeRemoved(sess.session, name);
             }
-            sess.lastAccessed = new Date().getTime();
             bumpTimeout();
             return new FinishedIoFuture<Object>(existing);
         }
@@ -257,11 +260,13 @@ public class InMemorySessionManager implements SessionManager {
             for (SessionListener listener : listeners) {
                 listener.sessionDestroyed(sess.session, exchange, false);
             }
-            final SessionCookieConfig config = exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
-            if (config != null) {
-                config.clearCookie(exchange, this);
-            } else {
-                UndertowLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
+            if (exchange != null) {
+                final SessionCookieConfig config = exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
+                if (config != null) {
+                    config.clearCookie(exchange, this);
+                } else {
+                    UndertowLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
+                }
             }
             return new FinishedIoFuture<Void>(null);
         }

@@ -79,13 +79,14 @@ public class SessionAttachmentHandler implements HttpHandler {
             HttpHandlers.executeHandler(next, exchange, completionHandler);
         } else {
             final IoFuture<Session> session = sessionManager.getSession(exchange, sessionId);
+            final UpdateLastAccessTimeCompletionHandler handler = new UpdateLastAccessTimeCompletionHandler(completionHandler, sessionManager, sessionId);
             session.addNotifier(new IoFuture.Notifier<Session, Session>() {
                 @Override
                 public void notify(final IoFuture<? extends Session> ioFuture, final Session attachment) {
                     try {
                         if (ioFuture.getStatus() == IoFuture.Status.DONE) {
                             exchange.putAttachment(Session.ATTACHMENT_KEY, ioFuture.get());
-                            HttpHandlers.executeHandler(next, exchange, completionHandler);
+                            HttpHandlers.executeHandler(next, exchange, handler);
                         } else if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
                             //we failed to get the session
                             UndertowLogger.REQUEST_LOGGER.getSessionFailed(ioFuture.getException());
@@ -164,6 +165,25 @@ public class SessionAttachmentHandler implements HttpHandler {
 
     public synchronized void setSecure(final boolean secure) {
         this.secure = secure;
+    }
+
+    private static class UpdateLastAccessTimeCompletionHandler implements HttpCompletionHandler {
+
+        private final HttpCompletionHandler completionHandler;
+        private final SessionManager sessionManager;
+        private final String sessionId;
+
+        private UpdateLastAccessTimeCompletionHandler(final HttpCompletionHandler completionHandler, final SessionManager sessionManager, final String sessionId) {
+            this.completionHandler = completionHandler;
+            this.sessionManager = sessionManager;
+            this.sessionId = sessionId;
+        }
+
+        @Override
+        public void handleComplete() {
+            sessionManager.updateLastAccessedTime(sessionId);
+            completionHandler.handleComplete();
+        }
     }
 
 }
