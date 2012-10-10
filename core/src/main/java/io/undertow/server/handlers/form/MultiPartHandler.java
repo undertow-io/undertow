@@ -42,7 +42,6 @@ import org.xnio.FileAccess;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
-import org.xnio.Xnio;
 import org.xnio.channels.StreamSourceChannel;
 
 /**

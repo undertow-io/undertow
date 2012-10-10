@@ -44,8 +44,6 @@ public class SecurityInitialHandler implements HttpHandler {
         // TODO - Report an error if next is null as that would make no sense at all.
     }
 
-    // TODO - Need to check internal forwarding scenarios but for the moment will ensure we set the context.
-
     /**
      * @see io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange,
      *      io.undertow.server.HttpCompletionHandler)

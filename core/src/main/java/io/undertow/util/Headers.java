@@ -170,8 +170,25 @@ public final class Headers {
     public static final HttpString CONTENT_TRANSFER_ENCODING = new HttpString(CONTENT_TRANSFER_ENCODING_STRING);
 
     // Authentication Schemes
-    public static final String BASIC = "Basic";
-    public static final String NEGOTIATE = "Negotiate";
+    public static final HttpString BASIC = new HttpString("Basic");
+    public static final HttpString DIGEST = new HttpString("Digest");
+    public static final HttpString NEGOTIATE = new HttpString("Negotiate");
+
+    // Digest authentication Token Names
+    public static final HttpString ALGORITHM = new HttpString("algorithm");
+    public static final HttpString AUTH_PARAM = new HttpString("auth-param");
+    public static final HttpString CNONCE = new HttpString("cnonce");
+    public static final HttpString DOMAIN = new HttpString("domain");
+    public static final HttpString NONCE = new HttpString("nonce");
+    public static final HttpString NONCE_COUNT = new HttpString("nc");
+    public static final HttpString OPAQUE = new HttpString("opaque");
+    public static final HttpString QOP = new HttpString("qop");
+    public static final HttpString REALM = new HttpString("realm");
+    public static final HttpString RESPONSE = new HttpString("response");
+    public static final HttpString URI = new HttpString("uri");
+    public static final HttpString USERNAME = new HttpString("username");
+
+
 
     /**
      * Extracts a token from a header that has a given key. For instance if the header is

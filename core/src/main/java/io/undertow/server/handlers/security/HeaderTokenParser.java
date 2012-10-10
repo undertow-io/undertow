@@ -1,0 +1,117 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2012 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.undertow.server.handlers.security;
+
+import static io.undertow.UndertowMessages.MESSAGES;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * Utility to parse the tokens contained within a HTTP header.
+ *
+ * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
+ */
+public class HeaderTokenParser<E extends HeaderToken> {
+
+    private static final char EQUALS = '=';
+    private static final char COMMA = ',';
+    private static final char QUOTE = '"';
+
+    private final Map<String, E> expectedTokens;
+
+    public HeaderTokenParser(final Map<String, E> expectedTokens) {
+        this.expectedTokens = expectedTokens;
+    }
+
+    public Map<E, String> parseHeader(final String header) {
+        char[] headerChars = header.toCharArray();
+
+        // The LinkedHashMap is used so that the parameter order can also be retained.
+        Map<E, String> response = new LinkedHashMap<E, String>();
+
+        SearchingFor searchingFor = SearchingFor.START_OF_NAME;
+        int nameStart = 0;
+        E currentToken = null;
+        int valueStart = 0;
+
+        for (int i = 0; i < headerChars.length; i++) {
+            switch (searchingFor) {
+                case START_OF_NAME:
+                    // Eliminate any white space before the name of the parameter.
+                    if (headerChars[i] != COMMA && Character.isWhitespace(headerChars[i]) == false) {
+                        nameStart = i;
+                        searchingFor = SearchingFor.EQUALS_SIGN;
+                    }
+                    break;
+                case EQUALS_SIGN:
+                    if (headerChars[i] == EQUALS) {
+                        String paramName = String.valueOf(headerChars, nameStart, i - nameStart);
+                        currentToken = expectedTokens.get(paramName);
+                        if (currentToken == null) {
+                            throw MESSAGES.unexpectedTokenInHeader(paramName);
+                        }
+                        if (currentToken.isQuoted()) {
+                            searchingFor = SearchingFor.FIRST_QUOTE;
+                        } else {
+                            valueStart = i + 1;
+                            searchingFor = SearchingFor.END_OF_VALUE;
+                        }
+                    }
+                    break;
+                case FIRST_QUOTE:
+                    if (headerChars[i] == QUOTE) {
+                        valueStart = i + 1;
+                        searchingFor = SearchingFor.LAST_QUOTE;
+                    }
+                    break;
+                case LAST_QUOTE:
+                    if (headerChars[i] == QUOTE) {
+                        String value = String.valueOf(headerChars, valueStart, i - valueStart);
+                        response.put(currentToken, value);
+
+                        searchingFor = SearchingFor.START_OF_NAME;
+                    }
+                    break;
+                case END_OF_VALUE:
+                    if (headerChars[i] == COMMA || Character.isWhitespace(headerChars[i])) {
+                        String value = String.valueOf(headerChars, valueStart, i - valueStart);
+                        response.put(currentToken, value);
+
+                        searchingFor = SearchingFor.START_OF_NAME;
+                    }
+                    break;
+            }
+        }
+
+        if (searchingFor == SearchingFor.END_OF_VALUE) {
+            // Special case where we reached the end of the array containing the header values.
+            String value = String.valueOf(headerChars, valueStart, headerChars.length - valueStart);
+            response.put(currentToken, value);
+        } else if (searchingFor != SearchingFor.START_OF_NAME) {
+            // Somehow we are still in the middle of searching for a current value.
+            throw MESSAGES.invalidHeader();
+        }
+
+        return response;
+    }
+
+    enum SearchingFor {
+        START_OF_NAME, EQUALS_SIGN, FIRST_QUOTE, LAST_QUOTE, END_OF_VALUE;
+    }
+
+}

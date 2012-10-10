@@ -21,6 +21,7 @@ package io.undertow;
 import java.io.IOException;
 import java.net.SocketAddress;
 
+import org.jboss.logging.Cause;
 import org.jboss.logging.Message;
 import org.jboss.logging.MessageBundle;
 import org.jboss.logging.Messages;
@@ -90,4 +91,20 @@ public interface UndertowMessages {
 
     @Message(id = 21, value = "Session already invalidated")
     IllegalStateException sessionAlreadyInvalidated();
+
+    @Message(id = 22, value = "The specified hash algorithm '%s' can not be found.")
+    IllegalArgumentException hashAlgorithmNotFound(String algorithmName);
+
+    @Message(id = 23, value = "An invalid Base64 token has been recieved.")
+    IllegalArgumentException invalidBase64Token(@Cause final IOException cause);
+
+    @Message(id = 24, value = "An invalidly formatted nonce has been received.")
+    IllegalArgumentException invalidNonceReceived();
+
+    @Message(id = 25, value = "Unexpected token '%s' within header.")
+    IllegalArgumentException unexpectedTokenInHeader(final String name);
+
+    @Message(id = 26, value = "Invalid header received.")
+    IllegalArgumentException invalidHeader();
+
 }

@@ -222,6 +222,7 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
 
             if (negContext != null) {
                 byte[] responseChallenge = negContext.useResponseToken();
+                exchange.putAttachment(NegotiationContext.ATTACHMENT_KEY, null);
                 if (responseChallenge != null) {
                     System.out.println("Sending existing challenge.");
                     HeaderMap headers = exchange.getResponseHeaders();
@@ -238,7 +239,7 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
             // An in-progress authentication didn't take this handle call so check if a new challenge is needed.
             if (authenticationState == AuthenticationState.REQUIRED || authenticationState == AuthenticationState.FAILED) {
                 System.out.println("Sending new challenge.");
-                exchange.getResponseHeaders().add(WWW_AUTHENTICATE, NEGOTIATE);
+                exchange.getResponseHeaders().add(WWW_AUTHENTICATE, NEGOTIATE.toString());
                 exchange.setResponseCode(CODE_401.getCode());
             }
 

@@ -43,7 +43,7 @@ import org.xnio.XnioWorker;
  */
 public class InMemorySessionManager implements SessionManager {
 
-    private volatile SessionIdGenerator sessionIdGenerator = new SecureRandomeSessionIdGenerator();
+    private volatile SessionIdGenerator sessionIdGenerator = new SecureRandomSessionIdGenerator();
 
     private final ConcurrentMap<String, InMemorySession> sessions = new SecureHashMap<String, InMemorySession>();
 

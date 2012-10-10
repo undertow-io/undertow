@@ -25,7 +25,6 @@ import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -39,15 +38,13 @@ import io.undertow.util.Protocols;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
 import org.xnio.XnioExecutor;
+
 import org.xnio.channels.AssembledConnectedStreamChannel;
 import org.xnio.channels.ChannelFactory;
-import org.xnio.channels.Channels;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-import org.xnio.channels.SuspendableReadChannel;
 
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.intBitMask;

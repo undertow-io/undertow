@@ -157,7 +157,7 @@ public class BasicAuthenticationHandler implements HttpHandler {
         }
     }
 
-    private class BasicCompletionHandler implements HttpCompletionHandler {
+    private final class BasicCompletionHandler implements HttpCompletionHandler {
 
         private final HttpServerExchange exchange;
         private final HttpCompletionHandler next;

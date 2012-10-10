@@ -30,7 +30,7 @@ import java.security.SecureRandom;
  *
  * @author Stuart Douglas
  */
-public class SecureRandomeSessionIdGenerator implements SessionIdGenerator {
+public class SecureRandomSessionIdGenerator implements SessionIdGenerator {
 
     private final SecureRandom random = new SecureRandom();
 
