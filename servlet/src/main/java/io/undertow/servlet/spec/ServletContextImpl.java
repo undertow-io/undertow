@@ -223,7 +223,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServerInfo() {
-        return null;
+        return "Undertow 1.0.Alpha1"; //todo: fix this
     }
 
     @Override
