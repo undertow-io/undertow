@@ -134,7 +134,7 @@ public class HttpSessionImpl implements HttpSession {
             } else if(old == null) {
                 applicationListeners.httpSessionAttributeAdded(this, name, value);
             } else {
-                applicationListeners.httpSessionAttributeReplaced(this, name, value);
+                applicationListeners.httpSessionAttributeReplaced(this, name, old);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
