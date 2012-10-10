@@ -60,6 +60,9 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     private PrintWriter writer;
     private Integer bufferSize;
     private boolean insideInclude = false;
+    private String contentType;
+    private String charset;
+    private Locale locale;
 
     public HttpServletResponseImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
@@ -238,12 +241,18 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String getCharacterEncoding() {
-        return null;
+        if (charset == null) {
+            return "ISO-8859-1";
+        }
+        return charset;
     }
 
     @Override
     public String getContentType() {
-        return exchange.getExchange().getResponseHeaders().getFirst(Headers.CONTENT_TYPE);
+        if (contentType != null) {
+            return contentType + "; charset=" + getCharacterEncoding();
+        }
+        return null;
     }
 
     @Override
@@ -279,15 +288,18 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setCharacterEncoding(final String charset) {
-        if (insideInclude) {
+        if (insideInclude || exchange.getExchange().isResponseStarted()) {
             return;
         }
-
+        this.charset = charset;
+        if (contentType != null) {
+            exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
+        }
     }
 
     @Override
     public void setContentLength(final int len) {
-        if (insideInclude) {
+        if (insideInclude || exchange.getExchange().isResponseStarted()) {
             return;
         }
         exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
@@ -295,10 +307,22 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentType(final String type) {
-        if (insideInclude) {
+        if (insideInclude || exchange.getExchange().isResponseStarted()) {
             return;
         }
-        exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, type);
+        contentType = type;
+        int pos = type.indexOf("charset=");
+        if(pos != -1) {
+            int i = pos + "charset=".length();
+            do {
+                char c = type.charAt(i++);
+                if(c == ' ' || c == '\t' || c == ';') {
+                    break;
+                }
+            } while (i < type.length());
+            this.charset = type.substring(pos + "charset=".length(), i);
+        }
+        exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
     }
 
     @Override
@@ -348,12 +372,19 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setLocale(final Locale loc) {
-
+        if (insideInclude || exchange.getExchange().isResponseStarted()) {
+            return;
+        }
+        this.locale = loc;
+        exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LANGUAGE, loc.getLanguage() + "-" + loc.getCountry());
     }
 
     @Override
     public Locale getLocale() {
-        return null;
+        if (locale != null) {
+            return locale;
+        }
+        return Locale.getDefault();
     }
 
     public void responseDone(final HttpCompletionHandler handler) {
