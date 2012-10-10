@@ -24,6 +24,8 @@ import java.util.Set;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpSessionBindingEvent;
+import javax.servlet.http.HttpSessionBindingListener;
 import javax.servlet.http.HttpSessionContext;
 
 import io.undertow.server.HttpServerExchange;
@@ -134,7 +136,13 @@ public class HttpSessionImpl implements HttpSession {
             } else if(old == null) {
                 applicationListeners.httpSessionAttributeAdded(this, name, value);
             } else {
+                if(old instanceof HttpSessionBindingListener) {
+                    ((HttpSessionBindingListener)old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
+                }
                 applicationListeners.httpSessionAttributeReplaced(this, name, old);
+            }
+            if(value instanceof HttpSessionBindingListener) {
+                ((HttpSessionBindingListener)value).valueBound(new HttpSessionBindingEvent(this, name, value));
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -151,6 +159,9 @@ public class HttpSessionImpl implements HttpSession {
         try {
             Object old = session.removeAttribute(name).get();
             applicationListeners.httpSessionAttributeRemoved(this, name, old);
+            if(old instanceof HttpSessionBindingListener) {
+                ((HttpSessionBindingListener)old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
