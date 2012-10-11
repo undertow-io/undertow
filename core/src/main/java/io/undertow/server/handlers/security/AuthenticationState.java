@@ -23,18 +23,7 @@ package io.undertow.server.handlers.security;
  */
 public enum AuthenticationState {
 
-    /**
-     * No authentication is required for this request.
-     *
-     * Although not required the mechanism specific handlers may still verify the currently authenticated user, this is so that
-     * even if an unsecured portion of a site is being visited the current user can still be identified.
-     */
-    NOT_REQUIRED,
-
-    /**
-     * Authentication is required before this request can proceed.
-     */
-    REQUIRED,
+    NOT_AUTHENTICATED,
 
     AUTHENTICATED,
 

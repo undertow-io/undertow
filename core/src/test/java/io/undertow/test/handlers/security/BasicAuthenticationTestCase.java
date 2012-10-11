@@ -17,21 +17,8 @@
  */
 package io.undertow.test.handlers.security;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.security.BasicAuthenticationHandler;
-import io.undertow.server.handlers.security.SecurityEndHandler;
-import io.undertow.server.handlers.security.SecurityInitialHandler;
-import io.undertow.test.utils.DefaultServer;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,6 +28,17 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.security.AuthenticationHandler;
+import io.undertow.server.handlers.security.AuthenticationMethodsHandler;
+import io.undertow.server.handlers.security.AuthenticationRequiredHandler;
+import io.undertow.server.handlers.security.BasicAuthenticationHandler;
+import io.undertow.server.handlers.security.SecurityInitialHandler;
+import io.undertow.test.utils.DefaultServer;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -48,6 +46,11 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.BASIC;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
 
 /**
  * A test case to test when the only authentication mechanism
@@ -108,8 +111,9 @@ public class BasicAuthenticationTestCase {
     @Test
     public void testBasicSuccess() throws Exception {
         HttpHandler responseHandler = new ResponseHandler();
-        HttpHandler endHandler = new SecurityEndHandler(responseHandler);
-        HttpHandler basicHandler = new BasicAuthenticationHandler(endHandler, "Test Realm", callbackHandler);
+        HttpHandler endHandler = new AuthenticationRequiredHandler(responseHandler);
+        BasicAuthenticationHandler basicAuthHandler = new BasicAuthenticationHandler("Test Realm", callbackHandler);
+        HttpHandler basicHandler = new AuthenticationMethodsHandler(endHandler, Collections.<AuthenticationHandler>singletonList(basicAuthHandler));
         HttpHandler initialHandler = new SecurityInitialHandler(basicHandler);
         DefaultServer.setRootHandler(initialHandler);
 

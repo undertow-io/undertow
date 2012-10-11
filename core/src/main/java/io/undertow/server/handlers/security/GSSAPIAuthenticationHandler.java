@@ -17,19 +17,6 @@
  */
 package io.undertow.server.handlers.security;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.HOST;
-import static io.undertow.util.Headers.NEGOTIATE;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.CODE_401;
-import static io.undertow.util.WorkerDispatcher.dispatch;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerConnection;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.HeaderMap;
-
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.Principal;
@@ -40,10 +27,23 @@ import java.util.Deque;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerConnection;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.HeaderMap;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
+
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.HOST;
+import static io.undertow.util.Headers.NEGOTIATE;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.StatusCodes.CODE_401;
+import static io.undertow.util.WorkerDispatcher.dispatch;
 
 /**
  * HTTP Handler for GSSAPI / SPNEGO based authentication.
@@ -78,20 +78,20 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
         SecurityContext secContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         AuthenticationState authState = secContext.getAuthenticationState();
 
-        if (authState == AuthenticationState.REQUIRED || authState == AuthenticationState.NOT_REQUIRED) {
+        if (false /*authState == AuthenticationState.REQUIRED || authState == AuthenticationState.NOT_REQUIRED*/) {
             HttpServerConnection connection = exchange.getConnection();
             NegotiationContext negContext = connection.getAttachment(NegotiationContext.ATTACHMENT_KEY);
             if (negContext != null) {
                 exchange.putAttachment(NegotiationContext.ATTACHMENT_KEY, negContext);
                 if (negContext.isEstablished()) {
-                    secContext.setAuthenticatedPrincipal(negContext.getPrincipal());
-                    secContext.setAuthenticationState(AuthenticationState.AUTHENTICATED);
+                    //secContext.setAuthenticatedPrincipal(negContext.getPrincipal());
+                    //secContext.setAuthenticationState(AuthenticationState.AUTHENTICATED);
                 }
             }
         }
 
         // Repeat this check in case a cached authentication has now updates the state.
-        if (authState == AuthenticationState.REQUIRED || authState == AuthenticationState.NOT_REQUIRED) {
+        if (false /*authState == AuthenticationState.REQUIRED || authState == AuthenticationState.NOT_REQUIRED*/) {
             Deque<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
             if (authHeaders != null) {
                 for (String current : authHeaders) {
@@ -151,11 +151,11 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
             } catch (GeneralSecurityException e) {
                 e.printStackTrace();
                 SecurityContext secContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-                secContext.setAuthenticationState(AuthenticationState.FAILED);
+                //secContext.setAuthenticationState(AuthenticationState.FAILED);
             } catch (PrivilegedActionException e) {
                 e.printStackTrace();
                 SecurityContext secContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-                secContext.setAuthenticationState(AuthenticationState.FAILED);
+                //secContext.setAuthenticationState(AuthenticationState.FAILED);
             }
 
             next.handleRequest(exchange, completionHandler);
@@ -195,8 +195,8 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
 
             if (negContext.isEstablished()) {
                 SecurityContext secContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-                secContext.setAuthenticatedPrincipal(negContext.getPrincipal());
-                secContext.setAuthenticationState(AuthenticationState.AUTHENTICATED);
+                //secContext.setAuthenticatedPrincipal(negContext.getPrincipal());
+                //secContext.setAuthenticationState(AuthenticationState.AUTHENTICATED);
             }
 
             return null;
@@ -237,7 +237,7 @@ public class GSSAPIAuthenticationHandler implements HttpHandler {
             }
 
             // An in-progress authentication didn't take this handle call so check if a new challenge is needed.
-            if (authenticationState == AuthenticationState.REQUIRED || authenticationState == AuthenticationState.FAILED) {
+            if (false /*authenticationState == AuthenticationState.REQUIRED || authenticationState == AuthenticationState.FAILED*/) {
                 System.out.println("Sending new challenge.");
                 exchange.getResponseHeaders().add(WWW_AUTHENTICATE, NEGOTIATE.toString());
                 exchange.setResponseCode(CODE_401.getCode());

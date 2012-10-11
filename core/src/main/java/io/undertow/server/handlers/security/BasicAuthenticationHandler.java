@@ -17,15 +17,6 @@
  */
 package io.undertow.server.handlers.security;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.CODE_401;
-import static io.undertow.util.WorkerDispatcher.dispatch;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.Principal;
@@ -38,16 +29,25 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConcreteIoFuture;
+import org.xnio.IoFuture;
+
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.BASIC;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.StatusCodes.CODE_401;
+import static io.undertow.util.WorkerDispatcher.dispatch;
+
 /**
  * The authentication handler responsible for BASIC authentication as described by RFC2617
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public class BasicAuthenticationHandler implements HttpHandler {
+public class BasicAuthenticationHandler implements AuthenticationHandler {
 
     private static Charset UTF_8 = Charset.forName("UTF-8");
 
-    private final HttpHandler next;
     private final String challenge;
     private final CallbackHandler callbackHandler;
 
@@ -55,9 +55,8 @@ public class BasicAuthenticationHandler implements HttpHandler {
     private static final int PREFIX_LENGTH = BASIC_PREFIX.length();
     private static final String COLON = ":";
 
-    public BasicAuthenticationHandler(final HttpHandler next, final String realmName, final CallbackHandler callbackHandler) {
-        this.next = next;
-        challenge = BASIC_PREFIX + "realm=\"" + realmName + "\"";
+    public BasicAuthenticationHandler(final String realmName, final CallbackHandler callbackHandler) {
+        this.challenge = BASIC_PREFIX + "realm=\"" + realmName + "\"";
         this.callbackHandler = callbackHandler;
     }
 
@@ -66,12 +65,13 @@ public class BasicAuthenticationHandler implements HttpHandler {
      *      io.undertow.server.HttpCompletionHandler)
      */
     @Override
-    public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
-        HttpCompletionHandler wrapperCompletionHandler = new BasicCompletionHandler(exchange, completionHandler);
+    public IoFuture<AuthenticationResult> authenticate(final HttpServerExchange exchange) {
+        ConcreteIoFuture<AuthenticationResult> result = new ConcreteIoFuture<AuthenticationResult>();
+
         SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         AuthenticationState authState = context.getAuthenticationState();
 
-        if (authState == AuthenticationState.REQUIRED || authState == AuthenticationState.NOT_REQUIRED) {
+        if (authState == AuthenticationState.NOT_AUTHENTICATED) {
             Deque<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
             if (authHeaders != null) {
                 for (String current : authHeaders) {
@@ -87,37 +87,38 @@ public class BasicAuthenticationHandler implements HttpHandler {
                             String userName = plainChallenge.substring(0, colonPos);
                             String password = plainChallenge.substring(colonPos + 1);
                             dispatch(exchange,
-                                    new BasicRunnable(exchange, wrapperCompletionHandler, userName, password.toCharArray()));
+                                    new BasicRunnable(exchange, result, userName, password.toCharArray()));
 
                             // The request has now potentially been dispatched to a different worker thread, the run method
                             // within BasicRunnable is now responsible for ensuring the request continues.
-                            return;
+                            return result;
                         }
 
                         // By this point we had a header we should have been able to verify but for some reason
                         // it was not correctly structured.
-                        context.setAuthenticationState(AuthenticationState.FAILED);
+                        result.setResult(new AuthenticationResult(null, AuthenticationState.FAILED, new BasicCompletionHandler(exchange)));
+                        return result;
                     }
                 }
             }
         }
 
         // Either an authentication attempt has already occurred or no suitable header has been found in this request,
-        // either way let the call continue for the final decision to be made in the SecurityEndHandler.
-        next.handleRequest(exchange, wrapperCompletionHandler);
+        result.setResult(new AuthenticationResult(null, AuthenticationState.NOT_AUTHENTICATED, new BasicCompletionHandler(exchange)));
+        return result;
     }
 
     private final class BasicRunnable implements Runnable {
 
         private final HttpServerExchange exchange;
-        private final HttpCompletionHandler completionHandler;
+        private final ConcreteIoFuture<AuthenticationResult> result;
         private final String userName;
         private char[] password;
 
-        private BasicRunnable(HttpServerExchange exchange, HttpCompletionHandler completionHandler, final String userName,
+        private BasicRunnable(HttpServerExchange exchange, ConcreteIoFuture<AuthenticationResult> result, final String userName,
                 final char[] password) {
             this.exchange = exchange;
-            this.completionHandler = completionHandler;
+            this.result = result;
             this.userName = userName;
             this.password = password;
         }
@@ -135,49 +136,41 @@ public class BasicAuthenticationHandler implements HttpHandler {
                 callbackHandler.handle(new Callback[] { ncb, pcp });
 
                 if (Arrays.equals(password, pcp.getPassword())) {
-                    context.setAuthenticationState(AuthenticationState.AUTHENTICATED);
-                    context.setAuthenticatedPrincipal(new Principal() {
+
+                    Principal principal = (new Principal() {
 
                         @Override
                         public String getName() {
                             return userName;
                         }
                     });
-                } else {
-                    context.setAuthenticationState(AuthenticationState.FAILED);
+                    result.setResult(new AuthenticationResult(principal, AuthenticationState.AUTHENTICATED, null));
                 }
 
             } catch (IOException e) {
-                context.setAuthenticationState(AuthenticationState.FAILED);
             } catch (UnsupportedCallbackException e) {
-                context.setAuthenticationState(AuthenticationState.FAILED);
             }
-
-            next.handleRequest(exchange, completionHandler);
+            result.setResult(new AuthenticationResult(null, AuthenticationState.FAILED, null));
         }
     }
 
-    private final class BasicCompletionHandler implements HttpCompletionHandler {
+    private final class BasicCompletionHandler implements Runnable {
 
         private final HttpServerExchange exchange;
-        private final HttpCompletionHandler next;
 
-        private BasicCompletionHandler(final HttpServerExchange exchange, final HttpCompletionHandler next) {
+        private BasicCompletionHandler(final HttpServerExchange exchange) {
             this.exchange = exchange;
-            this.next = next;
         }
 
-        public void handleComplete() {
+        public void run() {
             SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
             AuthenticationState authenticationState = context.getAuthenticationState();
             // TODO Including Failed in this check to allow a subsequent attemp, may prefer a utility method somethere
             // e.g. shouldSendChallenge()
-            if (authenticationState == AuthenticationState.REQUIRED || authenticationState == AuthenticationState.FAILED) {
+            if (authenticationState != AuthenticationState.AUTHENTICATED) {
                 exchange.getResponseHeaders().add(WWW_AUTHENTICATE, challenge);
                 exchange.setResponseCode(CODE_401.getCode());
             }
-
-            next.handleComplete();
         }
 
     }

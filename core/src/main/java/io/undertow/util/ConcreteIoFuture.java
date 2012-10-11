@@ -26,7 +26,7 @@ import org.xnio.AbstractIoFuture;
 /**
 * @author Stuart Douglas
 */
-public class ImmediateIoFuture<T> extends AbstractIoFuture<T> {
+public class ConcreteIoFuture<T> extends AbstractIoFuture<T> {
     @Override
     public boolean setResult(final T result) {
         return super.setResult(result);

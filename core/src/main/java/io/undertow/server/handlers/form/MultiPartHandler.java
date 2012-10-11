@@ -35,7 +35,7 @@ import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
-import io.undertow.util.ImmediateIoFuture;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.MultipartParser;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.FileAccess;
@@ -122,7 +122,7 @@ public class MultiPartHandler implements HttpHandler {
         private final FormData data = new FormData();
         private final String boundary;
         private final List<File> createdFiles = new ArrayList<File>();
-        private volatile ImmediateIoFuture<FormData> ioFuture;
+        private volatile ConcreteIoFuture<FormData> ioFuture;
 
         //0=form data
         int currentType = 0;
@@ -144,10 +144,10 @@ public class MultiPartHandler implements HttpHandler {
         @Override
         public IoFuture<FormData> parse() {
             if (ioFuture == null) {
-                ImmediateIoFuture<FormData> created = null;
+                ConcreteIoFuture<FormData> created = null;
                 synchronized (this) {
                     if (ioFuture == null) {
-                        ioFuture = created = new ImmediateIoFuture<FormData>();
+                        ioFuture = created = new ConcreteIoFuture<FormData>();
 
                     }
                 }
@@ -167,10 +167,10 @@ public class MultiPartHandler implements HttpHandler {
         @Override
         public FormData parseBlocking() throws IOException {
             if (ioFuture == null) {
-                ImmediateIoFuture<FormData> created = null;
+                ConcreteIoFuture<FormData> created = null;
                 synchronized (this) {
                     if (ioFuture == null) {
-                        ioFuture = created = new ImmediateIoFuture<FormData>();
+                        ioFuture = created = new ConcreteIoFuture<FormData>();
 
                     }
                 }

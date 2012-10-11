@@ -52,8 +52,6 @@ public class SecurityInitialHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
         SecurityContext existingContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         SecurityContext newContext = new SecurityContext();
-        // TODO - At this point make authentication mandatory - will subsequently add a filter.
-        newContext.setAuthenticationState(AuthenticationState.REQUIRED);
         exchange.putAttachment(SecurityContext.ATTACHMENT_KEY, newContext);
 
         HttpCompletionHandler wrapperHandler = new InitialCompletionHandler(exchange, existingContext, completionHandler);

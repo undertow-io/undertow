@@ -31,11 +31,11 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public class SecurityEndHandler implements HttpHandler {
+public class AuthenticationRequiredHandler implements HttpHandler {
 
     private final HttpHandler next;
 
-    public SecurityEndHandler(final HttpHandler next) {
+    public AuthenticationRequiredHandler(final HttpHandler next) {
         this.next = next;
     }
 
@@ -48,14 +48,7 @@ public class SecurityEndHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
         SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        switch (context.getAuthenticationState()) {
-            case AUTHENTICATED:
-            case NOT_REQUIRED:
-                next.handleRequest(exchange, completionHandler);
-                break;
-            default:
-                completionHandler.handleComplete();
-        }
+        context.authenticate(exchange, completionHandler, next);
     }
 
 }

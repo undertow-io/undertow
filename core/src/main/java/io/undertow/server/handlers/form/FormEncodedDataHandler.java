@@ -29,8 +29,8 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
-import io.undertow.util.ImmediateIoFuture;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
@@ -79,7 +79,7 @@ public class FormEncodedDataHandler implements HttpHandler {
         private final FormData data = new FormData();
         private final StringBuilder builder = new StringBuilder();
         private String name = null;
-        private volatile ImmediateIoFuture<FormData> ioFuture;
+        private volatile ConcreteIoFuture<FormData> ioFuture;
 
         //0= parsing name
         //1=parsing name, decode required
@@ -180,10 +180,10 @@ public class FormEncodedDataHandler implements HttpHandler {
         @Override
         public IoFuture<FormData> parse() {
             if (ioFuture == null) {
-                ImmediateIoFuture<FormData> created = null;
+                ConcreteIoFuture<FormData> created = null;
                 synchronized (this) {
                     if (ioFuture == null) {
-                        ioFuture = created = new ImmediateIoFuture<FormData>();
+                        ioFuture = created = new ConcreteIoFuture<FormData>();
 
                     }
                 }
@@ -206,10 +206,10 @@ public class FormEncodedDataHandler implements HttpHandler {
         @Override
         public FormData parseBlocking() throws IOException {
             if (ioFuture == null) {
-                ImmediateIoFuture<FormData> created = null;
+                ConcreteIoFuture<FormData> created = null;
                 synchronized (this) {
                     if (ioFuture == null) {
-                        ioFuture = created = new ImmediateIoFuture<FormData>();
+                        ioFuture = created = new ConcreteIoFuture<FormData>();
 
                     }
                 }

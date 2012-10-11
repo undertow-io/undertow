@@ -17,24 +17,25 @@
  */
 package io.undertow.server.handlers.security;
 
-import static io.undertow.server.handlers.security.DigestAuthorizationToken.parseHeader;
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.DIGEST;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.CODE_401;
-import static io.undertow.util.WorkerDispatcher.dispatch;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import javax.security.auth.callback.CallbackHandler;
+
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+
+import static io.undertow.server.handlers.security.DigestAuthorizationToken.parseHeader;
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.DIGEST;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.StatusCodes.CODE_401;
+import static io.undertow.util.WorkerDispatcher.dispatch;
 
 /**
  * {@link HttpHandler} to handle HTTP Digest authentication, both according to RFC-2617 and draft update to allow additional
@@ -98,7 +99,7 @@ public class DigestAuthenticationHandler implements HttpHandler {
         SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         AuthenticationState authState = context.getAuthenticationState();
 
-        if (authState == AuthenticationState.REQUIRED || authState == AuthenticationState.NOT_REQUIRED) {
+        if (false /*authState == AuthenticationState.REQUIRED || authState == AuthenticationState.NOT_REQUIRED*/) {
             Deque<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
             if (authHeaders != null) {
                 for (String current : authHeaders) {
@@ -120,7 +121,7 @@ public class DigestAuthenticationHandler implements HttpHandler {
 
                     // By this point we had a header we should have been able to verify but for some reason
                     // it was not correctly structured.
-                    context.setAuthenticationState(AuthenticationState.FAILED);
+                    /*context.setAuthenticationState(AuthenticationState.FAILED);*/
                 }
             }
 
@@ -165,7 +166,7 @@ public class DigestAuthenticationHandler implements HttpHandler {
             SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
             AuthenticationState authenticationState = context.getAuthenticationState();
 
-            if (authenticationState == AuthenticationState.REQUIRED || authenticationState == AuthenticationState.FAILED) {
+            if (false /*&& authenticationState == AuthenticationState.REQUIRED || authenticationState == AuthenticationState.FAILED*/) {
                 // Need to dispatch to a Runnable here in-case the nonce management is blocking and we
                 // don't know if we were already dispatched to a different worker thread.
                 dispatch(exchange, new SendChallengeRunnable());
