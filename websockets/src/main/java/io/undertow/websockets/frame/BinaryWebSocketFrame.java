@@ -18,6 +18,8 @@
 package io.undertow.websockets.frame;
 
 
+import io.undertow.websockets.WebSocketFrameType;
+
 import java.nio.ByteBuffer;
 
 import org.xnio.Buffers;

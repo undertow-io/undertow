@@ -20,7 +20,6 @@ package io.undertow.websockets.server;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;

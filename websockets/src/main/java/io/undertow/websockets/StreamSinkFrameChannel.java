@@ -1,3 +1,21 @@
+
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2012 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.undertow.websockets;
 
 import java.io.IOException;
@@ -5,8 +23,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import io.undertow.websockets.frame.WebSocketFrameType;
 
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListener.SimpleSetter;
@@ -17,26 +33,35 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
+/**
+ * 
+ * 
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
+ *
+ */
 public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     private final WebSocketFrameType type;
-    private final StreamSinkChannel channel;
+    protected final StreamSinkChannel channel;
     private final WebSocketChannel wsChannel;
     SimpleSetter<StreamSinkFrameChannel> closeSetter = new SimpleSetter<StreamSinkFrameChannel>();
     SimpleSetter<StreamSinkFrameChannel> writeSetter = new SimpleSetter<StreamSinkFrameChannel>();
     
     private volatile boolean closed;
     private AtomicBoolean writesDone = new AtomicBoolean();
+    protected final long payloadSize;
+    final Object writeWaitLock = new Object();
 
-    public StreamSinkFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
+    public StreamSinkFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this.channel = channel;
         this.wsChannel = wsChannel;
         this.type = type;
+        this.payloadSize = payloadSize;
     }
 
     
     /**
-     * Return the {@link WebSocketFrameType} or <code>null</code> if its not known at the calling time.
+     * Return the {@link WebSocketFrameType} for which the {@link StreamSinkFrameChannel} was obtained.
      * 
      * 
      */
@@ -44,59 +69,70 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return type;
     }
 
-
     @Override
     public XnioWorker getWorker() {
         return channel.getWorker();
     }
 
     @Override
-    public void close() throws IOException {
-        if (wsChannel.currentSender.remove(this)) {
-            flush();
+    public final void close() throws IOException {
+        if (!closed) {
             closed = true;
+            close0();
+
+            wsChannel.remove(this);
         }
-        // TODO: Implement me
     }
 
+    protected abstract void close0() throws IOException ;
+    
     @Override
-    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+    public final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
         checkClosed();
         if (!isWriteResumed()) {
             return 0;
         }
-        return 0;
+        return write0(srcs, offset, length);
     }
-
+    
+    protected abstract long write0(ByteBuffer[] srcs, int offset, int length) throws IOException;
 
     @Override
-    public long write(ByteBuffer[] srcs) throws IOException {
+    public final long write(ByteBuffer[] srcs) throws IOException {
         checkClosed();
         if (!isWriteResumed()) {
             return 0;
         }
-        return 0;
+        return write0(srcs);
     }
+
+    protected abstract long write0(ByteBuffer[] srcs) throws IOException;
+
 
 
     @Override
-    public int write(ByteBuffer src) throws IOException {
+    public final int write(ByteBuffer src) throws IOException {
         checkClosed();
         if (!isWriteResumed()) {
             return 0;
         }
-        return 0;
+        return write0(src);
     }
+    
+    protected abstract int write0(ByteBuffer src) throws IOException;
+
 
 
     @Override
-    public long transferFrom(FileChannel src, long position, long count) throws IOException {
+    public final long transferFrom(FileChannel src, long position, long count) throws IOException {
         checkClosed();
         if (!isWriteResumed()) {
             return 0;
         }
-        return 0;
+        return transferFrom0(src, position, count);
     }
+    
+    protected abstract long transferFrom0(FileChannel src, long position, long count) throws IOException;
 
 
     @Override
@@ -105,8 +141,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isWriteResumed()) {
             return 0;
         }
-        return 0;
+        return transferFrom0(source, count, throughBuffer);
     }
+
+    protected abstract long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException;
 
 
     @Override
@@ -182,8 +220,15 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     public void awaitWritable() throws IOException {
         if (wsChannel.currentSender.peek() == this) {
             channel.awaitWritable();
+        } else {
+            try {
+                synchronized (writeWaitLock) {
+                    writeWaitLock.wait();
+                }
+            } catch (InterruptedException e) {
+                // ignore
+            }
         }
-        // TODO: handle this
     }
 
 
@@ -191,8 +236,15 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
         if (wsChannel.currentSender.peek() == this) {
             channel.awaitWritable(time, timeUnit);
+        } else {
+            try {
+                synchronized (writeWaitLock) {
+                    writeWaitLock.wait(timeUnit.toMillis(time));
+                }
+            } catch (InterruptedException e) {
+                // ignore
+            }
         }
-        // TODO: handle this        
     }
 
 
