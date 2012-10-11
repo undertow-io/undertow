@@ -18,6 +18,7 @@
 package io.undertow.server.handlers.security;
 
 import static io.undertow.UndertowMessages.MESSAGES;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 

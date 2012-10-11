@@ -17,25 +17,24 @@
  */
 package io.undertow.server.handlers.security;
 
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import javax.security.auth.callback.CallbackHandler;
-
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-
 import static io.undertow.server.handlers.security.DigestAuthorizationToken.parseHeader;
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.DIGEST;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.CODE_401;
 import static io.undertow.util.WorkerDispatcher.dispatch;
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import javax.security.auth.callback.CallbackHandler;
 
 /**
  * {@link HttpHandler} to handle HTTP Digest authentication, both according to RFC-2617 and draft update to allow additional

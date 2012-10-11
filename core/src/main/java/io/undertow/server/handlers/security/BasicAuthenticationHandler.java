@@ -17,6 +17,14 @@
  */
 package io.undertow.server.handlers.security;
 
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.BASIC;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.StatusCodes.CODE_401;
+import static io.undertow.util.WorkerDispatcher.dispatch;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConcreteIoFuture;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.Principal;
@@ -29,22 +37,14 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConcreteIoFuture;
 import org.xnio.IoFuture;
-
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.CODE_401;
-import static io.undertow.util.WorkerDispatcher.dispatch;
 
 /**
  * The authentication handler responsible for BASIC authentication as described by RFC2617
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public class BasicAuthenticationHandler implements AuthenticationHandler {
+public class BasicAuthenticationHandler implements AuthenticationMechanism {
 
     private static Charset UTF_8 = Charset.forName("UTF-8");
 
@@ -165,7 +165,7 @@ public class BasicAuthenticationHandler implements AuthenticationHandler {
         public void run() {
             SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
             AuthenticationState authenticationState = context.getAuthenticationState();
-            // TODO Including Failed in this check to allow a subsequent attemp, may prefer a utility method somethere
+            // TODO Including Failed in this check to allow a subsequent attempt, may prefer a utility method somewhere
             // e.g. shouldSendChallenge()
             if (authenticationState != AuthenticationState.AUTHENTICATED) {
                 exchange.getResponseHeaders().add(WWW_AUTHENTICATE, challenge);

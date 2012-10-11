@@ -18,13 +18,13 @@
 
 package io.undertow.server.handlers.security;
 
-import java.util.List;
-
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
+
+import java.util.List;
 
 /**
  * Authentication handler that adds one or more authentication
@@ -35,14 +35,14 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 public class AuthenticationMethodsHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
-    private final List<AuthenticationHandler> authenticationHandlers;
+    private final List<AuthenticationMechanism> authenticationHandlers;
 
-    public AuthenticationMethodsHandler(final HttpHandler next, final List<AuthenticationHandler> authenticationHandlers) {
+    public AuthenticationMethodsHandler(final HttpHandler next, final List<AuthenticationMechanism> authenticationHandlers) {
         this.next = next;
         this.authenticationHandlers = authenticationHandlers;
     }
 
-    public AuthenticationMethodsHandler(final List<AuthenticationHandler> authenticationHandlers) {
+    public AuthenticationMethodsHandler(final List<AuthenticationMechanism> authenticationHandlers) {
         this.authenticationHandlers = authenticationHandlers;
     }
 
@@ -50,8 +50,8 @@ public class AuthenticationMethodsHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         if(sc != null) {
-            for(AuthenticationHandler handler : authenticationHandlers) {
-                sc.addAuthenticationHandler(handler);
+            for(AuthenticationMechanism handler : authenticationHandlers) {
+                sc.addAuthenticationMechanism(handler);
             }
         }
         HttpHandlers.executeHandler(next, exchange, completionHandler);

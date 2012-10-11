@@ -18,14 +18,15 @@
 package io.undertow.server.handlers.security;
 
 /**
- *
+ * The AuthenticationState represents the overal status of authentication for the current request.
+ * 
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 public enum AuthenticationState {
 
-    NOT_AUTHENTICATED,
+    REQUIRED,
 
-    AUTHENTICATED,
+    NOT_REQUIRED,
 
     /**
      * At least one authentication mechanism was attempted and it failed.

@@ -22,7 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
 
-import io.undertow.server.handlers.security.AuthenticationHandler;
+import io.undertow.server.handlers.security.AuthenticationMechanism;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Cause;
 import org.jboss.logging.LogMessage;
@@ -115,5 +115,5 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = Logger.Level.DEBUG)
     @Message(id = 5018, value = "Exception occurred during authentication using handler %s")
-    void exceptionWhileAuthenticating(final AuthenticationHandler handler, @Cause IOException exception);
+    void exceptionWhileAuthenticating(final AuthenticationMechanism handler, @Cause IOException exception);
 }

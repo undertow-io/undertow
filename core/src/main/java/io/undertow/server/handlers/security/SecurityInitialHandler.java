@@ -26,8 +26,13 @@ import io.undertow.server.session.Session;
 /**
  * The security handler responsible for attaching the SecurityContext to the current {@link HttpServerExchange}.
  *
- * At the end of the authentication handler chain the SecurityEndHandler is called to verify authentication has completed.
- * Mechanism specific handlers will be 'sandwiched' between these two handler.
+ * This handler is called early in the processing of the incoming request, subsequently supported authentication mechanisms will
+ * be added to the context, a decision will then be made if authentication is required or optional and the associated mechanisms
+ * will be called.
+ *
+ * If any existing {@link SecurityContext} has been set it will be replaced and then restored as the the
+ * {@link HttpCompletionHandler} is called, this allows for a general security configuration to be applied to a server and then
+ * replaced with a context specific config.
  *
  * In addition to the HTTPExchange authentication state can also be associated with the {@link HttpServerConnection} and with
  * the {@link Session} however this is mechanism specific so it is down to the actual mechanisms to decide if there is state
@@ -41,7 +46,6 @@ public class SecurityInitialHandler implements HttpHandler {
 
     public SecurityInitialHandler(final HttpHandler next) {
         this.next = next;
-        // TODO - Report an error if next is null as that would make no sense at all.
     }
 
     /**

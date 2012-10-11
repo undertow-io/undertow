@@ -31,9 +31,9 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.security.AuthenticationHandler;
+import io.undertow.server.handlers.security.AuthenticationMechanism;
 import io.undertow.server.handlers.security.AuthenticationMethodsHandler;
-import io.undertow.server.handlers.security.AuthenticationRequiredHandler;
+import io.undertow.server.handlers.security.AuthenticationCallHandler;
 import io.undertow.server.handlers.security.BasicAuthenticationHandler;
 import io.undertow.server.handlers.security.SecurityInitialHandler;
 import io.undertow.test.utils.DefaultServer;
@@ -111,9 +111,9 @@ public class BasicAuthenticationTestCase {
     @Test
     public void testBasicSuccess() throws Exception {
         HttpHandler responseHandler = new ResponseHandler();
-        HttpHandler endHandler = new AuthenticationRequiredHandler(responseHandler);
+        HttpHandler endHandler = new AuthenticationCallHandler(responseHandler);
         BasicAuthenticationHandler basicAuthHandler = new BasicAuthenticationHandler("Test Realm", callbackHandler);
-        HttpHandler basicHandler = new AuthenticationMethodsHandler(endHandler, Collections.<AuthenticationHandler>singletonList(basicAuthHandler));
+        HttpHandler basicHandler = new AuthenticationMethodsHandler(endHandler, Collections.<AuthenticationMechanism>singletonList(basicAuthHandler));
         HttpHandler initialHandler = new SecurityInitialHandler(basicHandler);
         DefaultServer.setRootHandler(initialHandler);
 

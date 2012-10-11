@@ -23,19 +23,15 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * This is the final {@link HttpHandler} in the security chain, it's purpose is to act as a barrier at the end of the chain to
- * only allow the request through either if authentication was not required or it it was required to ensure that it was a
- * success.
- *
- * There is no special challenge generation within this handler, instead if the authentication state is not correct the call is
- * not passed to the next handler and instead returned back using the supplied {@link HttpCompletionHandler}
+ * ensure authenticate is called after the mechanisms have been associated with the context and the constraint checked.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public class AuthenticationRequiredHandler implements HttpHandler {
+public class AuthenticationCallHandler implements HttpHandler {
 
     private final HttpHandler next;
 
-    public AuthenticationRequiredHandler(final HttpHandler next) {
+    public AuthenticationCallHandler(final HttpHandler next) {
         this.next = next;
     }
 
