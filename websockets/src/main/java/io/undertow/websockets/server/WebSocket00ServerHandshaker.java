@@ -4,16 +4,16 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketUtils;
 import io.undertow.websockets.WebSocketVersion;
+import io.undertow.websockets.version00.WebSocket00Channel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -61,7 +61,7 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
 
 
     @Override
-    protected ChannelListener<PushBackStreamChannel> readListener(HttpServerExchange exchange) throws WebSocketHandshakeException {
+    public WebSocketChannel handshake(HttpServerExchange exchange) throws WebSocketHandshakeException {
         HeaderMap requestHeader = exchange.getRequestHeaders();
         // Serve the WebSocket handshake request.
         if (!"Upgrade".equalsIgnoreCase(requestHeader.getFirst(Headers.CONNECTION))
@@ -146,11 +146,12 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
                 responseHeader.add(HttpString.tryFromString("WebSocket-Protocol"), selectSubprotocol(protocol));
             }
         }
-
-        // TODO: Implement the listener
-        return null;
+        try {
+            return new WebSocket00Channel(exchange.upgradeChannel(), exchange.getConnection().getBufferPool(), getWebSocketUrl());
+        } catch (Exception e) {
+            throw new WebSocketHandshakeException("Error while perform the WebSocket handshake", e);
+        }
     }
-    
 
 
 }

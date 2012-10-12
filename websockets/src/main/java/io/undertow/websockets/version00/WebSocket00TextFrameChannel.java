@@ -1,4 +1,3 @@
-
 /*
  * JBoss, Home of Professional Open Source.
  * Copyright 2012 Red Hat, Inc., and individual contributors
@@ -26,8 +25,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import org.xnio.ChannelListener.Setter;
-import org.xnio.ChannelListener.SimpleSetter;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -40,18 +37,13 @@ import org.xnio.channels.StreamSourceChannel;
 public class WebSocket00TextFrameChannel extends StreamSinkFrameChannel {
     private final static ByteBuffer TEXT_FRAME_PREFIX = ByteBuffer.wrap(new byte[] {(byte) 0x00});
     private final static ByteBuffer TEXT_FRAME_SUFFIX = ByteBuffer.wrap(new byte[] {(byte) 0xFF});
-    private final SimpleSetter<WebSocket00TextFrameChannel> setter = new SimpleSetter<WebSocket00TextFrameChannel>();
     
     private boolean prefixWritten = false;
     
-    public WebSocket00TextFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
-        super(channel, wsChannel, type, payloadSize);
+    public WebSocket00TextFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, long payloadSize) {
+        super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
     }
 
-    @Override
-    public Setter<? extends StreamSinkChannel> getWriteSetter() {
-        return setter;
-    }
 
     @Override
     protected void close0() throws IOException {

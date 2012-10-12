@@ -26,8 +26,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import org.xnio.ChannelListener.Setter;
-import org.xnio.ChannelListener.SimpleSetter;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 /**
@@ -38,19 +36,13 @@ import org.xnio.channels.StreamSourceChannel;
  *
  */
 public class WebSocket00BinaryFrameChannel extends StreamSinkFrameChannel {
-    private SimpleSetter<WebSocket00BinaryFrameChannel> setter = new SimpleSetter<WebSocket00BinaryFrameChannel>();
     private long written = 0;
     private final ByteBuffer frameStart = createFrameStart();
 
     private boolean frameStartWritten = false;
     
-    public WebSocket00BinaryFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
-        super(channel, wsChannel, type, payloadSize);
-    }
-
-    @Override
-    public Setter<? extends StreamSinkChannel> getWriteSetter() {
-        return setter;
+    public WebSocket00BinaryFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, long payloadSize) {
+        super(channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
     }
 
     private ByteBuffer createFrameStart() {

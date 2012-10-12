@@ -22,9 +22,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.jboss.logging.Logger;
-import org.xnio.ChannelListener;
-import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.channels.PushBackStreamChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerConnection;
@@ -163,36 +160,5 @@ public abstract class WebSocketServerHandshaker {
      * @throws WebSocketHandshakeException
      *          Thrown if the handshake fails for what-ever reason.
      */
-    public final WebSocketChannel handshake(HttpServerExchange exchange) throws WebSocketHandshakeException {
-        if (WEBSOCKET_LOGGER.isDebugEnabled()) {
-            WEBSOCKET_LOGGER.debug("WS Version " + version.name() + " server handshake");
-        }
-        try {
-            // Upgrade connection
-            //
-            // TODO: Fix this
-            ConnectedStreamChannel channel = exchange.upgradeChannel();
-            WebSocketChannel wsChannel = null;
-
-            return wsChannel;
-            
-        } catch (Exception e) {
-            throw new WebSocketHandshakeException("Error while perform the WebSocket Handshake", e);
-        }
-
-    }
-
-    /**
-     * Return the {@link WebSocketReadListener} for the given {@link HttpServerExchange}. Usually you will have one separate
-     * {@link WebSocketReadListener} implementation per WebSocket Version.
-     * 
-     * @param exchange
-     *          The {@link HttpServerExchange} which will be used parse all needed informations that are needed to generate the
-     *          {@link WebSocketReadListener}.
-     * @return listener
-     *          The {@link WebSocketReadListener} for the given {@link HttpServerExchange}.
-     * @throws WebSocketHandshakeException
-     *          Get thrown if the {@link HttpServerExchange} does not contain all needed data to generate the {@link WebSocketReadListener}.
-     */
-    protected abstract ChannelListener<PushBackStreamChannel> readListener(HttpServerExchange exchange) throws WebSocketHandshakeException;
+    public abstract WebSocketChannel handshake(HttpServerExchange exchange) throws WebSocketHandshakeException;
 }

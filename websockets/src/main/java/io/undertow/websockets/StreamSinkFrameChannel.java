@@ -60,6 +60,12 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     
+    @Override
+    public Setter<? extends StreamSinkChannel> getWriteSetter() {
+        return writeSetter;
+    }
+
+
     /**
      * Return the {@link WebSocketFrameType} for which the {@link StreamSinkFrameChannel} was obtained.
      * 
