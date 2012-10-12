@@ -24,10 +24,10 @@ import io.undertow.server.HttpServerExchange;
 /**
  * Handler responsible for checking the constraints for the current request and marking authentication as required if
  * applicable.
- * 
+ *
  * Sub classes can override isAuthenticationRequired to provide a constraint check, by default this handler will set
  * authentication as always requried, authentication will be optional if this handler is omitted.
- * 
+ *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 public class AuthenticationConstraintHandler implements HttpHandler {
@@ -46,12 +46,20 @@ public class AuthenticationConstraintHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
         if (isAuthenticationRequired(exchange)) {
             SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-            context.setAuthenticationState(AuthenticationState.REQUIRED);
+            context.setAuthenticationRequired();
         }
 
         next.handleRequest(exchange, completionHandler);
     }
 
+    /**
+     * Evaluate the current request and indicate if authentication is required for the current request.
+     *
+     * By default this will always return true, sub-classes will override this method to provide a more specific check.
+     *
+     * @param exchange - the {@link HttpServerExchange} for the current request to decide if authentication is required.
+     * @return true if authentication is required, false otherwise.
+     */
     protected boolean isAuthenticationRequired(final HttpServerExchange exchange) {
         return true;
     }

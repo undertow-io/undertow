@@ -31,10 +31,11 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.security.AuthenticationConstraintHandler;
 import io.undertow.server.handlers.security.AuthenticationMechanism;
 import io.undertow.server.handlers.security.AuthenticationMethodsHandler;
 import io.undertow.server.handlers.security.AuthenticationCallHandler;
-import io.undertow.server.handlers.security.BasicAuthenticationHandler;
+import io.undertow.server.handlers.security.BasicAuthenticationMechanism;
 import io.undertow.server.handlers.security.SecurityInitialHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.HeaderMap;
@@ -111,10 +112,11 @@ public class BasicAuthenticationTestCase {
     @Test
     public void testBasicSuccess() throws Exception {
         HttpHandler responseHandler = new ResponseHandler();
-        HttpHandler endHandler = new AuthenticationCallHandler(responseHandler);
-        BasicAuthenticationHandler basicAuthHandler = new BasicAuthenticationHandler("Test Realm", callbackHandler);
-        HttpHandler basicHandler = new AuthenticationMethodsHandler(endHandler, Collections.<AuthenticationMechanism>singletonList(basicAuthHandler));
-        HttpHandler initialHandler = new SecurityInitialHandler(basicHandler);
+        HttpHandler callHandler = new AuthenticationCallHandler(responseHandler);
+        HttpHandler constraintHandler = new AuthenticationConstraintHandler(callHandler);
+        BasicAuthenticationMechanism basicAuthHandler = new BasicAuthenticationMechanism("Test Realm", callbackHandler);
+        HttpHandler methodsAddHandler = new AuthenticationMethodsHandler(constraintHandler, Collections.<AuthenticationMechanism>singletonList(basicAuthHandler));
+        HttpHandler initialHandler = new SecurityInitialHandler(methodsAddHandler);
         DefaultServer.setRootHandler(initialHandler);
 
         DefaultHttpClient client = new DefaultHttpClient();
