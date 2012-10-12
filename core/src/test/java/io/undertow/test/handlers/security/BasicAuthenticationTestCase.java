@@ -33,7 +33,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.security.AuthenticationConstraintHandler;
 import io.undertow.server.handlers.security.AuthenticationMechanism;
-import io.undertow.server.handlers.security.AuthenticationMethodsHandler;
+import io.undertow.server.handlers.security.AuthenticationMechanismsHandler;
 import io.undertow.server.handlers.security.AuthenticationCallHandler;
 import io.undertow.server.handlers.security.BasicAuthenticationMechanism;
 import io.undertow.server.handlers.security.SecurityInitialHandler;
@@ -115,7 +115,7 @@ public class BasicAuthenticationTestCase {
         HttpHandler callHandler = new AuthenticationCallHandler(responseHandler);
         HttpHandler constraintHandler = new AuthenticationConstraintHandler(callHandler);
         BasicAuthenticationMechanism basicAuthHandler = new BasicAuthenticationMechanism("Test Realm", callbackHandler);
-        HttpHandler methodsAddHandler = new AuthenticationMethodsHandler(constraintHandler, Collections.<AuthenticationMechanism>singletonList(basicAuthHandler));
+        HttpHandler methodsAddHandler = new AuthenticationMechanismsHandler(constraintHandler, Collections.<AuthenticationMechanism>singletonList(basicAuthHandler));
         HttpHandler initialHandler = new SecurityInitialHandler(methodsAddHandler);
         DefaultServer.setRootHandler(initialHandler);
 

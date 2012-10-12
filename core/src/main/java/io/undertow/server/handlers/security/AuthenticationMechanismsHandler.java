@@ -28,30 +28,30 @@ import java.util.List;
 
 /**
  * Authentication handler that adds one or more authentication
- * methods to the security context
+ * mechanisms to the security context
  *
  * @author Stuart Douglas
  */
-public class AuthenticationMethodsHandler implements HttpHandler {
+public class AuthenticationMechanismsHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
-    private final List<AuthenticationMechanism> authenticationHandlers;
+    private final List<AuthenticationMechanism> authenticationMechanisms;
 
-    public AuthenticationMethodsHandler(final HttpHandler next, final List<AuthenticationMechanism> authenticationHandlers) {
+    public AuthenticationMechanismsHandler(final HttpHandler next, final List<AuthenticationMechanism> authenticationHandlers) {
         this.next = next;
-        this.authenticationHandlers = authenticationHandlers;
+        this.authenticationMechanisms = authenticationHandlers;
     }
 
-    public AuthenticationMethodsHandler(final List<AuthenticationMechanism> authenticationHandlers) {
-        this.authenticationHandlers = authenticationHandlers;
+    public AuthenticationMechanismsHandler(final List<AuthenticationMechanism> authenticationHandlers) {
+        this.authenticationMechanisms = authenticationHandlers;
     }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         if(sc != null) {
-            for(AuthenticationMechanism handler : authenticationHandlers) {
-                sc.addAuthenticationMechanism(handler);
+            for(AuthenticationMechanism mechanism : authenticationMechanisms) {
+                sc.addAuthenticationMechanism(mechanism);
             }
         }
         HttpHandlers.executeHandler(next, exchange, completionHandler);
