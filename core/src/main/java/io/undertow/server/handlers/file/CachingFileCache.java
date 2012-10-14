@@ -21,10 +21,11 @@ package io.undertow.server.handlers.file;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
@@ -71,12 +72,16 @@ public class CachingFileCache implements FileCache {
         IoUtils.safeShutdownReads(exchange.getRequestChannel());
         final HttpString method = exchange.getRequestMethod();
 
-        if (! method.equals(Methods.GET)) {
+        if (! (method.equals(Methods.GET) || method.equals(Methods.HEAD))) {
             exchange.setResponseCode(500);
             completionHandler.handleComplete();
             return;
         }
         final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
+        if (sendRequestedBlobs(exchange, completionHandler, factory)) {
+            return;
+        }
+
         final DirectBufferCache.CacheEntry entry = cache.get(file.getAbsolutePath());
         if (entry == null) {
             WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, factory, file));
@@ -120,6 +125,65 @@ public class CachingFileCache implements FileCache {
         new TransferListener(entry, exchange, completionHandler, buffers, true).handleEvent(responseChannel);
     }
 
+    private boolean sendRequestedBlobs(HttpServerExchange exchange, HttpCompletionHandler completionHandler, ChannelFactory<StreamSinkChannel> factory) {
+        ByteBuffer buffer = null;
+        String type = null;
+        if ("css".equals(exchange.getQueryString())) {
+            buffer = Blobs.FILE_CSS_BUFFER.duplicate();
+            type = "text/css";
+        } else if ("js".equals(exchange.getQueryString())) {
+            buffer = Blobs.FILE_JS_BUFFER.duplicate();
+            type = "application/javascript";
+        }
+
+        if (buffer != null) {
+            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(buffer.limit()));
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, type);
+            if (Methods.HEAD.equals(exchange.getRequestMethod())) {
+                completionHandler.handleComplete();
+                return true;
+            }
+
+            StreamSinkChannel channel = factory.create();
+            new TransferListener(null, exchange, completionHandler, new ByteBuffer[] { buffer } , true).handleEvent(channel);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static StringBuilder formatSize(StringBuilder builder, long size) {
+        int n = 1024 * 1024 * 1024;
+        int type = 0;
+        while (size < n && n >= 1024) {
+            n /= 1024;
+            type++;
+        }
+
+        long top = (size * 100) / n;
+        long bottom =  top % 100;
+        top /= 100;
+
+        builder.append(top);
+        if (bottom > 0) {
+            builder.append(".").append(bottom / 10);
+            bottom %= 10;
+            if (bottom > 0) {
+                builder.append(bottom);
+            }
+
+        }
+
+        switch (type) {
+            case 0: builder.append(" GB"); break;
+            case 1: builder.append(" MB"); break;
+            case 2: builder.append(" KB"); break;
+        }
+
+        return builder;
+    }
+
+
     private class FileWriteLoadTask implements Runnable {
 
         private final HttpCompletionHandler completionHandler;
@@ -139,6 +203,12 @@ public class CachingFileCache implements FileCache {
             final HttpString method = exchange.getRequestMethod();
             final FileChannel fileChannel;
             final long length;
+
+            if (file.isDirectory()) {
+                renderDirectoryListing();
+                return;
+            }
+
             try {
                 fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
                 length = fileChannel.size();
@@ -151,6 +221,8 @@ public class CachingFileCache implements FileCache {
                 completionHandler.handleComplete();
                 return;
             }
+
+
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
             if (method.equals(Methods.HEAD)) {
                 completionHandler.handleComplete();
@@ -203,6 +275,85 @@ public class CachingFileCache implements FileCache {
             // Also, pass off entry dereference to the listener
             new TransferListener(entry, exchange, completionHandler, buffers, true).handleEvent(channel);
         }
+
+        private void renderDirectoryListing() {
+            String requestPath = exchange.getRequestPath();
+            if (! requestPath.endsWith("/")) {
+                exchange.setResponseCode(302);
+                exchange.getResponseHeaders().put(Headers.LOCATION, requestPath + "/");
+                completionHandler.handleComplete();
+                return;
+            }
+
+            // TODO - Fix exchange to sanitize path
+            String resolvedPath = exchange.getResolvedPath();
+            for (int i = 0; i < resolvedPath.length(); i++) {
+                if (resolvedPath.charAt(i) != '/') {
+                    resolvedPath = resolvedPath.substring(Math.max(0, i - 1));
+                    break;
+                }
+            }
+
+            StringBuilder builder = new StringBuilder();
+            builder.append("<html><head><script src='").append(resolvedPath).append("?js'></script>")
+                   .append("<link rel='stylesheet' type='txt/css' href='").append(resolvedPath).append("?css'/></head>");
+            builder.append("<body onresize='growit()' onload='growit()'><table id='thetable'><thead>");
+            builder.append("<tr><th class='loc' colspan='3'>Directory Listing - ").append(requestPath)
+                   .append("<tr><th class='label offset'>Name</th><th class='label'>Last Modified</th><th class='label'>Size</th></tr></thead>")
+                   .append("<tfoot><tr><th class=\"loc footer\" colspan=\"3\">Powered by Undertow</th></tr></tfoot><tbody>");
+
+            int state  = 0;
+            String parent = null;
+            for (int i = requestPath.length() - 1; i >= 0; i--) {
+                if (state == 1) {
+                    if (requestPath.charAt(i) == '/') {
+                        state = 2;
+                    }
+                } else if (requestPath.charAt(i) != '/') {
+                    if (state == 2) {
+                        parent = requestPath.substring(0, i + 1);
+                        break;
+                    }
+                    state = 1;
+                }
+            }
+
+            SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss");
+            int i = 0;
+            if (parent != null) {
+                i++;
+                builder.append("<tr class='odd'><td><a class='icon up' href='").append(parent).append("'>[..]</a></td><td>");
+                builder.append(format.format(new Date(file.lastModified()))).append("</td><td>--</td></tr>");
+            }
+
+            for (File entry : file.listFiles()) {
+                builder.append("<tr class='").append((++i & 1) == 1 ? "odd" : "even").append("'><td><a class='icon ");
+                builder.append(entry.isFile() ? "file" : "dir");
+                builder.append("' href='").append(entry.getName()).append("'>").append(entry.getName()).append("</a></td><td>");
+                builder.append(format.format(new Date(file.lastModified()))).append("</td><td>");
+                if (entry.isFile()) {
+                    formatSize(builder, entry.length());
+                } else {
+                    builder.append("--");
+                }
+                builder.append("</td></tr>");
+            }
+            builder.append("</tbody></table></body></html>");
+
+            try {
+                ByteBuffer output = ByteBuffer.wrap(builder.toString().getBytes("UTF-8"));
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(output.limit()));
+                Channels.writeBlocking(factory.create(), output);
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException(e);
+            } catch (IOException e) {
+                exchange.setResponseCode(500);
+            }
+
+            completionHandler.handleComplete();
+            return;
+        }
+
 
         private ByteBuffer[] populateBuffers(FileChannel fileChannel, long length, DirectBufferCache.CacheEntry entry) {
             LimitedBufferSlicePool.PooledByteBuffer[] pooled = entry.buffers();
@@ -299,7 +450,7 @@ public class CachingFileCache implements FileCache {
                     }
                 }
             } finally {
-                if (dereference) {
+                if (dereference && entry != null) {
                     entry.dereference();
                 }
             }
