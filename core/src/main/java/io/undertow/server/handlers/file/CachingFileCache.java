@@ -26,13 +26,11 @@ import java.nio.channels.FileChannel;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.WorkerDispatcher;
 import org.jboss.logging.Logger;
-import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.channels.ChannelFactory;
@@ -54,6 +52,18 @@ public class CachingFileCache implements FileCache {
     private final DirectBufferCache cache;
     private final long maxFileSize;
 
+    private static class DereferenceCallback implements BufferTransfer.TransferCompletionCallback {
+        private final DirectBufferCache.CacheEntry cache;
+
+        public DereferenceCallback(DirectBufferCache.CacheEntry cache) {
+            this.cache = cache;
+        }
+
+        public void complete() {
+            cache.dereference();
+        }
+    }
+
     public CachingFileCache(final int sliceSize, final int maxSlices, final long maxFileSize) {
         this.maxFileSize = maxFileSize;
         this.cache =  new DirectBufferCache(sliceSize, sliceSize * maxSlices);
@@ -69,7 +79,7 @@ public class CachingFileCache implements FileCache {
         IoUtils.safeShutdownReads(exchange.getRequestChannel());
         final HttpString method = exchange.getRequestMethod();
 
-        if (! method.equals(Methods.GET)) {
+        if (! (method.equals(Methods.GET) || method.equals(Methods.HEAD))) {
             exchange.setResponseCode(500);
             completionHandler.handleComplete();
             return;
@@ -115,7 +125,7 @@ public class CachingFileCache implements FileCache {
 
         // Transfer Inline, or register and continue transfer
         // Pass off the entry dereference call to the listener
-        new TransferListener(entry, exchange, completionHandler, buffers, true).handleEvent(responseChannel);
+        BufferTransfer.transfer(exchange, responseChannel, completionHandler, new DereferenceCallback(entry), buffers);
     }
 
     private class FileWriteLoadTask implements Runnable {
@@ -137,6 +147,12 @@ public class CachingFileCache implements FileCache {
             final HttpString method = exchange.getRequestMethod();
             final FileChannel fileChannel;
             final long length;
+
+            if (file.isDirectory()) {
+                FileHandler.renderDirectoryListing(exchange, completionHandler, file, factory);
+                return;
+            }
+
             try {
                 fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
                 length = fileChannel.size();
@@ -149,6 +165,8 @@ public class CachingFileCache implements FileCache {
                 completionHandler.handleComplete();
                 return;
             }
+
+
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
             if (method.equals(Methods.HEAD)) {
                 completionHandler.handleComplete();
@@ -199,7 +217,7 @@ public class CachingFileCache implements FileCache {
 
             // Now that the cache is loaded, attempt to write or register a lister
             // Also, pass off entry dereference to the listener
-            new TransferListener(entry, exchange, completionHandler, buffers, true).handleEvent(channel);
+            BufferTransfer.transfer(exchange, channel, completionHandler, new DereferenceCallback(entry), buffers);
         }
 
         private ByteBuffer[] populateBuffers(FileChannel fileChannel, long length, DirectBufferCache.CacheEntry entry) {
@@ -257,51 +275,4 @@ public class CachingFileCache implements FileCache {
         }
     }
 
-    private static class TransferListener implements ChannelListener<StreamSinkChannel> {
-        private final HttpCompletionHandler completionHandler;
-        private final ByteBuffer[] buffers;
-        private final boolean recurse;
-        private final DirectBufferCache.CacheEntry entry;
-        private final HttpServerExchange exchange;
-
-        public TransferListener(DirectBufferCache.CacheEntry entry, HttpServerExchange exchange, HttpCompletionHandler completionHandler, ByteBuffer[] buffers, boolean recurse) {
-            this.entry = entry;
-            this.completionHandler = completionHandler;
-            this.buffers = buffers;
-            this.recurse = recurse;
-            this.exchange = exchange;
-        }
-
-        public void handleEvent(final StreamSinkChannel channel) {
-            boolean dereference = true;
-            try {
-                ByteBuffer last = buffers[buffers.length - 1];
-                while (last.remaining() > 0) {
-                    long res;
-                    try {
-                        res = channel.write(buffers);
-                    } catch (IOException e) {
-                        IoUtils.safeClose(channel);
-                        completionHandler.handleComplete();
-                        exchange.setResponseCode(500);
-                        return;
-                    }
-
-                    if (res == 0L) {
-                        if (recurse) {
-                            channel.getWriteSetter().set(new TransferListener(entry, exchange, completionHandler, buffers, false));
-                            channel.resumeWrites();
-                        }
-                        dereference = false; // Entry still in-use
-                        return;
-                    }
-                }
-            } finally {
-                if (dereference) {
-                    entry.dereference();
-                }
-            }
-            HttpHandlers.flushAndCompleteRequest(channel, completionHandler);
-        }
-    }
 }
