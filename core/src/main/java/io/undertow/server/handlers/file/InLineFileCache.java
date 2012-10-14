@@ -51,7 +51,7 @@ public class InLineFileCache implements FileCache {
     public static final FileCache INSTANCE = new InLineFileCache();
 
     @Override
-    public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
+    public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file, final boolean directoryListingEnabled) {
         // ignore request body
         IoUtils.safeShutdownReads(exchange.getRequestChannel());
         final HttpString method = exchange.getRequestMethod();

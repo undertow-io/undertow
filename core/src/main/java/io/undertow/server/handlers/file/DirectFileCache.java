@@ -51,7 +51,7 @@ public class DirectFileCache implements FileCache {
     public static final FileCache INSTANCE = new DirectFileCache();
 
     @Override
-    public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
+    public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file, final boolean directoryListingEnabled) {
         // ignore request body
         IoUtils.safeShutdownReads(exchange.getRequestChannel());
 

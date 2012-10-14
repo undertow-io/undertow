@@ -55,7 +55,7 @@ public class PermanentFileCache implements FileCache {
     private final ConcurrentMap<String, FileChannel> channels = new ConcurrentHashMap<String, FileChannel>();
 
     @Override
-    public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
+    public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file, final boolean directoryListingEnabled) {
         // ignore request body
         IoUtils.safeShutdownReads(exchange.getRequestChannel());
         final HttpString method = exchange.getRequestMethod();

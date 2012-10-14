@@ -45,6 +45,7 @@ public class FileHandlerTestCase {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
             final FileHandler handler = new FileHandler(new File(getClass().getResource("page.html").getFile()).getParentFile());
+            handler.setDirectoryListingEnabled(true);
             final PathHandler path = new PathHandler();
             path.addPath("/path", handler);
             final CanonicalPathHandler root = new CanonicalPathHandler();

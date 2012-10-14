@@ -122,7 +122,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         } else if (resource.isDirectory()) {
             handleWelcomePage(exchange, completionHandler, resource);
         } else {
-            fileCache.serveFile(exchange, completionHandler, resource);
+            fileCache.serveFile(exchange, completionHandler, resource, false);
         }
     }
 

@@ -46,6 +46,7 @@ public class FileHandler implements HttpHandler {
 
     private volatile File base;
     private volatile FileCache fileCache = new CachingFileCache(1024, 10480);
+    private volatile boolean directoryListingEnabled = false;
 
     public FileHandler(final File base) {
         if (base == null) {
@@ -70,7 +71,7 @@ public class FileHandler implements HttpHandler {
             return;
         }
 
-        fileCache.serveFile(exchange, completionHandler, new File(base, path));
+        fileCache.serveFile(exchange, completionHandler, new File(base, path), directoryListingEnabled);
     }
 
     public File getBase() {
@@ -232,5 +233,13 @@ public class FileHandler implements HttpHandler {
         }
 
         return builder;
+    }
+
+    public boolean isDirectoryListingEnabled() {
+        return directoryListingEnabled;
+    }
+
+    public void setDirectoryListingEnabled(final boolean directoryListingEnabled) {
+        this.directoryListingEnabled = directoryListingEnabled;
     }
 }

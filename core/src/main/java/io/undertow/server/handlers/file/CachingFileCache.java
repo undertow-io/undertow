@@ -66,7 +66,7 @@ public class CachingFileCache implements FileCache {
 
     public CachingFileCache(final int sliceSize, final int maxSlices, final long maxFileSize) {
         this.maxFileSize = maxFileSize;
-        this.cache =  new DirectBufferCache(sliceSize, sliceSize * maxSlices);
+        this.cache = new DirectBufferCache(sliceSize, sliceSize * maxSlices);
     }
 
     public CachingFileCache(final int sliceSize, final int maxSlices) {
@@ -74,12 +74,12 @@ public class CachingFileCache implements FileCache {
     }
 
     @Override
-    public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
+    public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file, final boolean directoryListingEnabled) {
         // ignore request body
         IoUtils.safeShutdownReads(exchange.getRequestChannel());
         final HttpString method = exchange.getRequestMethod();
 
-        if (! (method.equals(Methods.GET) || method.equals(Methods.HEAD))) {
+        if (!(method.equals(Methods.GET) || method.equals(Methods.HEAD))) {
             exchange.setResponseCode(500);
             completionHandler.handleComplete();
             return;
@@ -87,7 +87,7 @@ public class CachingFileCache implements FileCache {
         final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
         final DirectBufferCache.CacheEntry entry = cache.get(file.getAbsolutePath());
         if (entry == null) {
-            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, factory, file));
+            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, factory, file, directoryListingEnabled));
             return;
         }
 
@@ -99,7 +99,7 @@ public class CachingFileCache implements FileCache {
 
         // It's loading retry later
         if (!entry.enabled() || !entry.reference()) {
-            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, factory, file));
+            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, factory, file, directoryListingEnabled));
             return;
         }
 
@@ -134,12 +134,14 @@ public class CachingFileCache implements FileCache {
         private final File file;
         private final HttpServerExchange exchange;
         private final ChannelFactory<StreamSinkChannel> factory;
+        private final boolean renderDirectoryListing;
 
-        public FileWriteLoadTask(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final ChannelFactory<StreamSinkChannel> factory, final File file) {
+        public FileWriteLoadTask(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final ChannelFactory<StreamSinkChannel> factory, final File file, final boolean renderDirectoryListing) {
             this.completionHandler = completionHandler;
             this.factory = factory;
             this.file = file;
             this.exchange = exchange;
+            this.renderDirectoryListing = renderDirectoryListing;
         }
 
         @Override
@@ -149,7 +151,13 @@ public class CachingFileCache implements FileCache {
             final long length;
 
             if (file.isDirectory()) {
-                FileHandler.renderDirectoryListing(exchange, completionHandler, file, factory);
+                if (renderDirectoryListing) {
+                    FileHandler.renderDirectoryListing(exchange, completionHandler, file, factory);
+                } else {
+                    //we send a 404 so as to not leak any information
+                    exchange.setResponseCode(404);
+                    completionHandler.handleComplete();
+                }
                 return;
             }
 
@@ -191,7 +199,7 @@ public class CachingFileCache implements FileCache {
                 return;
             }
 
-            if (! entry.reference()) {
+            if (!entry.reference()) {
                 entry.disable();
                 transfer(channel, fileChannel, length);
                 return;
@@ -200,8 +208,8 @@ public class CachingFileCache implements FileCache {
             ByteBuffer[] buffers;
             boolean ok = false;
             try {
-                buffers =  populateBuffers(fileChannel, length, entry);
-                if (buffers == null ) {
+                buffers = populateBuffers(fileChannel, length, entry);
+                if (buffers == null) {
                     // File I/O exception, cleanup required
                     return;
                 }
