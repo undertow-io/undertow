@@ -178,6 +178,7 @@ public abstract class WebSocket00FrameSinkChannel  extends StreamSinkFrameChanne
                         
                         // TODO: IS this correct?
                         channel.close();
+                        return;
                     }
                 }
                 if (!channel.flush()) {
