@@ -1,4 +1,3 @@
-
 /*
  * JBoss, Home of Professional Open Source.
  * Copyright 2012 Red Hat, Inc., and individual contributors
@@ -22,12 +21,10 @@ import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 
+import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 /**
  * 
  * {@link StreamSinkFrameChannel} implementation for writing {@link WebSocketFrameType#BINARY}
@@ -35,17 +32,14 @@ import org.xnio.channels.StreamSourceChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public class WebSocket00BinaryFrameSinkChannel extends StreamSinkFrameChannel {
-    private long written = 0;
-    private final ByteBuffer frameStart = createFrameStart();
+public class WebSocket00BinaryFrameSinkChannel extends WebSocket00FrameSinkChannel {
 
-    private boolean frameStartWritten = false;
-    
     public WebSocket00BinaryFrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
     }
 
-    private ByteBuffer createFrameStart() {
+    @Override
+    protected ByteBuffer createFrameStart() {
         int dataLen = (int) payloadSize;
         ByteBuffer buffer = ByteBuffer.allocate(5);
         // Encode type.
@@ -80,77 +74,7 @@ public class WebSocket00BinaryFrameSinkChannel extends StreamSinkFrameChannel {
     }
 
     @Override
-    protected void close0() throws IOException {
-         if (written != payloadSize) {
-             try {
-                 throw new IOException("Written Payload does not match");
-             } finally {
-                 channel.close();
-             }
-         }
+    protected ByteBuffer createFrameEnd() {
+        return Buffers.EMPTY_BYTE_BUFFER;
     }
-
-    @Override
-    protected int write0(ByteBuffer src) throws IOException {
-        if (writeFrameStart()) {
-            int b = channel.write(src);
-            written =+ b;
-            return b;
-        }
-        return 0;
-    }
-    
-    private boolean writeFrameStart() throws IOException {
-        if (!frameStartWritten) {
-            while(frameStart.hasRemaining()) {
-                if (channel.write(frameStart) < 1) {
-                    return false;
-                }
-            }
-            frameStartWritten = true;
-        }
-        return true;
-    }
-
-    @Override
-    protected long write0(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        if (writeFrameStart()) {
-            long b = channel.write(srcs, offset, length);
-            written =+ b;
-            return b;
-        }
-        return 0;
-    }
-
-    @Override
-    protected long write0(ByteBuffer[] srcs) throws IOException {
-        if (writeFrameStart()) {
-            long b = channel.write(srcs);
-            written =+ b;
-            return b;
-        }
-        return 0;
-    }
-
-    @Override
-    protected long transferFrom0(FileChannel src, long position, long count) throws IOException {
-        if (writeFrameStart()) {
-            long b = channel.transferFrom(src, position, count);
-            written =+ b;
-            return b;
-        }
-        return 0;
-    }
-
-    @Override
-    protected long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
-        if (writeFrameStart()) {
-            long b = channel.transferFrom(source, count, throughBuffer);
-            written =+ b;
-            return b;
-        }
-        return 0;
-    }
-    
-
 }

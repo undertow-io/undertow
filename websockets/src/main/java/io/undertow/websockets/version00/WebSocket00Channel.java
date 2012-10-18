@@ -19,13 +19,11 @@ package io.undertow.websockets.version00;
 
 import java.nio.ByteBuffer;
 
-import org.xnio.ChannelListener;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 
 import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.StreamSourceFrameChannel;
@@ -39,12 +37,6 @@ public class WebSocket00Channel extends WebSocketChannel{
     public WebSocket00Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool,
             String wsUrl) {
         super(channel, bufferPool, WebSocketVersion.V00, wsUrl);
-    }
-
-    @Override
-    public void sendClose() {
-        // TODO Auto-generated method stub
-        
     }
 
     @Override
@@ -87,9 +79,14 @@ public class WebSocket00Channel extends WebSocketChannel{
     protected StreamSinkFrameChannel create(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize) {
         switch (type) {
         case TEXT:
-            return new WebSocket00TextFrameChannel(channel, this, payloadSize);
+            return new WebSocket00TextFrameSinkChannel(channel, this, payloadSize);
         case BINARY:
             return new WebSocket00BinaryFrameSinkChannel(channel, this, payloadSize);
+        case CLOSE:
+            if (payloadSize != 0) {
+                throw new IllegalArgumentException("Payload is not support in CloseFrames when using WebSocket Version 00");
+            }
+            return new WebSocket00CloseFrameSinkChannel(channel, this);
         default:
             throw new IllegalArgumentException("WebSocketFrameType " + type + " is not supported by this WebSocketChannel");
         }

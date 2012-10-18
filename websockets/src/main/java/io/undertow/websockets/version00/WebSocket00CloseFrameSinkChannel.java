@@ -1,3 +1,4 @@
+
 /*
  * JBoss, Home of Professional Open Source.
  * Copyright 2012 Red Hat, Inc., and individual contributors
@@ -25,83 +26,58 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-
 /**
- * {@link StreamSinkFrameChannel} implementations for write {@link WebSocketFrameType#TEXT}
+ * 
+ * {@link StreamSinkFrameChannel} implementation for writing {@link WebSocketFrameType#CLOSE}
  * 
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public class WebSocket00TextFrameChannel extends StreamSinkFrameChannel {
-    private final static ByteBuffer TEXT_FRAME_PREFIX = ByteBuffer.wrap(new byte[] {(byte) 0x00});
-    private final static ByteBuffer TEXT_FRAME_SUFFIX = ByteBuffer.wrap(new byte[] {(byte) 0xFF});
-    
-    private boolean prefixWritten = false;
-    
-    public WebSocket00TextFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, long payloadSize) {
-        super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
-    }
+public class WebSocket00CloseFrameSinkChannel extends WebSocket00FrameSinkChannel {
+    private static final ByteBuffer END = ByteBuffer.allocate(2).put((byte) 0xFF).put((byte) 0x00);
 
-
-    @Override
-    protected void close0() throws IOException {
-        if (write(TEXT_FRAME_SUFFIX.duplicate()) != 1) {
-            throw new IOException("Unable to write end of frame");
-        }
+    
+    public WebSocket00CloseFrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel) {
+        super(channel, wsChannel, WebSocketFrameType.CLOSE, 0);
     }
 
     @Override
     protected int write0(ByteBuffer src) throws IOException {
-        if (writePrefix()) {
-            return channel.write(src);
-        }
-        return 0;
+        throw new IOException("CloseFrames are not allowed to have a payload");
     }
-    
-    private boolean writePrefix() throws IOException {
-        if (!prefixWritten) {
-            if (channel.write(TEXT_FRAME_PREFIX.duplicate()) == 1) {
-                prefixWritten = true;
-            } else {
-                return false;
-            }
-        }
-        return true;
-    }
+ 
 
     @Override
     protected long write0(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        if (writePrefix()) {
-            return channel.write(srcs, offset, length);
-        }
-        return 0;
+        throw new IOException("CloseFrames are not allowed to have a payload");
     }
 
     @Override
     protected long write0(ByteBuffer[] srcs) throws IOException {
-        if (writePrefix()) {
-            return channel.write(srcs);
-        }
-        return 0;
+        throw new IOException("CloseFrames are not allowed to have a payload");
     }
 
     @Override
     protected long transferFrom0(FileChannel src, long position, long count) throws IOException {
-        if (writePrefix()) {
-            return channel.transferFrom(src, position, count);
-        }
-        return 0;
+        throw new IOException("CloseFrames are not allowed to have a payload");
     }
 
     @Override
     protected long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
-        if (writePrefix()) {
-            return channel.transferFrom(source, count, throughBuffer);
-        }
-        return 0;
+        throw new IOException("CloseFrames are not allowed to have a payload");
     }
-    
+
+    @Override
+    protected ByteBuffer createFrameStart() {
+        return Buffers.EMPTY_BYTE_BUFFER;
+    }
+
+    @Override
+    protected ByteBuffer createFrameEnd() {
+        return END.duplicate();
+    }
 
 }

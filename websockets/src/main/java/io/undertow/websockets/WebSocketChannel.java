@@ -272,8 +272,11 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         return ch;
     }
 
-    public abstract void sendClose();
-    
+    public void sendClose() throws IOException {
+        StreamSinkFrameChannel closeChannel = create(channel, WebSocketFrameType.CLOSE, 0);
+        closeChannel.close();
+    }
+
     public ChannelListener.Setter<? extends WebSocketChannel> getReceiveSetter() {
         return null;
     }

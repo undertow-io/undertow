@@ -59,7 +59,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         this.payloadSize = payloadSize;
     }
 
-    
+    protected WebSocketChannel getWebSocketChannel() {
+        return wsChannel;
+    }
+
     @Override
     public Setter<? extends StreamSinkChannel> getWriteSetter() {
         return writeSetter;
@@ -84,13 +87,20 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     public final void close() throws IOException {
         if (!closed) {
             closed = true;
-            close0();
+            flush();
+            if (close0()) {
+                remove();
+            }
 
-            wsChannel.remove(this);
         }
     }
 
-    protected abstract void close0() throws IOException ;
+
+    protected void remove() throws IOException {
+        wsChannel.remove(this);
+    }
+
+    protected abstract boolean close0() throws IOException ;
     
     @Override
     public final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
