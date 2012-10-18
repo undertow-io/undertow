@@ -35,13 +35,13 @@ import org.xnio.channels.StreamSourceChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public class WebSocket00BinaryFrameChannel extends StreamSinkFrameChannel {
+public class WebSocket00BinaryFrameSinkChannel extends StreamSinkFrameChannel {
     private long written = 0;
     private final ByteBuffer frameStart = createFrameStart();
 
     private boolean frameStartWritten = false;
     
-    public WebSocket00BinaryFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, long payloadSize) {
+    public WebSocket00BinaryFrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
     }
 

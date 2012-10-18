@@ -9,11 +9,12 @@ import org.xnio.channels.StreamSourceChannel;
 
 import io.undertow.websockets.StreamSourceFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
+import io.undertow.websockets.WebSocketFrameType;
 
 public class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
 
     public WebSocket00CloseFrameSourceChannel(StreamSourceChannel channel, WebSocketChannel wsChannel) {
-        super(channel, wsChannel);
+        super(channel, wsChannel, WebSocketFrameType.CLOSE);
     }
 
     @Override

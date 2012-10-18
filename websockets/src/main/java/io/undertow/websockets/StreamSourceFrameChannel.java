@@ -37,15 +37,16 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
-    private WebSocketFrameType type = null;
-    private final StreamSourceChannel channel;
+    private final WebSocketFrameType type;
+    protected final StreamSourceChannel channel;
     private final WebSocketChannel wsChannel;
     private SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private volatile boolean closed;
     
-    public StreamSourceFrameChannel(StreamSourceChannel channel, WebSocketChannel wsChannel) {
+    public StreamSourceFrameChannel(StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
         this.channel = channel;
         this.wsChannel = wsChannel;
+        this.type = type;
     }
 
     /**

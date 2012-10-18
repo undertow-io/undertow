@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 
 import org.xnio.ChannelListener;
 import org.xnio.Pool;
+import org.xnio.Pooled;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
@@ -29,6 +30,7 @@ import org.xnio.channels.StreamSourceChannel;
 import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.StreamSourceFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
+import io.undertow.websockets.WebSocketException;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketVersion;
 
@@ -46,8 +48,38 @@ public class WebSocket00Channel extends WebSocketChannel{
     }
 
     @Override
-    protected StreamSourceFrameChannel create(StreamSourceChannel channel) {
-        // TODO Auto-generated method stub
+    protected StreamSourceFrameChannel create(Pooled<ByteBuffer> pooled, PushBackStreamChannel channel) throws WebSocketException {
+        ByteBuffer buffer = pooled.getResource();
+            byte type = buffer.get();
+            if ((type & 0x80) == 0x80) {
+                
+                long frameSize = 0;
+                int lengthFieldSize = 0;
+                byte b;
+                
+                // If the MSB on type is set, decode the frame length
+                do {
+                    b = buffer.get();
+                    frameSize <<= 7;
+                    frameSize |= b & 0x7f;
+                    
+                    lengthFieldSize++;
+                    if (lengthFieldSize > 8) {
+                        // Perhaps a malicious peer?
+                        throw new WebSocketException();
+                    }
+                } while ((b & 0x80) == 0x80 && buffer.hasRemaining());
+                if (frameSize == 0) {
+                    channel.unget(pooled);
+                    return new WebSocket00CloseFrameSourceChannel(channel, this);
+                } else {
+                    
+                }
+            } else {
+                // Decode a 0xff terminated UTF-8 string
+
+            }
+        
         return null;
     }
 
@@ -57,16 +89,9 @@ public class WebSocket00Channel extends WebSocketChannel{
         case TEXT:
             return new WebSocket00TextFrameChannel(channel, this, payloadSize);
         case BINARY:
-            return new WebSocket00BinaryFrameChannel(channel, this, payloadSize);
+            return new WebSocket00BinaryFrameSinkChannel(channel, this, payloadSize);
         default:
             throw new IllegalArgumentException("WebSocketFrameType " + type + " is not supported by this WebSocketChannel");
         }
     }
-
-    @Override
-    protected ChannelListener<PushBackStreamChannel> createListener() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
 }
