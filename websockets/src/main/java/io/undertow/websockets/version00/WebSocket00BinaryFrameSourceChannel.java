@@ -105,7 +105,7 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
             int remain = buf.remaining();
             if (remain > toRead) {
                 buf.limit(toRead);
-                if (l == 0) {
+                if (l == 1) {
                     int b = channel.read(buf);
                     readBytes += b;
                     return b;

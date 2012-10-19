@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -41,7 +42,7 @@ import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
- * 
+ * A {@link ConnectedChannel} which can be used to send and receive WebSocket Frames. 
  * 
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
@@ -49,7 +50,7 @@ import org.xnio.channels.StreamSinkChannel;
 public abstract class WebSocketChannel implements ConnectedChannel {
 
     final AtomicReference<StreamSourceFrameChannel> receiver = new AtomicReference<StreamSourceFrameChannel>();
-    final ConcurrentLinkedQueue<StreamSinkFrameChannel> currentSender = new ConcurrentLinkedQueue<StreamSinkFrameChannel>();
+    final Queue<StreamSinkFrameChannel> currentSender = new ConcurrentLinkedQueue<StreamSinkFrameChannel>();
     private final ConnectedStreamChannel channel;
     private final WebSocketVersion version;
     private final String wsUrl;
@@ -76,17 +77,19 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     public Pool<ByteBuffer> getBufferPool() {
         return bufferPool;
     }
+
     
-    void remove(StreamSinkFrameChannel channel) throws IOException {
+    void recycle(StreamSinkFrameChannel channel) throws IOException {
         if (currentSender.peek() == channel) {
             // TODO: I think thats not safe
             if (currentSender.remove(channel)) {
                 channel.flush();
+
                 StreamSinkFrameChannel ch = currentSender.peek();
-                synchronized(ch.writeWaitLock) {
-                    // notify threads that may wait because of  StreamSinkFrameChannel.await*()
-                    ch.writeWaitLock.notify();
-                }
+
+                // notify threads that may wait because of  StreamSinkFrameChannel.await*()
+                ch.notifyWaiters();
+
                 ChannelListeners.invokeChannelListener(ch, ch.closeSetter.get());
             }
         } else {

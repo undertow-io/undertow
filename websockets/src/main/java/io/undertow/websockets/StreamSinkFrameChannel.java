@@ -41,16 +41,18 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
+    private boolean recycled = false;
     private final WebSocketFrameType type;
     protected final StreamSinkChannel channel;
-    private final WebSocketChannel wsChannel;
-    SimpleSetter<StreamSinkFrameChannel> closeSetter = new SimpleSetter<StreamSinkFrameChannel>();
-    SimpleSetter<StreamSinkFrameChannel> writeSetter = new SimpleSetter<StreamSinkFrameChannel>();
+    protected final WebSocketChannel wsChannel;
+    final SimpleSetter<StreamSinkFrameChannel> closeSetter = new SimpleSetter<StreamSinkFrameChannel>();
+    final SimpleSetter<StreamSinkFrameChannel> writeSetter = new SimpleSetter<StreamSinkFrameChannel>();
     
     private volatile boolean closed;
-    private AtomicBoolean writesDone = new AtomicBoolean();
+    private final AtomicBoolean writesDone = new AtomicBoolean();
     protected final long payloadSize;
-    final Object writeWaitLock = new Object();
+    private final Object writeWaitLock = new Object();
+    private int waiters = 0;
 
     public StreamSinkFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this.channel = channel;
@@ -59,15 +61,21 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         this.payloadSize = payloadSize;
     }
 
-    protected WebSocketChannel getWebSocketChannel() {
-        return wsChannel;
-    }
-
     @Override
     public Setter<? extends StreamSinkChannel> getWriteSetter() {
         return writeSetter;
     }
 
+    /**
+     * Notify the waiters on the channel
+     */
+    protected final void notifyWaiters() {
+        synchronized (writeWaitLock) {
+            if (waiters > 0) {
+                writeWaitLock.notifyAll();
+            }
+        }
+    }
 
     /**
      * Return the {@link WebSocketFrameType} for which the {@link StreamSinkFrameChannel} was obtained.
@@ -89,17 +97,32 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
             closed = true;
             flush();
             if (close0()) {
-                remove();
+                recycle();
             }
 
         }
     }
 
 
-    protected void remove() throws IOException {
-        wsChannel.remove(this);
+    /**
+     * Recycle this {@link StreamSinkFrameChannel}. After thats its not usable at all
+     * 
+     * @throws IOException
+     */
+    protected final void recycle() throws IOException {
+        if (recycled) {
+            throw new IllegalStateException("Should not get recycled multiple times");
+        }
+        recycled = true;
+        wsChannel.recycle(this);
     }
 
+    /**
+     * Gets called on {@link #close()}. If this returns <code>true<code> the {@link #recycle()} method will be triggered automaticly.
+     * 
+     * @return recycle          <code>true</code> if the {@link StreamSinkFrameChannel} is ready for recycle.
+     * @throws IOException      Get thrown if an problem during the close operation is detected
+     */
     protected abstract boolean close0() throws IOException ;
     
     @Override
@@ -116,9 +139,8 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return write0(srcs);
     }
 
+
     protected abstract long write0(ByteBuffer[] srcs) throws IOException;
-
-
 
     @Override
     public final int write(ByteBuffer src) throws IOException {
@@ -224,7 +246,12 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         } else {
             try {
                 synchronized (writeWaitLock) {
-                    writeWaitLock.wait();
+                    waiters++;
+                    try {
+                        writeWaitLock.wait();
+                    } finally {
+                        waiters--;
+                    }
                 }
             } catch (InterruptedException e) {
                 // ignore
@@ -240,7 +267,12 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         } else {
             try {
                 synchronized (writeWaitLock) {
-                    writeWaitLock.wait(timeUnit.toMillis(time));
+                    waiters++;
+                    try {
+                        writeWaitLock.wait(timeUnit.toMillis(time));
+                    } finally {
+                        waiters--;
+                    }
                 }
             } catch (InterruptedException e) {
                 // ignore
@@ -263,7 +295,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return false;
     }
 
-    private void checkClosed() throws IOException {
+    /**
+     * Throws an {@link IOException} if the {@link #isOpen()} returns <code>false</code>
+     */
+    protected final void checkClosed() throws IOException {
         if (!isOpen()) {
             throw new IOException("Channel already closed");
         }
