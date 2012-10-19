@@ -39,7 +39,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     private final WebSocketFrameType type;
     protected final StreamSourceChannel channel;
-    private final WebSocketChannel wsChannel;
+    protected final WebSocketChannel wsChannel;
     private SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private volatile boolean closed;
     

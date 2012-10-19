@@ -42,37 +42,36 @@ public class WebSocket00Channel extends WebSocketChannel{
     @Override
     protected StreamSourceFrameChannel create(Pooled<ByteBuffer> pooled, PushBackStreamChannel channel) throws WebSocketException {
         ByteBuffer buffer = pooled.getResource();
-            byte type = buffer.get();
-            if ((type & 0x80) == 0x80) {
-                
-                long frameSize = 0;
-                int lengthFieldSize = 0;
-                byte b;
-                
-                // If the MSB on type is set, decode the frame length
-                do {
-                    b = buffer.get();
-                    frameSize <<= 7;
-                    frameSize |= b & 0x7f;
-                    
-                    lengthFieldSize++;
-                    if (lengthFieldSize > 8) {
-                        // Perhaps a malicious peer?
-                        throw new WebSocketException();
-                    }
-                } while ((b & 0x80) == 0x80 && buffer.hasRemaining());
-                if (frameSize == 0) {
-                    channel.unget(pooled);
-                    return new WebSocket00CloseFrameSourceChannel(channel, this);
-                } else {
-                    
-                }
-            } else {
-                // Decode a 0xff terminated UTF-8 string
+        byte type = buffer.get();
 
+        if ((type & 0x80) == 0x80) {
+
+            long frameSize = 0;
+            int lengthFieldSize = 0;
+            byte b;
+
+            // If the MSB on type is set, decode the frame length
+            do {
+                b = buffer.get();
+                frameSize <<= 7;
+                frameSize |= b & 0x7f;
+
+                lengthFieldSize++;
+                if (lengthFieldSize > 8) {
+                    // Perhaps a malicious peer?
+                    throw new WebSocketException("No Length encoded in the frame");
+                }
+            } while ((b & 0x80) == 0x80 && buffer.hasRemaining());
+            if (frameSize == 0) {
+                return new WebSocket00CloseFrameSourceChannel(channel, this);
+            } else {
+                return new WebSocket00BinaryFrameSourceChannel(channel, this, (int) frameSize);
             }
-        
-        return null;
+        } else {
+            // Decode a 0xff terminated UTF-8 string
+            return new WebSocket00TextFrameSourceChannel(channel, this);
+        }
+
     }
 
     @Override

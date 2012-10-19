@@ -305,6 +305,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     
     
     private final class WebSocketReadListener implements ChannelListener<PushBackStreamChannel> {
+        @Override
         public void handleEvent(final PushBackStreamChannel channel) {
             final Pooled<ByteBuffer> pooled = getBufferPool().allocate();
             final ByteBuffer buffer = pooled.getResource();
@@ -345,25 +346,20 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                         }
                         return;
                     }
-                    //TODO: we need to handle parse errors
                     buffer.flip();
 
                 } while ((sourceChannel = create(pooled, pushBackStreamChannel)) == null);
                 
+                if (buffer.hasRemaining()) {
+                    pushBackStreamChannel.unget(pooled);
+                    free = false;
+                }
+
                 receiver.set(sourceChannel);
                 // we remove ourselves as the read listener from the channel;
-                // if the http handler doesn't set any then reads will suspend, which is the right thing to do
                 channel.getReadSetter().set(null);
                 channel.suspendReads();
 
-                try {
-                   
-
-                } catch (Throwable t) {
-                    UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
-                    IoUtils.safeClose(channel);
-                    IoUtils.safeClose(WebSocketChannel.this);
-                }
             } catch (WebSocketException e) {
                 UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
                 IoUtils.safeClose(channel);
