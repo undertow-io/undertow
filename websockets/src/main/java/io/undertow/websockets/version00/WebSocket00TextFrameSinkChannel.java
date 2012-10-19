@@ -31,12 +31,12 @@ import org.xnio.channels.StreamSinkChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public class WebSocket00TextFrameSinkChannel extends WebSocket00FrameSinkChannel {
+class WebSocket00TextFrameSinkChannel extends WebSocket00FrameSinkChannel {
 
     private static final ByteBuffer START = ByteBuffer.allocate(1).put((byte) 0x00);
     private static final ByteBuffer END = ByteBuffer.allocate(1).put((byte) 0xFF);
 
-    public WebSocket00TextFrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, long payloadSize) {
+    WebSocket00TextFrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
     }
 

@@ -40,7 +40,7 @@ import org.xnio.channels.StreamSourceChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public abstract class WebSocket00FrameSinkChannel  extends StreamSinkFrameChannel {
+abstract class WebSocket00FrameSinkChannel  extends StreamSinkFrameChannel {
     public WebSocket00FrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type,
             long payloadSize) {
         super(channel, wsChannel, type, payloadSize);

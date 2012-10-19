@@ -36,12 +36,12 @@ import io.undertow.websockets.WebSocketFrameType;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
+class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
 
     private final byte END_FRAME_MARKER = (byte) 0xFF;
     private boolean complete = false;
     
-    public WebSocket00TextFrameSourceChannel(PushBackStreamChannel channel, WebSocketChannel wsChannel) {
+    WebSocket00TextFrameSourceChannel(PushBackStreamChannel channel, WebSocketChannel wsChannel) {
         super(channel, wsChannel, WebSocketFrameType.TEXT);
     }
 

@@ -34,11 +34,11 @@ import io.undertow.websockets.WebSocketFrameType;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
+class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
 
     private final int payloadSize;
     private int readBytes;
-    public WebSocket00BinaryFrameSourceChannel(StreamSourceChannel channel, WebSocketChannel wsChannel, int payloadSize) {
+    WebSocket00BinaryFrameSourceChannel(StreamSourceChannel channel, WebSocketChannel wsChannel, int payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.BINARY);
         this.payloadSize = payloadSize;
     }

@@ -36,9 +36,9 @@ import io.undertow.websockets.WebSocketFrameType;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
+class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
 
-    public WebSocket00CloseFrameSourceChannel(StreamSourceChannel channel, WebSocketChannel wsChannel) {
+    WebSocket00CloseFrameSourceChannel(StreamSourceChannel channel, WebSocketChannel wsChannel) {
         super(channel, wsChannel, WebSocketFrameType.CLOSE);
     }
 
