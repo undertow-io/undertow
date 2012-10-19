@@ -17,8 +17,6 @@
  */
 package io.undertow.websockets.version00;
 
-import io.undertow.websockets.StreamSinkFrameChannel;
-import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 
 import java.io.IOException;
@@ -30,7 +28,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 /**
  * 
- * {@link StreamSinkFrameChannel} implementation for writing {@link WebSocketFrameType#CLOSE}
+ * {@link WebSocket00FrameSinkChannel} implementation for writing {@link WebSocketFrameType#CLOSE}
  * 
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
@@ -39,7 +37,7 @@ class WebSocket00CloseFrameSinkChannel extends WebSocket00FrameSinkChannel {
     private static final ByteBuffer END = ByteBuffer.allocate(2).put((byte) 0xFF).put((byte) 0x00);
 
     
-    public WebSocket00CloseFrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel) {
+    WebSocket00CloseFrameSinkChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel) {
         super(channel, wsChannel, WebSocketFrameType.CLOSE, 0);
     }
 

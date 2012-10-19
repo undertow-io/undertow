@@ -27,7 +27,6 @@ import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.websockets.StreamSourceFrameChannel;
-import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 
 /**
@@ -41,7 +40,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
     private final byte END_FRAME_MARKER = (byte) 0xFF;
     private boolean complete = false;
     
-    WebSocket00TextFrameSourceChannel(PushBackStreamChannel channel, WebSocketChannel wsChannel) {
+    WebSocket00TextFrameSourceChannel(PushBackStreamChannel channel, WebSocket00Channel wsChannel) {
         super(channel, wsChannel, WebSocketFrameType.TEXT);
     }
 
@@ -62,6 +61,9 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
         Pooled<ByteBuffer> pooled = wsChannel.getBufferPool().allocate();
         try {
             ByteBuffer buf = pooled.getResource();
+            // clear the buffer before use it
+            buf.clear();
+
             long r = 0;
             while (r < count) {
                 int remaining = (int) (count - r);
@@ -180,10 +182,13 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                     buf.position(pos - 1);
                     
                     Pooled<ByteBuffer> pooled = wsChannel.getBufferPool().allocate();
+                    ByteBuffer pooledBuf = pooled.getResource();
+                    pooledBuf.clear();
+                    
                     boolean failed = true;
 
                     try {
-                        pooled.getResource().put(remainingBytes).flip();
+                        pooledBuf.put(remainingBytes).flip();
 
                         // push back the bytes that not belong to the frame
                         ((PushBackStreamChannel)channel).unget(pooled);

@@ -32,8 +32,23 @@ import io.undertow.websockets.WebSocketException;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketVersion;
 
-public class WebSocket00Channel extends WebSocketChannel{
 
+/**
+ * {@link WebSocketChannel} which is used for {@link WebSocketVersion#V00}
+ * 
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
+ *
+ */
+public final class WebSocket00Channel extends WebSocketChannel {
+
+    /**
+     * Create a new {@link WebSocket00Channel} 
+     * 
+     * @param channel           The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
+     *                          Be aware that it already must be "upgraded".
+     * @param bufferPool        The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
+     * @param wsUrl             The url for which the {@link WebSocket00Channel} was created.
+     */
     public WebSocket00Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool,
             String wsUrl) {
         super(channel, bufferPool, WebSocketVersion.V00, wsUrl);

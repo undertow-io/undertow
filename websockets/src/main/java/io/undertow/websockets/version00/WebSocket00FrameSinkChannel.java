@@ -18,7 +18,6 @@
 package io.undertow.websockets.version00;
 
 import io.undertow.websockets.StreamSinkFrameChannel;
-import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketVersion;
 
@@ -41,7 +40,7 @@ import org.xnio.channels.StreamSourceChannel;
  *
  */
 abstract class WebSocket00FrameSinkChannel  extends StreamSinkFrameChannel {
-    public WebSocket00FrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type,
+    WebSocket00FrameSinkChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel, WebSocketFrameType type,
             long payloadSize) {
         super(channel, wsChannel, type, payloadSize);
     }

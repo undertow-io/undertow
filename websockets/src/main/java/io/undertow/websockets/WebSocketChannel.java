@@ -19,6 +19,7 @@ package io.undertow.websockets;
 
 import static org.xnio.IoUtils.safeClose;
 import io.undertow.UndertowLogger;
+import io.undertow.websockets.version00.WebSocket00Channel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -58,7 +59,17 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private final PushBackStreamChannel pushBackStreamChannel;
     private final Pool<ByteBuffer> bufferPool;
 
-    public WebSocketChannel(final ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl) {
+
+    /**
+     * Create a new {@link WebSocketChannel} 
+     * 
+     * @param channel           The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
+     *                          Be aware that it already must be "upgraded".
+     * @param bufferPool        The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
+     * @param version           The {@link WebSocketVersion} of the {@link WebSocketChannel}
+     * @param wsUrl             The url for which the {@link WebSocket00Channel} was created.
+     */
+    protected WebSocketChannel(final ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl) {
         this.channel = channel;
         this.version = version;
         this.wsUrl = wsUrl;
@@ -78,7 +89,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         return bufferPool;
     }
 
-    
+    /**
+     * Recycle the given {@link StreamSinkFrameChannel}. This means that it will not longer be able to send any data.
+     */
     void recycle(StreamSinkFrameChannel channel) throws IOException {
         if (currentSender.peek() == channel) {
             // TODO: I think thats not safe
@@ -290,9 +303,12 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     /**
      * Create a new {@link StreamSourceFrameChannel}  which can be used to read the data of the received WebSocket Frame
      * 
-     * @param channel   The {@link PushBackStreamChannel} to wrap
-     * @return ch       The {@link StreamSourceFrameChannel} which can be used to read data
-     * @throws WebSocketException 
+     * @param buffer                    The {@link Pooled} {@link ByteBuffer} which. is used to detect which {@link StreamSourceFrameChannel} to create.
+     * @param channel                   The {@link PushBackStreamChannel} to wrap
+     * @return channel                  A {@link StreamSourceFrameChannel} will be used to read a Frame from.
+     *                                  This will return <code>null</code> if the right {@link StreamSourceFrameChannel} could not be detected with the given
+     *                                  buffer and so more data is needed.
+     * @throws WebSocketException       Is thrown if something goes wrong
      */
     protected abstract StreamSourceFrameChannel create(Pooled<ByteBuffer> buffer, PushBackStreamChannel channel) throws WebSocketException;
     
@@ -302,11 +318,15 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * @param channel           The {@link StreamSinkChannel} to wrap
      * @param type              The {@link WebSocketFrameType} of the WebSocketFrame which will be send over this {@link StreamSinkFrameChannel}
      * @param payloadSize       The size of the payload to transmit. May be 0 if non payload at all should be included. 
-     * @return ch               The {@link StreamSinkFrameChannel} that was created
      */
     protected abstract StreamSinkFrameChannel create(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize);
     
-    
+
+    /**
+     * {@link ChannelListener} which reads data from the {@link PushBackStreamChannel} until it was able to detect a WebSocket Frame.
+     * Once that happended it will remove it self from listening 
+     *
+     */
     private final class WebSocketReadListener implements ChannelListener<PushBackStreamChannel> {
         @Override
         public void handleEvent(final PushBackStreamChannel channel) {
@@ -317,7 +337,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             try {
                 StreamSourceFrameChannel sourceChannel = null;
                 int res;
-                do {
+                while ((sourceChannel = create(pooled, pushBackStreamChannel)) == null) {
                     buffer.clear();
                     try {
                         res = channel.read(buffer);
@@ -343,22 +363,23 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                             if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                                 UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
                             }
-                            // fuck it, it's all ruined
+                            // nothing we can do here.. close
                             IoUtils.safeClose(channel);
                             return;
                         }
                         return;
                     }
                     buffer.flip();
-
-                } while ((sourceChannel = create(pooled, pushBackStreamChannel)) == null);
+                }
                 
                 if (buffer.hasRemaining()) {
+                    // something was left in the buffer, push it back so it can be processed by the actual Source
                     pushBackStreamChannel.unget(pooled);
                     free = false;
                 }
 
                 receiver.set(sourceChannel);
+                
                 // we remove ourselves as the read listener from the channel;
                 channel.getReadSetter().set(null);
                 channel.suspendReads();
@@ -368,7 +389,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 IoUtils.safeClose(channel);
                 IoUtils.safeClose(WebSocketChannel.this);
             } finally {
-                if (free) pooled.free();
+                if (free) {
+                    pooled.free();
+                }
             }
         }
     }

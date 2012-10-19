@@ -25,7 +25,6 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import io.undertow.websockets.StreamSourceFrameChannel;
-import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 
 /**
@@ -38,7 +37,7 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
 
     private final int payloadSize;
     private int readBytes;
-    WebSocket00BinaryFrameSourceChannel(StreamSourceChannel channel, WebSocketChannel wsChannel, int payloadSize) {
+    WebSocket00BinaryFrameSourceChannel(StreamSourceChannel channel, WebSocket00Channel wsChannel, int payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.BINARY);
         this.payloadSize = payloadSize;
     }

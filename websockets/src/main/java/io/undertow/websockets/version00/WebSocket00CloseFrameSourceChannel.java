@@ -26,7 +26,6 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import io.undertow.websockets.StreamSourceFrameChannel;
-import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 
 
@@ -38,7 +37,7 @@ import io.undertow.websockets.WebSocketFrameType;
  */
 class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
 
-    WebSocket00CloseFrameSourceChannel(StreamSourceChannel channel, WebSocketChannel wsChannel) {
+    WebSocket00CloseFrameSourceChannel(StreamSourceChannel channel, WebSocket00Channel wsChannel) {
         super(channel, wsChannel, WebSocketFrameType.CLOSE);
     }
 
