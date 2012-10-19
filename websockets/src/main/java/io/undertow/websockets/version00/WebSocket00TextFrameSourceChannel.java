@@ -176,39 +176,56 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
             while(pos < limit) {
                 if (buf.get(pos) == END_FRAME_MARKER) {
                     complete = true;
-                    ByteBuffer remainingBytes = (ByteBuffer) buf.duplicate().position(pos + 1);
 
-                    // Set the new position so that once the buffer is flipped it will be the new limit
-                    buf.position(pos - 1);
-                    
-                    Pooled<ByteBuffer> pooled = wsChannel.getBufferPool().allocate();
-                    ByteBuffer pooledBuf = pooled.getResource();
-                    pooledBuf.clear();
-                    
-                    boolean failed = true;
-
-                    try {
-                        pooledBuf.put(remainingBytes).flip();
-
-                        // push back the bytes that not belong to the frame
-                        ((PushBackStreamChannel)channel).unget(pooled);
-                        failed = false;
-
-                    } finally {
-                        if (failed) {
-                            // for whatever reason it failed to hand the bytes back to the stream, free the pooled buffer
-                            // to not run into a leak
-                            pooled.free();
-
-                            // What we should do here now that it was failed ? 
-                            // I think closing the channel would probably make sense as the channel is 
-                            // unusable
-                            // TODO: Fix me
+                    if (pos +1 < r) {
+                        ByteBuffer remainingBytes;
+                        if (pos == 0) {
+                            remainingBytes = (ByteBuffer) buf.duplicate().position(pos + 1).limit(buf.limit());
+                        } else {
+                            remainingBytes = (ByteBuffer) buf.duplicate().position(pos + 1).limit(buf.limit() - pos + 1);
                         }
+
+                        // Set the new position so that once the buffer is flipped it will be the new limit
+                        buf.position(pos);
+                        
+                        Pooled<ByteBuffer> pooled = wsChannel.getBufferPool().allocate();
+                        ByteBuffer pooledBuf = pooled.getResource();
+                        pooledBuf.clear();
+                        
+                        boolean failed = true;
+
+                        try {
+
+                            pooledBuf.put(remainingBytes).flip();
+
+                            // push back the bytes that not belong to the frame
+                            ((PushBackStreamChannel)channel).unget(pooled);
+                            failed = false;
+
+                        } finally {
+                            if (failed) {
+                                // for whatever reason it failed to hand the bytes back to the stream, free the pooled buffer
+                                // to not run into a leak
+                                pooled.free();
+
+                                // What we should do here now that it was failed ? 
+                                // I think closing the channel would probably make sense as the channel is 
+                                // unusable
+                                // TODO: Fix me
+                            }
+                        }
+                        if (pos == 0) {
+                            return -1;
+                        } else {
+                            return pos;
+                        }
+                    } else {
+                        // Set the new position so that once the buffer is flipped it will be the new limit
+                        buf.position(pos);
                     }
-                    
+
                     // return the read bytes
-                    return r  - pos;
+                    return r  - pos + 1;
                 }
                 pos++;
             }

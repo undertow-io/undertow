@@ -39,7 +39,7 @@ import io.undertow.websockets.WebSocketVersion;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-public final class WebSocket00Channel extends WebSocketChannel {
+public class WebSocket00Channel extends WebSocketChannel {
 
     /**
      * Create a new {@link WebSocket00Channel} 
