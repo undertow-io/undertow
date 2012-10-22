@@ -52,6 +52,7 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
         if (toRead < count) {
             count = toRead;
         }
+
         long r = channel.transferTo(position, count, target);
         readBytes += (int) r;
         return r;
@@ -82,7 +83,9 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
         if (byteToRead() < dst.remaining()) {
             dst.limit(dst.position() + byteToRead());
         }
-        return channel.read(dst);
+        int r = channel.read(dst);
+        readBytes += r;
+        return r;
     }
 
     @Override
