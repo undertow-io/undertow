@@ -39,6 +39,12 @@ import org.xnio.Pool;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSourceChannel;
 
+/**
+ * 
+ * 
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
+ *
+ */
 public class WebSocket00TextFrameSourceChannelTest {
     private final static Pool<ByteBuffer> POOL = Buffers.allocatedBufferPool(new BufferAllocator<ByteBuffer>() {
 

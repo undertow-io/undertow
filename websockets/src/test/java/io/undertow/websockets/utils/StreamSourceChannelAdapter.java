@@ -31,6 +31,12 @@ import org.xnio.ChannelListener.Setter;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
+/**
+ * 
+ * 
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
+ *
+ */
 public class StreamSourceChannelAdapter implements StreamSourceChannel {
     private final ReadableByteChannel channel;
     private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> readSetter = new ChannelListener.SimpleSetter<StreamSourceChannel>(); 
