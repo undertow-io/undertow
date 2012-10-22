@@ -81,6 +81,7 @@ public class ServletContextImpl implements ServletContext {
         this.deployment = deployment;
         this.deploymentInfo = deployment.getDeploymentInfo();
         sessionCookieConfig = new SessionCookieConfigImpl(deployment.getDeploymentInfo().getContextPath());
+        attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
     }
 
     @Override

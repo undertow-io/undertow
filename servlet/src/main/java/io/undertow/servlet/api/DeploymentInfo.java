@@ -60,6 +60,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<ServletContainerInitializerInfo> servletContainerInitializers = new ArrayList<ServletContainerInitializerInfo>();
     private final List<ThreadSetupAction> threadSetupActions = new ArrayList<ThreadSetupAction>();
     private final Map<String, String> initParameters = new HashMap<String, String>();
+    private final Map<String, Object> servletContextAttributes = new HashMap<String, Object>();
     private final List<String> welcomePages = new ArrayList<String>();
     private final List<ErrorPage> errorPages = new ArrayList<ErrorPage>();
     private final List<MimeMapping> mimeMappings = new ArrayList<MimeMapping>();
@@ -281,15 +282,22 @@ public class DeploymentInfo implements Cloneable {
         return threadSetupActions;
     }
 
-
     public DeploymentInfo addInitParameter(final String name, final String value) {
         initParameters.put(name, value);
         return this;
     }
 
-
     public Map<String, String> getInitParameters() {
         return Collections.unmodifiableMap(initParameters);
+    }
+
+    public DeploymentInfo addServletContextAttribute(final String name, final Object value) {
+        servletContextAttributes.put(name, value);
+        return this;
+    }
+
+    public Map<String, Object> getServletContextAttributes() {
+        return Collections.unmodifiableMap(servletContextAttributes);
     }
 
     public DeploymentInfo addWelcomePages(final String welcomePage) {
@@ -412,6 +420,7 @@ public class DeploymentInfo implements Cloneable {
         info.servletContainerInitializers.addAll(servletContainerInitializers);
         info.threadSetupActions.addAll(threadSetupActions);
         info.initParameters.putAll(initParameters);
+        info.servletContextAttributes.putAll(servletContextAttributes);
         info.welcomePages.addAll(welcomePages);
         info.errorPages.addAll(errorPages);
         info.mimeMappings.addAll(mimeMappings);

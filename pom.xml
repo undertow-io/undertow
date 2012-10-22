@@ -72,6 +72,9 @@
         <version.org.jboss.logmanager>1.4.0.Beta1</version.org.jboss.logmanager>
         <version.org.jboss.logging.processor>1.0.3.Final</version.org.jboss.logging.processor>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec>1.0.2.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec>
+        <version.org.jboss.spec.javax.servlet.jsp>1.0.1.Final</version.org.jboss.spec.javax.servlet.jsp>
+        <version.org.jboss.web.jasper-jdt>7.0.3.Final</version.org.jboss.web.jasper-jdt>
+        <version.org.jboss.web.jastow>7.2.0.Alpha2-SNAPSHOT</version.org.jboss.web.jastow>
         <version.checkstyle.plugin>2.9.1</version.checkstyle.plugin>
 
         <!-- Surefire args -->
@@ -89,6 +92,7 @@
         <module>parser-generator</module>
         <module>core</module>
         <module>servlet</module>
+        <module>jsp</module>
     </modules>
 
     <build>
@@ -205,8 +209,10 @@
 
             <dependency>
                 <groupId>io.undertow</groupId>
-                <artifactId>undertow-testsuite-shared</artifactId>
+                <artifactId>undertow-servlet</artifactId>
                 <version>${project.version}</version>
+                <type>test-jar</type>
+                <scope>test</scope>
             </dependency>
 
             <!-- External Dependencies -->
@@ -259,6 +265,24 @@
                 <groupId>org.jboss.spec.javax.servlet</groupId>
                 <artifactId>jboss-servlet-api_3.0_spec</artifactId>
                 <version>${version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.spec.javax.servlet.jsp</groupId>
+                <artifactId>jboss-jsp-api_2.2_spec</artifactId>
+                <version>${version.org.jboss.spec.javax.servlet.jsp}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.web</groupId>
+                <artifactId>jasper-jdt</artifactId>
+                <version>${version.org.jboss.web.jasper-jdt}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.web</groupId>
+                <artifactId>jastow</artifactId>
+                <version>${version.org.jboss.web.jastow}</version>
             </dependency>
 
             <dependency>
