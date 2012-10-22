@@ -17,30 +17,26 @@
  */
 package io.undertow.websockets.version00;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.reset;
+import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import io.undertow.websockets.WebSocketUtils;
+import io.undertow.websockets.utils.StreamSourceChannelAdapter;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
-import org.xnio.Buffers;
-import org.xnio.ChannelListener.Setter;
 import org.xnio.BufferAllocator;
-import org.xnio.ChannelListener;
-import org.xnio.Option;
+import org.xnio.Buffers;
 import org.xnio.Pool;
-import org.xnio.XnioExecutor;
-import org.xnio.XnioWorker;
 import org.xnio.channels.PushBackStreamChannel;
-import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 public class WebSocket00TextFrameSourceChannelTest {
@@ -211,123 +207,5 @@ public class WebSocket00TextFrameSourceChannelTest {
         byte[] readBytes = new byte[buffer.remaining()];
         System.arraycopy(buffer.array(), buffer.arrayOffset() + buffer.position(), readBytes, 0, readBytes.length);
         return readBytes;
-    }
-
-    private final class StreamSourceChannelAdapter implements StreamSourceChannel {
-        private final ReadableByteChannel channel;
-        private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> readSetter = new ChannelListener.SimpleSetter<StreamSourceChannel>(); 
-        private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> closeSetter = new ChannelListener.SimpleSetter<StreamSourceChannel>(); 
-
-        public StreamSourceChannelAdapter(ReadableByteChannel channel) {
-            this.channel = channel;
-        }
-
-        @Override
-        public int read(ByteBuffer dst) throws IOException {
-            return channel.read(dst);
-        }
-
-        @Override
-        public void close() throws IOException {
-            channel.close();
-        }
-
-        @Override
-        public boolean isOpen() {
-            return channel.isOpen();
-        }
-
-        @Override
-        public long read(ByteBuffer[] dst) throws IOException {
-            return read(dst, 0, dst.length);
-        }
-
-        @Override
-        public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-            return channel.read(dsts[0]);
-        }
-
-        @Override
-        public void suspendReads() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void resumeReads() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isReadResumed() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void wakeupReads() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void shutdownReads() throws IOException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void awaitReadable() throws IOException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
-            throw new UnsupportedOperationException();
-            
-        }
-
-        @Override
-        public XnioExecutor getReadThread() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public XnioWorker getWorker() {
-            throw new UnsupportedOperationException();
-
-        }
-
-        @Override
-        public boolean supportsOption(Option<?> option) {
-            return false;
-        }
-
-        @Override
-        public <T> T getOption(Option<T> option) throws IOException {
-            return null;
-        }
-
-        @Override
-        public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
-            return null;
-        }
-
-        @Override
-        public long transferTo(long position, long count, FileChannel target) throws IOException {
-            return 0;
-        }
-
-        @Override
-        public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-            return 0;
-        }
-
-        @Override
-        public Setter<? extends StreamSourceChannel> getReadSetter() {
-            return readSetter;
-        }
-
-        @Override
-        public Setter<? extends StreamSourceChannel> getCloseSetter() {
-            return closeSetter;
-        }
-        
     }
 }
