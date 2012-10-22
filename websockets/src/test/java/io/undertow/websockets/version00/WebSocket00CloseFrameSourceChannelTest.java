@@ -33,12 +33,7 @@ import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
-/**
- * 
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
- *
- */
+
 public class WebSocket00CloseFrameSourceChannelTest {
 
     @Test
@@ -144,8 +139,8 @@ public class WebSocket00CloseFrameSourceChannelTest {
 
         assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         
-        verify(mockChannel);
-        reset(mockChannel);
+        verify(mockChannel, mockSink);
+        reset(mockChannel, mockSink);
     }
     
 }

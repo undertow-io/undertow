@@ -17,26 +17,30 @@
  */
 package io.undertow.websockets.version00;
 
-import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-import static org.easymock.EasyMock.reset;
-import static org.easymock.EasyMock.verify;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import io.undertow.websockets.WebSocketUtils;
 import io.undertow.websockets.utils.StreamSourceChannelAdapter;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 
+import org.easymock.IAnswer;
+import org.easymock.internal.matchers.Any;
 import org.junit.Test;
 import org.xnio.BufferAllocator;
 import org.xnio.Buffers;
 import org.xnio.Pool;
 import org.xnio.channels.PushBackStreamChannel;
+import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
@@ -209,6 +213,68 @@ public class WebSocket00TextFrameSourceChannelTest {
         reset(mockChannel);
     }
     
+    @Test
+    public void testTransferTo() throws IOException {
+        WebSocket00Channel mockChannel = createMock(WebSocket00Channel.class);
+        expect(mockChannel.getBufferPool()).andReturn(POOL).times(2);
+        replay(mockChannel);
+
+        StreamSourceChannel sch = new StreamSourceChannelAdapter(Channels.newChannel(new ByteArrayInputStream(SOURCE_BYTES)));
+
+        PushBackStreamChannel pch = new PushBackStreamChannel(sch);
+
+        File file = File.createTempFile("undertow", ".tmp");
+        file.deleteOnExit();
+
+        WebSocket00TextFrameSourceChannel channel = new WebSocket00TextFrameSourceChannel(pch, mockChannel);
+        assertEquals("Should read 4 bytes", 4, channel.transferTo(0, 8, new FileOutputStream(file).getChannel()));
+
+        assertEquals("Should have transfered 4 bytes", 4L, file.length());
+        
+        InputStream in = new FileInputStream(file);
+        int i = 0;
+        int b = -1;
+        while((b = in.read()) != -1) {
+            assertEquals(SOURCE_BYTES[i++], b);
+        }
+        in.close();
+        assertEquals(4, i);
+        verify(mockChannel);
+        reset(mockChannel);
+    }
+
+    @Test
+    public void testTransferToWithBuffer() throws IOException {
+        WebSocket00Channel mockChannel = createMock(WebSocket00Channel.class);
+        replay(mockChannel);
+        StreamSinkChannel mockSink = createMock(StreamSinkChannel.class);
+        expect(mockSink.write(anyObject(ByteBuffer.class))).andAnswer(new IAnswer<Integer>() {
+
+            @Override
+            public Integer answer() throws Throwable {
+                ByteBuffer buf = (ByteBuffer) getCurrentArguments()[0];
+                assertEquals(8, buf.capacity());
+                assertEquals(1, buf.remaining());
+                assertEquals(SOURCE_BYTES[0], buf.get());
+                return 1;
+            }
+        });
+        replay(mockSink);
+        
+        StreamSourceChannel sch = new StreamSourceChannelAdapter(Channels.newChannel(new ByteArrayInputStream(SOURCE_BYTES)));
+
+        PushBackStreamChannel pch = new PushBackStreamChannel(sch);
+
+
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+
+        WebSocket00TextFrameSourceChannel channel = new WebSocket00TextFrameSourceChannel(pch, mockChannel);
+        assertEquals(1, channel.transferTo(1L, buffer, mockSink));
+        
+        assertFalse(buffer.hasRemaining());
+        verify(mockChannel, mockSink);
+        reset(mockChannel, mockSink);
+    }
     private byte[] toBytes(ByteBuffer buffer) {
         byte[] readBytes = new byte[buffer.remaining()];
         System.arraycopy(buffer.array(), buffer.arrayOffset() + buffer.position(), readBytes, 0, readBytes.length);

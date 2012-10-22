@@ -71,7 +71,6 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                     // we have left less to read as the limit of the buffer, so adjust it
                     buf.limit(remaining);
                 }
-
                 // read into the buffer and flip it. It's not that effective but
                 // I can not think of a
                 // better way that would us allow to detect the end of the frame
@@ -93,6 +92,8 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                     }
                     // Clear the buffer so it can get used for writing again
                     buf.clear();
+                } else {
+                    return r;
                 }
             }
             return r;
@@ -166,7 +167,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
         int limit = pos + r;
 
         if (r == 1) {
-           if (buf.get(pos + 1) == END_FRAME_MARKER) {
+           if (buf.get(pos) == END_FRAME_MARKER) {
                complete = true;
                // frame was complete to just set the position to the limit
                buf.position(pos + 1);
