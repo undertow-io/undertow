@@ -19,6 +19,7 @@ package io.undertow.websockets.version00;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
+import io.undertow.websockets.utils.BufferUtils;
 import io.undertow.websockets.utils.StreamSourceChannelAdapter;
 
 import java.io.ByteArrayInputStream;
@@ -34,6 +35,12 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 
+/**
+ * 
+ * 
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
+ *
+ */
 public class WebSocket00CloseFrameSourceChannelTest {
 
     @Test
@@ -50,8 +57,8 @@ public class WebSocket00CloseFrameSourceChannelTest {
         assertEquals(-1, channel.read(buffer));
         
         assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
-        verify(mockChannel);
-        reset(mockChannel);
+
+        BufferUtils.verifyAndReset(mockChannel);
     }
     
 
@@ -72,8 +79,7 @@ public class WebSocket00CloseFrameSourceChannelTest {
             assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         }
 
-        verify(mockChannel);
-        reset(mockChannel);
+        BufferUtils.verifyAndReset(mockChannel);
     }
     
 
@@ -94,8 +100,7 @@ public class WebSocket00CloseFrameSourceChannelTest {
             assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         }
         
-        verify(mockChannel);
-        reset(mockChannel);
+        BufferUtils.verifyAndReset(mockChannel);
     }
 
     @Test
@@ -115,8 +120,8 @@ public class WebSocket00CloseFrameSourceChannelTest {
         assertEquals(-1, channel.transferTo(0, 8, new FileOutputStream(file).getChannel()));
 
         assertEquals("Nothing should be read", 0L, file.length());
-        verify(mockChannel);
-        reset(mockChannel);
+
+        BufferUtils.verifyAndReset(mockChannel);
     }
 
     @Test
@@ -139,8 +144,7 @@ public class WebSocket00CloseFrameSourceChannelTest {
 
         assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         
-        verify(mockChannel, mockSink);
-        reset(mockChannel, mockSink);
+        BufferUtils.verifyAndReset(mockChannel);
     }
     
 }

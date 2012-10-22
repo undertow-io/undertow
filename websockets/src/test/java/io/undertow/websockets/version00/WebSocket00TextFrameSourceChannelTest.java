@@ -101,8 +101,7 @@ public class WebSocket00TextFrameSourceChannelTest {
 
         assertEquals(-1, pch.read(readBuffer));
 
-        verify(mockChannel);
-        reset(mockChannel);
+        BufferUtils.verifyAndReset(mockChannel);
     }
 
     @Test
@@ -154,8 +153,7 @@ public class WebSocket00TextFrameSourceChannelTest {
 
         assertEquals(-1, pch.read(readBuffer));
 
-        verify(mockChannel);
-        reset(mockChannel);
+        BufferUtils.verifyAndReset(mockChannel);
     }
 
     @Test
@@ -207,8 +205,7 @@ public class WebSocket00TextFrameSourceChannelTest {
 
         assertEquals(-1, pch.read(readBuffer));
 
-        verify(mockChannel);
-        reset(mockChannel);
+        BufferUtils.verifyAndReset(mockChannel);
     }
     
     @Test
@@ -237,8 +234,8 @@ public class WebSocket00TextFrameSourceChannelTest {
         }
         in.close();
         assertEquals(4, i);
-        verify(mockChannel);
-        reset(mockChannel);
+        
+        BufferUtils.verifyAndReset(mockChannel);
     }
 
     @Test
@@ -270,8 +267,8 @@ public class WebSocket00TextFrameSourceChannelTest {
         assertEquals(1, channel.transferTo(1L, buffer, mockSink));
         
         assertFalse(buffer.hasRemaining());
-        verify(mockChannel, mockSink);
-        reset(mockChannel, mockSink);
+        
+        BufferUtils.verifyAndReset(mockChannel, mockSink);
     }
 
 }

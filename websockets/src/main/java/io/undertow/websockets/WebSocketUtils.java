@@ -33,6 +33,9 @@ import org.xnio.Buffers;
  */
 public final class WebSocketUtils {
 
+    /**
+     * UTF-8 {@link Charset} which is used to encode Strings in WebSockets
+     */
     public final static Charset UTF_8 = Charset.forName("UTF-8");
 
     /**

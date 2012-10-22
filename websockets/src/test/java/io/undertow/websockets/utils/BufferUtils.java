@@ -19,6 +19,15 @@ package io.undertow.websockets.utils;
 
 import java.nio.ByteBuffer;
 
+import org.easymock.EasyMock;
+
+import static org.easymock.EasyMock.*;
+
+/**
+ * An utility class which is used for testing
+ * @author norman
+ *
+ */
 public final class BufferUtils {
 
     private BufferUtils() {
@@ -26,9 +35,22 @@ public final class BufferUtils {
     }
 
 
+    /**
+     * Return a array of bytes that holds all the readable data of the {@link ByteBuffer}. It will not increase the position
+     * of the given {@link ByteBuffer}
+     */
     public static byte[] readableBytes(ByteBuffer buffer) {
         byte[] readBytes = new byte[buffer.remaining()];
         System.arraycopy(buffer.array(), buffer.arrayOffset() + buffer.position(), readBytes, 0, readBytes.length);
         return readBytes;
+    }
+
+    /**
+     * Verify and reset the mocks which were created via {@link EasyMock}.
+     * 
+     */
+    public static void verifyAndReset(Object...objects) {
+        verify(objects);
+        reset(objects);
     }
 }
