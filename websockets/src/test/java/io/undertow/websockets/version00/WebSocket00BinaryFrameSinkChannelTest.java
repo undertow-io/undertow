@@ -29,7 +29,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 
-import javax.imageio.stream.FileImageInputStream;
 
 import io.undertow.websockets.WebSocketUtils;
 import io.undertow.websockets.utils.StreamSinkChannelAdapter;
@@ -39,8 +38,6 @@ import io.undertow.websockets.utils.TestUtils;
 import org.junit.Test;
 import org.xnio.ChannelListener;
 import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 
 /**
  *  
