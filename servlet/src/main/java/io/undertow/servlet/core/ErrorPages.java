@@ -41,6 +41,9 @@ public class ErrorPages {
     }
 
     public String getErrorLocation(final Throwable exception) {
+        if(exception == null) {
+            return null;
+        }
         //todo: this is kinda slow, but there is probably not a great deal that can be done about it
         String e = null;
         for(Class c = exception.getClass(); c != null && e == null; c = c.getSuperclass()) {
