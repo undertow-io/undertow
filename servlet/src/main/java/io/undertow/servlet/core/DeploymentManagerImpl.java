@@ -112,6 +112,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
         ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
         try {
 
+            final ApplicationListeners listeners = createListeners();
+            deployment.setApplicationListeners(listeners);
             //first run the SCI's
             for (final ServletContainerInitializerInfo sci : deploymentInfo.getServletContainerInitializers()) {
                 final InstanceHandle<? extends ServletContainerInitializer> instance = sci.getInstanceFactory().createInstance();
@@ -122,8 +124,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
             }
 
-            final ApplicationListeners listeners = createListeners();
-            deployment.setApplicationListeners(listeners);
             listeners.contextInitialized();
             initializeErrorPages(deployment, deploymentInfo);
             initializeMimeMappings(deployment, deploymentInfo);
