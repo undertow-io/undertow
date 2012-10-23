@@ -170,7 +170,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                         UndertowLogger.REQUEST_LOGGER.errorf(e, "Exception while generating error page %s", location);
                     }
                 } else {
-                    UndertowLogger.REQUEST_LOGGER.debugf(t, "Servlet request failed %s", exchange);
+                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", exchange);
                 }
             }
         } finally {
