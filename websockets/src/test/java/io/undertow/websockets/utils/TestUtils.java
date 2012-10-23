@@ -28,9 +28,9 @@ import static org.easymock.EasyMock.*;
  * @author norman
  *
  */
-public final class BufferUtils {
+public final class TestUtils {
 
-    private BufferUtils() {
+    private TestUtils() {
         // utility class
     }
 

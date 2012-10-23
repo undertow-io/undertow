@@ -20,7 +20,7 @@ package io.undertow.websockets.version00;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 import io.undertow.websockets.WebSocketUtils;
-import io.undertow.websockets.utils.BufferUtils;
+import io.undertow.websockets.utils.TestUtils;
 import io.undertow.websockets.utils.StreamSourceChannelAdapter;
 
 import java.io.ByteArrayInputStream;
@@ -87,7 +87,7 @@ public class WebSocket00TextFrameSourceChannelTest {
         readBuffer.flip();
 
         assertEquals(4, readBuffer.remaining());
-        assertArrayEquals(TEXT_BYTES, BufferUtils.readableBytes(readBuffer));
+        assertArrayEquals(TEXT_BYTES, TestUtils.readableBytes(readBuffer));
 
         read = channel.read(readBuffer);
         assertEquals(-1, read);
@@ -97,11 +97,11 @@ public class WebSocket00TextFrameSourceChannelTest {
         assertEquals(2, pch.read(readBuffer));
         readBuffer.flip();
 
-        assertArrayEquals(new byte[] {(byte)1, (byte)2 }, BufferUtils.readableBytes(readBuffer));
+        assertArrayEquals(new byte[] {(byte)1, (byte)2 }, TestUtils.readableBytes(readBuffer));
 
         assertEquals(-1, pch.read(readBuffer));
 
-        BufferUtils.verifyAndReset(mockChannel);
+        TestUtils.verifyAndReset(mockChannel);
     }
 
     @Test
@@ -138,7 +138,7 @@ public class WebSocket00TextFrameSourceChannelTest {
 
         complete.flip();
 
-        assertArrayEquals(TEXT_BYTES, BufferUtils.readableBytes(complete));
+        assertArrayEquals(TEXT_BYTES, TestUtils.readableBytes(complete));
         readBuffer.clear();
 
         read = channel.read(readBuffer);
@@ -149,11 +149,11 @@ public class WebSocket00TextFrameSourceChannelTest {
         assertEquals(2, pch.read(readBuffer));
         readBuffer.flip();
 
-        assertArrayEquals(new byte[] {(byte)1, (byte)2 }, BufferUtils.readableBytes(readBuffer));
+        assertArrayEquals(new byte[] {(byte)1, (byte)2 }, TestUtils.readableBytes(readBuffer));
 
         assertEquals(-1, pch.read(readBuffer));
 
-        BufferUtils.verifyAndReset(mockChannel);
+        TestUtils.verifyAndReset(mockChannel);
     }
 
     @Test
@@ -190,7 +190,7 @@ public class WebSocket00TextFrameSourceChannelTest {
 
         complete.flip();
 
-        assertArrayEquals(TEXT_BYTES, BufferUtils.readableBytes(complete));
+        assertArrayEquals(TEXT_BYTES, TestUtils.readableBytes(complete));
         readBuffer.clear();
 
         read = channel.read(readBuffer);
@@ -201,11 +201,11 @@ public class WebSocket00TextFrameSourceChannelTest {
         assertEquals(2, pch.read(readBuffer));
         readBuffer.flip();
 
-        assertArrayEquals(new byte[] {(byte)1, (byte)2 }, BufferUtils.readableBytes(readBuffer));
+        assertArrayEquals(new byte[] {(byte)1, (byte)2 }, TestUtils.readableBytes(readBuffer));
 
         assertEquals(-1, pch.read(readBuffer));
 
-        BufferUtils.verifyAndReset(mockChannel);
+        TestUtils.verifyAndReset(mockChannel);
     }
     
     @Test
@@ -235,7 +235,7 @@ public class WebSocket00TextFrameSourceChannelTest {
         in.close();
         assertEquals(4, i);
         
-        BufferUtils.verifyAndReset(mockChannel);
+        TestUtils.verifyAndReset(mockChannel);
     }
 
     @Test
@@ -268,7 +268,7 @@ public class WebSocket00TextFrameSourceChannelTest {
         
         assertFalse(buffer.hasRemaining());
         
-        BufferUtils.verifyAndReset(mockChannel, mockSink);
+        TestUtils.verifyAndReset(mockChannel, mockSink);
     }
 
 }

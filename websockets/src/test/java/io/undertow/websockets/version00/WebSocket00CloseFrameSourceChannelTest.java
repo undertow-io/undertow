@@ -19,7 +19,7 @@ package io.undertow.websockets.version00;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
-import io.undertow.websockets.utils.BufferUtils;
+import io.undertow.websockets.utils.TestUtils;
 import io.undertow.websockets.utils.StreamSourceChannelAdapter;
 
 import java.io.ByteArrayInputStream;
@@ -58,7 +58,7 @@ public class WebSocket00CloseFrameSourceChannelTest {
         
         assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
 
-        BufferUtils.verifyAndReset(mockChannel);
+        TestUtils.verifyAndReset(mockChannel);
     }
     
 
@@ -79,7 +79,7 @@ public class WebSocket00CloseFrameSourceChannelTest {
             assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         }
 
-        BufferUtils.verifyAndReset(mockChannel);
+        TestUtils.verifyAndReset(mockChannel);
     }
     
 
@@ -100,7 +100,7 @@ public class WebSocket00CloseFrameSourceChannelTest {
             assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         }
         
-        BufferUtils.verifyAndReset(mockChannel);
+        TestUtils.verifyAndReset(mockChannel);
     }
 
     @Test
@@ -121,7 +121,7 @@ public class WebSocket00CloseFrameSourceChannelTest {
 
         assertEquals("Nothing should be read", 0L, file.length());
 
-        BufferUtils.verifyAndReset(mockChannel);
+        TestUtils.verifyAndReset(mockChannel);
     }
 
     @Test
@@ -144,7 +144,7 @@ public class WebSocket00CloseFrameSourceChannelTest {
 
         assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         
-        BufferUtils.verifyAndReset(mockChannel);
+        TestUtils.verifyAndReset(mockChannel);
     }
     
 }
