@@ -205,7 +205,7 @@ public class WebSocket00BinaryFrameSourceChannelTest {
 
         PushBackStreamChannel pch = new PushBackStreamChannel(sch);
 
-        File file = File.createTempFile("undertow", ".tmp");
+        File file = File.createTempFile("undertow-j", ".tmp");
         file.deleteOnExit();
 
         WebSocket00BinaryFrameSourceChannel channel = new WebSocket00BinaryFrameSourceChannel(pch, mockChannel, TEXT_BYTES.length);

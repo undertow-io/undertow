@@ -54,6 +54,7 @@ public class WebSocket00Channel extends WebSocketChannel {
         super(channel, bufferPool, WebSocketVersion.V00, wsUrl);
     }
 
+
     @Override
     protected StreamSourceFrameChannel create(Pooled<ByteBuffer> pooled, PushBackStreamChannel channel) throws WebSocketException {
         ByteBuffer buffer = pooled.getResource();

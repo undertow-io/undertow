@@ -197,7 +197,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void suspendWrites() {
-        if (wsChannel.currentSender.peek() == this) {
+        if (isInUse()) {
             channel.suspendWrites();
         }
     }
@@ -205,15 +205,18 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void resumeWrites() {
-        if (wsChannel.currentSender.peek() == this) {
+        if (isInUse()) {
             channel.suspendWrites();
         }        
     }
 
+    protected final boolean isInUse() {
+        return wsChannel.isInUse(this);
+    }
 
     @Override
     public boolean isWriteResumed() {
-        if (wsChannel.currentSender.peek() == this) {
+        if (isInUse()) {
             return channel.isWriteResumed();
         } else {
             return false;
@@ -223,7 +226,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void wakeupWrites() {
-        if (wsChannel.currentSender.peek() == this) {
+        if (isInUse()) {
             channel.wakeupWrites();
         }
         ChannelListeners.invokeChannelListener(this, writeSetter.get());
@@ -241,7 +244,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void awaitWritable() throws IOException {
-        if (wsChannel.currentSender.peek() == this) {
+        if (isInUse()) {
             channel.awaitWritable();
         } else {
             try {
@@ -262,7 +265,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
-        if (wsChannel.currentSender.peek() == this) {
+        if (isInUse()) {
             channel.awaitWritable(time, timeUnit);
         } else {
             try {
@@ -289,7 +292,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public boolean flush() throws IOException {
-        if (wsChannel.currentSender.peek() == this) {
+        if (isInUse()) {
             return channel.flush();
         }
         return false;

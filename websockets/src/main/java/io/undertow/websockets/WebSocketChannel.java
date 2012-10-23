@@ -51,7 +51,7 @@ import org.xnio.channels.StreamSinkChannel;
 public abstract class WebSocketChannel implements ConnectedChannel {
 
     final AtomicReference<StreamSourceFrameChannel> receiver = new AtomicReference<StreamSourceFrameChannel>();
-    final Queue<StreamSinkFrameChannel> currentSender = new ConcurrentLinkedQueue<StreamSinkFrameChannel>();
+    private final Queue<StreamSinkFrameChannel> currentSender = new ConcurrentLinkedQueue<StreamSinkFrameChannel>();
     private final ConnectedStreamChannel channel;
     private final WebSocketVersion version;
     private final String wsUrl;
@@ -87,6 +87,10 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      */
     public Pool<ByteBuffer> getBufferPool() {
         return bufferPool;
+    }
+
+    protected final boolean isInUse(StreamSinkChannel channel) {
+        return currentSender.peek() == channel;
     }
 
     /**

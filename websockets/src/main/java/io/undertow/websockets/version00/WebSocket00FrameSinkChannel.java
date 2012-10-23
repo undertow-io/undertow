@@ -45,7 +45,7 @@ abstract class WebSocket00FrameSinkChannel  extends StreamSinkFrameChannel {
         super(channel, wsChannel, type, payloadSize);
     }
 
-    private final ByteBuffer start = createFrameStart();
+    private final ByteBuffer start = (ByteBuffer) createFrameStart().flip();
     
     private long written = 0;
   
@@ -74,7 +74,7 @@ abstract class WebSocket00FrameSinkChannel  extends StreamSinkFrameChannel {
                  channel.close();
              }
          } else {
-             final ByteBuffer buf = createFrameEnd();
+             final ByteBuffer buf = (ByteBuffer) createFrameEnd().flip();
  
              while(buf.hasRemaining()) {
                  if (channel.write(buf) == 0) {
