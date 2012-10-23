@@ -199,7 +199,8 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         }
         int ext = lastSegment.lastIndexOf('.');
         if (ext == -1) {
-            return defaultAllowed;
+            //no extension
+            return true;
         }
         final String extension = lastSegment.substring(ext + 1, lastSegment.length());
         if (defaultAllowed) {
