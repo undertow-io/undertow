@@ -135,16 +135,7 @@ public class StreamSourceChannelAdapter implements StreamSourceChannel {
 
     @Override
     public long transferTo(long position, long count, FileChannel target) throws IOException {
-        ByteBuffer buf = ByteBuffer.allocate((int) count);
-        int r = channel.read(buf);
-        buf.flip();
-        while(buf.hasRemaining()) {
-            if ( target.write(buf) < 1) {
-                throw new IOException("Unable to write out all bytes");
-            }
-        }
-        buf.clear();
-        return r;
+        return target.transferTo(position, count, target);
     }
 
     @Override
