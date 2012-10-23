@@ -124,7 +124,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      * @throws IOException      Get thrown if an problem during the close operation is detected
      */
     protected abstract boolean close0() throws IOException ;
-    
+
     @Override
     public final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
         checkClosed();
@@ -139,7 +139,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return write0(srcs);
     }
 
-
     protected abstract long write0(ByteBuffer[] srcs) throws IOException;
 
     @Override
@@ -147,7 +146,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         checkClosed();
         return write0(src);
     }
-    
+
     protected abstract int write0(ByteBuffer src) throws IOException;
 
 
@@ -157,7 +156,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         checkClosed();
         return transferFrom0(src, position, count);
     }
-    
+
     protected abstract long transferFrom0(FileChannel src, long position, long count) throws IOException;
 
 

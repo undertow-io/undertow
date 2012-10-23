@@ -40,7 +40,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     private final WebSocketFrameType type;
     protected final StreamSourceChannel channel;
     protected final WebSocketChannel wsChannel;
-    private SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
+    private final SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private volatile boolean closed;
     
     public StreamSourceFrameChannel(StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
@@ -70,7 +70,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     @Override
     public void close() throws IOException {
-        if(wsChannel.receiver.compareAndSet(this, null)) {
+        if(wsChannel.recycle(this)) {
             closed = true;
             ChannelListeners.invokeChannelListener(this, closeSetter.get());
         }
