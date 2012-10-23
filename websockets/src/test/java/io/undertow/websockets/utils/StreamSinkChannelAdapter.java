@@ -83,12 +83,12 @@ public class StreamSinkChannelAdapter implements StreamSinkChannel {
 
     @Override
     public void suspendWrites() {
-        throw new UnsupportedOperationException();
+        // Noop
     }
 
     @Override
     public void resumeWrites() {
-        throw new UnsupportedOperationException();
+        // Noop
     }
 
     @Override
