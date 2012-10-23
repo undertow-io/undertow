@@ -68,13 +68,13 @@
         <version.org.jboss.classfilewriter>1.0.4.Final</version.org.jboss.classfilewriter>
         <version.junit>4.8.2</version.junit>
         <version.xnio>3.1.0.Beta6</version.xnio>
+        <version.io.undertow.jastow>1.0.0.Alpha1-SNAPSHOT</version.io.undertow.jastow>
         <version.org.jboss.logging>3.1.1.GA</version.org.jboss.logging>
         <version.org.jboss.logmanager>1.4.0.Beta1</version.org.jboss.logmanager>
         <version.org.jboss.logging.processor>1.0.3.Final</version.org.jboss.logging.processor>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec>1.0.2.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.1.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.web.jasper-jdt>7.0.3.Final</version.org.jboss.web.jasper-jdt>
-        <version.org.jboss.web.jastow>7.2.0.Alpha2-SNAPSHOT</version.org.jboss.web.jastow>
         <version.checkstyle.plugin>2.9.1</version.checkstyle.plugin>
 
         <!-- Surefire args -->
@@ -280,9 +280,9 @@
             </dependency>
 
             <dependency>
-                <groupId>org.jboss.web</groupId>
+                <groupId>io.undertow.jastow</groupId>
                 <artifactId>jastow</artifactId>
-                <version>${version.org.jboss.web.jastow}</version>
+                <version>${version.io.undertow.jastow}</version>
             </dependency>
 
             <dependency>
