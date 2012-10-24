@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import io.undertow.websockets.WebSocketChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -36,8 +37,8 @@ import io.undertow.websockets.WebSocketFrameType;
  */
 class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
 
-    WebSocket00CloseFrameSourceChannel(StreamSourceChannel channel, WebSocket00Channel wsChannel) {
-        super(channel, wsChannel, WebSocketFrameType.CLOSE);
+    WebSocket00CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket00Channel wsChannel) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE);
     }
 
     /**

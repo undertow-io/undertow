@@ -186,13 +186,7 @@ abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel {
 
                         @Override
                         public void handleEvent(StreamSinkChannel channel) {
-                            try {
-                                // flushed now remove the channel
-                                WebSocket00FrameSinkChannel.this.recycle();
-                            } catch (IOException e) {
-                                // TODO: Logging
-                                IoUtils.safeClose(channel);
-                            }
+
                         }
 
                     }, ChannelListeners.closingChannelExceptionHandler()));
@@ -201,7 +195,7 @@ abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel {
 
                 } else {
                     // everything flushed out now its safe to remove this channel
-                    WebSocket00FrameSinkChannel.this.recycle();
+                    //WebSocket00FrameSinkChannel.this.recycle();
                 }
             } catch (IOException e) {
                 // TODO: Logging

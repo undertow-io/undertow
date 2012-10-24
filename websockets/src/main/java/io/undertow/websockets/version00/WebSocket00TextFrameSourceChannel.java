@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import io.undertow.websockets.WebSocketChannel;
 import org.xnio.Pooled;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
@@ -39,8 +40,8 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
     private final byte END_FRAME_MARKER = (byte) 0xFF;
     private boolean complete = false;
 
-    WebSocket00TextFrameSourceChannel(PushBackStreamChannel channel, WebSocket00Channel wsChannel) {
-        super(channel, wsChannel, WebSocketFrameType.TEXT);
+    WebSocket00TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl,PushBackStreamChannel channel, WebSocket00Channel wsChannel) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT);
     }
 
     @Override

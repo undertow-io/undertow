@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import io.undertow.websockets.WebSocketChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -37,8 +38,8 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
     private final int payloadSize;
     private int readBytes;
 
-    WebSocket00BinaryFrameSourceChannel(StreamSourceChannel channel, WebSocket00Channel wsChannel, int payloadSize) {
-        super(channel, wsChannel, WebSocketFrameType.BINARY);
+    WebSocket00BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket00Channel wsChannel, int payloadSize) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY);
         this.payloadSize = payloadSize;
     }
 

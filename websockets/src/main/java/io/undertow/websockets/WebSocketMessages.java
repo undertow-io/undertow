@@ -18,6 +18,8 @@
 
 package io.undertow.websockets;
 
+import java.io.IOException;
+
 import org.jboss.logging.Message;
 import org.jboss.logging.MessageBundle;
 import org.jboss.logging.Messages;
@@ -33,5 +35,8 @@ public interface WebSocketMessages {
 
     @Message(id = 2001, value = "Not a WebSocket handshake request: missing upgrade in the headers")
     WebSocketHandshakeException missingUpgradeHeaders();
+
+    @Message(id = 2002, value = "Channel is closed")
+    IOException channelClosed();
 
 }
