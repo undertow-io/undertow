@@ -117,4 +117,16 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5018, value = "Exception occurred during authentication using handler %s")
     void exceptionWhileAuthenticating(final AuthenticationMechanism handler, @Cause IOException exception);
 
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5019, value = "An invalid token '%s' with value '%s' has been received.")
+    void invalidTokenReceived(final String tokenName, final String tokenValue);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5020, value = "A mandatory token %s is missing from the request.")
+    void missingAuthorizationToken(final String tokenName);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 5021, value = "Verification of authentication tokens for user '%s' has failed using mechanism '%s'.")
+    void authenticationFailed(final String userName, final String mechanism);
+
 }

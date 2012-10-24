@@ -32,6 +32,9 @@ public interface NonceManager {
     /**
      * Select the next nonce to be sent from the server taking into account the last valid nonce.
      *
+     * It is both possible and likely that the nonce last used by the client will still be valid, in that case the same nonce
+     * will be returned.
+     *
      * @param lastNonce - The last valid nonce received from the client or null if we don't already have a nonce.
      * @return The next nonce to be sent in a challenge to the client.
      */
@@ -42,6 +45,12 @@ public interface NonceManager {
      *
      * If the nonce can not be used but the related digest was correct then a new nonce should be returned to the client
      * indicating that the nonce was stale.
+     *
+     * For implementations of this interface this method is not expected by be idempotent, i.e. once a nonce is validated with a
+     * specific nonceCount it is not expected that this method will return true again if the same combination is presented.
+     *
+     * This method is expected to ONLY be called if the users credentials are valid as a storage overhead could be incurred
+     * this overhead must not be accessible to unauthenticated clients.
      *
      * @param nonce - The nonce receieved from the client.
      * @param nonceCount - The nonce count from the client or -1 of none specified.

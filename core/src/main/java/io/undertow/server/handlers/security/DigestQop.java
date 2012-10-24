@@ -17,6 +17,10 @@
  */
 package io.undertow.server.handlers.security;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Enumeration to represent the Digest quality of protection options.
  *
@@ -24,8 +28,20 @@ package io.undertow.server.handlers.security;
  */
 public enum DigestQop {
 
-    AUTH("auth", false),
-    AUTH_INT("auth-int", true);
+    AUTH("auth", false), AUTH_INT("auth-int", true);
+
+    private static final Map<String, DigestQop> BY_TOKEN;
+
+    static {
+        DigestQop[] qops = DigestQop.values();
+
+        Map<String, DigestQop> byToken = new HashMap<String, DigestQop>(qops.length);
+        for (DigestQop current : qops) {
+            byToken.put(current.token, current);
+        }
+
+        BY_TOKEN = Collections.unmodifiableMap(byToken);
+    }
 
     private final String token;
     private final boolean integrity;
@@ -41,6 +57,10 @@ public enum DigestQop {
 
     public boolean isMessageIntegrity() {
         return integrity;
+    }
+
+    public static DigestQop forName(final String name) {
+        return BY_TOKEN.get(name);
     }
 
 }

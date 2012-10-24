@@ -46,6 +46,13 @@ public class SecurityContext {
 
     private final List<AuthenticationMechanism> authMechanisms = new ArrayList<AuthenticationMechanism>();
 
+    // TODO - We also need to supply a login method that allows app to supply a username and password.
+    // Maybe this will need to be a custom mechanism that doesn't exchange tokens with the client but will then
+    // be configured to either associate with the connection, the session or some other arbitrary whatever.
+    //
+    // Do we want multiple to be supported or just one?  Maybe extend the AuthenticationMechanism to allow
+    // it to be identified and called.
+
     private AuthenticationState authenticationState = AuthenticationState.NOT_REQUIRED;
     private Principal authenticatedPrincipal;
 

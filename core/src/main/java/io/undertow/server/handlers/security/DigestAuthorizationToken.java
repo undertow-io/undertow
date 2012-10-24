@@ -34,7 +34,7 @@ public enum DigestAuthorizationToken implements HeaderToken {
     USERNAME(Headers.USERNAME, true),
     REALM(Headers.REALM, true),
     NONCE(Headers.NONCE, true),
-    DIGEST_URI(Headers.URI, false),
+    DIGEST_URI(Headers.URI, true),
     RESPONSE(Headers.RESPONSE, true),
     ALGORITHM(Headers.ALGORITHM, true),
     CNONCE(Headers.CNONCE, true),

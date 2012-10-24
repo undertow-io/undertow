@@ -17,6 +17,12 @@
  */
 package io.undertow.server.handlers.security;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Enumeration of the supported digest algorithms.
  *
@@ -25,6 +31,19 @@ package io.undertow.server.handlers.security;
 public enum DigestAlgorithm {
 
     MD5("MD5", "MD5", false), MD5_SESS("MD5-sess", "MD5", true);
+
+    private static final Map<String, DigestAlgorithm> BY_TOKEN;
+
+    static {
+        DigestAlgorithm[] algorithms = DigestAlgorithm.values();
+
+        Map<String, DigestAlgorithm> byToken = new HashMap<String, DigestAlgorithm>(algorithms.length);
+        for (DigestAlgorithm current : algorithms) {
+            byToken.put(current.token, current);
+        }
+
+        BY_TOKEN = Collections.unmodifiableMap(byToken);
+    }
 
     private final String token;
     private final String digestAlgorithm;
@@ -46,6 +65,15 @@ public enum DigestAlgorithm {
 
     public boolean isSession() {
         return session;
+    }
+
+    public MessageDigest getMessageDigest() throws NoSuchAlgorithmException {
+        // TODO - If we end up always Hex based then may use a wrapper here.
+        return MessageDigest.getInstance(digestAlgorithm);
+    }
+
+    public static DigestAlgorithm forName(final String name) {
+        return BY_TOKEN.get(name);
     }
 
 }
