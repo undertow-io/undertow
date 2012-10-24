@@ -17,26 +17,24 @@
  */
 package io.undertow.websockets.version00;
 
-import io.undertow.websockets.WebSocketFrameType;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import io.undertow.websockets.WebSocketFrameType;
 import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+
 /**
- * 
  * {@link WebSocket00FrameSinkChannel} implementation for writing {@link WebSocketFrameType#CLOSE}
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket00CloseFrameSinkChannel extends WebSocket00FrameSinkChannel {
     private static final ByteBuffer END = ByteBuffer.allocate(2).put((byte) 0xFF).put((byte) 0x00);
 
-    
+
     WebSocket00CloseFrameSinkChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel) {
         super(channel, wsChannel, WebSocketFrameType.CLOSE, 0);
     }
@@ -45,7 +43,7 @@ class WebSocket00CloseFrameSinkChannel extends WebSocket00FrameSinkChannel {
     protected int write0(ByteBuffer src) throws IOException {
         throw new IOException("CloseFrames are not allowed to have a payload");
     }
- 
+
 
     @Override
     protected long write0(ByteBuffer[] srcs, int offset, int length) throws IOException {

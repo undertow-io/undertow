@@ -25,22 +25,20 @@ import java.security.NoSuchAlgorithmException;
 import org.xnio.Buffers;
 
 /**
- * Utility class which holds general useful utility methods which 
+ * Utility class which holds general useful utility methods which
  * can be used within WebSocket implementations.
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public final class WebSocketUtils {
 
     /**
      * UTF-8 {@link Charset} which is used to encode Strings in WebSockets
      */
-    public final static Charset UTF_8 = Charset.forName("UTF-8");
+    public static final Charset UTF_8 = Charset.forName("UTF-8");
 
     /**
      * Generate the MD5 hash out of the given {@link ByteBuffer}
-     *
      */
     public static ByteBuffer md5(ByteBuffer buffer) {
         try {
@@ -54,9 +52,9 @@ public final class WebSocketUtils {
     }
 
     /**
-     * Create a {@link ByteBuffer} which holds the UTF8 encoded bytes for the 
+     * Create a {@link ByteBuffer} which holds the UTF8 encoded bytes for the
      * given {@link String}.
-     * 
+     *
      * @param utfString The {@link String} to convert
      * @return buffer   The {@link ByteBuffer} which was created
      */

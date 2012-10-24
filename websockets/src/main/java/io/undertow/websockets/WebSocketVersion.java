@@ -27,7 +27,7 @@ package io.undertow.websockets;
  * A specification is tied to one wire protocol version but a protocol version may have use by more than 1 version of
  * the specification.
  * </p>
- * 
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public enum WebSocketVersion {

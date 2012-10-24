@@ -35,22 +35,21 @@ import io.undertow.websockets.WebSocketVersion;
 
 /**
  * {@link WebSocketChannel} which is used for {@link WebSocketVersion#V00}
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket00Channel extends WebSocketChannel {
 
     /**
-     * Create a new {@link WebSocket00Channel} 
-     * 
-     * @param channel           The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
-     *                          Be aware that it already must be "upgraded".
-     * @param bufferPool        The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
-     * @param wsUrl             The url for which the {@link WebSocket00Channel} was created.
+     * Create a new {@link WebSocket00Channel}
+     *
+     * @param channel    The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
+     *                   Be aware that it already must be "upgraded".
+     * @param bufferPool The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
+     * @param wsUrl      The url for which the {@link WebSocket00Channel} was created.
      */
     public WebSocket00Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool,
-            String wsUrl) {
+                              String wsUrl) {
         super(channel, bufferPool, WebSocketVersion.V00, wsUrl);
     }
 
@@ -93,17 +92,17 @@ public class WebSocket00Channel extends WebSocketChannel {
     @Override
     protected StreamSinkFrameChannel create(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize) {
         switch (type) {
-        case TEXT:
-            return new WebSocket00TextFrameSinkChannel(channel, this, payloadSize);
-        case BINARY:
-            return new WebSocket00BinaryFrameSinkChannel(channel, this, payloadSize);
-        case CLOSE:
-            if (payloadSize != 0) {
-                throw new IllegalArgumentException("Payload is not support in CloseFrames when using WebSocket Version 00");
-            }
-            return new WebSocket00CloseFrameSinkChannel(channel, this);
-        default:
-            throw new IllegalArgumentException("WebSocketFrameType " + type + " is not supported by this WebSocketChannel");
+            case TEXT:
+                return new WebSocket00TextFrameSinkChannel(channel, this, payloadSize);
+            case BINARY:
+                return new WebSocket00BinaryFrameSinkChannel(channel, this, payloadSize);
+            case CLOSE:
+                if (payloadSize != 0) {
+                    throw new IllegalArgumentException("Payload is not support in CloseFrames when using WebSocket Version 00");
+                }
+                return new WebSocket00CloseFrameSinkChannel(channel, this);
+            default:
+                throw new IllegalArgumentException("WebSocketFrameType " + type + " is not supported by this WebSocketChannel");
         }
     }
 }

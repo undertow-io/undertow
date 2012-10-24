@@ -21,9 +21,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.jboss.logging.Logger;
-
-import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.websockets.WebSocketChannel;
@@ -33,14 +30,10 @@ import io.undertow.websockets.WebSocketVersion;
 /**
  * The {@link WebSocketServerHandshaker} is responsible to issue the WebSocket Handshake and upgrade via the {@link #handshake(HttpServerExchange)} method.
  * Once this method was called and successes without and {@link WebSocketHandshakeException} no futher {@link HttpServerExchange} will be generated in processed.
- * 
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public abstract class WebSocketServerHandshaker {
-
-    protected final static UndertowLogger WEBSOCKET_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".websocket");
 
     private final String url;
 
@@ -51,7 +44,7 @@ public abstract class WebSocketServerHandshaker {
     private final long maxFramePayloadLength;
 
     /**
-     * {@link #WebSocketServerHandshaker(WebSocketVersion, String, String, long)} using {@link Long#MAX_VALUE} as 
+     * {@link #WebSocketServerHandshaker(WebSocketVersion, String, String, long)} using {@link Long#MAX_VALUE} as
      * maxFramePayloadLength.
      */
     protected WebSocketServerHandshaker(WebSocketVersion version, String webSocketUrl, String subprotocols) {
@@ -62,20 +55,16 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Constructor a new {@link WebSocketServerHandshaker}
      *
-     * @param version
-     *            the protocol version for which this {@link WebSocketServerHandshaker} will be used
-     * @param url
-     *            URL for web socket communications. e.g
-     *            "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param subprotocols
-     *            Comma-separated list of supported protocols. Null if sub protocols not
-     *            supported.
-     * @param maxFramePayloadLength
-     *            Maximum length of a frame's payload.
+     * @param version               the protocol version for which this {@link WebSocketServerHandshaker} will be used
+     * @param url                   URL for web socket communications. e.g
+     *                              "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *                              sent to this URL.
+     * @param subprotocols          Comma-separated list of supported protocols. Null if sub protocols not
+     *                              supported.
+     * @param maxFramePayloadLength Maximum length of a frame's payload.
      */
     protected WebSocketServerHandshaker(WebSocketVersion version, String url, String subprotocols,
-            long maxFramePayloadLength) {
+                                        long maxFramePayloadLength) {
         this.version = version;
         this.url = url;
         if (subprotocols != null) {
@@ -121,16 +110,14 @@ public abstract class WebSocketServerHandshaker {
         return maxFramePayloadLength;
     }
 
-    
+
     /**
      * Selects the first matching supported sub protocol
      *
-     * @param requestedSubprotocols
-     *          Comma-separated list of protocols to be supported. e.g. "chat, superchat"
+     * @param requestedSubprotocols Comma-separated list of protocols to be supported. e.g. "chat, superchat"
      * @return sub
-     *          First matching supported sub protocol.
-     * @throws WebSocketHandshakeException 
-     *          Get thrown if no subprotocol could be found
+     *         First matching supported sub protocol.
+     * @throws WebSocketHandshakeException Get thrown if no subprotocol could be found
      */
     protected final String selectSubprotocol(String requestedSubprotocols) throws WebSocketHandshakeException {
         if (requestedSubprotocols == null || subprotocols.isEmpty()) {
@@ -154,11 +141,9 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Issue the WebSocket upgrade and upgrade the {@link HttpServerConnection} to a {@link WebSocketServerConnection} once the
      * handshake was done.
-     * 
-     * @param exchange
-     *          The {@link HttpServerExchange} for which the handshake and upgrade should occur.
-     * @throws WebSocketHandshakeException
-     *          Thrown if the handshake fails for what-ever reason.
+     *
+     * @param exchange The {@link HttpServerExchange} for which the handshake and upgrade should occur.
+     * @throws WebSocketHandshakeException Thrown if the handshake fails for what-ever reason.
      */
     public abstract WebSocketChannel handshake(HttpServerExchange exchange) throws WebSocketHandshakeException;
 }

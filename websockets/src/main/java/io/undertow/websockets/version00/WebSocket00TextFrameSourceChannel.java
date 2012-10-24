@@ -31,15 +31,14 @@ import io.undertow.websockets.WebSocketFrameType;
 
 /**
  * {@link StreamSourceFrameChannel} to read Frames of type {@link WebSocketFrameType#TEXT}
- *  
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
 
     private final byte END_FRAME_MARKER = (byte) 0xFF;
     private boolean complete = false;
-    
+
     WebSocket00TextFrameSourceChannel(PushBackStreamChannel channel, WebSocket00Channel wsChannel) {
         super(channel, wsChannel, WebSocketFrameType.TEXT);
     }
@@ -167,18 +166,18 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
         int limit = pos + r;
 
         if (r == 1) {
-           if (buf.get(pos) == END_FRAME_MARKER) {
-               complete = true;
-               // frame was complete to just set the position to the limit
-               buf.position(pos + 1);
-               return -1;
-           }
+            if (buf.get(pos) == END_FRAME_MARKER) {
+                complete = true;
+                // frame was complete to just set the position to the limit
+                buf.position(pos + 1);
+                return -1;
+            }
         } else if (r > 1) {
-            while(pos < limit) {
+            while (pos < limit) {
                 if (buf.get(pos) == END_FRAME_MARKER) {
                     complete = true;
 
-                    if (pos +1 < r) {
+                    if (pos + 1 < r) {
                         ByteBuffer remainingBytes;
                         if (pos == 0) {
                             remainingBytes = (ByteBuffer) buf.duplicate().position(pos + 1).limit(buf.limit());
@@ -188,11 +187,11 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
 
                         // Set the new position so that once the buffer is flipped it will be the new limit
                         buf.position(pos);
-                        
+
                         Pooled<ByteBuffer> pooled = wsChannel.getBufferPool().allocate();
                         ByteBuffer pooledBuf = pooled.getResource();
                         pooledBuf.clear();
-                        
+
                         boolean failed = true;
 
                         try {
@@ -200,7 +199,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                             pooledBuf.put(remainingBytes).flip();
 
                             // push back the bytes that not belong to the frame
-                            ((PushBackStreamChannel)channel).unget(pooled);
+                            ((PushBackStreamChannel) channel).unget(pooled);
                             failed = false;
 
                         } finally {
@@ -209,8 +208,8 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                                 // to not run into a leak
                                 pooled.free();
 
-                                // What we should do here now that it was failed ? 
-                                // I think closing the channel would probably make sense as the channel is 
+                                // What we should do here now that it was failed ?
+                                // I think closing the channel would probably make sense as the channel is
                                 // unusable
                                 // TODO: Fix me
                             }
@@ -226,12 +225,12 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                     }
 
                     // return the read bytes
-                    return r  - pos + 1;
+                    return r - pos + 1;
                 }
                 pos++;
             }
             return r;
-           
+
         }
         return r;
     }
@@ -248,10 +247,10 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
         }
 
         long r = 0;
-        while(index < length) {
+        while (index < length) {
             int i = read(bufs[index++]);
             if (i > 0) {
-                r =+ i;
+                r = +i;
             } else {
                 break;
             }

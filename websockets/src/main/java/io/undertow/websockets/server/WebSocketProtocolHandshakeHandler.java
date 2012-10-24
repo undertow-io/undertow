@@ -32,8 +32,7 @@ import io.undertow.websockets.WebSocketVersionNotSupportedException;
 /**
  * {@link HttpHandler} which will process the {@link HttpServerExchange} and do the actual handshake/upgrade
  * to WebSocket.
- * 
- * 
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocketProtocolHandshakeHandler implements HttpHandler {
@@ -42,9 +41,9 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
 
     /**
      * Create a new {@link WebSocketProtocolHandshakeHandler}
-     * 
-     * @param websocketPath     The path which is used to serve the WebSocket requests
-     * @param subprotocols      The sub-protocols to handle
+     *
+     * @param websocketPath The path which is used to serve the WebSocket requests
+     * @param subprotocols  The sub-protocols to handle
      */
     public WebSocketProtocolHandshakeHandler(String websocketPath, String subprotocols) {
         this.websocketPath = websocketPath;
@@ -68,7 +67,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
             // After the handshake was complete we are now have the connection upgraded to WebSocket and no futher HTTP processing will take place.
         } catch (WebSocketVersionNotSupportedException e) {
             exchange.setResponseCode(101);
-            exchange.getResponseHeaders().put(HttpString.tryFromString("Sec-WebSocket-Version"),  WebSocketVersion.V13.toHttpHeaderValue());
+            exchange.getResponseHeaders().put(HttpString.tryFromString("Sec-WebSocket-Version"), WebSocketVersion.V13.toHttpHeaderValue());
             completionHandler.handleComplete();
             return;
         } catch (WebSocketHandshakeException e) {
@@ -78,17 +77,17 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
             // TODO: Proper logging
             e.printStackTrace();
         }
-        
+
     }
-    
+
     /**
      * Get the proper WebSocket location
-     * 
-     * @param   exchange        The {@link HttpServerExchange} which is used to do the upgrade.
-     * @param   path            The path which is used for serve WebSockets
-     * @return  location        The complete location for WebSockets
+     *
+     * @param exchange The {@link HttpServerExchange} which is used to do the upgrade.
+     * @param path     The path which is used for serve WebSockets
+     * @return location        The complete location for WebSockets
      */
-    private static final String getWebSocketLocation(HttpServerExchange exchange, String path) {
+    private static String getWebSocketLocation(HttpServerExchange exchange, String path) {
         String protocol = "ws";
         if (exchange.getRequestScheme().equalsIgnoreCase("https")) {
             // SSL in use so use Secure WebSockets

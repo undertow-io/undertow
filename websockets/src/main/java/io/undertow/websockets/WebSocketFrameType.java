@@ -18,11 +18,9 @@
 package io.undertow.websockets;
 
 /**
- * 
  * The different WebSocketFrame types which are out there.
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public enum WebSocketFrameType {
 
@@ -44,12 +42,12 @@ public enum WebSocketFrameType {
     /**
      * {@link WebSocketFrame} which should be issued after a {@link #PING} was received
      */
-    PONG, 
+    PONG,
 
     /**
      * {@link WebSocketFrame} which requests the close of the WebSockets connection
      */
-    CLOSE, 
+    CLOSE,
 
     /**
      * {@link WebSocketFrame} which notify about more data to come

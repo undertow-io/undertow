@@ -18,6 +18,7 @@
 package io.undertow.websockets;
 
 import static org.xnio.IoUtils.safeClose;
+
 import io.undertow.UndertowLogger;
 import io.undertow.websockets.version00.WebSocket00Channel;
 
@@ -43,10 +44,9 @@ import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
- * A {@link ConnectedChannel} which can be used to send and receive WebSocket Frames. 
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
+ * A {@link ConnectedChannel} which can be used to send and receive WebSocket Frames.
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public abstract class WebSocketChannel implements ConnectedChannel {
 
@@ -61,13 +61,13 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
 
     /**
-     * Create a new {@link WebSocketChannel} 
-     * 
-     * @param channel           The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
-     *                          Be aware that it already must be "upgraded".
-     * @param bufferPool        The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
-     * @param version           The {@link WebSocketVersion} of the {@link WebSocketChannel}
-     * @param wsUrl             The url for which the {@link WebSocket00Channel} was created.
+     * Create a new {@link WebSocketChannel}
+     *
+     * @param channel    The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
+     *                   Be aware that it already must be "upgraded".
+     * @param bufferPool The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
+     * @param version    The {@link WebSocketVersion} of the {@link WebSocketChannel}
+     * @param wsUrl      The url for which the {@link WebSocket00Channel} was created.
      */
     protected WebSocketChannel(final ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl) {
         this.channel = channel;
@@ -117,7 +117,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             currentSender.remove(channel);
         }
     }
-    
+
     @Override
     public SocketAddress getLocalAddress() {
         return channel.getLocalAddress();
@@ -185,7 +185,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     /**
      * Return the URL of the WebSocket endpoint.
-     * 
+     *
      * @return url The URL of the endpoint
      */
     public String getUrl() {
@@ -194,7 +194,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     /**
      * Return the {@link WebSocketVersion} which is used
-     * 
+     *
      * @return version The {@link WebSocketVersion} which is in use
      */
     public WebSocketVersion getVersion() {
@@ -219,7 +219,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         return getLocalAddress(InetSocketAddress.class);
     }
 
-    
+
     /**
      * Async receive, returns null if no frame is ready. Otherwise returns a
      * channel that can be used to read the frame contents.
@@ -242,7 +242,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 ex = e;
             }
         }
-        for (;;) {
+        for (; ; ) {
             StreamSinkFrameChannel ch = currentSender.poll();
             if (ch == null) {
                 break;
@@ -269,20 +269,20 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 ex = e;
             }
         }
-        
+
         if (ex != null) {
             throw ex;
         }
     }
-    
+
     /**
      * Returns a new {@link StreamSinkFrameChannel} for sending the given {@link WebSocketFrameType} with the given payload.
      * If this method is called multiple times, subsequent {@link StreamSinkFrameChannel}'s will not be writable until all previous frames
      * were completely written.
-     * 
-     * @param type              The {@link WebSocketFrameType} for which a {@link StreamSinkChannel} should be created
-     * @param payloadSize       The size of the payload which will be included in the WebSocket Frame. This may be 0 if you want
-     *                          to transmit no payload at all.
+     *
+     * @param type        The {@link WebSocketFrameType} for which a {@link StreamSinkChannel} should be created
+     * @param payloadSize The size of the payload which will be included in the WebSocket Frame. This may be 0 if you want
+     *                    to transmit no payload at all.
      */
     public StreamSinkFrameChannel send(WebSocketFrameType type, long payloadSize) {
         if (payloadSize < 0) {
@@ -310,30 +310,29 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     /**
      * Create a new {@link StreamSourceFrameChannel}  which can be used to read the data of the received WebSocket Frame
-     * 
-     * @param buffer                    The {@link Pooled} {@link ByteBuffer} which. is used to detect which {@link StreamSourceFrameChannel} to create.
-     * @param channel                   The {@link PushBackStreamChannel} to wrap
+     *
+     * @param buffer  The {@link Pooled} {@link ByteBuffer} which. is used to detect which {@link StreamSourceFrameChannel} to create.
+     * @param channel The {@link PushBackStreamChannel} to wrap
      * @return channel                  A {@link StreamSourceFrameChannel} will be used to read a Frame from.
-     *                                  This will return <code>null</code> if the right {@link StreamSourceFrameChannel} could not be detected with the given
-     *                                  buffer and so more data is needed.
-     * @throws WebSocketException       Is thrown if something goes wrong
+     *         This will return <code>null</code> if the right {@link StreamSourceFrameChannel} could not be detected with the given
+     *         buffer and so more data is needed.
+     * @throws WebSocketException Is thrown if something goes wrong
      */
     protected abstract StreamSourceFrameChannel create(Pooled<ByteBuffer> buffer, PushBackStreamChannel channel) throws WebSocketException;
-    
+
     /**
      * Create a new StreamSinkFrameChannel which can be used to send a WebSocket Frame of the type {@link WebSocketFrameType}.
-     * 
-     * @param channel           The {@link StreamSinkChannel} to wrap
-     * @param type              The {@link WebSocketFrameType} of the WebSocketFrame which will be send over this {@link StreamSinkFrameChannel}
-     * @param payloadSize       The size of the payload to transmit. May be 0 if non payload at all should be included. 
+     *
+     * @param channel     The {@link StreamSinkChannel} to wrap
+     * @param type        The {@link WebSocketFrameType} of the WebSocketFrame which will be send over this {@link StreamSinkFrameChannel}
+     * @param payloadSize The size of the payload to transmit. May be 0 if non payload at all should be included.
      */
     protected abstract StreamSinkFrameChannel create(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize);
-    
+
 
     /**
      * {@link ChannelListener} which reads data from the {@link PushBackStreamChannel} until it was able to detect a WebSocket Frame.
-     * Once that happended it will remove it self from listening 
-     *
+     * Once that happended it will remove it self from listening
      */
     private final class WebSocketReadListener implements ChannelListener<PushBackStreamChannel> {
         @Override
@@ -357,7 +356,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                         return;
                     }
                     if (res == 0) {
-                        if(!channel.isReadResumed()) {
+                        if (!channel.isReadResumed()) {
                             channel.getReadSetter().set(this);
                             channel.resumeReads();
                         }
@@ -366,7 +365,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                     if (res == -1) {
                         try {
                             channel.shutdownReads();
-                            
+
                         } catch (IOException e) {
                             if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                                 UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
@@ -379,7 +378,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                     }
                     buffer.flip();
                 }
-                
+
                 if (buffer.hasRemaining()) {
                     // something was left in the buffer, push it back so it can be processed by the actual Source
                     pushBackStreamChannel.unget(pooled);
@@ -387,7 +386,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 }
 
                 receiver.set(sourceChannel);
-                
+
                 // we remove ourselves as the read listener from the channel;
                 channel.getReadSetter().set(null);
                 channel.suspendReads();
