@@ -19,18 +19,16 @@ package io.undertow.websockets.version00;
 
 import java.nio.ByteBuffer;
 
-import org.xnio.Pool;
-import org.xnio.Pooled;
-import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.channels.PushBackStreamChannel;
-import org.xnio.channels.StreamSinkChannel;
-
 import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.StreamSourceFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketException;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketVersion;
+import org.xnio.Pool;
+import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.channels.PushBackStreamChannel;
+import org.xnio.channels.StreamSinkChannel;
 
 
 /**
@@ -55,38 +53,58 @@ public class WebSocket00Channel extends WebSocketChannel {
 
 
     @Override
-    protected StreamSourceFrameChannel create(Pooled<ByteBuffer> pooled, PushBackStreamChannel channel) throws WebSocketException {
-        ByteBuffer buffer = pooled.getResource();
-        byte type = buffer.get();
+    protected PartialFrame recieveFrame(final StreamSourceChannelControl streamSourceChannelControl) {
+        return new PartialFrame() {
 
-        if ((type & 0x80) == 0x80) {
+            private StreamSourceFrameChannel channel;
 
-            long frameSize = 0;
-            int lengthFieldSize = 0;
-            byte b;
-
-            // If the MSB on type is set, decode the frame length
-            do {
-                b = buffer.get();
-                frameSize <<= 7;
-                frameSize |= b & 0x7f;
-
-                lengthFieldSize++;
-                if (lengthFieldSize > 8) {
-                    // Perhaps a malicious peer?
-                    throw new WebSocketException("No Length encoded in the frame");
-                }
-            } while ((b & 0x80) == 0x80 && buffer.hasRemaining());
-            if (frameSize == 0) {
-                return new WebSocket00CloseFrameSourceChannel(channel, this);
-            } else {
-                return new WebSocket00BinaryFrameSourceChannel(channel, this, (int) frameSize);
+            @Override
+            public StreamSourceFrameChannel getChannel() {
+                return channel;
             }
-        } else {
-            // Decode a 0xff terminated UTF-8 string
-            return new WebSocket00TextFrameSourceChannel(channel, this);
-        }
 
+            @Override
+            public void handle(final ByteBuffer buffer, final PushBackStreamChannel channel) throws WebSocketException {
+                //TODO: deal with the case where we can't read all the data at once
+                if (!buffer.hasRemaining()) {
+                    return;
+                }
+                byte type = buffer.get();
+
+                if ((type & 0x80) == 0x80) {
+
+                    long frameSize = 0;
+                    int lengthFieldSize = 0;
+                    byte b;
+
+                    // If the MSB on type is set, decode the frame length
+                    do {
+                        b = buffer.get();
+                        frameSize <<= 7;
+                        frameSize |= b & 0x7f;
+
+                        lengthFieldSize++;
+                        if (lengthFieldSize > 8) {
+                            // Perhaps a malicious peer?
+                            throw new WebSocketException("No Length encoded in the frame");
+                        }
+                    } while ((b & 0x80) == 0x80 && buffer.hasRemaining());
+                    if (frameSize == 0) {
+                        this.channel = new WebSocket00CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
+                    } else {
+                        this.channel = new WebSocket00BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this, (int) frameSize);
+                    }
+                } else {
+                    // Decode a 0xff terminated UTF-8 string
+                    this.channel = new WebSocket00TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
+                }
+            }
+
+            @Override
+            public boolean isDone() {
+                return channel != null;
+            }
+        };
     }
 
     @Override

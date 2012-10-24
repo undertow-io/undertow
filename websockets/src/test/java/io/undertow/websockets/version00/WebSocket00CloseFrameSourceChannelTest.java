@@ -17,11 +17,6 @@
  */
 package io.undertow.websockets.version00;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-import io.undertow.websockets.utils.TestUtils;
-import io.undertow.websockets.utils.StreamSourceChannelAdapter;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -29,15 +24,22 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 
+import io.undertow.websockets.WebSocketChannel;
+import io.undertow.websockets.utils.StreamSourceChannelAdapter;
+import io.undertow.websockets.utils.TestUtils;
 import org.junit.Test;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.replay;
+import static org.junit.Assert.assertEquals;
+
 
 /**
- * 
- * 
+ *
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
@@ -51,16 +53,16 @@ public class WebSocket00CloseFrameSourceChannelTest {
         StreamSourceChannel sch = new StreamSourceChannelAdapter(Channels.newChannel(new ByteArrayInputStream(new byte[] { (byte) 1, (byte) 2})));
 
         PushBackStreamChannel pch = new PushBackStreamChannel(sch);
-        
-        WebSocket00CloseFrameSourceChannel channel = new WebSocket00CloseFrameSourceChannel(pch, mockChannel);
+
+        WebSocket00CloseFrameSourceChannel channel = new WebSocket00CloseFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel);
         ByteBuffer buffer = ByteBuffer.allocate(8);
         assertEquals(-1, channel.read(buffer));
-        
+
         assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
 
         TestUtils.verifyAndReset(mockChannel);
     }
-    
+
 
     @Test
     public void testReadWithByteBuffers() throws IOException {
@@ -70,18 +72,18 @@ public class WebSocket00CloseFrameSourceChannelTest {
         StreamSourceChannel sch = new StreamSourceChannelAdapter(Channels.newChannel(new ByteArrayInputStream(new byte[] { (byte) 1, (byte) 2})));
 
         PushBackStreamChannel pch = new PushBackStreamChannel(sch);
-        
-        WebSocket00CloseFrameSourceChannel channel = new WebSocket00CloseFrameSourceChannel(pch, mockChannel);
+
+        WebSocket00CloseFrameSourceChannel channel = new WebSocket00CloseFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class),pch, mockChannel);
         ByteBuffer[] buffers = {ByteBuffer.allocate(8), ByteBuffer.allocate(8)};
         assertEquals(-1, channel.read(buffers));
-        
+
         for (ByteBuffer buffer: buffers) {
             assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         }
 
         TestUtils.verifyAndReset(mockChannel);
     }
-    
+
 
     @Test
     public void testReadWithByteBuffersWithOffset() throws IOException {
@@ -91,15 +93,15 @@ public class WebSocket00CloseFrameSourceChannelTest {
         StreamSourceChannel sch = new StreamSourceChannelAdapter(Channels.newChannel(new ByteArrayInputStream(new byte[] { (byte) 1, (byte) 2})));
 
         PushBackStreamChannel pch = new PushBackStreamChannel(sch);
-        
-        WebSocket00CloseFrameSourceChannel channel = new WebSocket00CloseFrameSourceChannel(pch, mockChannel);
+
+        WebSocket00CloseFrameSourceChannel channel = new WebSocket00CloseFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class),pch, mockChannel);
         ByteBuffer[] buffers = {ByteBuffer.allocate(8), ByteBuffer.allocate(8)};
         assertEquals(-1, channel.read(buffers, 0 , 1));
-        
+
         for (ByteBuffer buffer: buffers) {
             assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         }
-        
+
         TestUtils.verifyAndReset(mockChannel);
     }
 
@@ -116,7 +118,7 @@ public class WebSocket00CloseFrameSourceChannelTest {
         File file = File.createTempFile("undertow", ".tmp");
         file.deleteOnExit();
 
-        WebSocket00CloseFrameSourceChannel channel = new WebSocket00CloseFrameSourceChannel(pch, mockChannel);
+        WebSocket00CloseFrameSourceChannel channel = new WebSocket00CloseFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class),pch, mockChannel);
         assertEquals(-1, channel.transferTo(0, 8, new FileOutputStream(file).getChannel()));
 
         assertEquals("Nothing should be read", 0L, file.length());
@@ -130,7 +132,7 @@ public class WebSocket00CloseFrameSourceChannelTest {
         replay(mockChannel);
         StreamSinkChannel mockSink = createMock(StreamSinkChannel.class);
         replay(mockSink);
-        
+
         StreamSourceChannel sch = new StreamSourceChannelAdapter(Channels.newChannel(new ByteArrayInputStream(
                 new byte[] { (byte) 1, (byte) 2 })));
 
@@ -139,12 +141,12 @@ public class WebSocket00CloseFrameSourceChannelTest {
 
         ByteBuffer buffer = ByteBuffer.allocate(8);
 
-        WebSocket00CloseFrameSourceChannel channel = new WebSocket00CloseFrameSourceChannel(pch, mockChannel);
+        WebSocket00CloseFrameSourceChannel channel = new WebSocket00CloseFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class),pch, mockChannel);
         assertEquals(-1, channel.transferTo(1L, buffer, mockSink));
 
         assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
-        
+
         TestUtils.verifyAndReset(mockChannel);
     }
-    
+
 }

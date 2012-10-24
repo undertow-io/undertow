@@ -91,26 +91,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!closed) {
             closed = true;
             flush();
-            if (close0()) {
-                recycle();
-            }
-
+            close0();
         }
     }
 
-
-    /**
-     * Recycle this {@link StreamSinkFrameChannel}. After thats its not usable at all
-     *
-     * @throws IOException
-     */
-    protected final void recycle() throws IOException {
-        if (recycled) {
-            throw new IllegalStateException("Should not get recycled multiple times");
-        }
-        recycled = true;
-        wsChannel.recycle(this);
-    }
 
     /**
      * Gets called on {@link #close()}. If this returns <code>true<code> the {@link #recycle()} method will be triggered automaticly.

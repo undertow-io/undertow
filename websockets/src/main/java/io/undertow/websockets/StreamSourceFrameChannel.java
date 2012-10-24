@@ -35,13 +35,16 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
+    protected final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl;
     private final WebSocketFrameType type;
     protected final StreamSourceChannel channel;
     protected final WebSocketChannel wsChannel;
+    private final SimpleSetter<? extends StreamSourceFrameChannel> readSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private final SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private volatile boolean closed;
 
-    public StreamSourceFrameChannel(StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
+    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
+        this.streamSourceChannelControl = streamSourceChannelControl;
         this.channel = channel;
         this.wsChannel = wsChannel;
         this.type = type;
@@ -56,7 +59,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     @Override
     public Setter<? extends StreamSourceChannel> getReadSetter() {
-        return channel.getReadSetter();
+        return readSetter;
     }
 
     @Override
@@ -66,10 +69,8 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     @Override
     public void close() throws IOException {
-        if (wsChannel.recycle(this)) {
-            closed = true;
-            ChannelListeners.invokeChannelListener(this, closeSetter.get());
-        }
+        closed = true;
+        ChannelListeners.invokeChannelListener(this, closeSetter.get());
     }
 
     @Override

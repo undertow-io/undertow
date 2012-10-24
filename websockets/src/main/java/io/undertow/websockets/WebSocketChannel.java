@@ -17,31 +17,29 @@
  */
 package io.undertow.websockets;
 
-import static org.xnio.IoUtils.safeClose;
-
-import io.undertow.UndertowLogger;
-import io.undertow.websockets.version00.WebSocket00Channel;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicReference;
 
+import io.undertow.UndertowLogger;
+import io.undertow.websockets.version00.WebSocket00Channel;
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.XnioWorker;
-import org.xnio.ChannelListener.Setter;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
+
+import static org.xnio.IoUtils.safeClose;
 
 /**
  * A {@link ConnectedChannel} which can be used to send and receive WebSocket Frames.
@@ -50,18 +48,24 @@ import org.xnio.channels.StreamSinkChannel;
  */
 public abstract class WebSocketChannel implements ConnectedChannel {
 
-    private final AtomicReference<StreamSourceFrameChannel> receiver = new AtomicReference<StreamSourceFrameChannel>();
     private final Queue<StreamSinkFrameChannel> currentSender = new ConcurrentLinkedQueue<StreamSinkFrameChannel>();
     private final ConnectedStreamChannel channel;
     private final WebSocketVersion version;
     private final String wsUrl;
     private final Setter<WebSocketChannel> closeSetter;
+    private final ChannelListener.SimpleSetter<WebSocketChannel> receiveSetter;
     private final PushBackStreamChannel pushBackStreamChannel;
     private final Pool<ByteBuffer> bufferPool;
 
+    private volatile StreamSourceFrameChannel receiver;
+    /**
+     * an incoming frame that has not been created yet
+     */
+    private volatile PartialFrame partialFrame;
 
     /**
      * Create a new {@link WebSocketChannel}
+     * 8
      *
      * @param channel    The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
      *                   Be aware that it already must be "upgraded".
@@ -74,7 +78,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         this.version = version;
         this.wsUrl = wsUrl;
         this.bufferPool = bufferPool;
-        closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
+        this.closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
+        this.receiveSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
         pushBackStreamChannel = new PushBackStreamChannel(channel);
         pushBackStreamChannel.getReadSetter().set(new WebSocketReadListener());
     }
@@ -91,31 +96,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     protected final boolean isInUse(StreamSinkChannel channel) {
         return currentSender.peek() == channel;
-    }
-
-    protected final boolean recycle(StreamSourceFrameChannel channel) {
-        return receiver.compareAndSet(channel, null);
-    }
-
-    /**
-     * Recycle the given {@link StreamSinkFrameChannel}. This means that it will not longer be able to send any data.
-     */
-    void recycle(StreamSinkFrameChannel channel) throws IOException {
-        if (currentSender.peek() == channel) {
-            // TODO: I think thats not safe
-            if (currentSender.remove(channel)) {
-                channel.flush();
-
-                StreamSinkFrameChannel ch = currentSender.peek();
-
-                // notify threads that may wait because of  StreamSinkFrameChannel.await*()
-                ch.notifyWaiters();
-
-                ChannelListeners.invokeChannelListener(ch, ch.closeSetter.get());
-            }
-        } else {
-            currentSender.remove(channel);
-        }
     }
 
     @Override
@@ -224,55 +204,89 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * Async receive, returns null if no frame is ready. Otherwise returns a
      * channel that can be used to read the frame contents.
      */
-    public StreamSourceFrameChannel receive() {
-        return receiver.getAndSet(null);
+    public StreamSourceFrameChannel receive() throws IOException {
+        final Pooled<ByteBuffer> pooled = getBufferPool().allocate();
+        final ByteBuffer buffer = pooled.getResource();
+        boolean free = true;
+
+        try {
+            PartialFrame partialFrame = this.partialFrame;
+            if (partialFrame == null) {
+                partialFrame = recieveFrame(new StreamSourceChannelControl());
+            }
+
+            StreamSourceFrameChannel sourceChannel = null;
+            int res;
+            while (!partialFrame.isDone()) {
+                buffer.clear();
+                try {
+                    res = channel.read(buffer);
+                } catch (IOException e) {
+                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
+                    }
+                    safeClose(channel);
+                    throw e;
+                }
+                if (res == 0) {
+                    return null;
+                }
+                if (res == -1) {
+                    try {
+                        channel.shutdownReads();
+
+                    } catch (IOException e) {
+                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                            UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
+                        }
+                        // nothing we can do here.. close
+                        IoUtils.safeClose(channel);
+                        throw e;
+                    }
+                    throw WebSocketMessages.MESSAGES.channelClosed();
+                }
+                buffer.flip();
+                try {
+                    partialFrame.handle(buffer, pushBackStreamChannel);
+                } catch (WebSocketException e) {
+                    //the data was corrupt
+                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        UndertowLogger.REQUEST_LOGGER.debugf(e, "receive failed due to Exception");
+                    }
+                    // nothing we can do here.. close
+                    IoUtils.safeClose(channel);
+                    throw new IOException(e);
+                }
+            }
+
+            if (buffer.hasRemaining()) {
+                // something was left in the buffer, push it back so it can be processed by the actual Source
+                pushBackStreamChannel.unget(pooled);
+                free = false;
+            }
+
+            channel.suspendReads();
+            this.partialFrame = null;
+            return partialFrame.getChannel();
+
+        } finally {
+            if (free) {
+                pooled.free();
+            }
+        }
+    }
+
+
+    public Setter<WebSocketChannel> getReceiveSetter() {
+        return receiveSetter;
     }
 
     /**
-     * Close the {@link WebSocketChannel} and also all {@link StreamSinkFrameChannel}'s and {@link StreamSourceFrameChannel} that was acquired
+     * Close the {@link WebSocketChannel}.
      */
     @Override
     public void close() throws IOException {
-        IOException ex = null;
-        StreamSourceFrameChannel channel = receiver.get();
-        if (channel != null) {
-            try {
-                channel.close();
-            } catch (IOException e) {
-                ex = e;
-            }
-        }
-        for (; ; ) {
-            StreamSinkFrameChannel ch = currentSender.poll();
-            if (ch == null) {
-                break;
-            }
-            try {
-                ch.close();
-            } catch (IOException e) {
-                if (ex == null) {
-                    ex = e;
-                }
-            }
-        }
-        try {
-            pushBackStreamChannel.close();
-        } catch (IOException e) {
-            if (ex == null) {
-                ex = e;
-            }
-        }
-        try {
-            channel.close();
-        } catch (IOException e) {
-            if (ex == null) {
-                ex = e;
-            }
-        }
-
-        if (ex != null) {
-            throw ex;
-        }
+        channel.close();
     }
 
     /**
@@ -299,10 +313,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         closeChannel.close();
     }
 
-    public ChannelListener.Setter<? extends WebSocketChannel> getReceiveSetter() {
-        return null;
-    }
-
     @Override
     public ChannelListener.Setter<? extends WebSocketChannel> getCloseSetter() {
         return closeSetter;
@@ -311,14 +321,13 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     /**
      * Create a new {@link StreamSourceFrameChannel}  which can be used to read the data of the received WebSocket Frame
      *
-     * @param buffer  The {@link Pooled} {@link ByteBuffer} which. is used to detect which {@link StreamSourceFrameChannel} to create.
-     * @param channel The {@link PushBackStreamChannel} to wrap
-     * @return channel                  A {@link StreamSourceFrameChannel} will be used to read a Frame from.
+     * @param streamSourceChannelControl@return
+     *         channel                  A {@link StreamSourceFrameChannel} will be used to read a Frame from.
      *         This will return <code>null</code> if the right {@link StreamSourceFrameChannel} could not be detected with the given
      *         buffer and so more data is needed.
      * @throws WebSocketException Is thrown if something goes wrong
      */
-    protected abstract StreamSourceFrameChannel create(Pooled<ByteBuffer> buffer, PushBackStreamChannel channel) throws WebSocketException;
+    protected abstract PartialFrame recieveFrame(final StreamSourceChannelControl streamSourceChannelControl);
 
     /**
      * Create a new StreamSinkFrameChannel which can be used to send a WebSocket Frame of the type {@link WebSocketFrameType}.
@@ -329,77 +338,55 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      */
     protected abstract StreamSinkFrameChannel create(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize);
 
-
     /**
-     * {@link ChannelListener} which reads data from the {@link PushBackStreamChannel} until it was able to detect a WebSocket Frame.
-     * Once that happended it will remove it self from listening
+     * {@link ChannelListener} which delegates the read notification to the appropriate listener
      */
     private final class WebSocketReadListener implements ChannelListener<PushBackStreamChannel> {
         @Override
         public void handleEvent(final PushBackStreamChannel channel) {
-            final Pooled<ByteBuffer> pooled = getBufferPool().allocate();
-            final ByteBuffer buffer = pooled.getResource();
-            boolean free = true;
-
-            try {
-                StreamSourceFrameChannel sourceChannel = null;
-                int res;
-                while ((sourceChannel = create(pooled, pushBackStreamChannel)) == null) {
-                    buffer.clear();
-                    try {
-                        res = channel.read(buffer);
-                    } catch (IOException e) {
-                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                            UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
-                        }
-                        safeClose(channel);
-                        return;
-                    }
-                    if (res == 0) {
-                        if (!channel.isReadResumed()) {
-                            channel.getReadSetter().set(this);
-                            channel.resumeReads();
-                        }
-                        return;
-                    }
-                    if (res == -1) {
-                        try {
-                            channel.shutdownReads();
-
-                        } catch (IOException e) {
-                            if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                                UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
-                            }
-                            // nothing we can do here.. close
-                            IoUtils.safeClose(channel);
-                            return;
-                        }
-                        return;
-                    }
-                    buffer.flip();
-                }
-
-                if (buffer.hasRemaining()) {
-                    // something was left in the buffer, push it back so it can be processed by the actual Source
-                    pushBackStreamChannel.unget(pooled);
-                    free = false;
-                }
-
-                receiver.set(sourceChannel);
-
-                // we remove ourselves as the read listener from the channel;
-                channel.getReadSetter().set(null);
-                channel.suspendReads();
-
-            } catch (WebSocketException e) {
-                UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
-                IoUtils.safeClose(channel);
-                IoUtils.safeClose(WebSocketChannel.this);
-            } finally {
-                if (free) {
-                    pooled.free();
-                }
+            final StreamSourceFrameChannel receiver = WebSocketChannel.this.receiver;
+            if (receiver != null) {
+                ChannelListeners.invokeChannelListener(receiver, ((SimpleSetter) receiver.getReadSetter()).get());
+            } else {
+                ChannelListeners.invokeChannelListener(WebSocketChannel.this, receiveSetter.get());
             }
         }
     }
+
+    /**
+     * Interface that represenets a channel that is in the process of being created
+     */
+    public interface PartialFrame {
+
+        /**
+         * @return The channel, or null if the channel is not availble yet
+         */
+        StreamSourceFrameChannel getChannel();
+
+        /**
+         * Handles the data, any remaining data will be pushed back
+         *
+         * @param data
+         */
+        void handle(ByteBuffer data, final PushBackStreamChannel channel) throws WebSocketException;
+
+        /**
+         * @return true if the channel is available
+         */
+        boolean isDone();
+    }
+
+    public class StreamSourceChannelControl {
+
+        private StreamSourceChannelControl() {
+
+        }
+
+        public void readFrameDone() {
+            receiver = null;
+            channel.resumeReads();
+        }
+    }
+
+
 }
