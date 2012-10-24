@@ -17,18 +17,16 @@
  */
 package io.undertow.websockets.version00;
 
-import io.undertow.websockets.WebSocketFrameType;
-
 import java.nio.ByteBuffer;
 
+import io.undertow.websockets.WebSocketFrameType;
 import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
+
 /**
- * 
  * {@link WebSocket00FrameSinkChannel} implementation for writing {@link WebSocketFrameType#BINARY}
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket00BinaryFrameSinkChannel extends WebSocket00FrameSinkChannel {
 
@@ -54,18 +52,18 @@ class WebSocket00BinaryFrameSinkChannel extends WebSocket00FrameSinkChannel {
                     buffer.put((byte) b4);
                 } else {
                     buffer.put((byte) (b3 | 0x80));
-                    buffer.put((byte)b4);
+                    buffer.put((byte) b4);
                 }
             } else {
-                buffer.put((byte)(b2 | 0x80));
-                buffer.put((byte)(b3 | 0x80));
-                buffer.put((byte)b4);
+                buffer.put((byte) (b2 | 0x80));
+                buffer.put((byte) (b3 | 0x80));
+                buffer.put((byte) b4);
             }
         } else {
-            buffer.put((byte)(b1 | 0x80));
-            buffer.put((byte)(b2 | 0x80));
-            buffer.put((byte)(b3 | 0x80));
-            buffer.put((byte)b4);
+            buffer.put((byte) (b1 | 0x80));
+            buffer.put((byte) (b2 | 0x80));
+            buffer.put((byte) (b3 | 0x80));
+            buffer.put((byte) b4);
         }
         buffer.flip();
         return buffer;
