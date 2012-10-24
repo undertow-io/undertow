@@ -31,9 +31,8 @@ import io.undertow.websockets.WebSocketFrameType;
 
 /**
  * {@link StreamSourceFrameChannel} which allows to read WebSocketFrames of type {@link WebSocketFrameType#CLOSE}
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
 

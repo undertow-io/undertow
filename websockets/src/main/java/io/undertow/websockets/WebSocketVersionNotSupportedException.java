@@ -20,14 +20,13 @@ package io.undertow.websockets;
 /**
  * Special {@link WebSocketHandshakeException} which is thrown if the requested WebSocket Version is not
  * supported.
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocketVersionNotSupportedException extends WebSocketHandshakeException {
 
     /**
-     * 
+     *
      */
     private static final long serialVersionUID = 1508553157345558990L;
 

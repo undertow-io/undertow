@@ -19,14 +19,13 @@ package io.undertow.websockets;
 
 /**
  * Base class for all WebSocket Exceptions
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocketException extends Exception {
 
     /**
-     * 
+     *
      */
     private static final long serialVersionUID = -6784834646314672530L;
 

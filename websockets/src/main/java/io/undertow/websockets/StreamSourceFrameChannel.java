@@ -31,9 +31,7 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- * 
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
- *
  */
 public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
@@ -42,7 +40,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     protected final WebSocketChannel wsChannel;
     private final SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private volatile boolean closed;
-    
+
     public StreamSourceFrameChannel(StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
         this.channel = channel;
         this.wsChannel = wsChannel;
@@ -51,8 +49,6 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     /**
      * Return the {@link WebSocketFrameType} or <code>null</code> if its not known at the calling time.
-     * 
-     * 
      */
     public WebSocketFrameType getType() {
         return type;
@@ -70,7 +66,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     @Override
     public void close() throws IOException {
-        if(wsChannel.recycle(this)) {
+        if (wsChannel.recycle(this)) {
             closed = true;
             ChannelListeners.invokeChannelListener(this, closeSetter.get());
         }

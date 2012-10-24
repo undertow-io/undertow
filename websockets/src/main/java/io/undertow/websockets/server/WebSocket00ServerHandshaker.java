@@ -1,5 +1,8 @@
 package io.undertow.websockets.server;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -9,32 +12,25 @@ import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketUtils;
 import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.version00.WebSocket00Channel;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
  * {@link WebSocketServerHandshaker} which can be used to issue the handshake for {@link WebSocketVersion#V00}.
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
 
     /**
      * Constructor using default values
      *
-     * @param webSocketUrl
-     *            URL for web socket communications. e.g
-     *            "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param subprotocols
-     *            CSV of supported protocols. Null if sub protocols not
-     *            supported.
+     * @param webSocketUrl URL for web socket communications. e.g
+     *                     "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *                     sent to this URL.
+     * @param subprotocols CSV of supported protocols. Null if sub protocols not
+     *                     supported.
      */
     public WebSocket00ServerHandshaker(String webSocketUrl, String subprotocols) {
         super(WebSocketVersion.V00, webSocketUrl, subprotocols, Long.MAX_VALUE);
@@ -43,19 +39,16 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
 
     /**
      * Constructor specifying the destination web socket location
-     * 
-     * @param webSocketUrl
-     *            URL for web socket communications. e.g
-     *            "ws://myhost.com/mypath". Subsequent web socket frames will be
-     *            sent to this URL.
-     * @param subprotocols
-     *            CSV of supported protocols. Null if sub protocols not
-     *            supported.
-     * @param maxFramePayloadLength
-     *            Maximum length of a frame's payload
+     *
+     * @param webSocketUrl          URL for web socket communications. e.g
+     *                              "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *                              sent to this URL.
+     * @param subprotocols          CSV of supported protocols. Null if sub protocols not
+     *                              supported.
+     * @param maxFramePayloadLength Maximum length of a frame's payload
      */
     public WebSocket00ServerHandshaker(String webSocketUrl, String subprotocols,
-            long maxFramePayloadLength) {
+                                       long maxFramePayloadLength) {
         super(WebSocketVersion.V00, webSocketUrl, subprotocols, maxFramePayloadLength);
     }
 
@@ -99,8 +92,8 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
             try {
                 int read = -1;
                 int amount = 0;
-                while((read = channel.read(buf)) != -1) {
-                    amount =+ read;
+                while ((read = channel.read(buf)) != -1) {
+                    amount = +read;
                     if (amount >= 8) {
                         break;
                     }
@@ -110,9 +103,9 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
             } finally {
                 IoUtils.safeClose(channel);
             }
-            
+
             buf.flip();
-            
+
             long c = buf.getLong();
             ByteBuffer input = ByteBuffer.allocate(16);
             input.putInt(a);
@@ -136,7 +129,7 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
             } finally {
                 IoUtils.safeClose(ch);
             }
-            
+
         } else {
             // Old Hixie 75 handshake method has not challenge, so no need to generate one
             responseHeader.add(HttpString.tryFromString("WebSocket-Origin"), requestHeader.getFirst(Headers.ORIGIN));

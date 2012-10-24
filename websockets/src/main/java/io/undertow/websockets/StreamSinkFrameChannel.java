@@ -34,10 +34,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- * 
- * 
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
- *
  */
 public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
@@ -47,7 +44,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     protected final WebSocketChannel wsChannel;
     final SimpleSetter<StreamSinkFrameChannel> closeSetter = new SimpleSetter<StreamSinkFrameChannel>();
     final SimpleSetter<StreamSinkFrameChannel> writeSetter = new SimpleSetter<StreamSinkFrameChannel>();
-    
+
     private volatile boolean closed;
     private final AtomicBoolean writesDone = new AtomicBoolean();
     protected final long payloadSize;
@@ -79,8 +76,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     /**
      * Return the {@link WebSocketFrameType} for which the {@link StreamSinkFrameChannel} was obtained.
-     * 
-     * 
      */
     public WebSocketFrameType getType() {
         return type;
@@ -106,7 +101,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     /**
      * Recycle this {@link StreamSinkFrameChannel}. After thats its not usable at all
-     * 
+     *
      * @throws IOException
      */
     protected final void recycle() throws IOException {
@@ -119,18 +114,18 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     /**
      * Gets called on {@link #close()}. If this returns <code>true<code> the {@link #recycle()} method will be triggered automaticly.
-     * 
+     *
      * @return recycle          <code>true</code> if the {@link StreamSinkFrameChannel} is ready for recycle.
-     * @throws IOException      Get thrown if an problem during the close operation is detected
+     * @throws IOException Get thrown if an problem during the close operation is detected
      */
-    protected abstract boolean close0() throws IOException ;
+    protected abstract boolean close0() throws IOException;
 
     @Override
     public final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
         checkClosed();
         return write0(srcs, offset, length);
     }
-    
+
     protected abstract long write0(ByteBuffer[] srcs, int offset, int length) throws IOException;
 
     @Override
@@ -148,7 +143,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     protected abstract int write0(ByteBuffer src) throws IOException;
-
 
 
     @Override
@@ -206,7 +200,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     public void resumeWrites() {
         if (isInUse()) {
             channel.suspendWrites();
-        }        
+        }
     }
 
     protected final boolean isInUse() {

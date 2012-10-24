@@ -17,17 +17,15 @@
  */
 package io.undertow.websockets.version00;
 
-import io.undertow.websockets.WebSocketFrameType;
-
 import java.nio.ByteBuffer;
 
+import io.undertow.websockets.WebSocketFrameType;
 import org.xnio.channels.StreamSinkChannel;
+
 /**
- * 
  * {@link WebSocket00FrameSinkChannel} implementation for writing {@link WebSocketFrameType#TEXT}
- * 
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
+ * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket00TextFrameSinkChannel extends WebSocket00FrameSinkChannel {
 
