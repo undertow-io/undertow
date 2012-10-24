@@ -100,7 +100,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * The resolved part of the canonical path.
      */
-    private volatile String resolvedPath = "/";
+    private volatile String resolvedPath = "";
 
     /**
      * the query string

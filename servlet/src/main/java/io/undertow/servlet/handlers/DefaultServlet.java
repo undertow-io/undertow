@@ -37,11 +37,12 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.file.DirectFileCache;
 import io.undertow.server.handlers.file.FileCache;
 import io.undertow.servlet.api.Deployment;
+import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.util.CopyOnWriteMap;
-import io.undertow.util.Headers;
 import org.xnio.IoUtils;
 
 /**
@@ -83,7 +84,6 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             resp.setStatus(404);
             return;
         }
-        ServletOutputStream out = null;
         final File resource = deployment.getDeploymentInfo().getResourceLoader().getResource(path);
         if (resource == null) {
             resp.setStatus(404);
@@ -91,20 +91,25 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         } else if (resource.isDirectory()) {
             handleWelcomePage(req, resp, resource);
         } else {
-            InputStream in = new BufferedInputStream(new FileInputStream(resource));
-            try {
-                int read;
-                final byte[] buffer = new byte[1024];
-                out = resp.getOutputStream();
-                while ((read = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, read);
-                }
-            } finally {
-                if (out != null) {
-                    IoUtils.safeClose(out);
-                }
-                IoUtils.safeClose(in);
+            serveFileBlocking(resp, resource);
+        }
+    }
+
+    private void serveFileBlocking(final HttpServletResponse resp, final File resource) throws IOException {
+        ServletOutputStream out = null;
+        InputStream in = new BufferedInputStream(new FileInputStream(resource));
+        try {
+            int read;
+            final byte[] buffer = new byte[1024];
+            out = resp.getOutputStream();
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
             }
+        } finally {
+            if (out != null) {
+                IoUtils.safeClose(out);
+            }
+            IoUtils.safeClose(in);
         }
     }
 
@@ -127,49 +132,63 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     }
 
     private void handleWelcomePage(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File resource) {
-        final String found = findWelcomeResource(resource, exchange.getRelativePath().endsWith("/") ? exchange.getRelativePath() : exchange.getRelativePath() + "/");
-        if (found != null) {
-            exchange.setResponseCode(302);
-            StringBuilder newLocation = new StringBuilder(exchange.getRequestURL());
-            if (newLocation.charAt(newLocation.length() - 1) != '/') {
-                newLocation.append('/');
-            }
-            newLocation.append(found);
-            exchange.getResponseHeaders().put(Headers.LOCATION, newLocation.toString());
-            completionHandler.handleComplete();
+        File welcomePage = findWelcomeFile(resource);
+        if (welcomePage != null) {
+            fileCache.serveFile(exchange, completionHandler, welcomePage, false);
         } else {
-            exchange.setResponseCode(404);
-            completionHandler.handleComplete();
+            ServletPathMatch handler = findWelcomeServlet(exchange.getRelativePath().endsWith("/") ? exchange.getRelativePath() : exchange.getRelativePath() + "/");
+            if (handler != null && handler.getHandler() != null) {
+                exchange.setRequestPath(exchange.getResolvedPath() + handler.getMatched());
+                exchange.setRequestURI(exchange.getResolvedPath() + handler.getMatched());
+                exchange.putAttachment(ServletPathMatch.ATTACHMENT_KEY, handler);
+                handler.getHandler().handleRequest(exchange, completionHandler);
+            } else {
+                exchange.setResponseCode(404);
+                completionHandler.handleComplete();
+            }
         }
     }
 
-    private void handleWelcomePage(final HttpServletRequest req, final HttpServletResponse resp, final File resource) {
-        final String found = findWelcomeResource(resource, req.getPathInfo().endsWith("/") ? req.getPathInfo() : req.getPathInfo() + "/");
-        if (found != null) {
-            resp.setStatus(302);
-            StringBuffer newLocation = req.getRequestURL();
-            if (newLocation.charAt(newLocation.length() - 1) != '/') {
-                newLocation.append('/');
-            }
-            newLocation.append(found);
-            resp.addHeader(Headers.LOCATION_STRING, newLocation.toString());
+    private void handleWelcomePage(final HttpServletRequest req, final HttpServletResponse resp, final File resource) throws IOException, ServletException {
+        File welcomePage = findWelcomeFile(resource);
+        if (welcomePage != null) {
+            serveFileBlocking(resp, welcomePage);
         } else {
-            resp.setStatus(404);
+            ServletPathMatch handler = findWelcomeServlet(req.getPathInfo().endsWith("/") ? req.getPathInfo() : req.getPathInfo() + "/");
+            if (handler != null) {
+                HttpServletRequestImpl servletRequestImpl = HttpServletRequestImpl.getRequestImpl(req);
+                BlockingHttpServerExchange exchange = servletRequestImpl.getExchange();
+                exchange.getExchange().setRequestPath(exchange.getExchange().getResolvedPath() + handler.getMatched());
+                exchange.getExchange().setRequestURI(exchange.getExchange().getResolvedPath() + handler.getMatched());
+                exchange.getExchange().putAttachment(ServletPathMatch.ATTACHMENT_KEY, handler);
+                try {
+                    handler.getHandler().handleRequest(exchange);
+                } catch (ServletException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new ServletException(e);
+                }
+            } else {
+                resp.setStatus(404);
+            }
         }
     }
 
-    private String findWelcomeResource(final File resource, final String path) {
+    private File findWelcomeFile(final File resource) {
         for (String i : welcomePages) {
             final File res = new File(resource + File.separator + i);
             if (res.exists()) {
-                return i;
+                return res;
             }
         }
+        return null;
+    }
 
+    private ServletPathMatch findWelcomeServlet(final String path) {
         for (String i : welcomePages) {
-            final ServletInitialHandler handler = deployment.getServletPaths().getServletHandlerByPath(path + i).getHandler();
-            if(handler.getManagedServlet() != null) {
-                return i;
+            final ServletPathMatch handler = deployment.getServletPaths().getServletHandlerByPath(path + i);
+            if (handler.getHandler().getManagedServlet() != null && handler.getHandler().getManagedServlet().getServletInfo().getServletClass() != DefaultServlet.class) {
+                return handler;
             }
         }
         return null;
@@ -194,7 +213,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         } else {
             lastSegment = path.substring(pos + 1);
         }
-        if(lastSegment.isEmpty()) {
+        if (lastSegment.isEmpty()) {
             return true;
         }
         int ext = lastSegment.lastIndexOf('.');

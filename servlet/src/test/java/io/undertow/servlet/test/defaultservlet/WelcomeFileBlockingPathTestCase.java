@@ -18,33 +18,29 @@
 
 package io.undertow.servlet.test.defaultservlet;
 
-import java.io.IOException;
-
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
 import io.undertow.servlet.test.runner.ServletServer;
-import io.undertow.servlet.test.runner.HttpClientUtils;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
+ * Tests the behaviour of the default servlet when running in blocking mode with a filter
+ *
  * @author Stuart Douglas
  */
 @RunWith(ServletServer.class)
-public class WelcomeFileTestCase {
-
+public class WelcomeFileBlockingPathTestCase extends AbstractWelcomeFileTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -57,29 +53,20 @@ public class WelcomeFileTestCase {
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(new TestResourceLoader(WelcomeFileTestCase.class))
-                .addWelcomePages("doesnotexist.html", "index.html");
+                .setResourceLoader(new TestResourceLoader(WelcomeFileBlockingPathTestCase.class))
+                .addWelcomePages("doesnotexist.html", "index.html", "default");
+
+        builder.addServlet(new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)
+                .addMapping("/path/default"));
+
+        builder.addFilter(new FilterInfo("Filter", NoOpFilter.class));
+        builder.addFilterUrlMapping("Filter", "/*", DispatcherType.REQUEST);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         root.addPath(builder.getContextPath(), manager.start());
 
         ServletServer.setRootHandler(root);
-    }
-
-    @Test
-    public void testWelcomeRedirect() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
-        try {
-            HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertTrue(response.contains("Redirected home page"));
-
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
     }
 
 }
