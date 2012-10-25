@@ -48,7 +48,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     private volatile boolean closed;
     private final boolean finalFragment;
     private boolean complete;
-    
+
     public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, boolean finalFragment) {
         this.streamSourceChannelControl = streamSourceChannelControl;
         this.channel = channel;
@@ -123,7 +123,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
             }
         }
     }
-    
+
     protected abstract long transferTo0(long position, long count, FileChannel target) throws IOException;
 
     @Override

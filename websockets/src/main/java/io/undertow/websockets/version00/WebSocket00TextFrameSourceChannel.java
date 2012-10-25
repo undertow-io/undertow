@@ -150,7 +150,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                     // to make sure we not read to much
                     throughBuffer.limit((int) toRead);
                 }
-                
+
                 // check if the read operation marked it as complete and if so just return
                 // now
                 if (complete) {
@@ -272,6 +272,4 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
     protected boolean isComplete() {
         return complete;
     }
-    
-
 }
