@@ -19,6 +19,9 @@ package io.undertow.websockets.version00;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
+
+import java.io.IOException;
+
 import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
@@ -38,41 +41,42 @@ import org.xnio.channels.ConnectedStreamChannel;
 public class WebSocket00ChannelTest {
 
     @Test
-    public void testSendBinary() {
+    public void testSendBinary() throws IOException {
         checkSend(WebSocketFrameType.BINARY, 10, WebSocket00BinaryFrameSinkChannel.class);
     }
 
     @Test
-    public void testSendText() {
+    public void testSendText() throws IOException {
         checkSend(WebSocketFrameType.TEXT, 10, WebSocket00TextFrameSinkChannel.class);
     }
     
     @Test
-    public void testSendClose() {
+    public void testSendClose() throws IOException {
         checkSend(WebSocketFrameType.CLOSE, 0, WebSocket00CloseFrameSinkChannel.class);
     }
     
     @Test(expected = IllegalArgumentException.class)
-    public void testSendCloseWithPayload() {
+    public void testSendCloseWithPayload() throws IOException {
         checkSend(WebSocketFrameType.CLOSE, 10, WebSocket00CloseFrameSinkChannel.class);
     }
     
     @Test(expected = IllegalArgumentException.class)
-    public void testSendContinuation() {
+    public void testSendContinuation() throws IOException {
         checkSend(WebSocketFrameType.CONTINUATION, 10, null);
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testSendPing() {
+    public void testSendPing() throws IOException {
         checkSend(WebSocketFrameType.PING, 10, null);
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testSendPong() {
+    public void testSendPong() throws IOException {
         checkSend(WebSocketFrameType.PONG, 10, null);
     }
 
-    private static void checkSend(WebSocketFrameType type, int size, Class<? extends WebSocket00FrameSinkChannel> clazz) {
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static void checkSend(WebSocketFrameType type, int size, Class<? extends WebSocket00FrameSinkChannel> clazz) throws IOException {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
@@ -86,5 +90,7 @@ public class WebSocket00ChannelTest {
         assertTrue(clazz.isInstance(ch));
         assertTrue(ch.isOpen());
         TestUtils.verifyAndReset(mockChannel);
+
+         wsChannel.close();
     }
 }
