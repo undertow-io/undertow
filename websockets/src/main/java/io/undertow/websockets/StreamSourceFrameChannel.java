@@ -28,6 +28,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
+import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
@@ -36,14 +37,15 @@ import org.xnio.channels.StreamSourceChannel;
 public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     protected final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl;
-    private final WebSocketFrameType type;
-    protected final StreamSourceChannel channel;
+    protected final WebSocketFrameType type;
+    protected final PushBackStreamChannel channel;
     protected final WebSocketChannel wsChannel;
+
     private final SimpleSetter<? extends StreamSourceFrameChannel> readSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private final SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private volatile boolean closed;
 
-    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
+    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
         this.streamSourceChannelControl = streamSourceChannelControl;
         this.channel = channel;
         this.wsChannel = wsChannel;

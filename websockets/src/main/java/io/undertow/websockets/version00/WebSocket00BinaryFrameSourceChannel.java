@@ -56,6 +56,9 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
 
         long r = channel.transferTo(position, count, target);
         readBytes += (int) r;
+        if(readBytes == payloadSize) {
+            streamSourceChannelControl.readFrameDone();
+        }
         return r;
     }
 
@@ -71,6 +74,9 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
         }
         long r = channel.transferTo(count, throughBuffer, target);
         readBytes += (int) (r + throughBuffer.remaining());
+        if(readBytes == payloadSize) {
+            streamSourceChannelControl.readFrameDone();
+        }
         return r;
     }
 
@@ -81,12 +87,20 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
             return -1;
         }
 
-        if (byteToRead() < dst.remaining()) {
-            dst.limit(dst.position() + byteToRead());
+        int old = dst.limit();
+        try {
+            if (byteToRead() < dst.remaining()) {
+                dst.limit(dst.position() + byteToRead());
+            }
+            int r = channel.read(dst);
+            readBytes += r;
+            if(readBytes == payloadSize) {
+                streamSourceChannelControl.readFrameDone();
+            }
+            return r;
+        } finally {
+            dst.limit(old);
         }
-        int r = channel.read(dst);
-        readBytes += r;
-        return r;
     }
 
     @Override
@@ -100,30 +114,32 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
         if (toRead < 1) {
             return -1;
         }
-
-        int l = 0;
+        int[] old = new int[length];
+        int used = 0;
+        int remaining = toRead;
         for (int i = offset; i < length; i++) {
-            l++;
-            ByteBuffer buf = dsts[i];
-            int remain = buf.remaining();
-            if (remain > toRead) {
-                buf.limit(toRead);
-                if (l == 1) {
-                    int b = channel.read(buf);
-                    readBytes += b;
-                    return b;
-                } else {
-                    ByteBuffer[] dstsNew = new ByteBuffer[l];
-                    System.arraycopy(dsts, offset, dstsNew, 0, dstsNew.length);
-                    long b = channel.read(dstsNew);
-                    readBytes += b;
-                    return b;
-                }
+            old[i - offset] = dsts[i].limit();
+            final int bufferRemaining = dsts[i].remaining();
+            used += bufferRemaining;
+            if (used > remaining) {
+                dsts[i].limit(remaining);
+            }
+            remaining -= bufferRemaining;
+            remaining = remaining < 0 ? 0 : remaining;
+        }
+        try {
+            long b = channel.read(dsts, offset, length);
+            readBytes += b;
+            if(readBytes == payloadSize) {
+                streamSourceChannelControl.readFrameDone();
+            }
+            return b;
+        } finally {
+            for (int i = offset; i < length; i++) {
+                dsts[i].limit(old[i - offset]);
             }
         }
-        long b = channel.read(dsts);
-        readBytes += b;
-        return b;
+
     }
 
     private int byteToRead() {

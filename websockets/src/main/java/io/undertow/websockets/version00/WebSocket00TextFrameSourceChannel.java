@@ -37,7 +37,7 @@ import io.undertow.websockets.WebSocketFrameType;
  */
 class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
 
-    private final byte END_FRAME_MARKER = (byte) 0xFF;
+    private static final byte END_FRAME_MARKER = (byte) 0xFF;
     private boolean complete = false;
 
     WebSocket00TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl,PushBackStreamChannel channel, WebSocket00Channel wsChannel) {
@@ -82,7 +82,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                         if (written == 0) {
                             if (buf.hasRemaining()) {
                                 // nothing could be written and the buffer has something left in there, so push it back to the channel
-                                ((PushBackStreamChannel) channel).unget(pooled);
+                                channel.unget(pooled);
                                 free = false;
                             }
                             return r;
@@ -122,7 +122,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
             long r = 0;
             while (r < count) {
                 int i = read(throughBuffer);
-                if (r == 0 && r == -1) {
+                if (r == 0 || r == -1) {
                     return -1;
                 }
 
