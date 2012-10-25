@@ -194,8 +194,8 @@ abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel {
                     channel.resumeWrites();
 
                 } else {
-                    // everything flushed out now its safe to remove this channel
-                    //WebSocket00FrameSinkChannel.this.recycle();
+                    // everything flushed out now its safe to mark it as complete
+                    WebSocket00FrameSinkChannel.this.complete();
                 }
             } catch (IOException e) {
                 // TODO: Logging
