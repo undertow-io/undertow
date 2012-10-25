@@ -38,7 +38,6 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
-    private boolean recycled = false;
     private final WebSocketFrameType type;
     protected final StreamSinkChannel channel;
     protected final WebSocketChannel wsChannel;
@@ -50,6 +49,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     protected final long payloadSize;
     private final Object writeWaitLock = new Object();
     private int waiters = 0;
+    private boolean suspendWrites;
 
     public StreamSinkFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this.channel = channel;
@@ -64,9 +64,16 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     /**
-     * Notify the waiters on the channel
+     * Mark this channel as active
      */
-    protected final void notifyWaiters() {
+    protected final void active() {
+        if (suspendWrites) {
+            channel.suspendWrites();
+        } else {
+            channel.resumeWrites();
+        }
+
+        // now notify the waiter
         synchronized (writeWaitLock) {
             if (waiters > 0) {
                 writeWaitLock.notifyAll();
@@ -91,15 +98,24 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!closed) {
             closed = true;
             flush();
-            close0();
+            if (close0()) {
+                complete();
+            }
         }
     }
 
 
     /**
+     * Mark this {@link StreamSinkFrameChannel} as complete
+     */
+    protected final void complete() {
+        wsChannel.complete(this);
+    }
+
+    /**
      * Gets called on {@link #close()}. If this returns <code>true<code> the {@link #recycle()} method will be triggered automaticly.
      *
-     * @return recycle          <code>true</code> if the {@link StreamSinkFrameChannel} is ready for recycle.
+     * @return complete          <code>true</code> if the {@link StreamSinkFrameChannel} is ready for close.
      * @throws IOException Get thrown if an problem during the close operation is detected
      */
     protected abstract boolean close0() throws IOException;
@@ -191,6 +207,8 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     public void suspendWrites() {
         if (isInUse()) {
             channel.suspendWrites();
+        } else {
+            suspendWrites = true;
         }
     }
 
@@ -199,6 +217,8 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     public void resumeWrites() {
         if (isInUse()) {
             channel.suspendWrites();
+        } else {
+            suspendWrites = false;
         }
     }
 
@@ -211,7 +231,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (isInUse()) {
             return channel.isWriteResumed();
         } else {
-            return false;
+            return !suspendWrites;
         }
     }
 

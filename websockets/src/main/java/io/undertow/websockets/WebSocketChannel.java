@@ -319,6 +319,11 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         StreamSinkFrameChannel ch = create(channel, type, payloadSize);
         boolean o = currentSender.offer(ch);
         assert o;
+        
+        if (isInUse(ch)) {
+            // Channel is first in the queue so mark it as active
+            ch.active();
+        }
         return ch;
     }
 
@@ -352,6 +357,15 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      */
     protected abstract StreamSinkFrameChannel create(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize);
 
+    protected void complete(StreamSinkFrameChannel channel) {
+        if (currentSender.peek() == channel) {
+            if (currentSender.remove(channel)) {
+                StreamSinkFrameChannel ch = currentSender.peek();
+                ch.active();
+            }
+        }
+    }
+
     /**
      * {@link ChannelListener} which delegates the read notification to the appropriate listener
      */
@@ -381,7 +395,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private class WebSocketWriteListener implements ChannelListener<ConnectedStreamChannel> {
         @Override
         public void handleEvent(final ConnectedStreamChannel channel) {
-
         }
     }
 
