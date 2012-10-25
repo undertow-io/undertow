@@ -45,6 +45,7 @@ import static org.xnio.IoUtils.safeClose;
  * A {@link ConnectedChannel} which can be used to send and receive WebSocket Frames.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
+ * @author Stuart Douglas
  */
 public abstract class WebSocketChannel implements ConnectedChannel {
 
@@ -62,6 +63,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * an incoming frame that has not been created yet
      */
     private volatile PartialFrame partialFrame;
+
+    private boolean receivesSuspended;
 
     /**
      * Create a new {@link WebSocketChannel}
@@ -82,6 +85,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         this.receiveSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
         pushBackStreamChannel = new PushBackStreamChannel(channel);
         pushBackStreamChannel.getReadSetter().set(new WebSocketReadListener());
+        channel.getWriteSetter().set(new WebSocketWriteListener());
     }
 
 
@@ -265,7 +269,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 free = false;
             }
 
-            channel.suspendReads();
+            pushBackStreamChannel.suspendReads();
             this.partialFrame = null;
             return partialFrame.getChannel();
 
@@ -279,6 +283,16 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     public Setter<WebSocketChannel> getReceiveSetter() {
         return receiveSetter;
+    }
+
+    public synchronized void suspendReceives() {
+        receivesSuspended = true;
+        pushBackStreamChannel.suspendReads();
+    }
+
+    public synchronized void resumeReceives() {
+        receivesSuspended = false;
+        pushBackStreamChannel.resumeReads();
     }
 
     /**
@@ -346,12 +360,31 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         public void handleEvent(final PushBackStreamChannel channel) {
             final StreamSourceFrameChannel receiver = WebSocketChannel.this.receiver;
             if (receiver != null) {
-                ChannelListeners.invokeChannelListener(receiver, ((SimpleSetter) receiver.getReadSetter()).get());
+                final ChannelListener listener = ((SimpleSetter) receiver.getReadSetter()).get();
+                if (listener != null) {
+                    ChannelListeners.invokeChannelListener(receiver, listener);
+                } else {
+                    channel.suspendReads();
+                }
             } else {
-                ChannelListeners.invokeChannelListener(WebSocketChannel.this, receiveSetter.get());
+                final ChannelListener listener = receiveSetter.get();
+                if (listener != null) {
+                    ChannelListeners.invokeChannelListener(receiver, listener);
+                } else {
+                    channel.suspendReads();
+                }
             }
         }
     }
+
+
+    private class WebSocketWriteListener implements ChannelListener<WebSocketChannel> {
+        @Override
+        public void handleEvent(final WebSocketChannel channel) {
+
+        }
+    }
+
 
     /**
      * Interface that represenets a channel that is in the process of being created
@@ -383,8 +416,14 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
 
         public void readFrameDone() {
-            receiver = null;
-            channel.resumeReads();
+            synchronized (WebSocketChannel.this) {
+                receiver = null;
+                if (receivesSuspended) {
+                    pushBackStreamChannel.suspendReads();
+                } else {
+                    pushBackStreamChannel.resumeReads();
+                }
+            }
         }
     }
 
