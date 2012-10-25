@@ -107,6 +107,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
         checkClosed();
+        if (!isInUse()) {
+            return 0;
+        }
         return write0(srcs, offset, length);
     }
 
@@ -115,6 +118,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public final long write(ByteBuffer[] srcs) throws IOException {
         checkClosed();
+        if (!isInUse()) {
+            return 0;
+        }
         return write0(srcs);
     }
 
@@ -123,6 +129,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public final int write(ByteBuffer src) throws IOException {
         checkClosed();
+        if (!isInUse()) {
+            return 0;
+        }
         return write0(src);
     }
 
@@ -132,6 +141,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public final long transferFrom(FileChannel src, long position, long count) throws IOException {
         checkClosed();
+        if (!isInUse()) {
+            return 0;
+        }
         return transferFrom0(src, position, count);
     }
 
@@ -141,6 +153,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
         checkClosed();
+        if (!isInUse()) {
+            return 0;
+        }
         return transferFrom0(source, count, throughBuffer);
     }
 
