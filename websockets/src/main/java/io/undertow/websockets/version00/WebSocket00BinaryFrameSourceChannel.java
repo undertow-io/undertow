@@ -39,7 +39,7 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
     private int readBytes;
 
     WebSocket00BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket00Channel wsChannel, int payloadSize) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY);
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, true);
         this.payloadSize = payloadSize;
     }
 
