@@ -37,6 +37,7 @@ public final class Headers {
     public static final String ACCEPT_RANGES_STRING = "Accept-Ranges";
     public static final String AGE_STRING = "Age";
     public static final String ALLOW_STRING = "Allow";
+    public static final String AUTHENTICATION_INFO_STRING = "Authentication-Info";
     public static final String AUTHORIZATION_STRING = "Authorization";
     public static final String CACHE_CONTROL_STRING = "Cache-Control";
     public static final String COOKIE_STRING = "Cookie";
@@ -103,6 +104,7 @@ public final class Headers {
     public static final HttpString ACCEPT_RANGES = new HttpString(ACCEPT_RANGES_STRING);
     public static final HttpString AGE = new HttpString(AGE_STRING);
     public static final HttpString ALLOW = new HttpString(ALLOW_STRING);
+    public static final HttpString AUTHENTICATION_INFO = new HttpString(AUTHENTICATION_INFO_STRING);
     public static final HttpString AUTHORIZATION = new HttpString(AUTHORIZATION_STRING);
     public static final HttpString CACHE_CONTROL = new HttpString(CACHE_CONTROL_STRING);
     public static final HttpString COOKIE = new HttpString(COOKIE_STRING);
@@ -195,12 +197,14 @@ public final class Headers {
     public static final HttpString AUTH_PARAM = new HttpString("auth-param");
     public static final HttpString CNONCE = new HttpString("cnonce");
     public static final HttpString DOMAIN = new HttpString("domain");
+    public static final HttpString NEXT_NONCE = new HttpString("nextnonce");
     public static final HttpString NONCE = new HttpString("nonce");
     public static final HttpString NONCE_COUNT = new HttpString("nc");
     public static final HttpString OPAQUE = new HttpString("opaque");
     public static final HttpString QOP = new HttpString("qop");
     public static final HttpString REALM = new HttpString("realm");
     public static final HttpString RESPONSE = new HttpString("response");
+    public static final HttpString RESPONSE_AUTH = new HttpString("response-auth");
     public static final HttpString STALE = new HttpString("stale");
     public static final HttpString URI = new HttpString("uri");
     public static final HttpString USERNAME = new HttpString("username");

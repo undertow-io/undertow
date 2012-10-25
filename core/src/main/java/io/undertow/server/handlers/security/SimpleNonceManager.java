@@ -142,6 +142,12 @@ public class SimpleNonceManager implements SessionNonceManager {
             return createNewNonce();
         }
 
+        NonceKey key = new NonceKey(lastNonce);
+        if (invalidNonces.contains(key)) {
+            // The nonce supplied has already been used.
+            return createNewNonce();
+        }
+
         // TODO - Add timestamp checking and forwarding to a new nonce.
         return lastNonce;
     }

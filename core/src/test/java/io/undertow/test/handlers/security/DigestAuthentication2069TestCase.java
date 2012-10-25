@@ -22,6 +22,7 @@ import static io.undertow.util.Headers.DIGEST;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import io.undertow.server.handlers.security.AuthenticationInfoToken;
 import io.undertow.server.handlers.security.AuthenticationMechanism;
 import io.undertow.server.handlers.security.DigestAlgorithm;
 import io.undertow.server.handlers.security.DigestAuthenticationMechanism;
@@ -135,6 +136,31 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
+        
+        values = result.getHeaders("Authentication-Info");
+        assertEquals(1, values.length);
+        Map<AuthenticationInfoToken, String> parsedAuthInfo = AuthenticationInfoToken.parseHeader(values[0].getValue());
+        
+        nonce = parsedAuthInfo.get(AuthenticationInfoToken.NEXT_NONCE);
+        response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
+
+        client = new DefaultHttpClient();
+        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        sb = new StringBuilder(DIGEST.toString());
+        sb.append(" ");
+        sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"userOne\"").append(",");
+        sb.append(DigestAuthorizationToken.REALM.getName()).append("=\"").append(REALM_NAME).append("\",");
+        sb.append(DigestAuthorizationToken.NONCE.getName()).append("=\"").append(nonce).append("\",");
+        sb.append(DigestAuthorizationToken.DIGEST_URI.getName()).append("=\"/\",");
+        sb.append(DigestAuthorizationToken.RESPONSE.getName()).append("=\"").append(response).append("\"");
+
+        get.addHeader(AUTHORIZATION.toString(), sb.toString());
+        result = client.execute(get);
+        assertEquals(200, result.getStatusLine().getStatusCode());
+
+        values = result.getHeaders("ProcessedBy");
+        assertEquals(1, values.length);
+        assertEquals("ResponseHandler", values[0].getValue());                
     }
 
     /**

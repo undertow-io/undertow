@@ -18,8 +18,10 @@ package io.undertow.server.handlers.security;
 
 import static io.undertow.UndertowLogger.REQUEST_LOGGER;
 import static io.undertow.server.handlers.security.DigestAuthorizationToken.parseHeader;
+import static io.undertow.util.Headers.AUTHENTICATION_INFO;
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.DIGEST;
+import static io.undertow.util.Headers.NEXT_NONCE;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.CODE_401;
 import static io.undertow.util.WorkerDispatcher.dispatch;
@@ -158,14 +160,29 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         if (Util.shouldChallenge(exchange)) {
             dispatch(exchange, new SendChallengeRunnable(exchange, completionHandler));
         } else {
-            // In this case we may be sending an Authentication-Info header.
-            // Depending on the chosen QOP we may need to be providing a hash
-            // including the message body - also if the nonce has change we may
-            // need to send an alternative.
-
-            // TODO - Implement else.
+            // Although the NonceManager will be used we do not need to dispatch to a different worker thread
+            // as to reach this point this mechanism must have handled authenication which means the request will
+            // have already been dispatched to a worker.
+            addAuthenticationInfoHeader(exchange);
             completionHandler.handleComplete();
         }
+
+    }
+
+    private void addAuthenticationInfoHeader(final HttpServerExchange exchange) {
+        // Add the header if a new nonce is needed.
+        DigestContext context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
+        String currentNonce = context.getNonce();
+        String nextNonce = nonceManager.nextNonce(currentNonce);
+        if (nextNonce.equals(currentNonce) == false) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(NEXT_NONCE).append("=\"").append(nextNonce).append("\"");
+
+            HeaderMap responseHeader = exchange.getResponseHeaders();
+            responseHeader.add(AUTHENTICATION_INFO, sb.toString());
+        }
+
+        // Then add the header if there are qop requirements and set the appropriate qop fields.
 
     }
 
