@@ -76,6 +76,7 @@ public class WebSocket00ChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
         expect(mockChannel.isOpen()).andReturn(true);
         replay(mockChannel);
        

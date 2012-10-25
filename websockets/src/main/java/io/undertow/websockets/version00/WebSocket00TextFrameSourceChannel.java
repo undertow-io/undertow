@@ -40,7 +40,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
     private static final byte END_FRAME_MARKER = (byte) 0xFF;
     private boolean complete = false;
 
-    WebSocket00TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl,PushBackStreamChannel channel, WebSocket00Channel wsChannel) {
+    WebSocket00TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocket00Channel wsChannel) {
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT);
     }
 
@@ -82,7 +82,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                         if (written == 0) {
                             if (buf.hasRemaining()) {
                                 // nothing could be written and the buffer has something left in there, so push it back to the channel
-                                channel.unget(pooled);
+                                ((PushBackStreamChannel) channel).unget(pooled);
                                 free = false;
                             }
                             return r;
