@@ -49,7 +49,7 @@ import static org.xnio.IoUtils.safeClose;
  */
 public abstract class WebSocketChannel implements ConnectedChannel {
 
-    private final Queue<StreamSinkFrameChannel> currentSender = new ConcurrentLinkedQueue<StreamSinkFrameChannel>();
+    private final Queue<StreamSinkFrameChannel> senders = new ConcurrentLinkedQueue<StreamSinkFrameChannel>();
     private final ConnectedStreamChannel channel;
     private final WebSocketVersion version;
     private final String wsUrl;
@@ -99,7 +99,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     }
 
     protected boolean isInUse(StreamSinkChannel channel) {
-        return currentSender.peek() == channel;
+        return senders.peek() == channel;
     }
 
     @Override
@@ -316,7 +316,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             throw new IllegalArgumentException("The payloadSize must be >= 0");
         }
         StreamSinkFrameChannel ch = create(channel, type, payloadSize);
-        boolean o = currentSender.offer(ch);
+        boolean o = senders.offer(ch);
         assert o;
         
         if (isInUse(ch)) {
@@ -361,9 +361,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * take care of call {@link StreamSinkFrameChannel#active()} on the new active {@link StreamSinkFrameChannel}.
      */
     protected final void complete(StreamSinkFrameChannel channel) {
-        if (currentSender.peek() == channel) {
-            if (currentSender.remove(channel)) {
-                StreamSinkFrameChannel ch = currentSender.peek();
+        if (senders.peek() == channel) {
+            if (senders.remove(channel)) {
+                StreamSinkFrameChannel ch = senders.peek();
                 ch.active();
             }
         }
@@ -399,7 +399,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private class WebSocketWriteListener implements ChannelListener<ConnectedStreamChannel> {
         @Override
         public void handleEvent(final ConnectedStreamChannel channel) {
-            StreamSinkFrameChannel ch = currentSender.peek();
+            StreamSinkFrameChannel ch = senders.peek();
             if (ch != null) {
                 ChannelListeners.invokeChannelListener(ch, ch.writeSetter.get());
             }
