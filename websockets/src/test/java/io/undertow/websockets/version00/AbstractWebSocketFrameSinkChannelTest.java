@@ -48,14 +48,9 @@ import org.xnio.channels.StreamSinkChannel;
 public abstract class AbstractWebSocketFrameSinkChannelTest {
     private final static byte[] DATA = "MyData".getBytes(WebSocketUtils.UTF_8);
     
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testWriteWithBuffer() throws IOException {
-        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
-        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
-        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
-        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
-
+        ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
@@ -70,7 +65,6 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
             int written = 0;
 
             while(buf.hasRemaining()) {
-                System.out.println("here");
                 written += channel.write(buf);
             }
             assertEquals(DATA.length, written);
@@ -84,14 +78,9 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test(expected = IOException.class)
     public void testWriteWithBufferWithCorruptedPayload() throws IOException {
-        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
-        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
-        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
-        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
-
+        ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
@@ -115,14 +104,9 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
     
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testWriteWithBuffers() throws IOException {
-        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
-        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
-        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
-        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
-
+        ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
@@ -154,14 +138,9 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
     
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test(expected = IOException.class)
     public void testWriteWithBuffersWithCorruptedPayload() throws IOException {
-        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
-        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
-        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
-        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
-
+        ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
@@ -187,14 +166,9 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
     
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testWriteWithBuffersWithOffset() throws IOException {
-        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
-        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
-        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
-        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
-
+        ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
@@ -228,14 +202,9 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test(expected = IOException.class)
     public void testWriteWithBuffersWithOffsetWithCorruptPayload() throws IOException {
-        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
-        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
-        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
-        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
-
+        ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
@@ -284,14 +253,9 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
     }
 
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testTransferFrom() throws IOException {
-        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
-        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
-        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
-        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
-
+        ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
         
         File file = File.createTempFile("undertow-test", ".tmp");
@@ -324,14 +288,9 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test(expected = IOException.class)
     public void testTransferFromWithCorruptedPayload() throws IOException {
-        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
-        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
-        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
-        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
-
+        ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
         
         File file = File.createTempFile("undertow-test", ".tmp");
@@ -363,11 +322,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testTransferFromSource() throws IOException {
-        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
-        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
-        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
-        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
-
+        ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
         
         File file = File.createTempFile("undertow-test", ".tmp");
@@ -402,13 +357,9 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
     
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test(expected = IOException.class)
     public void testTransferFromSourceWithCorruptPayload() throws IOException {
-        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
-        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
-        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
-        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+        ConnectedStreamChannel mockChannel = createMockChannel();
 
         replay(mockChannel);
         
@@ -440,7 +391,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
 
-    protected WebSocket00Channel createWSChannel(ConnectedStreamChannel channel, final boolean inUse) {
+    protected static WebSocket00Channel createWSChannel(ConnectedStreamChannel channel, final boolean inUse) {
         return new WebSocket00Channel(channel, null, "ws://localhost/ws") {
 
             @Override
@@ -449,6 +400,15 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
             }
             
         };
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected static ConnectedStreamChannel createMockChannel() {
+        ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
+        expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
+        expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+        return mockChannel;
     }
 
     protected abstract WebSocket00FrameSinkChannel createChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel, int payloadLength);
