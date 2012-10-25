@@ -18,6 +18,7 @@
 package io.undertow.websockets.version00;
 
 import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import io.undertow.websockets.WebSocketUtils;
 import io.undertow.websockets.utils.StreamSinkChannelAdapter;
@@ -46,8 +47,8 @@ import org.xnio.channels.StreamSinkChannel;
  *
  */
 public abstract class AbstractWebSocketFrameSinkChannelTest {
-    private final static byte[] DATA = "MyData".getBytes(WebSocketUtils.UTF_8);
-    
+    protected final static byte[] DATA = "MyData".getBytes(WebSocketUtils.UTF_8);
+
     @Test
     public void testWriteWithBuffer() throws IOException {
         ConnectedStreamChannel mockChannel = createMockChannel();
@@ -78,6 +79,31 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
 
+    @Test
+    public void testWriteWithBufferNotInUse() throws IOException {
+        ConnectedStreamChannel mockChannel = createMockChannel();
+        replay(mockChannel);
+       
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, false);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        try {
+            WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
+            ByteBuffer buf = ByteBuffer.wrap(DATA);
+            assertEquals(0, channel.write(buf));
+
+            try {
+                channel.close();
+                fail();
+            } catch (IOException e) {
+                // expected
+            }
+
+        } finally {
+            TestUtils.verifyAndReset(mockChannel);
+        }
+    }
+    
     @Test(expected = IOException.class)
     public void testWriteWithBufferWithCorruptedPayload() throws IOException {
         ConnectedStreamChannel mockChannel = createMockChannel();
@@ -132,6 +158,36 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
             channel.close();
             
             checkWrittenData(start, DATA, end, out.toByteArray());
+
+        } finally {
+            TestUtils.verifyAndReset(mockChannel);
+        }
+    }
+    
+    @Test
+    public void testWriteWithBuffersNotInUse() throws IOException {
+        ConnectedStreamChannel mockChannel = createMockChannel();
+        replay(mockChannel);
+       
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, false);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        try {
+            WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
+
+            ByteBuffer buf = ByteBuffer.wrap(DATA);
+            ByteBuffer buf1 = (ByteBuffer) buf.duplicate().limit(2);
+            ByteBuffer buf2 = (ByteBuffer) buf.duplicate().position(2).limit(buf.limit());
+
+            ByteBuffer[] bufs = new ByteBuffer[] {buf1, buf2};
+            assertEquals(0, channel.write(bufs));
+
+            try {
+                channel.close();
+                fail();
+            } catch (IOException e) {
+                // expected
+            }
 
         } finally {
             TestUtils.verifyAndReset(mockChannel);
@@ -202,6 +258,37 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
 
+    @Test
+    public void testWriteWithBuffersWithOffsetNotInUse() throws IOException {
+        ConnectedStreamChannel mockChannel = createMockChannel();
+        replay(mockChannel);
+       
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, false);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        try {
+            WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
+
+            ByteBuffer buf = ByteBuffer.wrap(DATA);
+            ByteBuffer buf1 = (ByteBuffer) buf.duplicate().limit(2);
+            ByteBuffer buf2 = (ByteBuffer) buf.duplicate().position(2).limit(buf.limit());
+
+            ByteBuffer[] bufs = new ByteBuffer[] {buf1, buf2};
+ 
+            assertEquals(0, channel.write(bufs, 0, 2));
+
+            try {
+                channel.close();
+                fail();
+            } catch (IOException e) {
+                // expected
+            }
+
+        } finally {
+            TestUtils.verifyAndReset(mockChannel);
+        }
+    }
+    
     @Test(expected = IOException.class)
     public void testWriteWithBuffersWithOffsetWithCorruptPayload() throws IOException {
         ConnectedStreamChannel mockChannel = createMockChannel();
@@ -288,6 +375,37 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
 
+    @Test
+    public void testTransferFromNotInUse() throws IOException {
+        ConnectedStreamChannel mockChannel = createMockChannel();
+        replay(mockChannel);
+        
+        File file = File.createTempFile("undertow-test", ".tmp");
+        file.deleteOnExit();
+        FileOutputStream fout = new FileOutputStream(file);
+        fout.write(DATA);
+        fout.close();
+        
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        FileChannel fchannel = new FileInputStream(file).getChannel();
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, false);
+        try {
+            WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
+            assertEquals(0, channel.transferFrom(fchannel, 0, DATA.length));
+ 
+            try {
+                channel.close();
+                fail();
+            } catch (IOException e) {
+                // expected
+            }
+        } finally {
+            TestUtils.verifyAndReset(mockChannel);
+        }
+    }
+
+    
     @Test(expected = IOException.class)
     public void testTransferFromWithCorruptedPayload() throws IOException {
         ConnectedStreamChannel mockChannel = createMockChannel();
@@ -319,7 +437,6 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     public void testTransferFromSource() throws IOException {
         ConnectedStreamChannel mockChannel = createMockChannel();
@@ -351,6 +468,38 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
 
             channel.close();
             checkWrittenData(start, DATA, end, out.toByteArray());
+
+        } finally {
+            TestUtils.verifyAndReset(mockChannel);
+        }
+    }
+
+    @Test
+    public void testTransferFromSourceNotInUse() throws IOException {
+        ConnectedStreamChannel mockChannel = createMockChannel();
+        replay(mockChannel);
+        
+        File file = File.createTempFile("undertow-test", ".tmp");
+        file.deleteOnExit();
+        FileOutputStream fout = new FileOutputStream(file);
+        fout.write(DATA);
+        fout.close();
+        
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        StreamSourceChannelAdapter fchannel = new StreamSourceChannelAdapter(Channels.newChannel(new FileInputStream(file)));
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, false);
+        try {
+            WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
+            ByteBuffer buf = ByteBuffer.allocate(8);
+            assertEquals(0, channel.transferFrom(fchannel, DATA.length, (ByteBuffer) buf.clear()));
+
+            try {
+                channel.close();
+                fail();
+            } catch (IOException e) {
+                // expected
+            }
 
         } finally {
             TestUtils.verifyAndReset(mockChannel);
