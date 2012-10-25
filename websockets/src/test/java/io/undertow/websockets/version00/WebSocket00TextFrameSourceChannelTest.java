@@ -47,6 +47,7 @@ import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -108,6 +109,8 @@ public class WebSocket00TextFrameSourceChannelTest {
 
         assertEquals(-1, pch.read(readBuffer));
 
+        assertTrue(channel.isFinalFragment());
+
         TestUtils.verifyAndReset(mockChannel);
     }
 
@@ -159,6 +162,8 @@ public class WebSocket00TextFrameSourceChannelTest {
         assertArrayEquals(new byte[] {(byte)1, (byte)2 }, TestUtils.readableBytes(readBuffer));
 
         assertEquals(-1, pch.read(readBuffer));
+
+        assertTrue(channel.isFinalFragment());
 
         TestUtils.verifyAndReset(mockChannel);
     }
@@ -212,6 +217,8 @@ public class WebSocket00TextFrameSourceChannelTest {
 
         assertEquals(-1, pch.read(readBuffer));
 
+        assertTrue(channel.isFinalFragment());
+
         TestUtils.verifyAndReset(mockChannel);
     }
 
@@ -241,6 +248,8 @@ public class WebSocket00TextFrameSourceChannelTest {
         }
         in.close();
         assertEquals(4, i);
+
+        assertTrue(channel.isFinalFragment());
 
         TestUtils.verifyAndReset(mockChannel);
     }
@@ -274,6 +283,8 @@ public class WebSocket00TextFrameSourceChannelTest {
         assertEquals(1, channel.transferTo(1L, buffer, mockSink));
 
         assertFalse(buffer.hasRemaining());
+
+        assertTrue(channel.isFinalFragment());
 
         TestUtils.verifyAndReset(mockChannel, mockSink);
     }
