@@ -216,7 +216,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         try {
             PartialFrame partialFrame = this.partialFrame;
             if (partialFrame == null) {
-                partialFrame = recieveFrame(new StreamSourceChannelControl());
+                partialFrame = receiveFrame(new StreamSourceChannelControl());
             }
 
             StreamSourceFrameChannel sourceChannel = null;
@@ -341,7 +341,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      *         buffer and so more data is needed.
      * @throws WebSocketException Is thrown if something goes wrong
      */
-    protected abstract PartialFrame recieveFrame(final StreamSourceChannelControl streamSourceChannelControl);
+    protected abstract PartialFrame receiveFrame(final StreamSourceChannelControl streamSourceChannelControl);
 
     /**
      * Create a new StreamSinkFrameChannel which can be used to send a WebSocket Frame of the type {@link WebSocketFrameType}.
@@ -369,7 +369,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             } else {
                 final ChannelListener listener = receiveSetter.get();
                 if (listener != null) {
-                    ChannelListeners.invokeChannelListener(receiver, listener);
+                    ChannelListeners.invokeChannelListener(WebSocketChannel.this, listener);
                 } else {
                     channel.suspendReads();
                 }

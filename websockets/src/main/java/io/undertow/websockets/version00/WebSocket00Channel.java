@@ -53,7 +53,7 @@ public class WebSocket00Channel extends WebSocketChannel {
 
 
     @Override
-    protected PartialFrame recieveFrame(final StreamSourceChannelControl streamSourceChannelControl) {
+    protected PartialFrame receiveFrame(final StreamSourceChannelControl streamSourceChannelControl) {
         return new PartialFrame() {
 
             private StreamSourceFrameChannel channel;
