@@ -47,7 +47,8 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     private final SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private volatile boolean closed;
     private final boolean finalFragment;
-
+    private boolean complete;
+    
     public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, boolean finalFragment) {
         this.streamSourceChannelControl = streamSourceChannelControl;
         this.channel = channel;
@@ -56,11 +57,16 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         this.finalFragment = finalFragment;
     }
 
+    /**
+     * Returns <code>true</code> if the frame was complete.
+     */
     protected abstract boolean isComplete();
 
-    
     @Override
     public final long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+        if (complete) {
+            return -1;
+        }
         try {
             return read0(dsts, offset, length);
         } finally {
@@ -74,6 +80,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     @Override
     public final long read(ByteBuffer[] dsts) throws IOException {
+        if (complete) {
+            return -1;
+        }
         try {
             return read0(dsts);
         } finally {
@@ -84,9 +93,12 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     }
 
     protected abstract long read0(ByteBuffer[] dsts) throws IOException;
-    
+
     @Override
     public final int read(ByteBuffer dst) throws IOException {
+        if (complete) {
+            return -1;
+        }
         try {
             return read0(dst);
         } finally {
@@ -98,9 +110,11 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     protected abstract int read0(ByteBuffer dst) throws IOException;
 
-    
     @Override
     public final long transferTo(long position, long count, FileChannel target) throws IOException {
+        if (complete) {
+            return -1;
+        }
         try {
             return transferTo0(position, count, target);
         } finally {
@@ -114,6 +128,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     @Override
     public final long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+        if (complete) {
+            return -1;
+        }
         try {
             return transferTo0(count, throughBuffer, target);
         } finally {
@@ -126,6 +143,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     protected abstract long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException;
 
     private void complete() {
+        complete = true;
         streamSourceChannelControl.readFrameDone(this);
     }
 
