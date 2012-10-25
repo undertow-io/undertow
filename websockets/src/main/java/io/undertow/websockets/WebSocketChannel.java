@@ -98,7 +98,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         return bufferPool;
     }
 
-    protected final boolean isInUse(StreamSinkChannel channel) {
+    protected boolean isInUse(StreamSinkChannel channel) {
         return currentSender.peek() == channel;
     }
 
@@ -219,7 +219,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 partialFrame = receiveFrame(new StreamSourceChannelControl());
             }
 
-            StreamSourceFrameChannel sourceChannel = null;
             int res;
             while (!partialFrame.isDone()) {
                 buffer.clear();
@@ -374,6 +373,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * {@link ChannelListener} which delegates the read notification to the appropriate listener
      */
     private final class WebSocketReadListener implements ChannelListener<PushBackStreamChannel> {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
         @Override
         public void handleEvent(final PushBackStreamChannel channel) {
             final StreamSourceFrameChannel receiver = WebSocketChannel.this.receiver;
