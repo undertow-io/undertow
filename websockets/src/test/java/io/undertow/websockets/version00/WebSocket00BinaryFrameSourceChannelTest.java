@@ -42,9 +42,7 @@ import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.getCurrentArguments;
 import static org.easymock.EasyMock.replay;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -91,6 +89,8 @@ public class WebSocket00BinaryFrameSourceChannelTest {
         assertArrayEquals(new byte[]{(byte) 1, (byte) 2}, TestUtils.readableBytes(readBuffer));
 
         assertEquals(-1, pch.read(readBuffer));
+
+        assertTrue(channel.isFinalFragment());
 
         TestUtils.verifyAndReset(mockChannel);
     }
@@ -143,6 +143,8 @@ public class WebSocket00BinaryFrameSourceChannelTest {
 
         assertEquals(-1, pch.read(readBuffer));
 
+        assertTrue(channel.isFinalFragment());
+        
         TestUtils.verifyAndReset(mockChannel);
 
     }
@@ -195,6 +197,8 @@ public class WebSocket00BinaryFrameSourceChannelTest {
 
         assertEquals(-1, pch.read(readBuffer));
 
+        assertTrue(channel.isFinalFragment());
+
         TestUtils.verifyAndReset(mockChannel);
 
     }
@@ -225,6 +229,8 @@ public class WebSocket00BinaryFrameSourceChannelTest {
         in.close();
 
         assertEquals(4, i);
+
+        assertTrue(channel.isFinalFragment());
 
         TestUtils.verifyAndReset(mockChannel);
 
@@ -260,6 +266,8 @@ public class WebSocket00BinaryFrameSourceChannelTest {
         assertEquals(1, channel.transferTo(1L, buffer, mockSink));
 
         assertFalse(buffer.hasRemaining());
+
+        assertTrue(channel.isFinalFragment());
 
         TestUtils.verifyAndReset(mockChannel, mockSink);
 

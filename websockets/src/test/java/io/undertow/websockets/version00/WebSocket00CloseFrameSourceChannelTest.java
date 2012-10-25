@@ -35,6 +35,7 @@ import org.xnio.channels.StreamSourceChannel;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 
 /**
@@ -60,6 +61,8 @@ public class WebSocket00CloseFrameSourceChannelTest {
 
         assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
 
+        assertTrue(channel.isFinalFragment());
+
         TestUtils.verifyAndReset(mockChannel);
     }
 
@@ -80,6 +83,8 @@ public class WebSocket00CloseFrameSourceChannelTest {
         for (ByteBuffer buffer: buffers) {
             assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         }
+
+        assertTrue(channel.isFinalFragment());
 
         TestUtils.verifyAndReset(mockChannel);
     }
@@ -102,6 +107,8 @@ public class WebSocket00CloseFrameSourceChannelTest {
             assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
         }
 
+        assertTrue(channel.isFinalFragment());
+
         TestUtils.verifyAndReset(mockChannel);
     }
 
@@ -122,6 +129,8 @@ public class WebSocket00CloseFrameSourceChannelTest {
         assertEquals(-1, channel.transferTo(0, 8, new FileOutputStream(file).getChannel()));
 
         assertEquals("Nothing should be read", 0L, file.length());
+
+        assertTrue(channel.isFinalFragment());
 
         TestUtils.verifyAndReset(mockChannel);
     }
@@ -145,6 +154,8 @@ public class WebSocket00CloseFrameSourceChannelTest {
         assertEquals(-1, channel.transferTo(1L, buffer, mockSink));
 
         assertEquals("Nothing should be read", buffer.capacity(), buffer.remaining());
+
+        assertTrue(channel.isFinalFragment());
 
         TestUtils.verifyAndReset(mockChannel);
     }

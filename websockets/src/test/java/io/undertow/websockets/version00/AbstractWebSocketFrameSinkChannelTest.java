@@ -19,7 +19,6 @@ package io.undertow.websockets.version00;
 
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 import io.undertow.websockets.WebSocketUtils;
 import io.undertow.websockets.utils.StreamSinkChannelAdapter;
 import io.undertow.websockets.utils.StreamSourceChannelAdapter;
