@@ -82,6 +82,7 @@ public class WebSocket00ChannelTest {
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
         expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
         expect(mockChannel.isOpen()).andReturn(true);
+        mockChannel.resumeWrites();
         replay(mockChannel);
        
 

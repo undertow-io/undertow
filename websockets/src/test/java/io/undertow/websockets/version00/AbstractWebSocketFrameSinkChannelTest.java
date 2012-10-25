@@ -58,7 +58,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
 
         replay(mockChannel);
        
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
@@ -70,6 +70,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
             int written = 0;
 
             while(buf.hasRemaining()) {
+                System.out.println("here");
                 written += channel.write(buf);
             }
             assertEquals(DATA.length, written);
@@ -93,7 +94,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
 
         replay(mockChannel);
        
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
@@ -124,7 +125,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
 
         replay(mockChannel);
        
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
@@ -163,7 +164,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
 
         replay(mockChannel);
        
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
@@ -196,7 +197,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
 
         replay(mockChannel);
        
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
@@ -237,7 +238,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
 
         replay(mockChannel);
        
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
@@ -302,7 +303,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         FileChannel fchannel = new FileInputStream(file).getChannel();
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
         try {
             WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
             byte[] start = TestUtils.readableBytes((ByteBuffer) channel.createFrameStart().flip());
@@ -342,7 +343,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         FileChannel fchannel = new FileInputStream(file).getChannel();
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
         try {
             WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
 
@@ -378,7 +379,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         StreamSourceChannelAdapter fchannel = new StreamSourceChannelAdapter(Channels.newChannel(new FileInputStream(file)));
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
         try {
             WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
             byte[] start = TestUtils.readableBytes((ByteBuffer) channel.createFrameStart().flip());
@@ -420,7 +421,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         StreamSourceChannelAdapter fchannel = new StreamSourceChannelAdapter(Channels.newChannel(new FileInputStream(file)));
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
+        WebSocket00Channel wsChannel = createWSChannel(mockChannel, true);
         try {
             WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length + 1);
 
@@ -437,6 +438,17 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         } finally {
             TestUtils.verifyAndReset(mockChannel);
         }
+    }
+
+    protected WebSocket00Channel createWSChannel(ConnectedStreamChannel channel, final boolean inUse) {
+        return new WebSocket00Channel(channel, null, "ws://localhost/ws") {
+
+            @Override
+            protected boolean isInUse(StreamSinkChannel channel) {
+                return inUse;
+            }
+            
+        };
     }
 
     protected abstract WebSocket00FrameSinkChannel createChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel, int payloadLength);
