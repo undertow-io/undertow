@@ -54,6 +54,8 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
@@ -87,6 +89,8 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
@@ -116,6 +120,8 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
@@ -153,6 +159,8 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
@@ -184,6 +192,8 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
@@ -223,6 +233,8 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+
         replay(mockChannel);
        
         WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
@@ -277,6 +289,8 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+
         replay(mockChannel);
         
         File file = File.createTempFile("undertow-test", ".tmp");
@@ -315,6 +329,8 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+
         replay(mockChannel);
         
         File file = File.createTempFile("undertow-test", ".tmp");
@@ -349,6 +365,8 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+
         replay(mockChannel);
         
         File file = File.createTempFile("undertow-test", ".tmp");
@@ -389,6 +407,8 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());
+        expect(mockChannel.getWriteSetter()).andReturn(new ChannelListener.SimpleSetter());
+
         replay(mockChannel);
         
         File file = File.createTempFile("undertow-test", ".tmp");

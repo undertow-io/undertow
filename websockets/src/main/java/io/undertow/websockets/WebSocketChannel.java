@@ -378,9 +378,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     }
 
 
-    private class WebSocketWriteListener implements ChannelListener<WebSocketChannel> {
+    private class WebSocketWriteListener implements ChannelListener<ConnectedStreamChannel> {
         @Override
-        public void handleEvent(final WebSocketChannel channel) {
+        public void handleEvent(final ConnectedStreamChannel channel) {
 
         }
     }
