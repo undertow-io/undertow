@@ -45,7 +45,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     @Override
-    public long transferTo(long position, long count, FileChannel target) throws IOException {
+    public long transferTo0(long position, long count, FileChannel target) throws IOException {
         if (complete) {
             return -1;
         }
@@ -112,7 +112,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     @Override
-    public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+    public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         if (complete) {
             return -1;
         }
@@ -166,7 +166,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     @Override
-    public int read(ByteBuffer buf) throws IOException {
+    public int read0(ByteBuffer buf) throws IOException {
         if (complete) {
             return -1;
         }
@@ -246,12 +246,12 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     @Override
-    public long read(ByteBuffer[] bufs) throws IOException {
-        return read(bufs, 0, bufs.length);
+    public long read0(ByteBuffer[] bufs) throws IOException {
+        return read0(bufs, 0, bufs.length);
     }
 
     @Override
-    public long read(ByteBuffer[] bufs, int index, int length) throws IOException {
+    public long read0(ByteBuffer[] bufs, int index, int length) throws IOException {
         if (complete) {
             return -1;
         }
@@ -267,4 +267,11 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
         }
         return r;
     }
+
+    @Override
+    protected boolean isComplete() {
+        return complete;
+    }
+    
+
 }
