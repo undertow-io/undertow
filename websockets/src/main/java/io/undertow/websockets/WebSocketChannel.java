@@ -357,7 +357,11 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      */
     protected abstract StreamSinkFrameChannel create(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize);
 
-    protected void complete(StreamSinkFrameChannel channel) {
+    /**
+     * Mark the given {@link StreamSinkFrameChannel} as complete and so remove the obtained ones. Calling this method will also
+     * take care of call {@link StreamSinkFrameChannel#active()} on the new active {@link StreamSinkFrameChannel}.
+     */
+    protected final void complete(StreamSinkFrameChannel channel) {
         if (currentSender.peek() == channel) {
             if (currentSender.remove(channel)) {
                 StreamSinkFrameChannel ch = currentSender.peek();
@@ -395,6 +399,10 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private class WebSocketWriteListener implements ChannelListener<ConnectedStreamChannel> {
         @Override
         public void handleEvent(final ConnectedStreamChannel channel) {
+            StreamSinkFrameChannel ch = currentSender.peek();
+            if (ch != null) {
+                ChannelListeners.invokeChannelListener(ch, ch.writeSetter.get());
+            }
         }
     }
 
