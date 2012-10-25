@@ -92,6 +92,12 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                     }
                     // Clear the buffer so it can get used for writing again
                     buf.clear();
+
+                    // check if the read operation marked it as complete and if so just return
+                    // now
+                    if (complete) {
+                        return r;
+                    }
                 } else {
                     return r;
                 }
@@ -143,6 +149,12 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                     // limit, so set it
                     // to make sure we not read to much
                     throughBuffer.limit((int) toRead);
+                }
+                
+                // check if the read operation marked it as complete and if so just return
+                // now
+                if (complete) {
+                    return r;
                 }
             }
 
