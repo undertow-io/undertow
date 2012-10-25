@@ -318,7 +318,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         StreamSinkFrameChannel ch = create(channel, type, payloadSize);
         boolean o = senders.offer(ch);
         assert o;
-        
+
         if (isInUse(ch)) {
             // Channel is first in the queue so mark it as active
             ch.active();

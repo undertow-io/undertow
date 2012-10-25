@@ -127,10 +127,8 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
                 dsts[i].limit(old[i - offset]);
             }
         }
-
     }
 
-    
     private int byteToRead() {
         return payloadSize - readBytes;
     }
