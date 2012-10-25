@@ -122,9 +122,6 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
             long r = 0;
             while (r < count) {
                 int i = read(throughBuffer);
-                if (r == 0 || r == -1) {
-                    return -1;
-                }
 
                 if (i < 1) {
                     return r;
