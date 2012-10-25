@@ -436,14 +436,17 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
         }
 
-        public void readFrameDone() {
+        public void readFrameDone(StreamSourceFrameChannel channel) {
             synchronized (WebSocketChannel.this) {
-                receiver = null;
-                if (receivesSuspended) {
-                    pushBackStreamChannel.suspendReads();
-                } else {
-                    pushBackStreamChannel.resumeReads();
+                if (channel == receiver) {
+                    receiver = null;
+                    if (receivesSuspended) {
+                        pushBackStreamChannel.suspendReads();
+                    } else {
+                        pushBackStreamChannel.resumeReads();
+                    }
                 }
+
             }
         }
     }

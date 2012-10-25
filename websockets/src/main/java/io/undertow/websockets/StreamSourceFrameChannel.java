@@ -19,6 +19,8 @@
 package io.undertow.websockets;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 
@@ -28,6 +30,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
@@ -35,7 +38,7 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
-    protected final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl;
+    private final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl;
     protected final WebSocketFrameType type;
     protected final StreamSourceChannel channel;
     protected final WebSocketChannel wsChannel;
@@ -51,6 +54,79 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         this.wsChannel = wsChannel;
         this.type = type;
         this.finalFragment = finalFragment;
+    }
+
+    protected abstract boolean isComplete();
+
+    
+    @Override
+    public final long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+        try {
+            return read0(dsts, offset, length);
+        } finally {
+            if(isComplete()) {
+                complete();
+            }
+        }
+    }
+
+    protected abstract long read0(ByteBuffer[] dsts, int offset, int length) throws IOException;
+
+    @Override
+    public final long read(ByteBuffer[] dsts) throws IOException {
+        try {
+            return read0(dsts);
+        } finally {
+            if(isComplete()) {
+                complete();
+            }
+        }
+    }
+
+    protected abstract long read0(ByteBuffer[] dsts) throws IOException;
+    
+    @Override
+    public final int read(ByteBuffer dst) throws IOException {
+        try {
+            return read0(dst);
+        } finally {
+            if(isComplete()) {
+                complete();
+            }
+        }
+    }
+
+    protected abstract int read0(ByteBuffer dst) throws IOException;
+
+    
+    @Override
+    public final long transferTo(long position, long count, FileChannel target) throws IOException {
+        try {
+            return transferTo0(position, count, target);
+        } finally {
+            if(isComplete()) {
+                complete();
+            }
+        }
+    }
+    
+    protected abstract long transferTo0(long position, long count, FileChannel target) throws IOException;
+
+    @Override
+    public final long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+        try {
+            return transferTo0(count, throughBuffer, target);
+        } finally {
+            if(isComplete()) {
+                complete();
+            }
+        }
+    }
+
+    protected abstract long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException;
+
+    private void complete() {
+        streamSourceChannelControl.readFrameDone(this);
     }
 
     /**

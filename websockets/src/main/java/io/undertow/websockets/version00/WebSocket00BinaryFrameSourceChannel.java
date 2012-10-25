@@ -44,7 +44,7 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     @Override
-    public long transferTo(long position, long count, FileChannel target) throws IOException {
+    protected long transferTo0(long position, long count, FileChannel target) throws IOException {
         int toRead = byteToRead();
         if (toRead < 1) {
             return -1;
@@ -56,14 +56,11 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
 
         long r = channel.transferTo(position, count, target);
         readBytes += (int) r;
-        if(readBytes == payloadSize) {
-            streamSourceChannelControl.readFrameDone();
-        }
         return r;
     }
 
     @Override
-    public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+    public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         int toRead = byteToRead();
         if (toRead < 1) {
             return -1;
@@ -74,14 +71,11 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
         }
         long r = channel.transferTo(count, throughBuffer, target);
         readBytes += (int) (r + throughBuffer.remaining());
-        if(readBytes == payloadSize) {
-            streamSourceChannelControl.readFrameDone();
-        }
         return r;
     }
 
     @Override
-    public int read(ByteBuffer dst) throws IOException {
+    protected int read0(ByteBuffer dst) throws IOException {
         int toRead = byteToRead();
         if (toRead < 1) {
             return -1;
@@ -94,9 +88,6 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
             }
             int r = channel.read(dst);
             readBytes += r;
-            if(readBytes == payloadSize) {
-                streamSourceChannelControl.readFrameDone();
-            }
             return r;
         } finally {
             dst.limit(old);
@@ -104,12 +95,12 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     @Override
-    public long read(ByteBuffer[] dsts) throws IOException {
-        return read(dsts, 0, dsts.length);
+    protected long read0(ByteBuffer[] dsts) throws IOException {
+        return read0(dsts, 0, dsts.length);
     }
 
     @Override
-    public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+    protected long read0(ByteBuffer[] dsts, int offset, int length) throws IOException {
         int toRead = byteToRead();
         if (toRead < 1) {
             return -1;
@@ -130,9 +121,6 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
         try {
             long b = channel.read(dsts, offset, length);
             readBytes += b;
-            if(readBytes == payloadSize) {
-                streamSourceChannelControl.readFrameDone();
-            }
             return b;
         } finally {
             for (int i = offset; i < length; i++) {
@@ -142,7 +130,14 @@ class WebSocket00BinaryFrameSourceChannel extends StreamSourceFrameChannel {
 
     }
 
+    
     private int byteToRead() {
         return payloadSize - readBytes;
+    }
+
+    @Override
+    protected boolean isComplete() {
+        assert readBytes <= payloadSize;
+        return readBytes == payloadSize;
     }
 }

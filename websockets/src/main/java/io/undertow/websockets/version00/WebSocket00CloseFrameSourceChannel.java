@@ -46,7 +46,7 @@ class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
      * Always returns <code>-1</code> as the frame can not contain any payload
      */
     @Override
-    public long transferTo(long position, long count, FileChannel target) throws IOException {
+    public long transferTo0(long position, long count, FileChannel target) throws IOException {
         return -1;
     }
 
@@ -54,7 +54,7 @@ class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
      * Always returns <code>-1</code> as the frame can not contain any payload
      */
     @Override
-    public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+    public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         return -1;
     }
 
@@ -62,7 +62,7 @@ class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
      * Always returns <code>-1</code> as the frame can not contain any payload
      */
     @Override
-    public int read(ByteBuffer arg0) throws IOException {
+    public int read0(ByteBuffer arg0) throws IOException {
         return -1;
     }
 
@@ -70,7 +70,7 @@ class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
      * Always returns <code>-1</code> as the frame can not contain any payload
      */
     @Override
-    public long read(ByteBuffer[] arg0) throws IOException {
+    public long read0(ByteBuffer[] arg0) throws IOException {
         return -1;
     }
 
@@ -78,8 +78,13 @@ class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
      * Always returns <code>-1</code> as the frame can not contain any payload
      */
     @Override
-    public long read(ByteBuffer[] arg0, int arg1, int arg2) throws IOException {
+    public long read0(ByteBuffer[] arg0, int arg1, int arg2) throws IOException {
         return -1;
+    }
+
+    @Override
+    protected boolean isComplete() {
+        return true;
     }
 
 }
