@@ -164,6 +164,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             // need to send an alternative.
 
             // TODO - Implement else.
+            completionHandler.handleComplete();
         }
 
     }

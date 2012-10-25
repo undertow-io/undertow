@@ -201,6 +201,7 @@ public final class Headers {
     public static final HttpString QOP = new HttpString("qop");
     public static final HttpString REALM = new HttpString("realm");
     public static final HttpString RESPONSE = new HttpString("response");
+    public static final HttpString STALE = new HttpString("stale");
     public static final HttpString URI = new HttpString("uri");
     public static final HttpString USERNAME = new HttpString("username");
 
