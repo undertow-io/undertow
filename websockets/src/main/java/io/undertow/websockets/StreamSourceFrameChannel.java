@@ -43,12 +43,14 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     private final SimpleSetter<? extends StreamSourceFrameChannel> readSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private final SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private volatile boolean closed;
+    private final boolean finalFragment;
 
-    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
+    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, boolean finalFragment) {
         this.streamSourceChannelControl = streamSourceChannelControl;
         this.channel = channel;
         this.wsChannel = wsChannel;
         this.type = type;
+        this.finalFragment = finalFragment;
     }
 
     /**
@@ -56,6 +58,15 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
      */
     public WebSocketFrameType getType() {
         return type;
+    }
+
+
+    /**
+     * Flag to indicate if this frame is the final fragment in a message. The first fragment (frame) may also be the
+     * final fragment.
+     */
+    public boolean isFinalFragment() {
+        return finalFragment;
     }
 
     @Override
