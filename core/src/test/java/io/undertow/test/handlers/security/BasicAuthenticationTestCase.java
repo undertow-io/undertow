@@ -35,7 +35,7 @@ import org.junit.runner.RunWith;
 
 /**
  * A test case to test when the only authentication mechanism
- *
+ * 
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 @RunWith(DefaultServer.class)
@@ -67,6 +67,44 @@ public class BasicAuthenticationTestCase extends UsernamePasswordAuthenticationT
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
+    }
+
+    @Test
+    public void testBadUserName() throws Exception {
+        setAuthenticationChain();
+
+        DefaultHttpClient client = new DefaultHttpClient();
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpResponse result = client.execute(get);
+        assertEquals(401, result.getStatusLine().getStatusCode());
+        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+        assertEquals(1, values.length);
+        assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+
+        client = new DefaultHttpClient();
+        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get.addHeader(AUTHORIZATION.toString(), BASIC + " " + Base64.encodeBase64String("badUser:passwordOne".getBytes()));
+        result = client.execute(get);
+        assertEquals(401, result.getStatusLine().getStatusCode());
+    }
+
+    @Test
+    public void testBadPassword() throws Exception {
+        setAuthenticationChain();
+
+        DefaultHttpClient client = new DefaultHttpClient();
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpResponse result = client.execute(get);
+        assertEquals(401, result.getStatusLine().getStatusCode());
+        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+        assertEquals(1, values.length);
+        assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+
+        client = new DefaultHttpClient();
+        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get.addHeader(AUTHORIZATION.toString(), BASIC + " " + Base64.encodeBase64String("userOne:badPassword".getBytes()));
+        result = client.execute(get);
+        assertEquals(401, result.getStatusLine().getStatusCode());
     }
 
 }

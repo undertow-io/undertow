@@ -128,13 +128,82 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
     }
+    
+    @Test
+    public void testBadUserName() throws Exception {
+        setAuthenticationChain();
 
-    // Test bad user name.
-    // Test bad password.
+        DefaultHttpClient client = new DefaultHttpClient();
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpResponse result = client.execute(get);
+        assertEquals(401, result.getStatusLine().getStatusCode());
+        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+        assertEquals(1, values.length);
+        String value = values[0].getValue();
+        assertTrue(value.startsWith(DIGEST.toString()));
+        Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+        assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
+        assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
+
+        String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
+
+        String response = createResponse("badUser", REALM_NAME, "passwordOne", "GET", "/", nonce);
+
+        client = new DefaultHttpClient();
+        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        StringBuilder sb = new StringBuilder(DIGEST.toString());
+        sb.append(" ");
+        sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"badUser\"").append(",");
+        sb.append(DigestAuthorizationToken.REALM.getName()).append("=\"").append(REALM_NAME).append("\",");
+        sb.append(DigestAuthorizationToken.NONCE.getName()).append("=\"").append(nonce).append("\",");
+        sb.append(DigestAuthorizationToken.DIGEST_URI.getName()).append("=\"/\",");
+        sb.append(DigestAuthorizationToken.RESPONSE.getName()).append("=\"").append(response).append("\"");
+
+        get.addHeader(AUTHORIZATION.toString(), sb.toString());
+        result = client.execute(get);
+        assertEquals(401, result.getStatusLine().getStatusCode());
+    }
+
+    @Test
+    public void testBadPassword() throws Exception {
+        setAuthenticationChain();
+
+        DefaultHttpClient client = new DefaultHttpClient();
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpResponse result = client.execute(get);
+        assertEquals(401, result.getStatusLine().getStatusCode());
+        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+        assertEquals(1, values.length);
+        String value = values[0].getValue();
+        assertTrue(value.startsWith(DIGEST.toString()));
+        Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+        assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
+        assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
+
+        String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
+
+        String response = createResponse("userOne", REALM_NAME, "badPassword", "GET", "/", nonce);
+
+        client = new DefaultHttpClient();
+        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        StringBuilder sb = new StringBuilder(DIGEST.toString());
+        sb.append(" ");
+        sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"userOne\"").append(",");
+        sb.append(DigestAuthorizationToken.REALM.getName()).append("=\"").append(REALM_NAME).append("\",");
+        sb.append(DigestAuthorizationToken.NONCE.getName()).append("=\"").append(nonce).append("\",");
+        sb.append(DigestAuthorizationToken.DIGEST_URI.getName()).append("=\"/\",");
+        sb.append(DigestAuthorizationToken.RESPONSE.getName()).append("=\"").append(response).append("\"");
+
+        get.addHeader(AUTHORIZATION.toString(), sb.toString());
+        result = client.execute(get);
+        assertEquals(401, result.getStatusLine().getStatusCode());
+    }
+    
+
     // Test completely different nonce.
     // Test nonce re-use.
     // Test choosing different algorithm.
-    // Different URI
+    // Different URI - Test not matching the request as well.
     // Different Method
 
 }
