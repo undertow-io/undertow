@@ -77,7 +77,6 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     }
 
     /**
-     * 
      * @see StreamSourceChannel#read(ByteBuffer[], int, int)
      */
     protected abstract long read0(ByteBuffer[] dsts, int offset, int length) throws IOException;
