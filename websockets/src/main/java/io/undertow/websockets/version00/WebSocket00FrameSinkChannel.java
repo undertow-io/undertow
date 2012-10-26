@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import io.undertow.websockets.StreamSinkFrameChannel;
+import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketVersion;
 import org.xnio.ChannelListener;
@@ -36,13 +37,13 @@ import org.xnio.channels.StreamSourceChannel;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel {
-    WebSocket00FrameSinkChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel, WebSocketFrameType type,
+public abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel {
+    public WebSocket00FrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type,
                                 long payloadSize) {
         super(channel, wsChannel, type, payloadSize);
     }
 
-    private final ByteBuffer start = (ByteBuffer) createFrameStart().flip();
+    private ByteBuffer start;
 
     private long written = 0;
 
@@ -98,6 +99,9 @@ abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel {
 
     private boolean writeFrameStart() throws IOException {
         if (!frameStartWritten) {
+            if (start == null) {
+                start = (ByteBuffer) createFrameStart().flip();
+            }
             while (start.hasRemaining()) {
                 if (channel.write(start) < 1) {
                     return false;
@@ -146,6 +150,30 @@ abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel {
             return b;
         }
         return 0;
+    }
+
+    @Override
+    public int getRsv() {
+        return 0;
+    }
+
+    @Override
+    public boolean isFinalFragment() {
+        return true;
+    }
+
+    @Override
+    public void setFinalFragment(boolean finalFragment) {
+        if (!finalFragment) {
+            throw new IllegalArgumentException("WebSocket 00 only support final fragements");
+        }
+    }
+
+    @Override
+    public void setRsv(int rsv) {
+        if (rsv != 0) {
+            throw new IllegalArgumentException("WebSocket 00 only support rsv of 0");
+        }
     }
 
     private final class CloseListener implements ChannelListener<StreamSinkChannel> {
@@ -204,4 +232,5 @@ abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel {
         }
 
     }
+
 }

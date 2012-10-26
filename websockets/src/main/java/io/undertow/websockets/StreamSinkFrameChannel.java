@@ -21,7 +21,6 @@ package io.undertow.websockets;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.Pipe.SinkChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -51,6 +50,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     private final Object writeWaitLock = new Object();
     private int waiters = 0;
     private boolean suspendWrites;
+    private int rsv;
+    private boolean finalFragment;
+    private boolean written = false;
 
     public StreamSinkFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this.channel = channel;
@@ -62,6 +64,28 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public Setter<? extends StreamSinkChannel> getWriteSetter() {
         return writeSetter;
+    }
+
+    public int getRsv() {
+        return rsv;
+    }
+
+    public boolean isFinalFragment() {
+        return finalFragment;
+    }
+
+    public void setFinalFragment(boolean finalFragment) {
+        if (written) {
+            throw new IllegalStateException("Can only be set before anything is written");
+        }
+        this.finalFragment = finalFragment;
+    }
+
+    public void setRsv(int rsv) {
+        if (written) {
+            throw new IllegalStateException("Can only be set before anything is written");
+        }
+        this.rsv = rsv;
     }
 
     /**
@@ -127,7 +151,11 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        return write0(srcs, offset, length);
+        long w = write0(srcs, offset, length);
+        if (!written && w > 0) {
+            written = true;
+        }
+        return w;
     }
 
     /**
@@ -141,7 +169,11 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        return write0(srcs);
+        long w = write0(srcs);
+        if (!written && w > 0) {
+            written = true;
+        }
+        return w;
     }
 
     /**
@@ -155,7 +187,11 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        return write0(src);
+        int w = write0(src);
+        if (!written && w > 0) {
+            written = true;
+        }
+        return w;
     }
 
     /**
@@ -170,7 +206,11 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        return transferFrom0(src, position, count);
+        long w = transferFrom0(src, position, count);
+        if (!written && w > 0) {
+            written = true;
+        }
+        return w;
     }
 
     /**
@@ -185,11 +225,14 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        return transferFrom0(source, count, throughBuffer);
+        long w =  transferFrom0(source, count, throughBuffer);
+        if (!written && w > 0) {
+            written = true;
+        }
+        return w;
     }
 
     /**
-     * 
      * @see StreamSinkChannel#transferFrom(StreamSourceChannel, long, ByteBuffer)
      */
     protected abstract long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException;
@@ -241,7 +284,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     /**
      * Return <code>true</code> if this {@link StreamSinkFrameChannel} is currently in use.
-     * 
      */
     protected final boolean isActive() {
         return wsChannel.isActive(this);
