@@ -76,6 +76,10 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         }
     }
 
+    /**
+     * 
+     * @see StreamSourceChannel#read(ByteBuffer[], int, int)
+     */
     protected abstract long read0(ByteBuffer[] dsts, int offset, int length) throws IOException;
 
     @Override
@@ -92,6 +96,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         }
     }
 
+    /**
+     * @see StreamSourceChannel#read(ByteBuffer[])
+     */
     protected abstract long read0(ByteBuffer[] dsts) throws IOException;
 
     @Override
@@ -108,6 +115,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         }
     }
 
+    /**
+     * @see StreamSourceChannel#read(ByteBuffer)
+     */
     protected abstract int read0(ByteBuffer dst) throws IOException;
 
     @Override
@@ -124,6 +134,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         }
     }
 
+    /**
+     * @see StreamSourceChannel#transferTo(long, long, FileChannel)
+     */
     protected abstract long transferTo0(long position, long count, FileChannel target) throws IOException;
 
     @Override
@@ -140,6 +153,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         }
     }
 
+    /**
+     * @see StreamSourceChannel#transferTo(long, ByteBuffer, StreamSinkChannel)
+     */
     protected abstract long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException;
 
     private void complete() {
@@ -153,7 +169,6 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     public WebSocketFrameType getType() {
         return type;
     }
-
 
     /**
      * Flag to indicate if this frame is the final fragment in a message. The first fragment (frame) may also be the
