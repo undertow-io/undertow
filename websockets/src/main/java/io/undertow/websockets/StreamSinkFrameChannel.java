@@ -21,6 +21,7 @@ package io.undertow.websockets;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.Pipe.SinkChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -129,6 +130,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return write0(srcs, offset, length);
     }
 
+    /**
+     * @see {@link StreamSinkChannel#write(ByteBuffer[], int, int)}
+     */
     protected abstract long write0(ByteBuffer[] srcs, int offset, int length) throws IOException;
 
     @Override
@@ -140,6 +144,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return write0(srcs);
     }
 
+    /**
+     * @see StreamSinkChannel#write(ByteBuffer[])
+     */
     protected abstract long write0(ByteBuffer[] srcs) throws IOException;
 
     @Override
@@ -151,6 +158,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return write0(src);
     }
 
+    /**
+     * @see StreamSinkChannel#write(ByteBuffer)
+     */
     protected abstract int write0(ByteBuffer src) throws IOException;
 
 
@@ -163,6 +173,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return transferFrom0(src, position, count);
     }
 
+    /**
+     * @see StreamSinkChannel#transferFrom(FileChannel, long, long)
+     */
     protected abstract long transferFrom0(FileChannel src, long position, long count) throws IOException;
 
 
@@ -175,6 +188,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return transferFrom0(source, count, throughBuffer);
     }
 
+    /**
+     * 
+     * @see StreamSinkChannel#transferFrom(StreamSourceChannel, long, ByteBuffer)
+     */
     protected abstract long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException;
 
 
@@ -222,6 +239,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
     }
 
+    /**
+     * Return <code>true</code> if this {@link StreamSinkFrameChannel} is currently in use.
+     * 
+     */
     protected final boolean isActive() {
         return wsChannel.isActive(this);
     }
