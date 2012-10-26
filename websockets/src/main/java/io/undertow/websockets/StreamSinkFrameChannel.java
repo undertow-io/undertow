@@ -123,7 +123,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
         checkClosed();
-        if (!isInUse()) {
+        if (!isActive()) {
             return 0;
         }
         return write0(srcs, offset, length);
@@ -134,7 +134,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public final long write(ByteBuffer[] srcs) throws IOException {
         checkClosed();
-        if (!isInUse()) {
+        if (!isActive()) {
             return 0;
         }
         return write0(srcs);
@@ -145,7 +145,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public final int write(ByteBuffer src) throws IOException {
         checkClosed();
-        if (!isInUse()) {
+        if (!isActive()) {
             return 0;
         }
         return write0(src);
@@ -157,7 +157,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public final long transferFrom(FileChannel src, long position, long count) throws IOException {
         checkClosed();
-        if (!isInUse()) {
+        if (!isActive()) {
             return 0;
         }
         return transferFrom0(src, position, count);
@@ -169,7 +169,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
         checkClosed();
-        if (!isInUse()) {
+        if (!isActive()) {
             return 0;
         }
         return transferFrom0(source, count, throughBuffer);
@@ -205,7 +205,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void suspendWrites() {
-        if (isInUse()) {
+        if (isActive()) {
             channel.suspendWrites();
         } else {
             suspendWrites = true;
@@ -215,20 +215,20 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void resumeWrites() {
-        if (isInUse()) {
+        if (isActive()) {
             channel.suspendWrites();
         } else {
             suspendWrites = false;
         }
     }
 
-    protected final boolean isInUse() {
-        return wsChannel.isInUse(this);
+    protected final boolean isActive() {
+        return wsChannel.isActive(this);
     }
 
     @Override
     public boolean isWriteResumed() {
-        if (isInUse()) {
+        if (isActive()) {
             return channel.isWriteResumed();
         } else {
             return !suspendWrites;
@@ -238,7 +238,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void wakeupWrites() {
-        if (isInUse()) {
+        if (isActive()) {
             channel.wakeupWrites();
         }
         ChannelListeners.invokeChannelListener(this, writeSetter.get());
@@ -256,7 +256,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void awaitWritable() throws IOException {
-        if (isInUse()) {
+        if (isActive()) {
             channel.awaitWritable();
         } else {
             try {
@@ -277,7 +277,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
-        if (isInUse()) {
+        if (isActive()) {
             channel.awaitWritable(time, timeUnit);
         } else {
             try {
@@ -304,7 +304,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public boolean flush() throws IOException {
-        if (isInUse()) {
+        if (isActive()) {
             return channel.flush();
         }
         return false;
