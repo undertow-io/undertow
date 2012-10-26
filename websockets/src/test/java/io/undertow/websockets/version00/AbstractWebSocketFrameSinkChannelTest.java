@@ -543,7 +543,7 @@ public abstract class AbstractWebSocketFrameSinkChannelTest {
         return new WebSocket00Channel(channel, null, "ws://localhost/ws") {
 
             @Override
-            protected boolean isInUse(StreamSinkChannel channel) {
+            protected boolean isActive(StreamSinkChannel channel) {
                 return inUse;
             }
             

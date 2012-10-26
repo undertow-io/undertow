@@ -98,7 +98,10 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         return bufferPool;
     }
 
-    protected boolean isInUse(StreamSinkChannel channel) {
+    /**
+     * Check if the given {@link StreamSinkChannel} is currently active
+     */
+    protected boolean isActive(StreamSinkChannel channel) {
         return senders.peek() == channel;
     }
 
@@ -319,7 +322,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         boolean o = senders.offer(ch);
         assert o;
 
-        if (isInUse(ch)) {
+        if (isActive(ch)) {
             // Channel is first in the queue so mark it as active
             ch.active();
         }
