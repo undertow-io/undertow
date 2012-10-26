@@ -51,8 +51,8 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     private int waiters = 0;
     private boolean suspendWrites;
     private int rsv;
-    private boolean finalFragment;
-    private boolean written = false;
+    private boolean finalFragment = true;
+    private boolean written;
 
     public StreamSinkFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this.channel = channel;
@@ -66,14 +66,28 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return writeSetter;
     }
 
+    /**
+     * Return the RSV for the extension. Default is 0.
+     */
     public int getRsv() {
         return rsv;
     }
 
+    /**
+     * Return <code>true</code> if this {@link StreamSinkFrameChannel} is the final fragement
+     */
     public boolean isFinalFragment() {
         return finalFragment;
     }
 
+    /**
+     * Set if this {@link StreamSinkFrameChannel} is the final fragement. 
+     * 
+     * This can only be set before any write or transfer operations where passed
+     * to the wrapped {@link StreamSinkChannel}, after that an {@link IllegalStateException} will be thrown.
+     * 
+     * @param finalFragment
+     */
     public void setFinalFragment(boolean finalFragment) {
         if (written) {
             throw new IllegalStateException("Can only be set before anything is written");
@@ -81,6 +95,14 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         this.finalFragment = finalFragment;
     }
 
+    /**
+     * Set the RSV which is used for extensions. 
+     * 
+     * This can only be set before any write or transfer operations where passed
+     * to the wrapped {@link StreamSinkChannel}, after that an {@link IllegalStateException} will be thrown.
+     * 
+     * @param rsv
+     */
     public void setRsv(int rsv) {
         if (written) {
             throw new IllegalStateException("Can only be set before anything is written");
@@ -151,11 +173,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        long w = write0(srcs, offset, length);
-        if (!written && w > 0) {
-            written = true;
-        }
-        return w;
+        written = true;
+
+        return write0(srcs, offset, length);
     }
 
     /**
@@ -169,11 +189,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        long w = write0(srcs);
-        if (!written && w > 0) {
-            written = true;
-        }
-        return w;
+        written = true;
+
+        return write0(srcs);
     }
 
     /**
@@ -187,11 +205,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        int w = write0(src);
-        if (!written && w > 0) {
-            written = true;
-        }
-        return w;
+        written = true;
+
+        return write0(src);
     }
 
     /**
@@ -206,11 +222,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        long w = transferFrom0(src, position, count);
-        if (!written && w > 0) {
-            written = true;
-        }
-        return w;
+        written = true;
+
+        return transferFrom0(src, position, count);
     }
 
     /**
@@ -225,11 +239,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        long w =  transferFrom0(source, count, throughBuffer);
-        if (!written && w > 0) {
-            written = true;
-        }
-        return w;
+        written = true;
+
+        return transferFrom0(source, count, throughBuffer);
     }
 
     /**
