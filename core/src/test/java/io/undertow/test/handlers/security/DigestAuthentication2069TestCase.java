@@ -21,6 +21,7 @@ import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.DIGEST;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import io.undertow.server.handlers.security.AuthenticationInfoToken;
 import io.undertow.server.handlers.security.AuthenticationMechanism;
@@ -114,6 +115,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
         Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
         assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
         assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
+        assertFalse(parsedHeader.containsKey(DigestWWWAuthenticateToken.MESSAGE_QOP));
 
         String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
 
@@ -136,11 +138,11 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
-        
+
         values = result.getHeaders("Authentication-Info");
         assertEquals(1, values.length);
         Map<AuthenticationInfoToken, String> parsedAuthInfo = AuthenticationInfoToken.parseHeader(values[0].getValue());
-        
+
         nonce = parsedAuthInfo.get(AuthenticationInfoToken.NEXT_NONCE);
         response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
@@ -160,7 +162,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
 
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
-        assertEquals("ResponseHandler", values[0].getValue());                
+        assertEquals("ResponseHandler", values[0].getValue());
     }
 
     /**

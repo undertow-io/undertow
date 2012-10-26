@@ -24,6 +24,7 @@ import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -59,13 +60,14 @@ public class SimpleNonceManager implements SessionNonceManager {
      *
      * In that situation they are considered single use and must not be used again.
      */
-    private final List<NonceKey> invalidNonces = new LinkedList<NonceKey>();
+    private final List<NonceKey> invalidNonces = Collections.synchronizedList(new LinkedList<NonceKey>());
 
     /**
      * Map of known currently valid nonces, a SortedMap is used to order the nonces by their creation time stamp allowing a
      * simple iteration over the keys to identify expired nonces.
      */
-    private final SortedMap<NonceKey, NonceValue> knownNonces = new TreeMap<NonceKey, NonceValue>();
+    private final SortedMap<NonceKey, NonceValue> knownNonces = Collections
+            .synchronizedSortedMap(new TreeMap<NonceKey, NonceValue>());
 
     /**
      * A WeakHashMap to map expired nonces to their replacement nonce. For an item to be added to this Collection the key will
@@ -78,7 +80,8 @@ public class SimpleNonceManager implements SessionNonceManager {
      * The value in this Map is a plain String, this is to avoid inadvertantly creating a long term reference to the key we
      * expect to be garbage collected at some point in the future.
      */
-    private final Map<NonceKey, String> forwardMapping = new WeakHashMap<SimpleNonceManager.NonceKey, String>();
+    private final Map<NonceKey, String> forwardMapping = Collections
+            .synchronizedMap(new WeakHashMap<SimpleNonceManager.NonceKey, String>());
 
     /**
      * A pseudo-random generator for creating the nonces, a secure random is not required here as this is used purely to
@@ -101,10 +104,11 @@ public class SimpleNonceManager implements SessionNonceManager {
     private final long overallTimeOut = 15 * 60 * 1000;
 
     /**
-     * This is the time before the expiration of the current nonce that a replacement nonce will be sent to the client
-     * pro-actively, i.e. from 5 minutes before the expiration of the nonce the client will be asked to use the next nonce.
+     * A previously used nonce will be allowed to remain in the knownNonces list for up to 5 minutes.
+     *
+     * This is primarily for session based digests where loosing the cached session key would be bad.
      */
-    private final long newNonceOverlap = 5 * 60 * 1000;
+    private final long cacheTimePostExpiry = 5 * 60 * 1000;
 
     public SimpleNonceManager() {
         this(DEFAULT_HASH_ALG);
@@ -176,8 +180,8 @@ public class SimpleNonceManager implements SessionNonceManager {
         } else if (knownNonces.containsKey(key)) {
             // At this point we need to validate that the nonce is still within it's time limits,
             // If a new nonce had been selected then a known nonce would not have been found.
-            // The nonce will also have it's key sequence checked - we are not mandating the order
-            // of the count but we are mandating a count can only be used once.
+            // The nonce will also have it's nonce count checked.
+            return validateNonceWithCount(key, nonceCount);
 
         } else if (forwardMapping.containsKey(key)) {
             // We could have let this drop through as the next validation would fail anyway but
@@ -186,29 +190,65 @@ public class SimpleNonceManager implements SessionNonceManager {
         }
 
         // This is not a nonce currently known to us so start the validation process.
-        NonceKey nonceKey = verifyUnknownNonce(nonce);
-        if (nonceKey == null) {
+        key = verifyUnknownNonce(nonce);
+        if (key == null) {
             return false;
         }
 
         long now = System.currentTimeMillis();
         long earliestAccepted = now - firstUseTimeOut;
-        if (nonceKey.timeStamp < earliestAccepted || nonceKey.timeStamp > now) {
+        if (key.timeStamp < earliestAccepted || key.timeStamp > now) {
             // The embedded timestamp is either expired or somehow is after now.
             return false;
         }
 
         if (nonceCount < 0) {
             // Allow a single use but reject all further uses.
-            addInvalidNonce(nonceKey);
+            addInvalidNonce(key);
             return true;
+        } else {
+            return validateNonceWithCount(key, nonceCount);
+        }
+    }
+
+    private boolean validateNonceWithCount(NonceKey nonceKey, int nonceCount) {
+        // This point could have been reached either because the knownNonces map contained the key or because
+        // it didn't and a count was supplied - either way need to double check the contents of knownNonces once
+        // the lock is in place.
+        synchronized (knownNonces) {
+            NonceValue value = knownNonces.get(nonceKey);
+            long now = System.currentTimeMillis();
+            long earliestAccepted = now - overallTimeOut;
+            if (value == null) {
+                if (nonceKey.getTimeStamp() < 0) {
+                    // Means it was in there, now it isn't - most likely a timestamp expiration mid check - abandon validation.
+                    return false;
+                }
+
+                if (nonceKey.timeStamp > earliestAccepted && nonceKey.timeStamp < now) {
+                    value = new NonceValue(nonceKey.getTimeStamp(), nonceCount);
+                    knownNonces.put(nonceKey, value);
+                    return true;
+                }
+
+                return false;
+            } else {
+                // We have it, just need to verify that it has not expired and that the nonce key is valid.
+                if (nonceKey.timeStamp < earliestAccepted || nonceKey.timeStamp > now) {
+                    // The embedded timestamp is either expired or somehow is after now!!
+                    return false;
+                }
+
+                if (value.getMaxNonceCount() < nonceCount) {
+                    value.setMaxNonceCount(nonceCount);
+                    return true;
+                }
+
+                return false;
+            }
+
         }
 
-        // TODO - Implement nonceCount support.
-        return false;
-
-        // Should this also be tied to a user? i.e. a different user can not use someone elses nonce or is the count enough to
-        // pick up abuse?
     }
 
     private void addInvalidNonce(final NonceKey nonce) {
@@ -336,6 +376,10 @@ public class SimpleNonceManager implements SessionNonceManager {
             this.timeStamp = timeStamp;
         }
 
+        public long getTimeStamp() {
+            return timeStamp;
+        }
+
         public int compareTo(NonceKey other) {
             if (timeStamp == other.timeStamp) {
                 return 0;
@@ -388,8 +432,22 @@ public class SimpleNonceManager implements SessionNonceManager {
      */
     private class NonceValue {
 
-        private NonceKey previousKey;
+        private final long timeStamp;
+        // TODO we will also add a mechanism to track the gaps as the only restriction is that a NC can only be used one.
+        private int maxNonceCount;
+        // We keep this as the previous key is also used in a weak hash mep so we need to keep it alive.
+        private final NonceKey previousKey;
         private byte[] sessionKey;
+
+        private NonceValue(final long timeStamp, final int initialNC) {
+            this(timeStamp, initialNC, null);
+        }
+
+        private NonceValue(final long timeStamp, final int initialNC, final NonceKey previousKey) {
+            this.timeStamp = timeStamp;
+            this.maxNonceCount = initialNC;
+            this.previousKey = previousKey;
+        }
 
         byte[] getSessionKey() {
             return sessionKey;
@@ -397,6 +455,14 @@ public class SimpleNonceManager implements SessionNonceManager {
 
         void setSessionKey(final byte[] sessionKey) {
             this.sessionKey = sessionKey;
+        }
+
+        int getMaxNonceCount() {
+            return maxNonceCount;
+        }
+
+        void setMaxNonceCount(int maxNonceCount) {
+            this.maxNonceCount = maxNonceCount;
         }
 
     }

@@ -331,6 +331,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
             // Step 3 - Verify that the nonce was eligible to be used.
             if (validateNonceUse() == false) {
+                // TODO - This is the right place to make use of the decision but the check needs to be much much sooner otherwise a failure server
+                // side could leave a packet that could be 're-played' after the failed auth.
                 // The username and password verification passed but for some reason we do not like the nonce.
                 context.markStale();
                 result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED));
@@ -359,7 +361,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             if (parsedHeader.containsKey(DigestAuthorizationToken.NONCE_COUNT)) {
                 String nonceCountHex = parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT);
 
-                throw new IllegalStateException("Nonce count not yet supported.");
+                nonceCount = Integer.parseInt(nonceCountHex, 16);
             }
 
             context.setNonce(suppliedNonce);
@@ -441,8 +443,28 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         }
 
         private byte[] createRFC2617RequestDigest(final byte[] ha1, final byte[] ha2) {
-            // TODO - Implement method.
-            throw new IllegalStateException("Method not implemented.");
+            byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
+            byte[] nonceCount = parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT).getBytes(UTF_8);
+            byte[] cnonce = parsedHeader.get(DigestAuthorizationToken.CNONCE).getBytes(UTF_8);
+            byte[] qop = parsedHeader.get(DigestAuthorizationToken.MESSAGE_QOP).getBytes(UTF_8);
+
+            try {
+                digest.update(ha1);
+                digest.update(COLON);
+                digest.update(nonce);
+                digest.update(COLON);
+                digest.update(nonceCount);
+                digest.update(COLON);
+                digest.update(cnonce);
+                digest.update(COLON);
+                digest.update(qop);
+                digest.update(COLON);
+                digest.update(ha2);
+
+                return HexConverter.convertToHexBytes(digest.digest());
+            } finally {
+                digest.reset();
+            }
         }
 
     }
