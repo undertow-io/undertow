@@ -44,6 +44,7 @@ public class ServletInfo implements Cloneable {
     private final List<String> mappings = new ArrayList<String>();
     private final Map<String, String> initParams = new HashMap<String, String>();
     private final List<SecurityRoleRef> securityRoleRefs = new ArrayList<SecurityRoleRef>();
+    private final List<HandlerChainWrapper> handlerChainWrappers = new ArrayList<HandlerChainWrapper>();
 
     private volatile InstanceFactory<? extends Servlet> instanceFactory;
     private volatile String jspFile;
@@ -106,6 +107,7 @@ public class ServletInfo implements Cloneable {
         info.mappings.addAll(mappings);
         info.initParams.putAll(initParams);
         info.securityRoleRefs.addAll(securityRoleRefs);
+        info.handlerChainWrappers.addAll(handlerChainWrappers);
         return info;
     }
 
@@ -219,5 +221,14 @@ public class ServletInfo implements Cloneable {
 
     public List<SecurityRoleRef> getSecurityRoleRefs() {
         return Collections.unmodifiableList(securityRoleRefs);
+    }
+
+    public ServletInfo addAdditionalHandler(final HandlerChainWrapper wrapper) {
+        this.handlerChainWrappers.add(wrapper);
+        return this;
+    }
+
+    public List<HandlerChainWrapper> getHandlerChainWrappers() {
+        return Collections.unmodifiableList(handlerChainWrappers);
     }
 }

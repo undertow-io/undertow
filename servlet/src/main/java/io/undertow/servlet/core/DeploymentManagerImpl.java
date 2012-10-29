@@ -44,6 +44,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.FilterMappingInfo;
+import io.undertow.servlet.api.HandlerChainWrapper;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.MimeMapping;
@@ -408,7 +409,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private ServletInitialHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners, final ManagedServlet managedServlet) {
-        return new ServletInitialHandler(new RequestListenerHandler(applicationListeners, next), setupAction, deployment.getServletContext(), managedServlet);
+        BlockingHttpHandler servletHandler = new RequestListenerHandler(applicationListeners, next);
+        for(HandlerChainWrapper wrapper : managedServlet.getServletInfo().getHandlerChainWrappers()) {
+            servletHandler = wrapper.wrap(servletHandler);
+        }
+        return new ServletInitialHandler(servletHandler, setupAction, deployment.getServletContext(), managedServlet);
     }
 
     private ServletHandler resolveServletForPath(final String path, final Map<String, ServletHandler> pathServlets) {
