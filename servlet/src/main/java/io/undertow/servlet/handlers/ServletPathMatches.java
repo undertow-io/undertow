@@ -41,7 +41,7 @@ public class ServletPathMatches {
         this.nameMatches = nameMatches;
         this.defaultServlet = defaultServlet;
         Map<String, ServletPathMatch> newExactPathMatches = new HashMap<String, ServletPathMatch>();
-        for(Map.Entry<String, ServletInitialHandler> entry : exactPathMatches.entrySet()) {
+        for (Map.Entry<String, ServletInitialHandler> entry : exactPathMatches.entrySet()) {
             newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey(), null));
         }
         this.exactPathMatches = newExactPathMatches;
@@ -59,40 +59,56 @@ public class ServletPathMatches {
         }
         PathMatch match = prefixMatches.get(path);
         if (match != null) {
-            return  handleMatch(path, match, path, null);
+            return handleMatch(path, match, path, null, -1, path.lastIndexOf('.'));
         }
-        for (int i = path.length() -1; i >= 0; --i) {
+        int qsPos = -1;
+        int extensionPos = -1;
+        for (int i = path.length() - 1; i >= 0; --i) {
             final char c = path.charAt(i);
-            if(c == '?') {
+            if (c == '?') {
                 //there was a query string, check the exact matches again
                 final String part = path.substring(0, i);
                 exact = exactPathMatches.get(part);
                 if (exact != null) {
                     return exact;
                 }
+                qsPos = i;
+                extensionPos = -1;
             } else if (c == '/') {
                 final String part = path.substring(0, i);
                 match = prefixMatches.get(part);
                 if (match != null) {
-                    return  handleMatch(path, match, part, path.substring(i));
+                    return handleMatch(path, match, part, path.substring(i), qsPos, extensionPos);
+                }
+            } else if (c == '.') {
+                if (extensionPos == -1) {
+                    extensionPos = i;
                 }
             }
         }
         return new ServletPathMatch(defaultServlet, "", path);
     }
 
-    private ServletPathMatch handleMatch(final String path, final PathMatch match, String matched, String remaining) {
+    private ServletPathMatch handleMatch(final String path, final PathMatch match, String matched, String remaining, final int qsPos, final int extensionPos) {
         if (match.extensionMatches.isEmpty()) {
             return new ServletPathMatch(match.defaultHandler, matched, remaining);
         } else {
-            int c = path.lastIndexOf('.');
-            if (c == -1) {
+            if (extensionPos == -1) {
                 return new ServletPathMatch(match.defaultHandler, matched, remaining);
             } else {
-                final String ext = path.substring(c + 1, path.length());
+                final String ext;
+                if (qsPos == -1) {
+                    ext = path.substring(extensionPos + 1, path.length());
+                } else {
+                    ext = path.substring(extensionPos + 1, qsPos);
+                }
                 ServletInitialHandler handler = match.extensionMatches.get(ext);
                 if (handler != null) {
-                    return new ServletPathMatch(handler, matched, remaining);
+                    if(qsPos == -1) {
+                        return new ServletPathMatch(handler, path, "");
+                    } else {
+                        return new ServletPathMatch(handler, path.substring(0, qsPos), "");
+                    }
                 } else {
                     return new ServletPathMatch(match.defaultHandler, matched, remaining);
                 }
@@ -120,7 +136,7 @@ public class ServletPathMatches {
 
         public void addPrefixMatch(final String prefix, final ServletInitialHandler match) {
             PathMatch m = prefixMatches.get(prefix);
-            if(m == null) {
+            if (m == null) {
                 prefixMatches.put(prefix, m = new PathMatch(match));
             }
             m.defaultHandler = match;
@@ -128,7 +144,7 @@ public class ServletPathMatches {
 
         public void addExtensionMatch(final String prefix, final String extension, final ServletInitialHandler match) {
             PathMatch m = prefixMatches.get(prefix);
-            if(m == null) {
+            if (m == null) {
                 prefixMatches.put(prefix, m = new PathMatch(null));
             }
             m.extensionMatches.put(extension, match);
