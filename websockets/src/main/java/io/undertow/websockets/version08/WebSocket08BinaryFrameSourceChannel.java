@@ -15,8 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.version00;
-
+package io.undertow.websockets.version08;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
@@ -24,12 +23,10 @@ import io.undertow.websockets.WebSocketPayloadFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket00BinaryFrameSourceChannel extends WebSocketPayloadFrameSourceChannel {
-
-    WebSocket00BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int payloadSize) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
+public class WebSocket08BinaryFrameSourceChannel extends WebSocketPayloadFrameSourceChannel {
+    WebSocket08BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, boolean finalFragment, int payloadSize) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, rsv, finalFragment, payloadSize);
     }
 }
