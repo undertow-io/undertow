@@ -49,7 +49,7 @@ import org.junit.runner.RunWith;
 
 /**
  * Test case for Digest authentication based on RFC2617 with QOP of auth.
- * 
+ *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 @RunWith(DefaultServer.class)
@@ -79,7 +79,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
 
     /**
      * Creates a response value from the supplied parameters.
-     * 
+     *
      * @return The generated Hex encoded MD5 digest based response.
      */
     private String createResponse(final String userName, final String realm, final String password, final String method,
@@ -115,6 +115,38 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
         return HexConverter.convertToHexString(digest.digest());
     }
 
+    private String createRspAuth(final String userName, final String realm, final String password, final String uri,
+            final String nonce, final String nonceCount, final String cnonce) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("MD5");
+        digest.update(userName.getBytes(UTF_8));
+        digest.update((byte) ':');
+        digest.update(realm.getBytes(UTF_8));
+        digest.update((byte) ':');
+        digest.update(password.getBytes(UTF_8));
+
+        byte[] ha1 = HexConverter.convertToHexBytes(digest.digest());
+
+        digest.update((byte) ':');
+        digest.update(uri.getBytes(UTF_8));
+
+        byte[] ha2 = HexConverter.convertToHexBytes(digest.digest());
+
+        digest.update(ha1);
+        digest.update((byte) ':');
+        digest.update(nonce.getBytes(UTF_8));
+        digest.update((byte) ':');
+        digest.update(nonceCount.getBytes(UTF_8));
+        digest.update((byte) ':');
+        digest.update(cnonce.getBytes(UTF_8));
+        digest.update((byte) ':');
+        digest.update(DigestQop.AUTH.getToken().getBytes(UTF_8));
+        digest.update((byte) ':');
+
+        digest.update(ha2);
+
+        return HexConverter.convertToHexString(digest.digest());
+    }
+
     private String createAuthorizationLine(final String userName, final String password, final String method, final String uri,
             final String nonce, final int nonceCount, final String cnonce, final String opaque) throws Exception {
         StringBuilder sb = new StringBuilder(DIGEST.toString());
@@ -126,12 +158,13 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
         String nonceCountHex = toHex(nonceCount);
         String response = createResponse(userName, REALM_NAME, password, method, uri, nonce, nonceCountHex, cnonce);
         sb.append(DigestAuthorizationToken.RESPONSE.getName()).append("=\"").append(response).append("\",");
-        sb.append(DigestAuthorizationToken.ALGORITHM.getName()).append("=\"").append(DigestAlgorithm.MD5.getToken()).append("\",");
+        sb.append(DigestAuthorizationToken.ALGORITHM.getName()).append("=\"").append(DigestAlgorithm.MD5.getToken())
+                .append("\",");
         sb.append(DigestAuthorizationToken.CNONCE.getName()).append("=\"").append(cnonce).append("\",");
         sb.append(DigestAuthorizationToken.OPAQUE.getName()).append("=\"").append(opaque).append("\",");
         sb.append(DigestAuthorizationToken.MESSAGE_QOP.getName()).append("=\"").append(DigestQop.AUTH.getToken()).append("\",");
         sb.append(DigestAuthorizationToken.NONCE_COUNT.getName()).append("=").append(nonceCountHex);
-        
+
         return sb.toString();
     }
 
@@ -143,7 +176,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
 
     /**
      * Test for a successful authentication.
-     * 
+     *
      * Also makes two additional calls to demonstrate nonce re-use with an incrementing nonce count.
      */
     @Test
@@ -174,9 +207,10 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
             client = new DefaultHttpClient();
             get = new HttpGet(DefaultServer.getDefaultServerAddress());
 
-            String authorization = createAuthorizationLine("userOne", "passwordOne", "GET", "/", nonce, nonceCount++,
+            int thisNonceCount = nonceCount++;
+            String authorization = createAuthorizationLine("userOne", "passwordOne", "GET", "/", nonce, thisNonceCount,
                     clientNonce, opaque);
-            
+
             get.addHeader(AUTHORIZATION.toString(), authorization);
             result = client.execute(get);
             assertEquals(200, result.getStatusLine().getStatusCode());
@@ -184,15 +218,18 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
             values = result.getHeaders("ProcessedBy");
             assertEquals(1, values.length);
             assertEquals("ResponseHandler", values[0].getValue());
-            
-            // We are sending these quickly so don't expect a replacement nonce.
 
-            //values = result.getHeaders("Authentication-Info");
-            //assertEquals(1, values.length);
-            //Map<AuthenticationInfoToken, String> parsedAuthInfo = AuthenticationInfoToken.parseHeader(values[0].getValue());
+            values = result.getHeaders("Authentication-Info");
+            assertEquals(1, values.length);
+            Map<AuthenticationInfoToken, String> parsedAuthInfo = AuthenticationInfoToken.parseHeader(values[0].getValue());
 
-            //String newNonce = parsedAuthInfo.get(AuthenticationInfoToken.NEXT_NONCE);
-            //assertEquals("Don't expect a replacement nonce.", nonce, newNonce);
+            assertEquals("Didn't expect a new nonce.", nonce, parsedAuthInfo.get(AuthenticationInfoToken.NEXT_NONCE));
+            assertEquals(DigestQop.AUTH.getToken(), parsedAuthInfo.get(AuthenticationInfoToken.MESSAGE_QOP));
+            String nonceCountString = toHex(thisNonceCount);
+            assertEquals(createRspAuth("userOne", REALM_NAME, "passwordOne", "/", nonce, nonceCountString, clientNonce),
+                    parsedAuthInfo.get(AuthenticationInfoToken.RESPONSE_AUTH));
+            assertEquals(clientNonce, parsedAuthInfo.get(AuthenticationInfoToken.CNONCE));
+            assertEquals(nonceCountString, parsedAuthInfo.get(AuthenticationInfoToken.NONCE_COUNT));
         }
     }
 

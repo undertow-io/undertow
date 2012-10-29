@@ -548,7 +548,6 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
             MessageDigest digest = context.getDigest();
             try {
-                digest.update("BOO".getBytes());
                 digest.update(COLON);
                 digest.update(digestUri);
 

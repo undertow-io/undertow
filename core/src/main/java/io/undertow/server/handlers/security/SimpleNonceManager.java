@@ -25,13 +25,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.WeakHashMap;
 
 /**
@@ -66,8 +65,9 @@ public class SimpleNonceManager implements SessionNonceManager {
      * Map of known currently valid nonces, a SortedMap is used to order the nonces by their creation time stamp allowing a
      * simple iteration over the keys to identify expired nonces.
      */
-    private final SortedMap<NonceKey, NonceValue> knownNonces = Collections
-            .synchronizedSortedMap(new TreeMap<NonceKey, NonceValue>());
+    private final Map<NonceKey, NonceValue> knownNonces = Collections
+            .synchronizedMap(new HashMap<NonceKey, NonceValue>());
+    // TODO - Will need to add something else for the expiration clean up - maybe also a sorted set also to periodically iterate over.
 
     /**
      * A WeakHashMap to map expired nonces to their replacement nonce. For an item to be added to this Collection the key will
@@ -173,7 +173,7 @@ public class SimpleNonceManager implements SessionNonceManager {
                     // The cacheTimePostExpiry is not included here as this is our opportunity to inform the client to use a
                     // replacement nonce without a stale round trip.
                     long earliestAccepted = now - firstUseTimeOut;
-                    if (key.timeStamp < earliestAccepted || key.timeStamp > now) {
+                    if (value.timeStamp < earliestAccepted || value.timeStamp > now) {
                         NonceKey replacement = createNewNonceKey();
                         nonce = replacement.nonce;
                         // Create a record of the forward mapping so if any requests do need to be marked stale they can be
@@ -282,7 +282,7 @@ public class SimpleNonceManager implements SessionNonceManager {
                 return false;
             } else {
                 // We have it, just need to verify that it has not expired and that the nonce key is valid.
-                if (nonceKey.timeStamp < earliestAccepted || nonceKey.timeStamp > now) {
+                if (value.timeStamp < earliestAccepted || value.timeStamp > now) {
                     // The embedded timestamp is either expired or somehow is after now!!
                     return false;
                 }
