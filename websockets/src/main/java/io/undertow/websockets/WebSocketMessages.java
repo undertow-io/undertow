@@ -19,6 +19,7 @@
 package io.undertow.websockets;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 import org.jboss.logging.Message;
 import org.jboss.logging.MessageBundle;
@@ -38,5 +39,8 @@ public interface WebSocketMessages {
 
     @Message(id = 2002, value = "Channel is closed")
     IOException channelClosed();
+
+    @Message(id = 2003, value = "Text frame contains non UTF-8 data")
+    UnsupportedEncodingException invalidTextFrameEncoding();
 
 }
