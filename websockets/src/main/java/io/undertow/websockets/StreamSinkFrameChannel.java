@@ -81,11 +81,11 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     /**
-     * Set if this {@link StreamSinkFrameChannel} is the final fragement. 
-     * 
+     * Set if this {@link StreamSinkFrameChannel} is the final fragement.
+     *
      * This can only be set before any write or transfer operations where passed
      * to the wrapped {@link StreamSinkChannel}, after that an {@link IllegalStateException} will be thrown.
-     * 
+     *
      * @param finalFragment
      */
     public void setFinalFragment(boolean finalFragment) {
@@ -96,11 +96,11 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     /**
-     * Set the RSV which is used for extensions. 
-     * 
+     * Set the RSV which is used for extensions.
+     *
      * This can only be set before any write or transfer operations where passed
      * to the wrapped {@link StreamSinkChannel}, after that an {@link IllegalStateException} will be thrown.
-     * 
+     *
      * @param rsv
      */
     public void setRsv(int rsv) {

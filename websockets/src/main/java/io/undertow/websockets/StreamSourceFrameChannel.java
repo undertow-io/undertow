@@ -47,14 +47,20 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     private final SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private volatile boolean closed;
     private final boolean finalFragment;
+    private final int rsv;
     private boolean complete;
 
-    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, boolean finalFragment) {
+    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
+        this(streamSourceChannelControl, channel, wsChannel, type, 0, true);
+    }
+
+    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment) {
         this.streamSourceChannelControl = streamSourceChannelControl;
         this.channel = channel;
         this.wsChannel = wsChannel;
         this.type = type;
         this.finalFragment = finalFragment;
+        this.rsv = rsv;
     }
 
     /**
@@ -175,6 +181,14 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
      */
     public boolean isFinalFragment() {
         return finalFragment;
+    }
+
+    /**
+     * Return the rsv which is used for extensions.
+     *
+     */
+    public int getRsv() {
+        return rsv;
     }
 
     @Override

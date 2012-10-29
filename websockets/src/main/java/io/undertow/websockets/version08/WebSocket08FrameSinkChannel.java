@@ -32,14 +32,6 @@ import org.xnio.channels.StreamSinkChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket08FrameSinkChannel extends WebSocket00FrameSinkChannel {
-    public WebSocket08FrameSinkChannel(StreamSinkChannel channel, WebSocket08Channel wsChannel, WebSocketFrameType type,
-                                long payloadSize) {
-        super(channel, wsChannel, type, payloadSize);
-        if (opcode == OPCODE_PING && payloadSize > 125) {
-            throw new IllegalArgumentException("invalid payload for PING (payload length must be <= 125, was "
-                    + payloadSize);
-        }
-    }
 
     private static final byte OPCODE_CONT = 0x0;
     private static final byte OPCODE_TEXT = 0x1;
@@ -48,7 +40,16 @@ public class WebSocket08FrameSinkChannel extends WebSocket00FrameSinkChannel {
     private static final byte OPCODE_PING = 0x9;
     private static final byte OPCODE_PONG = 0xA;
 
-    private final byte opcode = opCode();
+    private final byte opCode = opCode();
+
+    public WebSocket08FrameSinkChannel(StreamSinkChannel channel, WebSocket08Channel wsChannel, WebSocketFrameType type,
+                                long payloadSize) {
+        super(channel, wsChannel, type, payloadSize);
+        if (opCode == OPCODE_PING && payloadSize > 125) {
+            throw new IllegalArgumentException("invalid payload for PING (payload length must be <= 125, was "
+                    + payloadSize);
+        }
+    }
 
     private byte opCode() {
         switch (getType()) {
@@ -71,13 +72,12 @@ public class WebSocket08FrameSinkChannel extends WebSocket00FrameSinkChannel {
 
     @Override
     protected ByteBuffer createFrameStart() {
-        byte opcode = opCode();
         int b0 = 0;
         if (isFinalFragment()) {
             b0 |= 1 << 7;
         }
         b0 |= getRsv() % 8 << 4;
-        b0 |= opcode % 128;
+        b0 |= opCode % 128;
 
         final ByteBuffer header;
         int maskLength = 0; // handle masking for clients but we are currently only
