@@ -66,18 +66,18 @@ public class HeaderTokenParser<E extends HeaderToken> {
                         if (currentToken == null) {
                             throw MESSAGES.unexpectedTokenInHeader(paramName);
                         }
-                        if (currentToken.isQuoted()) {
-                            searchingFor = SearchingFor.FIRST_QUOTE;
-                        } else {
-                            valueStart = i + 1;
-                            searchingFor = SearchingFor.END_OF_VALUE;
-                        }
+                        searchingFor = SearchingFor.START_OF_VALUE;
                     }
                     break;
-                case FIRST_QUOTE:
-                    if (headerChars[i] == QUOTE) {
-                        valueStart = i + 1;
-                        searchingFor = SearchingFor.LAST_QUOTE;
+                case START_OF_VALUE:
+                    if (Character.isWhitespace(headerChars[i]) == false) {
+                        if (headerChars[i] == QUOTE && currentToken.isAllowQuoted()) {
+                            valueStart = i + 1;
+                            searchingFor = SearchingFor.LAST_QUOTE;
+                        } else {
+                            valueStart = i;
+                            searchingFor = SearchingFor.END_OF_VALUE;
+                        }
                     }
                     break;
                 case LAST_QUOTE:
@@ -112,7 +112,7 @@ public class HeaderTokenParser<E extends HeaderToken> {
     }
 
     enum SearchingFor {
-        START_OF_NAME, EQUALS_SIGN, FIRST_QUOTE, LAST_QUOTE, END_OF_VALUE;
+        START_OF_NAME, EQUALS_SIGN, START_OF_VALUE, LAST_QUOTE, END_OF_VALUE;
     }
 
 }

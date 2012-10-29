@@ -127,11 +127,13 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     String digestChallenge = current.substring(PREFIX_LENGTH);
 
                     try {
+                        DigestContext context = new DigestContext();
                         Map<DigestAuthorizationToken, String> parsedHeader = parseHeader(digestChallenge);
+                        context.setParsedHeader(parsedHeader);
                         // Some form of Digest authentication is going to occur so get the DigestContext set on the exchange.
-                        exchange.putAttachment(DigestContext.ATTACHMENT_KEY, new DigestContext());
+                        exchange.putAttachment(DigestContext.ATTACHMENT_KEY, context);
 
-                        dispatch(exchange, new DigestRunnable(result, exchange, parsedHeader));
+                        dispatch(exchange, new DigestRunnable(result, exchange));
 
                         // The request has now potentially been dispatched to a different worker thread, the run method
                         // within BasicRunnable is now responsible for ensuring the request continues.
@@ -160,30 +162,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         if (Util.shouldChallenge(exchange)) {
             dispatch(exchange, new SendChallengeRunnable(exchange, completionHandler));
         } else {
-            // Although the NonceManager will be used we do not need to dispatch to a different worker thread
-            // as to reach this point this mechanism must have handled authenication which means the request will
-            // have already been dispatched to a worker.
-            addAuthenticationInfoHeader(exchange);
-            completionHandler.handleComplete();
+            dispatch(exchange, new SendAuthenticationInfoHeader(exchange, completionHandler));
         }
-
-    }
-
-    private void addAuthenticationInfoHeader(final HttpServerExchange exchange) {
-        // Add the header if a new nonce is needed.
-        DigestContext context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
-        String currentNonce = context.getNonce();
-        String nextNonce = nonceManager.nextNonce(currentNonce);
-        if (nextNonce.equals(currentNonce) == false) {
-            StringBuilder sb = new StringBuilder();
-            sb.append(NEXT_NONCE).append("=\"").append(nextNonce).append("\"");
-
-            HeaderMap responseHeader = exchange.getResponseHeaders();
-            responseHeader.add(AUTHENTICATION_INFO, sb.toString());
-        }
-
-        // Then add the header if there are qop requirements and set the appropriate qop fields.
-
     }
 
     private final class DigestRunnable implements Runnable {
@@ -194,12 +174,11 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         private final Map<DigestAuthorizationToken, String> parsedHeader;
         private MessageDigest digest;
 
-        private DigestRunnable(final ConcreteIoFuture<AuthenticationResult> result, HttpServerExchange exchange,
-                Map<DigestAuthorizationToken, String> parsedHeader) {
+        private DigestRunnable(final ConcreteIoFuture<AuthenticationResult> result, HttpServerExchange exchange) {
             this.result = result;
             this.exchange = exchange;
             context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
-            this.parsedHeader = parsedHeader;
+            this.parsedHeader = context.getParsedHeader();
         }
 
         public void run() {
@@ -226,6 +205,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED));
                     return;
                 }
+                context.setQop(qop);
                 mandatoryTokens.add(DigestAuthorizationToken.CNONCE);
                 mandatoryTokens.add(DigestAuthorizationToken.NONCE_COUNT);
             }
@@ -283,6 +263,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             // Step 2 - Based on the headers received verify that in theory the response is valid.
             try {
                 digest = algorithm.getMessageDigest();
+                context.setDigest(digest);
             } catch (NoSuchAlgorithmException e) {
                 // This is really not expected but the API makes us consider it.
                 REQUEST_LOGGER.exceptionProcessingRequest(e);
@@ -299,6 +280,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     // This is the most simple form of a hash involving the username, realm and password.
                     ha1 = createHA1();
                 }
+                context.setHa1(ha1);
             } catch (AuthenticationException e) {
                 // Most likely the user does not exist.
                 result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED));
@@ -517,12 +499,110 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         }
     }
 
+    private class SendAuthenticationInfoHeader implements Runnable {
+
+        private final HttpServerExchange exchange;
+        private final HttpCompletionHandler next;
+        private final DigestContext context;
+
+        private SendAuthenticationInfoHeader(final HttpServerExchange exchange, final HttpCompletionHandler next) {
+            this.exchange = exchange;
+            context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
+            this.next = next;
+        }
+
+        public void run() {
+            DigestQop qop = context.getQop();
+            String currentNonce = context.getNonce();
+            String nextNonce = nonceManager.nextNonce(currentNonce);
+            if (qop != null || nextNonce.equals(currentNonce) == false) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(NEXT_NONCE).append("=\"").append(nextNonce).append("\"");
+                if (qop != null) {
+                    Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
+                    sb.append(",").append(Headers.QOP.toString()).append("=\"").append(qop.getToken()).append("\"");
+                    byte[] ha1 = context.getHa1();
+                    byte[] ha2;
+
+                    if (qop == DigestQop.AUTH) {
+                        ha2 = createHA2Auth();
+                    } else {
+                        ha2 = createHA2AuthInt();
+                    }
+                    String rspauth = createRFC2617RequestDigest(ha1, ha2);
+                    sb.append(",").append(Headers.RESPONSE_AUTH.toString()).append("=\"").append(rspauth).append("\"");
+                    sb.append(",").append(Headers.CNONCE.toString()).append("=\"").append(parsedHeader.get(DigestAuthorizationToken.CNONCE)).append("\"");
+                    sb.append(",").append(Headers.NONCE_COUNT.toString()).append("=").append(parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT));
+                }
+
+                HeaderMap responseHeader = exchange.getResponseHeaders();
+                responseHeader.add(AUTHENTICATION_INFO, sb.toString());
+            }
+
+            exchange.removeAttachment(DigestContext.ATTACHMENT_KEY);
+            next.handleComplete();
+        }
+
+        private byte[] createHA2Auth() {
+            byte[] digestUri = context.getParsedHeader().get(DigestAuthorizationToken.DIGEST_URI).getBytes(UTF_8);
+
+            MessageDigest digest = context.getDigest();
+            try {
+                digest.update("BOO".getBytes());
+                digest.update(COLON);
+                digest.update(digestUri);
+
+                return HexConverter.convertToHexBytes(digest.digest());
+            } finally {
+                digest.reset();
+            }
+        }
+
+        private byte[] createHA2AuthInt() {
+            // TODO - Implement method.
+            throw new IllegalStateException("Method not implemented.");
+        }
+
+        // TODO - Get all digesting into a single wrapper of the MessageDigest.
+        private String createRFC2617RequestDigest(final byte[] ha1, final byte[] ha2) {
+            Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
+            byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
+            byte[] nonceCount = parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT).getBytes(UTF_8);
+            byte[] cnonce = parsedHeader.get(DigestAuthorizationToken.CNONCE).getBytes(UTF_8);
+            byte[] qop = parsedHeader.get(DigestAuthorizationToken.MESSAGE_QOP).getBytes(UTF_8);
+            MessageDigest digest = context.getDigest();
+
+            try {
+                digest.update(ha1);
+                digest.update(COLON);
+                digest.update(nonce);
+                digest.update(COLON);
+                digest.update(nonceCount);
+                digest.update(COLON);
+                digest.update(cnonce);
+                digest.update(COLON);
+                digest.update(qop);
+                digest.update(COLON);
+                digest.update(ha2);
+
+                return HexConverter.convertToHexString(digest.digest());
+            } finally {
+                digest.reset();
+            }
+        }
+
+    }
+
     private static class DigestContext {
 
         static AttachmentKey<DigestContext> ATTACHMENT_KEY = AttachmentKey.create(DigestContext.class);
 
         private String nonce;
+        private DigestQop qop;
+        private byte[] ha1;
+        private MessageDigest digest;
         private boolean stale = false;
+        Map<DigestAuthorizationToken, String> parsedHeader;
 
         public boolean isStale() {
             return stale;
@@ -538,6 +618,38 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
         public void setNonce(String nonce) {
             this.nonce = nonce;
+        }
+
+        DigestQop getQop() {
+            return qop;
+        }
+
+        void setQop(DigestQop qop) {
+            this.qop = qop;
+        }
+
+        byte[] getHa1() {
+            return ha1;
+        }
+
+        void setHa1(byte[] ha1) {
+            this.ha1 = ha1;
+        }
+
+        MessageDigest getDigest() {
+            return digest;
+        }
+
+        void setDigest(MessageDigest digest) {
+            this.digest = digest;
+        }
+
+        Map<DigestAuthorizationToken, String> getParsedHeader() {
+            return parsedHeader;
+        }
+
+        void setParsedHeader(Map<DigestAuthorizationToken, String> parsedHeader) {
+            this.parsedHeader = parsedHeader;
         }
 
     }

@@ -64,7 +64,7 @@ public enum DigestWWWAuthenticateToken implements HeaderToken {
         return name;
     }
 
-    public boolean isQuoted() {
+    public boolean isAllowQuoted() {
         return quoted;
     }
 

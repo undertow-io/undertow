@@ -184,6 +184,8 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
             values = result.getHeaders("ProcessedBy");
             assertEquals(1, values.length);
             assertEquals("ResponseHandler", values[0].getValue());
+            
+            // We are sending these quickly so don't expect a replacement nonce.
 
             //values = result.getHeaders("Authentication-Info");
             //assertEquals(1, values.length);

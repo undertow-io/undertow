@@ -24,9 +24,15 @@ package io.undertow.server.handlers.security;
  */
 public interface HeaderToken {
 
+    /**
+     * @return The name of the token as seen within the HTTP header.
+     */
     String getName();
 
-    boolean isQuoted();
+    /**
+     * @return true if this header could be a quoted header.
+     */
+    boolean isAllowQuoted();
 
     /*
      * Additional items could be added and incorporated into the parsing checks: -

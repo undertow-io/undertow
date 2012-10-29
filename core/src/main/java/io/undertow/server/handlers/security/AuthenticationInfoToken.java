@@ -60,7 +60,7 @@ public enum AuthenticationInfoToken implements HeaderToken {
         return name;
     }
 
-    public boolean isQuoted() {
+    public boolean isAllowQuoted() {
         return quoted;
     }
 

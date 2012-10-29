@@ -106,6 +106,9 @@ public class SimpleNonceManager implements SessionNonceManager {
     /**
      * A previously used nonce will be allowed to remain in the knownNonces list for up to 5 minutes.
      *
+     * The nonce will be accepted during this 5 minute window but will immediately be replaced causing any additional requests
+     * to be forced to use the new nonce.
+     *
      * This is primarily for session based digests where loosing the cached session key would be bad.
      */
     private final long cacheTimePostExpiry = 5 * 60 * 1000;
@@ -152,16 +155,61 @@ public class SimpleNonceManager implements SessionNonceManager {
             return createNewNonce();
         }
 
-        // TODO - Add timestamp checking and forwarding to a new nonce.
-        return lastNonce;
+        String nonce;
+        // Loop the forward mappings.
+        synchronized (forwardMapping) {
+            while (forwardMapping.containsKey(key)) {
+                key = new NonceKey(forwardMapping.get(key));
+            }
+
+            synchronized (knownNonces) {
+                NonceValue value = knownNonces.get(key);
+                if (value == null) {
+                    // Not a likely scenario but if this occurs then most likely the nonce mapped to has also expired so we will
+                    // just send a new nonce.
+                    nonce = createNewNonce();
+                } else {
+                    long now = System.currentTimeMillis();
+                    // The cacheTimePostExpiry is not included here as this is our opportunity to inform the client to use a
+                    // replacement nonce without a stale round trip.
+                    long earliestAccepted = now - firstUseTimeOut;
+                    if (key.timeStamp < earliestAccepted || key.timeStamp > now) {
+                        NonceKey replacement = createNewNonceKey();
+                        nonce = replacement.nonce;
+                        // Create a record of the forward mapping so if any requests do need to be marked stale they can be
+                        // pointed towards the correct nonce to use.
+                        forwardMapping.put(key, nonce);
+                        value = new NonceValue(replacement.timeStamp, key, value.getSessionKey());
+                        // At this point we will not accept the nonce again so remove it from the list of known nonces but do
+                        // register the replacement.
+                        knownNonces.remove(key);
+                        // There are two reasons for registering the replacement 1 - to preserve any session key, 2 - To keep a
+                        // reference to the now invalid key so it
+                        // can be used as a key in a weak hash map.
+                        knownNonces.put(replacement, value);
+                    } else {
+                        nonce = key.nonce;
+                    }
+                }
+            }
+        }
+
+        return nonce;
     }
 
     private String createNewNonce() {
+        return createNewNonceKey().nonce;
+    }
+
+    private NonceKey createNewNonceKey() {
         byte[] prefix = new byte[8];
         random.nextBytes(prefix);
-        byte[] now = Long.toString(System.currentTimeMillis()).getBytes(UTF_8);
+        long timeStamp = System.currentTimeMillis();
+        byte[] now = Long.toString(timeStamp).getBytes(UTF_8);
 
-        return createNonce(prefix, now);
+        String nonce = createNonce(prefix, now);
+
+        return new NonceKey(nonce, timeStamp);
     }
 
     /**
@@ -196,7 +244,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         }
 
         long now = System.currentTimeMillis();
-        long earliestAccepted = now - firstUseTimeOut;
+        long earliestAccepted = now - (firstUseTimeOut + cacheTimePostExpiry);
         if (key.timeStamp < earliestAccepted || key.timeStamp > now) {
             // The embedded timestamp is either expired or somehow is after now.
             return false;
@@ -447,6 +495,13 @@ public class SimpleNonceManager implements SessionNonceManager {
             this.timeStamp = timeStamp;
             this.maxNonceCount = initialNC;
             this.previousKey = previousKey;
+        }
+
+        private NonceValue(final long timeStamp, final NonceKey previousKey, final byte[] sessionKey) {
+            this.timeStamp = timeStamp;
+            this.maxNonceCount = 0;
+            this.previousKey = previousKey;
+            this.sessionKey = sessionKey;
         }
 
         byte[] getSessionKey() {

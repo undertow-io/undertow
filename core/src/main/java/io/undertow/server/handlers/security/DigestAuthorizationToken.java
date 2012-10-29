@@ -69,7 +69,7 @@ public enum DigestAuthorizationToken implements HeaderToken {
     }
 
     @Override
-    public boolean isQuoted() {
+    public boolean isAllowQuoted() {
         return quoted;
     }
 
