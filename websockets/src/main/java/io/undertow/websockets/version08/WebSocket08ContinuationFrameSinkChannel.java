@@ -17,17 +17,24 @@
  */
 package io.undertow.websockets.version08;
 
-import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.WebSocketPayloadFrameSourceChannel;
-import org.xnio.channels.StreamSourceChannel;
+import org.xnio.channels.StreamSinkChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08CloseFrameSourceChannel extends WebSocketPayloadFrameSourceChannel {
-    WebSocket08CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, int payloadSize) {
-        // no fragmentation allowed per spec
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, rsv, true, payloadSize);
+public class WebSocket08ContinuationFrameSinkChannel extends WebSocket08FrameSinkChannel {
+    public WebSocket08ContinuationFrameSinkChannel(StreamSinkChannel channel, WebSocket08Channel wsChannel, long payloadSize) {
+        super(channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
+    }
+
+    @Override
+    public boolean isFragmentationSupported() {
+        return true;
+    }
+
+    @Override
+    public boolean areExtensionsSupported() {
+        return true;
     }
 }

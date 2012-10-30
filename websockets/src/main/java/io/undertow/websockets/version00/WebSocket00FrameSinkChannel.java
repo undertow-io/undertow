@@ -68,6 +68,16 @@ public abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel
     protected abstract ByteBuffer createFrameEnd();
 
     @Override
+    public boolean isFragmentationSupported() {
+        return false;
+    }
+
+    @Override
+    public boolean areExtensionsSupported() {
+        return false;
+    }
+
+    @Override
     protected void close0() throws IOException {
 
     }

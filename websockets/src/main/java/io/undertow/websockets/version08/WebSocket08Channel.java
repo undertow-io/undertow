@@ -77,6 +77,21 @@ public class WebSocket08Channel extends WebSocketChannel {
 
     @Override
     protected StreamSinkFrameChannel create(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize) {
-        return new WebSocket08FrameSinkChannel(channel, this, type, payloadSize);
+        switch (type) {
+            case TEXT:
+                return new WebSocket08TextFrameSinkChannel(channel, this, payloadSize);
+            case BINARY:
+                return new WebSocket08BinaryFrameSinkChannel(channel, this, payloadSize);
+            case CLOSE:
+                return new WebSocket08CloseFrameSinkChannel(channel, this, payloadSize);
+            case PONG:
+                return new WebSocket08PongFrameSinkChannel(channel, this, payloadSize);
+            case PING:
+                return new WebSocket08PingFrameSinkChannel(channel, this, payloadSize);
+            case CONTINUATION:
+                return new WebSocket08ContinuationFrameSinkChannel(channel, this, payloadSize);
+            default:
+                throw new IllegalArgumentException("WebSocketFrameType " + type + " is not supported by this WebSocketChannel");
+        }
     }
 }

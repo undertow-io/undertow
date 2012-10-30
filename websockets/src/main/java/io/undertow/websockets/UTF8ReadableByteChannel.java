@@ -22,13 +22,17 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
 /**
+ * ReadableByteChannel which wraps another ReadableByteChannel and check if the read data contain
+ * any non UTF-8 data. If that is the case it will throw an {@link java.io.UnsupportedEncodingException}
+ *
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class UTF8ReadableByteChannel implements ReadableByteChannel {
     protected final ReadableByteChannel channel;
     protected final UTF8Checker checker;
 
-    UTF8ReadableByteChannel(ReadableByteChannel channel, UTF8Checker checker) {
+    public UTF8ReadableByteChannel(ReadableByteChannel channel, UTF8Checker checker) {
         this.channel = channel;
         this.checker = checker;
     }

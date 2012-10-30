@@ -18,12 +18,17 @@
 package io.undertow.websockets;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
 /**
+ * An utility class which can be used to check if a sequence of bytes or ByteBuffers contain non UTF-8 data.
+ *
+ * Please use a new instance per stream.
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class UTF8Checker {
+public final class UTF8Checker {
 
 
     private static final int UTF8_ACCEPT = 0;
@@ -50,7 +55,13 @@ public class UTF8Checker {
     private int state = UTF8_ACCEPT;
     private int codep;
 
-    public void checkUTF8(int b) throws IOException {
+    /**
+     * Check if the given byte is UTF-8 data.
+     *
+     * @param b
+     * @throws IOException
+     */
+    public void checkUTF8(int b) throws UnsupportedEncodingException {
         byte type = TYPES[b & 0xFF];
 
         codep = state != UTF8_ACCEPT ? b & 0x3f | codep << 6 : 0xff >> type & b;
@@ -62,7 +73,15 @@ public class UTF8Checker {
         }
     }
 
-    public void checkUTF8(ByteBuffer buf, int pos, int length) throws IOException {
+    /**
+     * Check if the given ByteBuffer contains non UTF-8 data.
+     *
+     * @param buf                            the ByteBuffer to check
+     * @param pos                            the position to start with the check from
+     * @param length                         the number of bytes to check
+     * @throws UnsupportedEncodingException  is thrown if non UTF-8 data is found
+     */
+    public void checkUTF8(ByteBuffer buf, int pos, int length) throws UnsupportedEncodingException {
         for (int i = pos; i < length; i ++) {
             checkUTF8(buf.get(i));
         }
