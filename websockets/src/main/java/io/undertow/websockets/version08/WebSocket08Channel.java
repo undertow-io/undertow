@@ -41,6 +41,9 @@ import org.xnio.channels.StreamSinkChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket08Channel extends WebSocketChannel {
+    private enum State {
+        FRAME_START, READ_PAYLOAD_SIZE, PAYLOAD
+    }
 
     private int fragmentedFramesCount;
 
@@ -68,9 +71,6 @@ public class WebSocket08Channel extends WebSocketChannel {
     @Override
     protected PartialFrame receiveFrame(final StreamSourceChannelControl streamSourceChannelControl) {
         return new PartialFrame() {
-            enum State {
-                FRAME_START, READ_PAYLOAD_SIZE, PAYLOAD
-            }
 
             private boolean frameFinalFlag;
             private int frameRsv;
