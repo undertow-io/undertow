@@ -44,4 +44,8 @@ public interface WebSocketLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 25002, value = "StreamSinkFrameChannel %s was closed before writing was finished, web socket connection is now unusable")
     void closedBeforeFinishedWriting(StreamSinkFrameChannel streamSinkFrameChannel);
+
+    @LogMessage(level = Logger.Level.DEBUG)
+    @Message(id = 25003, value = "Decoding WebSocket Frame with opCode %s")
+    void decodingFrameWithOpCode(int opCode);
 }

@@ -76,4 +76,9 @@ public interface WebSocketMessages {
     @Message(id = 2014, value = "WebSocketFrameType %s is not supported by this WebSocketChannel\"")
     IllegalArgumentException unsupportedFrameType(WebSocketFrameType type);
 
+    @Message(id = 2015, value = "Extensions not allowed but received rsv of %s")
+    WebSocketFrameCorruptedException extensionsNotAllowed(int rsv);
+
+
+
 }
