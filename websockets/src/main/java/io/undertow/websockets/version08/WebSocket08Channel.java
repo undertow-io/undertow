@@ -112,7 +112,7 @@ public class WebSocket08Channel extends WebSocketChannel {
                 frameOpcode = b & 0x0F;
 
                 if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                    WebSocketLogger.REQUEST_LOGGER.debug("Decoding WebSocket Frame opCode=" + frameOpcode);
+                    WebSocketLogger.REQUEST_LOGGER.decodingFrameWithOpCode(frameOpcode);
                 }
 
                 // Read MASK, PAYLOAD LEN 1
@@ -123,8 +123,8 @@ public class WebSocket08Channel extends WebSocketChannel {
                 int framePayloadLen1 = b & 0x7F;
 
                 if (frameRsv != 0 && !allowExtensions) {
-                    protocolViolation(channel, "RSV != 0 and no extension negotiated, RSV:" + frameRsv);
-                    return;
+                    IoUtils.safeClose(channel);
+                    throw WebSocketMessages.MESSAGES.extensionsNotAllowed(frameRsv);
                 }
 
                 if (frameOpcode > 7) { // control frame (have MSB in opcode set)
@@ -195,10 +195,6 @@ public class WebSocket08Channel extends WebSocketChannel {
                     framePayloadLength = framePayloadLen1;
                 }
 
-                // TODO: Limit frame size ?
-                if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                    WebSocketLogger.REQUEST_LOGGER.debug("Decoding WebSocket Frame length=" + framePayloadLength);
-                }
                 // Processing ping/pong/close frames because they cannot be
                 // fragmented as per spec
                 if (frameOpcode == OPCODE_PING) {
