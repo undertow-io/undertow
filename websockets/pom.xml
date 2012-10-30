@@ -29,10 +29,10 @@
     </parent>
 
     <groupId>io.undertow</groupId>
-    <artifactId>undertow-core</artifactId>
+    <artifactId>undertow-websockets</artifactId>
     <version>1.0.0.Alpha1-SNAPSHOT</version>
 
-    <name>Undertow Core</name>
+    <name>Undertow WebSockets</name>
 
     <properties>
         <test.level>INFO</test.level>
@@ -42,14 +42,9 @@
 
         <dependency>
             <groupId>io.undertow</groupId>
-            <artifactId>undertow-parser-generator</artifactId>
-            <scope>provided</scope>
+            <artifactId>undertow-core</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.jboss.logging</groupId>
-            <artifactId>jboss-logging</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>org.jboss.logging</groupId>
@@ -57,22 +52,30 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Test dependencies -->
+
         <dependency>
-            <groupId>org.jboss.xnio</groupId>
-            <artifactId>xnio-api</artifactId>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-core</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.jboss.xnio</groupId>
             <artifactId>xnio-nio</artifactId>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
-
-        <!-- Test dependencies -->
 
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -83,19 +86,17 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpmime</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.jboss.logmanager</groupId>
             <artifactId>jboss-logmanager</artifactId>
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-client</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
-
 
     <build>
 
@@ -112,18 +113,6 @@
         </testResources>
 
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>jar</goal>
-                            <goal>test-jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
