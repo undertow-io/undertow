@@ -15,19 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.version08;
+package io.undertow.websockets.version13;
 
 import io.undertow.websockets.WebSocketChannel;
-import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
-import org.xnio.channels.StreamSourceChannel;
+import io.undertow.websockets.WebSocketVersion;
+import io.undertow.websockets.version08.WebSocket08Channel;
+import org.xnio.Pool;
+import org.xnio.channels.ConnectedStreamChannel;
+
+import java.nio.ByteBuffer;
 
 /**
+ *
+ * A WebSocketChannel that handles version 13
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08CloseFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
-    WebSocket08CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, long payloadSize) {
-        // no fragmentation allowed per spec
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, rsv, true, payloadSize);
+public class WebSocket13Channel extends WebSocket08Channel {
+    public WebSocket13Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool, String wsUrl) {
+        super(channel, bufferPool, wsUrl);
+    }
+
+    @Override
+    public WebSocketVersion getVersion() {
+        return WebSocketVersion.V13;
     }
 }

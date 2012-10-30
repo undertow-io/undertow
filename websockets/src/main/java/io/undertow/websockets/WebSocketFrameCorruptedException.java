@@ -15,19 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.version08;
-
-import io.undertow.websockets.WebSocketChannel;
-import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
-import org.xnio.channels.StreamSourceChannel;
+package io.undertow.websockets;
 
 /**
+ * WebSocketException which will be thrown if a corrupted frame was detected
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08CloseFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
-    WebSocket08CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, long payloadSize) {
-        // no fragmentation allowed per spec
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, rsv, true, payloadSize);
+public class WebSocketFrameCorruptedException extends WebSocketException {
+    public WebSocketFrameCorruptedException() {
+    }
+
+    public WebSocketFrameCorruptedException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
+
+    public WebSocketFrameCorruptedException(String msg) {
+        super(msg);
+    }
+
+    public WebSocketFrameCorruptedException(Throwable cause) {
+        super(cause);
     }
 }

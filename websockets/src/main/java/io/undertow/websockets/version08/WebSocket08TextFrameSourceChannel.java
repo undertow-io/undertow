@@ -21,7 +21,7 @@ import io.undertow.websockets.UTF8Checker;
 import io.undertow.websockets.UTF8FileChannel;
 import io.undertow.websockets.UTF8StreamSinkChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.WebSocketPayloadFrameSourceChannel;
+import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -32,13 +32,12 @@ import java.nio.channels.FileChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08TextFrameSourceChannel extends WebSocketPayloadFrameSourceChannel {
+public class WebSocket08TextFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
     private final UTF8Checker checker = new UTF8Checker();
 
-    WebSocket08TextFrameSourceChannel(WebSocket08Channel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket08Channel wsChannel, int rsv, boolean finalFragment, int payloadSize) {
+    public WebSocket08TextFrameSourceChannel(WebSocket08Channel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket08Channel wsChannel, int rsv, boolean finalFragment, long payloadSize) {
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, rsv, finalFragment, payloadSize);
     }
-
 
     @Override
     protected long transferTo0(long position, long count, FileChannel target) throws IOException {
@@ -58,7 +57,6 @@ public class WebSocket08TextFrameSourceChannel extends WebSocketPayloadFrameSour
         checker.checkUTF8(dst, pos, r);
         return r;
     }
-
 
     @Override
     protected long read0(ByteBuffer[] dsts) throws IOException {

@@ -19,14 +19,14 @@ package io.undertow.websockets.version08;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.WebSocketPayloadFrameSourceChannel;
+import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08PongFrameSourceChannel extends WebSocketPayloadFrameSourceChannel {
-    public WebSocket08PongFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, int payloadSize) {
+public class WebSocket08PongFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
+    public WebSocket08PongFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, long payloadSize) {
         // can not be fragmented
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PONG, rsv, true, payloadSize);
     }

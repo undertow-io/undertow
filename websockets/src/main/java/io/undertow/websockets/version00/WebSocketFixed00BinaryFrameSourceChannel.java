@@ -20,16 +20,16 @@ package io.undertow.websockets.version00;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.WebSocketPayloadFrameSourceChannel;
+import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket00BinaryFrameSourceChannel extends WebSocketPayloadFrameSourceChannel {
+public class WebSocketFixed00BinaryFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
 
-    WebSocket00BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int payloadSize) {
+    WebSocketFixed00BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize) {
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
     }
 }

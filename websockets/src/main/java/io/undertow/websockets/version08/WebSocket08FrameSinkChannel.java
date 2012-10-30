@@ -31,20 +31,12 @@ import org.xnio.channels.StreamSinkChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket08FrameSinkChannel extends WebSocket00FrameSinkChannel {
-
-    private static final byte OPCODE_CONT = 0x0;
-    private static final byte OPCODE_TEXT = 0x1;
-    private static final byte OPCODE_BINARY = 0x2;
-    private static final byte OPCODE_CLOSE = 0x8;
-    private static final byte OPCODE_PING = 0x9;
-    private static final byte OPCODE_PONG = 0xA;
-
     private final byte opCode = opCode();
 
     public WebSocket08FrameSinkChannel(StreamSinkChannel channel, WebSocket08Channel wsChannel, WebSocketFrameType type,
                                 long payloadSize) {
         super(channel, wsChannel, type, payloadSize);
-        if (opCode == OPCODE_PING && payloadSize > 125) {
+        if (opCode == WebSocket08Channel.OPCODE_PING && payloadSize > 125) {
             throw new IllegalArgumentException("invalid payload for PING (payload length must be <= 125, was "
                     + payloadSize);
         }
@@ -53,17 +45,17 @@ public class WebSocket08FrameSinkChannel extends WebSocket00FrameSinkChannel {
     private byte opCode() {
         switch (getType()) {
         case CONTINUATION:
-            return OPCODE_CONT;
+            return WebSocket08Channel.OPCODE_CONT;
         case TEXT:
-            return OPCODE_TEXT;
+            return WebSocket08Channel.OPCODE_TEXT;
         case BINARY:
-            return OPCODE_BINARY;
+            return WebSocket08Channel.OPCODE_BINARY;
         case CLOSE:
-            return OPCODE_CLOSE;
+            return WebSocket08Channel.OPCODE_CLOSE;
         case PING:
-            return OPCODE_PING;
+            return WebSocket08Channel.OPCODE_PING;
         case PONG:
-            return OPCODE_PONG;
+            return WebSocket08Channel.OPCODE_PONG;
         default:
             throw new IllegalStateException("Unsupported WebsocketType " + getType());
         }

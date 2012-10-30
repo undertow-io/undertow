@@ -92,7 +92,7 @@ public class WebSocket00Channel extends WebSocketChannel {
                     if (frameSize == 0) {
                         this.channel = new WebSocket00CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
                     } else {
-                        this.channel = new WebSocket00BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this, (int) frameSize);
+                        this.channel = new WebSocketFixed00BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this, frameSize);
                     }
                 } else {
                     // Decode a 0xff terminated UTF-8 string
