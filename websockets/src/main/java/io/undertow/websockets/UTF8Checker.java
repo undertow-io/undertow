@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 
 /**
  * An utility class which can be used to check if a sequence of bytes or ByteBuffers contain non UTF-8 data.
- *
+ * <p/>
  * Please use a new instance per stream.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -34,7 +34,7 @@ public final class UTF8Checker {
     private static final int UTF8_ACCEPT = 0;
     private static final int UTF8_REJECT = 12;
 
-    private static final byte[] TYPES = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    private static final byte[] TYPES = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -43,14 +43,14 @@ public final class UTF8Checker {
             7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8,
             8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             2, 2, 10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 11, 6, 6, 6, 5, 8, 8, 8, 8, 8,
-            8, 8, 8, 8, 8, 8 };
+            8, 8, 8, 8, 8, 8};
 
-    private static final byte[] STATES = { 0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12,
+    private static final byte[] STATES = {0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12,
             12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12,
             12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
             12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 36,
             12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12,
-            12, 12, 12, 12, 12, 12 };
+            12, 12, 12, 12, 12, 12};
 
     private int state = UTF8_ACCEPT;
     private int codep;
@@ -76,14 +76,16 @@ public final class UTF8Checker {
     /**
      * Check if the given ByteBuffer contains non UTF-8 data.
      *
-     * @param buf                            the ByteBuffer to check
-     * @param pos                            the position to start with the check from
-     * @param length                         the number of bytes to check
-     * @throws UnsupportedEncodingException  is thrown if non UTF-8 data is found
+     * @param buf    the ByteBuffer to check
+     * @param pos    the position to start with the check from
+     * @param length the number of bytes to check
+     * @throws UnsupportedEncodingException is thrown if non UTF-8 data is found
      */
     public void checkUTF8(ByteBuffer buf, int pos, int length) throws UnsupportedEncodingException {
-        for (int i = pos; i < length; i ++) {
-            checkUTF8(buf.get(i));
+        ByteBuffer b = buf.duplicate();
+        b.position(pos);
+        for (int i = pos; i < length; i++) {
+            checkUTF8(b.get(i));
         }
     }
 }

@@ -72,7 +72,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             responseTerminateAction = null;
         }
         final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(requestChannel, nextRequestResponseChannel, connection);
-        httpServerExchange = new HttpServerExchange(connection,  requestChannel, this.responseChannel, startNextRequestAction, responseTerminateAction);
+        httpServerExchange = new HttpServerExchange(connection, requestChannel, this.responseChannel, startNextRequestAction, responseTerminateAction);
         this.startNextRequestAction = startNextRequestAction;
 
     }
@@ -96,7 +96,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     return;
                 }
                 if (res == 0) {
-                    if(!channel.isReadResumed()) {
+                    if (!channel.isReadResumed()) {
                         channel.getReadSetter().set(this);
                         channel.resumeReads();
                     }
@@ -197,12 +197,12 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             do {
                 state = stateUpdater.get(this);
                 if (state == 3) {
-                    if(stateUpdater.compareAndSet(this, state, 1)) {
+                    if (stateUpdater.compareAndSet(this, state, 1)) {
                         startNextRequest();
                         return;
                     }
                 } else if (state == 0 && connection.startRequest()) {
-                    if(stateUpdater.compareAndSet(this, state, 1)) {
+                    if (stateUpdater.compareAndSet(this, state, 1)) {
                         startNextRequest();
                         return;
                     }
@@ -215,7 +215,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         private void startNextRequest() {
             final PushBackStreamChannel channel = this.channel;
             final HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, channel, connection);
-            if(channel.isReadResumed()) {
+            if (channel.isReadResumed()) {
                 channel.suspendReads();
             }
             WorkerDispatcher.dispatchNextRequest(channel, new DoNextRequestRead(listener, channel));
@@ -232,7 +232,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     return;
                 }
                 if (state == 2) {
-                    if(stateUpdater.compareAndSet(this, state, 1)) {
+                    if (stateUpdater.compareAndSet(this, state, 1)) {
                         startNextRequest();
                         return;
                     }
@@ -289,7 +289,10 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 httpServerExchange.cleanup();
             } finally {
                 //mark this request as finished to allow the next request to run
-                startNextRequestAction.completionHandler();
+                //but only if this is not an upgrade response
+                if (httpServerExchange.getResponseCode() != 101) {
+                    startNextRequestAction.completionHandler();
+                }
             }
         }
     }

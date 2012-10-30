@@ -12,7 +12,7 @@ import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.WebSocketVersion;
-import io.undertow.websockets.version08.WebSocket08Channel;
+import io.undertow.websockets.version13.WebSocket13Channel;
 import org.xnio.IoFuture;
 
 /**
@@ -104,7 +104,7 @@ public class WebSocket13ServerHandshaker extends WebSocketServerHandshaker {
 
     @Override
     protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
-        return new WebSocket08Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketUrl());
+        return new WebSocket13Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketUrl());
     }
 
 }

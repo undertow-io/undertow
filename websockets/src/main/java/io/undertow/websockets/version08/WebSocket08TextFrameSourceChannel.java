@@ -17,17 +17,17 @@
  */
 package io.undertow.websockets.version08;
 
-import io.undertow.websockets.UTF8Checker;
-import io.undertow.websockets.UTF8FileChannel;
-import io.undertow.websockets.UTF8StreamSinkChannel;
-import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+
+import io.undertow.websockets.UTF8Checker;
+import io.undertow.websockets.UTF8FileChannel;
+import io.undertow.websockets.UTF8StreamSinkChannel;
+import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
+import io.undertow.websockets.WebSocketFrameType;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -49,30 +49,4 @@ public class WebSocket08TextFrameSourceChannel extends WebSocketFixedPayloadFram
         return super.transferTo0(count, throughBuffer, new UTF8StreamSinkChannel(target, checker));
     }
 
-    @Override
-    public int read0(ByteBuffer dst) throws IOException {
-        int pos = dst.position();
-        int r = channel.read(dst);
-
-        checker.checkUTF8(dst, pos, r);
-        return r;
-    }
-
-    @Override
-    protected long read0(ByteBuffer[] dsts) throws IOException {
-        return read0(dsts, 0, dsts.length);
-    }
-
-    @Override
-    protected long read0(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        long r = 0;
-        for (int a = offset; a < length; a++) {
-            int i = read(dsts[a]);
-            if (i < 1) {
-                break;
-            }
-            r += i;
-        }
-        return r;
-    }
 }

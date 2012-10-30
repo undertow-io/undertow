@@ -86,6 +86,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         this.bufferPool = bufferPool;
         this.closeSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
         this.receiveSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
+        channel.getReadSetter().set(null);
+        channel.suspendReads();
         pushBackStreamChannel = new PushBackStreamChannel(channel);
         pushBackStreamChannel.getReadSetter().set(new WebSocketReadListener());
         channel.getWriteSetter().set(new WebSocketWriteListener());
@@ -216,6 +218,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * channel that can be used to read the frame contents.
      */
     public StreamSourceFrameChannel receive() throws IOException {
+        if(this.receiver != null) {
+            return null;
+        }
         final Pooled<ByteBuffer> pooled = getBufferPool().allocate();
         final ByteBuffer buffer = pooled.getResource();
         boolean free = true;
@@ -230,7 +235,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             while (!partialFrame.isDone()) {
                 buffer.clear();
                 try {
-                    res = channel.read(buffer);
+                    res = pushBackStreamChannel.read(buffer);
                 } catch (IOException e) {
                     if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
@@ -243,7 +248,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 }
                 if (res == -1) {
                     try {
-                        channel.shutdownReads();
+                        pushBackStreamChannel.shutdownReads();
 
                     } catch (IOException e) {
                         if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
@@ -458,7 +463,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 //the underlying channel is already closed, so they cannot write anyway
                 channel.activate();
             }
-            closeSetter.get().handleEvent(WebSocketChannel.this);
+            ChannelListeners.invokeChannelListener(WebSocketChannel.this, closeSetter.get());
         }
     }
 
