@@ -23,6 +23,7 @@ import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.StreamSourceFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketException;
+import io.undertow.websockets.WebSocketFrameCorruptedException;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketVersion;
 import org.xnio.Pool;
@@ -37,6 +38,9 @@ import org.xnio.channels.StreamSinkChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket00Channel extends WebSocketChannel {
+    private enum State {
+        FRAME_START, TEXT_FRAME, NON_TEXT_FRAME, FRAME_SIZE_READ
+    }
 
     /**
      * Create a new {@link WebSocket00Channel}
@@ -56,8 +60,10 @@ public class WebSocket00Channel extends WebSocketChannel {
     protected PartialFrame receiveFrame(final StreamSourceChannelControl streamSourceChannelControl) {
         return new PartialFrame() {
             private boolean receivedClosingHandshake;
-
+            private State state = State.FRAME_START;
             private StreamSourceFrameChannel channel;
+            private long frameSize = 0;
+            private int lengthFieldSize = 0;
 
             @Override
             public StreamSourceFrameChannel getChannel() {
@@ -75,36 +81,59 @@ public class WebSocket00Channel extends WebSocketChannel {
                     buffer.clear();
                     return;
                 }
-                byte type = buffer.get();
-
-                if ((type & 0x80) == 0x80) {
-
-                    long frameSize = 0;
-                    int lengthFieldSize = 0;
-                    byte b;
-
-                    // If the MSB on type is set, decode the frame length
-                    do {
-                        b = buffer.get();
-                        frameSize <<= 7;
-                        frameSize |= b & 0x7f;
-
-                        lengthFieldSize++;
-                        if (lengthFieldSize > 8) {
-                            // Perhaps a malicious peer?
-                            throw new WebSocketException("No Length encoded in the frame");
+                switch (state) {
+                    case FRAME_START:
+                        if (buffer.remaining() < 1) {
+                            return;
                         }
-                    } while ((b & 0x80) == 0x80 && buffer.hasRemaining());
-                    if (frameSize == 0) {
-                        receivedClosingHandshake = true;
-                        this.channel = new WebSocket00CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
-                    } else {
-                        this.channel = new WebSocketFixed00BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this, frameSize);
-                    }
-                } else {
-                    // Decode a 0xff terminated UTF-8 string
-                    this.channel = new WebSocket00TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
+                        byte type = buffer.get();
+
+                        if ((type & 0x80) == 0x80) {
+                            state = State.NON_TEXT_FRAME;
+                        } else {
+                            state = State.TEXT_FRAME;
+                        }
+                    case NON_TEXT_FRAME:
+                        if (buffer.remaining() < 1) {
+                            return;
+                        }
+                        byte b;
+
+                        // If the MSB on type is set, decode the frame length
+                        do {
+                            b = buffer.get();
+                            frameSize <<= 7;
+                            frameSize |= b & 0x7f;
+
+                            lengthFieldSize++;
+                            if (lengthFieldSize > 8) {
+                                // Perhaps a malicious peer?
+                                throw new WebSocketFrameCorruptedException("No Length encoded in the frame");
+                            }
+                        } while ((b & 0x80) == 0x80 && buffer.hasRemaining());
+                        state = State.FRAME_SIZE_READ;
+                    case FRAME_SIZE_READ:
+                        if (frameSize == 0) {
+                            receivedClosingHandshake = true;
+                            this.channel = new WebSocket00CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
+                        } else {
+                            this.channel = new WebSocketFixed00BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this, frameSize);
+                        }
+                        return;
+                    case TEXT_FRAME:
+                        if (buffer.remaining() < 1) {
+                            return;
+                        }
+                        // skip start marker
+                        buffer.position(buffer.position() + 1);
+
+                        // Decode a 0xff terminated UTF-8 string
+                        this.channel = new WebSocket00TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
+                        return;
+                    default:
+                        throw new IllegalStateException();
                 }
+
             }
 
             @Override
