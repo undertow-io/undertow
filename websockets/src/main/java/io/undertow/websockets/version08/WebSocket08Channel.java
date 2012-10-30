@@ -68,13 +68,16 @@ public class WebSocket08Channel extends WebSocketChannel {
     @Override
     protected PartialFrame receiveFrame(final StreamSourceChannelControl streamSourceChannelControl) {
         return new PartialFrame() {
-
+            enum State {
+                FRAME_START, READ_PAYLOAD_SIZE, PAYLOAD
+            }
 
             private boolean frameFinalFlag;
             private int frameRsv;
             private int frameOpcode;
-            private long framePayloadLength;
-
+            private long framePayloadLength = -1;
+            private State state = State.FRAME_START;
+            private int framePayloadLen1;
 
             // TODO: We may want to make it configurable
             private final boolean allowExtensions = true;
@@ -103,138 +106,153 @@ public class WebSocket08Channel extends WebSocketChannel {
                     buffer.clear();
                     return;
                 }
-                framePayloadLength = -1;
+                switch (state) {
+                    case FRAME_START:
+                        if (buffer.remaining() < 2) {
+                            // check if we have 2 bytes to read
+                            return;
+                        }
+                        // Read FIN, RSV, OPCODE
+                        byte b = buffer.get();
+                        frameFinalFlag = (b & 0x80) != 0;
+                        frameRsv = (b & 0x70) >> 4;
+                        frameOpcode = b & 0x0F;
 
-                // Read FIN, RSV, OPCODE
-                byte b = buffer.get();
-                frameFinalFlag = (b & 0x80) != 0;
-                frameRsv = (b & 0x70) >> 4;
-                frameOpcode = b & 0x0F;
+                        if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                            WebSocketLogger.REQUEST_LOGGER.decodingFrameWithOpCode(frameOpcode);
+                        }
 
-                if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                    WebSocketLogger.REQUEST_LOGGER.decodingFrameWithOpCode(frameOpcode);
+                        // Read MASK, PAYLOAD LEN 1
+                        //
+                        // TODO: Handle masking for client-side usage
+                        b = buffer.get();
+                        boolean frameMasked = (b & 0x80) != 0;
+                        framePayloadLen1 = b & 0x7F;
+
+                        if (frameRsv != 0 && !allowExtensions) {
+                            IoUtils.safeClose(channel);
+                            throw WebSocketMessages.MESSAGES.extensionsNotAllowed(frameRsv);
+                        }
+
+                        if (frameOpcode > 7) { // control frame (have MSB in opcode set)
+
+                            // control frames MUST NOT be fragmented
+                            if (!frameFinalFlag) {
+                                IoUtils.safeClose(channel);
+                                throw WebSocketMessages.MESSAGES.fragmentedControlFrame();
+                            }
+
+                            // control frames MUST have payload 125 octets or less as stated in the spec
+                            if (framePayloadLen1 > 125) {
+                                IoUtils.safeClose(channel);
+                                throw WebSocketMessages.MESSAGES.toBigControlFrame();
+                            }
+
+                            // check for reserved control frame opcodes
+                            if (!(frameOpcode == OPCODE_CLOSE || frameOpcode == OPCODE_PING || frameOpcode == OPCODE_PONG)) {
+                                IoUtils.safeClose(channel);
+                                throw WebSocketMessages.MESSAGES.reservedOpCodeInControlFrame(frameOpcode);
+                            }
+
+                            // close frame : if there is a body, the first two bytes of the
+                            // body MUST be a 2-byte unsigned integer (in network byte
+                            // order) representing a status code
+                            if (frameOpcode == 8 && framePayloadLen1 == 1) {
+                                IoUtils.safeClose(channel);
+                                throw WebSocketMessages.MESSAGES.controlFrameWithPayloadLen1();
+                            }
+                        } else { // data frame
+                            // check for reserved data frame opcodes
+                            if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT || frameOpcode == OPCODE_BINARY)) {
+                                IoUtils.safeClose(channel);
+                                throw WebSocketMessages.MESSAGES.reservedOpCodeInDataFrame(frameOpcode);
+                            }
+
+                            // check opcode vs message fragmentation state 1/2
+                            if (fragmentedFramesCount == 0 && frameOpcode == OPCODE_CONT) {
+                                IoUtils.safeClose(channel);
+                                throw WebSocketMessages.MESSAGES.continuationFrameOutsideFragmented();
+                            }
+
+                            // check opcode vs message fragmentation state 2/2
+                            if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
+                                IoUtils.safeClose(channel);
+                                throw WebSocketMessages.MESSAGES.nonContinuationFrameInsideFragmented();
+                            }
+                            state = State.READ_PAYLOAD_SIZE;
+                        }
+                    case READ_PAYLOAD_SIZE:
+                        // Read frame payload length
+                        if (framePayloadLen1 == 126) {
+                            if (buffer.remaining() < 1) {
+                                return;
+                            }
+                            // read unsigned short
+                            framePayloadLength = buffer.get() & 0xffff;
+                            if (framePayloadLength < 126) {
+                                IoUtils.safeClose(channel);
+                                throw WebSocketMessages.MESSAGES.invalidDataFrameLength();
+                            }
+                        } else if (framePayloadLen1 == 127) {
+                            if (buffer.remaining() < 8) {
+                                return;
+                            }
+                            framePayloadLength = buffer.getLong();
+                            // TODO: check if it's bigger than 0x7FFFFFFFFFFFFFFF, Maybe
+                            // just check if it's negative?
+
+                            if (framePayloadLength < 65536) {
+                                IoUtils.safeClose(channel);
+                                throw WebSocketMessages.MESSAGES.invalidDataFrameLength();
+                            }
+                        } else {
+                            framePayloadLength = framePayloadLen1;
+                        }
+
+                        state = State.PAYLOAD;
+                    case PAYLOAD:
+                        // Processing ping/pong/close frames because they cannot be
+                        // fragmented as per spec
+                        if (frameOpcode == OPCODE_PING) {
+                            this.channel = new WebSocket08PingFrameSourceChannel(streamSourceChannelControl, channel,
+                                    WebSocket08Channel.this, frameRsv, framePayloadLength);
+                            return;
+                        } else if (frameOpcode == OPCODE_PONG) {
+                            this.channel = new WebSocket08PongFrameSourceChannel(streamSourceChannelControl, channel,
+                                    WebSocket08Channel.this, frameRsv, framePayloadLength);
+                            return;
+                        } else if (frameOpcode == OPCODE_CLOSE) {
+                            receivedClosingHandshake = true;
+                            this.channel = new WebSocket08CloseFrameSourceChannel(streamSourceChannelControl, channel,
+                                    WebSocket08Channel.this, frameRsv, framePayloadLength);
+                            return;
+                        }
+
+                        if (frameFinalFlag) {
+                            // check if the frame is a ping frame as these are allowed in the middle
+                            if (frameOpcode != OPCODE_PING) {
+                                fragmentedFramesCount = 0;
+                            }
+                        } else {
+                            // Increment counter
+                            fragmentedFramesCount++;
+                        }
+
+                        if (frameOpcode == OPCODE_TEXT) {
+                            this.channel = new WebSocket08TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket08Channel.this, frameRsv, frameFinalFlag, framePayloadLength);
+                            return;
+                        } else if (frameOpcode == OPCODE_BINARY) {
+                            this.channel = new WebSocket08BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket08Channel.this, frameRsv, frameFinalFlag, framePayloadLength);
+                            return;
+                        } else if (frameOpcode == OPCODE_CONT) {
+                            this.channel = new WebSocket08ContinuationFrameSourceChannel(streamSourceChannelControl, channel, WebSocket08Channel.this, frameRsv, frameFinalFlag, framePayloadLength);
+                            return;
+                        } else {
+                            throw WebSocketMessages.MESSAGES.unsupportedOpCode(frameOpcode);
+                        }
+                     default:
+                         throw new IllegalStateException("Unknown state " + state);
                 }
-
-                // Read MASK, PAYLOAD LEN 1
-                //
-                // TODO: Handle masking for client-side usage
-                b = buffer.get();
-                boolean frameMasked = (b & 0x80) != 0;
-                int framePayloadLen1 = b & 0x7F;
-
-                if (frameRsv != 0 && !allowExtensions) {
-                    IoUtils.safeClose(channel);
-                    throw WebSocketMessages.MESSAGES.extensionsNotAllowed(frameRsv);
-                }
-
-                if (frameOpcode > 7) { // control frame (have MSB in opcode set)
-
-                    // control frames MUST NOT be fragmented
-                    if (!frameFinalFlag) {
-                        IoUtils.safeClose(channel);
-                        throw WebSocketMessages.MESSAGES.fragmentedControlFrame();
-                    }
-
-                    // control frames MUST have payload 125 octets or less as stated in the spec
-                    if (framePayloadLen1 > 125) {
-                        IoUtils.safeClose(channel);
-                        throw WebSocketMessages.MESSAGES.toBigControlFrame();
-                    }
-
-                    // check for reserved control frame opcodes
-                    if (!(frameOpcode == OPCODE_CLOSE || frameOpcode == OPCODE_PING || frameOpcode == OPCODE_PONG)) {
-                        IoUtils.safeClose(channel);
-                        throw WebSocketMessages.MESSAGES.reservedOpCodeInControlFrame(frameOpcode);
-                    }
-
-                    // close frame : if there is a body, the first two bytes of the
-                    // body MUST be a 2-byte unsigned integer (in network byte
-                    // order) representing a status code
-                    if (frameOpcode == 8 && framePayloadLen1 == 1) {
-                        IoUtils.safeClose(channel);
-                        throw WebSocketMessages.MESSAGES.controlFrameWithPayloadLen1();
-                    }
-                } else { // data frame
-                    // check for reserved data frame opcodes
-                    if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT || frameOpcode == OPCODE_BINARY)) {
-                        IoUtils.safeClose(channel);
-                        throw WebSocketMessages.MESSAGES.reservedOpCodeInDataFrame(frameOpcode);
-                    }
-
-                    // check opcode vs message fragmentation state 1/2
-                    if (fragmentedFramesCount == 0 && frameOpcode == OPCODE_CONT) {
-                        IoUtils.safeClose(channel);
-                        throw WebSocketMessages.MESSAGES.continuationFrameOutsideFragmented();
-                    }
-
-                    // check opcode vs message fragmentation state 2/2
-                    if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
-                        IoUtils.safeClose(channel);
-                        throw WebSocketMessages.MESSAGES.nonContinuationFrameInsideFragmented();
-                    }
-                }
-
-                // Read frame payload length
-                if (framePayloadLen1 == 126) {
-                    // read unsigned short
-                    framePayloadLength = buffer.get() & 0xffff;
-                    if (framePayloadLength < 126) {
-                        IoUtils.safeClose(channel);
-                        throw WebSocketMessages.MESSAGES.invalidDataFrameLength();
-                    }
-                } else if (framePayloadLen1 == 127) {
-                    framePayloadLength = buffer.getLong();
-                    // TODO: check if it's bigger than 0x7FFFFFFFFFFFFFFF, Maybe
-                    // just check if it's negative?
-
-                    if (framePayloadLength < 65536) {
-                        IoUtils.safeClose(channel);
-                        throw WebSocketMessages.MESSAGES.invalidDataFrameLength();
-                    }
-                } else {
-                    framePayloadLength = framePayloadLen1;
-                }
-
-                // Processing ping/pong/close frames because they cannot be
-                // fragmented as per spec
-                if (frameOpcode == OPCODE_PING) {
-                    this.channel = new WebSocket08PingFrameSourceChannel(streamSourceChannelControl, channel,
-                            WebSocket08Channel.this, frameRsv, framePayloadLength);
-                    return;
-                } else if (frameOpcode == OPCODE_PONG) {
-                    this.channel = new WebSocket08PongFrameSourceChannel(streamSourceChannelControl, channel,
-                            WebSocket08Channel.this, frameRsv, framePayloadLength);
-                    return;
-                } else if (frameOpcode == OPCODE_CLOSE) {
-                    receivedClosingHandshake = true;
-                    this.channel = new WebSocket08CloseFrameSourceChannel(streamSourceChannelControl, channel,
-                            WebSocket08Channel.this, frameRsv, framePayloadLength);
-                    return;
-                }
-
-                if (frameFinalFlag) {
-                    // check if the frame is a ping frame as these are allowed in the middle
-                    if (frameOpcode != OPCODE_PING) {
-                        fragmentedFramesCount = 0;
-                    }
-                } else {
-                    // Increment counter
-                    fragmentedFramesCount++;
-                }
-
-                if (frameOpcode == OPCODE_TEXT) {
-                    this.channel = new WebSocket08TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket08Channel.this, frameRsv, frameFinalFlag, framePayloadLength);
-                    return;
-                } else if (frameOpcode == OPCODE_BINARY) {
-                    this.channel = new WebSocket08BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket08Channel.this, frameRsv, frameFinalFlag, framePayloadLength);
-                    return;
-                } else if (frameOpcode == OPCODE_CONT) {
-                    this.channel = new WebSocket08ContinuationFrameSourceChannel(streamSourceChannelControl, channel, WebSocket08Channel.this, frameRsv, frameFinalFlag, framePayloadLength);
-                    return;
-                } else {
-                    throw WebSocketMessages.MESSAGES.unsupportedOpCode(frameOpcode);
-                }
-
             }
 
 
