@@ -55,6 +55,7 @@ public class WebSocket00Channel extends WebSocketChannel {
     @Override
     protected PartialFrame receiveFrame(final StreamSourceChannelControl streamSourceChannelControl) {
         return new PartialFrame() {
+            private boolean receivedClosingHandshake;
 
             private StreamSourceFrameChannel channel;
 
@@ -67,6 +68,11 @@ public class WebSocket00Channel extends WebSocketChannel {
             public void handle(final ByteBuffer buffer, final PushBackStreamChannel channel) throws WebSocketException {
                 //TODO: deal with the case where we can't read all the data at once
                 if (!buffer.hasRemaining()) {
+                    return;
+                }
+                if (receivedClosingHandshake) {
+                    // discard everything as we received a close frame before
+                    buffer.clear();
                     return;
                 }
                 byte type = buffer.get();
@@ -90,6 +96,7 @@ public class WebSocket00Channel extends WebSocketChannel {
                         }
                     } while ((b & 0x80) == 0x80 && buffer.hasRemaining());
                     if (frameSize == 0) {
+                        receivedClosingHandshake = true;
                         this.channel = new WebSocket00CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
                     } else {
                         this.channel = new WebSocketFixed00BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this, frameSize);
