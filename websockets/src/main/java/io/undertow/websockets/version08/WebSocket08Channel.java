@@ -26,6 +26,7 @@ import io.undertow.websockets.WebSocketException;
 import io.undertow.websockets.WebSocketFrameCorruptedException;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketLogger;
+import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.WebSocketVersion;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
@@ -130,47 +131,46 @@ public class WebSocket08Channel extends WebSocketChannel {
 
                     // control frames MUST NOT be fragmented
                     if (!frameFinalFlag) {
-                        protocolViolation(channel, "fragmented control frame");
-                        return;
+                        IoUtils.safeClose(channel);
+                        throw WebSocketMessages.MESSAGES.fragmentedControlFrame();
                     }
 
                     // control frames MUST have payload 125 octets or less as stated in the spec
                     if (framePayloadLen1 > 125) {
-                        protocolViolation(channel, "control frame with payload length > 125 octets");
-                        return;
+                        IoUtils.safeClose(channel);
+                        throw WebSocketMessages.MESSAGES.toBigControlFrame();
                     }
 
                     // check for reserved control frame opcodes
                     if (!(frameOpcode == OPCODE_CLOSE || frameOpcode == OPCODE_PING || frameOpcode == OPCODE_PONG)) {
-                        protocolViolation(channel, "control frame using reserved opcode " + frameOpcode);
-                        return;
+                        IoUtils.safeClose(channel);
+                        throw WebSocketMessages.MESSAGES.reservedOpCodeInControlFrame(frameOpcode);
                     }
 
                     // close frame : if there is a body, the first two bytes of the
                     // body MUST be a 2-byte unsigned integer (in network byte
                     // order) representing a status code
                     if (frameOpcode == 8 && framePayloadLen1 == 1) {
-                        protocolViolation(channel, "received close control frame with payload len 1");
-                        return;
+                        IoUtils.safeClose(channel);
+                        throw WebSocketMessages.MESSAGES.controlFrameWithPayloadLen1();
                     }
                 } else { // data frame
                     // check for reserved data frame opcodes
                     if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT || frameOpcode == OPCODE_BINARY)) {
-                        protocolViolation(channel, "data frame using reserved opcode " + frameOpcode);
-                        return;
+                        IoUtils.safeClose(channel);
+                        throw WebSocketMessages.MESSAGES.reservedOpCodeInDataFrame(frameOpcode);
                     }
 
                     // check opcode vs message fragmentation state 1/2
                     if (fragmentedFramesCount == 0 && frameOpcode == OPCODE_CONT) {
-                        protocolViolation(channel, "received continuation data frame outside fragmented message");
-                        return;
+                        IoUtils.safeClose(channel);
+                        throw WebSocketMessages.MESSAGES.continuationFrameOutsideFragmented();
                     }
 
                     // check opcode vs message fragmentation state 2/2
                     if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
-                        protocolViolation(channel,
-                                "received non-continuation data frame while inside fragmented message");
-                        return;
+                        IoUtils.safeClose(channel);
+                        throw WebSocketMessages.MESSAGES.nonContinuationFrameInsideFragmented();
                     }
                 }
 
@@ -179,8 +179,8 @@ public class WebSocket08Channel extends WebSocketChannel {
                     // read unsigned short
                     framePayloadLength = buffer.get() & 0xffff;
                     if (framePayloadLength < 126) {
-                        protocolViolation(channel, "invalid data frame length (not using minimal length encoding)");
-                        return;
+                        IoUtils.safeClose(channel);
+                        throw WebSocketMessages.MESSAGES.invalidDataFrameLength();
                     }
                 } else if (framePayloadLen1 == 127) {
                     framePayloadLength = buffer.getLong();
@@ -188,8 +188,8 @@ public class WebSocket08Channel extends WebSocketChannel {
                     // just check if it's negative?
 
                     if (framePayloadLength < 65536) {
-                        protocolViolation(channel, "invalid data frame length (not using minimal length encoding)");
-                        return;
+                        IoUtils.safeClose(channel);
+                        throw WebSocketMessages.MESSAGES.invalidDataFrameLength();
                     }
                 } else {
                     framePayloadLength = framePayloadLen1;
@@ -236,7 +236,7 @@ public class WebSocket08Channel extends WebSocketChannel {
                     this.channel = new WebSocket08ContinuationFrameSourceChannel(streamSourceChannelControl, channel, WebSocket08Channel.this, frameRsv, frameFinalFlag, framePayloadLength);
                     return;
                 } else {
-                    throw new UnsupportedOperationException("Cannot decode web socket frame with opcode: " + frameOpcode);
+                    throw WebSocketMessages.MESSAGES.unsupportedOpCode(frameOpcode);
                 }
 
             }
@@ -265,7 +265,7 @@ public class WebSocket08Channel extends WebSocketChannel {
             case CONTINUATION:
                 return new WebSocket08ContinuationFrameSinkChannel(channel, this, payloadSize);
             default:
-                throw new IllegalArgumentException("WebSocketFrameType " + type + " is not supported by this WebSocketChannel");
+                throw WebSocketMessages.MESSAGES.unsupportedFrameType(type);
         }
     }
 }
