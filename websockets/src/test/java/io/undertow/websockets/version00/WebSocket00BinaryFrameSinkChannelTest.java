@@ -25,7 +25,6 @@ import org.xnio.channels.StreamSinkChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
-@Ignore
 public class WebSocket00BinaryFrameSinkChannelTest extends AbstractWebSocketFrameSinkChannelTest {
 
     @Override

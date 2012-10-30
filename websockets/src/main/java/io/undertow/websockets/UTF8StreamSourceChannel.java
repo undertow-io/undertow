@@ -30,6 +30,9 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * StreamSourceChannel which checks if all read / transfered data contains only UTF-8 bytes.
+ * If non-UTF8 is detected it will throw an {@link java.io.UnsupportedEncodingException}.
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class UTF8StreamSourceChannel extends UTF8ReadableByteChannel implements StreamSourceChannel {

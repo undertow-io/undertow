@@ -22,6 +22,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
+ * WritableByteChannel which checks if any the data that should be written/transfered contain non-UTF8 data.
+ *
+ * If any non-UTF8 data is found it will throw an {@link java.io.UnsupportedEncodingException}
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class UTF8WritableByteChannel implements WritableByteChannel {

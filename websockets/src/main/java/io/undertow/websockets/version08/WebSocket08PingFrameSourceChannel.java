@@ -25,9 +25,9 @@ import org.xnio.channels.StreamSourceChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08CloseFrameSourceChannel extends WebSocketPayloadFrameSourceChannel {
-    WebSocket08CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, int payloadSize) {
-        // no fragmentation allowed per spec
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, rsv, true, payloadSize);
+public class WebSocket08PingFrameSourceChannel extends WebSocketPayloadFrameSourceChannel {
+    public WebSocket08PingFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, int payloadSize) {
+        // can not be fragmented
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PING, rsv, true, payloadSize);
     }
 }

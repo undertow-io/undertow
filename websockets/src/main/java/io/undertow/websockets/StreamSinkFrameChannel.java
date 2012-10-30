@@ -103,11 +103,18 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      * @param finalFragment
      */
     public void setFinalFragment(boolean finalFragment) {
+        if (!isFragmentationSupported() && !finalFragment)   {
+            throw new UnsupportedOperationException("Fragmentation is not supported");
+        }
         if (written > 0) {
             throw new IllegalStateException("Can only be set before anything is written");
         }
         this.finalFragment = finalFragment;
     }
+
+    public abstract boolean isFragmentationSupported();
+
+    public abstract boolean areExtensionsSupported();
 
     /**
      * Set the RSV which is used for extensions.
@@ -118,6 +125,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      * @param rsv
      */
     public void setRsv(int rsv) {
+        if (!areExtensionsSupported() && rsv != 0)   {
+            throw new UnsupportedOperationException("Extensions are not supported");
+        }
         if (written > 0) {
             throw new IllegalStateException("Can only be set before anything is written");
         }
