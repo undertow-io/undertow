@@ -41,4 +41,7 @@ public interface WebSocketLogger extends BasicLogger {
     @Message(id = 25001, value = "WebSocket handshake failed")
     void webSocketHandshakeFailed(@Cause Throwable cause);
 
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 25002, value = "StreamSinkFrameChannel %s was closed before writing was finished, web socket connection is now unusable")
+    void closedBeforeFinishedWriting(StreamSinkFrameChannel streamSinkFrameChannel);
 }

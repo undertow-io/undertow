@@ -23,6 +23,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.undertow.UndertowLogger;
 import io.undertow.websockets.version00.WebSocket00Channel;
@@ -53,7 +54,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private final ConnectedStreamChannel channel;
     private final WebSocketVersion version;
     private final String wsUrl;
-    private final Setter<WebSocketChannel> closeSetter;
+    private final ChannelListener.SimpleSetter<WebSocketChannel> closeSetter;
     private final ChannelListener.SimpleSetter<WebSocketChannel> receiveSetter;
     private final PushBackStreamChannel pushBackStreamChannel;
     private final Pool<ByteBuffer> bufferPool;
@@ -63,6 +64,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * an incoming frame that has not been created yet
      */
     private volatile PartialFrame partialFrame;
+
+    private final AtomicBoolean broken = new AtomicBoolean(false);
 
     private boolean receivesSuspended;
 
@@ -81,11 +84,12 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         this.version = version;
         this.wsUrl = wsUrl;
         this.bufferPool = bufferPool;
-        this.closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
+        this.closeSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
         this.receiveSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
         pushBackStreamChannel = new PushBackStreamChannel(channel);
         pushBackStreamChannel.getReadSetter().set(new WebSocketReadListener());
         channel.getWriteSetter().set(new WebSocketWriteListener());
+        channel.getCloseSetter().set(new WebSocketCloseListener());
     }
 
 
@@ -273,7 +277,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
             pushBackStreamChannel.suspendReads();
             this.partialFrame = null;
-            return partialFrame.getChannel();
+            return receiver = partialFrame.getChannel();
 
         } finally {
             if (free) {
@@ -289,12 +293,16 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     public synchronized void suspendReceives() {
         receivesSuspended = true;
-        pushBackStreamChannel.suspendReads();
+        if (receiver == null) {
+            pushBackStreamChannel.suspendReads();
+        }
     }
 
     public synchronized void resumeReceives() {
         receivesSuspended = false;
-        pushBackStreamChannel.resumeReads();
+        if (receiver == null) {
+            pushBackStreamChannel.resumeReads();
+        }
     }
 
     /**
@@ -324,7 +332,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
         if (isActive(ch)) {
             // Channel is first in the queue so mark it as active
-            ch.active();
+            ch.activate();
         }
         return ch;
     }
@@ -361,13 +369,37 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     /**
      * Mark the given {@link StreamSinkFrameChannel} as complete and so remove the obtained ones. Calling this method will also
-     * take care of call {@link StreamSinkFrameChannel#active()} on the new active {@link StreamSinkFrameChannel}.
+     * take care of call {@link StreamSinkFrameChannel#activate()} on the new active {@link StreamSinkFrameChannel}.
      */
     protected final void complete(StreamSinkFrameChannel channel) {
         if (senders.peek() == channel) {
             if (senders.remove(channel)) {
                 StreamSinkFrameChannel ch = senders.peek();
-                ch.active();
+                ch.activate();
+            }
+        }
+    }
+
+    /**
+     * Called when a sub channel fails to fulfil its contract, and leaves the channel in an inconsistent state.
+     * <p/>
+     * The underlying channel will be closed, and any sub channels that have reads/writes resumed will have their
+     * listeners notified. It is expected that these listeners will then attempt to use the channel, and their standard
+     * error handling logic will take over
+     */
+    void markBroken() {
+        if (broken.compareAndSet(false, true)) {
+            IoUtils.safeClose(channel);
+
+            StreamSourceFrameChannel receiver = this.receiver;
+            if (receiver != null && receiver.isReadResumed()) {
+                ChannelListeners.invokeChannelListener(receiver, (ChannelListener<? super StreamSourceFrameChannel>) receiver.getReadSetter().get());
+            }
+
+            for (final StreamSinkFrameChannel channel : senders) {
+                //we just activate them all at once
+                //the underlying channel is already closed, so they cannot write anyway
+                channel.activate();
             }
         }
     }
@@ -376,7 +408,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * {@link ChannelListener} which delegates the read notification to the appropriate listener
      */
     private final class WebSocketReadListener implements ChannelListener<PushBackStreamChannel> {
-        @SuppressWarnings({ "unchecked", "rawtypes" })
+        @SuppressWarnings({"unchecked", "rawtypes"})
         @Override
         public void handleEvent(final PushBackStreamChannel channel) {
             final StreamSourceFrameChannel receiver = WebSocketChannel.this.receiver;
@@ -404,8 +436,29 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         public void handleEvent(final ConnectedStreamChannel channel) {
             StreamSinkFrameChannel ch = senders.peek();
             if (ch != null) {
-                ChannelListeners.invokeChannelListener(ch, ch.writeSetter.get());
+                ChannelListeners.invokeChannelListener(ch, (ChannelListener<? super StreamSinkFrameChannel>) ch.getWriteSetter().get());
             }
+        }
+    }
+
+    /**
+     * close listener, just goes through and activates any sub channels to make sure their listeners are invoked
+     */
+    private class WebSocketCloseListener implements ChannelListener<ConnectedStreamChannel> {
+
+        @Override
+        public void handleEvent(final ConnectedStreamChannel c) {
+            StreamSourceFrameChannel receiver = WebSocketChannel.this.receiver;
+            if (receiver != null && receiver.isOpen() && receiver.isReadResumed()) {
+                ChannelListeners.invokeChannelListener(receiver, (ChannelListener<? super StreamSourceFrameChannel>) receiver.getReadSetter().get());
+            }
+
+            for (final StreamSinkFrameChannel channel : senders) {
+                //we just activate them all at once
+                //the underlying channel is already closed, so they cannot write anyway
+                channel.activate();
+            }
+            closeSetter.get().handleEvent(WebSocketChannel.this);
         }
     }
 
