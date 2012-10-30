@@ -25,27 +25,28 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
+ * A StreamSourceFrameChannel that is used to read a Frame with a fixed sized payload.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocketPayloadFrameSourceChannel extends StreamSourceFrameChannel {
+public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSourceFrameChannel {
 
-    private final int payloadSize;
+    private final long payloadSize;
     private int readBytes;
 
-    protected WebSocketPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, int payloadSize) {
+    protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, long payloadSize) {
         super(streamSourceChannelControl, channel, wsChannel, type, rsv, finalFragment);
         this.payloadSize = payloadSize;
     }
 
-    protected WebSocketPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, int payloadSize) {
+    protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         super(streamSourceChannelControl, channel, wsChannel, type);
         this.payloadSize = payloadSize;
     }
 
     @Override
     protected long transferTo0(long position, long count, FileChannel target) throws IOException {
-        int toRead = byteToRead();
+        long toRead = byteToRead();
         if (toRead < 1) {
             return -1;
         }
@@ -61,7 +62,7 @@ public class WebSocketPayloadFrameSourceChannel extends StreamSourceFrameChannel
 
     @Override
     public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        int toRead = byteToRead();
+        long toRead = byteToRead();
         if (toRead < 1) {
             return -1;
         }
@@ -76,7 +77,7 @@ public class WebSocketPayloadFrameSourceChannel extends StreamSourceFrameChannel
 
     @Override
     protected int read0(ByteBuffer dst) throws IOException {
-        int toRead = byteToRead();
+        long toRead = byteToRead();
         if (toRead < 1) {
             return -1;
         }
@@ -84,7 +85,7 @@ public class WebSocketPayloadFrameSourceChannel extends StreamSourceFrameChannel
         int old = dst.limit();
         try {
             if (byteToRead() < dst.remaining()) {
-                dst.limit(dst.position() + byteToRead());
+                dst.limit(dst.position() + (int) byteToRead());
             }
             int r = channel.read(dst);
             readBytes += r;
@@ -101,19 +102,19 @@ public class WebSocketPayloadFrameSourceChannel extends StreamSourceFrameChannel
 
     @Override
     protected long read0(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        int toRead = byteToRead();
+        long toRead = byteToRead();
         if (toRead < 1) {
             return -1;
         }
         int[] old = new int[length];
         int used = 0;
-        int remaining = toRead;
+        long remaining = toRead;
         for (int i = offset; i < length; i++) {
             old[i - offset] = dsts[i].limit();
             final int bufferRemaining = dsts[i].remaining();
             used += bufferRemaining;
             if (used > remaining) {
-                dsts[i].limit(remaining);
+                dsts[i].limit((int) remaining);
             }
             remaining -= bufferRemaining;
             remaining = remaining < 0 ? 0 : remaining;
@@ -129,7 +130,7 @@ public class WebSocketPayloadFrameSourceChannel extends StreamSourceFrameChannel
         }
     }
 
-    private int byteToRead() {
+    private long byteToRead() {
         return payloadSize - readBytes;
     }
 
