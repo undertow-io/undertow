@@ -18,7 +18,6 @@
 
 package io.undertow.server;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -39,10 +38,7 @@ import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.XnioExecutor;
-
-import org.xnio.channels.AssembledConnectedStreamChannel;
 import org.xnio.channels.ChannelFactory;
-import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -354,16 +350,25 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Upgrade the channel to a raw socket.  This is a convenience method which sets a 101 response code, sends the
-     * response headers, and merges the request and response channels into one full-duplex socket stream channel.
+     * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
+     * request and response as terminated, which means that once the current request is completed the raw channel
+     * can be obtained from {@link io.undertow.server.HttpServerConnection#getChannel()}
      *
-     * @return the socket channel
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
      *                               read
      */
-    public ConnectedStreamChannel upgradeChannel() throws IllegalStateException, IOException {
+    public void upgradeChannel(){
         setResponseCode(101);
-        return new AssembledConnectedStreamChannel(getRequestChannel(), getResponseChannelFactory().create());
+
+        int oldVal, newVal;
+        do {
+            oldVal = state;
+            if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+                // idempotent
+                return;
+            }
+            newVal = oldVal | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
+        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
     }
 
     /**

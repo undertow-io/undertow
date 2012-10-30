@@ -34,8 +34,8 @@ public interface WebSocketMessages {
 
     WebSocketMessages MESSAGES = Messages.getBundle(WebSocketMessages.class);
 
-    @Message(id = 2001, value = "Not a WebSocket handshake request: missing upgrade in the headers")
-    WebSocketHandshakeException missingUpgradeHeaders();
+    @Message(id = 2001, value = "Not a WebSocket handshake request: missing %s in the headers")
+    WebSocketHandshakeException missingHeader(final String header);
 
     @Message(id = 2002, value = "Channel is closed")
     IOException channelClosed();

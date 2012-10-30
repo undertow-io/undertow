@@ -17,15 +17,22 @@
  */
 package io.undertow.websockets.server;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketVersion;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoFuture;
+import org.xnio.channels.StreamSinkChannel;
 
 /**
  * The {@link WebSocketServerHandshaker} is responsible to issue the WebSocket Handshake and upgrade via the {@link #handshake(HttpServerExchange)} method.
@@ -145,5 +152,44 @@ public abstract class WebSocketServerHandshaker {
      * @param exchange The {@link HttpServerExchange} for which the handshake and upgrade should occur.
      * @throws WebSocketHandshakeException Thrown if the handshake fails for what-ever reason.
      */
-    public abstract WebSocketChannel handshake(HttpServerExchange exchange) throws WebSocketHandshakeException;
+    public abstract IoFuture<WebSocketChannel> handshake(HttpServerExchange exchange) throws WebSocketHandshakeException;
+
+
+    /**
+     * convenience method to perform the upgrade
+     */
+    protected IoFuture<WebSocketChannel> performUpgrade(final HttpServerExchange exchange) throws WebSocketHandshakeException {
+        exchange.upgradeChannel();
+        final StreamSinkChannel channel = exchange.getResponseChannelFactory().create();
+        final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
+        try {
+            channel.shutdownWrites();
+            if (!channel.flush()) {
+                final ChannelListener<StreamSinkChannel> listener = ChannelListeners
+                        .flushingChannelListener(
+                                new ChannelListener<StreamSinkChannel>() {
+                                    @Override
+                                    public void handleEvent(final StreamSinkChannel channel) {
+                                        ioFuture.setResult(createChannel(exchange));
+                                    }
+                                }, new ChannelExceptionHandler<StreamSinkChannel>() {
+                                    @Override
+                                    public void handleException(final StreamSinkChannel channel, final IOException exception) {
+                                        ioFuture.setException(exception);
+                                    }
+                                }
+                        );
+                channel.getWriteSetter().set(listener);
+            } else {
+                ioFuture.setResult(createChannel(exchange));
+            }
+
+        } catch (IOException e) {
+            throw new WebSocketHandshakeException(e);
+        }
+
+        return ioFuture;
+    }
+
+    protected abstract WebSocketChannel createChannel(HttpServerExchange exchange);
 }

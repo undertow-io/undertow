@@ -34,14 +34,16 @@ package io.undertow.websockets.version00;
  * limitations under the License.
  */
 
+import org.junit.Ignore;
 import org.xnio.channels.StreamSinkChannel;
 
 
 /**
- *  
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
+@Ignore
 public class WebSocket00TextFrameSinkChannelTest extends AbstractWebSocketFrameSinkChannelTest {
 
     @Override

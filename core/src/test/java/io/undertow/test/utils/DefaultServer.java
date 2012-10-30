@@ -129,11 +129,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         openListener.setRootHandler(ph);
     }
 
-    private static String getHostAddress(String serverName) {
+    public static String getHostAddress(String serverName) {
         return System.getProperty(serverName + ".server.address", "localhost");
     }
 
-    private static int getHostPort(String serverName) {
+    public static int getHostPort(String serverName) {
         return Integer.getInteger(serverName + ".server.port", 7777);
     }
 
