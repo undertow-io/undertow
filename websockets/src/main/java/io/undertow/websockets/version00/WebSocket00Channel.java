@@ -72,7 +72,6 @@ public class WebSocket00Channel extends WebSocketChannel {
 
             @Override
             public void handle(final ByteBuffer buffer, final PushBackStreamChannel channel) throws WebSocketException {
-                //TODO: deal with the case where we can't read all the data at once
                 if (!buffer.hasRemaining()) {
                     return;
                 }
@@ -110,7 +109,11 @@ public class WebSocket00Channel extends WebSocketChannel {
                                 // Perhaps a malicious peer?
                                 throw new WebSocketFrameCorruptedException("No Length encoded in the frame");
                             }
-                        } while ((b & 0x80) == 0x80 && buffer.hasRemaining());
+                            if (!buffer.hasRemaining()) {
+                                // nothing left to read and still not fully read the frame size
+                                return;
+                            }
+                        } while ((b & 0x80) == 0x80);
                         state = State.FRAME_SIZE_READ;
                     case FRAME_SIZE_READ:
                         if (frameSize == 0) {
