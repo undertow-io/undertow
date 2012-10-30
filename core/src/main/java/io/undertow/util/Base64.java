@@ -19,247 +19,156 @@
 package io.undertow.util;
 
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-
-import io.undertow.UndertowLogger;
-
-/**
- * This class provides encode/decode for RFC 2045 Base64 as
- * defined by RFC 2045, N. Freed and N. Borenstein.
- * RFC 2045: Multipurpose Internet Mail Extensions (MIME)
- * Part One: Format of Internet Message Bodies. Reference
- * 1996 Available at: http://www.ietf.org/rfc/rfc2045.txt
- * This class is used by XML Schema binary format validation
- *
- * @author Jeffrey Rodriguez
- */
-
-public final class Base64 {
-
-    private static final int BASELENGTH = 255;
-    private static final int LOOKUPLENGTH = 63;
-    private static final int TWENTYFOURBITGROUP = 24;
-    private static final int EIGHTBIT = 8;
-    private static final int SIXTEENBIT = 16;
-    private static final int FOURBYTE = 4;
-
-
-    private static final byte PAD = (byte) '=';
-    private static final byte[] base64Alphabet = new byte[BASELENGTH];
-    private static final byte[] lookUpBase64Alphabet = new byte[LOOKUPLENGTH];
+public class Base64 {
+    static byte[] ENCODING_TABLE;
+    static byte[] DECODING_TABLE = new byte[80];
 
     static {
-
-        for (int i = 0; i < BASELENGTH; i++) {
-            base64Alphabet[i] = -1;
-        }
-        for (int i = 'Z'; i >= 'A'; i--) {
-            base64Alphabet[i] = (byte) (i - 'A');
-        }
-        for (int i = 'z'; i >= 'a'; i--) {
-            base64Alphabet[i] = (byte) (i - 'a' + 26);
+        try {
+            ENCODING_TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".getBytes("ASCII");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException();
         }
 
-        for (int i = '9'; i >= '0'; i--) {
-            base64Alphabet[i] = (byte) (i - '0' + 52);
+        for (int i = 0; i < ENCODING_TABLE.length; i++) {
+            int v = (ENCODING_TABLE[i] & 0xFF) - 43;
+            DECODING_TABLE[v] = (byte)i;
         }
-
-        base64Alphabet['+'] = 62;
-        base64Alphabet['/'] = 63;
-
-        for (int i = 0; i <= 25; i++)
-            lookUpBase64Alphabet[i] = (byte) ('A' + i);
-
-        for (int i = 26, j = 0; i <= 51; i++, j++)
-            lookUpBase64Alphabet[i] = (byte) ('a' + j);
-
-        for (int i = 52, j = 0; i <= 61; i++, j++)
-            lookUpBase64Alphabet[i] = (byte) ('0' + j);
-
     }
 
-
-    static boolean isBase64(byte octect) {
-        //shall we ignore white space? JEFF??
-        return (octect == PAD || base64Alphabet[octect] != -1);
+    public static Encoder encoder() {
+        return new Encoder();
     }
 
-
-    static boolean isArrayByteBase64(byte[] arrayOctect) {
-        int length = arrayOctect.length;
-        if (length == 0)
-            return false;
-        for (int i = 0; i < length; i++) {
-            if (Base64.isBase64(arrayOctect[i]) == false)
-                return false;
-        }
-        return true;
+    public static Decoder decoder() {
+        return new Decoder();
     }
 
-    /**
-     * Encodes hex octects into Base64
-     *
-     * @param binaryData Array containing binaryData
-     * @return Encoded Base64 array
-     */
-    public static byte[] encode(byte[] binaryData) {
-        int lengthDataBits = binaryData.length * EIGHTBIT;
-        int fewerThan24bits = lengthDataBits % TWENTYFOURBITGROUP;
-        int numberTriplets = lengthDataBits / TWENTYFOURBITGROUP;
-        byte[] encodedData = null;
+    public static class Encoder {
+        private int state;
+        private int last;
 
-
-        if (fewerThan24bits != 0) //data not divisible by 24 bit
-            encodedData = new byte[(numberTriplets + 1) * 4];
-        else // 16 or 8 bit
-            encodedData = new byte[numberTriplets * 4];
-
-        byte k = 0, l = 0, b1 = 0, b2 = 0, b3 = 0;
-
-        int encodedIndex = 0;
-        int dataIndex = 0;
-        int i = 0;
-        for (i = 0; i < numberTriplets; i++) {
-
-            dataIndex = i * 3;
-            b1 = binaryData[dataIndex];
-            b2 = binaryData[dataIndex + 1];
-            b3 = binaryData[dataIndex + 2];
-
-            l = (byte) (b2 & 0x0f);
-            k = (byte) (b1 & 0x03);
-
-            encodedIndex = i * 4;
-            encodedData[encodedIndex] = lookUpBase64Alphabet[b1 >> 2];
-            encodedData[encodedIndex + 1] = lookUpBase64Alphabet[(b2 >> 4) |
-                    (k << 4)];
-            encodedData[encodedIndex + 2] = lookUpBase64Alphabet[(l << 2) |
-                    (b3 >> 6)];
-            encodedData[encodedIndex + 3] = lookUpBase64Alphabet[b3 & 0x3f];
+        public Encoder() {
         }
 
-        // form integral number of 6-bit groups
-        dataIndex = i * 3;
-        encodedIndex = i * 4;
-        if (fewerThan24bits == EIGHTBIT) {
-            b1 = binaryData[dataIndex];
-            k = (byte) (b1 & 0x03);
-            encodedData[encodedIndex] = lookUpBase64Alphabet[b1 >> 2];
-            encodedData[encodedIndex + 1] = lookUpBase64Alphabet[k << 4];
-            encodedData[encodedIndex + 2] = PAD;
-            encodedData[encodedIndex + 3] = PAD;
-        } else if (fewerThan24bits == SIXTEENBIT) {
+        public void encode(ByteBuffer source, ByteBuffer target) {
+            if (target == null)
+                throw new IllegalStateException();
 
-            b1 = binaryData[dataIndex];
-            b2 = binaryData[dataIndex + 1];
-            l = (byte) (b2 & 0x0f);
-            k = (byte) (b1 & 0x03);
-            encodedData[encodedIndex] = lookUpBase64Alphabet[b1 >> 2];
-            encodedData[encodedIndex + 1] = lookUpBase64Alphabet[(b2 >> 4)
-                    | (k << 4)];
-            encodedData[encodedIndex + 2] = lookUpBase64Alphabet[l << 2];
-            encodedData[encodedIndex + 3] = PAD;
-        }
-        return encodedData;
-    }
-
-
-    /**
-     * Decodes Base64 data into octects
-     *
-     * @param base64Data Byte array containing Base64 data
-     * @return false if all the data could not be consumed because the output buffer was not big enough
-     */
-    public static boolean decode(final ByteBuffer base64Data, final ByteBuffer target) {
-        int numberQuadruple = base64Data.remaining() / FOURBYTE;
-        byte b1 = 0, b2 = 0, b3 = 0, b4 = 0, marker0 = 0, marker1 = 0;
-
-        // Throw away anything not in base64Data
-        // Adjust size
-
-        int encodedIndex = 0;
-
-
-        for (int i = 0; i < numberQuadruple; i++) {
-            if (target.remaining() < 3) {
-                target.flip();
-                return false;
-            }
-            b1 = base64Alphabet[base64Data.get()];
-            b2 = base64Alphabet[base64Data.get()];
-
-            marker0 = base64Data.get();
-            marker1 = base64Data.get();
-
-            if (marker0 != PAD && marker1 != PAD) {     //No PAD e.g 3cQl
-                b3 = base64Alphabet[marker0];
-                b4 = base64Alphabet[marker1];
-
-                target.put((byte) (b1 << 2 | b2 >> 4));
-                target.put((byte) (((b2 & 0xf) << 4) | (
-                        (b3 >> 2) & 0xf)));
-                target.put((byte) (b3 << 6 | b4));
-            } else if (marker0 == PAD) {               //Two PAD e.g. 3c[Pad][Pad]
-                target.put((byte) (b1 << 2 | b2 >> 4));
-            } else if (marker1 == PAD) {              //One PAD e.g. 3cQ[Pad]
-                b3 = base64Alphabet[marker0];
-
-                target.put((byte) (b1 << 2 | b2 >> 4));
-                target.put((byte) (((b2 & 0xf) << 4) | (
-                        (b3 >> 2) & 0xf)));
-                target.put((byte) (b3 << 6));
-            }
-            encodedIndex += 3;
-        }
-        target.flip();
-        return true;
-    }
-
-    static final int[] base64 = {
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 62, 64, 64, 64, 63,
-            52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 64, 64, 64, 64, 64, 64,
-            64, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-            15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 64, 64, 64, 64, 64,
-            64, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-            41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 64, 64, 64, 64, 64,
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
-    };
-
-    public static String base64Decode(String orig) {
-        char[] chars = orig.toCharArray();
-        StringBuffer sb = new StringBuffer();
-        int i = 0;
-
-        int shift = 0;   // # of excess bits stored in accum
-        int acc = 0;
-
-        for (i = 0; i < chars.length; i++) {
-            int v = base64[chars[i] & 0xFF];
-
-            if (v >= 64) {
-                if (chars[i] != '=')
-                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled())
-                        UndertowLogger.REQUEST_LOGGER.debug("Wrong char in base64: " + chars[i]);
-            } else {
-                acc = (acc << 6) | v;
-                shift += 6;
-                if (shift >= 8) {
-                    shift -= 8;
-                    sb.append((char) ((acc >> shift) & 0xff));
+            //  ( 6 | 2) (4 | 4) (2 | 6)
+            int last = this.last;
+            int state = this.state;
+            while (source.remaining() > 0) {
+                int b = source.get() & 0xFF;
+                switch (state++) {
+                    case 0:
+                        target.put(ENCODING_TABLE[b >>> 2]);
+                        last = (b & 0x3) << 4;
+                        break;
+                    case 1:
+                        target.put(ENCODING_TABLE[last | (b >>> 4)]);
+                        last = (b & 0x0F) << 2;
+                        break;
+                    case 2:
+                        target.put(ENCODING_TABLE[last | (b >>> 6)]);
+                        target.put(ENCODING_TABLE[b & 0x3F]);
+                        state = last = 0;
+                        break;
                 }
             }
+
+            this.last = last;
+            this.state = state;
         }
-        return sb.toString();
+
+        public void complete(ByteBuffer target) {
+            if (state > 0) {
+                target.put(ENCODING_TABLE[last]);
+                for (int i = 0; i < state; i++)
+                    target.put((byte)'=');
+
+                last = state = 0;
+            }
+        }
     }
 
+    public static class Decoder {
+        private int state;
+        private int last;
+        private static int MARK = 0xFF00;
 
+        public Decoder() {
+        }
+
+        public void decode(ByteBuffer source, ByteBuffer target) throws IOException {
+            if (target == null)
+                throw new IllegalStateException();
+
+            int last = this.last;
+            int state = this.state;
+
+            while (source.remaining() > 0 && target.remaining() > 0) {
+                int b = source.get() & 0xFF;
+                if (last == MARK) {
+                    if (b != '=') {
+                        throw new IOException("Expected padding character");
+                    }
+                    last = state = 0;
+                    break;
+                }
+                if (b == '=') {
+                    switch (state) {
+                        case 2:
+                            last = MARK; state++;
+                            break;
+                        case 3:
+                            this.last = this.state = 0;  // DONE!
+                            return;
+                        default: throw new IOException("Unexpected padding character");
+                    }
+                    continue;
+                }
+                if (b == ' ' || b == '\t' || b == '\r' || b == '\n') {
+                    continue;
+                }
+                if (b < 43 || b > 122) {
+                    throw new IOException("Invalid base64 character encountered: " + b);
+                }
+                b = DECODING_TABLE[b - 43] & 0xFF;
+
+                //  ( 6 | 2) (4 | 4) (2 | 6)
+                switch (state++) {
+                    case 0:
+                        last = b << 2;
+                        break;
+                    case 1:
+                        target.put((byte)(last | (b >>> 4)));
+                        last = (b & 0x0F) << 4;
+                        break;
+                    case 2:
+                        target.put((byte)(last | (b >>> 2)));
+                        last = (b & 0x3) << 6;
+                        break;
+                    case 3:
+                        target.put((byte)(last | b));
+                        last = state = 0;
+                        break;
+                }
+            }
+
+            this.last = last;
+            this.state = state;
+        }
+
+        public void complete(ByteBuffer target) {
+            if (state > 0) {
+                target.put(ENCODING_TABLE[last]);
+                for (int i = 0; i < state; i++)
+                    target.put((byte)'=');
+            }
+        }
+    }
 }

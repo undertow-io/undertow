@@ -18,6 +18,7 @@
 
 package io.undertow.util;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.xnio.Pool;
@@ -314,8 +315,7 @@ public class MultipartParser {
 
     private static class Base64Encoding implements Encoding {
 
-        private byte[] remaining = null;
-        private int free;
+        private final Base64.Decoder decoder = Base64.decoder();
 
         private final Pool<ByteBuffer> bufferPool;
 
@@ -328,32 +328,16 @@ public class MultipartParser {
             Pooled<ByteBuffer> resource = bufferPool.allocate();
             ByteBuffer buf = resource.getResource();
             try {
-                if (remaining != null) {
-                    buf.clear();
-                    while (free > 0 && rawData.hasRemaining()) {
-                        remaining[4 - free--] = rawData.get();
-                    }
-                    if (free == 0) {
-                        //todo: is there a more efficient way to do this?
-                        Base64.decode(ByteBuffer.wrap(remaining), buf);
-                        handler.data(buf);
-                    } else {
-                        return;
-                    }
-                }
-                boolean done;
                 do {
                     buf.clear();
-                    done = Base64.decode(rawData, buf);
-                    handler.data(buf);
-                } while (!done);
-                if (rawData.hasRemaining()) {
-                    remaining = new byte[4];
-                    free = 4 - rawData.remaining();
-                    for (int i = 0; rawData.hasRemaining(); ++i) {
-                        remaining[i] = rawData.get();
+                    try {
+                        decoder.decode(rawData, buf);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
-                }
+                    buf.flip();
+                    handler.data(buf);
+                } while (rawData.hasRemaining());
             } finally {
                 resource.free();
             }
