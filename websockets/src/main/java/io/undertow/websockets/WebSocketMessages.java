@@ -45,4 +45,35 @@ public interface WebSocketMessages {
 
     @Message(id = 2004, value = "Cannot call shutdownWrites, only %s of %s bytes written")
     IOException notAllPayloadDataWritten(long written, long payloadSize);
+
+    @Message(id = 2005, value = "Fragmented control frame")
+    WebSocketFrameCorruptedException fragmentedControlFrame();
+
+    @Message(id = 2006, value = "Control frame with payload length > 125 octets")
+    WebSocketFrameCorruptedException toBigControlFrame();
+
+    @Message(id = 2007, value = "Control frame using reserved opcode = %s")
+    WebSocketFrameCorruptedException reservedOpCodeInControlFrame(int opCode);
+
+    @Message(id = 2008, value = "Received close control frame with payload len 1")
+    WebSocketFrameCorruptedException controlFrameWithPayloadLen1();
+
+    @Message(id = 2009, value = "Data frame using reserved opcode = %s")
+    WebSocketFrameCorruptedException reservedOpCodeInDataFrame(int opCode);
+
+    @Message(id = 2010, value = "Received continuation data frame outside fragmented message")
+    WebSocketFrameCorruptedException continuationFrameOutsideFragmented();
+
+    @Message(id = 2011, value = "Received non-continuation data frame while inside fragmented message")
+    WebSocketFrameCorruptedException nonContinuationFrameInsideFragmented();
+
+    @Message(id = 2012, value = "Invalid data frame length (not using minimal length encoding)")
+    WebSocketFrameCorruptedException invalidDataFrameLength();
+
+    @Message(id = 2013, value = "Cannot decode web socket frame with opcode: %s")
+    WebSocketFrameCorruptedException unsupportedOpCode(int opCode);
+
+    @Message(id = 2014, value = "WebSocketFrameType %s is not supported by this WebSocketChannel\"")
+    IllegalArgumentException unsupportedFrameType(WebSocketFrameType type);
+
 }
