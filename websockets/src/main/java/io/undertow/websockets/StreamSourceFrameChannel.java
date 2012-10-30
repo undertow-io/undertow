@@ -192,7 +192,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     }
 
     @Override
-    public Setter<? extends StreamSourceChannel> getReadSetter() {
+    public SimpleSetter<? extends StreamSourceChannel> getReadSetter() {
         return readSetter;
     }
 

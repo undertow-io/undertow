@@ -17,12 +17,11 @@
  */
 package io.undertow.websockets.version08;
 
+import java.nio.ByteBuffer;
+
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.version00.WebSocket00FrameSinkChannel;
-
-import java.nio.ByteBuffer;
-
 import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -98,10 +97,8 @@ public class WebSocket08FrameSinkChannel extends WebSocket00FrameSinkChannel {
             header.put((byte) 127);
             header.putLong(payloadSize);
         }
-
         return (ByteBuffer) header.flip();
     }
-
 
     @Override
     protected ByteBuffer createFrameEnd() {

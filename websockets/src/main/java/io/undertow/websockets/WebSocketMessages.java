@@ -43,4 +43,6 @@ public interface WebSocketMessages {
     @Message(id = 2003, value = "Text frame contains non UTF-8 data")
     UnsupportedEncodingException invalidTextFrameEncoding();
 
+    @Message(id = 2004, value = "Cannot call shutdownWrites, only %s of %s bytes written")
+    IOException notAllPayloadDataWritten(long written, long payloadSize);
 }

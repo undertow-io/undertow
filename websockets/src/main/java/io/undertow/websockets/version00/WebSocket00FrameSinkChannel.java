@@ -24,11 +24,8 @@ import java.nio.channels.FileChannel;
 import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.WebSocketVersion;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -39,75 +36,73 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel {
     public WebSocket00FrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type,
-                                long payloadSize) {
+                                       long payloadSize) {
         super(channel, wsChannel, type, payloadSize);
     }
 
+    /**
+     * Buffer that holds the first frame
+     */
     private ByteBuffer start;
 
-    private long written = 0;
+    /**
+     * buffer that holds the last frame
+     */
+    private ByteBuffer end;
 
     private boolean frameStartWritten = false;
 
     /**
      * Create the {@link ByteBuffer} that will be written as start of the frame.
+     * <p/>
      *
-     * @return startBuffer      The {@link ByteBuffer} which will be used to start a frame
+     * @return The {@link ByteBuffer} which will be used to start a frame
      */
     protected abstract ByteBuffer createFrameStart();
 
     /**
      * Create the {@link ByteBuffer} that marks the end of the frame
      *
-     * @return endBuffer        The {@link ByteBuffer} that marks the end of the frame
+     * @return The {@link ByteBuffer} that marks the end of the frame
      */
     protected abstract ByteBuffer createFrameEnd();
 
     @Override
-    protected boolean close0() throws IOException {
-        if (written != payloadSize) {
-            try {
-                throw new IOException("Written Payload does not match");
-            } finally {
-                channel.close();
-            }
-        } else {
-            final ByteBuffer buf = (ByteBuffer) createFrameEnd().flip();
+    protected void close0() throws IOException {
 
-            while (buf.hasRemaining()) {
-                if (channel.write(buf) == 0) {
-                    channel.getWriteSetter().set(new CloseListener(buf));
-                    channel.resumeWrites();
-                    return false;
-                }
-            }
-            channel.getWriteSetter().set(null);
-            channel.suspendWrites();
-            return true;
-        }
     }
 
     @Override
     protected int write0(ByteBuffer src) throws IOException {
         if (writeFrameStart()) {
-            int b = channel.write(src);
-            written = +b;
-            return b;
+            return channel.write(src);
         }
         return 0;
     }
 
+    /**
+     * todo: when we get serious about performance we will need to make sure we use direct buffers
+     * and a gathering write for this, so we can write out the whole message with a single write()
+     * call
+     * @return true if the frame start was written
+     * @throws IOException
+     */
     private boolean writeFrameStart() throws IOException {
         if (!frameStartWritten) {
             if (start == null) {
-                start = (ByteBuffer) createFrameStart().flip();
+                start = createFrameStart();
+                start.flip();
             }
             while (start.hasRemaining()) {
-                if (channel.write(start) < 1) {
+                final int result = channel.write(start);
+                if (result == -1) {
+                    throw WebSocketMessages.MESSAGES.channelClosed();
+                } else if (result == 0) {
                     return false;
                 }
             }
             frameStartWritten = true;
+            start = null;
         }
         return true;
     }
@@ -115,9 +110,7 @@ public abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel
     @Override
     protected long write0(ByteBuffer[] srcs, int offset, int length) throws IOException {
         if (writeFrameStart()) {
-            long b = channel.write(srcs, offset, length);
-            written = +b;
-            return b;
+            return channel.write(srcs, offset, length);
         }
         return 0;
     }
@@ -125,9 +118,7 @@ public abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel
     @Override
     protected long write0(ByteBuffer[] srcs) throws IOException {
         if (writeFrameStart()) {
-            long b = channel.write(srcs);
-            written = +b;
-            return b;
+            return channel.write(srcs);
         }
         return 0;
     }
@@ -135,9 +126,7 @@ public abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel
     @Override
     protected long transferFrom0(FileChannel src, long position, long count) throws IOException {
         if (writeFrameStart()) {
-            long b = channel.transferFrom(src, position, count);
-            written = +b;
-            return b;
+            return channel.transferFrom(src, position, count);
         }
         return 0;
     }
@@ -145,92 +134,32 @@ public abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel
     @Override
     protected long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
         if (writeFrameStart()) {
-            long b = channel.transferFrom(source, count, throughBuffer);
-            written = +b;
-            return b;
+            return channel.transferFrom(source, count, throughBuffer);
         }
         return 0;
     }
 
     @Override
-    public int getRsv() {
-        return 0;
-    }
-
-    @Override
-    public boolean isFinalFragment() {
-        return true;
-    }
-
-    @Override
-    public void setFinalFragment(boolean finalFragment) {
-        if (!finalFragment) {
-            throw new IllegalArgumentException("WebSocket 00 only support final fragements");
-        }
-    }
-
-    @Override
-    public void setRsv(int rsv) {
-        if (rsv != 0) {
-            throw new IllegalArgumentException("WebSocket 00 only support rsv of 0");
-        }
-    }
-
-    private final class CloseListener implements ChannelListener<StreamSinkChannel> {
-
-        private final ByteBuffer buf;
-
-        CloseListener(ByteBuffer buf) {
-            this.buf = buf;
-        }
-
-        @Override
-        public void handleEvent(StreamSinkChannel channel) {
-            try {
-                while (buf.hasRemaining()) {
-                    int w = channel.write(buf);
-                    if (w == 0) {
-                        // not everything written
-                        if (!channel.isWriteResumed()) {
-                            Channels.setWriteListener(channel, this);
-                            channel.resumeWrites();
-                        }
-                        return;
-                    }
-                    if (w == -1) {
-                        channel.suspendWrites();
-
-                        // TODO: IS this correct?
-                        channel.close();
-                        return;
+    protected boolean flush0() throws IOException {
+        if (writeFrameStart()) {
+            if (getState() == ChannelState.SHUTDOWN) {
+                //we know end has not been written yet, or the state would be CLOSED
+                if (end == null) {
+                    end = createFrameEnd();
+                }
+                while (end.hasRemaining()) {
+                    int b = channel.write(end);
+                    if (b == -1) {
+                        throw WebSocketMessages.MESSAGES.channelClosed();
+                    } else if (b == 0) {
+                        return false;
                     }
                 }
-                if (!channel.flush()) {
-                    // TODO: Is this needed ?
-                    channel.shutdownWrites();
-
-                    // flush did not work out, so set a new listener that will try to flush again
-                    channel.getWriteSetter().set(ChannelListeners.flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
-
-                        @Override
-                        public void handleEvent(StreamSinkChannel channel) {
-
-                        }
-
-                    }, ChannelListeners.closingChannelExceptionHandler()));
-                    // Make sure we get notified again when write was possible
-                    channel.resumeWrites();
-
-                } else {
-                    // everything flushed out now its safe to mark it as complete
-                    WebSocket00FrameSinkChannel.this.complete();
-                }
-            } catch (IOException e) {
-                // TODO: Logging
-                IoUtils.safeClose(channel);
+                return true;
+            } else {
+                return true;
             }
         }
-
+        return false;
     }
-
 }

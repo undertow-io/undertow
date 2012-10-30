@@ -19,10 +19,11 @@
 package io.undertow.websockets;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListener.SimpleSetter;
@@ -41,18 +42,30 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     private final WebSocketFrameType type;
     protected final StreamSinkChannel channel;
     protected final WebSocketChannel wsChannel;
-    final SimpleSetter<StreamSinkFrameChannel> closeSetter = new SimpleSetter<StreamSinkFrameChannel>();
-    final SimpleSetter<StreamSinkFrameChannel> writeSetter = new SimpleSetter<StreamSinkFrameChannel>();
+    private final SimpleSetter<StreamSinkFrameChannel> closeSetter = new SimpleSetter<StreamSinkFrameChannel>();
+    private final SimpleSetter<StreamSinkFrameChannel> writeSetter = new SimpleSetter<StreamSinkFrameChannel>();
 
-    private volatile boolean closed;
-    private final AtomicBoolean writesDone = new AtomicBoolean();
+    /**
+     * The payload size
+     */
     protected final long payloadSize;
+
+    /**
+     * The number of payload bytes that have been written. Does not include protocol bytes
+     */
+    private long written;
+
     private final Object writeWaitLock = new Object();
     private int waiters = 0;
-    private boolean suspendWrites;
+
+    private boolean writesSuspended;
+
+    //todo: I don't think this belongs here
     private int rsv;
     private boolean finalFragment = true;
-    private boolean written;
+
+    private static final AtomicReferenceFieldUpdater<StreamSinkFrameChannel, ChannelState> stateUpdater = AtomicReferenceFieldUpdater.newUpdater(StreamSinkFrameChannel.class, ChannelState.class, "state");
+    private volatile ChannelState state = ChannelState.WAITING;
 
     public StreamSinkFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this.channel = channel;
@@ -62,9 +75,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     @Override
-    public Setter<? extends StreamSinkChannel> getWriteSetter() {
+    public SimpleSetter<? extends StreamSinkFrameChannel> getWriteSetter() {
         return writeSetter;
     }
+
 
     /**
      * Return the RSV for the extension. Default is 0.
@@ -89,7 +103,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      * @param finalFragment
      */
     public void setFinalFragment(boolean finalFragment) {
-        if (written) {
+        if (written > 0) {
             throw new IllegalStateException("Can only be set before anything is written");
         }
         this.finalFragment = finalFragment;
@@ -104,7 +118,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      * @param rsv
      */
     public void setRsv(int rsv) {
-        if (written) {
+        if (written > 0) {
             throw new IllegalStateException("Can only be set before anything is written");
         }
         this.rsv = rsv;
@@ -113,17 +127,42 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     /**
      * Mark this channel as active
      */
-    protected final void active() {
-        if (suspendWrites) {
-            channel.suspendWrites();
-        } else {
-            channel.resumeWrites();
+    protected final void activate() {
+        ChannelState old = state;
+        if (old == ChannelState.WAITING) {
+            if (!stateUpdater.compareAndSet(this, ChannelState.WAITING, ChannelState.ACTIVE)) {
+                old = state;
+            }
         }
 
-        // now notify the waiter
+        // now notify the waiters if any
         synchronized (writeWaitLock) {
             if (waiters > 0) {
                 writeWaitLock.notifyAll();
+            }
+        }
+
+        if (old == ChannelState.CLOSED) {
+            //the channel was closed with nothing being written
+            //we simply activate the next channel.
+            wsChannel.complete(this);
+            return;
+        }
+
+        synchronized (this) {
+            if (writesSuspended) {
+                if (channel.isWriteResumed()) {
+                    channel.suspendWrites();
+                }
+            } else {
+                if (channel.isOpen()) {
+                    if (!channel.isWriteResumed()) {
+                        channel.resumeWrites();
+                    }
+                } else {
+                    //if the underlying channel has closed then we just invoke the write listener directly
+                    ChannelListeners.invokeChannelListener(this, writeSetter.get());
+                }
             }
         }
     }
@@ -140,32 +179,47 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return channel.getWorker();
     }
 
+    /**
+     * Closes the channel.
+     * <p/>
+     * If this channel has not been previously closed and fully flushed then
+     * this will result in the web socket channel becoming broken and unusable.
+     * <p/>
+     * As per the XNIO contract clients should use {@link #shutdownWrites()} and {@link #flush()}
+     * for normal shutdowns.
+     */
     @Override
     public final void close() throws IOException {
-        if (!closed) {
-            closed = true;
-            flush();
-            if (close0()) {
-                complete();
+        ChannelState oldState;
+        do {
+            oldState = state;
+            if (oldState == ChannelState.CLOSED) {
+                return;
             }
+        } while (stateUpdater.compareAndSet(this, oldState, ChannelState.CLOSED));
+
+        if (oldState == ChannelState.WAITING) {
+            // now notify the waiter
+            synchronized (writeWaitLock) {
+                if (waiters > 0) {
+                    writeWaitLock.notifyAll();
+                }
+            }
+        }
+        try {
+            close0();
+            WebSocketLogger.REQUEST_LOGGER.closedBeforeFinishedWriting(this);
+            wsChannel.markBroken();
+        } finally {
+            ChannelListeners.invokeChannelListener(this, closeSetter.get());
         }
     }
 
 
     /**
-     * Mark this {@link StreamSinkFrameChannel} as complete
-     */
-    protected final void complete() {
-        wsChannel.complete(this);
-    }
-
-    /**
-     * Gets called on {@link #close()}. If this returns <code>true<code> the {@link #recycle()} method will be triggered automaticly.
-     *
-     * @return complete          <code>true</code> if the {@link StreamSinkFrameChannel} is ready for close.
      * @throws IOException Get thrown if an problem during the close operation is detected
      */
-    protected abstract boolean close0() throws IOException;
+    protected abstract void close0() throws IOException;
 
     @Override
     public final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
@@ -173,9 +227,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        written = true;
-
-        return write0(srcs, offset, length);
+        long result = write0(srcs, offset, length);
+        this.written += result;
+        return result;
     }
 
     /**
@@ -189,9 +243,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        written = true;
-
-        return write0(srcs);
+        long result = write0(srcs);
+        this.written += result;
+        return result;
     }
 
     /**
@@ -205,9 +259,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        written = true;
-
-        return write0(src);
+        int result = write0(src);
+        this.written += result;
+        return result;
     }
 
     /**
@@ -222,9 +276,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        written = true;
-
-        return transferFrom0(src, position, count);
+        long result = transferFrom0(src, position, count);
+        this.written += result;
+        return result;
     }
 
     /**
@@ -232,16 +286,15 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      */
     protected abstract long transferFrom0(FileChannel src, long position, long count) throws IOException;
 
-
     @Override
     public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
         checkClosed();
         if (!isActive()) {
             return 0;
         }
-        written = true;
-
-        return transferFrom0(source, count, throughBuffer);
+        long result = transferFrom0(source, count, throughBuffer);
+        this.written += result;
+        return result;
     }
 
     /**
@@ -252,7 +305,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public boolean isOpen() {
-        return !closed && channel.isOpen();
+        return state != ChannelState.CLOSED && state != ChannelState.SHUTDOWN;
     }
 
     @Override
@@ -276,121 +329,178 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     @Override
-    public void suspendWrites() {
+    public synchronized void suspendWrites() {
         if (isActive()) {
             channel.suspendWrites();
-        } else {
-            suspendWrites = true;
         }
+        writesSuspended = true;
     }
 
 
     @Override
-    public void resumeWrites() {
+    public synchronized void resumeWrites() {
         if (isActive()) {
             channel.suspendWrites();
-        } else {
-            suspendWrites = false;
         }
+        writesSuspended = false;
     }
 
     /**
      * Return <code>true</code> if this {@link StreamSinkFrameChannel} is currently in use.
      */
     protected final boolean isActive() {
-        return wsChannel.isActive(this);
+        return state != ChannelState.WAITING;
     }
 
     @Override
     public boolean isWriteResumed() {
-        if (isActive()) {
-            return channel.isWriteResumed();
-        } else {
-            return !suspendWrites;
-        }
+        return !writesSuspended;
     }
-
 
     @Override
     public void wakeupWrites() {
-        if (isActive()) {
-            channel.wakeupWrites();
-        }
+        resumeWrites();
         ChannelListeners.invokeChannelListener(this, writeSetter.get());
-
     }
-
 
     @Override
     public void shutdownWrites() throws IOException {
-        if (writesDone.compareAndSet(false, true)) {
-            flush();
+        ChannelState oldState;
+        do {
+            oldState = state;
+            if (oldState == ChannelState.SHUTDOWN || oldState == ChannelState.CLOSED) {
+                return;
+            }
+            if (written != payloadSize) {
+                //we have not fully written out our payload
+                //so throw an IOException
+                throw WebSocketMessages.MESSAGES.notAllPayloadDataWritten(written, payloadSize);
+            }
+        } while (stateUpdater.compareAndSet(this, oldState, ChannelState.SHUTDOWN));
+
+        //if we have blocked threads we should wake them up just in case
+        if (oldState == ChannelState.WAITING) {
+            // now notify the waiter
+            synchronized (writeWaitLock) {
+                if (waiters > 0) {
+                    writeWaitLock.notifyAll();
+                }
+            }
         }
     }
-
 
     @Override
     public void awaitWritable() throws IOException {
-        if (isActive()) {
+        ChannelState currentState = state;
+        if (currentState == ChannelState.ACTIVE) {
             channel.awaitWritable();
-        } else {
+        } else if (currentState == ChannelState.WAITING) {
             try {
                 synchronized (writeWaitLock) {
-                    waiters++;
-                    try {
-                        writeWaitLock.wait();
-                    } finally {
-                        waiters--;
+                    if (state == ChannelState.WAITING) {
+                        waiters++;
+                        try {
+                            writeWaitLock.wait();
+                        } finally {
+                            waiters--;
+                        }
                     }
                 }
             } catch (InterruptedException e) {
-                // ignore
+                Thread.currentThread().interrupt();
+                throw new InterruptedIOException();
             }
         }
+        //otherwise we just return, next attempt to write should throw an exception
     }
-
 
     @Override
     public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
-        if (isActive()) {
-            channel.awaitWritable(time, timeUnit);
-        } else {
+        ChannelState currentState = state;
+        if (currentState == ChannelState.ACTIVE) {
+            channel.awaitWritable();
+        } else if (currentState == ChannelState.WAITING) {
             try {
                 synchronized (writeWaitLock) {
-                    waiters++;
-                    try {
-                        writeWaitLock.wait(timeUnit.toMillis(time));
-                    } finally {
-                        waiters--;
+                    if (state == ChannelState.WAITING) {
+                        waiters++;
+                        try {
+                            writeWaitLock.wait(timeUnit.toMillis(time));
+                        } finally {
+                            waiters--;
+                        }
                     }
                 }
             } catch (InterruptedException e) {
-                // ignore
+                Thread.currentThread().interrupt();
+                throw new InterruptedIOException();
             }
         }
+        //otherwise we just return, next attempt to write should throw an exception
     }
 
+    protected long getWritten() {
+        return written;
+    }
+
+    protected ChannelState getState() {
+        return state;
+    }
 
     @Override
     public XnioExecutor getWriteThread() {
         return channel.getWriteThread();
     }
 
-
     @Override
     public boolean flush() throws IOException {
-        if (isActive()) {
-            return channel.flush();
+        if (!isActive()) {
+            return false;
         }
-        return false;
+        if (state == ChannelState.CLOSED) {
+            throw WebSocketMessages.MESSAGES.channelClosed();
+        }
+        boolean flushed = flush0();
+        if (flushed && state == ChannelState.SHUTDOWN) {
+            state = ChannelState.CLOSED;
+            try {
+                close0();
+                wsChannel.complete(this);
+            } finally {
+                ChannelListeners.invokeChannelListener(this, closeSetter.get());
+            }
+        }
+        return flushed;
     }
+
+    protected abstract boolean flush0() throws IOException;
 
     /**
      * Throws an {@link IOException} if the {@link #isOpen()} returns <code>false</code>
      */
     protected final void checkClosed() throws IOException {
-        if (!isOpen()) {
+        final ChannelState state = this.state;
+        if (state == ChannelState.CLOSED || state == ChannelState.SHUTDOWN) {
             throw new IOException("Channel already closed");
         }
+    }
+
+    public static enum ChannelState {
+        /**
+         * channel is waiting to be the active writer
+         */
+        WAITING,
+        /**
+         * channel is the active writer
+         */
+        ACTIVE,
+        /**
+         * writes have been shutdown
+         */
+        SHUTDOWN,
+        /**
+         * channel is closed
+         */
+        CLOSED,
     }
 }
