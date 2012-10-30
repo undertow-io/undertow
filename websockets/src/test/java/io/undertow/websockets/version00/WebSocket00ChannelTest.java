@@ -17,9 +17,6 @@
  */
 package io.undertow.websockets.version00;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 
 import io.undertow.websockets.StreamSinkFrameChannel;
@@ -27,17 +24,23 @@ import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.utils.TestUtils;
-
+import org.junit.Ignore;
 import org.junit.Test;
 import org.xnio.ChannelListener;
 import org.xnio.channels.ConnectedStreamChannel;
 
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.junit.Assert.assertTrue;
+
 /**
  * {@link WebSocketChannel} which is used for {@link WebSocketVersion#V00}
- * 
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
+@Ignore
 public class WebSocket00ChannelTest {
 
     @Test
@@ -49,17 +52,17 @@ public class WebSocket00ChannelTest {
     public void testSendText() throws IOException {
         checkSend(WebSocketFrameType.TEXT, 10, WebSocket00TextFrameSinkChannel.class);
     }
-    
+
     @Test
     public void testSendClose() throws IOException {
         checkSend(WebSocketFrameType.CLOSE, 0, WebSocket00CloseFrameSinkChannel.class);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testSendCloseWithPayload() throws IOException {
         checkSend(WebSocketFrameType.CLOSE, 10, WebSocket00CloseFrameSinkChannel.class);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testSendContinuation() throws IOException {
         checkSend(WebSocketFrameType.CONTINUATION, 10, null);
@@ -84,7 +87,7 @@ public class WebSocket00ChannelTest {
         expect(mockChannel.isOpen()).andReturn(true);
         mockChannel.resumeWrites();
         replay(mockChannel);
-       
+
 
         WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws");
         StreamSinkFrameChannel ch = wsChannel.send(type, size);

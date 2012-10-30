@@ -57,8 +57,7 @@ public class WebSocketServerHandshakerFactory {
                     webSocketURL, subprotocols, maxFramePayloadLength);
         } else {
             if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
-                // Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).
-                // TODO: Support me
+                return new WebSocket13ServerHandshaker(webSocketURL, subprotocols, maxFramePayloadLength);
             } else if (version.equals(WebSocketVersion.V08.toHttpHeaderValue())) {
                 // Version 8 of the wire protocol - version 10 of the draft hybi specification.
                 // TODO: Support me

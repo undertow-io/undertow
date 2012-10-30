@@ -19,15 +19,19 @@
 package io.undertow.websockets.server;
 
 
+import java.io.IOException;
+
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
+import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.WebSocketVersionNotSupportedException;
+import org.xnio.IoFuture;
 
 /**
  * {@link HttpHandler} which will process the {@link HttpServerExchange} and do the actual handshake/upgrade
@@ -39,19 +43,23 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     private final String websocketPath;
     private final String subprotocols;
 
+    private final WebSocketConnectionCallback callback;
+
     /**
      * Create a new {@link WebSocketProtocolHandshakeHandler}
      *
      * @param websocketPath The path which is used to serve the WebSocket requests
      * @param subprotocols  The sub-protocols to handle
+     * @param callback
      */
-    public WebSocketProtocolHandshakeHandler(String websocketPath, String subprotocols) {
+    public WebSocketProtocolHandshakeHandler(String websocketPath, String subprotocols, final WebSocketConnectionCallback callback) {
         this.websocketPath = websocketPath;
         this.subprotocols = subprotocols;
+        this.callback = callback;
     }
 
     @Override
-    public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         if (!exchange.getRequestMethod().equals(Methods.GET)) {
             // Only GET is supported to start the handshake
             exchange.setResponseCode(403);
@@ -63,7 +71,19 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
                 getWebSocketLocation(exchange, websocketPath), subprotocols);
         try {
             final WebSocketServerHandshaker handshaker = wsFactory.getHandshaker(exchange);
-            handshaker.handshake(exchange);
+            IoFuture<WebSocketChannel> future = handshaker.handshake(exchange);
+            future.addNotifier(new IoFuture.Notifier<WebSocketChannel, Object>() {
+                @Override
+                public void notify(final IoFuture<? extends WebSocketChannel> ioFuture, final Object attachment) {
+                    try {
+                        callback.onConnect(exchange, ioFuture.get());
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } finally {
+                        completionHandler.handleComplete();
+                    }
+                }
+            }, null);
             // After the handshake was complete we are now have the connection upgraded to WebSocket and no futher HTTP processing will take place.
         } catch (WebSocketVersionNotSupportedException e) {
             exchange.setResponseCode(101);

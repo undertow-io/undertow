@@ -12,6 +12,7 @@ import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketUtils;
 import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.version00.WebSocket00Channel;
+import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -52,9 +53,9 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
         super(WebSocketVersion.V00, webSocketUrl, subprotocols, maxFramePayloadLength);
     }
 
-
+    //TODO: This is really broken, it does not account for failed read/writes, and performUpgrade need to take the payload into account
     @Override
-    public WebSocketChannel handshake(HttpServerExchange exchange) throws WebSocketHandshakeException {
+    public IoFuture<WebSocketChannel> handshake(HttpServerExchange exchange) throws WebSocketHandshakeException {
         HeaderMap requestHeader = exchange.getRequestHeaders();
         // Serve the WebSocket handshake request.
         if (!"Upgrade".equalsIgnoreCase(requestHeader.getFirst(Headers.CONNECTION))
@@ -140,11 +141,15 @@ public class WebSocket00ServerHandshaker extends WebSocketServerHandshaker {
             }
         }
         try {
-            return new WebSocket00Channel(exchange.upgradeChannel(), exchange.getConnection().getBufferPool(), getWebSocketUrl());
+
+            return performUpgrade(exchange);
         } catch (Exception e) {
             throw new WebSocketHandshakeException("Error while perform the WebSocket handshake", e);
         }
     }
 
-
+    @Override
+    protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
+        return new WebSocket00Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketUrl());
+    }
 }

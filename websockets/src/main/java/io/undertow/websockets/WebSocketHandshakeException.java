@@ -37,4 +37,8 @@ public class WebSocketHandshakeException extends WebSocketException {
     public WebSocketHandshakeException(String s, Throwable throwable) {
         super(s, throwable);
     }
+
+    public WebSocketHandshakeException(final Throwable cause) {
+        super(cause);
+    }
 }

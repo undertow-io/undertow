@@ -33,15 +33,17 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
- *  
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
+@Ignore
 public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrameSinkChannelTest {
 
     @Override
@@ -114,7 +116,7 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
     public void testWriteWithBufferNotInUse() throws IOException {
         ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
-       
+
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, false);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
@@ -130,12 +132,12 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
             TestUtils.verifyAndReset(mockChannel);
         }
     }
-    
+
     @Test
     public void testWriteWithBuffersNotInUse() throws IOException {
         ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
-       
+
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, false);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
@@ -154,12 +156,12 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
             TestUtils.verifyAndReset(mockChannel);
         }
     }
-    
+
     @Test
     public void testWriteWithBuffersWithOffsetNotInUse() throws IOException {
         ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
-       
+
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, false);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
@@ -171,7 +173,7 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
             ByteBuffer buf2 = (ByteBuffer) buf.duplicate().position(2).limit(buf.limit());
 
             ByteBuffer[] bufs = new ByteBuffer[] {buf1, buf2};
- 
+
             assertEquals(0, channel.write(bufs, 0, 2));
 
             channel.close();
@@ -179,18 +181,18 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
             TestUtils.verifyAndReset(mockChannel);
         }
     }
-    
+
     @Test
     public void testTransferFromNotInUse() throws IOException {
         ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
-        
+
         File file = File.createTempFile("undertow-test", ".tmp");
         file.deleteOnExit();
         FileOutputStream fout = new FileOutputStream(file);
         fout.write(DATA);
         fout.close();
-        
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         FileChannel fchannel = new FileInputStream(file).getChannel();
@@ -198,25 +200,25 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
         try {
             WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
             assertEquals(0, channel.transferFrom(fchannel, 0, DATA.length));
- 
+
             channel.close();
 
         } finally {
             TestUtils.verifyAndReset(mockChannel);
         }
     }
-    
+
     @Test
     public void testTransferFromSourceNotInUse() throws IOException {
         ConnectedStreamChannel mockChannel = createMockChannel();
         replay(mockChannel);
-        
+
         File file = File.createTempFile("undertow-test", ".tmp");
         file.deleteOnExit();
         FileOutputStream fout = new FileOutputStream(file);
         fout.write(DATA);
         fout.close();
-        
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         StreamSourceChannelAdapter fchannel = new StreamSourceChannelAdapter(Channels.newChannel(new FileInputStream(file)));
