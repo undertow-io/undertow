@@ -218,7 +218,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * channel that can be used to read the frame contents.
      */
     public StreamSourceFrameChannel receive() throws IOException {
-        if(this.receiver != null) {
+        if (this.receiver != null) {
             return null;
         }
         final Pooled<ByteBuffer> pooled = getBufferPool().allocate();
@@ -380,7 +380,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         if (senders.peek() == channel) {
             if (senders.remove(channel)) {
                 StreamSinkFrameChannel ch = senders.peek();
-                ch.activate();
+                if (ch != null) {
+                    ch.activate();
+                }
             }
         }
     }
