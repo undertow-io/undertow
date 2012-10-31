@@ -17,6 +17,8 @@
  */
 package io.undertow.server.handlers.security;
 
+import io.undertow.server.HttpServerExchange;
+
 /**
  * A NonceManager is used by the HTTP Digest authentication mechanism to request nonces and to validate the nonces sent from the
  * client.
@@ -38,7 +40,7 @@ public interface NonceManager {
      * @param lastNonce - The last valid nonce received from the client or null if we don't already have a nonce.
      * @return The next nonce to be sent in a challenge to the client.
      */
-    String nextNonce(final String lastNonce);
+    String nextNonce(final String lastNonce, final HttpServerExchange exchange);
 
     /**
      * Validate that a nonce can be used.
@@ -56,6 +58,6 @@ public interface NonceManager {
      * @param nonceCount - The nonce count from the client or -1 of none specified.
      * @return true if the nonce can be used otherwise return false.
      */
-    boolean validateNonce(final String nonce, final int nonceCount);
+    boolean validateNonce(final String nonce, final int nonceCount, final HttpServerExchange exchange);
 
 }

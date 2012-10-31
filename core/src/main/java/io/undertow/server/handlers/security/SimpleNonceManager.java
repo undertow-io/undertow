@@ -18,6 +18,7 @@
 package io.undertow.server.handlers.security;
 
 import static io.undertow.UndertowMessages.MESSAGES;
+import io.undertow.server.HttpServerExchange;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -27,12 +28,15 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.TimeUnit;
+
+import org.xnio.XnioExecutor;
+import org.xnio.XnioExecutor.Key;
 
 import io.undertow.util.FlexBase64;
 
@@ -62,29 +66,26 @@ public class SimpleNonceManager implements SessionNonceManager {
      *
      * In that situation they are considered single use and must not be used again.
      */
-    private final List<NonceKey> invalidNonces = Collections.synchronizedList(new LinkedList<NonceKey>());
+    private final Set<String> invalidNonces = Collections.synchronizedSet(new HashSet<String>());
 
     /**
      * Map of known currently valid nonces, a SortedMap is used to order the nonces by their creation time stamp allowing a
      * simple iteration over the keys to identify expired nonces.
      */
-    private final Map<NonceKey, NonceValue> knownNonces = Collections
-            .synchronizedMap(new HashMap<NonceKey, NonceValue>());
-    // TODO - Will need to add something else for the expiration clean up - maybe also a sorted set also to periodically iterate over.
+    private final Map<String, Nonce> knownNonces = Collections.synchronizedMap(new HashMap<String, Nonce>());
 
     /**
-     * A WeakHashMap to map expired nonces to their replacement nonce. For an item to be added to this Collection the key will
+     * A WeakHashMap to map expired nonces to their replacement nonce. For an item to be added to this Collection the value will
      * have been removed from the knownNonces map.
      *
      * A replacement nonce will have been added to knownNonces that references the key used here - once the replacement nonce is
      * removed from knownNonces then the key will be eligible for garbage collection allowing it to be removed from this map as
      * well.
      *
-     * The value in this Map is a plain String, this is to avoid inadvertantly creating a long term reference to the key we
+     * The value in this Map is a plain String, this is to avoid inadvertently creating a long term reference to the key we
      * expect to be garbage collected at some point in the future.
      */
-    private final Map<NonceKey, String> forwardMapping = Collections
-            .synchronizedMap(new WeakHashMap<SimpleNonceManager.NonceKey, String>());
+    private final Map<NonceHolder, String> forwardMapping = Collections.synchronizedMap(new WeakHashMap<NonceHolder, String>());
 
     /**
      * A pseudo-random generator for creating the nonces, a secure random is not required here as this is used purely to
@@ -146,52 +147,63 @@ public class SimpleNonceManager implements SessionNonceManager {
      *
      * @see io.undertow.server.handlers.security.NonceManager#nextNonce(java.lang.String)
      */
-    @Override
-    public String nextNonce(String lastNonce) {
+    public String nextNonce(String lastNonce, HttpServerExchange exchange) {
         if (lastNonce == null) {
-            return createNewNonce();
+            return createNewNonceString();
         }
 
-        NonceKey key = new NonceKey(lastNonce);
-        if (invalidNonces.contains(key)) {
+        if (invalidNonces.contains(lastNonce)) {
             // The nonce supplied has already been used.
-            return createNewNonce();
+            return createNewNonceString();
         }
 
-        String nonce;
+        String nonce = lastNonce;
         // Loop the forward mappings.
         synchronized (forwardMapping) {
-            while (forwardMapping.containsKey(key)) {
-                key = new NonceKey(forwardMapping.get(key));
+            NonceHolder holder = new NonceHolder(lastNonce);
+            while (forwardMapping.containsKey(holder)) {
+                nonce = forwardMapping.get(holder);
+                // The final NonceHolder will then be used if a forwardMapping needs to be set.
+                holder = new NonceHolder(nonce);
             }
 
             synchronized (knownNonces) {
-                NonceValue value = knownNonces.get(key);
+                Nonce value = knownNonces.get(nonce);
                 if (value == null) {
                     // Not a likely scenario but if this occurs then most likely the nonce mapped to has also expired so we will
                     // just send a new nonce.
-                    nonce = createNewNonce();
+                    nonce = createNewNonceString();
                 } else {
                     long now = System.currentTimeMillis();
                     // The cacheTimePostExpiry is not included here as this is our opportunity to inform the client to use a
                     // replacement nonce without a stale round trip.
                     long earliestAccepted = now - firstUseTimeOut;
                     if (value.timeStamp < earliestAccepted || value.timeStamp > now) {
-                        NonceKey replacement = createNewNonceKey();
+                        XnioExecutor executor = exchange.getWriteThread();
+                        Nonce replacement = createNewNonce(holder);
+                        if (value.executorKey != null) {
+                            // The outcome doesn't matter - if we have the value we have all we need.
+                            value.executorKey.remove();
+                        }
+
                         nonce = replacement.nonce;
                         // Create a record of the forward mapping so if any requests do need to be marked stale they can be
                         // pointed towards the correct nonce to use.
-                        forwardMapping.put(key, nonce);
-                        value = new NonceValue(replacement.timeStamp, key, value.getSessionKey());
+                        forwardMapping.put(holder, nonce);
+                        // Bring over any existing session key.
+                        replacement.setSessionKey(value.getSessionKey());
                         // At this point we will not accept the nonce again so remove it from the list of known nonces but do
                         // register the replacement.
-                        knownNonces.remove(key);
+                        knownNonces.remove(holder.nonce);
                         // There are two reasons for registering the replacement 1 - to preserve any session key, 2 - To keep a
                         // reference to the now invalid key so it
                         // can be used as a key in a weak hash map.
-                        knownNonces.put(replacement, value);
-                    } else {
-                        nonce = key.nonce;
+                        knownNonces.put(nonce, replacement);
+                        earliestAccepted = now - (overallTimeOut + cacheTimePostExpiry);
+                        long timeTillExpiry = replacement.timeStamp - earliestAccepted;
+                        replacement.executorKey = executor.executeAfter(new KnownNonceCleaner(nonce), timeTillExpiry,
+                                TimeUnit.MILLISECONDS);
+
                     }
                 }
             }
@@ -200,11 +212,11 @@ public class SimpleNonceManager implements SessionNonceManager {
         return nonce;
     }
 
-    private String createNewNonce() {
-        return createNewNonceKey().nonce;
+    private String createNewNonceString() {
+        return createNewNonce(null).nonce;
     }
 
-    private NonceKey createNewNonceKey() {
+    private Nonce createNewNonce(NonceHolder previousNonce) {
         byte[] prefix = new byte[8];
         random.nextBytes(prefix);
         long timeStamp = System.currentTimeMillis();
@@ -212,7 +224,7 @@ public class SimpleNonceManager implements SessionNonceManager {
 
         String nonce = createNonce(prefix, now);
 
-        return new NonceKey(nonce, timeStamp);
+        return new Nonce(nonce, timeStamp, previousNonce);
     }
 
     /**
@@ -220,65 +232,70 @@ public class SimpleNonceManager implements SessionNonceManager {
      * @see io.undertow.server.handlers.security.NonceManager#validateNonce(java.lang.String, int)
      */
     @Override
-    public boolean validateNonce(String nonce, int nonceCount) {
-        NonceKey key = new NonceKey(nonce);
+    public boolean validateNonce(String nonce, int nonceCount, HttpServerExchange exchange) {
+        XnioExecutor executor = exchange.getWriteThread();
         if (nonceCount < 0) {
-            if (invalidNonces.contains(key)) {
+            if (invalidNonces.contains(nonce)) {
                 // Without a nonce count the nonce is only useable once.
                 return false;
             }
             // Not already known so will drop into first use validation.
-        } else if (knownNonces.containsKey(key)) {
+        } else if (knownNonces.containsKey(nonce)) {
             // At this point we need to validate that the nonce is still within it's time limits,
             // If a new nonce had been selected then a known nonce would not have been found.
             // The nonce will also have it's nonce count checked.
-            return validateNonceWithCount(key, nonceCount);
+            return validateNonceWithCount(new Nonce(nonce), nonceCount, executor);
 
-        } else if (forwardMapping.containsKey(key)) {
+        } else if (forwardMapping.containsKey(nonce)) {
             // We could have let this drop through as the next validation would fail anyway but
             // why waste the time if we already know a replacement nonce has been issued.
             return false;
         }
 
         // This is not a nonce currently known to us so start the validation process.
-        key = verifyUnknownNonce(nonce);
-        if (key == null) {
+        Nonce value = verifyUnknownNonce(nonce, nonceCount);
+        if (value == null) {
             return false;
         }
 
         long now = System.currentTimeMillis();
-        long earliestAccepted = now - (firstUseTimeOut + cacheTimePostExpiry);
-        if (key.timeStamp < earliestAccepted || key.timeStamp > now) {
+        // NOTE - This check is for the first use, overall validity is checked in validateNonceWithCount.
+        long earliestAccepted = now - firstUseTimeOut;
+        if (value.timeStamp < earliestAccepted || value.timeStamp > now) {
             // The embedded timestamp is either expired or somehow is after now.
             return false;
         }
 
         if (nonceCount < 0) {
             // Allow a single use but reject all further uses.
-            addInvalidNonce(key);
+            addInvalidNonce(value, executor);
             return true;
         } else {
-            return validateNonceWithCount(key, nonceCount);
+            return validateNonceWithCount(value, nonceCount, executor);
         }
     }
 
-    private boolean validateNonceWithCount(NonceKey nonceKey, int nonceCount) {
+    private boolean validateNonceWithCount(Nonce nonce, int nonceCount, final XnioExecutor executor) {
         // This point could have been reached either because the knownNonces map contained the key or because
         // it didn't and a count was supplied - either way need to double check the contents of knownNonces once
         // the lock is in place.
         synchronized (knownNonces) {
-            NonceValue value = knownNonces.get(nonceKey);
+            Nonce value = knownNonces.get(nonce.nonce);
             long now = System.currentTimeMillis();
-            long earliestAccepted = now - overallTimeOut;
+            // For the purpose of this validation we also add the cacheTimePostExpiry - when nextNonce is subsequently
+            // called it will decide if we are in the interval to replace the nonce.
+            long earliestAccepted = now - (overallTimeOut + cacheTimePostExpiry);
             if (value == null) {
-                if (nonceKey.getTimeStamp() < 0) {
+                if (nonce.timeStamp < 0) {
                     // Means it was in there, now it isn't - most likely a timestamp expiration mid check - abandon validation.
                     return false;
                 }
 
-                if (nonceKey.timeStamp > earliestAccepted && nonceKey.timeStamp < now) {
-                    value = new NonceValue(nonceKey.getTimeStamp(), nonceCount);
-                    knownNonces.put(nonceKey, value);
+                if (nonce.timeStamp > earliestAccepted && nonce.timeStamp < now) {
+                    knownNonces.put(nonce.nonce, nonce);
+                    long timeTillExpiry = nonce.timeStamp - earliestAccepted;
+                    nonce.executorKey = executor.executeAfter(new KnownNonceCleaner(nonce.nonce), timeTillExpiry,
+                            TimeUnit.MILLISECONDS);
                     return true;
                 }
 
@@ -302,21 +319,17 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     }
 
-    private void addInvalidNonce(final NonceKey nonce) {
-        synchronized (invalidNonces) {
-            // TODO - We really need a recurring task to clean these up but for now clean on each addition.
-            long earliestAccepted = System.currentTimeMillis() - firstUseTimeOut;
-            Iterator<NonceKey> it = invalidNonces.iterator();
-            while (it.hasNext()) {
-                NonceKey current = it.next();
-                if (current.timeStamp < earliestAccepted) {
-                    it.remove();
-                } else {
-                    break;
-                }
-            }
+    private void addInvalidNonce(final Nonce nonce, final XnioExecutor executor) {
+        long now = System.currentTimeMillis();
+        long invalidBefore = now - firstUseTimeOut;
 
-            invalidNonces.add(invalidNonces.size(), nonce);
+        long timeTillInvalid = nonce.timeStamp - invalidBefore;
+        if (timeTillInvalid > 0) {
+            if (invalidNonces.add(nonce.nonce)) {
+                executor.executeAfter(new InvalidNonceCleaner(nonce.nonce), timeTillInvalid, TimeUnit.MILLISECONDS);
+            } else {
+                throw new IllegalStateException("Nonce re-used");
+            }
         }
     }
 
@@ -335,7 +348,7 @@ public class SimpleNonceManager implements SessionNonceManager {
      * @param nonce -
      * @return
      */
-    private NonceKey verifyUnknownNonce(final String nonce) {
+    private Nonce verifyUnknownNonce(final String nonce, final int nonceCount) {
         byte[] complete;
         int offset;
         int length;
@@ -369,7 +382,7 @@ public class SimpleNonceManager implements SessionNonceManager {
             try {
                 long timeStamp = Long.parseLong(new String(timeStampBytes, UTF_8));
 
-                return new NonceKey(expectedNonce, timeStamp);
+                return new Nonce(expectedNonce, timeStamp, nonceCount);
             } catch (NumberFormatException dropped) {
             }
         }
@@ -408,76 +421,27 @@ public class SimpleNonceManager implements SessionNonceManager {
     }
 
     /**
-     * Key used to reference known nonces.
-     *
-     * This key serves two purposes, firstly it is used for looking up information about a known nonce from the SortedMap, for
-     * this purpose hashCode and equals only take the nonce into account.
-     *
-     * The second purpose is to allow ordering based on the time the nonce was created, in this case comparison is only based on
-     * the created timestamp.
-     *
-     * Note: this class has a natural ordering that is inconsistent with equals.
+     * A simple wrapper around a nonce to allow it to be used as a key in a weak map.
      */
-    private class NonceKey implements Comparable<NonceKey> {
-
+    private class NonceHolder {
         private final String nonce;
-        private final long timeStamp;
 
-        NonceKey(final String nonce) {
-            this(nonce, -1);
-        }
-
-        NonceKey(final String nonce, final long timeStamp) {
-            this.nonce = nonce;
-            this.timeStamp = timeStamp;
-        }
-
-        public long getTimeStamp() {
-            return timeStamp;
-        }
-
-        public int compareTo(NonceKey other) {
-            if (timeStamp == other.timeStamp) {
-                return 0;
-            } else if (timeStamp < other.timeStamp) {
-                return -1;
+        private NonceHolder(final String nonce) {
+            if (nonce == null) {
+                throw new NullPointerException("nonce must not be null.");
             }
-
-            return 1;
+            this.nonce = nonce;
         }
 
         @Override
         public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + getOuterType().hashCode();
-            result = prime * result + ((nonce == null) ? 0 : nonce.hashCode());
-            return result;
+            return nonce.hashCode();
         }
 
         @Override
         public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (obj == null)
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            NonceKey other = (NonceKey) obj;
-            if (!getOuterType().equals(other.getOuterType()))
-                return false;
-            if (nonce == null) {
-                if (other.nonce != null)
-                    return false;
-            } else if (!nonce.equals(other.nonce))
-                return false;
-            return true;
+            return (obj instanceof NonceHolder) ? nonce.equals(((NonceHolder) obj).nonce) : false;
         }
-
-        private SimpleNonceManager getOuterType() {
-            return SimpleNonceManager.this;
-        }
-
     }
 
     /**
@@ -486,30 +450,40 @@ public class SimpleNonceManager implements SessionNonceManager {
      * A NonceKey for a preciously valid nonce is also referenced, this is so that a WeakHashMap can be used to maintain a
      * mapping from the original NonceKey to the new nonce value.
      */
-    private class NonceValue {
+    private class Nonce {
+
+        private final String nonce;
 
         private final long timeStamp;
         // TODO we will also add a mechanism to track the gaps as the only restriction is that a NC can only be used one.
         private int maxNonceCount;
-        // We keep this as the previous key is also used in a weak hash mep so we need to keep it alive.
-        private final NonceKey previousKey;
+        // We keep this as it is used in the wek hash map as a forward mapping as long as the nonce to map to is still alive.
+        @SuppressWarnings("unused")
+        private final NonceHolder previousNonce;
         private byte[] sessionKey;
+        private Key executorKey;
 
-        private NonceValue(final long timeStamp, final int initialNC) {
-            this(timeStamp, initialNC, null);
+        private Nonce(final String nonce) {
+            this(nonce, -1, -1);
         }
 
-        private NonceValue(final long timeStamp, final int initialNC, final NonceKey previousKey) {
+        private Nonce(final String nonce, final long timeStamp) {
+            this(nonce, timeStamp, -1);
+        }
+
+        private Nonce(final String nonce, final long timeStamp, final int initialNC) {
+            this(nonce, timeStamp, initialNC, null);
+        }
+
+        private Nonce(final String nonce, final long timeStamp, final NonceHolder previousNonce) {
+            this(nonce, timeStamp, -1, previousNonce);
+        }
+
+        private Nonce(final String nonce, final long timeStamp, final int initialNC, final NonceHolder previousNonce) {
+            this.nonce = nonce;
             this.timeStamp = timeStamp;
             this.maxNonceCount = initialNC;
-            this.previousKey = previousKey;
-        }
-
-        private NonceValue(final long timeStamp, final NonceKey previousKey, final byte[] sessionKey) {
-            this.timeStamp = timeStamp;
-            this.maxNonceCount = 0;
-            this.previousKey = previousKey;
-            this.sessionKey = sessionKey;
+            this.previousNonce = previousNonce;
         }
 
         byte[] getSessionKey() {
@@ -530,12 +504,36 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     }
 
-    public static void main(String[] args) throws Exception {
-        NonceManager nm = new SimpleNonceManager();
-        String nonce = nm.nextNonce(null);
-        System.out.println("Nonce = " + nonce);
-        System.out.println("Is Valid = " + nm.validateNonce(nonce, -1));
-        System.out.println("Is Valid = " + nm.validateNonce(nonce.substring(0, nonce.length() - 2) + "A=", -1));
+    private class InvalidNonceCleaner implements Runnable {
+
+        private final String nonce;
+
+        private InvalidNonceCleaner(final String nonce) {
+            if (nonce == null) {
+                throw new NullPointerException("nonce must not be null.");
+            }
+            this.nonce = nonce;
+        }
+
+        public void run() {
+            invalidNonces.remove(nonce);
+        }
+
+    }
+
+    private class KnownNonceCleaner implements Runnable {
+        private final String nonce;
+
+        private KnownNonceCleaner(final String nonce) {
+            if (nonce == null) {
+                throw new NullPointerException("nonce must not be null.");
+            }
+            this.nonce = nonce;
+        }
+
+        public void run() {
+            knownNonces.remove(nonce);
+        }
     }
 
 }

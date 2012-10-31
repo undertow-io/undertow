@@ -313,7 +313,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
             // Step 3 - Verify that the nonce was eligible to be used.
             if (validateNonceUse() == false) {
-                // TODO - This is the right place to make use of the decision but the check needs to be much much sooner otherwise a failure server
+                // TODO - This is the right place to make use of the decision but the check needs to be much much sooner
+                // otherwise a failure server
                 // side could leave a packet that could be 're-played' after the failed auth.
                 // The username and password verification passed but for some reason we do not like the nonce.
                 context.markStale();
@@ -348,7 +349,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
             context.setNonce(suppliedNonce);
             // TODO - A replay attempt will need an exception.
-            return (nonceManager.validateNonce(suppliedNonce, nonceCount));
+            return (nonceManager.validateNonce(suppliedNonce, nonceCount, exchange));
         }
 
         private byte[] getExpectedPassword() throws AuthenticationException {
@@ -469,7 +470,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             rb.append(Headers.REALM.toString()).append("=\"").append(realmName).append("\",");
             rb.append(Headers.DOMAIN.toString()).append("=\"/\","); // TODO - This will need to be generated
                                                                     // based on security constraints.
-            rb.append(Headers.NONCE.toString()).append("=\"").append(nonceManager.nextNonce(null)).append("\",");
+            rb.append(Headers.NONCE.toString()).append("=\"").append(nonceManager.nextNonce(null, exchange)).append("\",");
             // Not currently using OPAQUE as it offers no integrity, used for session data leaves it vulnerable to
             // session fixation type issues as well.
             rb.append(Headers.OPAQUE.toString()).append("=\"00000000000000000000000000000000\"");
@@ -514,7 +515,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         public void run() {
             DigestQop qop = context.getQop();
             String currentNonce = context.getNonce();
-            String nextNonce = nonceManager.nextNonce(currentNonce);
+            String nextNonce = nonceManager.nextNonce(currentNonce, exchange);
             if (qop != null || nextNonce.equals(currentNonce) == false) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(NEXT_NONCE).append("=\"").append(nextNonce).append("\"");
