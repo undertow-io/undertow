@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.protocol.version08;
+package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketFrameType;
 import org.xnio.channels.StreamSinkChannel;
@@ -23,8 +23,18 @@ import org.xnio.channels.StreamSinkChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08CloseFrameSinkChannel extends WebSocket08FrameSinkChannel {
-    public WebSocket08CloseFrameSinkChannel(StreamSinkChannel channel, WebSocket08Channel wsChannel, long payloadSize) {
-        super(channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize);
+public class WebSocket07ContinuationFrameSinkChannel extends WebSocket07FrameSinkChannel {
+    public WebSocket07ContinuationFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
+        super(channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize);
+    }
+
+    @Override
+    public boolean isFragmentationSupported() {
+        return true;
+    }
+
+    @Override
+    public boolean areExtensionsSupported() {
+        return true;
     }
 }

@@ -22,16 +22,17 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.protocol.AbstractFrameSinkChannel;
 import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- * {@link WebSocket00FrameSinkChannel} implementation for writing {@link WebSocketFrameType#CLOSE}
+ * {@link io.undertow.websockets.protocol.AbstractFrameSinkChannel} implementation for writing {@link WebSocketFrameType#CLOSE}
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-class WebSocket00CloseFrameSinkChannel extends WebSocket00FrameSinkChannel {
+class WebSocket00CloseFrameSinkChannel extends AbstractFrameSinkChannel {
     private static final ByteBuffer END = ByteBuffer.allocate(2).put((byte) 0xFF).put((byte) 0x00);
 
 

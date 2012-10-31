@@ -35,7 +35,6 @@ package io.undertow.websockets.protocol.version00;
  */
 
 import org.junit.Ignore;
-import org.xnio.channels.StreamSinkChannel;
 
 
 /**
@@ -45,11 +44,11 @@ import org.xnio.channels.StreamSinkChannel;
  */
 @Ignore
 public class WebSocket00TextFrameSinkChannelTest extends AbstractWebSocketFrameSinkChannelTest {
-
+/*
     @Override
-    protected WebSocket00FrameSinkChannel createChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel,
+    protected AbstractFrameSinkChannel createChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel,
             int payloadSize) {
         return new WebSocket00TextFrameSinkChannel(channel, wsChannel, payloadSize);
     }
-
+*/
 }

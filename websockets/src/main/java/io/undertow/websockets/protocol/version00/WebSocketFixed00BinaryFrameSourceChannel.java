@@ -20,7 +20,7 @@ package io.undertow.websockets.protocol.version00;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
+import io.undertow.websockets.protocol.WebSocketFixedPayloadFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**

@@ -147,7 +147,7 @@ public class WebSocket00Channel extends WebSocketChannel {
     }
 
     @Override
-    protected StreamSinkFrameChannel create(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize) {
+    protected StreamSinkFrameChannel createStreamSinkChannel(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize) {
         switch (type) {
             case TEXT:
                 return new WebSocket00TextFrameSinkChannel(channel, this, payloadSize);

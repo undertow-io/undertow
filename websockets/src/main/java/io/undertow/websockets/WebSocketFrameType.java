@@ -52,6 +52,8 @@ public enum WebSocketFrameType {
     /**
      * {@link WebSocketFrame} which notify about more data to come
      */
-    CONTINUATION
+    CONTINUATION,
+
+    UNKOWN,
 
 }

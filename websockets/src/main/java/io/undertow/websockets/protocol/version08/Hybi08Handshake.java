@@ -19,6 +19,8 @@ package io.undertow.websockets.protocol.version08;
 import java.util.Collections;
 import java.util.List;
 
+import io.undertow.server.HttpServerExchange;
+import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.protocol.version07.Hybi07Handshake;
 
 /**
@@ -34,5 +36,10 @@ public class Hybi08Handshake extends Hybi07Handshake {
 
     public Hybi08Handshake(List<String> subprotocols) {
         super("8", subprotocols);
+    }
+
+    @Override
+    protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
+        return new WebSocket08Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange));
     }
 }

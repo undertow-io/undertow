@@ -87,11 +87,13 @@ public class SimpleWebSocket13TestCase {
             @Override
             public void onWebSocketBinary(final byte[] payload, final int offset, final int len) {
 
+                latch.countDown();
             }
 
             @Override
             public void onWebSocketClose(final int statusCode, final String reason) {
 
+                latch.countDown();
             }
 
             @Override
@@ -115,7 +117,8 @@ public class SimpleWebSocket13TestCase {
 
             @Override
             public void onWebSocketException(final WebSocketException error) {
-
+                error.printStackTrace();
+                latch.countDown();
             }
 
             @Override

@@ -15,18 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.protocol.version08;
-
-import io.undertow.websockets.utf8.UTF8Checker;
-import io.undertow.websockets.utf8.UTF8FileChannel;
-import io.undertow.websockets.utf8.UTF8StreamSourceChannel;
-import io.undertow.websockets.WebSocketFrameType;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
+package io.undertow.websockets.protocol.version07;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+
+import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.protocol.version08.WebSocket08Channel;
+import io.undertow.websockets.utf8.UTF8Checker;
+import io.undertow.websockets.utf8.UTF8FileChannel;
+import io.undertow.websockets.utf8.UTF8StreamSourceChannel;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
 
 /**
  * WebSocket08FrameSinkChannel that is used to write WebSocketFrameType#TEXT frames.
@@ -36,10 +37,10 @@ import java.nio.channels.FileChannel;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08TextFrameSinkChannel extends WebSocket08FrameSinkChannel {
+public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel {
     private final UTF8Checker checker = new UTF8Checker();
 
-    public WebSocket08TextFrameSinkChannel(StreamSinkChannel channel, WebSocket08Channel wsChannel, long payloadSize) {
+    public WebSocket07TextFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
     }
 

@@ -15,18 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.protocol.version08;
+package io.undertow.websockets.protocol.version07;
 
-import io.undertow.websockets.WebSocketChannel;
-import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import org.xnio.channels.StreamSourceChannel;
+import org.xnio.channels.StreamSinkChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08ContinuationFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
-    WebSocket08ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, boolean finalFragment, long payloadSize) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, rsv, finalFragment, payloadSize);
+public class WebSocket07CloseFrameSinkChannel extends WebSocket07FrameSinkChannel {
+    public WebSocket07CloseFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
+        super(channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize);
     }
 }

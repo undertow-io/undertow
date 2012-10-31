@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.protocol.version00;
+package io.undertow.websockets.protocol;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,19 +34,19 @@ import org.xnio.channels.StreamSourceChannel;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public abstract class WebSocket00FrameSinkChannel extends StreamSinkFrameChannel {
-    public WebSocket00FrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type,
-                                       long payloadSize) {
+public abstract class AbstractFrameSinkChannel extends StreamSinkFrameChannel {
+    public AbstractFrameSinkChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type,
+                                    long payloadSize) {
         super(channel, wsChannel, type, payloadSize);
     }
 
     /**
-     * Buffer that holds the first frame
+     * Buffer that holds the frame start
      */
     private ByteBuffer start;
 
     /**
-     * buffer that holds the last frame
+     * buffer that holds the frame end
      */
     private ByteBuffer end;
 

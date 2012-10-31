@@ -15,28 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.protocol.version08;
+package io.undertow.websockets.protocol.version07;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import io.undertow.websockets.WebSocketChannel;
+import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.protocol.WebSocketFixedPayloadMaskedFrameSourceChannel;
 import io.undertow.websockets.utf8.UTF8Checker;
 import io.undertow.websockets.utf8.UTF8FileChannel;
 import io.undertow.websockets.utf8.UTF8StreamSinkChannel;
-import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
-import io.undertow.websockets.WebSocketFrameType;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08TextFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
+public class WebSocket07TextFrameSourceChannel extends WebSocketFixedPayloadMaskedFrameSourceChannel {
     private final UTF8Checker checker = new UTF8Checker();
 
-    public WebSocket08TextFrameSourceChannel(WebSocket08Channel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket08Channel wsChannel, int rsv, boolean finalFragment, long payloadSize) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, rsv, finalFragment, payloadSize);
+    public WebSocket07TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, int rsv, boolean finalFragment, long payloadSize, final boolean masked, final int mask) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, rsv, finalFragment, payloadSize, masked, mask);
     }
 
     @Override

@@ -15,12 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets;
+package io.undertow.websockets.protocol;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import io.undertow.websockets.StreamSourceFrameChannel;
+import io.undertow.websockets.WebSocketChannel;
+import io.undertow.websockets.WebSocketFrameType;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -31,8 +34,8 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSourceFrameChannel {
 
-    private final long payloadSize;
-    private int readBytes;
+    protected final long payloadSize;
+    protected int readBytes;
 
     protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, long payloadSize) {
         super(streamSourceChannelControl, channel, wsChannel, type, rsv, finalFragment);

@@ -44,6 +44,12 @@ public enum WebSocketVersion {
 
     /**
      * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
+     * >draft-ietf-hybi-thewebsocketprotocol- 07</a>
+     */
+    V07,
+
+    /**
+     * <a href= "http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-10"
      * >draft-ietf-hybi-thewebsocketprotocol- 10</a>
      */
     V08,

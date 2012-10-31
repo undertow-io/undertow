@@ -15,19 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.protocol.version08;
+package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
+import io.undertow.websockets.protocol.WebSocketFixedPayloadMaskedFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08PingFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
-    public WebSocket08PingFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, long payloadSize) {
-        // can not be fragmented
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PING, rsv, true, payloadSize);
+public class WebSocket07ContinuationFrameSourceChannel extends WebSocketFixedPayloadMaskedFrameSourceChannel {
+    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, boolean finalFragment, long payloadSize, final boolean masked, final int mask) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, rsv, finalFragment, payloadSize, masked, mask);
     }
 }

@@ -15,47 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.protocol.version08;
+package io.undertow.websockets.protocol.version07;
 
 import java.nio.ByteBuffer;
 
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketVersion;
-import io.undertow.websockets.protocol.version00.WebSocket00FrameSinkChannel;
+import io.undertow.websockets.protocol.AbstractFrameSinkChannel;
 import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
- * {@link WebSocket00FrameSinkChannel} implementation for writing WebSocket Frames on {@link WebSocketVersion#V08} connections
+ * {@link io.undertow.websockets.protocol.AbstractFrameSinkChannel} implementation for writing WebSocket Frames on {@link WebSocketVersion#V08} connections
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08FrameSinkChannel extends WebSocket00FrameSinkChannel {
-    private final byte opCode = opCode();
+public abstract class WebSocket07FrameSinkChannel extends AbstractFrameSinkChannel {
 
-    public WebSocket08FrameSinkChannel(StreamSinkChannel channel, WebSocket08Channel wsChannel, WebSocketFrameType type,
-                                long payloadSize) {
+
+    public WebSocket07FrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, WebSocketFrameType type,
+                                       long payloadSize) {
         super(channel, wsChannel, type, payloadSize);
-        if (opCode == WebSocket08Channel.OPCODE_PING && payloadSize > 125) {
-            throw new IllegalArgumentException("invalid payload for PING (payload length must be <= 125, was "
-                    + payloadSize);
-        }
     }
 
     private byte opCode() {
         switch (getType()) {
         case CONTINUATION:
-            return WebSocket08Channel.OPCODE_CONT;
+            return WebSocket07Channel.OPCODE_CONT;
         case TEXT:
-            return WebSocket08Channel.OPCODE_TEXT;
+            return WebSocket07Channel.OPCODE_TEXT;
         case BINARY:
-            return WebSocket08Channel.OPCODE_BINARY;
+            return WebSocket07Channel.OPCODE_BINARY;
         case CLOSE:
-            return WebSocket08Channel.OPCODE_CLOSE;
+            return WebSocket07Channel.OPCODE_CLOSE;
         case PING:
-            return WebSocket08Channel.OPCODE_PING;
+            return WebSocket07Channel.OPCODE_PING;
         case PONG:
-            return WebSocket08Channel.OPCODE_PONG;
+            return WebSocket07Channel.OPCODE_PONG;
         default:
             throw new IllegalStateException("Unsupported WebsocketType " + getType());
         }
@@ -68,7 +64,7 @@ public class WebSocket08FrameSinkChannel extends WebSocket00FrameSinkChannel {
             b0 |= 1 << 7;
         }
         b0 |= getRsv() % 8 << 4;
-        b0 |= opCode % 128;
+        b0 |= opCode() % 128;
 
         final ByteBuffer header;
         int maskLength = 0; // handle masking for clients but we are currently only

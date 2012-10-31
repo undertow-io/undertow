@@ -331,7 +331,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         if (payloadSize < 0) {
             throw new IllegalArgumentException("The payloadSize must be >= 0");
         }
-        StreamSinkFrameChannel ch = create(channel, type, payloadSize);
+        StreamSinkFrameChannel ch = createStreamSinkChannel(channel, type, payloadSize);
         boolean o = senders.offer(ch);
         assert o;
 
@@ -343,7 +343,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     }
 
     public void sendClose() throws IOException {
-        StreamSinkFrameChannel closeChannel = create(channel, WebSocketFrameType.CLOSE, 0);
+        StreamSinkFrameChannel closeChannel = createStreamSinkChannel(channel, WebSocketFrameType.CLOSE, 0);
         closeChannel.close();
     }
 
@@ -370,7 +370,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * @param type        The {@link WebSocketFrameType} of the WebSocketFrame which will be send over this {@link StreamSinkFrameChannel}
      * @param payloadSize The size of the payload to transmit. May be 0 if non payload at all should be included.
      */
-    protected abstract StreamSinkFrameChannel create(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize);
+    protected abstract StreamSinkFrameChannel createStreamSinkChannel(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize);
 
     /**
      * Mark the given {@link StreamSinkFrameChannel} as complete and so remove the obtained ones. Calling this method will also

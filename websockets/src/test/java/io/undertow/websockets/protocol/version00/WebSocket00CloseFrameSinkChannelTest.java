@@ -17,26 +17,7 @@
  */
 package io.undertow.websockets.protocol.version00;
 
-import static org.easymock.EasyMock.replay;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import io.undertow.websockets.utils.StreamSinkChannelAdapter;
-import io.undertow.websockets.utils.StreamSourceChannelAdapter;
-import io.undertow.websockets.utils.TestUtils;
-
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-
 import org.junit.Ignore;
-import org.junit.Test;
-import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.channels.StreamSinkChannel;
 
 /**
  *
@@ -45,9 +26,9 @@ import org.xnio.channels.StreamSinkChannel;
  */
 @Ignore
 public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrameSinkChannelTest {
-
+/*
     @Override
-    protected WebSocket00FrameSinkChannel createChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel,
+    protected AbstractFrameSinkChannel createChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel,
             int payloadLength) {
         return new WebSocket00CloseFrameSinkChannel(channel, wsChannel);
     }
@@ -121,7 +102,7 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
-            WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
+            AbstractFrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
             ByteBuffer buf = ByteBuffer.wrap(DATA);
             assertEquals(0, channel.write(buf));
 
@@ -142,7 +123,7 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
-            WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
+            AbstractFrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
 
             ByteBuffer buf = ByteBuffer.wrap(DATA);
             ByteBuffer buf1 = (ByteBuffer) buf.duplicate().limit(2);
@@ -166,7 +147,7 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
-            WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
+            AbstractFrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
 
             ByteBuffer buf = ByteBuffer.wrap(DATA);
             ByteBuffer buf1 = (ByteBuffer) buf.duplicate().limit(2);
@@ -198,7 +179,7 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
         FileChannel fchannel = new FileInputStream(file).getChannel();
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, false);
         try {
-            WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
+            AbstractFrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
             assertEquals(0, channel.transferFrom(fchannel, 0, DATA.length));
 
             channel.close();
@@ -224,7 +205,7 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
         StreamSourceChannelAdapter fchannel = new StreamSourceChannelAdapter(Channels.newChannel(new FileInputStream(file)));
         WebSocket00Channel wsChannel = createWSChannel(mockChannel, false);
         try {
-            WebSocket00FrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
+            AbstractFrameSinkChannel channel = createChannel(new StreamSinkChannelAdapter(Channels.newChannel(out)), wsChannel, DATA.length);
             ByteBuffer buf = ByteBuffer.allocate(8);
             assertEquals(0, channel.transferFrom(fchannel, DATA.length, (ByteBuffer) buf.clear()));
 
@@ -233,5 +214,5 @@ public class WebSocket00CloseFrameSinkChannelTest extends AbstractWebSocketFrame
         } finally {
             TestUtils.verifyAndReset(mockChannel);
         }
-    }
+    }*/
 }

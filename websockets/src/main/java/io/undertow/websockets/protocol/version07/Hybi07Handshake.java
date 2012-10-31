@@ -28,7 +28,6 @@ import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.protocol.Handshake;
-import io.undertow.websockets.protocol.version13.WebSocket13Channel;
 import org.xnio.IoFuture;
 
 /**
@@ -58,7 +57,6 @@ public class Hybi07Handshake extends Handshake {
         }
         return false;
     }
-
 
     @Override
     public IoFuture<WebSocketChannel> handshake(final HttpServerExchange exchange) throws WebSocketHandshakeException {
@@ -97,6 +95,6 @@ public class Hybi07Handshake extends Handshake {
 
     @Override
     protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
-        return new WebSocket13Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange));
+        return new WebSocket07Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange));
     }
 }

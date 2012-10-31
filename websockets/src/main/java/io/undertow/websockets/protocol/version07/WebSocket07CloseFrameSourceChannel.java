@@ -15,18 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.protocol.version08;
+package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.WebSocketFixedPayloadFrameSourceChannel;
+import io.undertow.websockets.protocol.WebSocketFixedPayloadMaskedFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket08BinaryFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
-    WebSocket08BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, boolean finalFragment, long payloadSize) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, rsv, finalFragment, payloadSize);
+public class WebSocket07CloseFrameSourceChannel extends WebSocketFixedPayloadMaskedFrameSourceChannel {
+    WebSocket07CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, long payloadSize, final boolean masked, final int mask) {
+        // no fragmentation allowed per spec
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, rsv, true, payloadSize, masked, mask);
     }
 }
