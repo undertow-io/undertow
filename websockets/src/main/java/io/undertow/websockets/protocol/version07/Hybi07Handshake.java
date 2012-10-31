@@ -17,7 +17,6 @@
 package io.undertow.websockets.protocol.version07;
 
 
-import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
@@ -27,6 +26,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
+import io.undertow.websockets.WebSocketUtils;
 import io.undertow.websockets.protocol.Handshake;
 import org.xnio.IoFuture;
 
@@ -82,12 +82,10 @@ public class Hybi07Handshake extends Handshake {
         try {
             final String concat = nonceBase64.trim().concat(getMagicNumber());
             final MessageDigest digest = MessageDigest.getInstance(getHashAlgorithm());
-            digest.update(concat.getBytes("UTF-8"));
+            digest.update(concat.getBytes(WebSocketUtils.UTF_8));
             final String result = Base64.encodeBytes(digest.digest()).trim();
             return result;
         } catch (NoSuchAlgorithmException e) {
-            throw new WebSocketHandshakeException(e);
-        } catch (UnsupportedEncodingException e) {
             throw new WebSocketHandshakeException(e);
         }
     }
