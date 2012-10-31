@@ -17,17 +17,13 @@
  */
 package io.undertow.websockets.utf8;
 
-import org.xnio.ChannelListener;
-import org.xnio.Option;
-import org.xnio.XnioExecutor;
-import org.xnio.XnioWorker;
+import io.undertow.websockets.wrapper.AbstractStreamSourceChannelWrapper;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
 
 /**
  * StreamSourceChannel which checks if all read / transfered data contains only UTF-8 bytes.
@@ -35,117 +31,27 @@ import java.util.concurrent.TimeUnit;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class UTF8StreamSourceChannel extends UTF8ReadableByteChannel implements StreamSourceChannel {
-    private final StreamSourceChannel source;
+public class UTF8StreamSourceChannel extends AbstractStreamSourceChannelWrapper {
+    private final UTF8Checker checker;
 
     public UTF8StreamSourceChannel(StreamSourceChannel channel, UTF8Checker checker) {
-        super(channel, checker);
-        this.source = channel;
+        super(channel);
+        this.checker = checker;
     }
 
     @Override
-    public long transferTo(long position, long count, FileChannel target) throws IOException {
-        return source.transferTo(position, count, new UTF8FileChannel(target, checker));
+    protected void afterReading(ByteBuffer buffer) throws IOException {
+        checker.checkUTF8AfterRead(buffer);
     }
 
     @Override
-    public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        return source.transferTo(count, throughBuffer, new UTF8StreamSinkChannel(target, checker));
+    protected StreamSinkChannel wrapStreamSinkChannel(StreamSinkChannel channel) {
+        return new UTF8StreamSinkChannel(channel, checker);
     }
 
     @Override
-    public ChannelListener.Setter<? extends StreamSourceChannel> getReadSetter() {
-        return source.getReadSetter();
+    protected FileChannel wrapFileChannel(FileChannel channel) {
+        return new UTF8FileChannel(channel, checker);
     }
 
-    @Override
-    public ChannelListener.Setter<? extends StreamSourceChannel> getCloseSetter() {
-        return source.getCloseSetter();
-    }
-
-    @Override
-    public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        long r = 0;
-        for (int a = offset; a < length; a++) {
-            int i = read(dsts[a]);
-            if (i < 1) {
-                break;
-            }
-            r += i;
-        }
-        return r;
-    }
-
-    @Override
-    public long read(ByteBuffer[] dsts) throws IOException {
-        long r = 0;
-        for (ByteBuffer buf: dsts) {
-           int i = read(buf);
-           if (i < 1) {
-               break;
-           }
-           r += i;
-        }
-        return r;
-    }
-
-    @Override
-    public void suspendReads() {
-        source.suspendReads();
-    }
-
-    @Override
-    public void resumeReads() {
-       source.resumeReads();
-    }
-
-    @Override
-    public boolean isReadResumed() {
-        return source.isReadResumed();
-    }
-
-    @Override
-    public void wakeupReads() {
-        source.wakeupReads();
-    }
-
-    @Override
-    public void shutdownReads() throws IOException {
-        source.shutdownReads();
-    }
-
-    @Override
-    public void awaitReadable() throws IOException {
-        source.awaitReadable();
-    }
-
-    @Override
-    public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
-        source.awaitReadable(time, timeUnit);
-    }
-
-    @Override
-    public XnioExecutor getReadThread() {
-        return source.getReadThread();
-    }
-
-    @Override
-    public XnioWorker getWorker() {
-        return source.getWorker();
-    }
-
-    @Override
-    public boolean supportsOption(Option<?> option) {
-        return source.supportsOption(option);
-    }
-
-    @Override
-    public <T> T getOption(Option<T> option) throws IOException {
-        return source.getOption(option);
-    }
-
-    @Override
-    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
-        return source.setOption(option, value);
-    }
 }

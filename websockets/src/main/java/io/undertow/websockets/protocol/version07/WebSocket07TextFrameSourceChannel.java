@@ -70,9 +70,8 @@ public class WebSocket07TextFrameSourceChannel extends WebSocketFixedPayloadMask
         if (checker == null) {
             return super.read0(dst);
         }
-        int pos = dst.position();
         int r = super.read0(dst);
-        checker.checkUTF8(dst, pos, r);
+        checker.checkUTF8AfterRead(dst);
         return r;
     }
 
