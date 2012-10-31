@@ -70,6 +70,8 @@ import static io.undertow.util.Headers.RANGE_STRING;
 import static io.undertow.util.Headers.REFERER_STRING;
 import static io.undertow.util.Headers.REFRESH_STRING;
 import static io.undertow.util.Headers.RETRY_AFTER_STRING;
+import static io.undertow.util.Headers.SEC_WEB_SOCKET_KEY_STRING;
+import static io.undertow.util.Headers.SEC_WEB_SOCKET_VERSION_STRING;
 import static io.undertow.util.Headers.SERVER_STRING;
 import static io.undertow.util.Headers.SET_COOKIE2_STRING;
 import static io.undertow.util.Headers.SET_COOKIE_STRING;
@@ -160,6 +162,8 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 REFERER_STRING,
                 REFRESH_STRING,
                 RETRY_AFTER_STRING,
+                SEC_WEB_SOCKET_KEY_STRING,
+                SEC_WEB_SOCKET_VERSION_STRING,
                 SERVER_STRING,
                 SET_COOKIE_STRING,
                 SET_COOKIE2_STRING,

@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.undertow.UndertowLogger;
-import io.undertow.websockets.version00.WebSocket00Channel;
+import io.undertow.websockets.protocol.version00.WebSocket00Channel;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;

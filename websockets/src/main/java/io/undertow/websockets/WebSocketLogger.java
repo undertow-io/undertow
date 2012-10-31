@@ -48,4 +48,6 @@ public interface WebSocketLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.DEBUG)
     @Message(id = 25003, value = "Decoding WebSocket Frame with opCode %s")
     void decodingFrameWithOpCode(int opCode);
+
+
 }

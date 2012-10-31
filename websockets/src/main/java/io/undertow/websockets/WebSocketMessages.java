@@ -20,6 +20,7 @@ package io.undertow.websockets;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 import org.jboss.logging.Message;
 import org.jboss.logging.MessageBundle;
@@ -79,6 +80,6 @@ public interface WebSocketMessages {
     @Message(id = 2015, value = "Extensions not allowed but received rsv of %s")
     WebSocketFrameCorruptedException extensionsNotAllowed(int rsv);
 
-
-
+    @Message(id = 2016, value = "Could not find supported protocol in request list %s. Supported protocols are %s")
+    WebSocketHandshakeException unsupportedProtocol(String requestedSubprotocols, List<String> subprotocols);
 }

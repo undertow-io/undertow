@@ -116,4 +116,5 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.DEBUG)
     @Message(id = 5018, value = "Exception occurred during authentication using handler %s")
     void exceptionWhileAuthenticating(final AuthenticationMechanism handler, @Cause IOException exception);
+
 }
