@@ -143,14 +143,12 @@ public class Hybi00Handshake extends Handshake {
         buffer.putInt((int) key1);
         buffer.putInt((int) key2);
         buffer.put(key3);
-
-        final byte[] solution = new byte[16];
         buffer.rewind();
-        buffer.get(solution, 0, 16);
 
         try {
             final MessageDigest digest = MessageDigest.getInstance(hashAlgorithm);
-            return digest.digest(solution);
+            digest.update(buffer);
+            return digest.digest();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("error generating hash", e);
         }

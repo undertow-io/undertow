@@ -39,21 +39,22 @@ public abstract class WebSocketFixedPayloadMaskedFrameSourceChannel extends WebS
     protected WebSocketFixedPayloadMaskedFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, long payloadSize, final boolean masked, final int maskingKey) {
         super(streamSourceChannelControl, channel, wsChannel, type, rsv, finalFragment, payloadSize);
         this.masked = masked;
-        this.maskingKey = new byte[4];
-        this.maskingKey[0] = (byte) ((maskingKey >> 24) & 0xFF);
-        this.maskingKey[1] = (byte) ((maskingKey >> 16) & 0xFF);
-        this.maskingKey[2] = (byte) ((maskingKey >> 8) & 0xFF);
-        this.maskingKey[3] = (byte) (maskingKey & 0xFF);
+        this.maskingKey = createsMaskingKey(maskingKey);
     }
 
     protected WebSocketFixedPayloadMaskedFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, final boolean masked, final int maskingKey) {
         super(streamSourceChannelControl, channel, wsChannel, type, payloadSize);
         this.masked = masked;
-        this.maskingKey = new byte[4];
-        this.maskingKey[0] = (byte) ((maskingKey >> 24) & 0xFF);
-        this.maskingKey[1] = (byte) ((maskingKey >> 16) & 0xFF);
-        this.maskingKey[2] = (byte) ((maskingKey >> 8) & 0xFF);
-        this.maskingKey[3] = (byte) (maskingKey & 0xFF);
+        this.maskingKey = createsMaskingKey(maskingKey);
+    }
+
+    private static byte[] createsMaskingKey(int maskingKey) {
+        byte[] key = new byte[4];
+        key[0] = (byte) ((maskingKey >> 24) & 0xFF);
+        key[1] = (byte) ((maskingKey >> 16) & 0xFF);
+        key[2] = (byte) ((maskingKey >> 8) & 0xFF);
+        key[3] = (byte) (maskingKey & 0xFF);
+        return key;
     }
 
     @Override

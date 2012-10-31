@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.protocol.version08.WebSocket08Channel;
 import io.undertow.websockets.utf8.UTF8Checker;
 import io.undertow.websockets.utf8.UTF8FileChannel;
 import io.undertow.websockets.utf8.UTF8StreamSourceChannel;
@@ -32,16 +31,23 @@ import org.xnio.channels.StreamSourceChannel;
 /**
  * WebSocket08FrameSinkChannel that is used to write WebSocketFrameType#TEXT frames.
  *
- * It will check if the written payload contain any non-UTF8 data and if so throw
- * an {@link java.io.UnsupportedEncodingException}.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel {
-    private final UTF8Checker checker = new UTF8Checker();
+    private final UTF8Checker checker;
 
     public WebSocket07TextFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
+        this(channel, wsChannel, payloadSize, true);
+    }
+
+    public WebSocket07TextFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize, boolean checkUtf8) {
         super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
+        if (checkUtf8) {
+            checker = new UTF8Checker();
+        } else {
+            checker = null;
+        }
     }
 
     @Override
@@ -56,34 +62,46 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
 
     @Override
     protected int write0(ByteBuffer src) throws IOException {
-        checker.checkUTF8(src, src.position(), src.limit());
-        return super.write0(src);    //To change body of overridden methods use File | Settings | File Templates.
+        if (checker != null) {
+            checker.checkUTF8(src, src.position(), src.limit());
+        }
+        return super.write0(src);
     }
 
     @Override
     protected long write0(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        for (int i = offset; i < length; i++) {
-            ByteBuffer src = srcs[i];
-            checker.checkUTF8(src, src.position(), src.limit());
+        if (checker != null) {
+            for (int i = offset; i < length; i++) {
+                ByteBuffer src = srcs[i];
+                checker.checkUTF8(src, src.position(), src.limit());
+            }
         }
         return super.write0(srcs, offset, length);    //To change body of overridden methods use File | Settings | File Templates.
     }
 
     @Override
     protected long write0(ByteBuffer[] srcs) throws IOException {
-        for (ByteBuffer src: srcs) {
-            checker.checkUTF8(src, src.position(), src.limit());
+        if (checker != null) {
+            for (ByteBuffer src: srcs) {
+                checker.checkUTF8(src, src.position(), src.limit());
+            }
         }
         return super.write0(srcs);    //To change body of overridden methods use File | Settings | File Templates.
     }
 
     @Override
     protected long transferFrom0(FileChannel src, long position, long count) throws IOException {
+        if (checker == null) {
+            return super.transferFrom0(src, position, count);
+        }
         return super.transferFrom0(new UTF8FileChannel(src, checker), position, count);
     }
 
     @Override
     protected long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
+        if (checker == null) {
+            return super.transferFrom0(source, count, throughBuffer);
+        }
         return super.transferFrom0(new UTF8StreamSourceChannel(source, checker), count, throughBuffer);
     }
 }
