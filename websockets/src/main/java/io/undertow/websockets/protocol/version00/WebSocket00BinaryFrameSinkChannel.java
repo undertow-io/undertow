@@ -66,7 +66,6 @@ class WebSocket00BinaryFrameSinkChannel extends AbstractFrameSinkChannel {
             buffer.put((byte) (b3 | 0x80));
             buffer.put((byte) b4);
         }
-        buffer.flip();
         return buffer;
     }
 

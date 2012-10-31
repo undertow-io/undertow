@@ -59,12 +59,12 @@ public abstract class WebSocket07FrameSinkChannel extends AbstractFrameSinkChann
 
     @Override
     protected ByteBuffer createFrameStart() {
-        int b0 = 0;
+        byte b0 = 0;
         if (isFinalFragment()) {
-            b0 |= 1 << 7;
+            b0 |= (1 << 7);
         }
-        b0 |= getRsv() % 8 << 4;
-        b0 |= opCode() % 128;
+        b0 |= ((getRsv() & 7) << 4);
+        b0 |= (opCode() & 0xf);
 
         final ByteBuffer header;
         int maskLength = 0; // handle masking for clients but we are currently only
@@ -72,7 +72,7 @@ public abstract class WebSocket07FrameSinkChannel extends AbstractFrameSinkChann
         if (payloadSize <= 125) {
             header = ByteBuffer.allocate(2 + maskLength);
             header.put((byte) b0);
-            header.put((byte) payloadSize);
+            header.put((byte)payloadSize);
         } else if (payloadSize <= 0xFFFF) {
             header = ByteBuffer.allocate(3 + maskLength);
             header.put((byte) b0);
@@ -85,7 +85,7 @@ public abstract class WebSocket07FrameSinkChannel extends AbstractFrameSinkChann
             header.put((byte) 127);
             header.putLong(payloadSize);
         }
-        return (ByteBuffer) header.flip();
+        return header;
     }
 
     @Override
