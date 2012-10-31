@@ -17,6 +17,8 @@
  */
 package io.undertow.websockets.utf8;
 
+import io.undertow.websockets.wrapper.ChannelWrapper;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
@@ -28,28 +30,17 @@ import java.nio.channels.WritableByteChannel;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class UTF8WritableByteChannel implements WritableByteChannel {
+public class UTF8WritableByteChannel extends ChannelWrapper<WritableByteChannel> implements WritableByteChannel {
     protected final UTF8Checker checker;
-    protected final WritableByteChannel channel;
 
     public UTF8WritableByteChannel(WritableByteChannel channel, UTF8Checker checker) {
-        this.channel = channel;
+        super(channel);
         this.checker = checker;
     }
 
     @Override
     public int write(ByteBuffer src) throws IOException {
-        checker.checkUTF8(src, src.position(), src.limit());
+        checker.checkUTF8BeforeWrite(src);
         return channel.write(src);
-    }
-
-    @Override
-    public boolean isOpen() {
-        return channel.isOpen();
-    }
-
-    @Override
-    public void close() throws IOException {
-        channel.close();
     }
 }

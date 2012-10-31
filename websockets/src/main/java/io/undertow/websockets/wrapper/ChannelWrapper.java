@@ -15,34 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.utf8;
-
-import io.undertow.websockets.wrapper.ChannelWrapper;
+package io.undertow.websockets.wrapper;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.Channel;
 
 /**
- * ReadableByteChannel which wraps another ReadableByteChannel and check if the read data contain
- * any non UTF-8 data. If that is the case it will throw an {@link java.io.UnsupportedEncodingException}
+ * Channel implementation which just wraps another Channel and delegates the tasks to it.
  *
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class UTF8ReadableByteChannel extends ChannelWrapper<ReadableByteChannel> implements ReadableByteChannel {
-    protected final UTF8Checker checker;
+public class ChannelWrapper<C extends Channel> implements Channel {
 
-    public UTF8ReadableByteChannel(ReadableByteChannel channel, UTF8Checker checker) {
-        super(channel);
-        this.checker = checker;
+    protected final C channel;
+
+    public ChannelWrapper(C channel) {
+        this.channel = channel;
     }
 
     @Override
-    public int read(ByteBuffer dst) throws IOException {
-        int r = channel.read(dst);
-        checker.checkUTF8AfterRead(dst);
-        return r;
+    public boolean isOpen() {
+        return channel.isOpen();
     }
 
+    @Override
+    public void close() throws IOException {
+        channel.close();
+    }
 }

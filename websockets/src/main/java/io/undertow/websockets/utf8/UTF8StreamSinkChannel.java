@@ -17,130 +17,38 @@
  */
 package io.undertow.websockets.utf8;
 
-import org.xnio.ChannelListener;
-import org.xnio.Option;
-import org.xnio.XnioExecutor;
-import org.xnio.XnioWorker;
+import io.undertow.websockets.wrapper.AbstractStreamSinkChannelWrapper;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class UTF8StreamSinkChannel extends UTF8WritableByteChannel implements StreamSinkChannel {
+public class UTF8StreamSinkChannel extends AbstractStreamSinkChannelWrapper {
 
-    private final StreamSinkChannel sink;
+    private final UTF8Checker checker;
 
     public UTF8StreamSinkChannel(StreamSinkChannel channel, UTF8Checker checker) {
-        super(channel, checker);
-        this.sink = channel;
+        super(channel);
+        this.checker = checker;
     }
 
     @Override
-    public long transferFrom(FileChannel src, long position, long count) throws IOException {
-        return sink.transferFrom(new UTF8FileChannel(src, checker), position, count);
+    protected void beforeWriting(ByteBuffer buffer) throws IOException {
+        checker.checkUTF8BeforeWrite(buffer);
     }
 
     @Override
-    public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
-        return sink.transferFrom(new UTF8StreamSourceChannel(source, checker), count, throughBuffer);
+    protected StreamSourceChannel wrapStreamSourceChannel(StreamSourceChannel channel) {
+        return new UTF8StreamSourceChannel(channel, checker);
     }
 
     @Override
-    public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter() {
-        return sink.getWriteSetter();
-    }
-
-    @Override
-    public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
-        return sink.getCloseSetter();
-    }
-
-    @Override
-    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        for (int i = offset; i < length; i++) {
-            ByteBuffer src = srcs[i];
-            checker.checkUTF8(src, src.position(), src.limit());
-        }
-        return sink.write(srcs, offset, length);
-    }
-
-    @Override
-    public long write(ByteBuffer[] srcs) throws IOException {
-        for (ByteBuffer src: srcs) {
-            checker.checkUTF8(src, src.position(), src.limit());
-        }
-        return sink.write(srcs);
-    }
-
-    @Override
-    public void suspendWrites() {
-        sink.suspendWrites();
-    }
-
-    @Override
-    public void resumeWrites() {
-        sink.resumeWrites();
-    }
-
-    @Override
-    public boolean isWriteResumed() {
-        return sink.isWriteResumed();
-    }
-
-    @Override
-    public void wakeupWrites() {
-        sink.wakeupWrites();
-    }
-
-    @Override
-    public void shutdownWrites() throws IOException {
-        sink.shutdownWrites();
-    }
-
-    @Override
-    public void awaitWritable() throws IOException {
-        sink.awaitWritable();
-    }
-
-    @Override
-    public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
-        sink.awaitWritable(time, timeUnit);
-    }
-
-    @Override
-    public XnioExecutor getWriteThread() {
-        return sink.getWriteThread();
-    }
-
-    @Override
-    public boolean flush() throws IOException {
-        return sink.flush();
-    }
-
-    @Override
-    public XnioWorker getWorker() {
-        return sink.getWorker();
-    }
-
-
-    @Override
-    public boolean supportsOption(Option<?> option) {
-        return sink.supportsOption(option);
-    }
-
-    @Override
-    public <T> T getOption(Option<T> option) throws IOException {
-        return sink.getOption(option);
-    }
-
-    @Override
-    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
-        return sink.setOption(option, value);
+    protected FileChannel wrapFileChannel(FileChannel channel) {
+        return new UTF8FileChannel(channel, checker);
     }
 }

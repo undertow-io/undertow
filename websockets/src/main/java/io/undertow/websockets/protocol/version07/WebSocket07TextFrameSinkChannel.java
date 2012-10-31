@@ -63,7 +63,7 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
     @Override
     protected int write0(ByteBuffer src) throws IOException {
         if (checker != null) {
-            checker.checkUTF8(src, src.position(), src.limit());
+            checker.checkUTF8BeforeWrite(src);
         }
         return super.write0(src);
     }
@@ -73,7 +73,7 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
         if (checker != null) {
             for (int i = offset; i < length; i++) {
                 ByteBuffer src = srcs[i];
-                checker.checkUTF8(src, src.position(), src.limit());
+                checker.checkUTF8BeforeWrite(src);
             }
         }
         return super.write0(srcs, offset, length);    //To change body of overridden methods use File | Settings | File Templates.
@@ -83,7 +83,7 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
     protected long write0(ByteBuffer[] srcs) throws IOException {
         if (checker != null) {
             for (ByteBuffer src: srcs) {
-                checker.checkUTF8(src, src.position(), src.limit());
+                checker.checkUTF8BeforeWrite(src);
             }
         }
         return super.write0(srcs);    //To change body of overridden methods use File | Settings | File Templates.

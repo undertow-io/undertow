@@ -78,16 +78,28 @@ public final class UTF8Checker {
     /**
      * Check if the given ByteBuffer contains non UTF-8 data.
      *
-     * @param buf    the ByteBuffer to check
-     * @param pos    the position to start with the check from
-     * @param length the number of bytes to check
+     * @param buf   the ByteBuffer to check
+     * @param flip
      * @throws UnsupportedEncodingException is thrown if non UTF-8 data is found
      */
-    public void checkUTF8(ByteBuffer buf, int pos, int length) throws UnsupportedEncodingException {
-        ByteBuffer b = buf.duplicate();
-        b.position(pos);
-        for (int i = pos; i < length; i++) {
+    private void checkUTF8(ByteBuffer buf, boolean flip) throws UnsupportedEncodingException {
+        ByteBuffer b;
+        if (flip) {
+            b = buf.duplicate();
+            b.flip();
+        } else {
+            b = buf;
+        }
+        for (int i = b.position(); i < b.limit(); i++) {
             checkUTF8(b.get(i));
         }
+    }
+
+    public void checkUTF8AfterRead(ByteBuffer buf) throws UnsupportedEncodingException{
+        checkUTF8(buf, true);
+    }
+
+    public void checkUTF8BeforeWrite(ByteBuffer buf) throws UnsupportedEncodingException{
+        checkUTF8(buf, false);
     }
 }

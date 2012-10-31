@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.utf8;
+package io.undertow.websockets.masking;
 
 import io.undertow.websockets.wrapper.AbstractFileChannelWrapper;
 
@@ -28,36 +28,36 @@ import java.nio.channels.WritableByteChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public final class UTF8FileChannel extends AbstractFileChannelWrapper {
-    private final UTF8Checker checker;
+public class MaskingFileChannel extends AbstractFileChannelWrapper  {
+    private final Masker masker;
 
-    public UTF8FileChannel(FileChannel fc, UTF8Checker checker) {
+    public MaskingFileChannel(FileChannel fc, Masker masker) {
         super(fc);
-        this.checker = checker;
+        this.masker = masker;
     }
 
     @Override
     protected void beforeWriting(ByteBuffer buffer) throws IOException {
-        checker.checkUTF8BeforeWrite(buffer);
+        masker.maskBeforeWrite(buffer);
     }
 
     @Override
     protected void afterReading(ByteBuffer buffer) throws IOException {
-        checker.checkUTF8AfterRead(buffer);
+        masker.maskAfterRead(buffer);
     }
 
     @Override
     protected ReadableByteChannel wrapReadableByteChannel(ReadableByteChannel channel) {
-        return new UTF8ReadableByteChannel(channel, checker);
+        return new MaskingReadableByteChannel(channel, masker);
     }
 
     @Override
     protected WritableByteChannel wrapWritableByteChannel(WritableByteChannel channel) {
-        return new UTF8WritableByteChannel(channel, checker);
+        return new MaskingWritableByteChannel(channel, masker);
     }
 
     @Override
     protected AbstractFileChannelWrapper wrapFileChannel(FileChannel channel) {
-        return new UTF8FileChannel(channel, checker);
+        return new MaskingFileChannel(channel, masker);
     }
 }
