@@ -380,7 +380,11 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         if (senders.peek() == channel) {
             if (senders.remove(channel)) {
                 StreamSinkFrameChannel ch = senders.peek();
-                ch.activate();
+
+                // check if there is some sink waiting
+                if (ch != null) {
+                    ch.activate();
+                }
             }
         }
     }
