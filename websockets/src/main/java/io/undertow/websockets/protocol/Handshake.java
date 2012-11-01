@@ -22,6 +22,7 @@ import java.util.List;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketMessages;
@@ -60,7 +61,13 @@ public abstract class Handshake {
     }
 
     protected String getWebSocketLocation(HttpServerExchange exchange) {
-        return "ws://" + exchange.getRequestHeaders().getFirst(Headers.HOST) + exchange.getRequestURI();
+        String scheme;
+        if (exchange.getRequestScheme().equals("https")) {
+            scheme = "wss";
+        } else {
+            scheme = "ws";
+        }
+        return scheme + "://" + exchange.getRequestHeaders().getFirst(Headers.HOST) + exchange.getRequestURI();
     }
 
     /**
