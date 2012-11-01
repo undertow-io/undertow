@@ -25,6 +25,7 @@ import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketException;
 import io.undertow.websockets.WebSocketFrameCorruptedException;
 import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.WebSocketVersion;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
@@ -107,7 +108,7 @@ public class WebSocket00Channel extends WebSocketChannel {
                             lengthFieldSize++;
                             if (lengthFieldSize > 8) {
                                 // Perhaps a malicious peer?
-                                throw new WebSocketFrameCorruptedException("No Length encoded in the frame");
+                                throw WebSocketMessages.MESSAGES.noLengthEncodedInFrame();
                             }
                             if (!buffer.hasRemaining()) {
                                 // nothing left to read and still not fully read the frame size
@@ -155,11 +156,11 @@ public class WebSocket00Channel extends WebSocketChannel {
                 return new WebSocket00BinaryFrameSinkChannel(channel, this, payloadSize);
             case CLOSE:
                 if (payloadSize != 0) {
-                    throw new IllegalArgumentException("Payload is not support in CloseFrames when using WebSocket Version 00");
+                    throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
                 }
                 return new WebSocket00CloseFrameSinkChannel(channel, this);
             default:
-                throw new IllegalArgumentException("WebSocketFrameType " + type + " is not supported by this WebSocketChannel");
+                throw WebSocketMessages.MESSAGES.unsupportedFrameType(type);
         }
     }
 }

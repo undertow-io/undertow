@@ -20,6 +20,7 @@ package io.undertow.websockets.protocol.version07;
 import java.nio.ByteBuffer;
 
 import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.protocol.AbstractFrameSinkChannel;
 import org.xnio.Buffers;
@@ -53,7 +54,7 @@ public abstract class WebSocket07FrameSinkChannel extends AbstractFrameSinkChann
         case PONG:
             return WebSocket07Channel.OPCODE_PONG;
         default:
-            throw new IllegalStateException("Unsupported WebsocketType " + getType());
+            throw WebSocketMessages.MESSAGES.unsupportedFrameType(getType());
         }
     }
 

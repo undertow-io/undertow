@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.protocol.AbstractFrameSinkChannel;
 import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
@@ -42,28 +43,28 @@ class WebSocket00CloseFrameSinkChannel extends AbstractFrameSinkChannel {
 
     @Override
     protected int write0(ByteBuffer src) throws IOException {
-        throw new IOException("CloseFrames are not allowed to have a payload");
+        throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
     }
 
 
     @Override
     protected long write0(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        throw new IOException("CloseFrames are not allowed to have a payload");
+        throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
     }
 
     @Override
     protected long write0(ByteBuffer[] srcs) throws IOException {
-        throw new IOException("CloseFrames are not allowed to have a payload");
+        throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
     }
 
     @Override
     protected long transferFrom0(FileChannel src, long position, long count) throws IOException {
-        throw new IOException("CloseFrames are not allowed to have a payload");
+        throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
     }
 
     @Override
     protected long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
-        throw new IOException("CloseFrames are not allowed to have a payload");
+        throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
     }
 
     @Override

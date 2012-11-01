@@ -82,4 +82,29 @@ public interface WebSocketMessages {
 
     @Message(id = 2016, value = "Could not find supported protocol in request list %s. Supported protocols are %s")
     WebSocketHandshakeException unsupportedProtocol(String requestedSubprotocols, List<String> subprotocols);
+
+    @Message(id = 2017, value = "No Length encoded in the frame")
+    WebSocketFrameCorruptedException noLengthEncodedInFrame();
+
+    @Message(id = 2018, value = "Payload is not support in CloseFrames when using WebSocket Version 00")
+    IllegalArgumentException payloadNotSupportedInCloseFrames();
+
+    @Message(id = 2019, value = "Invalid payload for PING (payload length must be <= 125, was %s)")
+    IllegalArgumentException invalidPayloadLengthForPing(long payloadLength);
+
+    @Message(id = 2020, value = "Payload is not supported for Close Frames when using WebSocket 00")
+    IOException noPayloadAllowedForCloseFrames();
+
+    @Message(id = 2021, value = "Fragmentation not supported")
+    UnsupportedOperationException fragmentationNotSupported();
+
+    @Message(id = 2022, value = "Can only be changed before the write is in progress")
+    IllegalStateException writeInProgress();
+
+    @Message(id = 2023, value = "Extensions not supported")
+    UnsupportedOperationException extensionsNotSupported();
+
+    @Message(id = 2024, value = "The payload length must be >= 0")
+    IllegalArgumentException negativePayloadLength();
+
 }

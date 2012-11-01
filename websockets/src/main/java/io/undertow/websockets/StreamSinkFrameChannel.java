@@ -104,10 +104,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      */
     public void setFinalFragment(boolean finalFragment) {
         if (!isFragmentationSupported() && !finalFragment)   {
-            throw new UnsupportedOperationException("Fragmentation is not supported");
+            throw WebSocketMessages.MESSAGES.fragmentationNotSupported();
         }
         if (written > 0) {
-            throw new IllegalStateException("Can only be set before anything is written");
+            throw WebSocketMessages.MESSAGES.writeInProgress();
         }
         this.finalFragment = finalFragment;
     }
@@ -126,10 +126,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      */
     public void setRsv(int rsv) {
         if (!areExtensionsSupported() && rsv != 0)   {
-            throw new UnsupportedOperationException("Extensions are not supported");
+            throw WebSocketMessages.MESSAGES.extensionsNotSupported();
         }
         if (written > 0) {
-            throw new IllegalStateException("Can only be set before anything is written");
+            throw WebSocketMessages.MESSAGES.writeInProgress();
         }
         this.rsv = rsv;
     }
@@ -491,7 +491,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     protected final void checkClosed() throws IOException {
         final ChannelState state = this.state;
         if (state == ChannelState.CLOSED || state == ChannelState.SHUTDOWN) {
-            throw new IOException("Channel already closed");
+            throw WebSocketMessages.MESSAGES.channelClosed();
         }
     }
 
