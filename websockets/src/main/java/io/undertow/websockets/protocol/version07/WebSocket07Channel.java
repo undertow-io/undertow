@@ -121,7 +121,6 @@ public class WebSocket07Channel extends WebSocketChannel {
 
             @Override
             public void handle(final ByteBuffer buffer, final PushBackStreamChannel channel) throws WebSocketException {
-                //TODO: deal with the case where we can't read all the data at once
                 if (!buffer.hasRemaining()) {
                     return;
                 }
