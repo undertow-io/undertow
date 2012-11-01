@@ -329,7 +329,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      */
     public StreamSinkFrameChannel send(WebSocketFrameType type, long payloadSize) {
         if (payloadSize < 0) {
-            throw new IllegalArgumentException("The payloadSize must be >= 0");
+            throw WebSocketMessages.MESSAGES.negativePayloadLength();
         }
         StreamSinkFrameChannel ch = createStreamSinkChannel(channel, type, payloadSize);
         boolean o = senders.offer(ch);

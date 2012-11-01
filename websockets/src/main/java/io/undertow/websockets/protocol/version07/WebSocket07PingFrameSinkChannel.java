@@ -18,6 +18,7 @@
 package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.WebSocketMessages;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
@@ -27,7 +28,7 @@ public class WebSocket07PingFrameSinkChannel extends WebSocket07FrameSinkChannel
     public WebSocket07PingFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize);
         if (payloadSize > 125) {
-            throw new IllegalArgumentException("invalid payload for PING (payload length must be <= 125, was " + payloadSize);
+            throw WebSocketMessages.MESSAGES.invalidPayloadLengthForPing(payloadSize);
         }
     }
 }
