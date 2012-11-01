@@ -128,22 +128,4 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
         }
 
     }
-
-    /**
-     * Get the proper WebSocket location
-     *
-     * @param exchange The {@link HttpServerExchange} which is used to do the upgrade.
-     * @param path     The path which is used for serve WebSockets
-     * @return location        The complete location for WebSockets
-     */
-    private static String getWebSocketLocation(HttpServerExchange exchange, String path) {
-        String protocol = "ws";
-        if (exchange.getRequestScheme().equalsIgnoreCase("https")) {
-            // SSL in use so use Secure WebSockets
-            protocol = "wss";
-        }
-        // TODO: Store the header names somewhere global and use these static fields to lookup.
-        return protocol + "://" + exchange.getRequestHeaders().getLast(Headers.HOST) + path;
-    }
-
 }
