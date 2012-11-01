@@ -67,7 +67,7 @@ public class WebSocket00BinaryFrameSourceChannelTest {
         StreamSourceChannel sch = new StreamSourceChannelAdapter(Channels.newChannel(new ByteArrayInputStream(SOURCE_BYTES)));
 
         PushBackStreamChannel pch = new PushBackStreamChannel(sch);
-        WebSocketFixed00BinaryFrameSourceChannel channel = new WebSocketFixed00BinaryFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel, TEXT_BYTES.length);
+        WebSocket00BinaryFrameSourceChannel channel = new WebSocket00BinaryFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel, TEXT_BYTES.length);
         ByteBuffer readBuffer = ByteBuffer.allocate(10);
 
         int read = channel.read(readBuffer);
@@ -105,7 +105,7 @@ public class WebSocket00BinaryFrameSourceChannelTest {
         StreamSourceChannel sch = new StreamSourceChannelAdapter(Channels.newChannel(new ByteArrayInputStream(SOURCE_BYTES)));
 
         PushBackStreamChannel pch = new PushBackStreamChannel(sch);
-        WebSocketFixed00BinaryFrameSourceChannel channel = new WebSocketFixed00BinaryFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel, TEXT_BYTES.length);
+        WebSocket00BinaryFrameSourceChannel channel = new WebSocket00BinaryFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel, TEXT_BYTES.length);
         ByteBuffer readBuffer = ByteBuffer.allocate(2);
 
         int read = channel.read(readBuffer);
@@ -159,7 +159,7 @@ public class WebSocket00BinaryFrameSourceChannelTest {
         StreamSourceChannel sch = new StreamSourceChannelAdapter(Channels.newChannel(new ByteArrayInputStream(SOURCE_BYTES)));
 
         PushBackStreamChannel pch = new PushBackStreamChannel(sch);
-        WebSocketFixed00BinaryFrameSourceChannel channel = new WebSocketFixed00BinaryFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel, TEXT_BYTES.length);
+        WebSocket00BinaryFrameSourceChannel channel = new WebSocket00BinaryFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel, TEXT_BYTES.length);
         ByteBuffer readBuffer = ByteBuffer.allocate(3);
 
         int read = channel.read(readBuffer);
@@ -215,7 +215,7 @@ public class WebSocket00BinaryFrameSourceChannelTest {
         File file = File.createTempFile("undertow-j", ".tmp");
         file.deleteOnExit();
 
-        WebSocketFixed00BinaryFrameSourceChannel channel = new WebSocketFixed00BinaryFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel, TEXT_BYTES.length);
+        WebSocket00BinaryFrameSourceChannel channel = new WebSocket00BinaryFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel, TEXT_BYTES.length);
         assertEquals("Should read 4 bytes", 4, channel.transferTo(0, 8, new FileOutputStream(file).getChannel()));
 
         assertEquals("Should have transfered 4 bytes", 4L, file.length());
@@ -262,7 +262,7 @@ public class WebSocket00BinaryFrameSourceChannelTest {
 
         ByteBuffer buffer = ByteBuffer.allocate(8);
 
-        WebSocketFixed00BinaryFrameSourceChannel channel = new WebSocketFixed00BinaryFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel, TEXT_BYTES.length);
+        WebSocket00BinaryFrameSourceChannel channel = new WebSocket00BinaryFrameSourceChannel(createMock(WebSocketChannel.StreamSourceChannelControl.class), pch, mockChannel, TEXT_BYTES.length);
         assertEquals(1, channel.transferTo(1L, buffer, mockSink));
 
         assertFalse(buffer.hasRemaining());

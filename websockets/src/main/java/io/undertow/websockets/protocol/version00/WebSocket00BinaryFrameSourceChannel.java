@@ -27,9 +27,9 @@ import org.xnio.channels.StreamSourceChannel;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocketFixed00BinaryFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
+public class WebSocket00BinaryFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
 
-    WebSocketFixed00BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize) {
+    WebSocket00BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize) {
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
     }
 }

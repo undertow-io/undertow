@@ -23,7 +23,6 @@ import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.StreamSourceFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketException;
-import io.undertow.websockets.WebSocketFrameCorruptedException;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.WebSocketVersion;
@@ -121,7 +120,7 @@ public class WebSocket00Channel extends WebSocketChannel {
                             receivedClosingHandshake = true;
                             this.channel = new WebSocket00CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
                         } else {
-                            this.channel = new WebSocketFixed00BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this, frameSize);
+                            this.channel = new WebSocket00BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this, frameSize);
                         }
                         return;
                     case TEXT_FRAME:
