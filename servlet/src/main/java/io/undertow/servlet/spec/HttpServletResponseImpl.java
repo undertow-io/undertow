@@ -89,22 +89,22 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String encodeURL(final String url) {
-        return null;
+        return url;
     }
 
     @Override
     public String encodeRedirectURL(final String url) {
-        return null;
+        return url;
     }
 
     @Override
     public String encodeUrl(final String url) {
-        return null;
+        return url;
     }
 
     @Override
     public String encodeRedirectUrl(final String url) {
-        return null;
+        return url;
     }
 
     @Override

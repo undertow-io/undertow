@@ -63,7 +63,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     private final Deployment deployment;
     private volatile FileCache fileCache = DirectFileCache.INSTANCE;
 
-    private volatile boolean defaultAllowed = false;
+    private volatile boolean defaultAllowed = true;
 
     private final Set<String> allowed = Collections.newSetFromMap(new CopyOnWriteMap<String, Boolean>());
     private final Set<String> disallowed = Collections.newSetFromMap(new CopyOnWriteMap<String, Boolean>());

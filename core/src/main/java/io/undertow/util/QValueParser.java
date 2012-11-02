@@ -21,9 +21,7 @@ package io.undertow.util;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Utility class for parsing headers that accept q values
@@ -39,8 +37,8 @@ public class QValueParser {
     /**
      * Parses a set of headers that take q values to determine the most preferred one.
      *
-     * It returns the result in the form of a sorted list of sets, with every element in
-     * the set having the same q value. This means the highest priority items are at the
+     * It returns the result in the form of a sorted list of list, with every element in
+     * the list having the same q value. This means the highest priority items are at the
      * front of the list. The container should use its own internal preferred ordering
      * to determinately pick the correct item to use
      *
