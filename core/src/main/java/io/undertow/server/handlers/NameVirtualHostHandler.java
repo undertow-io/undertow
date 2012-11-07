@@ -46,6 +46,7 @@ public class NameVirtualHostHandler implements HttpHandler {
             final HttpHandler handler = hosts.get(host.getFirst());
             if(handler != null) {
                 HttpHandlers.executeHandler(handler, exchange, completionHandler);
+                return;
             }
         }
         HttpHandlers.executeHandler(defaultHandler, exchange, completionHandler);
