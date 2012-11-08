@@ -487,6 +487,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                 }
             }
             if (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
+                buf.clear();
                 int c = delegate.read(buf);
                 buf.flip();
                 if (c == -1) {
@@ -510,6 +511,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                 }
             }
             if (anyAreSet(newVal, FLAG_READING_LENGTH)) {
+                buf.clear();
                 int c = delegate.read(buf);
                 buf.flip();
                 if (c == -1) {
@@ -528,6 +530,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                 }
             }
             if (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
+                buf.clear();
                 int c = delegate.read(buf);
                 buf.flip();
                 if (c == -1) {
