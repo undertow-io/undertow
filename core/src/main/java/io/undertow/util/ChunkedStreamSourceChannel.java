@@ -393,7 +393,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
                     chunkRemaining -= remaining;
                     updateRemainingAllowed(remaining);
                     return remaining;
-                } else {
+                } else if(buf.hasRemaining()){
                     int old = buf.limit();
                     buf.limit((int) Math.min(old, buf.position() + chunkInBuffer));
                     try {
@@ -409,19 +409,24 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
             //we attempt to just read it directly into the destination buffer
             //adjusting the limit as nessesary to make sure we do not read too much
             if (chunkRemaining > 0) {
-                if (chunkRemaining < dst.remaining()) {
-                    dst.limit((int) (dst.position() + chunkRemaining));
-                }
-                int c = 0;
-                do {
-                    c = delegate.read(dst);
-                    if (c > 0) {
-                        read += c;
-                        chunkRemaining -= c;
+                int old = dst.limit();
+                try {
+                    if (chunkRemaining < dst.remaining()) {
+                        dst.limit((int) (dst.position() + chunkRemaining));
                     }
-                } while (c > 0 && chunkRemaining > 0);
-                if (c == -1) {
-                    newVal |= FLAG_FINISHED;
+                    int c = 0;
+                    do {
+                        c = delegate.read(dst);
+                        if (c > 0) {
+                            read += c;
+                            chunkRemaining -= c;
+                        }
+                    } while (c > 0 && chunkRemaining > 0);
+                    if (c == -1) {
+                        newVal |= FLAG_FINISHED;
+                    }
+                } finally {
+                    dst.limit(old);
                 }
             }
 
