@@ -246,7 +246,8 @@ public class MultipartParser {
                             //we have our data
                             ByteBuffer retBuffer = buffer.duplicate();
                             retBuffer.position(pos);
-                            retBuffer.limit(buffer.position() - boundary.length);
+
+                            retBuffer.limit(Math.max(buffer.position() - boundary.length, 0));
                             encodingHandler.handle(partHandler, retBuffer);
                             partHandler.endPart();
                             subState = -1;
