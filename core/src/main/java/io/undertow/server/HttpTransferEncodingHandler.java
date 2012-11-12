@@ -33,6 +33,8 @@ import io.undertow.util.Methods;
 import java.io.IOException;
 import java.nio.channels.Channel;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import io.undertow.util.StatusCodes;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -255,18 +257,21 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                     stillPersistent = false;
                     wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
                 }
-                if (exchange.isHttp11()) {
-                    if (stillPersistent) {
-                        // not strictly required but user agents seem to like it
-                        responseHeaders.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
-                    } else {
-                        responseHeaders.put(Headers.CONNECTION, Headers.CLOSE.toString());
-                    }
-                } else if (exchange.isHttp10()) {
-                    if (stillPersistent) {
-                        responseHeaders.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
-                    } else {
-                        responseHeaders.remove(Headers.CONNECTION);
+                if (code != StatusCodes.CODE_101.getCode()) {
+                    // only set connection header if it was not an upgrade
+                    if (exchange.isHttp11()) {
+                        if (stillPersistent) {
+                            // not strictly required but user agents seem to like it
+                            responseHeaders.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
+                        } else {
+                            responseHeaders.put(Headers.CONNECTION, Headers.CLOSE.toString());
+                        }
+                    } else if (exchange.isHttp10()) {
+                        if (stillPersistent) {
+                            responseHeaders.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
+                        } else {
+                            responseHeaders.remove(Headers.CONNECTION);
+                        }
                     }
                 }
                 return ourCompletionHandler.setResponseStream(wrappedChannel);
