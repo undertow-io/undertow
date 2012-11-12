@@ -20,6 +20,7 @@ package io.undertow.server.handlers.security;
 import static io.undertow.UndertowMessages.MESSAGES;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -32,6 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.WeakHashMap;
+
+import io.undertow.util.FlexBase64;
 
 /**
  * A default {@link NonceManager} implementation to provide reasonable single host management of nonces.
@@ -128,7 +131,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         Random rand = new SecureRandom();
         byte[] secretBytes = new byte[32];
         rand.nextBytes(secretBytes);
-        secret = Base64.encodeBytes(digest.digest(secretBytes));
+        secret = FlexBase64.encodeString(digest.digest(secretBytes), false);
     }
 
     private MessageDigest getDigest(final String hashAlg) {
@@ -334,26 +337,31 @@ public class SimpleNonceManager implements SessionNonceManager {
      */
     private NonceKey verifyUnknownNonce(final String nonce) {
         byte[] complete;
+        int offset;
+        int length;
         try {
-            complete = Base64.decode(nonce.getBytes(UTF_8));
+            ByteBuffer decode = FlexBase64.decode(nonce);
+            complete = decode.array();
+            offset = decode.arrayOffset();
+            length = decode.limit() - offset;
         } catch (IOException e) {
             throw MESSAGES.invalidBase64Token(e);
         }
 
-        int timeStampLength = complete[8];
+        int timeStampLength = complete[offset + 8];
         // A sanity check to try and verify the sizes we expect from the arrays are correct.
         if (hashLength > 0) {
             int expectedLength = 9 + timeStampLength + hashLength;
-            if (complete.length != expectedLength) {
+            if (length != expectedLength) {
                 throw MESSAGES.invalidNonceReceived();
-            } else if (timeStampLength + 1 >= complete.length)
+            } else if (timeStampLength + 1 >= length)
                 throw MESSAGES.invalidNonceReceived();
         }
 
         byte[] prefix = new byte[8];
-        System.arraycopy(complete, 0, prefix, 0, 8);
+        System.arraycopy(complete, offset, prefix, 0, 8);
         byte[] timeStampBytes = new byte[timeStampLength];
-        System.arraycopy(complete, 9, timeStampBytes, 0, timeStampBytes.length);
+        System.arraycopy(complete, offset + 9, timeStampBytes, 0, timeStampBytes.length);
 
         String expectedNonce = createNonce(prefix, timeStampBytes);
 
@@ -377,7 +385,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         System.arraycopy(timeStamp, 0, complete, 9, timeStamp.length);
         System.arraycopy(hashedPart, 0, complete, 9 + timeStamp.length, hashedPart.length);
 
-        return Base64.encodeBytes(complete);
+        return FlexBase64.encodeString(complete, false);
     }
 
     private byte[] generateHash(final byte[] prefix, final byte[] timeStamp) {

@@ -28,9 +28,11 @@ import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcreteIoFuture;
+import io.undertow.util.FlexBase64;
 import io.undertow.util.HeaderMap;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
@@ -85,8 +87,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                 if (current.startsWith(NEGOTIATE_PREFIX)) {
                     String base64Challenge = current.substring(NEGOTIATE_PREFIX.length());
                     try {
-                        byte[] challenge = Base64.decode(base64Challenge);
-
+                        ByteBuffer challenge = FlexBase64.decode(base64Challenge);
                         dispatch(exchange, new GSSAPIRunnable(result, exchange, challenge));
                         // The request has now potentially been dispatched to a different worker thread, the run method
                         // within GSSAPIRunnable is now responsible for ensuring the request continues.
@@ -117,13 +118,13 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             exchange.putAttachment(NegotiationContext.ATTACHMENT_KEY, null);
             if (responseChallenge != null) {
                 HeaderMap headers = exchange.getResponseHeaders();
-                headers.add(WWW_AUTHENTICATE, NEGOTIATE_PREFIX + Base64.encodeBytes(responseChallenge));
+                headers.add(WWW_AUTHENTICATE, NEGOTIATE_PREFIX + FlexBase64.encodeString(responseChallenge, false));
                 authAdded = true;
             }
         }
 
         if (Util.shouldChallenge(exchange)) {
-            if (authAdded == false) {
+            if (!authAdded) {
                 exchange.getResponseHeaders().add(WWW_AUTHENTICATE, NEGOTIATE.toString());
             }
             // We only set this is actually challenging the client, the previously set header may have been a FYI for the
@@ -152,10 +153,10 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
         private final ConcreteIoFuture<AuthenticationResult> result;
         private final HttpServerExchange exchange;
-        private final byte[] challenge;
+        private final ByteBuffer challenge;
 
         private GSSAPIRunnable(final ConcreteIoFuture<AuthenticationResult> result, final HttpServerExchange exchange,
-                final byte[] challenge) {
+                final ByteBuffer challenge) {
             this.result = result;
             this.exchange = exchange;
             this.challenge = challenge;
@@ -181,10 +182,10 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
         private final ConcreteIoFuture<AuthenticationResult> result;
         private final HttpServerExchange exchange;
-        private final byte[] challenge;
+        private final ByteBuffer challenge;
 
         private AcceptSecurityContext(final ConcreteIoFuture<AuthenticationResult> result, final HttpServerExchange exchange,
-                final byte[] challenge) {
+                final ByteBuffer challenge) {
             this.result = result;
             this.exchange = exchange;
             this.challenge = challenge;
@@ -207,7 +208,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                 negContext.setGssContext(gssContext);
             }
 
-            byte[] respToken = gssContext.acceptSecContext(challenge, 0, challenge.length);
+            byte[] respToken = gssContext.acceptSecContext(challenge.array(), challenge.arrayOffset(), challenge.limit());
             negContext.setResponseToken(respToken);
 
             if (negContext.isEstablished()) {

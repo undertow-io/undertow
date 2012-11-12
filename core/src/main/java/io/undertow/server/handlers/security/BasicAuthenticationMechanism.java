@@ -27,6 +27,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.Arrays;
@@ -38,6 +39,7 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
+import io.undertow.util.FlexBase64;
 import org.xnio.IoFuture;
 
 /**
@@ -76,7 +78,8 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                     String base64Challenge = current.substring(PREFIX_LENGTH);
                     String plainChallenge = null;
                     try {
-                        plainChallenge = new String(Base64.decode(base64Challenge), UTF_8);
+                        ByteBuffer decode = FlexBase64.decode(base64Challenge);
+                        plainChallenge = new String(decode.array(), decode.arrayOffset(), decode.limit(), UTF_8);
                     } catch (IOException e) {
                     }
                     int colonPos;
