@@ -316,7 +316,7 @@ public class MultipartParser {
 
     private static class Base64Encoding implements Encoding {
 
-        private final Base64.Decoder decoder = Base64.decoder();
+        private final FlexBase64.Decoder decoder = FlexBase64.createDecoder();
 
         private final Pool<ByteBuffer> bufferPool;
 
