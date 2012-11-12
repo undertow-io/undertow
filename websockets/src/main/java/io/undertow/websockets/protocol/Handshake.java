@@ -89,6 +89,9 @@ public abstract class Handshake {
      */
     protected void performUpgrade(final ConcreteIoFuture<WebSocketChannel> ioFuture, final HttpServerExchange exchange, final byte[] data) throws WebSocketHandshakeException {
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + data.length);
+        exchange.getResponseHeaders().put(Headers.UPGRADE, "websocket");
+        exchange.getResponseHeaders().put(Headers.CONNECTION, "upgrade");
+
         exchange.upgradeChannel();
         final StreamSinkChannel channel = exchange.getResponseChannelFactory().create();
 
