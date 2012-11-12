@@ -180,7 +180,10 @@ public class FlexBase64 {
 
     /**
      * Decodes a Base64 encoded string into a new byte buffer. The returned byte buffer is a heap buffer,
-     * and it is therefor possible to retrieve the backing array using {@link java.nio.ByteBuffer#array()}
+     * and it is therefor possible to retrieve the backing array using {@link java.nio.ByteBuffer#array()},
+     * {@link java.nio.ByteBuffer#arrayOffset()} and {@link java.nio.ByteBuffer#limit()}. The latter is very
+     * important since the decoded array may be larger than the decoded data. This is due to length estimation which
+     * avoids an unnecessary array copy.
      *
      * @param source the Base64 string to decode
      * @return a byte buffer containing the decoded output
@@ -192,7 +195,10 @@ public class FlexBase64 {
 
     /**
      * Decodes a Base64 encoded byte buffer into a new byte buffer. The returned byte buffer is a heap buffer,
-     * and it is therefor possible to retrieve the backing array using {@link java.nio.ByteBuffer#array()}
+     * and it is therefor possible to retrieve the backing array using {@link java.nio.ByteBuffer#array()},
+     * {@link java.nio.ByteBuffer#arrayOffset()} and {@link java.nio.ByteBuffer#limit()}. The latter is very
+     * important since the decoded array may be larger than the decoded data. This is due to length estimation which
+     * avoids an unnecessary array copy.
      *
      * @param source the Base64 content to decode
      * @return a byte buffer containing the decoded output
@@ -205,7 +211,10 @@ public class FlexBase64 {
 
     /**
      * Decodes a Base64 encoded byte array into a new byte buffer.  The returned byte buffer is a heap buffer,
-     * and it is therefor possible to retrieve the backing array using {@link java.nio.ByteBuffer#array()}
+     * and it is therefor possible to retrieve the backing array using {@link java.nio.ByteBuffer#array()},
+     * {@link java.nio.ByteBuffer#arrayOffset()} and {@link java.nio.ByteBuffer#limit()}. The latter is very
+     * important since the decoded array may be larger than the decoded data. This is due to length estimation which
+     * avoids an unnecessary array copy.
      *
      * @param source the Base64 content to decode
      * @param off position to start decoding from in source
