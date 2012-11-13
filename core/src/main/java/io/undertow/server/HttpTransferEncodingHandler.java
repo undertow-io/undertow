@@ -235,7 +235,21 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 final int code = exchange.getResponseCode();
                 if (exchange.getRequestMethod().equals(Methods.HEAD) || (100 <= code && code <= 199) || code == 204 || code == 304) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, false, !stillPersistent, finishListener, null);
+                    if (code == StatusCodes.CODE_101.getCode() && responseHeaders.contains(Headers.CONTENT_LENGTH)) {
+                        // add least for websocket upgrades we can have a content length
+                        final long contentLength;
+                        try {
+                            contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
+                            // fixed-length response
+                            wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, !stillPersistent, finishListener, null);
+                        } catch (NumberFormatException e) {
+                            // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
+                            stillPersistent = false;
+                            wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
+                        }
+                    } else {
+                        wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, false, !stillPersistent, finishListener, null);
+                    }
                 } else if (!transferEncoding.equals(Headers.IDENTITY)) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                     wrappedChannel = new ChunkedStreamSinkChannel(channel, false, !stillPersistent, finishListener, exchange.getConnection().getBufferPool());

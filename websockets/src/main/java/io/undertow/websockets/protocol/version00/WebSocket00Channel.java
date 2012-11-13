@@ -75,6 +75,7 @@ public class WebSocket00Channel extends WebSocketChannel {
                 if (!buffer.hasRemaining()) {
                     return;
                 }
+
                 if (receivedClosingHandshake) {
                     // discard everything as we received a close frame before
                     buffer.clear();
@@ -93,6 +94,7 @@ public class WebSocket00Channel extends WebSocketChannel {
                             state = State.TEXT_FRAME;
                         }
                     case NON_TEXT_FRAME:
+
                         if (buffer.remaining() < 1) {
                             return;
                         }
@@ -116,6 +118,7 @@ public class WebSocket00Channel extends WebSocketChannel {
                         } while ((b & 0x80) == 0x80);
                         state = State.FRAME_SIZE_READ;
                     case FRAME_SIZE_READ:
+                        System.out.println(frameSize);
                         if (frameSize == 0) {
                             receivedClosingHandshake = true;
                             this.channel = new WebSocket00CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);

@@ -17,12 +17,14 @@
 package io.undertow.websockets.protocol.version07;
 
 
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.List;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
@@ -59,7 +61,7 @@ public class Hybi07Handshake extends Handshake {
     }
 
     @Override
-    public IoFuture<WebSocketChannel> handshake(final HttpServerExchange exchange) throws WebSocketHandshakeException {
+    public IoFuture<WebSocketChannel> handshake(final HttpServerExchange exchange) {
         String origin = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_ORIGIN);
         if (origin != null) {
             exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_ORIGIN, origin);
@@ -71,23 +73,25 @@ public class Hybi07Handshake extends Handshake {
         exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_LOCATION, getWebSocketLocation(exchange));
 
         final String key = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_KEY);
-        final String solution = solve(key);
-        exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_ACCEPT, solution);
+        try {
+            final String solution = solve(key);
+            exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_ACCEPT, solution);
+            return performUpgrade(exchange);
+        } catch (NoSuchAlgorithmException e) {
+            final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
+            ioFuture.setException(new IOException(new WebSocketHandshakeException(e)));
+            return ioFuture;
+        }
 
-        return performUpgrade(exchange);
     }
 
 
-    public String solve(final String nonceBase64) throws WebSocketHandshakeException {
-        try {
-            final String concat = nonceBase64.trim().concat(getMagicNumber());
-            final MessageDigest digest = MessageDigest.getInstance(getHashAlgorithm());
-            digest.update(concat.getBytes(WebSocketUtils.UTF_8));
-            final String result = Base64.encodeBytes(digest.digest()).trim();
-            return result;
-        } catch (NoSuchAlgorithmException e) {
-            throw new WebSocketHandshakeException(e);
-        }
+    public String solve(final String nonceBase64) throws NoSuchAlgorithmException {
+        final String concat = nonceBase64.trim().concat(getMagicNumber());
+        final MessageDigest digest = MessageDigest.getInstance(getHashAlgorithm());
+        digest.update(concat.getBytes(WebSocketUtils.UTF_8));
+        final String result = Base64.encodeBytes(digest.digest()).trim();
+        return result;
     }
 
 
