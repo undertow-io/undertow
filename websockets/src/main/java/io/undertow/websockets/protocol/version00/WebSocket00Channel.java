@@ -94,12 +94,10 @@ public class WebSocket00Channel extends WebSocketChannel {
                             state = State.TEXT_FRAME;
                         }
                     case NON_TEXT_FRAME:
-
                         if (buffer.remaining() < 1) {
                             return;
                         }
                         byte b;
-
                         // If the MSB on type is set, decode the frame length
                         do {
                             b = buffer.get();
@@ -112,13 +110,17 @@ public class WebSocket00Channel extends WebSocketChannel {
                                 throw WebSocketMessages.MESSAGES.noLengthEncodedInFrame();
                             }
                             if (!buffer.hasRemaining()) {
+                                if ((b & 0x80) != 0x80) {
+                                    // that's ok just break here
+                                    break;
+                                }
+
                                 // nothing left to read and still not fully read the frame size
                                 return;
                             }
                         } while ((b & 0x80) == 0x80);
                         state = State.FRAME_SIZE_READ;
                     case FRAME_SIZE_READ:
-                        System.out.println(frameSize);
                         if (frameSize == 0) {
                             receivedClosingHandshake = true;
                             this.channel = new WebSocket00CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
@@ -127,6 +129,7 @@ public class WebSocket00Channel extends WebSocketChannel {
                         }
                         return;
                     case TEXT_FRAME:
+                        System.out.println("HERE");
                         if (buffer.remaining() < 1) {
                             return;
                         }
