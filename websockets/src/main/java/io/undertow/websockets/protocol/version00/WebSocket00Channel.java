@@ -81,18 +81,21 @@ public class WebSocket00Channel extends WebSocketChannel {
                     buffer.clear();
                     return;
                 }
-                switch (state) {
-                    case FRAME_START:
-                        if (buffer.remaining() < 1) {
-                            return;
-                        }
-                        byte type = buffer.get();
 
-                        if ((type & 0x80) == 0x80) {
-                            state = State.NON_TEXT_FRAME;
-                        } else {
-                            state = State.TEXT_FRAME;
-                        }
+                if (state == State.FRAME_START) {
+                    if (buffer.remaining() < 1) {
+                        return;
+                    }
+                    byte type = buffer.get();
+
+                    if ((type & 0x80) == 0x80) {
+                        state = State.NON_TEXT_FRAME;
+                    } else {
+                        state = State.TEXT_FRAME;
+                    }
+                }
+
+                switch (state) {
                     case NON_TEXT_FRAME:
                         if (buffer.remaining() < 1) {
                             return;
@@ -129,13 +132,6 @@ public class WebSocket00Channel extends WebSocketChannel {
                         }
                         return;
                     case TEXT_FRAME:
-                        System.out.println("HERE");
-                        if (buffer.remaining() < 1) {
-                            return;
-                        }
-                        // skip start marker
-                        buffer.position(buffer.position() + 1);
-
                         // Decode a 0xff terminated UTF-8 string
                         this.channel = new WebSocket00TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
                         return;
