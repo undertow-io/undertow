@@ -20,8 +20,10 @@ package io.undertow.util;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -39,7 +41,7 @@ public class StringWriteChannelListener implements ChannelListener<StreamSinkCha
     private final ByteBuffer buffer;
 
     public StringWriteChannelListener( final String string) {
-        buffer = ByteBuffer.wrap(string.getBytes());
+        buffer = ByteBuffer.wrap(string.getBytes(Charset.forName("US-ASCII")));
     }
 
     public void setup(final StreamSinkChannel channel) {
@@ -78,6 +80,23 @@ public class StringWriteChannelListener implements ChannelListener<StreamSinkCha
     }
 
     protected void writeDone(final StreamSinkChannel channel) {
-        IoUtils.safeClose(channel);
+        try {
+            channel.shutdownWrites();
+
+            if (!channel.flush()) {
+                channel.getWriteSetter().set(ChannelListeners.flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
+                    @Override
+                    public void handleEvent(StreamSinkChannel o) {
+                        IoUtils.safeClose(channel);
+                    }
+                }, ChannelListeners.closingChannelExceptionHandler()));
+                channel.resumeWrites();
+
+            } else {
+                IoUtils.safeClose(channel);
+            }
+        } catch (IOException e) {
+            IoUtils.safeClose(channel);
+        }
     }
 }
