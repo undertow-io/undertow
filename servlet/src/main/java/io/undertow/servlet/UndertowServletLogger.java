@@ -21,16 +21,15 @@ package io.undertow.servlet;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Date;
-
 import javax.servlet.ServletException;
 import javax.servlet.UnavailableException;
 
 import org.jboss.logging.BasicLogger;
-import org.jboss.logging.Cause;
-import org.jboss.logging.LogMessage;
 import org.jboss.logging.Logger;
-import org.jboss.logging.Message;
-import org.jboss.logging.MessageLogger;
+import org.jboss.logging.annotations.Cause;
+import org.jboss.logging.annotations.LogMessage;
+import org.jboss.logging.annotations.Message;
+import org.jboss.logging.annotations.MessageLogger;
 
 /**
  * log messages start at 15000
