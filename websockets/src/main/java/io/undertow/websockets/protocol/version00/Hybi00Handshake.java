@@ -28,7 +28,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketChannel;
-import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.protocol.Handshake;
 import org.xnio.ChannelListener;
@@ -48,8 +47,7 @@ public class Hybi00Handshake extends Handshake {
     }
 
     @Override
-    public IoFuture<WebSocketChannel> handshake(final HttpServerExchange exchange) throws WebSocketHandshakeException {
-
+    public IoFuture<WebSocketChannel> handshake(final HttpServerExchange exchange) {
         String origin = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_ORIGIN);
         if (origin != null) {
             exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_ORIGIN, origin);
@@ -69,7 +67,6 @@ public class Hybi00Handshake extends Handshake {
         final ByteBuffer buffer = ByteBuffer.wrap(key3);
 
         final StreamSourceChannel channel = exchange.getRequestChannel();
-
         final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
         int r = 0, read = 0;
         do {
@@ -85,7 +82,6 @@ public class Hybi00Handshake extends Handshake {
                 return ioFuture;
             }
         } while (r > 0 && read < 8);
-
         if (read < 8) {
             final int soFar = read;
             channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
@@ -106,13 +102,14 @@ public class Hybi00Handshake extends Handshake {
                             return;
                         }
                     } while (r > 0 && read < 8);
-
-                    final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
-                    try {
+                    if (read < 8) {
+                        channel.resumeReads();
+                        channel.getReadSetter().set(this);
+                    } else {
+                        final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
                         performUpgrade(ioFuture, exchange, solution);
-                    } catch (WebSocketHandshakeException e) {
-                        ioFuture.setException(new IOException(e));
                     }
+
                 }
             });
         } else {

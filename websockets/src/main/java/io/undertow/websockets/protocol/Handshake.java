@@ -17,12 +17,12 @@
 package io.undertow.websockets.protocol;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketMessages;
@@ -71,14 +71,13 @@ public abstract class Handshake {
     }
 
     /**
-     * Issue the WebSocket upgrade and upgrade the {@link io.undertow.server.HttpServerConnection} to a {@link WebSocketServerConnection} once the
-     * handshake was done.
+     * Issue the WebSocket upgrade
      *
      * @param exchange The {@link io.undertow.server.HttpServerExchange} for which the handshake and upgrade should occur.
      * @throws io.undertow.websockets.WebSocketHandshakeException
      *          Thrown if the handshake fails for what-ever reason.
      */
-    public abstract IoFuture<WebSocketChannel> handshake(HttpServerExchange exchange) throws WebSocketHandshakeException;
+    public abstract IoFuture<WebSocketChannel> handshake(HttpServerExchange exchange);
 
     public abstract boolean matches(final HttpServerExchange exchange);
 
@@ -87,19 +86,56 @@ public abstract class Handshake {
     /**
      * convenience method to perform the upgrade
      */
-    protected void performUpgrade(final ConcreteIoFuture<WebSocketChannel> ioFuture, final HttpServerExchange exchange, final byte[] data) throws WebSocketHandshakeException {
+    protected void performUpgrade(final ConcreteIoFuture<WebSocketChannel> ioFuture, final HttpServerExchange exchange, final byte[] data) {
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + data.length);
+        exchange.getResponseHeaders().put(Headers.UPGRADE, "websocket");
+        exchange.getResponseHeaders().put(Headers.CONNECTION, "upgrade");
+
         exchange.upgradeChannel();
         final StreamSinkChannel channel = exchange.getResponseChannelFactory().create();
 
         if(data.length > 0) {
-
+            writePayload(ioFuture, exchange, channel, ByteBuffer.wrap(data));
+        } else {
+            try {
+                flushAndCreateChannel(ioFuture, exchange, channel);
+            } catch (WebSocketHandshakeException e) {
+                ioFuture.setException(new IOException(e));
+            }
         }
-
-        flushAndCreateChannel(ioFuture, exchange, channel);
     }
 
-    protected IoFuture<WebSocketChannel> performUpgrade(final HttpServerExchange exchange) throws WebSocketHandshakeException {
+    private void writePayload(final ConcreteIoFuture<WebSocketChannel> ioFuture,   final HttpServerExchange exchange, StreamSinkChannel channel, final ByteBuffer payload){
+        while(payload.hasRemaining()) {
+            try {
+                int w = channel.write(payload);
+                if (w == 0) {
+                    channel.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
+                        @Override
+                        public void handleEvent(StreamSinkChannel channel) {
+                            writePayload(ioFuture, exchange, channel, payload);
+                        }
+                    });
+                    channel.resumeWrites();
+
+                    return;
+                }
+
+            } catch (IOException e) {
+                ioFuture.setException(e);
+                return;
+            }
+        }
+        try {
+            flushAndCreateChannel(ioFuture, exchange, channel);
+        } catch (WebSocketHandshakeException e) {
+            ioFuture.setException(new IOException(e));
+        }
+
+    }
+
+
+    protected IoFuture<WebSocketChannel> performUpgrade(final HttpServerExchange exchange) {
         final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
         performUpgrade(ioFuture, exchange, new byte[0]);
         return ioFuture;
@@ -138,7 +174,6 @@ public abstract class Handshake {
     /**
      * Selects the first matching supported sub protocol
      *
-     * @param requestedSubprotocols Comma-separated list of protocols to be supported. e.g. "chat, superchat"
      * @return sub
      *         First matching supported sub protocol.
      * @throws WebSocketHandshakeException Get thrown if no subprotocol could be found

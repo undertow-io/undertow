@@ -29,8 +29,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Methods;
 import io.undertow.websockets.WebSocketChannel;
-import io.undertow.websockets.WebSocketHandshakeException;
-import io.undertow.websockets.WebSocketLogger;
 import io.undertow.websockets.protocol.Handshake;
 import io.undertow.websockets.protocol.version00.Hybi00Handshake;
 import io.undertow.websockets.protocol.version07.Hybi07Handshake;
@@ -104,27 +102,19 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
             return;
         }
 
-
-        try {
-            IoFuture<WebSocketChannel> future = handshaker.handshake(exchange);
-            future.addNotifier(new IoFuture.Notifier<WebSocketChannel, Object>() {
+        IoFuture<WebSocketChannel> future = handshaker.handshake(exchange);
+        future.addNotifier(new IoFuture.Notifier<WebSocketChannel, Object>() {
                 @Override
                 public void notify(final IoFuture<? extends WebSocketChannel> ioFuture, final Object attachment) {
-                    try {
-                        callback.onConnect(exchange, ioFuture.get());
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    } finally {
-                        completionHandler.handleComplete();
-                    }
+                try {
+                    callback.onConnect(exchange, ioFuture.get());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                } finally {
+                    completionHandler.handleComplete();
+                }
                 }
             }, null);
-            // After the handshake was complete we are now have the connection upgraded to WebSocket and no futher HTTP processing will take place.
-        } catch (WebSocketHandshakeException e) {
-            exchange.setResponseCode(500);
-            completionHandler.handleComplete();
-            WebSocketLogger.REQUEST_LOGGER.webSocketHandshakeFailed(e);
-        }
 
     }
 }
