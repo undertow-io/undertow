@@ -35,6 +35,7 @@ import io.undertow.websockets.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.protocol.version13.Hybi13Handshake;
 import org.xnio.IoFuture;
+import org.xnio.IoUtils;
 
 /**
  * {@link HttpHandler} which will process the {@link HttpServerExchange} and do the actual handshake/upgrade
@@ -106,13 +107,14 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
         future.addNotifier(new IoFuture.Notifier<WebSocketChannel, Object>() {
                 @Override
                 public void notify(final IoFuture<? extends WebSocketChannel> ioFuture, final Object attachment) {
-                try {
-                    callback.onConnect(exchange, ioFuture.get());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                } finally {
-                    completionHandler.handleComplete();
-                }
+                    try {
+                        callback.onConnect(exchange, ioFuture.get());
+                    } catch (IOException e) {
+                        // close connection on exception
+                        IoUtils.safeClose(exchange.getConnection());
+                    } finally {
+                        completionHandler.handleComplete();
+                    }
                 }
             }, null);
 
