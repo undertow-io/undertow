@@ -153,12 +153,16 @@ public abstract class AbstractFrameSinkChannel extends StreamSinkFrameChannel {
     protected boolean flush0() throws IOException {
         if (writeFrameStart()) {
             if (getState() == ChannelState.SHUTDOWN) {
+
                 //we know end has not been written yet, or the state would be CLOSED
                 if (end == null) {
                     end = createFrameEnd();
+                    end.flip();
                 }
+
                 while (end.hasRemaining()) {
                     int b = channel.write(end);
+
                     if (b == -1) {
                         throw WebSocketMessages.MESSAGES.channelClosed();
                     } else if (b == 0) {
