@@ -41,7 +41,11 @@ public class StringWriteChannelListener implements ChannelListener<StreamSinkCha
     private final ByteBuffer buffer;
 
     public StringWriteChannelListener( final String string) {
-        buffer = ByteBuffer.wrap(string.getBytes(Charset.forName("US-ASCII")));
+        this(string, Charset.defaultCharset());
+    }
+
+    public StringWriteChannelListener( final String string, Charset charset) {
+        buffer = ByteBuffer.wrap(string.getBytes(charset));
     }
 
     public void setup(final StreamSinkChannel channel) {
