@@ -32,6 +32,7 @@ import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.protocol.Handshake;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
+import org.xnio.IoUtils;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
@@ -73,8 +74,10 @@ public class Hybi00Handshake extends Handshake {
             try {
                 r = channel.read(buffer);
                 read += r;
+
                 if (r == -1) {
                     ioFuture.setException(WebSocketMessages.MESSAGES.channelClosed());
+                    channel.shutdownReads();
                     return ioFuture;
                 }
             } catch (IOException e) {
@@ -82,6 +85,7 @@ public class Hybi00Handshake extends Handshake {
                 return ioFuture;
             }
         } while (r > 0 && read < 8);
+
         if (read != 8) {
             final int soFar = read;
             channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
@@ -94,11 +98,12 @@ public class Hybi00Handshake extends Handshake {
                             read += r;
                             if (r == -1) {
                                 ioFuture.setException(WebSocketMessages.MESSAGES.channelClosed());
+                                IoUtils.safeClose(channel);
                                 return;
                             }
                         } catch (IOException e) {
                             ioFuture.setException(e);
-                            channel.suspendReads();
+                            IoUtils.safeClose(channel);
                             return;
                         }
                     } while (r > 0 && read != 8);
@@ -111,6 +116,7 @@ public class Hybi00Handshake extends Handshake {
                 }
             });
         } else {
+            channel.suspendReads();
             final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
             performUpgrade(ioFuture, exchange, solution);
         }
