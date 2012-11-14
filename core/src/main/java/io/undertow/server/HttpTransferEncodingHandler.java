@@ -18,6 +18,10 @@
 
 package io.undertow.server;
 
+import java.io.IOException;
+import java.nio.channels.Channel;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -30,11 +34,6 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
-import java.io.IOException;
-import java.nio.channels.Channel;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
-import io.undertow.util.StatusCodes;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -235,7 +234,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 final int code = exchange.getResponseCode();
                 if (exchange.getRequestMethod().equals(Methods.HEAD) || (100 <= code && code <= 199) || code == 204 || code == 304) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    if (code == StatusCodes.CODE_101.getCode() && responseHeaders.contains(Headers.CONTENT_LENGTH)) {
+                    if (code == 101 && responseHeaders.contains(Headers.CONTENT_LENGTH)) {
                         // add least for websocket upgrades we can have a content length
                         final long contentLength;
                         try {
@@ -271,7 +270,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                     stillPersistent = false;
                     wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
                 }
-                if (code != StatusCodes.CODE_101.getCode()) {
+                if (code != 101) {
                     // only set connection header if it was not an upgrade
                     if (exchange.isHttp11()) {
                         if (stillPersistent) {
