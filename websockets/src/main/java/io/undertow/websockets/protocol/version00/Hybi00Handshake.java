@@ -82,7 +82,7 @@ public class Hybi00Handshake extends Handshake {
                 return ioFuture;
             }
         } while (r > 0 && read < 8);
-        if (read < 8) {
+        if (read != 8) {
             final int soFar = read;
             channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
                 @Override
@@ -101,11 +101,9 @@ public class Hybi00Handshake extends Handshake {
                             channel.suspendReads();
                             return;
                         }
-                    } while (r > 0 && read < 8);
-                    if (read < 8) {
-                        channel.resumeReads();
-                        channel.getReadSetter().set(this);
-                    } else {
+                    } while (r > 0 && read != 8);
+                    if (read == 8) {
+                        channel.suspendReads();
                         final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
                         performUpgrade(ioFuture, exchange, solution);
                     }

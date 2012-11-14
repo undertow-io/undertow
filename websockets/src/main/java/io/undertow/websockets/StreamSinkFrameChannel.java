@@ -349,7 +349,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public synchronized void resumeWrites() {
         if (isActive()) {
-            channel.suspendWrites();
+            channel.resumeWrites();
         }
         writesSuspended = false;
     }
