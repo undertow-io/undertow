@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 
-import org.jboss.logging.Message;
-import org.jboss.logging.MessageBundle;
 import org.jboss.logging.Messages;
+import org.jboss.logging.annotations.Message;
+import org.jboss.logging.annotations.MessageBundle;
 
 /**
  * start at 20000
