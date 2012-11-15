@@ -41,7 +41,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
     private boolean complete = false;
 
     WebSocket00TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocket00Channel wsChannel) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT);
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, -1);
     }
 
     @Override

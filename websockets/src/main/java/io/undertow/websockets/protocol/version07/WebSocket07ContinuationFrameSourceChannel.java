@@ -26,7 +26,7 @@ import org.xnio.channels.StreamSourceChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket07ContinuationFrameSourceChannel extends WebSocketFixedPayloadMaskedFrameSourceChannel {
-    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, boolean finalFragment, long payloadSize, final boolean masked, final int mask) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, rsv, finalFragment, payloadSize, masked, mask);
+    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, boolean finalFragment, final boolean masked, final int mask) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, masked, mask);
     }
 }

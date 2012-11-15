@@ -26,8 +26,8 @@ import org.xnio.channels.StreamSourceChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket07CloseFrameSourceChannel extends WebSocketFixedPayloadMaskedFrameSourceChannel {
-    WebSocket07CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, int rsv, long payloadSize, final boolean masked, final int mask) {
+    WebSocket07CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, final boolean masked, final int mask) {
         // no fragmentation allowed per spec
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, rsv, true, payloadSize, masked, mask);
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, masked, mask);
     }
 }

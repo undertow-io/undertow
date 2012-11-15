@@ -78,6 +78,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return writeSetter;
     }
 
+    public long getPayloadSize() {
+        return payloadSize;
+    }
 
     /**
      * Return the RSV for the extension. Default is 0.

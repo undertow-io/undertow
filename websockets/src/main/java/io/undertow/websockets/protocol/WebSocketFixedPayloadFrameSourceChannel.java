@@ -34,17 +34,14 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSourceFrameChannel {
 
-    protected final long payloadSize;
     protected int readBytes;
 
-    protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, long payloadSize) {
-        super(streamSourceChannelControl, channel, wsChannel, type, rsv, finalFragment);
-        this.payloadSize = payloadSize;
+    protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment) {
+        super(streamSourceChannelControl, channel, wsChannel, type, payloadSize, rsv, finalFragment);
     }
 
     protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
-        super(streamSourceChannelControl, channel, wsChannel, type);
-        this.payloadSize = payloadSize;
+        super(streamSourceChannelControl, channel, wsChannel, type, payloadSize);
     }
 
     @Override
@@ -134,12 +131,12 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
     }
 
     private long byteToRead() {
-        return payloadSize - readBytes;
+        return getPayloadSize() - readBytes;
     }
 
     @Override
     protected boolean isComplete() {
-        assert readBytes <= payloadSize;
-        return readBytes == payloadSize;
+        assert readBytes <= getPayloadSize();
+        return readBytes == getPayloadSize();
     }
 }
