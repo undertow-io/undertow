@@ -75,7 +75,7 @@ public abstract class WebSocket07FrameSinkChannel extends AbstractFrameSinkChann
             header.put((byte) b0);
             header.put((byte)payloadSize);
         } else if (payloadSize <= 0xFFFF) {
-            header = ByteBuffer.allocate(3 + maskLength);
+            header = ByteBuffer.allocate(4 + maskLength);
             header.put((byte) b0);
             header.put((byte) 126);
             header.put((byte) (payloadSize >>> 8 & 0xFF));
