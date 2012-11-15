@@ -63,6 +63,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     private String contentType;
     private String charset;
     private Locale locale;
+    private boolean responseDone = false;
 
     public HttpServletResponseImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
@@ -388,6 +389,10 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void responseDone(final HttpCompletionHandler handler) {
+        if(responseDone) {
+            return;
+        }
+        responseDone = true;
         if (writer != null) {
             writer.close();
         }

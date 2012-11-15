@@ -21,6 +21,7 @@ package io.undertow.servlet.handlers;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -28,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
@@ -86,7 +88,12 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         }
         final File resource = deployment.getDeploymentInfo().getResourceLoader().getResource(path);
         if (resource == null) {
-            resp.setStatus(404);
+            if (req.getDispatcherType() == DispatcherType.INCLUDE) {
+                //servlet 9.3
+                throw new FileNotFoundException(path);
+            } else {
+                resp.setStatus(404);
+            }
             return;
         } else if (resource.isDirectory()) {
             handleWelcomePage(req, resp, resource);

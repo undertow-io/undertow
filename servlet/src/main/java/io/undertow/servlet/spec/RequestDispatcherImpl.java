@@ -128,6 +128,9 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
                 exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
                 handler.handleRequest(exchange);
+                //if the forward completed sucessfully we need to complete the request
+                responseImpl.flushBuffer();
+                responseImpl.responseDone(exchange.getCompletionHandler());
             } catch (ServletException e) {
                 throw e;
             } catch (IOException e) {
