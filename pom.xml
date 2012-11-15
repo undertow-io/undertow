@@ -67,6 +67,7 @@
         <version.org.jboss.classfilewriter>1.0.4.Final</version.org.jboss.classfilewriter>
         <version.junit>4.8.2</version.junit>
         <version.easymock>3.1</version.easymock>
+        <version.netty>3.6.0.Final-SNAPSHOT</version.netty>
         <version.xnio>3.1.0.Beta7</version.xnio>
         <version.io.undertow.jastow>1.0.0.Alpha1</version.io.undertow.jastow>
         <version.org.eclipse.jetty.jetty-websocket-client>9.0.0.M1</version.org.eclipse.jetty.jetty-websocket-client>
@@ -244,6 +245,13 @@
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
                 <version>${version.easymock}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+                <version>${version.netty}</version>
                 <scope>test</scope>
             </dependency>
 
