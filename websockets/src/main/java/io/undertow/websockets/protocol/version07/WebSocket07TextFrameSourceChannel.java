@@ -36,12 +36,12 @@ import org.xnio.channels.StreamSourceChannel;
 public class WebSocket07TextFrameSourceChannel extends WebSocketFixedPayloadMaskedFrameSourceChannel {
     private final UTF8Checker checker;
 
-    public WebSocket07TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, int rsv, boolean finalFragment, long payloadSize, final boolean masked, final int mask) {
-        this(streamSourceChannelControl, channel, wsChannel, rsv, finalFragment, payloadSize, masked, mask, true);
+    public WebSocket07TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final boolean masked, final int mask) {
+        this(streamSourceChannelControl, channel, wsChannel, payloadSize, rsv, finalFragment, masked, mask, true);
     }
 
-    public WebSocket07TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, int rsv, boolean finalFragment, long payloadSize, final boolean masked, final int mask, boolean checkUtf8) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, rsv, finalFragment, payloadSize, masked, mask);
+    public WebSocket07TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final boolean masked, final int mask, boolean checkUtf8) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, payloadSize, rsv, finalFragment, masked, mask);
         if (checkUtf8) {
             checker = new UTF8Checker();
         } else {

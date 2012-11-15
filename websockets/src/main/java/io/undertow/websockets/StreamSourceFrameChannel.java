@@ -49,20 +49,30 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     private final boolean finalFragment;
     private final int rsv;
     private boolean complete;
+    private final long payloadSize;
 
-    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type) {
-        this(streamSourceChannelControl, channel, wsChannel, type, 0, true);
+    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
+        this(streamSourceChannelControl, channel, wsChannel, type, payloadSize, 0, true);
     }
 
-    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment) {
+    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment) {
         this.streamSourceChannelControl = streamSourceChannelControl;
         this.channel = channel;
         this.wsChannel = wsChannel;
         this.type = type;
         this.finalFragment = finalFragment;
         this.rsv = rsv;
+        this.payloadSize = payloadSize;
     }
 
+    /**
+     * Return the payload size of <code>-1</code> if unknown on creation
+     *
+     * @return payloadSize
+     */
+    public long getPayloadSize() {
+        return payloadSize;
+    }
     /**
      * Returns <code>true</code> if the frame was complete.
      */

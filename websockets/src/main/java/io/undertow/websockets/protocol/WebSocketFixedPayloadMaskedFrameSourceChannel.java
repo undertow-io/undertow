@@ -38,8 +38,8 @@ public abstract class WebSocketFixedPayloadMaskedFrameSourceChannel extends WebS
 
     private final Masker masker;
 
-    protected WebSocketFixedPayloadMaskedFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, long payloadSize, final boolean masked, final int maskingKey) {
-        super(streamSourceChannelControl, channel, wsChannel, type, rsv, finalFragment, payloadSize);
+    protected WebSocketFixedPayloadMaskedFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment, final boolean masked, final int maskingKey) {
+        super(streamSourceChannelControl, channel, wsChannel, type, payloadSize, rsv, finalFragment);
         if (masked) {
             this.masker = new Masker(maskingKey);
         } else {
