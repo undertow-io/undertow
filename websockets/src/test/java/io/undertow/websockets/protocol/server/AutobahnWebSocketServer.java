@@ -26,6 +26,7 @@ import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.handler.WebSocketProtocolHandshakeHandler;
 import org.xnio.BufferAllocator;
+import org.xnio.Buffers;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -100,13 +101,22 @@ public class AutobahnWebSocketServer {
 
         @Override
         public void handleEvent(final WebSocketChannel channel) {
-            // Fix this
-            final ByteBuffer buffer = ByteBuffer.allocate(128 * 1024);
-
             try {
                 final StreamSourceFrameChannel ws = channel.receive();
                 if (ws == null) {
                     return;
+                }
+                long size = ws.getPayloadSize();
+                if (size == -1) {
+                    // Fix this
+                    size = 128 * 1024;
+                }
+
+                final ByteBuffer buffer;
+                if (size == 0) {
+                    buffer = Buffers.EMPTY_BYTE_BUFFER;
+                } else {
+                    buffer = ByteBuffer.allocate((int) size);
                 }
                 for (;;) {
                     int r = ws.read(buffer);
@@ -125,6 +135,7 @@ public class AutobahnWebSocketServer {
                                     }
                                     write(channel, (StreamSourceFrameChannel) ch, buffer);
                                 } catch (IOException e) {
+                                    e.printStackTrace();
                                     IoUtils.safeClose(ch);
                                     IoUtils.safeClose(channel);
                                 }
@@ -133,6 +144,7 @@ public class AutobahnWebSocketServer {
                         });
                         return;
                     } else if (r == -1) {
+                        System.out.println("YO");
                         break;
                     }
                 }
@@ -169,7 +181,7 @@ public class AutobahnWebSocketServer {
                                      public void handleEvent(final StreamSinkChannel ch) {
                                          ch.getWriteSetter().set(null);
 
-                                         IoUtils.safeClose(ch);
+                                         IoUtils.safeClose(ch, source);
                                          if (source.getType() == WebSocketFrameType.CLOSE)  {
                                              IoUtils.safeClose(channel);
                                          }
@@ -178,7 +190,7 @@ public class AutobahnWebSocketServer {
                                  ch.resumeWrites();
                              } else {
                                  ch.getWriteSetter().set(null);
-                                 IoUtils.safeClose(ch);
+                                 IoUtils.safeClose(ch, source);
 
                                  if (source.getType() == WebSocketFrameType.CLOSE)  {
                                      IoUtils.safeClose(channel);
@@ -188,7 +200,7 @@ public class AutobahnWebSocketServer {
                          } catch (IOException e) {
                              e.printStackTrace();
                              ch.getWriteSetter().set(null);
-                             IoUtils.safeClose(ch, channel);
+                             IoUtils.safeClose(ch, channel, source);
 
                          }
                     }
@@ -203,7 +215,7 @@ public class AutobahnWebSocketServer {
                 @Override
                 public void handleEvent(final StreamSinkChannel ch) {
                     ch.getWriteSetter().set(null);
-                    IoUtils.safeClose(ch);
+                    IoUtils.safeClose(ch, source);
                     if (source.getType() == WebSocketFrameType.CLOSE)  {
                         IoUtils.safeClose(channel);
                     }
@@ -211,11 +223,13 @@ public class AutobahnWebSocketServer {
             }, ChannelListeners.closingChannelExceptionHandler()));
             sink.resumeWrites();
         } else {
-            IoUtils.safeClose(sink);
+            IoUtils.safeClose(sink, source);
             if (source.getType() == WebSocketFrameType.CLOSE)  {
                 IoUtils.safeClose(channel);
             }
+            System.out.println("FFFF");
         }
+
     }
 
     /**
