@@ -64,10 +64,9 @@ public class WebSocket07Channel extends WebSocketChannel {
     }
 
     private int fragmentedFramesCount;
+    private boolean closeFrameReceived;
 
     private static final byte FRAME_OPCODE = 127;
-    private static final byte FRAME_MASKED = Byte.MIN_VALUE;
-    private static final byte FRAME_LENGTH = 127;
 
     protected static final byte OPCODE_CONT = 0x0;
     protected static final byte OPCODE_TEXT = 0x1;
@@ -124,6 +123,11 @@ public class WebSocket07Channel extends WebSocketChannel {
                 if (!buffer.hasRemaining()) {
                     return;
                 }
+                if (closeFrameReceived) {
+                    buffer.clear();
+                    // suspend reads as we are not interested in anything that comes after the close
+                    channel.suspendReads();
+                }
                 while (state != State.DONE) {
                     byte b;
                     switch (state) {
@@ -167,7 +171,7 @@ public class WebSocket07Channel extends WebSocketChannel {
                                 } else {
                                     state = State.DONE;
                                 }
-                                break;
+                                continue;
                             }
 
                         case READING_EXTENDED_SIZE1:
@@ -183,16 +187,18 @@ public class WebSocket07Channel extends WebSocketChannel {
                                 return;
                             }
                             b = buffer.get();
-                            framePayloadLength = (framePayloadLength << 8) | b;
                             if (framePayloadLen1 == 126) {
                                 // must be unsigned short
-                                framePayloadLength = framePayloadLen1& 0xFFFF;
+                                framePayloadLength = ((short) (framePayloadLength << 8) | b & 0xFF) & 0xFFFF;
+
                                 if (frameMasked) {
                                     state = State.READING_MASK_1;
                                 } else {
                                     state = State.DONE;
                                 }
-                                break;
+                                continue;
+                            } else {
+                                framePayloadLength = (framePayloadLength << 8) | b;
                             }
                             state = State.READING_EXTENDED_SIZE3;
                         case READING_EXTENDED_SIZE3:
@@ -283,6 +289,7 @@ public class WebSocket07Channel extends WebSocketChannel {
                     this.channel = new WebSocket07PongFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameMasked, maskingKey);
                     return;
                 } else if (frameOpcode == OPCODE_CLOSE) {
+                    closeFrameReceived = true;
                     this.channel = new WebSocket07CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameMasked, maskingKey);
                     return;
                 }
