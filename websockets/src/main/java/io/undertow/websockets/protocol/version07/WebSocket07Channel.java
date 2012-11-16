@@ -17,7 +17,6 @@
  */
 package io.undertow.websockets.protocol.version07;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import io.undertow.websockets.StreamSinkFrameChannel;
@@ -68,8 +67,6 @@ public class WebSocket07Channel extends WebSocketChannel {
     private ByteBuffer lengthBuffer = ByteBuffer.allocate(8);
 
     private UTF8Checker checker;
-
-    private static final byte FRAME_OPCODE = 127;
 
     protected static final byte OPCODE_CONT = 0x0;
     protected static final byte OPCODE_TEXT = 0x1;
@@ -154,6 +151,8 @@ public class WebSocket07Channel extends WebSocketChannel {
                                 IoUtils.safeClose(channel);
                                 throw WebSocketMessages.MESSAGES.extensionsNotAllowed(frameRsv);
                             }
+
+                            System.out.println(frameFinalFlag + " " + frameOpcode + " " +frameMasked + " " + framePayloadLen1 + " " + framePayloadLength);
 
                             if (frameOpcode > 7) { // control frame (have MSB in opcode set)
                                 validateControlFrame();
@@ -353,6 +352,7 @@ public class WebSocket07Channel extends WebSocketChannel {
             }
 
             private void validateControlFrame() throws WebSocketFrameCorruptedException {
+
                 // control frames MUST NOT be fragmented
                 if (!frameFinalFlag) {
                     throw WebSocketMessages.MESSAGES.fragmentedControlFrame();
@@ -404,23 +404,4 @@ public class WebSocket07Channel extends WebSocketChannel {
         }
     }
 
-
-    private WebSocketFrameType getNextFrameType(byte opcode) throws IOException {
-        switch (opcode & FRAME_OPCODE) {
-            case OPCODE_CONT:
-                return WebSocketFrameType.CONTINUATION;
-            case OPCODE_TEXT:
-                return WebSocketFrameType.TEXT;
-            case OPCODE_BINARY:
-                return WebSocketFrameType.BINARY;
-            case OPCODE_CLOSE:
-                return WebSocketFrameType.CLOSE;
-            case OPCODE_PING:
-                return WebSocketFrameType.PING;
-            case OPCODE_PONG:
-                return WebSocketFrameType.PONG;
-            default:
-                return WebSocketFrameType.UNKOWN;
-        }
-    }
 }
