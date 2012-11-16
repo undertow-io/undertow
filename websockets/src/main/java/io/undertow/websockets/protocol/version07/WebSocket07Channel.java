@@ -185,6 +185,8 @@ public class WebSocket07Channel extends WebSocketChannel {
                             b = buffer.get();
                             framePayloadLength = (framePayloadLength << 8) | b;
                             if (framePayloadLen1 == 126) {
+                                // must be unsigned short
+                                framePayloadLength = framePayloadLen1& 0xFFFF;
                                 if (frameMasked) {
                                     state = State.READING_MASK_1;
                                 } else {
@@ -192,34 +194,35 @@ public class WebSocket07Channel extends WebSocketChannel {
                                 }
                                 break;
                             }
+                            state = State.READING_EXTENDED_SIZE3;
                         case READING_EXTENDED_SIZE3:
                             if (!buffer.hasRemaining()) {
                                 return;
                             }
                             b = buffer.get();
                             framePayloadLength = (framePayloadLength << 8) | b;
-
+                            state = State.READING_EXTENDED_SIZE4;
                         case READING_EXTENDED_SIZE4:
                             if (!buffer.hasRemaining()) {
                                 return;
                             }
                             b = buffer.get();
                             framePayloadLength = (framePayloadLength << 8) | b;
-
+                            state = State.READING_EXTENDED_SIZE5;
                         case READING_EXTENDED_SIZE5:
                             if (!buffer.hasRemaining()) {
                                 return;
                             }
                             b = buffer.get();
                             framePayloadLength = (framePayloadLength << 8) | b;
-
+                            state = State.READING_EXTENDED_SIZE6;
                         case READING_EXTENDED_SIZE6:
                             if (!buffer.hasRemaining()) {
                                 return;
                             }
                             b = buffer.get();
                             framePayloadLength = (framePayloadLength << 8) | b;
-
+                            state = State.READING_EXTENDED_SIZE7;
                         case READING_EXTENDED_SIZE7:
                             if (!buffer.hasRemaining()) {
                                 return;
@@ -244,21 +247,21 @@ public class WebSocket07Channel extends WebSocketChannel {
                             }
                             b = buffer.get();
                             maskingKey = (b & 0xFF);
-
+                            state = State.READING_MASK_2;
                         case READING_MASK_2:
                             if (!buffer.hasRemaining()) {
                                 return;
                             }
                             b = buffer.get();
                             maskingKey = (maskingKey << 8) | ((int)b & 0xFF);
-
+                            state = State.READING_MASK_3;
                         case READING_MASK_3:
                             if (!buffer.hasRemaining()) {
                                 return;
                             }
                             b = buffer.get();
                             maskingKey = (maskingKey << 8) | ((int)b & 0xFF);
-
+                            state = State.READING_MASK_4;
                         case READING_MASK_4:
                             if (!buffer.hasRemaining()) {
                                 return;
