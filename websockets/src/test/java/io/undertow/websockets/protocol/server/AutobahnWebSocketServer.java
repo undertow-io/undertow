@@ -106,6 +106,7 @@ public class AutobahnWebSocketServer {
                 if (ws == null) {
                     return;
                 }
+
                 long size = ws.getPayloadSize();
                 if (size == -1) {
                     // Fix this
@@ -144,9 +145,12 @@ public class AutobahnWebSocketServer {
                         });
                         return;
                     } else if (r == -1) {
-                        System.out.println("YO");
                         break;
                     }
+                }
+                if (ws.getType() == WebSocketFrameType.PONG) {
+                    IoUtils.safeClose(ws);
+                    return;
                 }
                 write(channel, ws, buffer);
             } catch (IOException e) {
@@ -158,7 +162,14 @@ public class AutobahnWebSocketServer {
 
     private void write(final WebSocketChannel channel, final StreamSourceFrameChannel source, final ByteBuffer buffer) throws IOException {
         buffer.flip();
-        StreamSinkFrameChannel sink = channel.send(source.getType(), buffer.remaining());
+        final WebSocketFrameType type;
+        if (source.getType() == WebSocketFrameType.PING) {
+            // if a ping is send the autobahn testsuite expects a PONG when echo back
+            type = WebSocketFrameType.PONG;
+        } else {
+            type = source.getType();
+        }
+        StreamSinkFrameChannel sink = channel.send(type, buffer.remaining());
         sink.setFinalFragment(source.isFinalFragment());
         sink.setRsv(source.getRsv());
         source.close();
@@ -182,7 +193,7 @@ public class AutobahnWebSocketServer {
                                          ch.getWriteSetter().set(null);
 
                                          IoUtils.safeClose(ch, source);
-                                         if (source.getType() == WebSocketFrameType.CLOSE)  {
+                                         if (type == WebSocketFrameType.CLOSE)  {
                                              IoUtils.safeClose(channel);
                                          }
                                      }
@@ -192,7 +203,7 @@ public class AutobahnWebSocketServer {
                                  ch.getWriteSetter().set(null);
                                  IoUtils.safeClose(ch, source);
 
-                                 if (source.getType() == WebSocketFrameType.CLOSE)  {
+                                 if (type == WebSocketFrameType.CLOSE)  {
                                      IoUtils.safeClose(channel);
                                  }
 
@@ -216,7 +227,7 @@ public class AutobahnWebSocketServer {
                 public void handleEvent(final StreamSinkChannel ch) {
                     ch.getWriteSetter().set(null);
                     IoUtils.safeClose(ch, source);
-                    if (source.getType() == WebSocketFrameType.CLOSE)  {
+                    if (type == WebSocketFrameType.CLOSE)  {
                         IoUtils.safeClose(channel);
                     }
                 }
@@ -224,10 +235,9 @@ public class AutobahnWebSocketServer {
             sink.resumeWrites();
         } else {
             IoUtils.safeClose(sink, source);
-            if (source.getType() == WebSocketFrameType.CLOSE)  {
+            if (type == WebSocketFrameType.CLOSE)  {
                 IoUtils.safeClose(channel);
             }
-            System.out.println("FFFF");
         }
 
     }
