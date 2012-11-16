@@ -64,10 +64,6 @@ public interface UndertowLogger extends BasicLogger {
     void couldNotInvalidateSessionCookieAsResponseAlreadyStarted();
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5006, value = "Could not find session cookie config in the request, session will not be persistent across requests")
-    void couldNotFindSessionCookieConfig();
-
-    @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5007, value = "Configured error page %s was not found")
     void errorPageDoesNotExist(File file);
 

@@ -21,10 +21,10 @@ package io.undertow;
 import java.io.IOException;
 import java.net.SocketAddress;
 
+import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
-import org.jboss.logging.Messages;
 
 /**
  * @author Stuart Douglas
@@ -106,5 +106,8 @@ public interface UndertowMessages {
 
     @Message(id = 26, value = "Invalid header received.")
     IllegalArgumentException invalidHeader();
+
+    @Message(id = 27, value = "Could not find session cookie config in the request")
+    IllegalStateException couldNotFindSessionCookieConfig();
 
 }

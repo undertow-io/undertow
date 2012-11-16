@@ -183,4 +183,11 @@ public interface Session {
      * @return The session manager that is associated with this session
      */
     SessionManager getSessionManager();
+
+
+    /**
+     * Sets the last accessed time for the session
+     * @param sessionId The session id
+     */
+    void updateLastAccessedTime();
 }

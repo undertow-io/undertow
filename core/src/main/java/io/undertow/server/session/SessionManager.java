@@ -46,14 +46,14 @@ public interface SessionManager {
      *
      * @return The created session
      */
-    IoFuture<Session> createSession(final HttpServerExchange serverExchange);
+    IoFuture<Session> getOrCreateSession(final HttpServerExchange serverExchange);
 
     /**
      *
      * @param sessionId The session id
      * @return An IoFuture that can be used to retrieve the session, or an IoFuture that will return null if not found
      */
-    IoFuture<Session> getSession(final HttpServerExchange serverExchange, final String sessionId);
+    IoFuture<Session> getSession(final HttpServerExchange serverExchange);
 
     /**
      * Registers a session listener for the session manager
@@ -74,10 +74,5 @@ public interface SessionManager {
      */
     void setDefaultSessionTimeout(final int timeout);
 
-    /**
-     * Sets the last accessed time for the session
-     * @param sessionId The session id
-     */
-    void updateLastAccessedTime(final String sessionId);
 
 }

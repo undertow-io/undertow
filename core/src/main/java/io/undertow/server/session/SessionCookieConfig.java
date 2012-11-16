@@ -18,6 +18,8 @@
 
 package io.undertow.server.session;
 
+import java.util.Map;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
@@ -70,4 +72,16 @@ public class SessionCookieConfig {
                 .setMaxAge(0);
         CookieImpl.addResponseCookie(exchange, cookie);
     }
+
+    public String findSessionId(final HttpServerExchange exchange) {
+        Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
+        if (cookies != null) {
+            Cookie sessionId = cookies.get(cookieName);
+            if (sessionId != null) {
+                return sessionId.getValue();
+            }
+        }
+        return null;
+    }
+
 }

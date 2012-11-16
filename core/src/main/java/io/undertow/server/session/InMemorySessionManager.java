@@ -25,9 +25,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.SecureHashMap;
 import org.xnio.FinishedIoFuture;
 import org.xnio.IoFuture;
@@ -55,27 +55,45 @@ public class InMemorySessionManager implements SessionManager {
     private volatile int defaultSessionTimeout = 30 * 60;
 
     @Override
-    public IoFuture<Session> createSession(final HttpServerExchange serverExchange) {
-        final String sessionID = sessionIdGenerator.createSessionId();
+    public IoFuture<Session> getOrCreateSession(final HttpServerExchange serverExchange) {
+
+        final SessionCookieConfig config = serverExchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
+        if (config == null) {
+            throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
+        }
+        String sessionID = config.findSessionId(serverExchange);
+        if (sessionID != null) {
+            InMemorySession session = sessions.get(sessionID);
+            if (session != null) {
+                ConcreteIoFuture<Session> future = new ConcreteIoFuture<Session>();
+                future.setResult(session.session);
+                return future;
+            }
+        } else {
+            sessionID = sessionIdGenerator.createSessionId();
+        }
         final SessionImpl session = new SessionImpl(sessionID, serverExchange.getWriteThread(), serverExchange.getConnection().getWorker());
         InMemorySession im = new InMemorySession(session, defaultSessionTimeout);
         sessions.put(sessionID, im);
         for (SessionListener listener : listeners) {
             listener.sessionCreated(session, serverExchange);
         }
-        final SessionCookieConfig config = serverExchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
-        if (config != null) {
-            config.setSessionCookie(serverExchange, session);
-        } else {
-            UndertowLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
-        }
+        config.setSessionCookie(serverExchange, session);
         im.lastAccessed = System.currentTimeMillis();
         session.bumpTimeout();
         return new FinishedIoFuture<Session>(session);
     }
 
     @Override
-    public IoFuture<Session> getSession(final HttpServerExchange serverExchange, final String sessionId) {
+    public IoFuture<Session> getSession(final HttpServerExchange serverExchange) {
+        final SessionCookieConfig config = serverExchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
+        if (config == null) {
+            throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
+        }
+        String sessionId = config.findSessionId(serverExchange);
+        if (sessionId == null) {
+            return new FinishedIoFuture<Session>(null);
+        }
         final InMemorySession sess = sessions.get(sessionId);
         if (sess == null) {
             return new FinishedIoFuture<Session>(null);
@@ -102,14 +120,6 @@ public class InMemorySessionManager implements SessionManager {
     @Override
     public void setDefaultSessionTimeout(final int timeout) {
         defaultSessionTimeout = timeout;
-    }
-
-    @Override
-    public void updateLastAccessedTime(final String sessionId) {
-        final InMemorySession sess = sessions.get(sessionId);
-        if (sess != null) {
-            sess.lastAccessed = System.currentTimeMillis();
-        }
     }
 
     /**
@@ -265,7 +275,7 @@ public class InMemorySessionManager implements SessionManager {
                 if (config != null) {
                     config.clearCookie(exchange, this);
                 } else {
-                    UndertowLogger.REQUEST_LOGGER.couldNotFindSessionCookieConfig();
+                    throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
                 }
             }
             return new FinishedIoFuture<Void>(null);
@@ -274,6 +284,12 @@ public class InMemorySessionManager implements SessionManager {
         @Override
         public SessionManager getSessionManager() {
             return InMemorySessionManager.this;
+        }
+
+        @Override
+        public void updateLastAccessedTime() {
+            final InMemorySession sess = sessions.get(sessionId);
+            sess.lastAccessed = System.currentTimeMillis();
         }
 
     }

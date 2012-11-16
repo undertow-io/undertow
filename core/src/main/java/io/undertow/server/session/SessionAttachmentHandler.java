@@ -19,15 +19,12 @@
 package io.undertow.server.session;
 
 import java.io.IOException;
-import java.util.Map;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import org.xnio.IoFuture;
@@ -48,7 +45,7 @@ public class SessionAttachmentHandler implements HttpHandler {
     /**
      * The path of the session cookie.
      */
-    private volatile String path;
+    private volatile String path = "/";
     private volatile String domain;
     private volatile boolean discardOnExit = false;
     private volatile boolean secure = false;
@@ -68,52 +65,40 @@ public class SessionAttachmentHandler implements HttpHandler {
         }
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
         String path = this.path;
-        if (path == null) {
-            path = exchange.getResolvedPath();
+
+        SessionCookieConfig config = exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
+        if (config == null) {
+            exchange.putAttachment(SessionCookieConfig.ATTACHMENT_KEY, config = new SessionCookieConfig(cookieName, path, domain, discardOnExit, secure));
         }
 
-        exchange.putAttachment(SessionCookieConfig.ATTACHMENT_KEY, new SessionCookieConfig(cookieName, path, domain, discardOnExit, secure));
-        final String sessionId = findSessionId(exchange);
-
-        if (sessionId == null) {
-            HttpHandlers.executeHandler(next, exchange, completionHandler);
-        } else {
-            final IoFuture<Session> session = sessionManager.getSession(exchange, sessionId);
-            final UpdateLastAccessTimeCompletionHandler handler = new UpdateLastAccessTimeCompletionHandler(completionHandler, sessionManager, sessionId);
-            session.addNotifier(new IoFuture.Notifier<Session, Session>() {
-                @Override
-                public void notify(final IoFuture<? extends Session> ioFuture, final Session attachment) {
-                    try {
-                        if (ioFuture.getStatus() == IoFuture.Status.DONE) {
-                            exchange.putAttachment(Session.ATTACHMENT_KEY, ioFuture.get());
-                            HttpHandlers.executeHandler(next, exchange, handler);
-                        } else if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
-                            //we failed to get the session
-                            UndertowLogger.REQUEST_LOGGER.getSessionFailed(ioFuture.getException());
-                            HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange, completionHandler);
-                        } else {
-                            UndertowLogger.REQUEST_LOGGER.unexpectedStatusGettingSession(ioFuture.getStatus());
-                            HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange, completionHandler);
+        final IoFuture<Session> session = sessionManager.getSession(exchange);
+        final UpdateLastAccessTimeCompletionHandler handler = new UpdateLastAccessTimeCompletionHandler(completionHandler, exchange);
+        session.addNotifier(new IoFuture.Notifier<Session, Session>() {
+            @Override
+            public void notify(final IoFuture<? extends Session> ioFuture, final Session attachment) {
+                try {
+                    if (ioFuture.getStatus() == IoFuture.Status.DONE) {
+                        final Session session = ioFuture.get();
+                        if (session != null) {
+                            exchange.putAttachment(Session.ATTACHMENT_KEY, session);
                         }
-                    } catch (IOException e) {
-                        UndertowLogger.REQUEST_LOGGER.getSessionFailed(e);
+                        HttpHandlers.executeHandler(next, exchange, handler);
+                    } else if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
+                        //we failed to get the session
+                        UndertowLogger.REQUEST_LOGGER.getSessionFailed(ioFuture.getException());
+                        HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange, completionHandler);
+                    } else {
+                        UndertowLogger.REQUEST_LOGGER.unexpectedStatusGettingSession(ioFuture.getStatus());
                         HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange, completionHandler);
                     }
+                } catch (IOException e) {
+                    UndertowLogger.REQUEST_LOGGER.getSessionFailed(e);
+                    HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange, completionHandler);
                 }
-            }, null);
-        }
+            }
+        }, null);
     }
 
-    private String findSessionId(final HttpServerExchange exchange) {
-        Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
-        if(cookies != null) {
-            Cookie sessionId = cookies.get(cookieName);
-            if(sessionId != null) {
-                return sessionId.getValue();
-            }
-        }
-        return null;
-    }
 
     public HttpHandler getNext() {
         return next;
@@ -170,18 +155,19 @@ public class SessionAttachmentHandler implements HttpHandler {
     private static class UpdateLastAccessTimeCompletionHandler implements HttpCompletionHandler {
 
         private final HttpCompletionHandler completionHandler;
-        private final SessionManager sessionManager;
-        private final String sessionId;
+        private final HttpServerExchange exchange;
 
-        private UpdateLastAccessTimeCompletionHandler(final HttpCompletionHandler completionHandler, final SessionManager sessionManager, final String sessionId) {
+        private UpdateLastAccessTimeCompletionHandler(final HttpCompletionHandler completionHandler, final HttpServerExchange exchange) {
             this.completionHandler = completionHandler;
-            this.sessionManager = sessionManager;
-            this.sessionId = sessionId;
+            this.exchange = exchange;
         }
 
         @Override
         public void handleComplete() {
-            sessionManager.updateLastAccessedTime(sessionId);
+            Session session = exchange.getAttachment(Session.ATTACHMENT_KEY);
+            if (session != null) {
+                session.updateLastAccessedTime();
+            }
             completionHandler.handleComplete();
         }
     }
