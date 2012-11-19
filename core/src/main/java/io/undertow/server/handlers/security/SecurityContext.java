@@ -18,20 +18,20 @@
 package io.undertow.server.handlers.security;
 
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
-import io.undertow.util.AttachmentKey;
-
 import java.io.IOException;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
+import io.undertow.UndertowLogger;
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.util.AttachmentKey;
 import org.xnio.IoFuture;
 
 /**
@@ -55,6 +55,7 @@ public class SecurityContext {
 
     private AuthenticationState authenticationState = AuthenticationState.NOT_REQUIRED;
     private Principal authenticatedPrincipal;
+    private Set<String> roles;
 
     /**
      * Performs authentication on the request. If the auth succeeds then the next handler will be invoked, otherwise the
@@ -85,6 +86,10 @@ public class SecurityContext {
 
     public Principal getAuthenticatedPrincipal() {
         return authenticatedPrincipal;
+    }
+
+    public Set<String> getAuthenticatedRoles() {
+        return roles;
     }
 
     public void addAuthenticationMechanism(final AuthenticationMechanism handler) {

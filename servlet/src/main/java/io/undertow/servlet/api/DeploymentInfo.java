@@ -24,8 +24,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
@@ -74,6 +76,8 @@ public class DeploymentInfo implements Cloneable {
     private final List<String> welcomePages = new ArrayList<String>();
     private final List<ErrorPage> errorPages = new ArrayList<ErrorPage>();
     private final List<MimeMapping> mimeMappings = new ArrayList<MimeMapping>();
+    private final List<SecurityConstraint> securityConstraints = new ArrayList<SecurityConstraint>();
+    private final Map<String, Set<String>> principleVsRoleMapping = new HashMap<String, Set<String>>();
 
 
     public void validate() {
@@ -349,7 +353,6 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(errorPages);
     }
 
-
     public DeploymentInfo addMimeMapping(final MimeMapping mimeMappings) {
         this.mimeMappings.add(mimeMappings);
         return this;
@@ -369,6 +372,26 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(mimeMappings);
     }
 
+
+    public DeploymentInfo addSecurityConstraint(final SecurityConstraint securityConstraint) {
+        this.securityConstraints.add(securityConstraint);
+        return this;
+    }
+
+    public DeploymentInfo addSecurityConstraints(final SecurityConstraint ... securityConstraints) {
+        this.securityConstraints.addAll(Arrays.asList(securityConstraints));
+        return this;
+    }
+
+    public DeploymentInfo addSecurityConstraints(final Collection<SecurityConstraint> securityConstraints) {
+        this.securityConstraints.addAll(securityConstraints);
+        return this;
+    }
+
+    public List<SecurityConstraint> getSecurityConstraints() {
+        return Collections.unmodifiableList(securityConstraints);
+    }
+
     public InstanceFactory<Executor> getExecutorFactory() {
         return executorFactory;
     }
@@ -384,17 +407,17 @@ public class DeploymentInfo implements Cloneable {
     public void setExecutorFactory(final InstanceFactory<Executor> executorFactory) {
         this.executorFactory = executorFactory;
     }
+    public InstanceFactory<Executor> getAsyncExecutorFactory() {
+        return asyncExecutorFactory;
+    }
+
     /**
      * Sets the factory that is used to create the {@link ExecutorService} that is used to run async tasks.
      *
      * If this is null then {@link #executorFactory} is used, if this is also null then the default is used
      *
-     * @param executorFactory The executor factory
+     * @param asyncExecutorFactory The executor factory
      */
-    public InstanceFactory<Executor> getAsyncExecutorFactory() {
-        return asyncExecutorFactory;
-    }
-
     public void setAsyncExecutorFactory(final InstanceFactory<Executor> asyncExecutorFactory) {
         this.asyncExecutorFactory = asyncExecutorFactory;
     }
@@ -457,6 +480,18 @@ public class DeploymentInfo implements Cloneable {
         this.loginCallbackHandler = loginCallbackHandler;
     }
 
+    public void addPrincipleVsRoleMapping(final String principle, final String role) {
+        Set<String> roles = principleVsRoleMapping.get(principle);
+        if(roles == null) {
+            principleVsRoleMapping.put(principle, roles = new HashSet<String>());
+        }
+        roles.add(role);
+    }
+
+    public Map<String, Set<String>> getPrincipleVsRoleMapping() {
+        return Collections.unmodifiableMap(principleVsRoleMapping);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -494,6 +529,8 @@ public class DeploymentInfo implements Cloneable {
         info.sessionManager = sessionManager;
         info.loginConfig = loginConfig;
         info.loginCallbackHandler = loginCallbackHandler;
+        info.securityConstraints.addAll(securityConstraints);
+        info.principleVsRoleMapping.putAll(principleVsRoleMapping);
         return info;
     }
 

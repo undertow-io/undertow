@@ -18,11 +18,10 @@
 
 package io.undertow.server.handlers.security;
 
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpServerExchange;
-
 import java.security.Principal;
 
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpServerExchange;
 import org.xnio.IoFuture;
 
 /**

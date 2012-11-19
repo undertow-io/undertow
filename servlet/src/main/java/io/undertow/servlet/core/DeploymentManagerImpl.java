@@ -38,6 +38,7 @@ import javax.servlet.ServletException;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.AttachmentHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
+import io.undertow.server.handlers.security.AuthenticationCallHandler;
 import io.undertow.server.handlers.security.AuthenticationMechanism;
 import io.undertow.server.handlers.security.AuthenticationMechanismsHandler;
 import io.undertow.server.handlers.security.BasicAuthenticationMechanism;
@@ -56,6 +57,7 @@ import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.LoginConfig;
 import io.undertow.servlet.api.MimeMapping;
+import io.undertow.servlet.api.SecurityConstraint;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletContainerInitializerInfo;
 import io.undertow.servlet.api.ServletInfo;
@@ -68,6 +70,10 @@ import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletMatchingHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
+import io.undertow.servlet.handlers.security.SecurityPathMatches;
+import io.undertow.servlet.handlers.security.ServletAuthenticationConstraintHandler;
+import io.undertow.servlet.handlers.security.ServletSecurityConstraintHandler;
+import io.undertow.servlet.handlers.security.ServletSecurityRoleHandler;
 import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
@@ -155,11 +161,17 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     /**
      * sets up the outer security handlers.
+     * <p/>
+     * the handler that actually performs the access check happens later in the chain, it is not setup here
      *
      * @param initialHandler The handler to wrap with security handlers
      */
     private HttpHandler setupSecurityHandlers(HttpHandler initialHandler) {
         HttpHandler current = initialHandler;
+        current = new AuthenticationCallHandler(current);
+        current = new ServletAuthenticationConstraintHandler(current);
+        current = new ServletSecurityConstraintHandler(buildConstraints(), current);
+
         final DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
         if (loginConfig != null) {
@@ -174,6 +186,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
         current = new SecurityInitialHandler(current);
 
         return current;
+    }
+
+    private SecurityPathMatches buildConstraints() {
+        SecurityPathMatches.Builder builder = SecurityPathMatches.builder();
+        for (SecurityConstraint constraint : deployment.getDeploymentInfo().getSecurityConstraints()) {
+            builder.addSecurityConstraint(constraint);
+        }
+        return builder.build();
     }
 
     private void initializeTempDir(final ServletContextImpl servletContext, final DeploymentInfo deploymentInfo) {
@@ -353,7 +373,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     if (pathServlet == null) {
                         pathServlet = extensionServlets.get(entry.getKey());
                     }
-                    if(pathServlet == null) {
+                    if (pathServlet == null) {
                         pathServlet = defaultServlet;
                     }
                     BlockingHttpHandler handler = pathServlet;
@@ -405,7 +425,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private ServletInitialHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners, final ManagedServlet managedServlet) {
-        BlockingHttpHandler servletHandler = new RequestListenerHandler(applicationListeners, next);
+        BlockingHttpHandler servletHandler = new ServletSecurityRoleHandler(next, deployment.getDeploymentInfo().getPrincipleVsRoleMapping());
+        servletHandler = new RequestListenerHandler(applicationListeners, servletHandler);
         for (HandlerChainWrapper wrapper : managedServlet.getServletInfo().getHandlerChainWrappers()) {
             servletHandler = wrapper.wrap(servletHandler);
         }
