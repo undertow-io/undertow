@@ -20,8 +20,10 @@ package io.undertow.servlet.test.session;
 
 import java.io.IOException;
 
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
@@ -43,61 +45,97 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
+ *
+ * Test that seperate servlet deployments use seperate session managers, even in the presence of forwards,
+ * and that sessions created in a forwarded context are accessible to later direct requests
+ *
  * @author Stuart Douglas
  */
 @RunWith(ServletServer.class)
-public class ServletSessionTestCase {
+public class CrossContextServletSessionTestCase {
 
-    private static ServletContext servletContext;
 
     @BeforeClass
     public static void setup() throws ServletException {
 
+        final ServletContainer container = ServletContainer.Factory.newInstance();
         final CookieHandler cookieHandler = new CookieHandler();
         final PathHandler path = new PathHandler();
-        cookieHandler.setNext(path);
-        final ServletContainer container = ServletContainer.Factory.newInstance();
+        ServletServer.setRootHandler(cookieHandler);
 
+        createDeployment("1", container, cookieHandler, path);
+        createDeployment("2", container, cookieHandler, path);
+
+    }
+
+    private static void createDeployment(final String name, final ServletContainer container, final CookieHandler cookieHandler, final PathHandler path) throws ServletException {
+        cookieHandler.setNext(path);
         ServletInfo s = new ServletInfo("servlet", SessionServlet.class)
-                .addMapping("/aa");
+                .addMapping("/servlet");
+        ServletInfo forward = new ServletInfo("forward", ForwardServlet.class)
+                .addMapping("/forward");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletServerTestCase.class.getClassLoader())
-                .setContextPath("/servletContext")
+                .setContextPath("/" + name)
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
-                .setDeploymentName("servletContext.war")
+                .setDeploymentName( name + ".war")
                 .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlet(s);
+                .addServlets(s, forward);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         path.addPath(builder.getContextPath(), manager.start());
-        servletContext = manager.getDeployment().getServletContext();
-
-        ServletServer.setRootHandler(cookieHandler);
     }
 
 
     @Test
-    public void testSimpleSessionUsage() throws IOException {
+    public void testCrossContextSessionInvocation() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/aa");
-            HttpResponse result = client.execute(get);
+            HttpGet direct1 = new HttpGet(ServletServer.getDefaultServerAddress() + "/1/servlet");
+            HttpGet forward1 = new HttpGet(ServletServer.getDefaultServerAddress() + "/1/forward?context=/2&path=/servlet");
+            HttpGet direct2 = new HttpGet(ServletServer.getDefaultServerAddress() + "/2/servlet");
+            HttpGet forward2 = new HttpGet(ServletServer.getDefaultServerAddress() + "/2/forward?context=/1&path=/servlet");
+            HttpResponse result = client.execute(direct1);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("1", response);
 
-            result = client.execute(get);
+            result = client.execute(direct1);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("2", response);
 
-            result = client.execute(get);
+            result = client.execute(forward2);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("3", response);
 
+            result = client.execute(forward2);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("4", response);
+
+            result = client.execute(forward1);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("1", response);
+
+            result = client.execute(forward1);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("2", response);
+
+            result = client.execute(direct2);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("3", response);
+
+            result = client.execute(direct2);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("4", response);
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -105,35 +143,12 @@ public class ServletSessionTestCase {
     }
 
 
-    @Test
-    public void testSessionCookieConfig() throws IOException {
-        servletContext.getSessionCookieConfig().setName("MySessionCookie");
-        DefaultHttpClient client = new DefaultHttpClient();
-        try {
-            HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/aa");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("1", response);
-            Assert.assertTrue(result.getHeaders("Set-Cookie")[0].getValue().contains("MySessionCookie"));
+    public static class ForwardServlet extends HttpServlet {
 
-            result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("2", response);
-            Assert.assertTrue(result.getHeaders("Set-Cookie")[0].getValue().contains("MySessionCookie"));
-
-            result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("3", response);
-            Assert.assertTrue(result.getHeaders("Set-Cookie")[0].getValue().contains("MySessionCookie"));
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+        @Override
+        protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+            req.getServletContext().getContext(req.getParameter("context")).getRequestDispatcher(req.getParameter("path")).forward(req, resp);
         }
     }
-
 
 }

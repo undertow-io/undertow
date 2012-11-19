@@ -55,7 +55,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
     private final BlockingHttpHandler next;
     private final HttpHandler asyncPath;
 
-    final CompositeThreadSetupAction setupAction;
+    private final CompositeThreadSetupAction setupAction;
 
     private final ServletContextImpl servletContext;
 

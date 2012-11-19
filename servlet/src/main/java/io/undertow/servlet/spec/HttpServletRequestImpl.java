@@ -288,7 +288,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
             } else if (create) {
                 final SessionManager sessionManager = exchange.getExchange().getAttachment(SessionManager.ATTACHMENT_KEY);
                 try {
-                    Session newSession = sessionManager.createSession(exchange.getExchange()).get();
+                    Session newSession = sessionManager.getOrCreateSession(exchange.getExchange()).get();
                     httpSession = new HttpSessionImpl(newSession, servletContext, servletContext.getDeployment().getApplicationListeners(), exchange.getExchange(), true);
                     servletContext.getDeployment().getApplicationListeners().sessionCreated(httpSession);
                 } catch (IOException e) {

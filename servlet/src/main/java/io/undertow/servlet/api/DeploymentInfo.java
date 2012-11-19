@@ -32,6 +32,8 @@ import java.util.concurrent.ExecutorService;
 import javax.servlet.DispatcherType;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import io.undertow.server.session.InMemorySessionManager;
+import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.DefaultClassIntrospector;
 
@@ -55,6 +57,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile File tempDir;
     private volatile JspConfigDescriptor jspConfigDescriptor;
     private volatile DefaultServletConfig defaultServletConfig;
+    private volatile SessionManager sessionManager = new InMemorySessionManager();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -426,6 +429,14 @@ public class DeploymentInfo implements Cloneable {
         return localeCharsetMapping;
     }
 
+    public SessionManager getSessionManager() {
+        return sessionManager;
+    }
+
+    public void setSessionManager(final SessionManager sessionManager) {
+        this.sessionManager = sessionManager;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -460,6 +471,7 @@ public class DeploymentInfo implements Cloneable {
         info.jspConfigDescriptor = jspConfigDescriptor;
         info.defaultServletConfig = defaultServletConfig;
         info.localeCharsetMapping.putAll(localeCharsetMapping);
+        info.sessionManager = sessionManager;
         return info;
     }
 

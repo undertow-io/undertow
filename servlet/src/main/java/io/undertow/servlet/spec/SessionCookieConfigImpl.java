@@ -27,15 +27,11 @@ public class SessionCookieConfigImpl implements SessionCookieConfig {
 
     private volatile String name = "JSESSIONID";
     private volatile String domain;
-    private volatile String path;
+    private volatile String path = "/";
     private volatile String comment;
     private volatile boolean httpOnly;
     private volatile boolean secure;
     private volatile int maxAge;
-
-    public SessionCookieConfigImpl(final String path) {
-        this.path = path;
-    }
 
     public String getName() {
         return name;

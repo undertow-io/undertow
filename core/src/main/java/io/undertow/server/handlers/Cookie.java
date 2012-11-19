@@ -19,11 +19,8 @@
 package io.undertow.server.handlers;
 
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
-import io.undertow.UndertowMessages;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 
@@ -75,4 +72,8 @@ public interface Cookie {
     Date getExpires();
 
     Cookie setExpires(final Date expires);
+
+    String getComment();
+
+    Cookie setComment(final String comment);
 }

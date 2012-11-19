@@ -42,7 +42,7 @@ public class ServletSessionCookieConfigHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         javax.servlet.SessionCookieConfig c = servletContext.getSessionCookieConfig();
-        exchange.putAttachment(SessionCookieConfig.ATTACHMENT_KEY, new SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure()));
+        exchange.putAttachment(SessionCookieConfig.ATTACHMENT_KEY, new SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment()));
         HttpHandlers.executeHandler(next, exchange, completionHandler);
     }
 

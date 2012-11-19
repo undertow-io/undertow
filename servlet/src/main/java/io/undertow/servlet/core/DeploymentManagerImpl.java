@@ -101,6 +101,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
         deploymentInfo.validate();
         final DeploymentImpl deployment = new DeploymentImpl(deploymentInfo);
         this.deployment = deployment;
+
+
+
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
         deployment.setServletContext(servletContext);
 
@@ -134,7 +137,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             ServletPathMatches matches = setupServletChains(servletContext, threadSetupAction, listeners);
             deployment.setServletPaths(matches);
-            deployment.setServletHandler(new ServletMatchingHandler(matches));
+            final ServletMatchingHandler servletMatchingHandler = new ServletMatchingHandler(matches);
+
+            deployment.setServletHandler(servletMatchingHandler);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {

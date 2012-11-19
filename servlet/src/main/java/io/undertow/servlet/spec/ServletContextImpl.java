@@ -80,7 +80,7 @@ public class ServletContextImpl implements ServletContext {
         this.servletContainer = servletContainer;
         this.deployment = deployment;
         this.deploymentInfo = deployment.getDeploymentInfo();
-        sessionCookieConfig = new SessionCookieConfigImpl(deployment.getDeploymentInfo().getContextPath());
+        sessionCookieConfig = new SessionCookieConfigImpl();
         attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
     }
 

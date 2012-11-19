@@ -137,4 +137,15 @@ public class ServletCookieAdaptor implements Cookie {
     public Cookie setExpires(final Date expires) {
         throw UndertowServletMessages.MESSAGES.notImplemented();
     }
+
+    @Override
+    public String getComment() {
+        return cookie.getComment();
+    }
+
+    @Override
+    public Cookie setComment(final String comment) {
+        cookie.setComment(comment);
+        return this;
+    }
 }

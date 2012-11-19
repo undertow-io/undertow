@@ -49,12 +49,23 @@ public class SessionAttachmentHandler implements HttpHandler {
     private volatile String domain;
     private volatile boolean discardOnExit = false;
     private volatile boolean secure = false;
+    private volatile boolean httpOnly = false;
+    private volatile int maxAge = 30 * 60;
+    private volatile String comment;
     private volatile String cookieName = SessionCookieConfig.DEFAULT_SESSION_ID;
 
     public SessionAttachmentHandler(final SessionManager sessionManager) {
         if (sessionManager == null) {
             throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
+        this.sessionManager = sessionManager;
+    }
+
+    public SessionAttachmentHandler(final HttpHandler next, final SessionManager sessionManager) {
+        if (sessionManager == null) {
+            throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
+        }
+        this.next = next;
         this.sessionManager = sessionManager;
     }
 
@@ -66,9 +77,9 @@ public class SessionAttachmentHandler implements HttpHandler {
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
         String path = this.path;
 
-        SessionCookieConfig config = exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
-        if (config == null) {
-            exchange.putAttachment(SessionCookieConfig.ATTACHMENT_KEY, config = new SessionCookieConfig(cookieName, path, domain, discardOnExit, secure));
+        //todo: should this really be here? It seems like it should belong in its own handler
+        if(exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY) == null) {
+            exchange.putAttachment(SessionCookieConfig.ATTACHMENT_KEY, new SessionCookieConfig(cookieName, path, domain, discardOnExit, secure, httpOnly, maxAge, comment));
         }
 
         final IoFuture<Session> session = sessionManager.getSession(exchange);
@@ -150,6 +161,38 @@ public class SessionAttachmentHandler implements HttpHandler {
 
     public synchronized void setSecure(final boolean secure) {
         this.secure = secure;
+    }
+
+    public String getCookieName() {
+        return cookieName;
+    }
+
+    public void setCookieName(final String cookieName) {
+        this.cookieName = cookieName;
+    }
+
+    public boolean isHttpOnly() {
+        return httpOnly;
+    }
+
+    public void setHttpOnly(final boolean httpOnly) {
+        this.httpOnly = httpOnly;
+    }
+
+    public int getMaxAge() {
+        return maxAge;
+    }
+
+    public void setMaxAge(final int maxAge) {
+        this.maxAge = maxAge;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(final String comment) {
+        this.comment = comment;
     }
 
     private static class UpdateLastAccessTimeCompletionHandler implements HttpCompletionHandler {

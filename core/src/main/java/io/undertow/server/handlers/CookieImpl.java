@@ -41,6 +41,7 @@ public class CookieImpl implements Cookie {
     private boolean secure;
     private boolean httpOnly;
     private int version = 0;
+    private String comment;
 
 
     public CookieImpl(final String name, final String value) {
@@ -151,6 +152,15 @@ public class CookieImpl implements Cookie {
 
     public CookieImpl setExpires(final Date expires) {
         this.expires = expires;
+        return this;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public Cookie setComment(final String comment) {
+        this.comment = comment;
         return this;
     }
 }

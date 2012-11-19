@@ -42,14 +42,20 @@ public class SessionCookieConfig {
     private final String domain;
     private final boolean discard;
     private final boolean secure;
+    private final boolean httpOnly;
+    private final int maxAge;
+    private final String comment;
 
 
-    public SessionCookieConfig(final String cookieName, final String path, final String domain, final boolean discard, final boolean secure) {
+    public SessionCookieConfig(final String cookieName, final String path, final String domain, final boolean discard, final boolean secure, final boolean httpOnly, final int maxAge, final String comment) {
         this.cookieName = cookieName;
         this.path = path;
         this.domain = domain;
         this.discard = discard;
         this.secure = secure;
+        this.httpOnly = httpOnly;
+        this.maxAge = maxAge;
+        this.comment = comment;
     }
 
 
@@ -58,7 +64,12 @@ public class SessionCookieConfig {
                 .setPath(path)
                 .setDomain(domain)
                 .setDiscard(discard)
-                .setSecure(secure);
+                .setSecure(secure)
+                .setHttpOnly(httpOnly)
+                .setComment(comment);
+        if(maxAge > 0) {
+            cookie.setMaxAge(maxAge);
+        }
         CookieImpl.addResponseCookie(exchange, cookie);
 
     }
@@ -69,6 +80,7 @@ public class SessionCookieConfig {
                 .setDomain(domain)
                 .setDiscard(discard)
                 .setSecure(secure)
+                .setHttpOnly(httpOnly)
                 .setMaxAge(0);
         CookieImpl.addResponseCookie(exchange, cookie);
     }
