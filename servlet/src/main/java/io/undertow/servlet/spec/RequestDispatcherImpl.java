@@ -96,22 +96,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             }
             String newRequestUri = servletContext.getContextPath() + newServletPath;
 
-            //todo: a more efficent impl
-            Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
-            for (String part : newQueryString.split("&")) {
-                String name = part;
-                String value = "";
-                int equals = part.indexOf('=');
-                if (equals != -1) {
-                    name = part.substring(0, equals);
-                    value = part.substring(equals + 1);
-                }
-                Deque<String> queue = newQueryParameters.get(name);
-                if (queue == null) {
-                    newQueryParameters.put(name, queue = new ArrayDeque<String>(1));
-                }
-                queue.add(value);
-            }
+            Map<String, Deque<String>> newQueryParameters = createNewQueryParameters(queryParameters, newQueryString);
             requestImpl.setQueryParameters(newQueryParameters);
 
             requestImpl.getExchange().getExchange().setRelativePath(newServletPath);
@@ -142,6 +127,30 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, oldRequest);
             exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, oldResponse);
         }
+    }
+
+    private Map<String, Deque<String>> createNewQueryParameters(final Map<String, Deque<String>> queryParameters, final String newQueryString) {
+        Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
+        for (String part : newQueryString.split("&")) {
+            String name = part;
+            String value = "";
+            int equals = part.indexOf('=');
+            if (equals != -1) {
+                name = part.substring(0, equals);
+                value = part.substring(equals + 1);
+            }
+            Deque<String> queue = newQueryParameters.get(name);
+            if (queue == null) {
+                newQueryParameters.put(name, queue = new ArrayDeque<String>(1));
+            }
+            queue.add(value);
+        }
+        for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
+            if (!newQueryParameters.containsKey(entry.getKey())) {
+                newQueryParameters.put(entry.getKey(), new ArrayDeque<String>(entry.getValue()));
+            }
+        }
+        return newQueryParameters;
     }
 
     @Override
@@ -178,22 +187,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             }
             String newRequestUri = servletContext.getContextPath() + newServletPath;
 
-            //todo: a more efficent impl
-            Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
-            for (String part : newQueryString.split("&")) {
-                String name = part;
-                String value = "";
-                int equals = part.indexOf('=');
-                if (equals != -1) {
-                    name = part.substring(0, equals);
-                    value = part.substring(equals + 1);
-                }
-                Deque<String> queue = newQueryParameters.get(name);
-                if (queue == null) {
-                    newQueryParameters.put(name, queue = new ArrayDeque<String>(1));
-                }
-                queue.add(value);
-            }
+            Map<String, Deque<String>> newQueryParameters = createNewQueryParameters(queryParameters, newQueryString);
             requestImpl.setQueryParameters(newQueryParameters);
 
             request.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
