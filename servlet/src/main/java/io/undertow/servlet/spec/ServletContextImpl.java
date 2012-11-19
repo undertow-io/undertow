@@ -454,7 +454,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public JspConfigDescriptor getJspConfigDescriptor() {
-        return null;
+        return deploymentInfo.getJspConfigDescriptor();
     }
 
     @Override

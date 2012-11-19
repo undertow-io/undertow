@@ -30,6 +30,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.DefaultClassIntrospector;
@@ -52,6 +53,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile InstanceFactory<Executor> executorFactory;
     private volatile InstanceFactory<Executor> asyncExecutorFactory;
     private volatile File tempDir;
+    private volatile JspConfigDescriptor jspConfigDescriptor;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -396,6 +398,14 @@ public class DeploymentInfo implements Cloneable {
         this.tempDir = tempDir;
     }
 
+    public JspConfigDescriptor getJspConfigDescriptor() {
+        return jspConfigDescriptor;
+    }
+
+    public void setJspConfigDescriptor(JspConfigDescriptor jspConfigDescriptor) {
+        this.jspConfigDescriptor = jspConfigDescriptor;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -427,6 +437,7 @@ public class DeploymentInfo implements Cloneable {
         info.executorFactory = executorFactory;
         info.asyncExecutorFactory = asyncExecutorFactory;
         info.tempDir = tempDir;
+        info.jspConfigDescriptor = jspConfigDescriptor;
         return info;
     }
 
