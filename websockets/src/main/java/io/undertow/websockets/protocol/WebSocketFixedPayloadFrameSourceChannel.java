@@ -34,7 +34,7 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSourceFrameChannel {
 
-    protected int readBytes;
+    protected long readBytes;
 
     protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment) {
         super(streamSourceChannelControl, channel, wsChannel, type, payloadSize, rsv, finalFragment);
@@ -56,7 +56,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         }
 
         long r = channel.transferTo(position, count, target);
-        readBytes += (int) r;
+        readBytes += r;
         return r;
     }
 
@@ -71,7 +71,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
             count = toRead;
         }
         long r = channel.transferTo(count, throughBuffer, target);
-        readBytes += (int) (r + throughBuffer.remaining());
+        readBytes += r + throughBuffer.remaining();
         return r;
     }
 
