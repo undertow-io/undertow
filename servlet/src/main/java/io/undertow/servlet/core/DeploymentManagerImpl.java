@@ -20,6 +20,7 @@ package io.undertow.servlet.core;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -40,6 +41,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.security.AuthenticationMechanism;
 import io.undertow.server.handlers.security.AuthenticationMechanismsHandler;
 import io.undertow.server.handlers.security.BasicAuthenticationMechanism;
+import io.undertow.server.handlers.security.DigestAuthenticationMechanism;
 import io.undertow.server.handlers.security.SecurityInitialHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DefaultServletConfig;
@@ -52,6 +54,7 @@ import io.undertow.servlet.api.FilterMappingInfo;
 import io.undertow.servlet.api.HandlerChainWrapper;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ListenerInfo;
+import io.undertow.servlet.api.LoginConfig;
 import io.undertow.servlet.api.MimeMapping;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletContainerInitializerInfo;
@@ -148,6 +151,29 @@ public class DeploymentManagerImpl implements DeploymentManager {
         } finally {
             handle.tearDown();
         }
+    }
+
+    /**
+     * sets up the outer security handlers.
+     *
+     * @param initialHandler The handler to wrap with security handlers
+     */
+    private HttpHandler setupSecurityHandlers(HttpHandler initialHandler) {
+        HttpHandler current = initialHandler;
+        final DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
+        final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
+        if (loginConfig != null) {
+            if (loginConfig.getAuthMethod().equalsIgnoreCase("BASIC")) {
+                AuthenticationMechanismsHandler basic = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism(loginConfig.getRealmName(), deploymentInfo.getLoginCallbackHandler())));
+                current = basic;
+            } else {
+                throw new RuntimeException("not yet implemented");
+            }
+        }
+
+        current = new SecurityInitialHandler(current);
+
+        return current;
     }
 
     private void initializeTempDir(final ServletContextImpl servletContext, final DeploymentInfo deploymentInfo) {
@@ -474,6 +500,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
         } finally {
             handle.tearDown();
+            if (executor != null) {
+                executor.release();
+            }
+            if (asyncExecutor != null) {
+                asyncExecutor.release();
+            }
+            executor = null;
+            asyncExecutor = null;
         }
     }
 
