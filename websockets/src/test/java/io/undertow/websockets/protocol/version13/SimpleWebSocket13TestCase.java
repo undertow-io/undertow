@@ -24,6 +24,7 @@ import org.eclipse.jetty.websocket.core.api.UpgradeResponse;
 import org.eclipse.jetty.websocket.core.api.WebSocketConnection;
 import org.eclipse.jetty.websocket.core.api.WebSocketException;
 import org.eclipse.jetty.websocket.core.api.WebSocketListener;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.xnio.ChannelListener;
 
@@ -31,6 +32,7 @@ import org.xnio.ChannelListener;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@Ignore("Requires JDK7")
 public class SimpleWebSocket13TestCase {
 
 
