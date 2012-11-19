@@ -151,7 +151,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private void initializeMimeMappings(final DeploymentImpl deployment, final DeploymentInfo deploymentInfo) {
-        final Map<String, String> mappings = new HashMap<String, String>();
+        final Map<String, String> mappings = new HashMap<String, String>(MimeMapping.DEFAULT_MIME_MAPPINGS);
         for (MimeMapping mapping : deploymentInfo.getMimeMappings()) {
             mappings.put(mapping.getExtension(), mapping.getMimeType());
         }
