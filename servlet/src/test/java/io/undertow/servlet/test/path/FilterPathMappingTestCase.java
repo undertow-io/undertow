@@ -51,9 +51,9 @@ import org.junit.runner.RunWith;
 @RunWith(ServletServer.class)
 public class FilterPathMappingTestCase {
 
+    @Test
+    public void testBasicFilterMappings() throws IOException, ServletException {
 
-    @BeforeClass
-    public static void setup() throws ServletException {
         DeploymentInfo builder = new DeploymentInfo();
 
         final PathHandler root = new PathHandler();
@@ -95,10 +95,9 @@ public class FilterPathMappingTestCase {
         root.addPath(builder.getContextPath(), manager.start());
 
         ServletServer.setRootHandler(root);
-    }
 
-    @Test
-    public void testSimpleHttpServlet() throws IOException {
+
+
         DefaultHttpClient client = new DefaultHttpClient();
         try {
             HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/aa");
@@ -151,6 +150,49 @@ public class FilterPathMappingTestCase {
             response = HttpClientUtils.readResponse(result);
             requireHeaders(result, "/*", "contextRoot");
             Assert.assertEquals("contextRoot", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
+    @Test
+    public void testExtensionMatchServletWithGlobalFilter() throws IOException, ServletException {
+
+        DeploymentInfo builder = new DeploymentInfo();
+
+        final PathHandler root = new PathHandler();
+        final ServletContainer container = ServletContainer.Factory.newInstance();
+
+        builder.addServlet(new ServletInfo("*.jsp", PathMappingServlet.class)
+                .addMapping("*.jsp"));
+
+        builder.addFilter(new FilterInfo("/*", PathFilter.class));
+        builder.addFilterUrlMapping("/*", "/*", DispatcherType.REQUEST);
+
+        builder.setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
+                .setContextPath("/servletContext")
+                .setDeploymentName("servletContext.war")
+                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER);
+
+        final DeploymentManager manager = container.addDeployment(builder);
+        manager.deploy();
+        root.addPath(builder.getContextPath(), manager.start());
+
+        ServletServer.setRootHandler(root);
+
+
+
+        DefaultHttpClient client = new DefaultHttpClient();
+        try {
+            HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/aa.jsp");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("*.jsp", response);
+            requireHeaders(result, "/*");
 
         } finally {
             client.getConnectionManager().shutdown();

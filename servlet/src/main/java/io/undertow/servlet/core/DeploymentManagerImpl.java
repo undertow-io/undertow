@@ -142,7 +142,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private void initializeTempDir(final ServletContextImpl servletContext, final DeploymentInfo deploymentInfo) {
-        if(deploymentInfo.getTempDir() != null) {
+        if (deploymentInfo.getTempDir() != null) {
             servletContext.setAttribute(ServletContext.TEMPDIR, deploymentInfo.getTempDir());
         } else {
             servletContext.setAttribute(ServletContext.TEMPDIR, new File(SecurityActions.getSystemProperty("java.io.tmpdir")));
@@ -151,7 +151,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     private void initializeMimeMappings(final DeploymentImpl deployment, final DeploymentInfo deploymentInfo) {
         final Map<String, String> mappings = new HashMap<String, String>();
-        for(MimeMapping mapping : deploymentInfo.getMimeMappings()) {
+        for (MimeMapping mapping : deploymentInfo.getMimeMappings()) {
             mappings.put(mapping.getExtension(), mapping.getMimeType());
         }
         deployment.setMimeExtensionMappings(mappings);
@@ -161,8 +161,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final Map<Integer, String> codes = new HashMap<Integer, String>();
         final Map<Class<? extends Throwable>, String> exceptions = new HashMap<Class<? extends Throwable>, String>();
 
-        for(final ErrorPage page : deploymentInfo.getErrorPages()) {
-            if(page.getExceptionType() != null) {
+        for (final ErrorPage page : deploymentInfo.getErrorPages()) {
+            if (page.getExceptionType() != null) {
                 exceptions.put(page.getExceptionType(), page.getLocation());
             } else {
                 codes.put(page.getErrorCode(), page.getLocation());
@@ -339,37 +339,39 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
 
         //now handle extension matches for the default path
-        for (final String path : extensionMatches) {
-            ServletHandler targetServlet = extensionServlets.get(path);
+        if (!defaultServletSupplied) {
+            for (final String path : extensionMatches) {
+                ServletHandler targetServlet = extensionServlets.get(path);
 
-            final Map<DispatcherType, List<ManagedFilter>> extension = new HashMap<DispatcherType, List<ManagedFilter>>();
-            for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
-                ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
-                if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
+                final Map<DispatcherType, List<ManagedFilter>> extension = new HashMap<DispatcherType, List<ManagedFilter>>();
+                for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
+                    ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
+                    if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
+                        if (targetServlet != null) {
+                            if (filterMapping.getMapping().equals(targetServlet.getManagedServlet().getServletInfo().getName())) {
+                                addToListMap(extension, filterMapping.getDispatcher(), filter);
+                            }
+                        }
+                    } else {
+                        if (filterMapping.getMapping().startsWith("*.")) {
+                            if (filterMapping.getMapping().substring(2).equals(path)) {
+                                addToListMap(extension, filterMapping.getDispatcher(), filter);
+                            }
+                        }
+                    }
+                }
+
+                if (extension.isEmpty() && targetServlet != null) {
+                    builder.addExtensionMatch("", path, servletChain(targetServlet, threadSetupAction, listeners, targetServlet.getManagedServlet()));
+                } else if (!extension.isEmpty()) {
+                    FilterHandler handler;
                     if (targetServlet != null) {
-                        if (filterMapping.getMapping().equals(targetServlet.getManagedServlet().getServletInfo().getName())) {
-                            addToListMap(extension, filterMapping.getDispatcher(), filter);
-                        }
+                        handler = new FilterHandler(extension, targetServlet);
+                    } else {
+                        handler = new FilterHandler(extension, defaultServlet);
                     }
-                } else {
-                    if (filterMapping.getMapping().startsWith("*.")) {
-                        if (filterMapping.getMapping().substring(2).equals(path)) {
-                            addToListMap(extension, filterMapping.getDispatcher(), filter);
-                        }
-                    }
+                    builder.addExtensionMatch("", path, servletChain(handler, threadSetupAction, listeners, targetServlet == null ? defaultServlet.getManagedServlet() : targetServlet.getManagedServlet()));
                 }
-            }
-
-            if (extension.isEmpty() && targetServlet != null) {
-                builder.addExtensionMatch("", path, servletChain(targetServlet, threadSetupAction, listeners, targetServlet.getManagedServlet()));
-            } else if (!extension.isEmpty()) {
-                FilterHandler handler;
-                if (targetServlet != null) {
-                    handler = new FilterHandler(extension, targetServlet);
-                } else {
-                    handler = new FilterHandler(extension, defaultServlet);
-                }
-                builder.addExtensionMatch("", path, servletChain(handler, threadSetupAction, listeners, targetServlet == null ? defaultServlet.getManagedServlet() : targetServlet.getManagedServlet()));
             }
         }
 
@@ -410,7 +412,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     private ServletInitialHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners, final ManagedServlet managedServlet) {
         BlockingHttpHandler servletHandler = new RequestListenerHandler(applicationListeners, next);
-        for(HandlerChainWrapper wrapper : managedServlet.getServletInfo().getHandlerChainWrappers()) {
+        for (HandlerChainWrapper wrapper : managedServlet.getServletInfo().getHandlerChainWrappers()) {
             servletHandler = wrapper.wrap(servletHandler);
         }
         return new ServletInitialHandler(servletHandler, setupAction, deployment.getServletContext(), managedServlet);
@@ -491,7 +493,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             if (executor != null) {
                 executor.release();
             }
-            if(asyncExecutor != null) {
+            if (asyncExecutor != null) {
                 asyncExecutor.release();
             }
             executor = null;
