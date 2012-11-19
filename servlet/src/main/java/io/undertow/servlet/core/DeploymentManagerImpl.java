@@ -505,9 +505,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void undeploy() {
-        deployment.getApplicationListeners().contextDestroyed();
-        deployment.getApplicationListeners().stop();
-        deployment = null;
+        ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
+        try {
+            deployment.getApplicationListeners().contextDestroyed();
+            deployment.getApplicationListeners().stop();
+            deployment = null;
+        } finally {
+            handle.tearDown();
+        }
     }
 
     @Override
