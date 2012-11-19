@@ -24,10 +24,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
@@ -42,9 +39,9 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.file.DirectFileCache;
 import io.undertow.server.handlers.file.FileCache;
+import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
-import io.undertow.util.CopyOnWriteMap;
 import org.xnio.IoUtils;
 
 /**
@@ -59,24 +56,17 @@ import org.xnio.IoUtils;
  */
 public class DefaultServlet extends HttpServlet implements HttpHandler {
 
-    private static final String[] DEFAULT_ALLOWED_EXTENSIONS = {"js", "css", "png", "jpg", "gif", "html", "htm"};
-    private static final String[] DEFAULT_DISALLOWED_EXTENSIONS = {"class", "jar", "war", "zip", "xml"};
 
     private final Deployment deployment;
     private volatile FileCache fileCache = DirectFileCache.INSTANCE;
-
-    private volatile boolean defaultAllowed = true;
-
-    private final Set<String> allowed = Collections.newSetFromMap(new CopyOnWriteMap<String, Boolean>());
-    private final Set<String> disallowed = Collections.newSetFromMap(new CopyOnWriteMap<String, Boolean>());
+    private final DefaultServletConfig config;
 
     private final List<String> welcomePages;
 
-    public DefaultServlet(final Deployment deployment, final List<String> welcomePages) {
+    public DefaultServlet(final Deployment deployment, final DefaultServletConfig config, final List<String> welcomePages) {
         this.deployment = deployment;
+        this.config = config;
         this.welcomePages = welcomePages;
-        allowed.addAll(Arrays.asList(DEFAULT_ALLOWED_EXTENSIONS));
-        disallowed.addAll(Arrays.asList(DEFAULT_DISALLOWED_EXTENSIONS));
     }
 
     @Override
@@ -229,27 +219,11 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             return true;
         }
         final String extension = lastSegment.substring(ext + 1, lastSegment.length());
-        if (defaultAllowed) {
-            return !disallowed.contains(extension);
+        if (config.isDefaultAllowed()) {
+            return !config.getDisallowed().contains(extension);
         } else {
-            return allowed.contains(extension);
+            return config.getAllowed().contains(extension);
         }
-    }
-
-    public Set<String> getAllowed() {
-        return allowed;
-    }
-
-    public Set<String> getDisallowed() {
-        return disallowed;
-    }
-
-    public boolean isDefaultAllowed() {
-        return defaultAllowed;
-    }
-
-    public void setDefaultAllowed(final boolean defaultAllowed) {
-        this.defaultAllowed = defaultAllowed;
     }
 
     public FileCache getFileCache() {

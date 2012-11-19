@@ -54,6 +54,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile InstanceFactory<Executor> asyncExecutorFactory;
     private volatile File tempDir;
     private volatile JspConfigDescriptor jspConfigDescriptor;
+    private volatile DefaultServletConfig defaultServletConfig;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -406,6 +407,14 @@ public class DeploymentInfo implements Cloneable {
         this.jspConfigDescriptor = jspConfigDescriptor;
     }
 
+    public DefaultServletConfig getDefaultServletConfig() {
+        return defaultServletConfig;
+    }
+
+    public void setDefaultServletConfig(final DefaultServletConfig defaultServletConfig) {
+        this.defaultServletConfig = defaultServletConfig;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -438,6 +447,7 @@ public class DeploymentInfo implements Cloneable {
         info.asyncExecutorFactory = asyncExecutorFactory;
         info.tempDir = tempDir;
         info.jspConfigDescriptor = jspConfigDescriptor;
+        info.defaultServletConfig = defaultServletConfig;
         return info;
     }
 
