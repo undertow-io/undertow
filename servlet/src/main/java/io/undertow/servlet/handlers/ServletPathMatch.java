@@ -34,7 +34,11 @@ public class ServletPathMatch {
     public ServletPathMatch(final ServletInitialHandler handler, final String matched, final String remaining) {
         this.handler = handler;
         this.matched = matched;
-        this.remaining = remaining;
+        if(remaining == null || remaining.equals("")) {
+            this.remaining = null;
+        } else {
+            this.remaining = remaining;
+        }
     }
 
     public ServletInitialHandler getHandler() {

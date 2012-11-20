@@ -105,9 +105,9 @@ public class ServletPathMatches {
                 ServletInitialHandler handler = match.extensionMatches.get(ext);
                 if (handler != null) {
                     if(qsPos == -1) {
-                        return new ServletPathMatch(handler, path, "");
+                        return new ServletPathMatch(handler, path, null);
                     } else {
-                        return new ServletPathMatch(handler, path.substring(0, qsPos), "");
+                        return new ServletPathMatch(handler, path.substring(0, qsPos), null);
                     }
                 } else {
                     return new ServletPathMatch(match.defaultHandler, matched, remaining);
