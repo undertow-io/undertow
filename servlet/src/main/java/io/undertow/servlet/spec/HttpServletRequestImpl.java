@@ -63,8 +63,6 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartHandler;
-import io.undertow.server.session.Session;
-import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletPathMatch;
@@ -105,7 +103,6 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     private Cookie[] cookies;
     private List<Part> parts = null;
-    private HttpSessionImpl httpSession;
     private AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
     private Charset characterEncoding;
@@ -281,22 +278,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public HttpSession getSession(final boolean create) {
-        if (httpSession == null) {
-            Session session = exchange.getExchange().getAttachment(Session.ATTACHMENT_KEY);
-            if (session != null) {
-                httpSession = new HttpSessionImpl(session, servletContext, servletContext.getDeployment().getApplicationListeners(), exchange.getExchange(), false);
-            } else if (create) {
-                final SessionManager sessionManager = exchange.getExchange().getAttachment(SessionManager.ATTACHMENT_KEY);
-                try {
-                    Session newSession = sessionManager.getOrCreateSession(exchange.getExchange()).get();
-                    httpSession = new HttpSessionImpl(newSession, servletContext, servletContext.getDeployment().getApplicationListeners(), exchange.getExchange(), true);
-                    servletContext.getDeployment().getApplicationListeners().sessionCreated(httpSession);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-        return httpSession;
+        return servletContext.getSession(exchange.getExchange(), create);
     }
 
     @Override

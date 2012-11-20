@@ -34,6 +34,8 @@ import org.xnio.IoFuture;
  * <p/>
  * This handler is also the place where session cookie configuration properties are configured.
  *
+ * note: this approach is not used by Servlet, which has its own session handlers
+ *
  * @author Stuart Douglas
  */
 public class SessionAttachmentHandler implements HttpHandler {
@@ -77,12 +79,13 @@ public class SessionAttachmentHandler implements HttpHandler {
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
         String path = this.path;
 
-        //todo: should this really be here? It seems like it should belong in its own handler
-        if(exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY) == null) {
-            exchange.putAttachment(SessionCookieConfig.ATTACHMENT_KEY, new SessionCookieConfig(cookieName, path, domain, discardOnExit, secure, httpOnly, maxAge, comment));
+        SessionCookieConfig config = exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
+        if(config == null) {
+            config = new SessionCookieConfig(cookieName, path, domain, discardOnExit, secure, httpOnly, maxAge, comment);
+            exchange.putAttachment(SessionCookieConfig.ATTACHMENT_KEY, config);
         }
 
-        final IoFuture<Session> session = sessionManager.getSession(exchange);
+        final IoFuture<Session> session = sessionManager.getSession(exchange, config);
         final UpdateLastAccessTimeCompletionHandler handler = new UpdateLastAccessTimeCompletionHandler(completionHandler, exchange);
         session.addNotifier(new IoFuture.Notifier<Session, Session>() {
             @Override

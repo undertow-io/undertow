@@ -29,6 +29,7 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionAttachmentHandler;
+import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
@@ -66,7 +67,7 @@ public class InMemorySessionTestCase {
                         Session session = exchange.getAttachment(Session.ATTACHMENT_KEY);
                         if(session == null) {
                             final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
-                            session = manager.getOrCreateSession(exchange).get();
+                            session = manager.getOrCreateSession(exchange, exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY)).get();
                             session.setAttribute(COUNT, 0);
                         }
                         Integer count = (Integer)session.getAttribute(COUNT).get();

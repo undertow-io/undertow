@@ -46,14 +46,14 @@ public interface SessionManager {
      *
      * @return The created session
      */
-    IoFuture<Session> getOrCreateSession(final HttpServerExchange serverExchange);
+    IoFuture<Session> getOrCreateSession(final HttpServerExchange serverExchange, final SessionCookieConfig sessionCookieConfig);
 
     /**
      *
      * @param sessionId The session id
      * @return An IoFuture that can be used to retrieve the session, or an IoFuture that will return null if not found
      */
-    IoFuture<Session> getSession(final HttpServerExchange serverExchange);
+    IoFuture<Session> getSession(final HttpServerExchange serverExchange, final SessionCookieConfig sessionCookieConfig);
 
     /**
      * Registers a session listener for the session manager

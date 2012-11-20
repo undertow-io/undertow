@@ -55,9 +55,7 @@ public class InMemorySessionManager implements SessionManager {
     private volatile int defaultSessionTimeout = 30 * 60;
 
     @Override
-    public IoFuture<Session> getOrCreateSession(final HttpServerExchange serverExchange) {
-
-        final SessionCookieConfig config = serverExchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
+    public IoFuture<Session> getOrCreateSession(final HttpServerExchange serverExchange, final SessionCookieConfig config) {
         if (config == null) {
             throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
         }
@@ -67,6 +65,7 @@ public class InMemorySessionManager implements SessionManager {
             if (session != null) {
                 ConcreteIoFuture<Session> future = new ConcreteIoFuture<Session>();
                 future.setResult(session.session);
+                config.setSessionCookie(serverExchange, session.session);
                 return future;
             }
         } else {
@@ -85,11 +84,7 @@ public class InMemorySessionManager implements SessionManager {
     }
 
     @Override
-    public IoFuture<Session> getSession(final HttpServerExchange serverExchange) {
-        final SessionCookieConfig config = serverExchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
-        if (config == null) {
-            throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
-        }
+    public IoFuture<Session> getSession(final HttpServerExchange serverExchange, final SessionCookieConfig config) {
         String sessionId = config.findSessionId(serverExchange);
         if (sessionId == null) {
             return new FinishedIoFuture<Session>(null);
@@ -98,6 +93,7 @@ public class InMemorySessionManager implements SessionManager {
         if (sess == null) {
             return new FinishedIoFuture<Session>(null);
         } else {
+            config.setSessionCookie(serverExchange, sess.session);
             return new FinishedIoFuture<Session>(sess.session);
         }
     }

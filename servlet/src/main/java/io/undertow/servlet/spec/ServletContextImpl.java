@@ -22,6 +22,7 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -45,6 +46,9 @@ import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.session.Session;
+import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
@@ -60,6 +64,7 @@ import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
+import io.undertow.util.AttachmentKey;
 
 /**
  * @author Stuart Douglas
@@ -71,6 +76,7 @@ public class ServletContextImpl implements ServletContext {
     private final DeploymentInfo deploymentInfo;
     private final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<String, Object>();
     private final SessionCookieConfigImpl sessionCookieConfig;
+    private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
 
 
     private volatile boolean bootstrapComplete = false;
@@ -121,10 +127,10 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public String getMimeType(final String file) {
         int pos = file.lastIndexOf('.');
-        if(pos == -1) {
+        if (pos == -1) {
             return deployment.getMimeExtensionMappings().get(file);
         }
-        return deployment.getMimeExtensionMappings().get(file.substring(pos +1));
+        return deployment.getMimeExtensionMappings().get(file.substring(pos + 1));
     }
 
     @Override
@@ -148,7 +154,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public URL getResource(final String path) throws MalformedURLException {
-        if(!path.startsWith("/")) {
+        if (!path.startsWith("/")) {
             throw UndertowServletMessages.MESSAGES.pathMustStartWithSlash(path);
         }
         File resource = deploymentInfo.getResourceLoader().getResource(path);
@@ -464,6 +470,36 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void declareRoles(final String... roleNames) {
+    }
+
+
+    /**
+     * Gets the session
+     *
+     * @param create
+     * @return
+     */
+    public HttpSessionImpl getSession(final HttpServerExchange exchange, boolean create) {
+        HttpSessionImpl httpSession = exchange.getAttachment(sessionAttachmentKey);
+        if (httpSession == null) {
+            try {
+                final SessionCookieConfig c = getSessionCookieConfig();
+                final SessionManager sessionManager = deploymentInfo.getSessionManager();
+                Session newSession;
+                if (create) {
+                    newSession = sessionManager.getOrCreateSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
+                } else {
+                    newSession = sessionManager.getSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
+                }
+                if(newSession != null ) {
+                    httpSession = new HttpSessionImpl(newSession, this, getDeployment().getApplicationListeners(), exchange, true);
+                    exchange.putAttachment(sessionAttachmentKey, httpSession);
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return httpSession;
     }
 
     public Deployment getDeployment() {

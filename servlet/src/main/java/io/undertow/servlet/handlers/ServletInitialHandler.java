@@ -145,6 +145,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
                 exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
             }
+
             next.handleRequest(exchange);
             if (!exchange.getExchange().isResponseStarted() && exchange.getExchange().getResponseCode() >= 400) {
                 String location = servletContext.getDeployment().getErrorPages().getErrorLocation(exchange.getExchange().getResponseCode());

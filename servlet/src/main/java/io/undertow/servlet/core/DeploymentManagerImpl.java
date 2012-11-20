@@ -60,7 +60,6 @@ import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletMatchingHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
-import io.undertow.servlet.handlers.ServletSessionCookieConfigHandler;
 import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
@@ -463,7 +462,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         for (Lifecycle object : deployment.getLifecycleObjects()) {
             object.start();
         }
-        HttpHandler root = new ServletSessionCookieConfigHandler(deployment.getServletHandler(), deployment.getServletContext());
+        HttpHandler root = deployment.getServletHandler();
 
         //create the executor, if it exists
         if (deployment.getDeploymentInfo().getExecutorFactory() != null) {
