@@ -58,6 +58,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     private volatile ServletContextImpl servletContext;
 
     private ServletOutputStreamImpl servletOutputStream;
+    private boolean servletOutputStreamAcquired = false;
     private PrintWriter writer;
     private Integer bufferSize;
     private boolean insideInclude = false;
@@ -115,6 +116,11 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         if (exchange.getExchange().isResponseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
+        if (servletOutputStream != null) {
+            servletOutputStream.resetBuffer();
+        }
+        writer = null;
+        servletOutputStreamAcquired = false;
         exchange.getExchange().setResponseCode(sc);
         //todo: is this the best way to handle errors?
         final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
@@ -126,8 +132,11 @@ public class HttpServletResponseImpl implements HttpServletResponse {
                 throw new RuntimeException(e);
             }
             responseDone(exchange.getCompletionHandler());
+        } else if (msg != null) {
+            setContentType("text/html");
+            getWriter().write(msg);
+            getWriter().close();
         }
-
     }
 
     @Override
@@ -194,7 +203,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setIntHeader(final String name, final int value) {
-        addHeader(name, Integer.toString(value));
+        setHeader(name, Integer.toString(value));
     }
 
     @Override
@@ -264,6 +273,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             throw UndertowServletMessages.MESSAGES.getWriterAlreadyCalled();
         }
         if (servletOutputStream == null) {
+            servletOutputStreamAcquired = true;
             if (bufferSize == null) {
                 servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this);
             } else {
@@ -276,13 +286,15 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public PrintWriter getWriter() throws IOException {
         if (writer == null) {
-            if (servletOutputStream != null) {
+            if (servletOutputStreamAcquired) {
                 throw UndertowServletMessages.MESSAGES.getOutputStreamAlreadyCalled();
             }
-            if (bufferSize == null) {
-                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this);
-            } else {
-                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this, bufferSize);
+            if (servletOutputStream == null) {
+                if (bufferSize == null) {
+                    servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this);
+                } else {
+                    servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this, bufferSize);
+                }
             }
             writer = new PrintWriter(new OutputStreamWriter(servletOutputStream));
         }
@@ -363,7 +375,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             servletOutputStream.resetBuffer();
         }
         if (writer != null) {
-            writer = new PrintWriter(new OutputStreamWriter(servletOutputStream));
+            writer = new PrintWriter(servletOutputStream, false);
         }
     }
 
@@ -374,7 +386,11 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void reset() {
-        resetBuffer();
+        if (servletOutputStream != null) {
+            servletOutputStream.resetBuffer();
+        }
+        writer = null;
+        servletOutputStreamAcquired = false;
         exchange.getExchange().getResponseHeaders().clear();
         exchange.getExchange().setResponseCode(200);
     }
