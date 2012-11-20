@@ -127,4 +127,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10027, value = "Not implemented")
     IllegalStateException notImplemented();
+
+    @Message(id = 10028, value = "Async processing already started")
+    IllegalStateException asyncAlreadyStarted();
 }

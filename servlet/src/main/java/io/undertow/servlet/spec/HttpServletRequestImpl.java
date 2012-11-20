@@ -726,6 +726,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public AsyncContext startAsync() throws IllegalStateException {
         if (!isAsyncSupported()) {
             throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
+        } else if (asyncContext != null) {
+            throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
         onAsyncStart();
         asyncListeners.clear();
@@ -736,6 +738,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     public AsyncContext startAsync(final ServletRequest servletRequest, final ServletResponse servletResponse) throws IllegalStateException {
         if (!isAsyncSupported()) {
             throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
+        } else if (asyncContext != null) {
+            throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
         onAsyncStart();
         asyncListeners.clear();
