@@ -50,10 +50,10 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletRequest;
+import javax.servlet.ServletRequestWrapper;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
@@ -795,8 +795,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
         final HttpServletRequestImpl requestImpl;
         if (request instanceof HttpServletRequestImpl) {
             requestImpl = (HttpServletRequestImpl) request;
-        } else if (request instanceof HttpServletRequestWrapper) {
-            requestImpl = getRequestImpl(((HttpServletRequestWrapper) request).getRequest());
+        } else if (request instanceof ServletRequestWrapper) {
+            requestImpl = getRequestImpl(((ServletRequestWrapper) request).getRequest());
         } else {
             throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
         }

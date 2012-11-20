@@ -31,9 +31,9 @@ import java.util.Set;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletResponse;
+import javax.servlet.ServletResponseWrapper;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
 
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
@@ -423,8 +423,8 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         final HttpServletResponseImpl requestImpl;
         if (response instanceof HttpServletResponseImpl) {
             requestImpl = (HttpServletResponseImpl) response;
-        } else if (response instanceof HttpServletResponseWrapper) {
-            requestImpl = getResponseImpl(((HttpServletResponseWrapper) response).getResponse());
+        } else if (response instanceof ServletResponseWrapper) {
+            requestImpl = getResponseImpl(((ServletResponseWrapper) response).getResponse());
         } else {
             throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
         }
