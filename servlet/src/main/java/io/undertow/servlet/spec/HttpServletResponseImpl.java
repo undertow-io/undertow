@@ -58,7 +58,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     private volatile ServletContextImpl servletContext;
 
     private ServletOutputStreamImpl servletOutputStream;
-    private boolean servletOutputStreamAcquired = false;
+    private ResponseState responseState = ResponseState.NONE;
     private PrintWriter writer;
     private Integer bufferSize;
     private boolean insideInclude = false;
@@ -120,7 +120,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             servletOutputStream.resetBuffer();
         }
         writer = null;
-        servletOutputStreamAcquired = false;
+        responseState = ResponseState.NONE;
         exchange.getExchange().setResponseCode(sc);
         //todo: is this the best way to handle errors?
         final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
@@ -269,41 +269,39 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public ServletOutputStream getOutputStream() throws IOException {
-        if (writer != null) {
+        if (responseState == ResponseState.WRITER) {
             throw UndertowServletMessages.MESSAGES.getWriterAlreadyCalled();
         }
-        if (servletOutputStream == null) {
-            servletOutputStreamAcquired = true;
-            if (bufferSize == null) {
-                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this);
-            } else {
-                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this, bufferSize);
-            }
-        }
+        responseState = ResponseState.STREAM;
+        createOutputStream();
         return servletOutputStream;
     }
 
     @Override
     public PrintWriter getWriter() throws IOException {
         if (writer == null) {
-            if (servletOutputStreamAcquired) {
+            if (responseState == ResponseState.STREAM) {
                 throw UndertowServletMessages.MESSAGES.getOutputStreamAlreadyCalled();
             }
-            if (servletOutputStream == null) {
-                if (bufferSize == null) {
-                    servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this);
-                } else {
-                    servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this, bufferSize);
-                }
-            }
+            createOutputStream();
             writer = new PrintWriter(new OutputStreamWriter(servletOutputStream));
         }
         return writer;
     }
 
+    private void createOutputStream() {
+        if (servletOutputStream == null) {
+            if (bufferSize == null) {
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this);
+            } else {
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this, bufferSize);
+            }
+        }
+    }
+
     @Override
     public void setCharacterEncoding(final String charset) {
-        if (insideInclude || exchange.getExchange().isResponseStarted()) {
+        if (insideInclude || exchange.getExchange().isResponseStarted() || writer != null || isCommitted()) {
             return;
         }
         charsetSet = true;
@@ -337,7 +335,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
                 }
             } while (i < type.length());
             this.contentType = type.substring(0, pos - 1);
-            if (writer == null) {
+            if (writer == null && !isCommitted()) {
                 charsetSet = true;
                 //we only change the charset if the writer has not been retrieved yet
                 this.charset = type.substring(pos + "charset=".length(), i);
@@ -366,6 +364,9 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             writer.flush();
         } else if (servletOutputStream != null) {
             servletOutputStream.flush();
+        } else {
+            createOutputStream();
+            servletOutputStream.flush();
         }
     }
 
@@ -390,7 +391,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             servletOutputStream.resetBuffer();
         }
         writer = null;
-        servletOutputStreamAcquired = false;
+        responseState = ResponseState.NONE;
         exchange.getExchange().getResponseHeaders().clear();
         exchange.getExchange().setResponseCode(200);
     }
@@ -473,5 +474,11 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
         }
         return requestImpl;
+    }
+
+    public static enum ResponseState {
+        NONE,
+        STREAM,
+        WRITER
     }
 }
