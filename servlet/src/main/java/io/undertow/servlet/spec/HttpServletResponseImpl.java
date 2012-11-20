@@ -116,9 +116,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         if (exchange.getExchange().isResponseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
-        if (servletOutputStream != null) {
-            servletOutputStream.resetBuffer();
-        }
+        resetBuffer();
         writer = null;
         responseState = ResponseState.NONE;
         exchange.getExchange().setResponseCode(sc);
@@ -131,12 +129,12 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             } catch (ServletException e) {
                 throw new RuntimeException(e);
             }
-            responseDone(exchange.getCompletionHandler());
         } else if (msg != null) {
             setContentType("text/html");
             getWriter().write(msg);
             getWriter().close();
         }
+        responseDone(exchange.getCompletionHandler());
     }
 
     @Override
@@ -146,6 +144,10 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendRedirect(final String location) throws IOException {
+        if (exchange.getExchange().isResponseStarted()) {
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+        }
+        resetBuffer();
         setStatus(302);
         String realPath;
         if (location.startsWith("/")) {
@@ -164,6 +166,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         }
         String loc = exchange.getExchange().getRequestScheme() + "://" + host + realPath;
         exchange.getExchange().getResponseHeaders().put(Headers.LOCATION, loc);
+        responseDone(exchange.getCompletionHandler());
     }
 
     @Override
