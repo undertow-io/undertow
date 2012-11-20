@@ -64,6 +64,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<ThreadSetupAction> threadSetupActions = new ArrayList<ThreadSetupAction>();
     private final Map<String, String> initParameters = new HashMap<String, String>();
     private final Map<String, Object> servletContextAttributes = new HashMap<String, Object>();
+    private final Map<String, String> localeCharsetMapping = new HashMap<String, String>();
     private final List<String> welcomePages = new ArrayList<String>();
     private final List<ErrorPage> errorPages = new ArrayList<ErrorPage>();
     private final List<MimeMapping> mimeMappings = new ArrayList<MimeMapping>();
@@ -411,8 +412,18 @@ public class DeploymentInfo implements Cloneable {
         return defaultServletConfig;
     }
 
-    public void setDefaultServletConfig(final DefaultServletConfig defaultServletConfig) {
+    public DeploymentInfo setDefaultServletConfig(final DefaultServletConfig defaultServletConfig) {
         this.defaultServletConfig = defaultServletConfig;
+        return this;
+    }
+
+    public DeploymentInfo addLocaleCharsetMapping(final String locale, final String charset) {
+        localeCharsetMapping.put(locale, charset);
+        return this;
+    }
+
+    public Map<String, String> getLocaleCharsetMapping() {
+        return localeCharsetMapping;
     }
 
     @Override
@@ -448,6 +459,7 @@ public class DeploymentInfo implements Cloneable {
         info.tempDir = tempDir;
         info.jspConfigDescriptor = jspConfigDescriptor;
         info.defaultServletConfig = defaultServletConfig;
+        info.localeCharsetMapping.putAll(localeCharsetMapping);
         return info;
     }
 

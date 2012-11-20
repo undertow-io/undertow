@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.ServletException;
@@ -60,6 +61,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     private PrintWriter writer;
     private Integer bufferSize;
     private boolean insideInclude = false;
+    private boolean charsetSet = false;
     private String contentType;
     private String charset;
     private Locale locale;
@@ -251,7 +253,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public String getContentType() {
         if (contentType != null) {
-            return contentType + "; charset=" + getCharacterEncoding();
+            return contentType + ";charset=" + getCharacterEncoding();
         }
         return null;
     }
@@ -292,6 +294,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude || exchange.getExchange().isResponseStarted()) {
             return;
         }
+        charsetSet = true;
         this.charset = charset;
         if (contentType != null) {
             exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
@@ -313,15 +316,20 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         }
         contentType = type;
         int pos = type.indexOf("charset=");
-        if(pos != -1) {
+        if (pos != -1) {
             int i = pos + "charset=".length();
             do {
                 char c = type.charAt(i++);
-                if(c == ' ' || c == '\t' || c == ';') {
+                if (c == ' ' || c == '\t' || c == ';') {
                     break;
                 }
             } while (i < type.length());
-            this.charset = type.substring(pos + "charset=".length(), i);
+            this.contentType = type.substring(0, pos - 1);
+            if (writer == null) {
+                charsetSet = true;
+                //we only change the charset if the writer has not been retrieved yet
+                this.charset = type.substring(pos + "charset=".length(), i);
+            }
         }
         exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
     }
@@ -378,6 +386,26 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         }
         this.locale = loc;
         exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LANGUAGE, loc.getLanguage() + "-" + loc.getCountry());
+        if (!charsetSet && writer == null) {
+            final Map<String, String> localeCharsetMapping = servletContext.getDeployment().getDeploymentInfo().getLocaleCharsetMapping();
+            // Match full language_country_variant first, then language_country,
+            // then language only
+            String charset = localeCharsetMapping.get(locale.toString());
+            if (charset == null) {
+                charset = localeCharsetMapping.get(locale.getLanguage() + "_"
+                        + locale.getCountry());
+                if (charset == null) {
+                    charset = localeCharsetMapping.get(locale.getLanguage());
+                }
+            }
+            if (charset != null) {
+                this.charset = charset;
+                if (contentType != null) {
+                    exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
+                }
+            }
+        }
+
     }
 
     @Override
@@ -389,7 +417,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void responseDone(final HttpCompletionHandler handler) {
-        if(responseDone) {
+        if (responseDone) {
             return;
         }
         responseDone = true;
