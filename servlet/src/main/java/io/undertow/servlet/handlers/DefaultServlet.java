@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.util.List;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
@@ -192,6 +193,16 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     }
 
     private String getPath(final HttpServletRequest request) {
+        if (request.getAttribute(RequestDispatcher.INCLUDE_REQUEST_URI) != null) {
+            String result = (String) request.getAttribute(RequestDispatcher.INCLUDE_PATH_INFO);
+            if (result == null) {
+                result = (String) request.getAttribute(RequestDispatcher.INCLUDE_SERVLET_PATH);
+            }
+            if (result == null || result.equals("")) {
+                result = "/";
+            }
+            return result;
+        }
         String result = request.getPathInfo();
         if (result == null) {
             result = request.getServletPath();
