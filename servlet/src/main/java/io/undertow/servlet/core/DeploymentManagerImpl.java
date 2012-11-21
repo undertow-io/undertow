@@ -102,7 +102,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
         this.deployment = deployment;
 
 
-
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
         deployment.setServletContext(servletContext);
 
@@ -112,7 +111,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final CompositeThreadSetupAction threadSetupAction = new CompositeThreadSetupAction(setup);
         deployment.setThreadSetupAction(threadSetupAction);
 
-        //TODO: this is just a temporary hack, this will probably change a lot
         ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
         try {
 
@@ -459,51 +457,59 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public HttpHandler start() throws ServletException {
-        for (Lifecycle object : deployment.getLifecycleObjects()) {
-            object.start();
-        }
-        HttpHandler root = deployment.getServletHandler();
-
-        //create the executor, if it exists
-        if (deployment.getDeploymentInfo().getExecutorFactory() != null) {
-            try {
-                executor = deployment.getDeploymentInfo().getExecutorFactory().createInstance();
-                root = new AttachmentHandler<Executor>(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY, root, executor.getInstance());
-            } catch (InstantiationException e) {
-                throw new RuntimeException(e);
+        ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
+        try {
+            for (Lifecycle object : deployment.getLifecycleObjects()) {
+                object.start();
             }
-        }
-        if (deployment.getDeploymentInfo().getExecutorFactory() != null) {
-            if (deployment.getDeploymentInfo().getAsyncExecutorFactory() != null) {
+            HttpHandler root = deployment.getServletHandler();
+
+            //create the executor, if it exists
+            if (deployment.getDeploymentInfo().getExecutorFactory() != null) {
                 try {
-                    asyncExecutor = deployment.getDeploymentInfo().getAsyncExecutorFactory().createInstance();
-                    root = new AttachmentHandler<Executor>(AsyncContextImpl.ASYNC_EXECUTOR, root, asyncExecutor.getInstance());
+                    executor = deployment.getDeploymentInfo().getExecutorFactory().createInstance();
+                    root = new AttachmentHandler<Executor>(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY, root, executor.getInstance());
                 } catch (InstantiationException e) {
                     throw new RuntimeException(e);
                 }
             }
+            if (deployment.getDeploymentInfo().getExecutorFactory() != null) {
+                if (deployment.getDeploymentInfo().getAsyncExecutorFactory() != null) {
+                    try {
+                        asyncExecutor = deployment.getDeploymentInfo().getAsyncExecutorFactory().createInstance();
+                        root = new AttachmentHandler<Executor>(AsyncContextImpl.ASYNC_EXECUTOR, root, asyncExecutor.getInstance());
+                    } catch (InstantiationException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
 
+            }
+            return root;
+        } finally {
+            handle.tearDown();
         }
-
-
-        return root;
     }
 
     @Override
     public void stop() throws ServletException {
+        ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
-            for (Lifecycle object : deployment.getLifecycleObjects()) {
-                object.stop();
+            try {
+                for (Lifecycle object : deployment.getLifecycleObjects()) {
+                    object.stop();
+                }
+            } finally {
+                if (executor != null) {
+                    executor.release();
+                }
+                if (asyncExecutor != null) {
+                    asyncExecutor.release();
+                }
+                executor = null;
+                asyncExecutor = null;
             }
         } finally {
-            if (executor != null) {
-                executor.release();
-            }
-            if (asyncExecutor != null) {
-                asyncExecutor.release();
-            }
-            executor = null;
-            asyncExecutor = null;
+            handle.tearDown();
         }
     }
 
