@@ -53,18 +53,30 @@ public class ManagedFilter implements Lifecycle {
         if (!started) {
             start();
         }
-        filter.doFilter(request, response, chain);
+        getFilter().doFilter(request, response, chain);
+    }
+
+    private Filter getFilter() throws ServletException {
+        if (filter == null) {
+            synchronized (this) {
+                if (filter == null) {
+                    try {
+                        handle = filterInfo.getInstanceFactory().createInstance();
+                    } catch (Exception e) {
+                        throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(filterInfo.getName(), e);
+                    }
+                    Filter filter = handle.getInstance();
+                    filter.init(new FilterConfigImpl(filterInfo, servletContext));
+                    this.filter = filter;
+                }
+            }
+        }
+        return filter;
     }
 
     public synchronized void start() throws ServletException {
         if (!started) {
-            try {
-                handle = filterInfo.getInstanceFactory().createInstance();
-            } catch (Exception e) {
-                throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(filterInfo.getName(), e);
-            }
-            filter = handle.getInstance();
-            filter.init(new FilterConfigImpl(filterInfo, servletContext));
+
             started = true;
         }
     }
