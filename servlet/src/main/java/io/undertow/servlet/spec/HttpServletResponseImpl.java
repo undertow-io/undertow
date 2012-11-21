@@ -286,6 +286,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             if (responseState == ResponseState.STREAM) {
                 throw UndertowServletMessages.MESSAGES.getOutputStreamAlreadyCalled();
             }
+            responseState = ResponseState.WRITER;
             createOutputStream();
             writer = new PrintWriter(new OutputStreamWriter(servletOutputStream));
         }
