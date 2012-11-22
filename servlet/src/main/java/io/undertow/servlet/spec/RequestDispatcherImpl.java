@@ -19,6 +19,7 @@
 package io.undertow.servlet.spec;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.Map;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
@@ -113,9 +115,20 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
                 exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
                 handler.handleRequest(exchange);
-                //if the forward completed sucessfully we need to complete the request
-                responseImpl.flushBuffer();
-                responseImpl.responseDone(exchange.getCompletionHandler());
+
+                if(response instanceof HttpServletResponseImpl) {
+                    responseImpl.closeStreamAndWriter();
+                } else {
+                    try {
+                        final PrintWriter writer = response.getWriter();
+                        writer.flush();
+                        writer.close();
+                    } catch (IllegalStateException e) {
+                        final ServletOutputStream outputStream = response.getOutputStream();
+                        outputStream.flush();
+                        outputStream.close();
+                    }
+                }
             } catch (ServletException e) {
                 throw e;
             } catch (IOException e) {
