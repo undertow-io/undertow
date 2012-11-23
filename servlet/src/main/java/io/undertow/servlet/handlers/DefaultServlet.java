@@ -24,6 +24,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.Reader;
 import java.util.List;
 
 import javax.servlet.DispatcherType;
@@ -52,6 +55,14 @@ import org.xnio.IoUtils;
  * otherwise the request is handled as a normal servlet request.
  * <p/>
  * By default we only allow a restricted set of extensions.
+ *
+ * todo: this thing needs a lot more work. In particular:
+ * - caching for blocking requests
+ * - correct mime type
+ * - directory listings
+ * - range/last-modified and other headers to be handled properly
+ * - head requests
+ * - and probably heaps of other things
  *
  * @author Stuart Douglas
  */
@@ -95,17 +106,38 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
 
     private void serveFileBlocking(final HttpServletResponse resp, final File resource) throws IOException {
         ServletOutputStream out = null;
+        PrintWriter writer = null;
         InputStream in = new BufferedInputStream(new FileInputStream(resource));
+
+        // Trying to retrieve the servlet output stream
         try {
-            int read;
-            final byte[] buffer = new byte[1024];
             out = resp.getOutputStream();
-            while ((read = in.read(buffer)) != -1) {
-                out.write(buffer, 0, read);
+        } catch (IllegalStateException e) {
+            //todo: only allow this for text files
+            writer = resp.getWriter();
+        }
+        try {
+            if(out != null) {
+                int read;
+                final byte[] buffer = new byte[1024];
+                while ((read = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, read);
+                }
+            } else {
+                Reader reader = new InputStreamReader(in);
+                int read;
+                final char[] buffer = new char[1024];
+                while ((read = reader.read(buffer)) != -1) {
+                    writer.write(buffer, 0, read);
+                }
             }
+
         } finally {
             if (out != null) {
                 IoUtils.safeClose(out);
+            }
+            if(writer != null) {
+                IoUtils.safeClose(writer);
             }
             IoUtils.safeClose(in);
         }
