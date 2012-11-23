@@ -32,8 +32,8 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.runner.HttpClientUtils;
+import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import org.apache.http.Header;
@@ -41,7 +41,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -80,6 +79,8 @@ public class FilterPathMappingTestCase {
         builder.addFilter(new FilterInfo("/aa", PathFilter.class));
         builder.addFilterUrlMapping("/aa", "/aa", DispatcherType.REQUEST);
 
+        builder.addFilter(new FilterInfo("*.bop", PathFilter.class));
+        builder.addFilterUrlMapping("*.bop", "*.bop", DispatcherType.REQUEST);
 
         builder.addFilter(new FilterInfo("contextRoot", PathFilter.class));
         builder.addFilterServletNameMapping("contextRoot", "contextRoot", DispatcherType.REQUEST);
@@ -100,56 +101,14 @@ public class FilterPathMappingTestCase {
 
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/aa");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/aa", response);
-            requireHeaders(result, "/*", "/aa");
-
-            get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/a/c");
-            result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            requireHeaders(result, "/*", "/a/*");
-            Assert.assertEquals("/a/*", response);
-
-            get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/a");
-            result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            requireHeaders(result, "/*", "/a/*");
-            Assert.assertEquals("/a/*", response);
-
-            get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/aa/b");
-            result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            requireHeaders(result, "/*");
-            Assert.assertEquals("/", response);
-
-            get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/a/b/c/d");
-            result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            requireHeaders(result, "/*", "/a/*");
-            Assert.assertEquals("/a/*", response);
-
-
-            get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/defaultStuff");
-            result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            requireHeaders(result, "/*");
-            Assert.assertEquals("/", response);
-
-
-            get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/");
-            result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            requireHeaders(result, "/*", "contextRoot");
-            Assert.assertEquals("contextRoot", response);
+            runTest(client, "aa","/aa", "/*", "/aa");
+            runTest(client, "a/c","/a/*", "/*", "/a/*");
+            runTest(client, "a","/a/*", "/*", "/a/*");
+            runTest(client, "aa/b","/", "/*");
+            runTest(client, "a/b/c/d","/a/*", "/*", "/a/*");
+            runTest(client, "defaultStuff","/", "/*");
+            runTest(client, "","contextRoot", "/*", "contextRoot");
+            runTest(client, "yyyy.bop","/", "/*", "*.bop");
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -184,19 +143,25 @@ public class FilterPathMappingTestCase {
         ServletServer.setRootHandler(root);
 
 
-
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/aa.jsp");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("*.jsp", response);
-            requireHeaders(result, "/*");
+            runTest(client, "aa.jsp","*.jsp", "/*");
 
         } finally {
             client.getConnectionManager().shutdown();
         }
+    }
+
+    private void runTest(final DefaultHttpClient client, final String path, final String expected, final String ... headers) throws IOException {
+        final HttpGet get;
+        final HttpResponse result;
+        final String response;
+        get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/" + path);
+        result = client.execute(get);
+        Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+        requireHeaders(result, headers);
+        response = HttpClientUtils.readResponse(result);
+        Assert.assertEquals(expected, response);
     }
 
     private void requireHeaders(final HttpResponse result, final String... headers) {

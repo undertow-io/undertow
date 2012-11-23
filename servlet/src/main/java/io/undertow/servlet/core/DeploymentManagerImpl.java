@@ -229,6 +229,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
             for (String path : entry.getValue().getMappings()) {
                 if (path.equals("/")) {
                     //the default servlet
+                    pathMatches.add("/*");
+                    if (pathServlets.containsKey("/*")) {
+                        throw UndertowServletMessages.MESSAGES.twoServletsWithSameMapping(path);
+                    }
+                    pathServlets.put("/*", handler);
                     defaultServlet = handler;
                     defaultHandler = servletChain(handler, threadSetupAction, listeners, managedServlet);
                 } else if (!path.startsWith("*.")) {
@@ -245,24 +250,20 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
         }
 
-        if (defaultServlet == null) {
+        if (!pathServlets.containsKey("/*")) {
             final DefaultServletConfig config = deploymentInfo.getDefaultServletConfig() == null ? new DefaultServletConfig() : deploymentInfo.getDefaultServletConfig();
             DefaultServlet defaultInstance = new DefaultServlet(deployment, config, deploymentInfo.getWelcomePages());
             final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("io.undertow.DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>(defaultInstance)), servletContext);
             lifecycles.add(managedDefaultServlet);
+            pathServlets.put("/*", new ServletHandler(managedDefaultServlet));
+            pathMatches.add("/*");
             defaultServlet = new ServletHandler(managedDefaultServlet);
-
             defaultHandler = new ServletInitialHandler(new RequestListenerHandler(listeners, defaultServlet), defaultInstance, threadSetupAction, servletContext, managedDefaultServlet);
         }
 
         final ServletPathMatches.Builder builder = ServletPathMatches.builder();
 
-        boolean defaultServletSupplied = false;
-
         for (final String path : pathMatches) {
-            if (path.equals("/*")) {
-                defaultServletSupplied = true;
-            }
             ServletHandler targetServlet = resolveServletForPath(path, pathServlets);
 
             final Map<DispatcherType, List<ManagedFilter>> noExtension = new HashMap<DispatcherType, List<ManagedFilter>>();
@@ -283,7 +284,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                         }
                     }
                 } else {
-                    if (path.isEmpty() || !path.startsWith("*.")) {
+                    if (filterMapping.getMapping().isEmpty() || !filterMapping.getMapping().startsWith("*.")) {
                         if (isFilterApplicable(path, filterMapping.getMapping())) {
                             addToListMap(noExtension, filterMapping.getDispatcher(), filter);
                             for (Map<DispatcherType, List<ManagedFilter>> l : extension.values()) {
@@ -291,7 +292,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                             }
                         }
                     } else {
-                        addToListMap(extension.get(path.substring(2)), filterMapping.getDispatcher(), filter);
+                        addToListMap(extension.get(filterMapping.getMapping().substring(2)), filterMapping.getDispatcher(), filter);
                     }
                 }
             }
@@ -318,64 +319,23 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 builder.addPrefixMatch(prefix, initialHandler);
 
                 for (Map.Entry<String, Map<DispatcherType, List<ManagedFilter>>> entry : extension.entrySet()) {
-                    ServletHandler pathServlet = targetServlet;
-                    if (targetServlet == null) {
-                        pathServlet = extensionServlets.get(entry.getKey());
+                    ServletHandler pathServlet = extensionServlets.get(entry.getKey());
+                    if (pathServlet == null) {
+                        pathServlet = targetServlet;
                     }
+                    if(pathServlet == null) {
+                        pathServlet = defaultServlet;
+                    }
+                    BlockingHttpHandler handler = pathServlet;
                     if (!entry.getValue().isEmpty()) {
-                        FilterHandler handler;
-                        if (pathServlet != null) {
-                            handler = new FilterHandler(entry.getValue(), pathServlet);
-                        } else {
-                            handler = new FilterHandler(entry.getValue(), defaultServlet);
-                        }
-                        builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, threadSetupAction, listeners, pathServlet == null ? defaultServlet.getManagedServlet() : pathServlet.getManagedServlet()));
+                        handler = new FilterHandler(entry.getValue(), handler);
                     }
+                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, threadSetupAction, listeners, pathServlet.getManagedServlet()));
                 }
             } else if (path.isEmpty()) {
                 builder.addExactMatch("/", initialHandler);
             } else {
                 builder.addExactMatch(path, initialHandler);
-            }
-        }
-        if (!defaultServletSupplied) {
-            builder.addPrefixMatch("", defaultHandler);
-        }
-
-        //now handle extension matches for the default path
-        if (!defaultServletSupplied) {
-            for (final String path : extensionMatches) {
-                ServletHandler targetServlet = extensionServlets.get(path);
-
-                final Map<DispatcherType, List<ManagedFilter>> extension = new HashMap<DispatcherType, List<ManagedFilter>>();
-                for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
-                    ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
-                    if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
-                        if (targetServlet != null) {
-                            if (filterMapping.getMapping().equals(targetServlet.getManagedServlet().getServletInfo().getName())) {
-                                addToListMap(extension, filterMapping.getDispatcher(), filter);
-                            }
-                        }
-                    } else {
-                        if (filterMapping.getMapping().startsWith("*.")) {
-                            if (filterMapping.getMapping().substring(2).equals(path)) {
-                                addToListMap(extension, filterMapping.getDispatcher(), filter);
-                            }
-                        }
-                    }
-                }
-
-                if (extension.isEmpty() && targetServlet != null) {
-                    builder.addExtensionMatch("", path, servletChain(targetServlet, threadSetupAction, listeners, targetServlet.getManagedServlet()));
-                } else if (!extension.isEmpty()) {
-                    FilterHandler handler;
-                    if (targetServlet != null) {
-                        handler = new FilterHandler(extension, targetServlet);
-                    } else {
-                        handler = new FilterHandler(extension, defaultServlet);
-                    }
-                    builder.addExtensionMatch("", path, servletChain(handler, threadSetupAction, listeners, targetServlet == null ? defaultServlet.getManagedServlet() : targetServlet.getManagedServlet()));
-                }
             }
         }
 
