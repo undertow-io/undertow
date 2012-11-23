@@ -308,6 +308,10 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     @Override
     public void wakeupReads() {
         channel.wakeupReads();
+        if (complete) {
+            // if complete we need to invoke the listener by ourself
+            ChannelListeners.invokeChannelListener(this, (ChannelListener<? super StreamSourceFrameChannel>) readSetter.get());
+        }
     }
 
     @Override
