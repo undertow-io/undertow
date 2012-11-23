@@ -80,16 +80,6 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
     }
 
     @Override
-    protected long write0(ByteBuffer[] srcs) throws IOException {
-        if (checker != null) {
-            for (ByteBuffer src: srcs) {
-                checker.checkUTF8BeforeWrite(src);
-            }
-        }
-        return super.write0(srcs);    //To change body of overridden methods use File | Settings | File Templates.
-    }
-
-    @Override
     protected long transferFrom0(FileChannel src, long position, long count) throws IOException {
         if (checker == null) {
             return super.transferFrom0(src, position, count);

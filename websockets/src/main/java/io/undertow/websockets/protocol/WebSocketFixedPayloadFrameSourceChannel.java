@@ -26,6 +26,7 @@ import java.nio.channels.WritableByteChannel;
 import io.undertow.websockets.StreamSourceFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
+import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -101,6 +102,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
     public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         long toRead = byteToRead();
         if (toRead < 1) {
+            throughBuffer.clear();
             return -1;
         }
 

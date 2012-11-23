@@ -27,4 +27,5 @@ public class WebSocket07CloseFrameSinkChannel extends WebSocket07FrameSinkChanne
     public WebSocket07CloseFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize);
     }
+
 }
