@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketMessages;
-import io.undertow.websockets.protocol.AbstractFrameSinkChannel;
 import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -33,7 +33,7 @@ import org.xnio.channels.StreamSourceChannel;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-class WebSocket00CloseFrameSinkChannel extends AbstractFrameSinkChannel {
+class WebSocket00CloseFrameSinkChannel extends StreamSinkFrameChannel {
     private static final ByteBuffer END = ByteBuffer.allocate(2).put((byte) 0xFF).put((byte) 0x00);
 
 
@@ -49,11 +49,6 @@ class WebSocket00CloseFrameSinkChannel extends AbstractFrameSinkChannel {
 
     @Override
     protected long write0(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
-    }
-
-    @Override
-    protected long write0(ByteBuffer[] srcs) throws IOException {
         throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
     }
 

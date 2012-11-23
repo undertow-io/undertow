@@ -114,10 +114,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         this.finalFragment = finalFragment;
     }
 
-    public abstract boolean isFragmentationSupported();
-
-    public abstract boolean areExtensionsSupported();
-
     /**
      * Set the RSV which is used for extensions.
      *
@@ -136,6 +132,96 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         this.rsv = rsv;
     }
 
+
+    /**
+     * Buffer that holds the frame start
+     */
+    private ByteBuffer start;
+
+    /**
+     * buffer that holds the frame end
+     */
+    private ByteBuffer end;
+
+    private boolean frameStartWritten = false;
+
+    /**
+     * Create the {@link ByteBuffer} that will be written as start of the frame.
+     * <p/>
+     *
+     * @return The {@link ByteBuffer} which will be used to start a frame
+     */
+    protected abstract ByteBuffer createFrameStart();
+
+    /**
+     * Create the {@link ByteBuffer} that marks the end of the frame
+     *
+     * @return The {@link ByteBuffer} that marks the end of the frame
+     */
+    protected abstract ByteBuffer createFrameEnd();
+
+    public boolean isFragmentationSupported() {
+        return false;
+    }
+
+    public boolean areExtensionsSupported() {
+        return false;
+    }
+
+    /**
+     * todo: when we get serious about performance we will need to make sure we use direct buffers
+     * and a gathering write for this, so we can write out the whole message with a single write()
+     * call
+     * @return true if the frame start was written
+     * @throws IOException
+     */
+    private boolean writeFrameStart() throws IOException {
+        if (!frameStartWritten) {
+            if (start == null) {
+                start = createFrameStart();
+                start.flip();
+            }
+            while (start.hasRemaining()) {
+                final int result = channel.write(start);
+                if (result == -1) {
+                    throw WebSocketMessages.MESSAGES.channelClosed();
+                } else if (result == 0) {
+                    return false;
+                }
+            }
+            frameStartWritten = true;
+            start = null;
+        }
+        return true;
+    }
+
+
+    protected boolean flush0() throws IOException {
+        if (writeFrameStart()) {
+            if (getState() == ChannelState.SHUTDOWN) {
+
+                //we know end has not been written yet, or the state would be CLOSED
+                if (end == null) {
+                    end = createFrameEnd();
+                    end.flip();
+                }
+
+                while (end.hasRemaining()) {
+                    int b = channel.write(end);
+
+                    if (b == -1) {
+                        throw WebSocketMessages.MESSAGES.channelClosed();
+                    } else if (b == 0) {
+                        return false;
+                    }
+                }
+                return true;
+            } else {
+                return true;
+            }
+        }
+        return false;
+    }
     /**
      * Mark this channel as active
      */
@@ -170,6 +256,8 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
                 if (channel.isOpen()) {
                     if (!channel.isWriteResumed()) {
                         channel.resumeWrites();
+                    } else {
+                        channel.wakeupWrites();
                     }
                 } else {
                     //if the underlying channel has closed then we just invoke the write listener directly
@@ -231,7 +319,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     /**
      * @throws IOException Get thrown if an problem during the close operation is detected
      */
-    protected abstract void close0() throws IOException;
+    protected void close0() throws IOException {
+        // NOOP
+    }
 
     @Override
     public final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
@@ -239,31 +329,44 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        long result = write0(srcs, offset, length);
-        this.written += result;
-        return result;
+        long toWrite = toWrite();
+        if (toWrite < 1) {
+            // TODO: Is this correct ?
+            return 0;
+        }
+        int i = offset;
+        int oldLimit = -1;
+        for (; i < length; i++) {
+            ByteBuffer src = srcs[i];
+            if (toWrite < src.remaining()) {
+                oldLimit = src.limit();
+                src.limit((int) toWrite);
+                i++;
+                break;
+            }
+        }
+        try {
+            long result = write0(srcs, offset, i);
+            this.written += result;
+            return result;
+        } finally {
+            if (oldLimit != -1) {
+                srcs[offset + i].limit(oldLimit);
+            }
+        }
     }
 
     /**
      * @see {@link StreamSinkChannel#write(ByteBuffer[], int, int)}
      */
-    protected abstract long write0(ByteBuffer[] srcs, int offset, int length) throws IOException;
+    protected long write0(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        return channel.write(srcs, offset, length);
+    }
 
     @Override
     public final long write(ByteBuffer[] srcs) throws IOException {
-        checkClosed();
-        if (!isActive()) {
-            return 0;
-        }
-        long result = write0(srcs);
-        this.written += result;
-        return result;
+        return write(srcs, 0, srcs.length);
     }
-
-    /**
-     * @see StreamSinkChannel#write(ByteBuffer[])
-     */
-    protected abstract long write0(ByteBuffer[] srcs) throws IOException;
 
     @Override
     public final int write(ByteBuffer src) throws IOException {
@@ -271,15 +374,34 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        int result = write0(src);
-        this.written += result;
-        return result;
+        if (!writeFrameStart()) {
+            return 0;
+        }
+        int oldLimit = src.limit();
+        long toWrite = toWrite();
+        if (toWrite < 1) {
+            // TODO: Is this correct ?
+            return 0;
+        }
+        if (toWrite < src.remaining()) {
+            src.limit((int) toWrite);
+        }
+        try {
+            int result = write0(src);
+
+            this.written += result;
+            return result;
+        } finally {
+           src.limit(oldLimit);
+        }
     }
 
     /**
      * @see StreamSinkChannel#write(ByteBuffer)
      */
-    protected abstract int write0(ByteBuffer src) throws IOException;
+    protected int write0(ByteBuffer src) throws IOException {
+        return channel.write(src);
+    }
 
 
     @Override
@@ -287,6 +409,17 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         checkClosed();
         if (!isActive()) {
             return 0;
+        }
+        if (!writeFrameStart()) {
+            return 0;
+        }
+        long toWrite = toWrite();
+        if (toWrite < 1) {
+            // TODO: Is this correct ?
+            return 0;
+        }
+        if (toWrite < count) {
+            count = toWrite;
         }
         long result = transferFrom0(src, position, count);
         this.written += result;
@@ -296,15 +429,31 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     /**
      * @see StreamSinkChannel#transferFrom(FileChannel, long, long)
      */
-    protected abstract long transferFrom0(FileChannel src, long position, long count) throws IOException;
+    protected long transferFrom0(FileChannel src, long position, long count) throws IOException {
+        return channel.transferFrom(src, position, count);
+    }
 
     @Override
     public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
         checkClosed();
+
+        throughBuffer.clear();
         if (!isActive()) {
             return 0;
         }
+        if (!writeFrameStart()) {
+            return 0;
+        }
+        long toWrite = toWrite();
+        if (toWrite < 1) {
+            // TODO: Is this correct ?
+            return 0;
+        }
+        if (toWrite < count) {
+            count = toWrite;
+        }
         long result = transferFrom0(source, count, throughBuffer);
+
         this.written += result;
         return result;
     }
@@ -312,7 +461,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     /**
      * @see StreamSinkChannel#transferFrom(StreamSourceChannel, long, ByteBuffer)
      */
-    protected abstract long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException;
+    protected long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
+        return channel.transferFrom(source, count, throughBuffer);
+    }
 
 
     @Override
@@ -485,7 +636,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return flushed;
     }
 
-    protected abstract boolean flush0() throws IOException;
+    private long toWrite() {
+        return payloadSize - written;
+    }
 
     /**
      * Throws an {@link IOException} if the {@link #isOpen()} returns <code>false</code>

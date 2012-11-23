@@ -381,7 +381,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * take care of call {@link StreamSinkFrameChannel#activate()} on the new active {@link StreamSinkFrameChannel}.
      */
     protected final void complete(StreamSinkFrameChannel channel) {
-        if (senders.peek() == channel) {
+
+        if (isActive(channel)) {
             if (senders.remove(channel)) {
                 StreamSinkFrameChannel ch = senders.peek();
                 // check if there is some sink waiting

@@ -160,6 +160,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     @Override
     public final long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         if (complete) {
+            throughBuffer.clear();
             return -1;
         }
         try {
