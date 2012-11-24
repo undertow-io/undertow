@@ -85,7 +85,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         final String path = getPath(req);
         if (!isAllowed(path)) {
-            resp.setStatus(404);
+            resp.sendError(404);
             return;
         }
         final File resource = deployment.getDeploymentInfo().getResourceLoader().getResource(path);
@@ -94,7 +94,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
                 //servlet 9.3
                 throw new FileNotFoundException(path);
             } else {
-                resp.setStatus(404);
+                resp.sendError(404);
             }
             return;
         } else if (resource.isDirectory()) {
@@ -199,7 +199,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
                     throw new ServletException(e);
                 }
             } else {
-                resp.setStatus(404);
+                resp.sendError(404);
             }
         }
     }
