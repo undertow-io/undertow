@@ -28,11 +28,11 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletServerTestCase;
-import io.undertow.servlet.test.runner.HttpClientUtils;
-import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.test.utils.DefaultServer;
+import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -44,7 +44,7 @@ import org.junit.runner.RunWith;
 /**
  * @author Stuart Douglas
  */
-@RunWith(ServletServer.class)
+@RunWith(DefaultServer.class)
 public class SimpleAsyncTestCase {
 
     public static final String HELLO_WORLD = "Hello World";
@@ -78,14 +78,14 @@ public class SimpleAsyncTestCase {
         manager.deploy();
         root.addPath(builder.getContextPath(), manager.start());
 
-        ServletServer.setRootHandler(root);
+        DefaultServer.setRootHandler(root);
     }
 
     @Test
     public void testSimpleHttpServlet() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/async");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/async");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);

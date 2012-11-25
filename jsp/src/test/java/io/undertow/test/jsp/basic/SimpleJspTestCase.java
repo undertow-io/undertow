@@ -23,6 +23,8 @@ import java.util.HashMap;
 
 import javax.servlet.ServletException;
 
+import io.undertow.jsp.HackInstanceManager;
+import io.undertow.jsp.JspServletBuilder;
 import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.session.InMemorySessionManager;
@@ -30,12 +32,10 @@ import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
-import io.undertow.jsp.HackInstanceManager;
-import io.undertow.jsp.JspServletBuilder;
-import io.undertow.servlet.test.runner.HttpClientUtils;
-import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.test.utils.DefaultServer;
+import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -50,7 +50,7 @@ import org.junit.runner.RunWith;
 /**
  * @author Stuart Douglas
  */
-@RunWith(ServletServer.class)
+@RunWith(DefaultServer.class)
 public class SimpleJspTestCase {
 
     public static final String KEY = "io.undertow.message";
@@ -80,7 +80,7 @@ public class SimpleJspTestCase {
         manager.deploy();
         servletPath.addPath(builder.getContextPath(), manager.start());
 
-        ServletServer.setRootHandler(cookieHandler);
+        DefaultServer.setRootHandler(cookieHandler);
         System.setProperty(KEY, "Hello JSP!");
     }
 
@@ -93,7 +93,7 @@ public class SimpleJspTestCase {
     public void testSimpleHttpServlet() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            HttpGet get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/a.jsp");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/a.jsp");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);

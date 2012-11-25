@@ -26,9 +26,9 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
-import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.test.utils.DefaultServer;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
@@ -37,7 +37,7 @@ import org.junit.runner.RunWith;
  *
  * @author Stuart Douglas
  */
-@RunWith(ServletServer.class)
+@RunWith(DefaultServer.class)
 public class WelcomeFileAsyncPathTestCase extends AbstractWelcomeFileTestCase {
 
 
@@ -62,7 +62,7 @@ public class WelcomeFileAsyncPathTestCase extends AbstractWelcomeFileTestCase {
         manager.deploy();
         root.addPath(builder.getContextPath(), manager.start());
 
-        ServletServer.setRootHandler(root);
+        DefaultServer.setRootHandler(root);
     }
 
 

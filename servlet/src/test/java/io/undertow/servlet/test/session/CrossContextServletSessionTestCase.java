@@ -32,10 +32,10 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletServerTestCase;
-import io.undertow.servlet.test.runner.HttpClientUtils;
-import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.test.utils.DefaultServer;
+import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -51,7 +51,7 @@ import org.junit.runner.RunWith;
  *
  * @author Stuart Douglas
  */
-@RunWith(ServletServer.class)
+@RunWith(DefaultServer.class)
 public class CrossContextServletSessionTestCase {
 
 
@@ -61,7 +61,7 @@ public class CrossContextServletSessionTestCase {
         final ServletContainer container = ServletContainer.Factory.newInstance();
         final CookieHandler cookieHandler = new CookieHandler();
         final PathHandler path = new PathHandler();
-        ServletServer.setRootHandler(cookieHandler);
+        DefaultServer.setRootHandler(cookieHandler);
 
         createDeployment("1", container, cookieHandler, path);
         createDeployment("2", container, cookieHandler, path);
@@ -93,10 +93,10 @@ public class CrossContextServletSessionTestCase {
     public void testCrossContextSessionInvocation() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            HttpGet direct1 = new HttpGet(ServletServer.getDefaultServerAddress() + "/1/servlet");
-            HttpGet forward1 = new HttpGet(ServletServer.getDefaultServerAddress() + "/1/forward?context=/2&path=/servlet");
-            HttpGet direct2 = new HttpGet(ServletServer.getDefaultServerAddress() + "/2/servlet");
-            HttpGet forward2 = new HttpGet(ServletServer.getDefaultServerAddress() + "/2/forward?context=/1&path=/servlet");
+            HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerAddress() + "/1/servlet");
+            HttpGet forward1 = new HttpGet(DefaultServer.getDefaultServerAddress() + "/1/forward?context=/2&path=/servlet");
+            HttpGet direct2 = new HttpGet(DefaultServer.getDefaultServerAddress() + "/2/servlet");
+            HttpGet forward2 = new HttpGet(DefaultServer.getDefaultServerAddress() + "/2/forward?context=/1&path=/servlet");
             HttpResponse result = client.execute(direct1);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);

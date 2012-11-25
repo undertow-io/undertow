@@ -32,10 +32,10 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.runner.HttpClientUtils;
-import io.undertow.servlet.test.runner.ServletServer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.test.utils.DefaultServer;
+import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -47,7 +47,7 @@ import org.junit.runner.RunWith;
 /**
  * @author Stuart Douglas
  */
-@RunWith(ServletServer.class)
+@RunWith(DefaultServer.class)
 public class FilterPathMappingTestCase {
 
     @Test
@@ -95,7 +95,7 @@ public class FilterPathMappingTestCase {
         manager.deploy();
         root.addPath(builder.getContextPath(), manager.start());
 
-        ServletServer.setRootHandler(root);
+        DefaultServer.setRootHandler(root);
 
 
 
@@ -140,7 +140,7 @@ public class FilterPathMappingTestCase {
         manager.deploy();
         root.addPath(builder.getContextPath(), manager.start());
 
-        ServletServer.setRootHandler(root);
+        DefaultServer.setRootHandler(root);
 
 
         DefaultHttpClient client = new DefaultHttpClient();
@@ -156,7 +156,7 @@ public class FilterPathMappingTestCase {
         final HttpGet get;
         final HttpResponse result;
         final String response;
-        get = new HttpGet(ServletServer.getDefaultServerAddress() + "/servletContext/" + path);
+        get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/" + path);
         result = client.execute(get);
         Assert.assertEquals(200, result.getStatusLine().getStatusCode());
         requireHeaders(result, headers);

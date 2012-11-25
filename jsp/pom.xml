@@ -53,6 +53,13 @@
         </dependency>
 
         <dependency>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-core</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.undertow.jastow</groupId>
             <artifactId>jastow</artifactId>
         </dependency>
