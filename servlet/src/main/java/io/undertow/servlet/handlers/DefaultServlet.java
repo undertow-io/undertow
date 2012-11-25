@@ -184,7 +184,11 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         if (welcomePage != null) {
             serveFileBlocking(resp, welcomePage);
         } else {
-            ServletPathMatch handler = findWelcomeServlet(req.getPathInfo().endsWith("/") ? req.getPathInfo() : req.getPathInfo() + "/");
+            String pathInfo = req.getPathInfo();
+            if(pathInfo == null) {
+                pathInfo = "";
+            }
+            ServletPathMatch handler = findWelcomeServlet(pathInfo.endsWith("/") ? pathInfo : pathInfo + "/");
             if (handler != null) {
                 HttpServletRequestImpl servletRequestImpl = HttpServletRequestImpl.getRequestImpl(req);
                 BlockingHttpServerExchange exchange = servletRequestImpl.getExchange();
