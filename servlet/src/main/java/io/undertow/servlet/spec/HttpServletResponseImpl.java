@@ -376,12 +376,14 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     public void closeStreamAndWriter() throws IOException {
         if (writer != null) {
-            writer.flush();
+            if(!servletOutputStream.isClosed()) {
+                writer.flush();
+            }
             writer.close();
         } else if (servletOutputStream == null) {
             createOutputStream();
         }
-        servletOutputStream.flush();
+        //close also flushes
         servletOutputStream.close();
     }
 
