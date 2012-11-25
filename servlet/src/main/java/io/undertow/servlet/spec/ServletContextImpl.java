@@ -485,15 +485,15 @@ public class ServletContextImpl implements ServletContext {
             try {
                 final SessionCookieConfig c = getSessionCookieConfig();
                 final SessionManager sessionManager = deploymentInfo.getSessionManager();
-                Session newSession;
-                if (create) {
-                    newSession = sessionManager.getOrCreateSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
-                } else {
-                    newSession = sessionManager.getSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
-                }
-                if (newSession != null) {
+                final Session session = sessionManager.getSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
+                if(session != null) {
+                    httpSession = new HttpSessionImpl(session, this, getDeployment().getApplicationListeners(), exchange, false);
+                    exchange.putAttachment(sessionAttachmentKey, httpSession);
+                } else if(create) {
+                    final Session newSession = sessionManager.createSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
                     httpSession = new HttpSessionImpl(newSession, this, getDeployment().getApplicationListeners(), exchange, true);
                     exchange.putAttachment(sessionAttachmentKey, httpSession);
+                    getDeployment().getApplicationListeners().sessionCreated(httpSession);
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -503,19 +503,8 @@ public class ServletContextImpl implements ServletContext {
     }
 
     public void updateSessionAccessTime(final HttpServerExchange exchange) {
-        HttpSessionImpl httpSession = exchange.getAttachment(sessionAttachmentKey);
-        if (httpSession == null) {
-            try {
-                final SessionCookieConfig c = getSessionCookieConfig();
-                final SessionManager sessionManager = deploymentInfo.getSessionManager();
-                Session newSession = sessionManager.getSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
-                if (newSession != null) {
-                    newSession.updateLastAccessedTime();
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
+        HttpSessionImpl httpSession = getSession(exchange, false);
+        if(httpSession != null) {
             httpSession.getSession().updateLastAccessedTime();
         }
     }

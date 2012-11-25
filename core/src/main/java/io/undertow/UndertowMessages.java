@@ -110,4 +110,6 @@ public interface UndertowMessages {
     @Message(id = 27, value = "Could not find session cookie config in the request")
     IllegalStateException couldNotFindSessionCookieConfig();
 
+    @Message(id = 28, value = "Session %s already exists")
+    IllegalStateException sessionAlreadyExists(final String id);
 }

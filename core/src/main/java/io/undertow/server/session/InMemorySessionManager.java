@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.SecureHashMap;
 import org.xnio.FinishedIoFuture;
 import org.xnio.IoFuture;
@@ -55,18 +54,15 @@ public class InMemorySessionManager implements SessionManager {
     private volatile int defaultSessionTimeout = 30 * 60;
 
     @Override
-    public IoFuture<Session> getOrCreateSession(final HttpServerExchange serverExchange, final SessionCookieConfig config) {
+    public IoFuture<Session> createSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         if (config == null) {
             throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
         }
-        String sessionID = config.findSessionId(serverExchange);
+        String sessionID = config.findSession(serverExchange);
         if (sessionID != null) {
             InMemorySession session = sessions.get(sessionID);
             if (session != null) {
-                ConcreteIoFuture<Session> future = new ConcreteIoFuture<Session>();
-                future.setResult(session.session);
-                config.setSessionCookie(serverExchange, session.session);
-                return future;
+                throw UndertowMessages.MESSAGES.sessionAlreadyExists(sessionID);
             }
         } else {
             sessionID = sessionIdGenerator.createSessionId();
@@ -77,15 +73,15 @@ public class InMemorySessionManager implements SessionManager {
         for (SessionListener listener : listeners) {
             listener.sessionCreated(session, serverExchange);
         }
-        config.setSessionCookie(serverExchange, session);
+        config.attachSession(serverExchange, session);
         im.lastAccessed = System.currentTimeMillis();
         session.bumpTimeout();
         return new FinishedIoFuture<Session>(session);
     }
 
     @Override
-    public IoFuture<Session> getSession(final HttpServerExchange serverExchange, final SessionCookieConfig config) {
-        String sessionId = config.findSessionId(serverExchange);
+    public IoFuture<Session> getSession(final HttpServerExchange serverExchange, final SessionConfig config) {
+        String sessionId = config.findSession(serverExchange);
         if (sessionId == null) {
             return new FinishedIoFuture<Session>(null);
         }
@@ -93,7 +89,7 @@ public class InMemorySessionManager implements SessionManager {
         if (sess == null) {
             return new FinishedIoFuture<Session>(null);
         } else {
-            config.setSessionCookie(serverExchange, sess.session);
+            config.attachSession(serverExchange, sess.session);
             return new FinishedIoFuture<Session>(sess.session);
         }
     }
@@ -124,7 +120,7 @@ public class InMemorySessionManager implements SessionManager {
     private class SessionImpl implements Session {
 
         private final String sessionId;
-        private final SessionCookieConfig sessionCookieConfig;
+        private final SessionConfig sessionCookieConfig;
 
         final XnioExecutor executor;
         final XnioWorker worker;
@@ -143,7 +139,7 @@ public class InMemorySessionManager implements SessionManager {
             }
         };
 
-        private SessionImpl(final String sessionId, final SessionCookieConfig sessionCookieConfig, final XnioExecutor executor, final XnioWorker worker) {
+        private SessionImpl(final String sessionId, final SessionConfig sessionCookieConfig, final XnioExecutor executor, final XnioWorker worker) {
             this.sessionId = sessionId;
             this.sessionCookieConfig = sessionCookieConfig;
             this.executor = executor;
@@ -269,7 +265,7 @@ public class InMemorySessionManager implements SessionManager {
                 listener.sessionDestroyed(sess.session, exchange, false);
             }
             if (exchange != null) {
-                sessionCookieConfig.clearCookie(exchange, this);
+                sessionCookieConfig.clearSession(exchange, this);
             }
             return new FinishedIoFuture<Void>(null);
         }

@@ -67,7 +67,7 @@ public class InMemorySessionTestCase {
                         Session session = exchange.getAttachment(Session.ATTACHMENT_KEY);
                         if(session == null) {
                             final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
-                            session = manager.getOrCreateSession(exchange, exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY)).get();
+                            session = manager.createSession(exchange, exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY)).get();
                             session.setAttribute(COUNT, 0);
                         }
                         Integer count = (Integer)session.getAttribute(COUNT).get();

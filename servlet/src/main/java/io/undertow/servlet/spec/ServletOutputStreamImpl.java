@@ -309,4 +309,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         }
         this.bufferSize = size;
     }
+
+    public boolean isClosed() {
+        return closed;
+    }
 }

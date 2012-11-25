@@ -31,7 +31,7 @@ import io.undertow.util.AttachmentKey;
  *
  * @author Stuart Douglas
  */
-public class SessionCookieConfig {
+public class SessionCookieConfig implements SessionConfig {
 
     public static final AttachmentKey<SessionCookieConfig> ATTACHMENT_KEY = AttachmentKey.create(SessionCookieConfig.class);
 
@@ -59,7 +59,7 @@ public class SessionCookieConfig {
     }
 
 
-    public void setSessionCookie(final HttpServerExchange exchange, final Session session) {
+    public void attachSession(final HttpServerExchange exchange, final Session session) {
         Cookie cookie = new CookieImpl(cookieName, session.getId())
                 .setPath(path)
                 .setDomain(domain)
@@ -74,7 +74,7 @@ public class SessionCookieConfig {
 
     }
 
-    public void clearCookie(final HttpServerExchange exchange, final Session session) {
+    public void clearSession(final HttpServerExchange exchange, final Session session) {
         Cookie cookie = new CookieImpl(cookieName, session.getId())
                 .setPath(path)
                 .setDomain(domain)
@@ -85,7 +85,13 @@ public class SessionCookieConfig {
         CookieImpl.addResponseCookie(exchange, cookie);
     }
 
-    public String findSessionId(final HttpServerExchange exchange) {
+    @Override
+    public String rewriteUrl(final String originalUrl, final Session session) {
+        return originalUrl;
+    }
+
+    @Override
+    public String findSession(final HttpServerExchange exchange) {
         Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
         if (cookies != null) {
             Cookie sessionId = cookies.get(cookieName);
