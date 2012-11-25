@@ -452,6 +452,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         if (responseDone) {
             return;
         }
+        servletContext.updateSessionAccessTime(exchange.getExchange());
         responseDone = true;
         if (writer != null) {
             writer.close();

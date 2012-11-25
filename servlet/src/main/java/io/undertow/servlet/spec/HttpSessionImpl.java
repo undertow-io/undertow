@@ -186,4 +186,8 @@ public class HttpSessionImpl implements HttpSession {
         }
         return newSession;
     }
+
+    public Session getSession() {
+        return session;
+    }
 }

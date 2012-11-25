@@ -491,7 +491,7 @@ public class ServletContextImpl implements ServletContext {
                 } else {
                     newSession = sessionManager.getSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
                 }
-                if(newSession != null ) {
+                if (newSession != null) {
                     httpSession = new HttpSessionImpl(newSession, this, getDeployment().getApplicationListeners(), exchange, true);
                     exchange.putAttachment(sessionAttachmentKey, httpSession);
                 }
@@ -502,7 +502,26 @@ public class ServletContextImpl implements ServletContext {
         return httpSession;
     }
 
+    public void updateSessionAccessTime(final HttpServerExchange exchange) {
+        HttpSessionImpl httpSession = exchange.getAttachment(sessionAttachmentKey);
+        if (httpSession == null) {
+            try {
+                final SessionCookieConfig c = getSessionCookieConfig();
+                final SessionManager sessionManager = deploymentInfo.getSessionManager();
+                Session newSession = sessionManager.getSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
+                if (newSession != null) {
+                    newSession.updateLastAccessedTime();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            httpSession.getSession().updateLastAccessedTime();
+        }
+    }
+
     public Deployment getDeployment() {
         return deployment;
     }
+
 }

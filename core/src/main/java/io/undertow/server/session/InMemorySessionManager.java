@@ -71,7 +71,7 @@ public class InMemorySessionManager implements SessionManager {
         } else {
             sessionID = sessionIdGenerator.createSessionId();
         }
-        final SessionImpl session = new SessionImpl(sessionID, serverExchange.getWriteThread(), serverExchange.getConnection().getWorker());
+        final SessionImpl session = new SessionImpl(sessionID, config, serverExchange.getWriteThread(), serverExchange.getConnection().getWorker());
         InMemorySession im = new InMemorySession(session, defaultSessionTimeout);
         sessions.put(sessionID, im);
         for (SessionListener listener : listeners) {
@@ -124,6 +124,7 @@ public class InMemorySessionManager implements SessionManager {
     private class SessionImpl implements Session {
 
         private final String sessionId;
+        private final SessionCookieConfig sessionCookieConfig;
 
         final XnioExecutor executor;
         final XnioWorker worker;
@@ -142,8 +143,9 @@ public class InMemorySessionManager implements SessionManager {
             }
         };
 
-        private SessionImpl(final String sessionId, final XnioExecutor executor, final XnioWorker worker) {
+        private SessionImpl(final String sessionId, final SessionCookieConfig sessionCookieConfig, final XnioExecutor executor, final XnioWorker worker) {
             this.sessionId = sessionId;
+            this.sessionCookieConfig = sessionCookieConfig;
             this.executor = executor;
             this.worker = worker;
         }
@@ -267,12 +269,7 @@ public class InMemorySessionManager implements SessionManager {
                 listener.sessionDestroyed(sess.session, exchange, false);
             }
             if (exchange != null) {
-                final SessionCookieConfig config = exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
-                if (config != null) {
-                    config.clearCookie(exchange, this);
-                } else {
-                    throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
-                }
+                sessionCookieConfig.clearCookie(exchange, this);
             }
             return new FinishedIoFuture<Void>(null);
         }
@@ -285,7 +282,9 @@ public class InMemorySessionManager implements SessionManager {
         @Override
         public void updateLastAccessedTime() {
             final InMemorySession sess = sessions.get(sessionId);
-            sess.lastAccessed = System.currentTimeMillis();
+            if(sess != null) {
+                sess.lastAccessed = System.currentTimeMillis();
+            }
         }
 
     }
