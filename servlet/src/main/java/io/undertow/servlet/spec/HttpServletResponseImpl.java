@@ -331,20 +331,23 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             return;
         }
         contentType = type;
-        int pos = type.indexOf("charset=");
-        if (pos != -1) {
-            int i = pos + "charset=".length();
-            do {
-                char c = type.charAt(i++);
-                if (c == ' ' || c == '\t' || c == ';') {
-                    break;
+        int split = type.indexOf(";");
+        if (split != -1) {
+            contentType = contentType.substring(0, split);
+            int pos = type.indexOf("charset=");
+            if (pos != -1) {
+                int i = pos + "charset=".length();
+                do {
+                    char c = type.charAt(i++);
+                    if (c == ' ' || c == '\t' || c == ';') {
+                        break;
+                    }
+                } while (i < type.length());
+                if (writer == null && !isCommitted()) {
+                    charsetSet = true;
+                    //we only change the charset if the writer has not been retrieved yet
+                    this.charset = type.substring(pos + "charset=".length(), i);
                 }
-            } while (i < type.length());
-            this.contentType = type.substring(0, pos - 1);
-            if (writer == null && !isCommitted()) {
-                charsetSet = true;
-                //we only change the charset if the writer has not been retrieved yet
-                this.charset = type.substring(pos + "charset=".length(), i);
             }
         }
         exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
@@ -378,7 +381,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     public void closeStreamAndWriter() throws IOException {
         if (writer != null) {
-            if(!servletOutputStream.isClosed()) {
+            if (!servletOutputStream.isClosed()) {
                 writer.flush();
             }
             writer.close();
