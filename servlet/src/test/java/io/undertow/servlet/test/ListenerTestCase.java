@@ -53,7 +53,7 @@ public class ListenerTestCase {
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
         DeploymentInfo builder = new DeploymentInfo()
-                .setClassLoader(SimpleServletServerTestCase.class.getClassLoader())
+                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")

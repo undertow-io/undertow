@@ -18,6 +18,7 @@
 
 package io.undertow.test.utils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -44,5 +45,19 @@ public class HttpClientUtils {
             builder.append(new String(data,0,read));
         }
         return builder.toString();
+    }
+
+    public static byte[] readRawResponse(final HttpResponse response) throws IOException {
+        return readRawResponse(response.getEntity().getContent());
+    }
+
+    public static byte[] readRawResponse(InputStream stream) throws IOException {
+        final ByteArrayOutputStream b = new ByteArrayOutputStream();
+        byte[] data = new byte[100];
+        int read;
+        while ((read = stream.read(data)) != -1) {
+            b.write(data, 0, read);
+        }
+        return b.toByteArray();
     }
 }

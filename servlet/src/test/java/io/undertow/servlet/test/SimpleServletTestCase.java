@@ -44,7 +44,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class SimpleServletServerTestCase {
+public class SimpleServletTestCase {
 
 
     public static final String HELLO_WORLD = "Hello World";
@@ -60,7 +60,7 @@ public class SimpleServletServerTestCase {
                 .addMapping("/aa");
 
         DeploymentInfo builder = new DeploymentInfo()
-                .setClassLoader(SimpleServletServerTestCase.class.getClassLoader())
+                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")

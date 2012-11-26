@@ -1,22 +1,4 @@
-/*
- * JBoss, Home of Professional Open Source.
- * Copyright 2012 Red Hat, Inc., and individual contributors
- * as indicated by the @author tags.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package io.undertow.servlet.test.async;
+package io.undertow.servlet.test.charset;
 
 import java.io.IOException;
 
@@ -28,7 +10,6 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
-import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
@@ -45,9 +26,8 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class SimpleAsyncTestCase {
+public class CharacterEncodingTestCase {
 
-    public static final String HELLO_WORLD = "Hello World";
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -55,16 +35,8 @@ public class SimpleAsyncTestCase {
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
-        ServletInfo m = new ServletInfo("messageServlet", MessageServlet.class)
-                .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
-                .setAsyncSupported(true)
-                .addMapping("/message");
-
-
-        ServletInfo a = new ServletInfo("asyncServlet", AsyncServlet.class)
-                .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
-                .setAsyncSupported(true)
-                .addMapping("/async");
+        ServletInfo s = new ServletInfo("servlet", CharsetServlet.class)
+                .addMapping("/");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -72,7 +44,7 @@ public class SimpleAsyncTestCase {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(m, a);
+                .addServlet(s);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -81,18 +53,34 @@ public class SimpleAsyncTestCase {
         DefaultServer.setRootHandler(root);
     }
 
+    public static byte[] toByteArray(int[] source) {
+        byte[] ret = new byte[source.length];
+        for (int i = 0; i < source.length; ++i) {
+            ret[i] = (byte) (0xff & source[i]);
+        }
+        return ret;
+    }
+
+    private static final byte[] UTF16 = toByteArray(new int[]{0x00, 0x41, 0x00, 0xA9, 0x00, 0xE9, 0x03, 0x01, 0x09, 0x41, 0xD8, 0x35, 0xDD, 0x0A});
+    private static final byte[] UTF8 = toByteArray(new int[]{0x41, 0xC2, 0xA9, 0xC3, 0xA9, 0xCC, 0x81, 0xE0, 0xA5, 0x81, 0xF0, 0x9D, 0x94, 0x8A});
+
     @Test
-    public void testSimpleHttpServlet() throws IOException {
+    public void testCharacterEncoding() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/async");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext?charset=UTF-16BE");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
+            byte[] response = HttpClientUtils.readRawResponse(result);
+            Assert.assertArrayEquals(UTF16, response);
+
+            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext?charset=UTF-8");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readRawResponse(result);
+            Assert.assertArrayEquals(UTF8, response);
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
-
 }
