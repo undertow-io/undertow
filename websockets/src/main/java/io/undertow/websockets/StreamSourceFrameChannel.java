@@ -24,6 +24,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 
+import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListener.SimpleSetter;
 import org.xnio.ChannelListeners;
