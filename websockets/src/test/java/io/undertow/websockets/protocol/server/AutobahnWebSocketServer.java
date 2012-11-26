@@ -26,19 +26,18 @@ import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.handler.WebSocketProtocolHandshakeHandler;
 import org.xnio.BufferAllocator;
-import org.xnio.Buffers;
 import org.xnio.ByteBufferSlicePool;
+import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
+import org.xnio.Pooled;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -107,139 +106,74 @@ public class AutobahnWebSocketServer {
                     return;
                 }
 
-                long size = ws.getPayloadSize();
-                if (size == -1) {
-                    // Fix this
-                    size = 128 * 1024;
-                }
-
-                final ByteBuffer buffer;
-                if (size == 0) {
-                    buffer = Buffers.EMPTY_BYTE_BUFFER;
+                final WebSocketFrameType type;
+                if (ws.getType() == WebSocketFrameType.PING) {
+                    // if a ping is send the autobahn testsuite expects a PONG when echo back
+                    type = WebSocketFrameType.PONG;
                 } else {
-                    buffer = ByteBuffer.allocate((int) size);
+                    type = ws.getType();
                 }
-                for (;;) {
-                    int r = ws.read(buffer);
-                    if (r == 0) {
-                        ws.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
+                long size = ws.getPayloadSize();
+
+                final StreamSinkFrameChannel sink = channel.send(type, size);
+                sink.setFinalFragment(ws.isFinalFragment());
+                sink.setRsv(ws.getRsv());
+                ChannelListeners.initiateTransfer(Long.MAX_VALUE, ws, sink, new ChannelListener<StreamSourceFrameChannel>() {
                             @Override
-                            public void handleEvent(StreamSourceChannel ch) {
-                                try {
-                                    for (;;) {
-                                        int r = ch.read(buffer);
-                                        if (r == 0) {
-                                            return;
-                                        } else if (r == -1) {
-                                            break;
+                            public void handleEvent(StreamSourceFrameChannel streamSourceFrameChannel) {
+                                IoUtils.safeClose(streamSourceFrameChannel);
+                            }
+                        }, new ChannelListener<StreamSinkFrameChannel>() {
+                    @Override
+                    public void handleEvent(StreamSinkFrameChannel streamSinkFrameChannel) {
+                        try {
+                            streamSinkFrameChannel.shutdownWrites();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            IoUtils.safeClose(streamSinkFrameChannel, channel);
+                            return;
+                        }
+
+                        streamSinkFrameChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
+                                new ChannelListener<StreamSinkFrameChannel>() {
+                                    @Override
+                                    public void handleEvent(StreamSinkFrameChannel streamSinkFrameChannel) {
+                                        streamSinkFrameChannel.getWriteSetter().set(null);
+                                        IoUtils.safeClose(streamSinkFrameChannel);
+                                        if (type == WebSocketFrameType.CLOSE) {
+                                            IoUtils.safeClose(channel);
                                         }
                                     }
-                                    write(channel, (StreamSourceFrameChannel) ch, buffer);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    IoUtils.safeClose(ch);
-                                    IoUtils.safeClose(channel);
-                                }
-
-                            }
-                        });
-                        return;
-                    } else if (r == -1) {
-                        break;
+                                }, new ChannelExceptionHandler<StreamSinkFrameChannel>() {
+                                    @Override
+                                    public void handleException(StreamSinkFrameChannel o, IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }));
                     }
-                }
+                }, new ChannelExceptionHandler<StreamSourceFrameChannel>() {
+                            @Override
+                            public void handleException(StreamSourceFrameChannel streamSourceFrameChannel, IOException e) {
+                                e.printStackTrace();
+                                IoUtils.safeClose(streamSourceFrameChannel, channel);
+                            }
+                        }, new ChannelExceptionHandler<StreamSinkFrameChannel>() {
+                            @Override
+                            public void handleException(StreamSinkFrameChannel streamSinkFrameChannel, IOException e) {
+                                e.printStackTrace();
+
+                                IoUtils.safeClose(streamSinkFrameChannel, channel);
+                            }
+                        }, channel.getBufferPool());
                 if (ws.getType() == WebSocketFrameType.PONG) {
                     IoUtils.safeClose(ws);
                     return;
                 }
-                write(channel, ws, buffer);
             } catch (IOException e) {
                 e.printStackTrace();
                 IoUtils.safeClose(channel);
             }
         }
-    }
-
-    private void write(final WebSocketChannel channel, final StreamSourceFrameChannel source, final ByteBuffer buffer) throws IOException {
-        buffer.flip();
-        final WebSocketFrameType type;
-        if (source.getType() == WebSocketFrameType.PING) {
-            // if a ping is send the autobahn testsuite expects a PONG when echo back
-            type = WebSocketFrameType.PONG;
-        } else {
-            type = source.getType();
-        }
-        StreamSinkFrameChannel sink = channel.send(type, buffer.remaining());
-        sink.setFinalFragment(source.isFinalFragment());
-        sink.setRsv(source.getRsv());
-        source.close();
-
-        while(buffer.hasRemaining()) {
-            if (sink.write(buffer) == 0) {
-                sink.getWriteSetter().set(new ChannelListener<StreamSinkFrameChannel>() {
-                    @Override
-                    public void handleEvent(StreamSinkFrameChannel ch) {
-                         try {
-                             while(buffer.hasRemaining()) {
-                                 if (ch.write(buffer) == 0) {
-                                     return;
-                                 }
-                             }
-                             ch.shutdownWrites();
-                             if (!ch.flush()) {
-                                 ch.getWriteSetter().set(ChannelListeners.flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
-                                     @Override
-                                     public void handleEvent(final StreamSinkChannel ch) {
-                                         ch.getWriteSetter().set(null);
-
-                                         IoUtils.safeClose(ch, source);
-                                         if (type == WebSocketFrameType.CLOSE)  {
-                                             IoUtils.safeClose(channel);
-                                         }
-                                     }
-                                 }, ChannelListeners.closingChannelExceptionHandler()));
-                                 ch.resumeWrites();
-                             } else {
-                                 ch.getWriteSetter().set(null);
-                                 IoUtils.safeClose(ch, source);
-
-                                 if (type == WebSocketFrameType.CLOSE)  {
-                                     IoUtils.safeClose(channel);
-                                 }
-
-                             }
-                         } catch (IOException e) {
-                             e.printStackTrace();
-                             ch.getWriteSetter().set(null);
-                             IoUtils.safeClose(ch, channel, source);
-
-                         }
-                    }
-                });
-                sink.resumeWrites();
-                return;
-            }
-        }
-        sink.shutdownWrites();
-        if (!sink.flush()) {
-            sink.getWriteSetter().set(ChannelListeners.flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
-                @Override
-                public void handleEvent(final StreamSinkChannel ch) {
-                    ch.getWriteSetter().set(null);
-                    IoUtils.safeClose(ch, source);
-                    if (type == WebSocketFrameType.CLOSE)  {
-                        IoUtils.safeClose(channel);
-                    }
-                }
-            }, ChannelListeners.closingChannelExceptionHandler()));
-            sink.resumeWrites();
-        } else {
-            IoUtils.safeClose(sink, source);
-            if (type == WebSocketFrameType.CLOSE)  {
-                IoUtils.safeClose(channel);
-            }
-        }
-
     }
 
     /**
