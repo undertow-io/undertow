@@ -215,6 +215,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     @Override
     public void close() throws IOException {
+        if (!isComplete() && wsChannel.isOpen()) {
+            throw new IOException("Closed before all bytes where read");
+        }
         closed = true;
         ChannelListeners.invokeChannelListener(this, closeSetter.get());
     }
