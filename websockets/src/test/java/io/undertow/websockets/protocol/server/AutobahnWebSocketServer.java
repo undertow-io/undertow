@@ -33,15 +33,14 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.Pooled;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -107,12 +106,29 @@ public class AutobahnWebSocketServer {
                 }
 
                 final WebSocketFrameType type;
-                if (ws.getType() == WebSocketFrameType.PING) {
-                    // if a ping is send the autobahn testsuite expects a PONG when echo back
-                    type = WebSocketFrameType.PONG;
-                } else {
-                    type = ws.getType();
+                switch(ws.getType()) {
+                    case PONG:
+                        // suspend receives until we have received the whole frame
+                        channel.suspendReceives();
+                        ws.getCloseSetter().set(new ChannelListener<StreamSourceChannel>() {
+                            @Override
+                            public void handleEvent(StreamSourceChannel o) {
+                                // discard complete receive next frame
+                                channel.resumeReceives();
+                            }
+                        });
+                        // pong frames must be discarded
+                        ws.discard();
+                        return;
+                    case PING:
+                        // if a ping is send the autobahn testsuite expects a PONG when echo back
+                        type = WebSocketFrameType.PONG;
+                        break;
+                    default:
+                        type = ws.getType();
+                        break;
                 }
+
                 long size = ws.getPayloadSize();
 
                 final StreamSinkFrameChannel sink = channel.send(type, size);
@@ -165,10 +181,6 @@ public class AutobahnWebSocketServer {
                                 IoUtils.safeClose(streamSinkFrameChannel, channel);
                             }
                         }, channel.getBufferPool());
-                if (ws.getType() == WebSocketFrameType.PONG) {
-                    IoUtils.safeClose(ws);
-                    return;
-                }
             } catch (IOException e) {
                 e.printStackTrace();
                 IoUtils.safeClose(channel);
