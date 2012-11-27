@@ -227,7 +227,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         try {
             PartialFrame partialFrame = this.partialFrame;
             if (partialFrame == null) {
-                partialFrame = receiveFrame(new StreamSourceChannelControl());
+                partialFrame = this.partialFrame = receiveFrame(new StreamSourceChannelControl());
             }
 
             int res;
