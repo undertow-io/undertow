@@ -233,7 +233,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     if (pathServlets.containsKey("/*")) {
                         throw UndertowServletMessages.MESSAGES.twoServletsWithSameMapping(path);
                     }
-                    pathServlets.put("/*", handler);
                     defaultServlet = handler;
                     defaultHandler = servletChain(handler, threadSetupAction, listeners, managedServlet);
                 } else if (!path.startsWith("*.")) {
@@ -250,12 +249,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
         }
 
-        if (!pathServlets.containsKey("/*")) {
+        if (defaultServlet == null) {
             final DefaultServletConfig config = deploymentInfo.getDefaultServletConfig() == null ? new DefaultServletConfig() : deploymentInfo.getDefaultServletConfig();
             DefaultServlet defaultInstance = new DefaultServlet(deployment, config, deploymentInfo.getWelcomePages());
             final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("io.undertow.DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>(defaultInstance)), servletContext);
             lifecycles.add(managedDefaultServlet);
-            pathServlets.put("/*", new ServletHandler(managedDefaultServlet));
             pathMatches.add("/*");
             defaultServlet = new ServletHandler(managedDefaultServlet);
             defaultHandler = new ServletInitialHandler(new RequestListenerHandler(listeners, defaultServlet), defaultInstance, threadSetupAction, servletContext, managedDefaultServlet);
@@ -319,9 +317,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 builder.addPrefixMatch(prefix, initialHandler);
 
                 for (Map.Entry<String, Map<DispatcherType, List<ManagedFilter>>> entry : extension.entrySet()) {
-                    ServletHandler pathServlet = extensionServlets.get(entry.getKey());
+                    ServletHandler pathServlet = targetServlet;
                     if (pathServlet == null) {
-                        pathServlet = targetServlet;
+                        pathServlet = extensionServlets.get(entry.getKey());
                     }
                     if(pathServlet == null) {
                         pathServlet = defaultServlet;
