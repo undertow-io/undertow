@@ -133,12 +133,6 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             }
 
         } finally {
-            if (out != null) {
-                IoUtils.safeClose(out);
-            }
-            if(writer != null) {
-                IoUtils.safeClose(writer);
-            }
             IoUtils.safeClose(in);
         }
     }
