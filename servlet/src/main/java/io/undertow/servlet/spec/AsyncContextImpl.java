@@ -41,6 +41,7 @@ import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
+import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.util.AttachmentKey;
@@ -211,7 +212,7 @@ public class AsyncContextImpl implements AsyncContext {
 
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         ServletPathMatch info = deployment.getServletPaths().getServletHandlerByPath(newServletPath);
-        requestImpl.getExchange().getExchange().putAttachment(ServletPathMatch.ATTACHMENT_KEY, info);
+        requestImpl.getExchange().getExchange().putAttachment(ServletAttachments.SERVLET_PATH_MATCH, info);
         handler = info.getHandler();
 
         dispatchAsyncRequest(requestImpl, handler, exchange);

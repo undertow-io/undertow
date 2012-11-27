@@ -164,7 +164,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             if (handler != null && handler.getHandler() != null) {
                 exchange.setRequestPath(exchange.getResolvedPath() + handler.getMatched());
                 exchange.setRequestURI(exchange.getResolvedPath() + handler.getMatched());
-                exchange.putAttachment(ServletPathMatch.ATTACHMENT_KEY, handler);
+                exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, handler);
                 handler.getHandler().handleRequest(exchange, completionHandler);
             } else {
                 exchange.setResponseCode(404);
@@ -188,7 +188,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
                 BlockingHttpServerExchange exchange = servletRequestImpl.getExchange();
                 exchange.getExchange().setRequestPath(exchange.getExchange().getResolvedPath() + handler.getMatched());
                 exchange.getExchange().setRequestURI(exchange.getExchange().getResolvedPath() + handler.getMatched());
-                exchange.getExchange().putAttachment(ServletPathMatch.ATTACHMENT_KEY, handler);
+                exchange.getExchange().putAttachment(ServletAttachments.SERVLET_PATH_MATCH, handler);
                 try {
                     handler.getHandler().handleRequest(exchange);
                 } catch (ServletException e) {

@@ -36,7 +36,6 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.WorkerDispatcher;
 
 /**
@@ -49,8 +48,6 @@ import io.undertow.util.WorkerDispatcher;
  * @author Stuart Douglas
  */
 public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
-
-    public static final AttachmentKey<ServletInfo> CURRENT_SERVLET = AttachmentKey.create(ServletInfo.class);
 
     private final BlockingHttpHandler next;
     private final HttpHandler asyncPath;
@@ -109,9 +106,9 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     @Override
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        ServletInfo old = exchange.getExchange().getAttachment(CURRENT_SERVLET);
+        ServletInfo old = exchange.getExchange().getAttachment(ServletAttachments.CURRENT_SERVLET);
         try {
-            exchange.getExchange().putAttachment(CURRENT_SERVLET, managedServlet.getServletInfo());
+            exchange.getExchange().putAttachment(ServletAttachments.CURRENT_SERVLET, managedServlet.getServletInfo());
             DispatcherType dispatcher = exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
             boolean first = dispatcher == null || dispatcher == DispatcherType.ASYNC;
             if (first) {
@@ -120,7 +117,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 handleDispatchedRequest(exchange);
             }
         } finally {
-            exchange.getExchange().putAttachment(CURRENT_SERVLET, old);
+            exchange.getExchange().putAttachment(ServletAttachments.CURRENT_SERVLET, old);
         }
     }
 

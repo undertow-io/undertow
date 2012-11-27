@@ -40,7 +40,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.ServletPrintWriter;
 import io.undertow.servlet.core.ServletPrintWriterDelegate;
-import io.undertow.servlet.handlers.ServletInitialHandler;
+import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.CanonicalPathUtils;
@@ -127,7 +127,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
         if (location != null) {
             RequestDispatcherImpl requestDispatcher = new RequestDispatcherImpl(location, servletContext);
             try {
-                requestDispatcher.error(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(ServletInitialHandler.CURRENT_SERVLET).getName(), msg);
+                requestDispatcher.error(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(ServletAttachments.CURRENT_SERVLET).getName(), msg);
             } catch (ServletException e) {
                 throw new RuntimeException(e);
             }

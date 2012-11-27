@@ -33,6 +33,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 
@@ -105,7 +106,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             requestImpl.getExchange().getExchange().setQueryString(newQueryString);
             requestImpl.getExchange().getExchange().setRequestPath(newRequestUri);
             requestImpl.getExchange().getExchange().setRequestURI(newRequestUri);
-            requestImpl.getExchange().getExchange().putAttachment(ServletPathMatch.ATTACHMENT_KEY, pathMatch);
+            requestImpl.getExchange().getExchange().putAttachment(ServletAttachments.SERVLET_PATH_MATCH, pathMatch);
             requestImpl.setServletContext(servletContext);
             responseImpl.setServletContext(servletContext);
         }
@@ -312,7 +313,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         requestImpl.getExchange().getExchange().setQueryString(newQueryString);
         requestImpl.getExchange().getExchange().setRequestPath(newRequestUri);
         requestImpl.getExchange().getExchange().setRequestURI(newRequestUri);
-        requestImpl.getExchange().getExchange().putAttachment(ServletPathMatch.ATTACHMENT_KEY, pathMatch);
+        requestImpl.getExchange().getExchange().putAttachment(ServletAttachments.SERVLET_PATH_MATCH, pathMatch);
         requestImpl.setServletContext(servletContext);
         responseImpl.setServletContext(servletContext);
 

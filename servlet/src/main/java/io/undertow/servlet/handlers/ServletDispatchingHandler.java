@@ -24,35 +24,18 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 
 /**
- * Handler that resolves servlet paths and attaches them to the exchange
+ * Handler that dispatches to the resolved servlet.
  *
  * @author Stuart Douglas
  */
-public class ServletMatchingHandler implements HttpHandler {
+public class ServletDispatchingHandler implements HttpHandler {
 
-    private volatile ServletPathMatches paths;
-    private final HttpHandler next;
-
-    public ServletMatchingHandler(final ServletPathMatches paths, final HttpHandler next) {
-        this.paths = paths;
-        this.next = next;
-    }
+    public static final ServletDispatchingHandler INSTANCE = new ServletDispatchingHandler();
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        final String path = exchange.getRelativePath();
-        ServletPathMatch info = paths.getServletHandlerByPath(path);
-        exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, info);
-        exchange.putAttachment(ServletAttachments.CURRENT_SERVLET, info.getHandler().getManagedServlet().getServletInfo());
-        HttpHandlers.executeHandler(next, exchange, completionHandler);
-    }
-
-    public ServletPathMatches getPaths() {
-        return paths;
-    }
-
-    public void setPaths(final ServletPathMatches paths) {
-        this.paths = paths;
+        ServletPathMatch info= exchange.getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
+        HttpHandlers.executeHandler(info.getHandler(), exchange, completionHandler);
     }
 
 }

@@ -25,8 +25,6 @@ import io.undertow.util.AttachmentKey;
  */
 public class ServletPathMatch {
 
-    public static final AttachmentKey<ServletPathMatch> ATTACHMENT_KEY = AttachmentKey.create(ServletPathMatch.class);
-
     private final ServletInitialHandler handler;
     private final String matched;
     private final String remaining;

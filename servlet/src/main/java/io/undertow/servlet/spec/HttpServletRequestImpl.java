@@ -65,6 +65,7 @@ import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
@@ -215,7 +216,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getPathInfo() {
-        ServletPathMatch match = exchange.getExchange().getAttachment(ServletPathMatch.ATTACHMENT_KEY);
+        ServletPathMatch match = exchange.getExchange().getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
         if (match != null) {
             return match.getRemaining();
         }
@@ -269,7 +270,7 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getServletPath() {
-        ServletPathMatch match = exchange.getExchange().getAttachment(ServletPathMatch.ATTACHMENT_KEY);
+        ServletPathMatch match = exchange.getExchange().getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
         if (match != null) {
             return match.getMatched();
         }

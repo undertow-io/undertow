@@ -37,6 +37,10 @@ import javax.servlet.ServletException;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.AttachmentHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
+import io.undertow.server.handlers.security.AuthenticationMechanism;
+import io.undertow.server.handlers.security.AuthenticationMechanismsHandler;
+import io.undertow.server.handlers.security.BasicAuthenticationMechanism;
+import io.undertow.server.handlers.security.SecurityInitialHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
@@ -56,6 +60,7 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.handlers.DefaultServlet;
 import io.undertow.servlet.handlers.FilterHandler;
 import io.undertow.servlet.handlers.RequestListenerHandler;
+import io.undertow.servlet.handlers.ServletDispatchingHandler;
 import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletMatchingHandler;
@@ -134,8 +139,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             ServletPathMatches matches = setupServletChains(servletContext, threadSetupAction, listeners);
             deployment.setServletPaths(matches);
-            final ServletMatchingHandler servletMatchingHandler = new ServletMatchingHandler(matches);
 
+            final HttpHandler wrappedHandlers = setupSecurityHandlers(ServletDispatchingHandler.INSTANCE);
+            final ServletMatchingHandler servletMatchingHandler = new ServletMatchingHandler(matches, wrappedHandlers);
             deployment.setServletHandler(servletMatchingHandler);
         } catch (Exception e) {
             throw new RuntimeException(e);
