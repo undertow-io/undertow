@@ -67,7 +67,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private final AtomicBoolean broken = new AtomicBoolean(false);
 
     private boolean receivesSuspended;
-
+    private boolean closeFrameReceived;
     /**
      * Create a new {@link WebSocketChannel}
      * 8
@@ -225,6 +225,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         boolean free = true;
 
         try {
+            if (closeFrameReceived) {
+                return null;
+            }
             PartialFrame partialFrame = this.partialFrame;
             if (partialFrame == null) {
                 partialFrame = this.partialFrame = receiveFrame(new StreamSourceChannelControl());
@@ -280,8 +283,11 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
             pushBackStreamChannel.suspendReads();
             this.partialFrame = null;
-            return receiver = partialFrame.getChannel();
-
+            receiver = partialFrame.getChannel();
+            if (receiver.getType() == WebSocketFrameType.CLOSE) {
+                closeFrameReceived = true;
+            }
+            return receiver;
         } finally {
             if (free) {
                 pooled.free();

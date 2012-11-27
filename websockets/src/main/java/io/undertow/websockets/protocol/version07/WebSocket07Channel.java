@@ -64,7 +64,6 @@ public class WebSocket07Channel extends WebSocketChannel {
     }
 
     private int fragmentedFramesCount;
-    private boolean closeFrameReceived;
 
     private static final byte FRAME_OPCODE = 127;
 
@@ -122,11 +121,6 @@ public class WebSocket07Channel extends WebSocketChannel {
             public void handle(final ByteBuffer buffer, final PushBackStreamChannel channel) throws WebSocketException {
                 if (!buffer.hasRemaining()) {
                     return;
-                }
-                if (closeFrameReceived) {
-                    buffer.clear();
-                    // suspend reads as we are not interested in anything that comes after the close
-                    channel.suspendReads();
                 }
                 while (state != State.DONE) {
                     byte b;
@@ -289,7 +283,6 @@ public class WebSocket07Channel extends WebSocketChannel {
                     this.channel = new WebSocket07PongFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameMasked, maskingKey);
                     return;
                 } else if (frameOpcode == OPCODE_CLOSE) {
-                    closeFrameReceived = true;
                     this.channel = new WebSocket07CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameMasked, maskingKey);
                     return;
                 }
