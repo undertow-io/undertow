@@ -10,19 +10,23 @@ import io.undertow.servlet.spec.ServletOutputStreamImpl;
  * Real servlet print writer functionality, that is not limited by extending
  * {@link java.io.PrintWriter}
  *
+ * TODO: we really need to fix this, atm we need to flush every write so that we know when the response is complete
+ * we can't just count the bytes because we don't know how they are going to be encoded
+ *
  * @author Stuart Douglas
  */
 public class ServletPrintWriter {
 
     private final PrintStream printStream;
+    private final Integer contentLength;
 
-    public ServletPrintWriter(final ServletOutputStreamImpl printStream, final String charset) throws UnsupportedEncodingException {
+    public ServletPrintWriter(final ServletOutputStreamImpl printStream, final String charset, final Integer contentLength) throws UnsupportedEncodingException {
+        this.contentLength = contentLength;
         this.printStream = new PrintStream(printStream, false, charset);
     }
 
     public void flush() {
         printStream.flush();
-
     }
 
     public void close() {

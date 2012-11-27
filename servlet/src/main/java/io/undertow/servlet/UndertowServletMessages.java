@@ -130,4 +130,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10028, value = "Async processing already started")
     IllegalStateException asyncAlreadyStarted();
+
+    @Message(id = 10029, value = "Stream is closed")
+    IOException streamIsClosed();
 }

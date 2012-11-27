@@ -37,18 +37,20 @@ import org.xnio.channels.PushBackStreamChannel;
 public final class HttpOpenListener implements ChannelListener<ConnectedStreamChannel> {
 
     private final Pool<ByteBuffer> bufferPool;
+    private final int bufferSize;
 
     private volatile HttpHandler rootHandler;
 
     private volatile OptionMap undertowOptions;
 
-    public HttpOpenListener(final Pool<ByteBuffer> pool) {
-        this(pool, OptionMap.EMPTY);
+    public HttpOpenListener(final Pool<ByteBuffer> pool, final int bufferSize) {
+        this(pool, OptionMap.EMPTY, bufferSize);
     }
 
-    public HttpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
+    public HttpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, final int bufferSize) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
+        this.bufferSize = bufferSize;
     }
 
     public void handleEvent(final ConnectedStreamChannel channel) {
@@ -56,7 +58,7 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(channel);
-        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions);
+        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         HttpReadListener readListener = new HttpReadListener(channel, pushBackStreamChannel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);

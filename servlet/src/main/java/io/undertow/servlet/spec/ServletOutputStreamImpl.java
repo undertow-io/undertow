@@ -47,18 +47,21 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     private Integer bufferSize;
     private boolean writeStarted;
     private StreamSinkChannel channel;
+    private int written;
+    private final Integer contentLength;
 
     /**
      * Construct a new instance.  No write timeout is configured.
      *
      * @param channelFactory the channel to wrap
      */
-    public ServletOutputStreamImpl(ChannelFactory<StreamSinkChannel> channelFactory, final HttpServletResponseImpl servletResponse) {
+    public ServletOutputStreamImpl(ChannelFactory<StreamSinkChannel> channelFactory, Integer contentLength, final HttpServletResponseImpl servletResponse) {
         if (channelFactory == null) {
             throw new IllegalArgumentException("Null ChannelFactory");
         }
         this.channelFactory = channelFactory;
         this.servletResponse = servletResponse;
+        this.contentLength = contentLength;
     }
 
     /**
@@ -66,17 +69,14 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      *
      * @param channelFactory the channel to wrap
      */
-    public ServletOutputStreamImpl(ChannelFactory<StreamSinkChannel> channelFactory, final HttpServletResponseImpl servletResponse, int bufferSize) {
+    public ServletOutputStreamImpl(ChannelFactory<StreamSinkChannel> channelFactory, Integer contentLength, final HttpServletResponseImpl servletResponse, int bufferSize) {
         if (channelFactory == null) {
             throw new IllegalArgumentException("Null ChannelFactory");
         }
         this.channelFactory = channelFactory;
         this.servletResponse = servletResponse;
         this.bufferSize = bufferSize;
-    }
-
-    private static IOException closed() {
-        return new IOException("The output stream is closed");
+        this.contentLength = contentLength;
     }
 
     /**
@@ -100,7 +100,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         if (len < 1) {
             return;
         }
-        if (closed) throw closed();
+        if (closed) {
+            throw UndertowServletMessages.MESSAGES.streamIsClosed();
+        }
         int written = 0;
         ByteBuffer buffer = buffer();
         while (written < len) {
@@ -109,6 +111,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                 if (buffer.remaining() == 0) {
                     writeBuffer();
                 }
+                updateWritten(len);
                 return;
             } else {
                 int remaining = buffer.remaining();
@@ -117,6 +120,15 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                 written += remaining;
             }
         }
+        updateWritten(len);
+    }
+
+    private void updateWritten(final int len) throws IOException {
+        this.written += len;
+        if (contentLength != null && this.written >= contentLength) {
+            flush();
+            close();
+        }
     }
 
     /**
@@ -124,7 +136,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      */
     public void flush() throws IOException {
         if (closed) {
-            throw closed();
+            throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
         if (buffer != null && buffer.position() != 0) {
             writeBuffer();
@@ -210,8 +222,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                 int res = 0;
                 do {
                     res = channel.write(buffer);
-                    if(!buffer.hasRemaining()) {
-                        if(pooledBuffer != null) {
+                    if (!buffer.hasRemaining()) {
+                        if (pooledBuffer != null) {
                             pooledBuffer.free();
                         }
                         HttpHandlers.flushAndCompleteRequest(channel, handler);
@@ -219,8 +231,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                     }
                 } while (res > 0);
 
-                if(res == 0) {
-                    channel.getWriteSetter().set( new ChannelListener<StreamSinkChannel>() {
+                if (res == 0) {
+                    channel.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
                         public void handleEvent(final StreamSinkChannel channel) {
                             int result;
                             boolean ok = false;
@@ -234,8 +246,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                                     handler.handleComplete();
                                     return;
                                 } finally {
-                                    if (! ok) {
-                                        if(pooledBuffer != null) {
+                                    if (!ok) {
+                                        if (pooledBuffer != null) {
                                             pooledBuffer.free();
                                         }
                                     }
@@ -243,13 +255,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                                 if (result == 0) {
                                     return;
                                 }
-                                if(result == -1) {
+                                if (result == -1) {
                                     channel.suspendWrites();
                                     IoUtils.safeClose(channel);
                                     handler.handleComplete();
                                 }
                             } while (buffer.hasRemaining());
-                            if(pooledBuffer != null) {
+                            if (pooledBuffer != null) {
                                 pooledBuffer.free();
                             }
                             HttpHandlers.flushAndCompleteRequest(channel, handler);
@@ -257,7 +269,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
                     });
                     channel.resumeWrites();
-                } else if(res == -1) {
+                } else if (res == -1) {
                     IoUtils.safeClose(channel);
                     handler.handleComplete();
                 } else {

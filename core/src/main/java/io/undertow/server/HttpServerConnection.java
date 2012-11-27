@@ -46,17 +46,19 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     private final HttpHandler rootHandler;
     private final int maxConcurrentRequests;
     private final OptionMap undertowOptions;
+    private final int bufferSize;
 
     @SuppressWarnings("unused")
     private volatile int runningRequestCount = 1;
 
     private static final AtomicIntegerFieldUpdater<HttpServerConnection> runningRequestCountUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpServerConnection.class, "runningRequestCount");
 
-    HttpServerConnection(ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions) {
+    HttpServerConnection(ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         this.channel = channel;
         this.bufferPool = bufferPool;
         this.rootHandler = rootHandler;
         this.undertowOptions = undertowOptions;
+        this.bufferSize = bufferSize;
         this.maxConcurrentRequests = undertowOptions.get(UndertowOptions.MAX_REQUESTS_PER_CONNECTION, 1);
         closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
     }
@@ -167,5 +169,13 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
 
     public OptionMap getUndertowOptions() {
         return undertowOptions;
+    }
+
+    /**
+     *
+     * @return The size of the buffers allocated by the buffer pool
+     */
+    public int getBufferSize() {
+        return bufferSize;
     }
 }

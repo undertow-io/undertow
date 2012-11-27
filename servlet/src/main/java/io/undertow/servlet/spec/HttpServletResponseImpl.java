@@ -62,6 +62,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     private ResponseState responseState = ResponseState.NONE;
     private PrintWriter writer;
     private Integer bufferSize;
+    private Integer contentLength;
     private boolean insideInclude = false;
     private boolean charsetSet = false;
     private String contentType;
@@ -289,7 +290,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             }
             responseState = ResponseState.WRITER;
             createOutputStream();
-            final ServletPrintWriter servletPrintWriter = new ServletPrintWriter(servletOutputStream, getCharacterEncoding());
+            final ServletPrintWriter servletPrintWriter = new ServletPrintWriter(servletOutputStream, getCharacterEncoding(), contentLength);
             writer = ServletPrintWriterDelegate.newInstance(servletPrintWriter);
         }
         return writer;
@@ -298,9 +299,9 @@ public class HttpServletResponseImpl implements HttpServletResponse {
     private void createOutputStream() {
         if (servletOutputStream == null) {
             if (bufferSize == null) {
-                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this);
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), contentLength, this);
             } else {
-                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), this, bufferSize);
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), contentLength, this, bufferSize);
             }
         }
     }
@@ -323,6 +324,7 @@ public class HttpServletResponseImpl implements HttpServletResponse {
             return;
         }
         exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
+        this.contentLength = len;
     }
 
     @Override
@@ -363,7 +365,9 @@ public class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public int getBufferSize() {
-        //todo: fix this
+        if(bufferSize == null){
+            return exchange.getExchange().getConnection().getBufferSize();
+        }
         return bufferSize;
     }
 
