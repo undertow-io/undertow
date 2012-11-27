@@ -71,7 +71,7 @@ public final class UTF8Checker {
         state = STATES[state + type];
 
         if (state == UTF8_REJECT) {
-            WebSocketMessages.MESSAGES.invalidTextFrameEncoding();
+            throw WebSocketMessages.MESSAGES.invalidTextFrameEncoding();
         }
     }
 
