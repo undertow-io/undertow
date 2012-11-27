@@ -17,85 +17,24 @@
  */
 package io.undertow.websockets.protocol.version07;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.protocol.WebSocketFixedPayloadMaskedFrameSourceChannel;
 import io.undertow.websockets.utf8.UTF8Checker;
-import io.undertow.websockets.utf8.UTF8FileChannel;
-import io.undertow.websockets.utf8.UTF8StreamSinkChannel;
-import org.xnio.channels.StreamSinkChannel;
+import io.undertow.websockets.utf8.UTF8FixedPayloadMaskedFrameSourceChannel;
+
 import org.xnio.channels.StreamSourceChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07TextFrameSourceChannel extends WebSocketFixedPayloadMaskedFrameSourceChannel {
-    private final UTF8Checker checker;
+public class WebSocket07TextFrameSourceChannel extends UTF8FixedPayloadMaskedFrameSourceChannel {
 
     public WebSocket07TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final boolean masked, final int mask) {
-        this(streamSourceChannelControl, channel, wsChannel, payloadSize, rsv, finalFragment, masked, mask, true);
+        this(streamSourceChannelControl, channel, wsChannel, payloadSize, rsv, finalFragment, masked, mask, new UTF8Checker());
     }
 
-    public WebSocket07TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final boolean masked, final int mask, boolean checkUtf8) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, payloadSize, rsv, finalFragment, masked, mask);
-        if (checkUtf8) {
-            checker = new UTF8Checker();
-        } else {
-            checker = null;
-        }
-    }
 
-    @Override
-    protected long transferTo0(long position, long count, FileChannel target) throws IOException {
-        if (checker == null) {
-            return super.transferTo0(position, count, target);
-        }
-        return super.transferTo0(position, count, new UTF8FileChannel(target, checker));
-    }
-
-    @Override
-    public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        if (checker == null) {
-            return super.transferTo0(count, throughBuffer, target);
-        }
-        return super.transferTo0(count, throughBuffer, new UTF8StreamSinkChannel(target, checker));
-    }
-
-    @Override
-    protected int read0(ByteBuffer dst) throws IOException {
-        if (checker == null) {
-            return super.read0(dst);
-        }
-        int r = super.read0(dst);
-        checker.checkUTF8AfterRead(dst);
-        return r;
-    }
-
-    @Override
-    protected long read0(ByteBuffer[] dsts) throws IOException {
-        if (checker == null) {
-            return super.read0(dsts);
-        }
-        return read0(dsts, 0, dsts.length);
-    }
-
-    @Override
-    protected long read0(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        if (checker == null) {
-            return super.read0(dsts, offset, length);
-        }
-        long r = 0;
-        for (int a = offset; a < length; a++) {
-            int i = read(dsts[a]);
-            if (i < 1) {
-                break;
-            }
-            r += i;
-        }
-        return r;
+    public WebSocket07TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final boolean masked, final int mask, UTF8Checker checker) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, payloadSize, rsv, finalFragment, masked, mask, checker);
     }
 }

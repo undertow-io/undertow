@@ -30,6 +30,7 @@ import io.undertow.websockets.WebSocketLogger;
 import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.protocol.version08.WebSocket08Channel;
+import io.undertow.websockets.utf8.UTF8Checker;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
@@ -64,6 +65,7 @@ public class WebSocket07Channel extends WebSocketChannel {
     }
 
     private int fragmentedFramesCount;
+    private UTF8Checker checker;
 
     private static final byte FRAME_OPCODE = 127;
 
@@ -298,13 +300,28 @@ public class WebSocket07Channel extends WebSocketChannel {
                 }
 
                 if (frameOpcode == OPCODE_TEXT) {
-                    this.channel = new WebSocket07TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, frameMasked, maskingKey);
+                    // try to grab the checker which was used before
+                    UTF8Checker checker = WebSocket07Channel.this.checker;
+                    if (checker == null) {
+                        checker = new UTF8Checker();
+                    }
+
+                    this.channel = new WebSocket07TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, frameMasked, maskingKey, checker);
+
+                    if (!frameFinalFlag) {
+                        // if this is not the final fragment store the used checker to use it in later fragements also
+                        WebSocket07Channel.this.checker = checker;
+                    } else {
+                        // was the final fragement reset the checker to null
+                        WebSocket07Channel.this.checker = null;
+                    }
+
                     return;
                 } else if (frameOpcode == OPCODE_BINARY) {
                     this.channel = new WebSocket07BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, frameMasked, maskingKey);
                     return;
                 } else if (frameOpcode == OPCODE_CONT) {
-                    this.channel = new WebSocket07ContinuationFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, frameMasked, maskingKey);
+                    this.channel = new WebSocket07ContinuationFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, frameMasked, maskingKey, WebSocket07Channel.this.checker);
                     return;
                 } else {
                     throw WebSocketMessages.MESSAGES.unsupportedOpCode(frameOpcode);
