@@ -55,7 +55,7 @@ import org.xnio.IoUtils;
  * otherwise the request is handled as a normal servlet request.
  * <p/>
  * By default we only allow a restricted set of extensions.
- *
+ * <p/>
  * todo: this thing needs a lot more work. In particular:
  * - caching for blocking requests
  * - correct mime type
@@ -117,11 +117,11 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             writer = resp.getWriter();
         }
         try {
-            if(out != null) {
+            if (out != null) {
                 int read;
                 final byte[] buffer = new byte[1024];
                 while ((read = in.read(buffer)) != -1) {
-                        out.write(buffer, 0, read);
+                    out.write(buffer, 0, read);
                 }
             } else {
                 Reader reader = new InputStreamReader(in);
@@ -179,7 +179,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             serveFileBlocking(resp, welcomePage);
         } else {
             String pathInfo = req.getPathInfo();
-            if(pathInfo == null) {
+            if (pathInfo == null) {
                 pathInfo = "";
             }
             ServletPathMatch handler = findWelcomeServlet(pathInfo.endsWith("/") ? pathInfo : pathInfo + "/");
@@ -214,8 +214,8 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
 
     private ServletPathMatch findWelcomeServlet(final String path) {
         for (String i : welcomePages) {
-            final ServletPathMatch handler = deployment.getServletPaths().getServletHandlerByPath(path + i);
-            if (handler.getHandler().getManagedServlet() != null && handler.getHandler().getManagedServlet().getServletInfo().getServletClass() != DefaultServlet.class) {
+            final ServletPathMatch handler = deployment.getServletPaths().getServletHandlerByExactPath(path + i);
+            if (handler != null) {
                 return handler;
             }
         }
@@ -223,7 +223,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     }
 
     private String getPath(final HttpServletRequest request) {
-        if (request.getAttribute(RequestDispatcher.INCLUDE_REQUEST_URI) != null) {
+        if (request.getDispatcherType() == DispatcherType.INCLUDE && request.getAttribute(RequestDispatcher.INCLUDE_REQUEST_URI) != null) {
             String result = (String) request.getAttribute(RequestDispatcher.INCLUDE_PATH_INFO);
             if (result == null) {
                 result = (String) request.getAttribute(RequestDispatcher.INCLUDE_SERVLET_PATH);
@@ -232,15 +232,16 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
                 result = "/";
             }
             return result;
+        } else {
+            String result = request.getPathInfo();
+            if (result == null) {
+                result = request.getServletPath();
+            }
+            if ((result == null) || (result.equals(""))) {
+                result = "/";
+            }
+            return result;
         }
-        String result = request.getPathInfo();
-        if (result == null) {
-            result = request.getServletPath();
-        }
-        if ((result == null) || (result.equals(""))) {
-            result = "/";
-        }
-        return result;
     }
 
     private boolean isAllowed(String path) {

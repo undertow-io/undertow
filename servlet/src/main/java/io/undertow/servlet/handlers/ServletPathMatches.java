@@ -52,6 +52,10 @@ public class ServletPathMatches {
         return nameMatches.get(name);
     }
 
+    public ServletPathMatch getServletHandlerByExactPath(final String path) {
+        return exactPathMatches.get(path);
+    }
+
     public ServletPathMatch getServletHandlerByPath(final String path) {
         ServletPathMatch exact = exactPathMatches.get(path);
         if (exact != null) {
