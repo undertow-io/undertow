@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 public final class Masker {
 
     private final byte[] maskingKey;
+    int m = 0;
 
     public Masker(int maskingKey) {
         this.maskingKey = createsMaskingKey(maskingKey);
@@ -47,7 +48,6 @@ public final class Masker {
         } else {
             d = buf;
         }
-        int m = 0;
         for (int i = d.position(); i < d.limit(); ++i) {
             d.put(i, (byte) (d.get(i) ^ maskingKey[m++]));
             m = m % 4;
