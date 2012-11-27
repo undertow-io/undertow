@@ -76,6 +76,7 @@ public class WebSocket07Channel extends WebSocketChannel {
     protected static final byte OPCODE_PING = 0x9;
     protected static final byte OPCODE_PONG = 0xA;
 
+    private final boolean allowExtensions;
 
     /**
      * Create a new {@link WebSocket08Channel}
@@ -86,8 +87,9 @@ public class WebSocket07Channel extends WebSocketChannel {
      * @param wsUrl      The url for which the {@link WebSocket08Channel} was created.
      */
     public WebSocket07Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool,
-                              String wsUrl) {
+                              String wsUrl, boolean allowExtensions) {
         super(channel, bufferPool, WebSocketVersion.V08, wsUrl);
+        this.allowExtensions = allowExtensions;
     }
 
 
@@ -104,8 +106,6 @@ public class WebSocket07Channel extends WebSocketChannel {
             private State state = State.READING_FIRST;
             private int framePayloadLen1;
 
-            // TODO: We may want to make it configurable
-            private final boolean allowExtensions = true;
 
             private StreamSourceFrameChannel channel;
 

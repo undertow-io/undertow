@@ -31,15 +31,15 @@ import io.undertow.websockets.protocol.version07.Hybi07Handshake;
  */
 public class Hybi08Handshake extends Hybi07Handshake {
     public Hybi08Handshake() {
-        super("8", Collections.<String>emptyList());
+        super("8", Collections.<String>emptyList(), false);
     }
 
-    public Hybi08Handshake(List<String> subprotocols) {
-        super("8", subprotocols);
+    public Hybi08Handshake(List<String> subprotocols, boolean allowExtensions) {
+        super("8", subprotocols, allowExtensions);
     }
 
     @Override
     protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
-        return new WebSocket08Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange));
+        return new WebSocket08Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange), allowExtensions);
     }
 }

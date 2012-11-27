@@ -31,8 +31,8 @@ import org.xnio.channels.ConnectedStreamChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket13Channel extends WebSocket07Channel {
-    public WebSocket13Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool, String wsUrl) {
-        super(channel, bufferPool, wsUrl);
+    public WebSocket13Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool, String wsUrl, boolean allowExtensions) {
+        super(channel, bufferPool, wsUrl, allowExtensions);
     }
 
     @Override
