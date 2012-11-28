@@ -17,19 +17,6 @@
  */
 package io.undertow.test.handlers.security;
 
-import static org.junit.Assert.assertEquals;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.security.AuthenticationCallHandler;
-import io.undertow.server.handlers.security.AuthenticationConstraintHandler;
-import io.undertow.server.handlers.security.AuthenticationMechanism;
-import io.undertow.server.handlers.security.AuthenticationMechanismsHandler;
-import io.undertow.server.handlers.security.SecurityInitialHandler;
-import io.undertow.test.utils.DefaultServer;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,11 +28,25 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.security.AuthenticationCallHandler;
+import io.undertow.server.handlers.security.AuthenticationConstraintHandler;
+import io.undertow.server.handlers.security.AuthenticationMechanism;
+import io.undertow.server.handlers.security.AuthenticationMechanismsHandler;
+import io.undertow.server.handlers.security.RoleCallback;
+import io.undertow.server.handlers.security.SecurityInitialHandler;
+import io.undertow.test.utils.DefaultServer;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Base class for the username / password based tests.
@@ -66,11 +67,14 @@ public abstract class UsernamePasswordAuthenticationTestBase {
             public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
                 NameCallback ncb = null;
                 PasswordCallback pcb = null;
+                RoleCallback rcb = null;
                 for (Callback current : callbacks) {
                     if (current instanceof NameCallback) {
                         ncb = (NameCallback) current;
                     } else if (current instanceof PasswordCallback) {
                         pcb = (PasswordCallback) current;
+                    } else if (current instanceof RoleCallback) {
+                        rcb = (RoleCallback) current;
                     } else {
                         throw new UnsupportedCallbackException(current);
                     }
@@ -93,7 +97,7 @@ public abstract class UsernamePasswordAuthenticationTestBase {
         AuthenticationMechanism authMech = getTestMechanism();
 
         HttpHandler methodsAddHandler = new AuthenticationMechanismsHandler(constraintHandler,
-                Collections.<AuthenticationMechanism> singletonList(authMech));
+                Collections.<AuthenticationMechanism>singletonList(authMech));
         HttpHandler initialHandler = new SecurityInitialHandler(methodsAddHandler);
         DefaultServer.setRootHandler(initialHandler);
     }
@@ -119,7 +123,7 @@ public abstract class UsernamePasswordAuthenticationTestBase {
 
     /**
      * A simple end of chain handler to set a header and cause the call to return.
-     *
+     * <p/>
      * Reaching this handler is a sign the mechanism handlers have allowed the request through.
      */
     protected static class ResponseHandler implements HttpHandler {

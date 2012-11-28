@@ -42,7 +42,6 @@ import io.undertow.server.handlers.security.AuthenticationCallHandler;
 import io.undertow.server.handlers.security.AuthenticationMechanism;
 import io.undertow.server.handlers.security.AuthenticationMechanismsHandler;
 import io.undertow.server.handlers.security.BasicAuthenticationMechanism;
-import io.undertow.server.handlers.security.DigestAuthenticationMechanism;
 import io.undertow.server.handlers.security.SecurityInitialHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DefaultServletConfig;

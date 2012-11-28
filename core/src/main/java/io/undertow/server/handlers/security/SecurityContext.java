@@ -129,6 +129,7 @@ public class SecurityContext {
                                 switch (result.getOutcome()) {
                                     case AUTHENTICATED:
                                         SecurityContext.this.authenticatedPrincipal = result.getPrinciple();
+                                        SecurityContext.this.roles = result.getRoles();
                                         SecurityContext.this.authenticationState = AuthenticationState.AUTHENTICATED;
 
                                         HttpCompletionHandler singleComplete = new SingleMechanismCompletionHandler(mechanism,

@@ -17,15 +17,6 @@
  */
 package io.undertow.server.handlers.security;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.CODE_401;
-import static io.undertow.util.WorkerDispatcher.dispatch;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConcreteIoFuture;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -39,8 +30,17 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.FlexBase64;
 import org.xnio.IoFuture;
+
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.BASIC;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.StatusCodes.CODE_401;
+import static io.undertow.util.WorkerDispatcher.dispatch;
 
 /**
  * The authentication handler responsible for BASIC authentication as described by RFC2617
@@ -95,14 +95,14 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
                     // By this point we had a header we should have been able to verify but for some reason
                     // it was not correctly structured.
-                    result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED));
+                    result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
                     return result;
                 }
             }
         }
 
         // No suitable header has been found in this request,
-        result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_ATTEMPTED));
+        result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_ATTEMPTED, null));
         return result;
     }
 
@@ -125,9 +125,10 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
             // TODO - This section will be re-worked to plug in a more appropriate identity repo style API / SPI.
             NameCallback ncb = new NameCallback("Username", userName);
             PasswordCallback pcp = new PasswordCallback("Password", false);
+            RoleCallback rcb = new RoleCallback();
 
             try {
-                callbackHandler.handle(new Callback[] { ncb, pcp });
+                callbackHandler.handle(new Callback[] { ncb, pcp, rcb});
 
                 if (Arrays.equals(password, pcp.getPassword())) {
 
@@ -138,13 +139,13 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                             return userName;
                         }
                     });
-                    result.setResult(new AuthenticationResult(principal, AuthenticationOutcome.AUTHENTICATED));
+                    result.setResult(new AuthenticationResult(principal, AuthenticationOutcome.AUTHENTICATED, rcb.getRoles()));
                 }
 
             } catch (IOException e) {
             } catch (UnsupportedCallbackException e) {
             }
-            result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED));
+            result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
         }
     }
 

@@ -17,20 +17,6 @@
  */
 package io.undertow.server.handlers.security;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.HOST;
-import static io.undertow.util.Headers.NEGOTIATE;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.CODE_401;
-import static io.undertow.util.WorkerDispatcher.dispatch;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpServerConnection;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.ConcreteIoFuture;
-import io.undertow.util.FlexBase64;
-import io.undertow.util.HeaderMap;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
@@ -42,11 +28,25 @@ import java.util.Deque;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpServerConnection;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.ConcreteIoFuture;
+import io.undertow.util.FlexBase64;
+import io.undertow.util.HeaderMap;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.xnio.IoFuture;
+
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.HOST;
+import static io.undertow.util.Headers.NEGOTIATE;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.StatusCodes.CODE_401;
+import static io.undertow.util.WorkerDispatcher.dispatch;
 
 /**
  * {@link AuthenticationMechanism} for GSSAPI / SPNEGO based authentication.
@@ -77,7 +77,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
         if (negContext != null) {
             exchange.putAttachment(NegotiationContext.ATTACHMENT_KEY, negContext);
             if (negContext.isEstablished()) {
-                result.setResult(new AuthenticationResult(negContext.getPrincipal(), AuthenticationOutcome.AUTHENTICATED));
+                result.setResult(new AuthenticationResult(negContext.getPrincipal(), AuthenticationOutcome.AUTHENTICATED, null));
             }
         }
 
@@ -97,14 +97,14 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
                     // By this point we had a header we should have been able to verify but for some reason
                     // it was not correctly structured.
-                    result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED));
+                    result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
                     return result;
                 }
             }
         }
 
         // No suitable header was found so authentication was not even attempted.
-        result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_ATTEMPTED));
+        result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_ATTEMPTED, null));
         return result;
     }
 
@@ -169,10 +169,10 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                 Subject.doAs(server, new AcceptSecurityContext(result, exchange, challenge));
             } catch (GeneralSecurityException e) {
                 e.printStackTrace();
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
             } catch (PrivilegedActionException e) {
                 e.printStackTrace();
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
             }
         }
 
@@ -212,10 +212,10 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             negContext.setResponseToken(respToken);
 
             if (negContext.isEstablished()) {
-                result.setResult(new AuthenticationResult(negContext.getPrincipal(), AuthenticationOutcome.AUTHENTICATED));
+                result.setResult(new AuthenticationResult(negContext.getPrincipal(), AuthenticationOutcome.AUTHENTICATED, null));
             } else {
                 // This isn't a failure but as the context is not established another round trip with the client is needed.
-                result.setResult(new AuthenticationResult(negContext.getPrincipal(), AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationResult(negContext.getPrincipal(), AuthenticationOutcome.NOT_AUTHENTICATED, null));
             }
 
             return null;
