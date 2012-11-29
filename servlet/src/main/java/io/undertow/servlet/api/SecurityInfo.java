@@ -1,12 +1,14 @@
 package io.undertow.servlet.api;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * @author Stuart Douglas
  */
-public class SecurityInfo implements Cloneable {
+public class SecurityInfo<T extends SecurityInfo> implements Cloneable {
 
     private final Set<String> rolesAllowed = new HashSet<String>();
     private volatile TransportGuaranteeType transportGuaranteeType = TransportGuaranteeType.NONE;
@@ -16,29 +18,37 @@ public class SecurityInfo implements Cloneable {
         return transportGuaranteeType;
     }
 
-    public SecurityInfo setTransportGuaranteeType(final TransportGuaranteeType transportGuaranteeType) {
+    public T setTransportGuaranteeType(final TransportGuaranteeType transportGuaranteeType) {
         this.transportGuaranteeType = transportGuaranteeType;
-        return this;
+        return (T) this;
     }
 
-    public SecurityInfo addRoleAllowed(final String role) {
+    public T addRoleAllowed(final String role) {
         this.rolesAllowed.add(role);
-        return this;
+        return (T) this;
     }
 
+    public T addRolesAllowed(final String ... roles) {
+        this.rolesAllowed.addAll(Arrays.asList(roles));
+        return (T) this;
+    }
+    public T addRolesAllowed(final Collection<String> roles) {
+        this.rolesAllowed.addAll(roles);
+        return (T) this;
+    }
     public Set<String> getRolesAllowed() {
         return new HashSet<String>(rolesAllowed);
     }
 
     @Override
-    public SecurityInfo clone() {
+    public T clone() {
         final SecurityInfo info = createInstance();
         info.transportGuaranteeType = transportGuaranteeType;
         info.rolesAllowed.addAll(rolesAllowed);
-        return info;
+        return (T) info;
     }
 
-    protected SecurityInfo createInstance() {
-        return new SecurityInfo();
+    protected T createInstance() {
+        return (T) new SecurityInfo();
     }
 }

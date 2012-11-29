@@ -125,7 +125,7 @@ public class SecurityPathMatches {
         }
 
         public void addSecurityConstraint(final SecurityConstraint securityConstraint) {
-            final SecurityInformation securityInformation = new SecurityInformation(securityConstraint.getRoleNames(), securityConstraint.getTransportGuaranteeType());
+            final SecurityInformation securityInformation = new SecurityInformation(securityConstraint.getRolesAllowed(), securityConstraint.getTransportGuaranteeType());
             for (final WebResourceCollection webResources : securityConstraint.getWebResourceCollections()) {
                 if (webResources.getUrlPatterns().isEmpty()) {
                     //default that is applied to everything

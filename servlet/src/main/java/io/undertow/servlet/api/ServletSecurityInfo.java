@@ -8,7 +8,7 @@ import javax.servlet.annotation.ServletSecurity;
 /**
  * @author Stuart Douglas
  */
-public class ServletSecurityInfo extends SecurityInfo implements Cloneable {
+public class ServletSecurityInfo extends SecurityInfo<ServletSecurityInfo> implements Cloneable {
 
     private volatile ServletSecurity.EmptyRoleSemantic emptyRoleSemantic = ServletSecurity.EmptyRoleSemantic.DENY;
     private final List<HttpMethodSecurityInfo> httpMethodSecurityInfo = new ArrayList<HttpMethodSecurityInfo>();
@@ -23,13 +23,13 @@ public class ServletSecurityInfo extends SecurityInfo implements Cloneable {
     }
 
     @Override
-    protected SecurityInfo createInstance() {
+    protected ServletSecurityInfo createInstance() {
         return new ServletSecurityInfo();
     }
 
     @Override
     public ServletSecurityInfo clone() {
-        ServletSecurityInfo info = (ServletSecurityInfo) super.clone();
+        ServletSecurityInfo info = super.clone();
         info.emptyRoleSemantic = emptyRoleSemantic;
         for(HttpMethodSecurityInfo method : httpMethodSecurityInfo) {
             info.httpMethodSecurityInfo.add(method.clone());

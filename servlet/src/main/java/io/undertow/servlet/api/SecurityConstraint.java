@@ -1,33 +1,46 @@
 package io.undertow.servlet.api;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
  * @author Stuart Douglas
  */
-public class SecurityConstraint {
+public class SecurityConstraint extends SecurityInfo<SecurityConstraint> {
 
-    private final Set<WebResourceCollection> webResourceCollections;
-    private final Set<String> roleNames;
-    private final TransportGuaranteeType transportGuaranteeType;
-
-    public SecurityConstraint(Set<WebResourceCollection> webResourceCollections, Set<String> roleNames, TransportGuaranteeType transportGuaranteeType) {
-        this.webResourceCollections = Collections.unmodifiableSet(new HashSet<WebResourceCollection>(webResourceCollections));
-        this.roleNames = Collections.unmodifiableSet(new HashSet<String>(roleNames));
-        this.transportGuaranteeType = transportGuaranteeType;
-    }
-
-    public Set<String> getRoleNames() {
-        return roleNames;
-    }
-
-    public TransportGuaranteeType getTransportGuaranteeType() {
-        return transportGuaranteeType;
-    }
+    private final Set<WebResourceCollection> webResourceCollections = new HashSet<WebResourceCollection>();
 
     public Set<WebResourceCollection> getWebResourceCollections() {
-        return webResourceCollections;
+        return Collections.unmodifiableSet(webResourceCollections);
     }
+
+    public SecurityConstraint addWebResourceCollection(final WebResourceCollection webResourceCollection) {
+        this.webResourceCollections.add(webResourceCollection);
+        return this;
+    }
+
+    public SecurityConstraint addWebResourceCollections(final WebResourceCollection ... webResourceCollection) {
+        this.webResourceCollections.addAll(Arrays.asList(webResourceCollection));
+        return this;
+    }
+    public SecurityConstraint addWebResourceCollections(final List<WebResourceCollection> webResourceCollections) {
+        this.webResourceCollections.addAll(webResourceCollections);
+        return this;
+    }
+
+    @Override
+    protected SecurityConstraint createInstance() {
+        return new SecurityConstraint();
+    }
+
+    @Override
+    public SecurityConstraint clone() {
+        SecurityConstraint info = super.clone();
+        this.webResourceCollections.addAll(webResourceCollections);
+        return info;
+    }
+
 }
