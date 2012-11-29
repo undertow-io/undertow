@@ -19,6 +19,7 @@ package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.utf8.UTF8Checker;
 import io.undertow.websockets.utf8.UTF8FixedPayloadMaskedFrameSourceChannel;
 import org.xnio.Pooled;
@@ -186,7 +187,7 @@ public class WebSocket07CloseFrameSourceChannel extends UTF8FixedPayloadMaskedFr
 
                 if (statusCode >= 0 && statusCode <= 999 || statusCode >= 1004 && statusCode <= 1006
                         || statusCode >= 1012 && statusCode <= 2999) {
-                    throw new IOException("Invalid close frame status code: " + statusCode);
+                    throw WebSocketMessages.MESSAGES.invalidCloseFrameStatusCode(statusCode);
                 }
                 return State.DONE;
             }

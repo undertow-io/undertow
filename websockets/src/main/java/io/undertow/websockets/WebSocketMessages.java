@@ -107,4 +107,9 @@ public interface WebSocketMessages {
     @Message(id = 2024, value = "The payload length must be >= 0")
     IllegalArgumentException negativePayloadLength();
 
+    @Message(id = 2025, value = "Closed before all bytes where read")
+    IOException closedBeforeAllBytesWereRead();
+
+    @Message(id = 2026, value = "Invalid close frame status code: %s")
+    IOException invalidCloseFrameStatusCode(int statusCode);
 }

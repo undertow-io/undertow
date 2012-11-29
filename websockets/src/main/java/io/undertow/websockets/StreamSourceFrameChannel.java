@@ -219,7 +219,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         if (!isComplete() && wsChannel.isOpen()) {
             // the channel is broken
             wsChannel.markBroken();
-            throw new IOException("Closed before all bytes where read");
+            throw WebSocketMessages.MESSAGES.closedBeforeAllBytesWereRead();
         }
         closed = true;
         ChannelListeners.invokeChannelListener(this, closeSetter.get());
