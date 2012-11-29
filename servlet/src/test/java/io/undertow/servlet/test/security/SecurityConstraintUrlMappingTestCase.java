@@ -24,6 +24,7 @@ import io.undertow.util.FlexBase64;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -96,6 +97,10 @@ public class SecurityConstraintUrlMappingTestCase {
                 .addWebResourceCollection(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("*.html")))
                 .addRoleAllowed("role2")
                 .setTransportGuaranteeType(TransportGuaranteeType.NONE));
+        builder.addSecurityConstraint(new SecurityConstraint()
+                .addWebResourceCollection(new WebResourceCollection(Collections.<String>singleton("POST"), Collections.<String>emptySet(), Collections.singleton("/public/postSecured/*")))
+                .addRoleAllowed("role1")
+                .setTransportGuaranteeType(TransportGuaranteeType.NONE));
 
         builder.addPrincipleVsRoleMapping("group1", "role1");
         builder.addPrincipleVsRoleMapping("group2", "role2");
@@ -128,6 +133,43 @@ public class SecurityConstraintUrlMappingTestCase {
     public void testAggregatedRoles() throws IOException {
         runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/secured/1/2/aa", "user1:password1", "user3:password3");
         runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/secured/1/2/aa", "user2:password2", "user3:password3");
+    }
+
+    @Test
+    public void testHttpMethod() throws IOException {
+        DefaultHttpClient client = new DefaultHttpClient();
+        final String url = DefaultServer.getDefaultServerAddress() + "/servletContext/public/postSecured/a";
+        try {
+            HttpGet initialGet = new HttpGet(url);
+            HttpResponse result = client.execute(initialGet);
+            assertEquals(200, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+
+            HttpPost post = new HttpPost(url);
+            result = client.execute(post);
+            assertEquals(401, result.getStatusLine().getStatusCode());
+            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+            assertEquals(1, values.length);
+            assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+            HttpClientUtils.readResponse(result);
+
+            post = new HttpPost(url);
+            post.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user2:password2".getBytes(), false));
+            result = client.execute(post);
+            assertEquals(403, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            post = new HttpPost(url);
+            post.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
+            result = client.execute(post);
+            assertEquals(200, result.getStatusLine().getStatusCode());
+
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(HELLO_WORLD, response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
     public void runSimpleUrlTest(final String url, final String badUser, final String goodUser) throws IOException {
