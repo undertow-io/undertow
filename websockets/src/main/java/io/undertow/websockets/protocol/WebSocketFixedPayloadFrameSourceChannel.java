@@ -62,7 +62,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         return r;
     }
 
-    private static long transfer(final ReadableByteChannel source, final long count, final ByteBuffer throughBuffer, final WritableByteChannel sink) throws IOException {
+    protected static long transfer(final ReadableByteChannel source, final long count, final ByteBuffer throughBuffer, final WritableByteChannel sink) throws IOException {
         long res;
         long total = 0L;
         throughBuffer.clear();
