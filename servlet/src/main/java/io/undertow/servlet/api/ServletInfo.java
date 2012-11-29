@@ -53,6 +53,8 @@ public class ServletInfo implements Cloneable {
     private volatile boolean asyncSupported;
     private volatile String runAs;
     private volatile MultipartConfigElement multipartConfig;
+    private volatile ServletSecurityInfo servletSecurityInfo;
+
 
     public ServletInfo(final String name, final Class<? extends Servlet> servletClass) {
         if (name == null) {
@@ -108,6 +110,9 @@ public class ServletInfo implements Cloneable {
         info.initParams.putAll(initParams);
         info.securityRoleRefs.addAll(securityRoleRefs);
         info.handlerChainWrappers.addAll(handlerChainWrappers);
+        if(servletSecurityInfo != null) {
+            info.servletSecurityInfo = servletSecurityInfo.clone();
+        }
         return info;
     }
 
@@ -230,5 +235,14 @@ public class ServletInfo implements Cloneable {
 
     public List<HandlerChainWrapper> getHandlerChainWrappers() {
         return Collections.unmodifiableList(handlerChainWrappers);
+    }
+
+    public ServletSecurityInfo getServletSecurityInfo() {
+        return servletSecurityInfo;
+    }
+
+    public ServletInfo setServletSecurityInfo(final ServletSecurityInfo servletSecurityInfo) {
+        this.servletSecurityInfo = servletSecurityInfo;
+        return this;
     }
 }
