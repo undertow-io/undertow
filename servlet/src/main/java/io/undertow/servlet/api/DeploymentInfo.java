@@ -460,32 +460,36 @@ public class DeploymentInfo implements Cloneable {
         return sessionManager;
     }
 
-    public void setSessionManager(final SessionManager sessionManager) {
+    public DeploymentInfo setSessionManager(final SessionManager sessionManager) {
         this.sessionManager = sessionManager;
+        return this;
     }
 
     public LoginConfig getLoginConfig() {
         return loginConfig;
     }
 
-    public void setLoginConfig(LoginConfig loginConfig) {
+    public DeploymentInfo setLoginConfig(LoginConfig loginConfig) {
         this.loginConfig = loginConfig;
+        return this;
     }
 
     public CallbackHandler getLoginCallbackHandler() {
         return loginCallbackHandler;
     }
 
-    public void setLoginCallbackHandler(CallbackHandler loginCallbackHandler) {
+    public DeploymentInfo setLoginCallbackHandler(CallbackHandler loginCallbackHandler) {
         this.loginCallbackHandler = loginCallbackHandler;
+        return this;
     }
 
-    public void addPrincipleVsRoleMapping(final String principle, final String role) {
+    public DeploymentInfo addPrincipleVsRoleMapping(final String principle, final String role) {
         Set<String> roles = principleVsRoleMapping.get(principle);
         if(roles == null) {
             principleVsRoleMapping.put(principle, roles = new HashSet<String>());
         }
         roles.add(role);
+        return this;
     }
 
     public Map<String, Set<String>> getPrincipleVsRoleMapping() {

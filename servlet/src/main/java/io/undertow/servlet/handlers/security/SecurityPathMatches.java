@@ -19,11 +19,13 @@ public class SecurityPathMatches {
     private final PathSecurityInformation defaultPathSecurityInformation;
     private final Map<String, PathSecurityInformation> exactPathRoleInformation;
     private final Map<String, PathSecurityInformation> prefixPathRoleInformation;
+    private final Map<String, PathSecurityInformation> extensionRoleInformation;
 
-    private SecurityPathMatches(final PathSecurityInformation defaultPathSecurityInformation, final Map<String, PathSecurityInformation> exactPathRoleInformation, final Map<String, PathSecurityInformation> prefixPathRoleInformation) {
+    private SecurityPathMatches(final PathSecurityInformation defaultPathSecurityInformation, final Map<String, PathSecurityInformation> exactPathRoleInformation, final Map<String, PathSecurityInformation> prefixPathRoleInformation, final Map<String, PathSecurityInformation> extensionRoleInformation) {
         this.defaultPathSecurityInformation = defaultPathSecurityInformation;
         this.exactPathRoleInformation = exactPathRoleInformation;
         this.prefixPathRoleInformation = prefixPathRoleInformation;
+        this.extensionRoleInformation = extensionRoleInformation;
     }
 
     public SecurityPathMatch getSecurityInfo(final String path, final String method) {
@@ -97,6 +99,7 @@ public class SecurityPathMatches {
         private final PathSecurityInformation defaultPathSecurityInformation = new PathSecurityInformation();
         private final Map<String, PathSecurityInformation> exactPathRoleInformation = new HashMap<String, PathSecurityInformation>();
         private final Map<String, PathSecurityInformation> prefixPathRoleInformation = new HashMap<String, PathSecurityInformation>();
+        private final Map<String, PathSecurityInformation> extensionRoleInformation = new HashMap<String, PathSecurityInformation>();
 
         private Builder() {
 
@@ -108,6 +111,29 @@ public class SecurityPathMatches {
                 if (webResources.getUrlPatterns().isEmpty()) {
                     //default that is applied to everything
                     setupPathSecurityInformation(defaultPathSecurityInformation, securityInformation, webResources);
+                }
+                for (String pattern : webResources.getUrlPatterns()) {
+                    if (pattern.endsWith("/*")) {
+                        String part = pattern.substring(0, pattern.length() - 1);
+                        PathSecurityInformation info = prefixPathRoleInformation.get(part);
+                        if (info == null) {
+                            prefixPathRoleInformation.put(part, info = new PathSecurityInformation());
+                        }
+                        setupPathSecurityInformation(info, securityInformation, webResources);
+                    } else if (pattern.startsWith("*.")) {
+                        String part = pattern.substring(2, pattern.length() - 2);
+                        PathSecurityInformation info = extensionRoleInformation.get(part);
+                        if (info == null) {
+                            extensionRoleInformation.put(part, info = new PathSecurityInformation());
+                        }
+                        setupPathSecurityInformation(info, securityInformation, webResources);
+                    } else {
+                        PathSecurityInformation info = exactPathRoleInformation.get(pattern);
+                        if (info == null) {
+                            exactPathRoleInformation.put(pattern, info = new PathSecurityInformation());
+                        }
+                        setupPathSecurityInformation(info, securityInformation, webResources);
+                    }
                 }
             }
 
@@ -131,7 +157,7 @@ public class SecurityPathMatches {
         }
 
         public SecurityPathMatches build() {
-            return new SecurityPathMatches(defaultPathSecurityInformation, exactPathRoleInformation, prefixPathRoleInformation);
+            return new SecurityPathMatches(defaultPathSecurityInformation, exactPathRoleInformation, prefixPathRoleInformation, extensionRoleInformation);
         }
     }
 
