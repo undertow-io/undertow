@@ -62,7 +62,7 @@ public class UTF8FixedPayloadMaskedFrameSourceChannel extends WebSocketFixedPayl
             return super.read0(dst);
         }
         int r = super.read0(dst);
-        checker.checkUTF8AfterRead(dst);
+        checkUTF8(dst);
         return r;
     }
 
@@ -96,5 +96,9 @@ public class UTF8FixedPayloadMaskedFrameSourceChannel extends WebSocketFixedPayl
             checker.complete();
         }
         super.complete();
+    }
+
+    protected void checkUTF8(ByteBuffer buffer) throws IOException{
+        checker.checkUTF8AfterRead(buffer);
     }
 }
