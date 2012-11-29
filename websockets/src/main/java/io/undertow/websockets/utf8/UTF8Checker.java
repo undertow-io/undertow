@@ -71,7 +71,7 @@ public final class UTF8Checker {
         state = STATES[state + type];
 
         if (state == UTF8_REJECT) {
-            WebSocketMessages.MESSAGES.invalidTextFrameEncoding();
+            throw WebSocketMessages.MESSAGES.invalidTextFrameEncoding();
         }
     }
 
@@ -101,5 +101,16 @@ public final class UTF8Checker {
 
     public void checkUTF8BeforeWrite(ByteBuffer buf) throws UnsupportedEncodingException{
         checkUTF8(buf, false);
+    }
+
+    /**
+     * Should be called to mark the UTF8Checker as complete. After that it MUST
+     * not been used anymore
+     *
+     */
+    public void complete() throws UnsupportedEncodingException {
+        if (state != UTF8_ACCEPT) {
+            throw WebSocketMessages.MESSAGES.invalidTextFrameEncoding();
+        }
     }
 }

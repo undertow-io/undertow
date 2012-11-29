@@ -20,6 +20,8 @@ package io.undertow.websockets.protocol;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 import io.undertow.websockets.StreamSourceFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
@@ -60,6 +62,41 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         return r;
     }
 
+    protected static long transfer(final ReadableByteChannel source, final long count, final ByteBuffer throughBuffer, final WritableByteChannel sink) throws IOException {
+        long res;
+        long total = 0L;
+        throughBuffer.clear();
+        while (total < count) {
+            if (count - total < (long) throughBuffer.remaining()) {
+                throughBuffer.limit((int) (count - total));
+            }
+
+            try {
+                res = source.read(throughBuffer);
+                if (res <= 0) {
+                    return total == 0L ? res : total;
+                }
+            } finally {
+                throughBuffer.flip();
+
+            }
+            res = sink.write(throughBuffer);
+
+            if (res == 0) {
+                return total;
+            }
+            total += res;
+            if (total < count) {
+                // only compact if nothing is left otherwise we may
+                // end up with a buffer that has a lim == cap even
+                // if it not contain data that we are interested in
+                throughBuffer.compact();
+            }
+
+        }
+        return total;
+    }
+
     @Override
     public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         long toRead = byteToRead();
@@ -70,7 +107,10 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         if (toRead < count) {
             count = toRead;
         }
-        long r = channel.transferTo(count, throughBuffer, target);
+
+        // use this because of XNIO bug
+        // See https://issues.jboss.org/browse/XNIO-185
+        long r = transfer(channel, count, throughBuffer, target);
         readBytes += r + throughBuffer.remaining();
         return r;
     }

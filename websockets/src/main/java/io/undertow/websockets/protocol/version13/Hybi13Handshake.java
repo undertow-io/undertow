@@ -36,11 +36,11 @@ import org.xnio.IoFuture;
  */
 public class Hybi13Handshake extends Hybi07Handshake {
     public Hybi13Handshake() {
-        super("13", Collections.<String>emptyList());
+        super("13", Collections.<String>emptyList(), false);
     }
 
-    public Hybi13Handshake(List<String> subprotocols) {
-        super("13", subprotocols);
+    public Hybi13Handshake(List<String> subprotocols, boolean allowExtensions) {
+        super("13", subprotocols, allowExtensions);
     }
 
     @Override
@@ -69,7 +69,7 @@ public class Hybi13Handshake extends Hybi07Handshake {
 
     @Override
     protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
-        return new WebSocket13Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange));
+        return new WebSocket13Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange), allowExtensions);
     }
 
 }

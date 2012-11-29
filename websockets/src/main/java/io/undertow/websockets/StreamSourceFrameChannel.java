@@ -24,10 +24,13 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 
+import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListener.SimpleSetter;
 import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.Option;
+import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
@@ -173,7 +176,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
      */
     protected abstract long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException;
 
-    private void complete() {
+    protected void complete() throws IOException {
         complete = true;
         streamSourceChannelControl.readFrameDone(this);
     }
@@ -213,10 +216,79 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     @Override
     public void close() throws IOException {
+        if (!isComplete() && wsChannel.isOpen()) {
+            // the channel is broken
+            wsChannel.markBroken();
+            throw new IOException("Closed before all bytes where read");
+        }
         closed = true;
         ChannelListeners.invokeChannelListener(this, closeSetter.get());
     }
 
+    /**
+     * Discard the frame, which means all data that would be part of the frame will be discarded.
+     *
+     * Once all is discarded it will call {@link #close()}
+     */
+    public void discard() throws IOException {
+        if (!complete) {
+            final Pooled<ByteBuffer> pooled = wsChannel.getBufferPool().allocate();
+            final ByteBuffer buffer = pooled.getResource();
+            boolean free = true;
+            buffer.clear();
+            try {
+                for (;;) {
+
+                    int r = read(buffer);
+                    buffer.clear();
+                    if (r == -1) {
+                        close();
+                        break;
+                    }
+                    if (r == 0) {
+
+                        free = false;
+                        getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
+                            @Override
+                            public void handleEvent(StreamSourceChannel channel) {
+                                boolean free = true;
+                                try {
+                                    for (;;) {
+                                        int r = read(buffer);
+                                        if (r == -1) {
+                                            getReadSetter().set(null);
+                                            close();
+                                            break;
+                                        }
+                                        if (r == 0) {
+                                            free = false;
+                                            break;
+                                        }
+                                        buffer.clear();
+                                    }
+
+                                } catch (IOException e) {
+                                    IoUtils.safeClose(channel);
+                                } finally {
+                                    if (free) {
+                                        pooled.free();
+                                    }
+                                }
+                            }
+                        });
+                        resumeReads();
+                        break;
+                    }
+                }
+            } finally {
+                if (free) {
+                    pooled.free();
+                }
+            }
+        } else {
+            close();
+        }
+    }
     @Override
     public void suspendReads() {
         channel.suspendReads();

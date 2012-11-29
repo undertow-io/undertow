@@ -30,7 +30,6 @@ import io.undertow.websockets.protocol.version00.WebSocket00Channel;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -68,7 +67,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private final AtomicBoolean broken = new AtomicBoolean(false);
 
     private boolean receivesSuspended;
-
+    private boolean closeFrameReceived;
     /**
      * Create a new {@link WebSocketChannel}
      * 8
@@ -226,9 +225,12 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         boolean free = true;
 
         try {
+            if (closeFrameReceived) {
+                return null;
+            }
             PartialFrame partialFrame = this.partialFrame;
             if (partialFrame == null) {
-                partialFrame = receiveFrame(new StreamSourceChannelControl());
+                partialFrame = this.partialFrame = receiveFrame(new StreamSourceChannelControl());
             }
 
             int res;
@@ -240,7 +242,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                     if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
                     }
-                    safeClose(channel);
+                    safeClose(pushBackStreamChannel);
                     throw e;
                 }
                 if (res == 0) {
@@ -255,7 +257,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                             UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
                         }
                         // nothing we can do here.. close
-                        IoUtils.safeClose(channel);
+                        safeClose(pushBackStreamChannel);
                         throw e;
                     }
                     throw WebSocketMessages.MESSAGES.channelClosed();
@@ -269,11 +271,10 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                         UndertowLogger.REQUEST_LOGGER.debugf(e, "receive failed due to Exception");
                     }
                     // nothing we can do here.. close
-                    IoUtils.safeClose(channel);
+                    safeClose(pushBackStreamChannel);
                     throw new IOException(e);
                 }
             }
-
             if (buffer.hasRemaining()) {
                 // something was left in the buffer, push it back so it can be processed by the actual Source
                 pushBackStreamChannel.unget(pooled);
@@ -282,8 +283,11 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
             pushBackStreamChannel.suspendReads();
             this.partialFrame = null;
-            return receiver = partialFrame.getChannel();
-
+            receiver = partialFrame.getChannel();
+            if (receiver.getType() == WebSocketFrameType.CLOSE) {
+                closeFrameReceived = true;
+            }
+            return receiver;
         } finally {
             if (free) {
                 pooled.free();
@@ -315,7 +319,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      */
     @Override
     public void close() throws IOException {
-        channel.close();
+        pushBackStreamChannel.close();
     }
 
     /**
@@ -397,7 +401,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      */
     void markBroken() {
         if (broken.compareAndSet(false, true)) {
-            IoUtils.safeClose(channel);
+            safeClose(pushBackStreamChannel);
 
             StreamSourceFrameChannel receiver = this.receiver;
             if (receiver != null && receiver.isReadResumed()) {

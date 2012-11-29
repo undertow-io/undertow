@@ -38,17 +38,19 @@ import org.xnio.IoFuture;
  * @author Mike Brock
  */
 public class Hybi07Handshake extends Handshake {
+    protected final boolean allowExtensions;
 
-    protected Hybi07Handshake(final String version, final List<String> subprotocols) {
+    protected Hybi07Handshake(final String version, final List<String> subprotocols, boolean allowExtensions) {
         super(version, "SHA1", "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", subprotocols);
+        this.allowExtensions = allowExtensions;
     }
 
-    public Hybi07Handshake(final List<String> subprotocols) {
-        this("7", subprotocols);
+    public Hybi07Handshake(final List<String> subprotocols, boolean allowExtensions) {
+        this("7", subprotocols, allowExtensions);
     }
 
     public Hybi07Handshake() {
-        this("7", Collections.<String>emptyList());
+        this("7", Collections.<String>emptyList(), false);
     }
 
     @Override
@@ -97,6 +99,6 @@ public class Hybi07Handshake extends Handshake {
 
     @Override
     protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
-        return new WebSocket07Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange));
+        return new WebSocket07Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange), allowExtensions);
     }
 }

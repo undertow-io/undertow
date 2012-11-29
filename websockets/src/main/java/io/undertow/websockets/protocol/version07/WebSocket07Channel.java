@@ -30,6 +30,7 @@ import io.undertow.websockets.WebSocketLogger;
 import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.protocol.version08.WebSocket08Channel;
+import io.undertow.websockets.utf8.UTF8Checker;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
@@ -64,7 +65,7 @@ public class WebSocket07Channel extends WebSocketChannel {
     }
 
     private int fragmentedFramesCount;
-    private boolean closeFrameReceived;
+    private UTF8Checker checker;
 
     private static final byte FRAME_OPCODE = 127;
 
@@ -75,6 +76,7 @@ public class WebSocket07Channel extends WebSocketChannel {
     protected static final byte OPCODE_PING = 0x9;
     protected static final byte OPCODE_PONG = 0xA;
 
+    private final boolean allowExtensions;
 
     /**
      * Create a new {@link WebSocket08Channel}
@@ -85,8 +87,9 @@ public class WebSocket07Channel extends WebSocketChannel {
      * @param wsUrl      The url for which the {@link WebSocket08Channel} was created.
      */
     public WebSocket07Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool,
-                              String wsUrl) {
+                              String wsUrl, boolean allowExtensions) {
         super(channel, bufferPool, WebSocketVersion.V08, wsUrl);
+        this.allowExtensions = allowExtensions;
     }
 
 
@@ -103,8 +106,6 @@ public class WebSocket07Channel extends WebSocketChannel {
             private State state = State.READING_FIRST;
             private int framePayloadLen1;
 
-            // TODO: We may want to make it configurable
-            private final boolean allowExtensions = true;
 
             private StreamSourceFrameChannel channel;
 
@@ -122,11 +123,6 @@ public class WebSocket07Channel extends WebSocketChannel {
             public void handle(final ByteBuffer buffer, final PushBackStreamChannel channel) throws WebSocketException {
                 if (!buffer.hasRemaining()) {
                     return;
-                }
-                if (closeFrameReceived) {
-                    buffer.clear();
-                    // suspend reads as we are not interested in anything that comes after the close
-                    channel.suspendReads();
                 }
                 while (state != State.DONE) {
                     byte b;
@@ -289,7 +285,6 @@ public class WebSocket07Channel extends WebSocketChannel {
                     this.channel = new WebSocket07PongFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameMasked, maskingKey);
                     return;
                 } else if (frameOpcode == OPCODE_CLOSE) {
-                    closeFrameReceived = true;
                     this.channel = new WebSocket07CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameMasked, maskingKey);
                     return;
                 }
@@ -305,13 +300,28 @@ public class WebSocket07Channel extends WebSocketChannel {
                 }
 
                 if (frameOpcode == OPCODE_TEXT) {
-                    this.channel = new WebSocket07TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, frameMasked, maskingKey);
+                    // try to grab the checker which was used before
+                    UTF8Checker checker = WebSocket07Channel.this.checker;
+                    if (checker == null) {
+                        checker = new UTF8Checker();
+                    }
+
+                    this.channel = new WebSocket07TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, frameMasked, maskingKey, checker);
+
+                    if (!frameFinalFlag) {
+                        // if this is not the final fragment store the used checker to use it in later fragements also
+                        WebSocket07Channel.this.checker = checker;
+                    } else {
+                        // was the final fragement reset the checker to null
+                        WebSocket07Channel.this.checker = null;
+                    }
+
                     return;
                 } else if (frameOpcode == OPCODE_BINARY) {
                     this.channel = new WebSocket07BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, frameMasked, maskingKey);
                     return;
                 } else if (frameOpcode == OPCODE_CONT) {
-                    this.channel = new WebSocket07ContinuationFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, frameMasked, maskingKey);
+                    this.channel = new WebSocket07ContinuationFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, frameMasked, maskingKey, WebSocket07Channel.this.checker);
                     return;
                 } else {
                     throw WebSocketMessages.MESSAGES.unsupportedOpCode(frameOpcode);
