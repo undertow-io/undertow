@@ -39,7 +39,7 @@ import static org.junit.Assert.assertEquals;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class SecurityConstrainTestCase {
+public class SecurityConstraintUrlMappingTestCase {
 
     public static final String HELLO_WORLD = "Hello World";
 
@@ -54,11 +54,13 @@ public class SecurityConstrainTestCase {
                 .addMapping("/role1")
                 .addMapping("/role2")
                 .addMapping("/secured/role2/*")
-                .addMapping("/public");
+                .addMapping("/secured/1/2/*")
+                .addMapping("/public/*");
 
         ServletCallbackHandler handler = new ServletCallbackHandler();
         handler.addUser("user1", "password1", "group1");
         handler.addUser("user2", "password2", "group2");
+        handler.addUser("user3", "password3", "group3");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -71,9 +73,16 @@ public class SecurityConstrainTestCase {
                 .addServlet(s);
 
         builder.addSecurityConstraint(new SecurityConstraint(Collections.singleton(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("/role1"))), Collections.singleton("role1"), TransportGuaranteeType.NONE));
+        builder.addSecurityConstraint(new SecurityConstraint(Collections.singleton(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("/secured/*"))), Collections.singleton("role2"), TransportGuaranteeType.NONE));
+        builder.addSecurityConstraint(new SecurityConstraint(Collections.singleton(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("/secured/*"))), Collections.singleton("role2"), TransportGuaranteeType.NONE));
+        builder.addSecurityConstraint(new SecurityConstraint(Collections.singleton(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("/secured/1/*"))), Collections.singleton("role1"), TransportGuaranteeType.NONE));
+        builder.addSecurityConstraint(new SecurityConstraint(Collections.singleton(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("/secured/1/2/*"))), Collections.singleton("role2"), TransportGuaranteeType.NONE));
+        builder.addSecurityConstraint(new SecurityConstraint(Collections.singleton(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("*.html"))), Collections.singleton("role2"), TransportGuaranteeType.NONE));
 
         builder.addPrincipleVsRoleMapping("group1", "role1");
         builder.addPrincipleVsRoleMapping("group2", "role2");
+        builder.addPrincipleVsRoleMapping("group3", "role1");
+        builder.addPrincipleVsRoleMapping("group3", "role2");
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -84,9 +93,29 @@ public class SecurityConstrainTestCase {
 
     @Test
     public void testExactMatch() throws IOException {
+        runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/role1", "user2:password2", "user1:password1");
+    }
+
+    @Test
+    public void testPatternMatch() throws IOException {
+        runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/secured/role2/aa", "user1:password1", "user2:password2");
+    }
+
+    @Test
+    public void testExtensionMatch() throws IOException {
+        runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/public/a.html", "user1:password1", "user2:password2");
+    }
+
+    @Test
+    public void testAggregatedRoles() throws IOException {
+        runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/secured/1/2/aa", "user1:password1", "user3:password3");
+        runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/secured/1/2/aa", "user2:password2", "user3:password3");
+    }
+
+    public void runSimpleUrlTest(final String url, final String badUser, final String goodUser) throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/role1");
+            HttpGet get = new HttpGet(url);
             HttpResponse result = client.execute(get);
             assertEquals(401, result.getStatusLine().getStatusCode());
             Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -94,14 +123,14 @@ public class SecurityConstrainTestCase {
             assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
             HttpClientUtils.readResponse(result);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/role1");
-            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user2:password2".getBytes(), false));
+            get = new HttpGet(url);
+            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(badUser.getBytes(), false));
             result = client.execute(get);
             assertEquals(403, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/role1");
-            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
+            get = new HttpGet(url);
+            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(goodUser.getBytes(), false));
             result = client.execute(get);
             assertEquals(200, result.getStatusLine().getStatusCode());
 

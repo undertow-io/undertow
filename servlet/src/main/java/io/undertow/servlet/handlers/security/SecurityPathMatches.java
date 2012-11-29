@@ -41,6 +41,8 @@ public class SecurityPathMatches {
         if (match != null) {
             type = handleMatch(method, match, roleSet, type);
         }
+        int qsPos = -1;
+        boolean extension = false;
         for (int i = path.length() - 1; i >= 0; --i) {
             final char c = path.charAt(i);
             if (c == '?') {
@@ -50,11 +52,28 @@ public class SecurityPathMatches {
                 if (match != null) {
                     type = handleMatch(method, match, roleSet, type);
                 }
+                qsPos = i;
+                extension = false;
             } else if (c == '/') {
+                extension = true;
                 final String part = path.substring(0, i);
                 match = prefixPathRoleInformation.get(part);
                 if (match != null) {
                     type = handleMatch(method, match, roleSet, type);
+                }
+            } else if (c == '.') {
+                if (!extension) {
+                    extension = true;
+                    final String ext;
+                    if (qsPos == -1) {
+                        ext = path.substring(i + 1, path.length());
+                    } else {
+                        ext = path.substring(i + 1, qsPos);
+                    }
+                    match = extensionRoleInformation.get(ext);
+                    if (match != null) {
+                        type = handleMatch(method, match, roleSet, type);
+                    }
                 }
             }
         }
@@ -114,14 +133,14 @@ public class SecurityPathMatches {
                 }
                 for (String pattern : webResources.getUrlPatterns()) {
                     if (pattern.endsWith("/*")) {
-                        String part = pattern.substring(0, pattern.length() - 1);
+                        String part = pattern.substring(0, pattern.length() - 2);
                         PathSecurityInformation info = prefixPathRoleInformation.get(part);
                         if (info == null) {
                             prefixPathRoleInformation.put(part, info = new PathSecurityInformation());
                         }
                         setupPathSecurityInformation(info, securityInformation, webResources);
                     } else if (pattern.startsWith("*.")) {
-                        String part = pattern.substring(2, pattern.length() - 2);
+                        String part = pattern.substring(2, pattern.length());
                         PathSecurityInformation info = extensionRoleInformation.get(part);
                         if (info == null) {
                             extensionRoleInformation.put(part, info = new PathSecurityInformation());
