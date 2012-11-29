@@ -20,7 +20,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
-import org.apache.commons.codec.binary.Base64;
+import io.undertow.util.FlexBase64;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -95,14 +95,13 @@ public class SecurityConstrainTestCase {
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/role1");
-            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + Base64.encodeBase64String("user2:password2".getBytes()));
+            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user2:password2".getBytes(), false));
             result = client.execute(get);
             assertEquals(403, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
-            client = new DefaultHttpClient();
             get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/role1");
-            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + Base64.encodeBase64String("user1:password1".getBytes()));
+            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
             result = client.execute(get);
             assertEquals(200, result.getStatusLine().getStatusCode());
 
