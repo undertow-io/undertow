@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collections;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.ServletSecurity;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -12,7 +13,6 @@ import io.undertow.servlet.api.LoginConfig;
 import io.undertow.servlet.api.SecurityConstraint;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.MessageServlet;
@@ -76,31 +76,31 @@ public class SecurityConstraintUrlMappingTestCase {
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("/role1")))
                 .addRoleAllowed("role1")
-                .setTransportGuaranteeType(TransportGuaranteeType.NONE));
+                .setTransportGuaranteeType(ServletSecurity.TransportGuarantee.NONE));
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("/secured/*")))
                 .addRoleAllowed("role2")
-                .setTransportGuaranteeType(TransportGuaranteeType.NONE));
+                .setTransportGuaranteeType(ServletSecurity.TransportGuarantee.NONE));
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("/secured/*")))
                 .addRoleAllowed("role2")
-                .setTransportGuaranteeType(TransportGuaranteeType.NONE));
+                .setTransportGuaranteeType(ServletSecurity.TransportGuarantee.NONE));
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("/secured/1/*")))
                 .addRoleAllowed("role1")
-                .setTransportGuaranteeType(TransportGuaranteeType.NONE));
+                .setTransportGuaranteeType(ServletSecurity.TransportGuarantee.NONE));
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("/secured/1/2/*")))
                 .addRoleAllowed("role2")
-                .setTransportGuaranteeType(TransportGuaranteeType.NONE));
+                .setTransportGuaranteeType(ServletSecurity.TransportGuarantee.NONE));
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection(Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.singleton("*.html")))
                 .addRoleAllowed("role2")
-                .setTransportGuaranteeType(TransportGuaranteeType.NONE));
+                .setTransportGuaranteeType(ServletSecurity.TransportGuarantee.NONE));
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection(Collections.<String>singleton("POST"), Collections.<String>emptySet(), Collections.singleton("/public/postSecured/*")))
                 .addRoleAllowed("role1")
-                .setTransportGuaranteeType(TransportGuaranteeType.NONE));
+                .setTransportGuaranteeType(ServletSecurity.TransportGuarantee.NONE));
 
         builder.addPrincipleVsRoleMapping("group1", "role1");
         builder.addPrincipleVsRoleMapping("group2", "role2");

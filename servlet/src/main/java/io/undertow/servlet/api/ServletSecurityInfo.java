@@ -27,6 +27,15 @@ public class ServletSecurityInfo extends SecurityInfo<ServletSecurityInfo> imple
         return new ServletSecurityInfo();
     }
 
+    public ServletSecurityInfo addHttpMethodSecurityInfo(final HttpMethodSecurityInfo info) {
+        httpMethodSecurityInfo.add(info);
+        return this;
+    }
+
+    public List<HttpMethodSecurityInfo> getHttpMethodSecurityInfo() {
+        return new ArrayList<HttpMethodSecurityInfo>(httpMethodSecurityInfo);
+    }
+
     @Override
     public ServletSecurityInfo clone() {
         ServletSecurityInfo info = super.clone();

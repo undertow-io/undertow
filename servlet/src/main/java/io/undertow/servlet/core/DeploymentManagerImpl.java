@@ -34,6 +34,7 @@ import javax.servlet.Servlet;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.ServletSecurity;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.AttachmentHandler;
@@ -52,6 +53,7 @@ import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.FilterMappingInfo;
 import io.undertow.servlet.api.HandlerChainWrapper;
+import io.undertow.servlet.api.HttpMethodSecurityInfo;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.LoginConfig;
@@ -60,7 +62,9 @@ import io.undertow.servlet.api.SecurityConstraint;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletContainerInitializerInfo;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.handlers.DefaultServlet;
 import io.undertow.servlet.handlers.FilterHandler;
 import io.undertow.servlet.handlers.RequestListenerHandler;
@@ -169,7 +173,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         HttpHandler current = initialHandler;
         current = new AuthenticationCallHandler(current);
         current = new ServletAuthenticationConstraintHandler(current);
-        current = new ServletSecurityConstraintHandler(buildConstraints(), current);
+        current = new ServletSecurityConstraintHandler(buildSecurityConstraints(), current);
 
         final DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
@@ -187,11 +191,45 @@ public class DeploymentManagerImpl implements DeploymentManager {
         return current;
     }
 
-    private SecurityPathMatches buildConstraints() {
+    private SecurityPathMatches buildSecurityConstraints() {
         SecurityPathMatches.Builder builder = SecurityPathMatches.builder();
+        final Set<String> urlPatterns = new HashSet<String>();
         for (SecurityConstraint constraint : deployment.getDeploymentInfo().getSecurityConstraints()) {
             builder.addSecurityConstraint(constraint);
+            for (WebResourceCollection webResources : constraint.getWebResourceCollections()) {
+                urlPatterns.addAll(webResources.getUrlPatterns());
+            }
         }
+
+        for (final ServletInfo servlet : deployment.getDeploymentInfo().getServlets().values()) {
+            final ServletSecurityInfo securityInfo = servlet.getServletSecurityInfo();
+            if (securityInfo != null) {
+                final Set<String> mappings = new HashSet<String>(servlet.getMappings());
+                mappings.removeAll(urlPatterns);
+                final Set<String> methods = new HashSet<String>();
+
+                for (HttpMethodSecurityInfo method : securityInfo.getHttpMethodSecurityInfo()) {
+                    methods.add(method.getMethod());
+                    if (method.getRolesAllowed().isEmpty() && method.getEmptyRoleSemantic() == ServletSecurity.EmptyRoleSemantic.PERMIT) {
+                        //this is an implict allow
+                        continue;
+                    }
+                    SecurityConstraint newConstraint = new SecurityConstraint()
+                            .addRolesAllowed(method.getRolesAllowed())
+                            .setTransportGuaranteeType(method.getTransportGuaranteeType())
+                            .addWebResourceCollection(new WebResourceCollection(Collections.singleton(method.getMethod()), Collections.<String>emptySet(), mappings));
+                    builder.addSecurityConstraint(newConstraint);
+                }
+
+                SecurityConstraint newConstraint = new SecurityConstraint()
+                        .addRolesAllowed(securityInfo.getRolesAllowed())
+                        .setTransportGuaranteeType(securityInfo.getTransportGuaranteeType())
+                        .addWebResourceCollection(new WebResourceCollection(Collections.<String>emptySet(), methods, mappings));
+                builder.addSecurityConstraint(newConstraint);
+
+            }
+        }
+
         return builder.build();
     }
 

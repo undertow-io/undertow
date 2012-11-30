@@ -23,12 +23,18 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.HttpMethodConstraintElement;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletRegistration;
 import javax.servlet.ServletSecurityElement;
 
+import io.undertow.UndertowMessages;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.HttpMethodSecurityInfo;
+import io.undertow.servlet.api.SecurityConstraint;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.ServletSecurityInfo;
+import io.undertow.servlet.api.WebResourceCollection;
 
 /**
  * @author Stuart Douglas
@@ -50,7 +56,37 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
 
     @Override
     public Set<String> setServletSecurity(final ServletSecurityElement constraint) {
-        return null;
+        if (constraint == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+        }
+
+        //this is not super efficient, but it does not really matter
+        final Set<String> urlPatterns = new HashSet<String>();
+        for (SecurityConstraint sc : deploymentInfo.getSecurityConstraints()) {
+            for (WebResourceCollection webResources : sc.getWebResourceCollections()) {
+                urlPatterns.addAll(webResources.getUrlPatterns());
+            }
+        }
+        final Set<String> ret = new HashSet<String>();
+        for (String url : servletInfo.getMappings()) {
+            if (urlPatterns.contains(url)) {
+                ret.add(url);
+            }
+        }
+        ServletSecurityInfo info = new ServletSecurityInfo();
+        servletInfo.setServletSecurityInfo(info);
+        info.setTransportGuaranteeType(constraint.getTransportGuarantee())
+                .setEmptyRoleSemantic(constraint.getEmptyRoleSemantic())
+                .addRolesAllowed(constraint.getRolesAllowed());
+
+        for (final HttpMethodConstraintElement methodConstraint : constraint.getHttpMethodConstraints()) {
+            info.addHttpMethodSecurityInfo(new HttpMethodSecurityInfo()
+                    .setTransportGuaranteeType(methodConstraint.getTransportGuarantee())
+                    .setMethod(methodConstraint.getMethodName())
+                    .setEmptyRoleSemantic(methodConstraint.getEmptyRoleSemantic())
+                    .addRolesAllowed(methodConstraint.getRolesAllowed()));
+        }
+        return ret;
     }
 
     @Override
@@ -73,7 +109,7 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
         final Set<String> ret = new HashSet<String>();
         final Set<String> existing = new HashSet<String>();
         for (ServletInfo s : deploymentInfo.getServlets().values()) {
-            if(!s.getName().equals(servletInfo.getName())) {
+            if (!s.getName().equals(servletInfo.getName())) {
                 existing.addAll(s.getMappings());
             }
         }
@@ -85,7 +121,7 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
         //only update if no changes have been made
         if (ret.isEmpty()) {
             for (String pattern : urlPatterns) {
-                if(!servletInfo.getMappings().contains(pattern)) {
+                if (!servletInfo.getMappings().contains(pattern)) {
                     servletInfo.addMapping(pattern);
                 }
             }

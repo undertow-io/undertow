@@ -14,7 +14,7 @@ public class HttpMethodSecurityInfo extends SecurityInfo<HttpMethodSecurityInfo>
         return emptyRoleSemantic;
     }
 
-    public SecurityInfo setEmptyRoleSemantic(final ServletSecurity.EmptyRoleSemantic emptyRoleSemantic) {
+    public HttpMethodSecurityInfo setEmptyRoleSemantic(final ServletSecurity.EmptyRoleSemantic emptyRoleSemantic) {
         this.emptyRoleSemantic = emptyRoleSemantic;
         return this;
     }
