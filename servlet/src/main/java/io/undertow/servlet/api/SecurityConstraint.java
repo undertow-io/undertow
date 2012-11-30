@@ -22,10 +22,11 @@ public class SecurityConstraint extends SecurityInfo<SecurityConstraint> {
         return this;
     }
 
-    public SecurityConstraint addWebResourceCollections(final WebResourceCollection ... webResourceCollection) {
+    public SecurityConstraint addWebResourceCollections(final WebResourceCollection... webResourceCollection) {
         this.webResourceCollections.addAll(Arrays.asList(webResourceCollection));
         return this;
     }
+
     public SecurityConstraint addWebResourceCollections(final List<WebResourceCollection> webResourceCollections) {
         this.webResourceCollections.addAll(webResourceCollections);
         return this;
@@ -39,7 +40,9 @@ public class SecurityConstraint extends SecurityInfo<SecurityConstraint> {
     @Override
     public SecurityConstraint clone() {
         SecurityConstraint info = super.clone();
-        this.webResourceCollections.addAll(webResourceCollections);
+        for (WebResourceCollection wr : webResourceCollections) {
+            info.addWebResourceCollection(wr.clone());
+        }
         return info;
     }
 

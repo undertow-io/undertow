@@ -217,14 +217,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     SecurityConstraint newConstraint = new SecurityConstraint()
                             .addRolesAllowed(method.getRolesAllowed())
                             .setTransportGuaranteeType(method.getTransportGuaranteeType())
-                            .addWebResourceCollection(new WebResourceCollection(Collections.singleton(method.getMethod()), Collections.<String>emptySet(), mappings));
+                            .addWebResourceCollection(new WebResourceCollection().addUrlPatterns(mappings));
                     builder.addSecurityConstraint(newConstraint);
                 }
 
                 SecurityConstraint newConstraint = new SecurityConstraint()
                         .addRolesAllowed(securityInfo.getRolesAllowed())
                         .setTransportGuaranteeType(securityInfo.getTransportGuaranteeType())
-                        .addWebResourceCollection(new WebResourceCollection(Collections.<String>emptySet(), methods, mappings));
+                        .addWebResourceCollection(new WebResourceCollection().addUrlPatterns(mappings));
                 builder.addSecurityConstraint(newConstraint);
 
             }
