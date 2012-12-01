@@ -35,6 +35,7 @@ import javax.security.auth.callback.CallbackHandler;
 import javax.servlet.DispatcherType;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import io.undertow.idm.IdentityManager;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletMessages;
@@ -62,7 +63,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile DefaultServletConfig defaultServletConfig;
     private volatile SessionManager sessionManager = new InMemorySessionManager();
     private volatile LoginConfig loginConfig;
-    private volatile CallbackHandler loginCallbackHandler;
+    private volatile IdentityManager identityManager;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -474,12 +475,12 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public CallbackHandler getLoginCallbackHandler() {
-        return loginCallbackHandler;
+    public IdentityManager getIdentityManager() {
+        return identityManager;
     }
 
-    public DeploymentInfo setLoginCallbackHandler(CallbackHandler loginCallbackHandler) {
-        this.loginCallbackHandler = loginCallbackHandler;
+    public DeploymentInfo setIdentityManager(IdentityManager identityManager) {
+        this.identityManager = identityManager;
         return this;
     }
 
@@ -532,7 +533,7 @@ public class DeploymentInfo implements Cloneable {
         info.localeCharsetMapping.putAll(localeCharsetMapping);
         info.sessionManager = sessionManager;
         info.loginConfig = loginConfig;
-        info.loginCallbackHandler = loginCallbackHandler;
+        info.identityManager = identityManager;
         info.securityConstraints.addAll(securityConstraints);
         info.principleVsRoleMapping.putAll(principleVsRoleMapping);
         return info;

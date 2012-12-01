@@ -57,10 +57,10 @@ public class SecurityConstraintUrlMappingTestCase {
                 .addMapping("/secured/1/2/*")
                 .addMapping("/public/*");
 
-        ServletCallbackHandler handler = new ServletCallbackHandler();
-        handler.addUser("user1", "password1", "group1");
-        handler.addUser("user2", "password2", "group2");
-        handler.addUser("user3", "password3", "group3");
+        ServletIdentityManager identityManager = new ServletIdentityManager();
+        identityManager.addUser("user1", "password1", "group1");
+        identityManager.addUser("user2", "password2", "group2");
+        identityManager.addUser("user3", "password3", "group3");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -68,7 +68,7 @@ public class SecurityConstraintUrlMappingTestCase {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .setLoginCallbackHandler(handler)
+                .setIdentityManager(identityManager)
                 .setLoginConfig(new LoginConfig("BASIC", "Test Realm"))
                 .addServlet(s);
 

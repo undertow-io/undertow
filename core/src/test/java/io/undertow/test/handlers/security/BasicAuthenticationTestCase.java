@@ -44,7 +44,7 @@ public class BasicAuthenticationTestCase extends UsernamePasswordAuthenticationT
 
     @Override
     protected AuthenticationMechanism getTestMechanism() {
-        return new BasicAuthenticationMechanism("Test Realm", callbackHandler);
+        return new BasicAuthenticationMechanism("Test Realm");
     }
 
     @Test

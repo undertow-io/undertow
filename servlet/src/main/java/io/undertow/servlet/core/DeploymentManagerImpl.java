@@ -179,14 +179,14 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
         if (loginConfig != null) {
             if (loginConfig.getAuthMethod().equalsIgnoreCase("BASIC")) {
-                AuthenticationMechanismsHandler basic = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism(loginConfig.getRealmName(), deploymentInfo.getLoginCallbackHandler())));
+                AuthenticationMechanismsHandler basic = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism(loginConfig.getRealmName())));
                 current = basic;
             } else {
                 throw new RuntimeException("not yet implemented");
             }
         }
 
-        current = new SecurityInitialHandler(current);
+        current = new SecurityInitialHandler(deploymentInfo.getIdentityManager(), current);
 
         return current;
     }

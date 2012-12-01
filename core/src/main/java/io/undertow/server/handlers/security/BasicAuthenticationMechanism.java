@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.Set;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -30,6 +31,9 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
+import io.undertow.idm.Account;
+import io.undertow.idm.IdentityManager;
+import io.undertow.idm.PasswordCredential;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
@@ -52,15 +56,14 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
     private static Charset UTF_8 = Charset.forName("UTF-8");
 
     private final String challenge;
-    private final CallbackHandler callbackHandler;
 
     private static final String BASIC_PREFIX = BASIC + " ";
     private static final int PREFIX_LENGTH = BASIC_PREFIX.length();
     private static final String COLON = ":";
 
-    public BasicAuthenticationMechanism(final String realmName, final CallbackHandler callbackHandler) {
+    // TODO - Can we get the realm name from the IDM?
+    public BasicAuthenticationMechanism(final String realmName) {
         this.challenge = BASIC_PREFIX + "realm=\"" + realmName + "\"";
-        this.callbackHandler = callbackHandler;
     }
 
     /**
@@ -86,7 +89,8 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                     if (plainChallenge != null && (colonPos = plainChallenge.indexOf(COLON)) > -1) {
                         String userName = plainChallenge.substring(0, colonPos);
                         String password = plainChallenge.substring(colonPos + 1);
-                        dispatch(exchange, new BasicRunnable(result, userName, password.toCharArray()));
+                        dispatch(exchange,
+                                new BasicRunnable(Util.getIdentityManager(exchange), result, userName, password.toCharArray()));
 
                         // The request has now potentially been dispatched to a different worker thread, the run method
                         // within BasicRunnable is now responsible for ensuring the request continues.
@@ -108,11 +112,14 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
     private final class BasicRunnable implements Runnable {
 
+        private final IdentityManager idm;
         private final ConcreteIoFuture<AuthenticationResult> result;
         private final String userName;
-        private char[] password;
+        private final char[] password;
 
-        private BasicRunnable(ConcreteIoFuture<AuthenticationResult> result, final String userName, final char[] password) {
+        private BasicRunnable(final IdentityManager identityManager, final ConcreteIoFuture<AuthenticationResult> result,
+                final String userName, final char[] password) {
+            this.idm = identityManager;
             this.result = result;
             this.userName = userName;
             this.password = password;
@@ -122,30 +129,22 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         public void run() {
             // To reach this point we must have been supplied a username and password.
 
-            // TODO - This section will be re-worked to plug in a more appropriate identity repo style API / SPI.
-            NameCallback ncb = new NameCallback("Username", userName);
-            PasswordCallback pcp = new PasswordCallback("Password", false);
-            RoleCallback rcb = new RoleCallback();
-
+            AuthenticationResult result = null;
+            PasswordCredential credential = new PasswordCredential(password);
             try {
-                callbackHandler.handle(new Callback[] { ncb, pcp, rcb});
-
-                if (Arrays.equals(password, pcp.getPassword())) {
-
-                    Principal principal = (new Principal() {
-
-                        @Override
-                        public String getName() {
-                            return userName;
-                        }
-                    });
-                    result.setResult(new AuthenticationResult(principal, AuthenticationOutcome.AUTHENTICATED, rcb.getRoles()));
+                Account account = idm.lookupAccount(userName);
+                if (account != null && idm.verifyCredential(account, credential)) {
+                    result = new AuthenticationResult(new UndertowPrincipal(account), AuthenticationOutcome.AUTHENTICATED,
+                            idm.getRoles(account));
                 }
+            } finally {
+                this.result.setResult(result != null ? result : new AuthenticationResult(null,
+                        AuthenticationOutcome.NOT_AUTHENTICATED, null));
 
-            } catch (IOException e) {
-            } catch (UnsupportedCallbackException e) {
+                for (int i = 0; i < password.length; i++) {
+                    password[i] = 0x00;
+                }
             }
-            result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
         }
     }
 

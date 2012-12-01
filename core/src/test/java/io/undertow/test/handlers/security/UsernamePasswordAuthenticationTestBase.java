@@ -18,9 +18,11 @@
 package io.undertow.test.handlers.security;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -28,6 +30,10 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
+import io.undertow.idm.Account;
+import io.undertow.idm.Credential;
+import io.undertow.idm.IdentityManager;
+import io.undertow.idm.PasswordCredential;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -56,6 +62,7 @@ import static org.junit.Assert.assertEquals;
 public abstract class UsernamePasswordAuthenticationTestBase {
 
     protected static final CallbackHandler callbackHandler;
+    protected static final IdentityManager identityManager;
 
     static {
         final Map<String, char[]> users = new HashMap<String, char[]>(2);
@@ -87,6 +94,44 @@ public abstract class UsernamePasswordAuthenticationTestBase {
                 pcb.setPassword(password);
             }
         };
+        identityManager = new IdentityManager() {
+
+            @Override
+            public boolean verifyCredential(Account account, Credential credential) {
+                if (credential instanceof PasswordCredential) {
+                    char[] password = ((PasswordCredential) credential).getPassword();
+                    char[] expectedPassword = users.get(account.getName());
+
+                    return Arrays.equals(password, expectedPassword);
+                }
+                return false;
+            }
+
+            @Override
+            public Account verifyCredential(Credential credential) {
+                return null;
+            }
+
+            @Override
+            public Account lookupAccount(final String id) {
+                if (users.containsKey(id)) {
+                    return new Account() {
+
+                        @Override
+                        public String getName() {
+                            return id;
+                        }
+
+                    };
+                }
+                return null;
+            }
+
+            @Override
+            public Set<String> getRoles(Account account) {
+                return Collections.emptySet();
+            }
+        };
     }
 
     protected void setAuthenticationChain() {
@@ -98,7 +143,7 @@ public abstract class UsernamePasswordAuthenticationTestBase {
 
         HttpHandler methodsAddHandler = new AuthenticationMechanismsHandler(constraintHandler,
                 Collections.<AuthenticationMechanism>singletonList(authMech));
-        HttpHandler initialHandler = new SecurityInitialHandler(methodsAddHandler);
+        HttpHandler initialHandler = new SecurityInitialHandler(identityManager, methodsAddHandler);
         DefaultServer.setRootHandler(initialHandler);
     }
 

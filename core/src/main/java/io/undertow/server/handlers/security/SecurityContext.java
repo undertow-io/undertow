@@ -18,6 +18,14 @@
 package io.undertow.server.handlers.security;
 
 
+import io.undertow.UndertowLogger;
+import io.undertow.idm.IdentityManager;
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.util.AttachmentKey;
+
 import java.io.IOException;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -26,12 +34,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
-import io.undertow.util.AttachmentKey;
 import org.xnio.IoFuture;
 
 /**
@@ -45,6 +47,7 @@ public class SecurityContext {
     public static AttachmentKey<SecurityContext> ATTACHMENT_KEY = AttachmentKey.create(SecurityContext.class);
 
     private final List<AuthenticationMechanism> authMechanisms = new ArrayList<AuthenticationMechanism>();
+    private final IdentityManager identityManager;
 
     // TODO - We also need to supply a login method that allows app to supply a username and password.
     // Maybe this will need to be a custom mechanism that doesn't exchange tokens with the client but will then
@@ -56,6 +59,10 @@ public class SecurityContext {
     private AuthenticationState authenticationState = AuthenticationState.NOT_REQUIRED;
     private Principal authenticatedPrincipal;
     private Set<String> roles;
+
+    SecurityContext(final IdentityManager identityManager) {
+        this.identityManager = identityManager;
+    }
 
     /**
      * Performs authentication on the request. If the auth succeeds then the next handler will be invoked, otherwise the
@@ -90,6 +97,11 @@ public class SecurityContext {
 
     public Set<String> getAuthenticatedRoles() {
         return roles;
+    }
+
+    IdentityManager getIdentityManager() {
+        // Mechanisms can access this through the AuthenticationMechanism Util class.
+        return identityManager;
     }
 
     public void addAuthenticationMechanism(final AuthenticationMechanism handler) {

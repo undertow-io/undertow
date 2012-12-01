@@ -21,6 +21,7 @@ package io.undertow.server.handlers.security;
 import java.security.Principal;
 import java.util.Set;
 
+import io.undertow.idm.IdentityManager;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.IoFuture;
@@ -135,6 +136,12 @@ public interface AuthenticationMechanism {
             SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
 
             return context.getAuthenticationState() != AuthenticationState.AUTHENTICATED;
+        }
+
+        static IdentityManager getIdentityManager(final HttpServerExchange exchange) {
+            SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+
+            return context.getIdentityManager();
         }
 
     }
