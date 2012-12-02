@@ -149,6 +149,7 @@ public class SecurityConstraintUrlMappingTestCase {
         try {
             HttpGet initialGet = new HttpGet(url);
             initialGet.addHeader("ExpectedMechanism", "None");
+            initialGet.addHeader("ExpectedUser", "None");
             HttpResponse result = client.execute(initialGet);
             assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
@@ -170,6 +171,7 @@ public class SecurityConstraintUrlMappingTestCase {
             post = new HttpPost(url);
             post.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
             post.addHeader("ExpectedMechanism", "BASIC");
+            post.addHeader("ExpectedUser", "user1");
             result = client.execute(post);
             assertEquals(200, result.getStatusLine().getStatusCode());
 
@@ -200,6 +202,7 @@ public class SecurityConstraintUrlMappingTestCase {
             get = new HttpGet(url);
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(goodUser.getBytes(), false));
             get.addHeader("ExpectedMechanism", "BASIC");
+            get.addHeader("ExpectedUser", goodUser.substring(0, goodUser.indexOf(':')));
             result = client.execute(get);
             assertEquals(200, result.getStatusLine().getStatusCode());
 

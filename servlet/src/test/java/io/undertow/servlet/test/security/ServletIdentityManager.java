@@ -40,6 +40,7 @@ public class ServletIdentityManager implements IdentityManager {
 
     public void addUser(final String name, final String password, final String... roles) {
         User user = new User();
+        user.name = name;
         user.password = password.toCharArray();
         user.roles = new HashSet<String>(Arrays.asList(roles));
         users.put(name, user);

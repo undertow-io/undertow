@@ -34,6 +34,18 @@ public class AuthenticationMessageServlet extends MessageServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        checkExpectedMechanism(req);
+        checkExpectedUser(req);
+
+        super.doGet(req, resp);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        doGet(req, resp);
+    }
+
+    private void checkExpectedMechanism(HttpServletRequest req) {
         String expectedMechanism = req.getHeader("ExpectedMechanism");
         if (expectedMechanism == null) {
             throw new IllegalStateException("No ExpectedMechanism received.");
@@ -49,13 +61,28 @@ public class AuthenticationMessageServlet extends MessageServlet {
         } else {
             throw new IllegalStateException("ExpectedMechanism not recognised.");
         }
-
-        super.doGet(req, resp);
     }
 
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        doGet(req, resp);
+    private void checkExpectedUser(HttpServletRequest req) {
+        String expectedUser = req.getHeader("ExpectedUser");
+        if (expectedUser == null) {
+            throw new IllegalStateException("No ExpectedUser received.");
+        }
+        if (expectedUser.equals("None")) {
+            if (req.getRemoteUser() != null) {
+                throw new IllegalStateException("Unexpected RemoteUser returned.");
+            }
+            if (req.getUserPrincipal() != null) {
+                throw new IllegalStateException("Unexpected UserPrincipal returned.");
+            }
+        } else {
+            if (req.getRemoteUser().equals(expectedUser) == false) {
+                throw new IllegalStateException("Different RemoteUser returned.");
+            }
+            if (req.getUserPrincipal().getName().equals(expectedUser) == false) {
+                throw new IllegalStateException("Different UserPrincipal returned.");
+            }
+        }
     }
 
 }

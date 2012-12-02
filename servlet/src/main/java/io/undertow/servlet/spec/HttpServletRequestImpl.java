@@ -123,11 +123,8 @@ public class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public String getAuthType() {
         SecurityContext securityContext = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
-        if (securityContext != null) {
-            return securityContext.getMechanismName();
-        }
 
-        return null;
+        return securityContext != null ? securityContext.getMechanismName() : null;
     }
 
     @Override
@@ -246,7 +243,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRemoteUser() {
-        return null;
+        Principal userPrincipal = getUserPrincipal();
+
+        return userPrincipal != null ? userPrincipal.getName() : null;
     }
 
     @Override
@@ -256,7 +255,9 @@ public class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Principal getUserPrincipal() {
-        return null;
+        SecurityContext securityContext = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
+
+        return securityContext != null ? securityContext.getAuthenticatedPrincipal() : null;
     }
 
     @Override
