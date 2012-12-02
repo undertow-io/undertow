@@ -35,6 +35,7 @@ import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.ServletSecurity;
+import javax.servlet.http.HttpServletRequest;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.AttachmentHandler;
@@ -179,7 +180,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
         if (loginConfig != null) {
             if (loginConfig.getAuthMethod().equalsIgnoreCase("BASIC")) {
-                AuthenticationMechanismsHandler basic = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism(loginConfig.getRealmName())));
+                // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be comparable using '=='
+                AuthenticationMechanismsHandler basic = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism(loginConfig.getRealmName(), HttpServletRequest.BASIC_AUTH)));
                 current = basic;
             } else {
                 throw new RuntimeException("not yet implemented");

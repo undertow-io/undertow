@@ -71,6 +71,11 @@ public interface AuthenticationMechanism {
     void handleComplete(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler);
 
     /**
+     * @return The name of the mechanism.
+     */
+    String getName();
+
+    /**
      * The AuthenticationOutcome is used by an AuthenticationMechanism to indicate the outcome of the call to authenticate, the
      * overall authentication process will then used this along with the current AuthenticationState to decide how to proceed
      * with the current request.

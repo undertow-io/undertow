@@ -118,6 +118,11 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         }
     }
 
+
+    public String getName() {
+        return null;
+    }
+
     public IoFuture<AuthenticationResult> authenticate(HttpServerExchange exchange) {
         ConcreteIoFuture<AuthenticationResult> result = new ConcreteIoFuture<AuthenticationResult>();
         Deque<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);

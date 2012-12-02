@@ -35,6 +35,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.HeaderMap;
+
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
@@ -67,6 +68,10 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
     public GSSAPIAuthenticationMechanism(final GSSAPIServerSubjectFactory subjectFactory) {
         this.subjectFactory = subjectFactory;
+    }
+
+    public String getName() {
+        return "SPNEGO";
     }
 
     @Override

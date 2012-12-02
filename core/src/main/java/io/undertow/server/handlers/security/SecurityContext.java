@@ -58,6 +58,7 @@ public class SecurityContext {
 
     private AuthenticationState authenticationState = AuthenticationState.NOT_REQUIRED;
     private Principal authenticatedPrincipal;
+    private String mechanismName;
     private Set<String> roles;
 
     SecurityContext(final IdentityManager identityManager) {
@@ -93,6 +94,13 @@ public class SecurityContext {
 
     public Principal getAuthenticatedPrincipal() {
         return authenticatedPrincipal;
+    }
+
+    /**
+     * @return The name of the mechanism used to authenticate the request.
+     */
+    public String getMechanismName() {
+        return mechanismName;
     }
 
     public Set<String> getAuthenticatedRoles() {
@@ -141,6 +149,7 @@ public class SecurityContext {
                                 switch (result.getOutcome()) {
                                     case AUTHENTICATED:
                                         SecurityContext.this.authenticatedPrincipal = result.getPrinciple();
+                                        SecurityContext.this.mechanismName = mechanism.getName();
                                         SecurityContext.this.roles = result.getRoles();
                                         SecurityContext.this.authenticationState = AuthenticationState.AUTHENTICATED;
 

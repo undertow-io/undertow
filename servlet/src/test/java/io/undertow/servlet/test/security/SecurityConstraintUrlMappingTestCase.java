@@ -49,7 +49,7 @@ public class SecurityConstraintUrlMappingTestCase {
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
-        ServletInfo s = new ServletInfo("servlet", MessageServlet.class)
+        ServletInfo s = new ServletInfo("servlet", AuthenticationMessageServlet.class)
                 .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
                 .addMapping("/role1")
                 .addMapping("/role2")
@@ -148,10 +148,10 @@ public class SecurityConstraintUrlMappingTestCase {
         final String url = DefaultServer.getDefaultServerAddress() + "/servletContext/public/postSecured/a";
         try {
             HttpGet initialGet = new HttpGet(url);
+            initialGet.addHeader("ExpectedMechanism", "None");
             HttpResponse result = client.execute(initialGet);
             assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
-
 
             HttpPost post = new HttpPost(url);
             result = client.execute(post);
@@ -169,6 +169,7 @@ public class SecurityConstraintUrlMappingTestCase {
 
             post = new HttpPost(url);
             post.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
+            post.addHeader("ExpectedMechanism", "BASIC");
             result = client.execute(post);
             assertEquals(200, result.getStatusLine().getStatusCode());
 
@@ -198,6 +199,7 @@ public class SecurityConstraintUrlMappingTestCase {
 
             get = new HttpGet(url);
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(goodUser.getBytes(), false));
+            get.addHeader("ExpectedMechanism", "BASIC");
             result = client.execute(get);
             assertEquals(200, result.getStatusLine().getStatusCode());
 

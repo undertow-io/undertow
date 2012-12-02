@@ -20,16 +20,7 @@ package io.undertow.server.handlers.security;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.security.Principal;
-import java.util.Arrays;
 import java.util.Deque;
-import java.util.Set;
-
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.NameCallback;
-import javax.security.auth.callback.PasswordCallback;
-import javax.security.auth.callback.UnsupportedCallbackException;
 
 import io.undertow.idm.Account;
 import io.undertow.idm.IdentityManager;
@@ -55,6 +46,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
     private static Charset UTF_8 = Charset.forName("UTF-8");
 
+    private final String name;
     private final String challenge;
 
     private static final String BASIC_PREFIX = BASIC + " ";
@@ -63,7 +55,16 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
     // TODO - Can we get the realm name from the IDM?
     public BasicAuthenticationMechanism(final String realmName) {
+        this(realmName, "BASIC");
+    }
+
+    public BasicAuthenticationMechanism(final String realmName, final String mechanismName) {
         this.challenge = BASIC_PREFIX + "realm=\"" + realmName + "\"";
+        this.name = mechanismName;
+    }
+
+    public String getName() {
+        return name;
     }
 
     /**
