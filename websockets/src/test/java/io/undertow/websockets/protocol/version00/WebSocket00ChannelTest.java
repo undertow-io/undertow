@@ -23,7 +23,6 @@ import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketVersion;
-import io.undertow.websockets.protocol.AbstractFrameSinkChannel;
 import io.undertow.websockets.utils.TestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -80,7 +79,7 @@ public class WebSocket00ChannelTest {
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    private static void checkSend(WebSocketFrameType type, int size, Class<? extends AbstractFrameSinkChannel> clazz) throws IOException {
+    private static void checkSend(WebSocketFrameType type, int size, Class<? extends StreamSinkFrameChannel> clazz) throws IOException {
         ConnectedStreamChannel mockChannel = createMock(ConnectedStreamChannel.class);
         expect(mockChannel.getCloseSetter()).andReturn(new ChannelListener.SimpleSetter()).times(2);
         expect(mockChannel.getReadSetter()).andReturn(new ChannelListener.SimpleSetter());

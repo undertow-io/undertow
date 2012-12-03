@@ -19,8 +19,8 @@ package io.undertow.websockets.protocol.version00;
 
 import java.nio.ByteBuffer;
 
+import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.protocol.AbstractFrameSinkChannel;
 import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -29,7 +29,7 @@ import org.xnio.channels.StreamSinkChannel;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-class WebSocket00BinaryFrameSinkChannel extends AbstractFrameSinkChannel {
+class WebSocket00BinaryFrameSinkChannel extends StreamSinkFrameChannel {
 
     WebSocket00BinaryFrameSinkChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);

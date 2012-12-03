@@ -66,14 +66,6 @@ public abstract class WebSocketFixedPayloadMaskedFrameSourceChannel extends WebS
     }
 
     @Override
-    public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        if (masker == null) {
-            return super.transferTo0(count, throughBuffer, target);
-        }
-        return super.transferTo0(count , throughBuffer, new MaskingStreamSinkChannel(target, masker));
-    }
-
-    @Override
     protected int read0(ByteBuffer dst) throws IOException {
         int ret = super.read0(dst);
         if (masker == null) {

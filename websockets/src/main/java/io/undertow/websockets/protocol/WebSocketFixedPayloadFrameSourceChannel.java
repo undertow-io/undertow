@@ -26,6 +26,7 @@ import java.nio.channels.WritableByteChannel;
 import io.undertow.websockets.StreamSourceFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
+import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -58,7 +59,9 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         }
 
         long r = channel.transferTo(position, count, target);
-        readBytes += r;
+        if (r > 0) {
+            readBytes += r;
+        }
         return r;
     }
 
@@ -67,7 +70,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         long total = 0L;
         throughBuffer.clear();
         while (total < count) {
-            if (count - total < (long) throughBuffer.remaining()) {
+            if (count - total < throughBuffer.remaining()) {
                 throughBuffer.limit((int) (count - total));
             }
 
@@ -98,9 +101,10 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
     }
 
     @Override
-    public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+    protected final long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         long toRead = byteToRead();
         if (toRead < 1) {
+            throughBuffer.clear();
             return -1;
         }
 
@@ -110,8 +114,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
 
         // use this because of XNIO bug
         // See https://issues.jboss.org/browse/XNIO-185
-        long r = transfer(channel, count, throughBuffer, target);
-        readBytes += r + throughBuffer.remaining();
+        long r = transfer(this, count, throughBuffer, target);
         return r;
     }
 
@@ -128,7 +131,9 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
                 dst.limit(dst.position() + (int) byteToRead());
             }
             int r = channel.read(dst);
-            readBytes += r;
+            if (r > 0) {
+                readBytes += r;
+            }
             return r;
         } finally {
             dst.limit(old);
@@ -161,7 +166,9 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         }
         try {
             long b = channel.read(dsts, offset, length);
-            readBytes += b;
+            if (b > 0) {
+                readBytes += b;
+            }
             return b;
         } finally {
             for (int i = offset; i < length; i++) {

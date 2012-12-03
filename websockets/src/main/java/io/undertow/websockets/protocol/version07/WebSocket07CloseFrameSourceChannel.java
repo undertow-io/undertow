@@ -111,11 +111,6 @@ public class WebSocket07CloseFrameSourceChannel extends UTF8FixedPayloadMaskedFr
     }
 
     @Override
-    public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        return transfer(this, count, throughBuffer, target);
-    }
-
-    @Override
     protected int read0(ByteBuffer dst) throws IOException {
         switch (validateStatus()) {
             case DONE:
