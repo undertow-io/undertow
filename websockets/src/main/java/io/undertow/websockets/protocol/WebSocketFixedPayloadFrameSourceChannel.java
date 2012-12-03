@@ -59,7 +59,9 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         }
 
         long r = channel.transferTo(position, count, target);
-        readBytes += r;
+        if (r > 0) {
+            readBytes += r;
+        }
         return r;
     }
 
@@ -113,7 +115,12 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         // use this because of XNIO bug
         // See https://issues.jboss.org/browse/XNIO-185
         long r = transfer(channel, count, throughBuffer, target);
-        readBytes += r + throughBuffer.remaining();
+
+        if (r > 0) {
+            readBytes += r + throughBuffer.remaining();
+        } else {
+            readBytes += + throughBuffer.remaining();
+        }
         return r;
     }
 
@@ -130,7 +137,9 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
                 dst.limit(dst.position() + (int) byteToRead());
             }
             int r = channel.read(dst);
-            readBytes += r;
+            if (r > 0) {
+                readBytes += r;
+            }
             return r;
         } finally {
             dst.limit(old);
@@ -163,7 +172,9 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         }
         try {
             long b = channel.read(dsts, offset, length);
-            readBytes += b;
+            if (b > 0) {
+                readBytes += b;
+            }
             return b;
         } finally {
             for (int i = offset; i < length; i++) {
