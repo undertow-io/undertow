@@ -48,15 +48,6 @@ public class UTF8FixedPayloadMaskedFrameSourceChannel extends WebSocketFixedPayl
     }
 
     @Override
-    public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        if (checker == null) {
-            return super.transferTo0(count, throughBuffer, target);
-        }
-        long r = super.transferTo0(count, throughBuffer, new UTF8StreamSinkChannel(target, checker));
-        return r;
-    }
-
-    @Override
     protected int read0(ByteBuffer dst) throws IOException {
         if (checker == null) {
             return super.read0(dst);
