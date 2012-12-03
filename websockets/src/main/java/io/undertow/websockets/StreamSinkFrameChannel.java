@@ -388,7 +388,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
         try {
             int result = write0(src);
-
             this.written += result;
             return result;
         } finally {
@@ -534,11 +533,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
             if (oldState == ChannelState.SHUTDOWN || oldState == ChannelState.CLOSED) {
                 return;
             }
-            if (written != payloadSize) {
-                //we have not fully written out our payload
-                //so throw an IOException
-                throw WebSocketMessages.MESSAGES.notAllPayloadDataWritten(written, payloadSize);
-            }
+
         } while (stateUpdater.compareAndSet(this, oldState, ChannelState.SHUTDOWN));
 
         //if we have blocked threads we should wake them up just in case
