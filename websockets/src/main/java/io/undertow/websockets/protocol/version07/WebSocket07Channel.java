@@ -241,7 +241,6 @@ public class WebSocket07Channel extends WebSocketChannel {
                             }
                             b = buffer.get();
                             lengthBuffer.put(b);
-                            System.out.println(lengthBuffer.position());
 
                             lengthBuffer.flip();
                             framePayloadLength = lengthBuffer.getLong();
