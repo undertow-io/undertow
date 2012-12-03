@@ -70,7 +70,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         long total = 0L;
         throughBuffer.clear();
         while (total < count) {
-            if (count - total < (long) throughBuffer.remaining()) {
+            if (count - total < throughBuffer.remaining()) {
                 throughBuffer.limit((int) (count - total));
             }
 
@@ -101,7 +101,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
     }
 
     @Override
-    public final long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+    protected final long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         long toRead = byteToRead();
         if (toRead < 1) {
             throughBuffer.clear();
