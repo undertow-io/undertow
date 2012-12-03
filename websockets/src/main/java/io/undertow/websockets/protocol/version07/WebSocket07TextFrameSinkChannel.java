@@ -76,7 +76,7 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
                 checker.checkUTF8BeforeWrite(src);
             }
         }
-        return super.write0(srcs, offset, length);    //To change body of overridden methods use File | Settings | File Templates.
+        return super.write0(srcs, offset, length);
     }
 
     @Override

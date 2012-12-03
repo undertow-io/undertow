@@ -101,7 +101,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
     }
 
     @Override
-    public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+    public final long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         long toRead = byteToRead();
         if (toRead < 1) {
             throughBuffer.clear();
@@ -114,13 +114,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
 
         // use this because of XNIO bug
         // See https://issues.jboss.org/browse/XNIO-185
-        long r = transfer(channel, count, throughBuffer, target);
-
-        if (r > 0) {
-            readBytes += r + throughBuffer.remaining();
-        } else {
-            readBytes += + throughBuffer.remaining();
-        }
+        long r = transfer(this, count, throughBuffer, target);
         return r;
     }
 
