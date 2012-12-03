@@ -65,6 +65,8 @@ public class WebSocket07Channel extends WebSocketChannel {
     }
 
     private int fragmentedFramesCount;
+    private ByteBuffer lengthBuffer = ByteBuffer.allocate(8);
+
     private UTF8Checker checker;
 
     private static final byte FRAME_OPCODE = 127;
@@ -104,7 +106,6 @@ public class WebSocket07Channel extends WebSocketChannel {
             private long framePayloadLength = 0;
             private State state = State.READING_FIRST;
             private int framePayloadLen1;
-            private ByteBuffer lengthBuffer = ByteBuffer.allocate(8);
 
             private StreamSourceFrameChannel channel;
 
@@ -137,6 +138,8 @@ public class WebSocket07Channel extends WebSocketChannel {
                                 WebSocketLogger.REQUEST_LOGGER.decodingFrameWithOpCode(frameOpcode);
                             }
                             state = State.READING_SECOND;
+                            // clear the lenghtbuffer to reuse it later
+                            lengthBuffer.clear();
                         case READING_SECOND:
                             if (!buffer.hasRemaining()) {
                                 return;
