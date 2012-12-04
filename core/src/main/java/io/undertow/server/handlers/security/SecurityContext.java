@@ -18,14 +18,6 @@
 package io.undertow.server.handlers.security;
 
 
-import io.undertow.UndertowLogger;
-import io.undertow.idm.IdentityManager;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
-import io.undertow.util.AttachmentKey;
-
 import java.io.IOException;
 import java.security.Principal;
 import java.util.ArrayList;
@@ -34,6 +26,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import io.undertow.UndertowLogger;
+import io.undertow.idm.IdentityManager;
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.util.AttachmentKey;
 import org.xnio.IoFuture;
 
 /**
@@ -103,8 +102,8 @@ public class SecurityContext {
         return mechanismName;
     }
 
-    public Set<String> getAuthenticatedRoles() {
-        return roles;
+    public boolean isUserInRole(String role) {
+        return roles.contains(role);
     }
 
     IdentityManager getIdentityManager() {
