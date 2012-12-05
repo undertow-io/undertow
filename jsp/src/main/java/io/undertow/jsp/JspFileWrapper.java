@@ -1,12 +1,12 @@
 package io.undertow.jsp;
 
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.servlet.api.HandlerChainWrapper;
+import io.undertow.servlet.api.HandlerWrapper;
 
 /**
  * @author Stuart Douglas
  */
-public class JspFileWrapper implements HandlerChainWrapper {
+public class JspFileWrapper implements HandlerWrapper<BlockingHttpHandler> {
 
     private final String jspFile;
 

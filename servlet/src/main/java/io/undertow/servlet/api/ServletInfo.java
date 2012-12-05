@@ -30,6 +30,7 @@ import java.util.Map;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
 
+import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
 
@@ -44,7 +45,7 @@ public class ServletInfo implements Cloneable {
     private final List<String> mappings = new ArrayList<String>();
     private final Map<String, String> initParams = new HashMap<String, String>();
     private final List<SecurityRoleRef> securityRoleRefs = new ArrayList<SecurityRoleRef>();
-    private final List<HandlerChainWrapper> handlerChainWrappers = new ArrayList<HandlerChainWrapper>();
+    private final List<HandlerWrapper<BlockingHttpHandler>> handlerChainWrappers = new ArrayList<HandlerWrapper<BlockingHttpHandler>>();
 
     private volatile InstanceFactory<? extends Servlet> instanceFactory;
     private volatile String jspFile;
@@ -228,12 +229,12 @@ public class ServletInfo implements Cloneable {
         return Collections.unmodifiableList(securityRoleRefs);
     }
 
-    public ServletInfo addAdditionalHandler(final HandlerChainWrapper wrapper) {
+    public ServletInfo addHandlerChainWrapper(final HandlerWrapper<BlockingHttpHandler> wrapper) {
         this.handlerChainWrappers.add(wrapper);
         return this;
     }
 
-    public List<HandlerChainWrapper> getHandlerChainWrappers() {
+    public List<HandlerWrapper<BlockingHttpHandler>> getHandlerChainWrappers() {
         return Collections.unmodifiableList(handlerChainWrappers);
     }
 

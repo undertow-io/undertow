@@ -53,7 +53,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.FilterMappingInfo;
-import io.undertow.servlet.api.HandlerChainWrapper;
+import io.undertow.servlet.api.HandlerWrapper;
 import io.undertow.servlet.api.HttpMethodSecurityInfo;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ListenerInfo;
@@ -153,7 +153,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
             ServletPathMatches matches = setupServletChains(servletContext, threadSetupAction, listeners);
             deployment.setServletPaths(matches);
 
-            final HttpHandler wrappedHandlers = setupSecurityHandlers(ServletDispatchingHandler.INSTANCE);
+            HttpHandler wrappedHandlers = ServletDispatchingHandler.INSTANCE;
+            wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getInnerHandlerChainWrappers());
+            wrappedHandlers = setupSecurityHandlers(wrappedHandlers);
+            wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
             final ServletMatchingHandler servletMatchingHandler = new ServletMatchingHandler(matches, wrappedHandlers);
             deployment.setServletHandler(servletMatchingHandler);
         } catch (Exception e) {
@@ -466,10 +469,17 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private ServletInitialHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners, final ManagedServlet managedServlet) {
         BlockingHttpHandler servletHandler = new ServletSecurityRoleHandler(next, deployment.getDeploymentInfo().getPrincipleVsRoleMapping());
         servletHandler = new RequestListenerHandler(applicationListeners, servletHandler);
-        for (HandlerChainWrapper wrapper : managedServlet.getServletInfo().getHandlerChainWrappers()) {
-            servletHandler = wrapper.wrap(servletHandler);
-        }
+        servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
+        servletHandler = wrapHandlers(servletHandler,deployment.getDeploymentInfo().getDispatchedHandlerChainWrappers());
         return new ServletInitialHandler(servletHandler, setupAction, deployment.getServletContext(), managedServlet);
+    }
+
+    private <T> T wrapHandlers(final T wrapee, final List<HandlerWrapper<T>> wrappers) {
+        T current = wrapee;
+        for(HandlerWrapper<T> wrapper : wrappers) {
+            current = wrapper.wrap(current);
+        }
+        return current;
     }
 
     private ServletHandler resolveServletForPath(final String path, final Map<String, ServletHandler> pathServlets) {

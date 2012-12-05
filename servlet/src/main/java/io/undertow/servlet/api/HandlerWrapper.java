@@ -1,7 +1,5 @@
 package io.undertow.servlet.api;
 
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-
 /**
  * Interface that can be used to wrap the servlet chain, adding additional handlers
  *
@@ -13,8 +11,8 @@ import io.undertow.server.handlers.blocking.BlockingHttpHandler;
  *
  * @author Stuart Douglas
  */
-public interface HandlerChainWrapper {
+public interface HandlerWrapper<T> {
 
-    BlockingHttpHandler wrap(BlockingHttpHandler handler);
+    T wrap(T handler);
 
 }

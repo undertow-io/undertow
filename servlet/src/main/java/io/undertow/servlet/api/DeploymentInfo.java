@@ -31,11 +31,12 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
-import javax.security.auth.callback.CallbackHandler;
 import javax.servlet.DispatcherType;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.idm.IdentityManager;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletMessages;
@@ -80,6 +81,23 @@ public class DeploymentInfo implements Cloneable {
     private final List<SecurityConstraint> securityConstraints = new ArrayList<SecurityConstraint>();
     private final Map<String, Set<String>> principleVsRoleMapping = new HashMap<String, Set<String>>();
 
+    /**
+     * Handler chain wrappers that are applied outside all other handlers, including security but after the initial
+     * servlet matching handler.
+     */
+    private final List<HandlerWrapper<HttpHandler>> outerHandlerChainWrappers = new ArrayList<HandlerWrapper<HttpHandler>>();
+
+    /**
+     * Handler chain wrappers that are applied just before the servlet request is dispatched. At this point the security
+     * handlers have run, and any security information is attached to the request.
+     */
+    private final List<HandlerWrapper<HttpHandler>> innerHandlerChainWrappers = new ArrayList<HandlerWrapper<HttpHandler>>();
+
+    /**
+     * Wrapper that is applied after the servlet request has been dispatched, but before any user code is run. This
+     * is run outside any wrappers applied via {@link ServletInfo#handlerChainWrappers}
+     */
+    private final List<HandlerWrapper<BlockingHttpHandler>> dispatchedHandlerChainWrappers = new ArrayList<HandlerWrapper<BlockingHttpHandler>>();
 
     public void validate() {
         if (deploymentName == null) {
@@ -206,7 +224,7 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableMap(filters);
     }
 
-    public DeploymentInfo addFilterUrlMapping(final String filterName,final String mapping, DispatcherType dispatcher) {
+    public DeploymentInfo addFilterUrlMapping(final String filterName, final String mapping, DispatcherType dispatcher) {
         filterUrlMappings.add(new FilterMappingInfo(filterName, FilterMappingInfo.MappingType.URL, mapping, dispatcher));
         return this;
     }
@@ -216,7 +234,7 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public DeploymentInfo insertFilterUrlMapping(final int pos,final String filterName,final String mapping, DispatcherType dispatcher) {
+    public DeploymentInfo insertFilterUrlMapping(final int pos, final String filterName, final String mapping, DispatcherType dispatcher) {
         filterUrlMappings.add(pos, new FilterMappingInfo(filterName, FilterMappingInfo.MappingType.URL, mapping, dispatcher));
         return this;
     }
@@ -321,7 +339,7 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public DeploymentInfo addWelcomePages(final String ... welcomePages) {
+    public DeploymentInfo addWelcomePages(final String... welcomePages) {
         this.welcomePages.addAll(Arrays.asList(welcomePages));
         return this;
     }
@@ -340,7 +358,7 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public DeploymentInfo addErrorPages(final ErrorPage ... errorPages) {
+    public DeploymentInfo addErrorPages(final ErrorPage... errorPages) {
         this.errorPages.addAll(Arrays.asList(errorPages));
         return this;
     }
@@ -359,7 +377,7 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public DeploymentInfo addMimeMappings(final MimeMapping ... mimeMappings) {
+    public DeploymentInfo addMimeMappings(final MimeMapping... mimeMappings) {
         this.mimeMappings.addAll(Arrays.asList(mimeMappings));
         return this;
     }
@@ -379,7 +397,7 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public DeploymentInfo addSecurityConstraints(final SecurityConstraint ... securityConstraints) {
+    public DeploymentInfo addSecurityConstraints(final SecurityConstraint... securityConstraints) {
         this.securityConstraints.addAll(Arrays.asList(securityConstraints));
         return this;
     }
@@ -400,7 +418,7 @@ public class DeploymentInfo implements Cloneable {
     /**
      * Sets the factory that is used to create the {@link ExecutorService} that is used to run servlet
      * invocations.
-     *
+     * <p/>
      * If this is null then the current executor is used, which is generally the XNIO worker pool
      *
      * @param executorFactory The executor factory
@@ -408,13 +426,14 @@ public class DeploymentInfo implements Cloneable {
     public void setExecutorFactory(final InstanceFactory<Executor> executorFactory) {
         this.executorFactory = executorFactory;
     }
+
     public InstanceFactory<Executor> getAsyncExecutorFactory() {
         return asyncExecutorFactory;
     }
 
     /**
      * Sets the factory that is used to create the {@link ExecutorService} that is used to run async tasks.
-     *
+     * <p/>
      * If this is null then {@link #executorFactory} is used, if this is also null then the default is used
      *
      * @param asyncExecutorFactory The executor factory
@@ -486,7 +505,7 @@ public class DeploymentInfo implements Cloneable {
 
     public DeploymentInfo addPrincipleVsRoleMapping(final String principle, final String role) {
         Set<String> roles = principleVsRoleMapping.get(principle);
-        if(roles == null) {
+        if (roles == null) {
             principleVsRoleMapping.put(principle, roles = new HashSet<String>());
         }
         roles.add(role);
@@ -495,6 +514,33 @@ public class DeploymentInfo implements Cloneable {
 
     public Map<String, Set<String>> getPrincipleVsRoleMapping() {
         return Collections.unmodifiableMap(principleVsRoleMapping);
+    }
+
+    public DeploymentInfo addOuterHandlerChainWrapper(final HandlerWrapper<HttpHandler> wrapper) {
+        outerHandlerChainWrappers.add(wrapper);
+        return this;
+    }
+
+    public List<HandlerWrapper<HttpHandler>> getOuterHandlerChainWrappers() {
+        return Collections.unmodifiableList(outerHandlerChainWrappers);
+    }
+
+    public DeploymentInfo addInnerHandlerChainWrapper(final HandlerWrapper<HttpHandler> wrapper) {
+        innerHandlerChainWrappers.add(wrapper);
+        return this;
+    }
+
+    public List<HandlerWrapper<HttpHandler>> getInnerHandlerChainWrappers() {
+        return Collections.unmodifiableList(innerHandlerChainWrappers);
+    }
+
+    public DeploymentInfo addDispatchedHandlerChainWrapper(final HandlerWrapper<BlockingHttpHandler> wrapper) {
+        dispatchedHandlerChainWrappers.add(wrapper);
+        return this;
+    }
+
+    public List<HandlerWrapper<BlockingHttpHandler>> getDispatchedHandlerChainWrappers() {
+        return Collections.unmodifiableList(dispatchedHandlerChainWrappers);
     }
 
     @Override
@@ -536,6 +582,9 @@ public class DeploymentInfo implements Cloneable {
         info.identityManager = identityManager;
         info.securityConstraints.addAll(securityConstraints);
         info.principleVsRoleMapping.putAll(principleVsRoleMapping);
+        info.outerHandlerChainWrappers.addAll(outerHandlerChainWrappers);
+        info.innerHandlerChainWrappers.addAll(innerHandlerChainWrappers);
+        info.dispatchedHandlerChainWrappers.addAll(dispatchedHandlerChainWrappers);
         return info;
     }
 
