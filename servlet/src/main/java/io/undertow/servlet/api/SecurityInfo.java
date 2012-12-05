@@ -5,22 +5,20 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.servlet.annotation.ServletSecurity;
-
 /**
  * @author Stuart Douglas
  */
 public class SecurityInfo<T extends SecurityInfo> implements Cloneable {
 
     private final Set<String> rolesAllowed = new HashSet<String>();
-    private volatile ServletSecurity.TransportGuarantee transportGuaranteeType = ServletSecurity.TransportGuarantee.NONE;
+    private volatile TransportGuaranteeType transportGuaranteeType = TransportGuaranteeType.NONE;
 
 
-    public ServletSecurity.TransportGuarantee getTransportGuaranteeType() {
+    public TransportGuaranteeType getTransportGuaranteeType() {
         return transportGuaranteeType;
     }
 
-    public T setTransportGuaranteeType(final ServletSecurity.TransportGuarantee transportGuaranteeType) {
+    public T setTransportGuaranteeType(final TransportGuaranteeType transportGuaranteeType) {
         this.transportGuaranteeType = transportGuaranteeType;
         return (T) this;
     }

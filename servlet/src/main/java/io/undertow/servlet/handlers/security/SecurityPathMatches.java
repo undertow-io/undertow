@@ -7,9 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.annotation.ServletSecurity;
-
 import io.undertow.servlet.api.SecurityConstraint;
+import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
 
 /**
@@ -31,7 +30,7 @@ public class SecurityPathMatches {
 
     public SecurityPathMatch getSecurityInfo(final String path, final String method) {
         final List<Set<String>> roleSet = new ArrayList<Set<String>>();
-        ServletSecurity.TransportGuarantee type = ServletSecurity.TransportGuarantee.NONE;
+        TransportGuaranteeType type = TransportGuaranteeType.NONE;
         type = handleMatch(method, defaultPathSecurityInformation, roleSet, type);
         PathSecurityInformation match = exactPathRoleInformation.get(path);
         if (match != null) {
@@ -81,7 +80,7 @@ public class SecurityPathMatches {
         return new SecurityPathMatch(type, roleSet);
     }
 
-    private ServletSecurity.TransportGuarantee handleMatch(final String method, final PathSecurityInformation exact, final List<Set<String>> roleSet, ServletSecurity.TransportGuarantee type) {
+    private TransportGuaranteeType handleMatch(final String method, final PathSecurityInformation exact, final List<Set<String>> roleSet, TransportGuaranteeType type) {
         List<SecurityInformation> roles = exact.defaultRequiredRoles;
         for (SecurityInformation role : roles) {
             type = transport(type, role.transportGuaranteeType);
@@ -103,7 +102,7 @@ public class SecurityPathMatches {
         return type;
     }
 
-    private ServletSecurity.TransportGuarantee transport(ServletSecurity.TransportGuarantee existing, ServletSecurity.TransportGuarantee other) {
+    private TransportGuaranteeType transport(TransportGuaranteeType existing, TransportGuaranteeType other) {
         if (other.ordinal() > existing.ordinal()) {
             return other;
         }
@@ -200,9 +199,9 @@ public class SecurityPathMatches {
 
     private static final class SecurityInformation {
         final Set<String> roles;
-        final ServletSecurity.TransportGuarantee transportGuaranteeType;
+        final TransportGuaranteeType transportGuaranteeType;
 
-        private SecurityInformation(final Set<String> roles, final ServletSecurity.TransportGuarantee transportGuaranteeType) {
+        private SecurityInformation(final Set<String> roles, final TransportGuaranteeType transportGuaranteeType) {
             this.roles = new HashSet<String>(roles);
             this.transportGuaranteeType = transportGuaranteeType;
         }

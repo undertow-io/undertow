@@ -4,12 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import javax.servlet.annotation.ServletSecurity;
-
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.ServletAttachments;
 
 /**
@@ -34,7 +33,7 @@ public class ServletSecurityConstraintHandler implements HttpHandler {
             exchange.putAttachment(ServletAttachments.REQUIRED_ROLES, list = new ArrayList<Set<String>>());
         }
         list.addAll(securityMatch.getRequiredRoles());
-        ServletSecurity.TransportGuarantee type = exchange.getAttachment(ServletAttachments.TRANSPORT_GUARANTEE_TYPE);
+        TransportGuaranteeType type = exchange.getAttachment(ServletAttachments.TRANSPORT_GUARANTEE_TYPE);
         if(type == null || type.ordinal() < securityMatch.getTransportGuaranteeType().ordinal()) {
             exchange.putAttachment(ServletAttachments.TRANSPORT_GUARANTEE_TYPE, type);
         }

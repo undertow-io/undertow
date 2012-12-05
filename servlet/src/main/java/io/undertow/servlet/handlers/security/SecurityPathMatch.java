@@ -3,22 +3,22 @@ package io.undertow.servlet.handlers.security;
 import java.util.List;
 import java.util.Set;
 
-import javax.servlet.annotation.ServletSecurity;
+import io.undertow.servlet.api.TransportGuaranteeType;
 
 /**
  * @author Stuart Douglas
  */
 public class SecurityPathMatch {
 
-    private final ServletSecurity.TransportGuarantee transportGuaranteeType;
+    private final TransportGuaranteeType transportGuaranteeType;
     private final List<Set<String>> requiredRoles;
 
-    public SecurityPathMatch(final ServletSecurity.TransportGuarantee transportGuaranteeType, final List<Set<String>> requiredRoles) {
+    public SecurityPathMatch(final TransportGuaranteeType transportGuaranteeType, final List<Set<String>> requiredRoles) {
         this.transportGuaranteeType = transportGuaranteeType;
         this.requiredRoles = requiredRoles;
     }
 
-    public ServletSecurity.TransportGuarantee getTransportGuaranteeType() {
+    public TransportGuaranteeType getTransportGuaranteeType() {
         return transportGuaranteeType;
     }
 
