@@ -152,8 +152,6 @@ public class WebSocket07Channel extends WebSocketChannel {
                                 throw WebSocketMessages.MESSAGES.extensionsNotAllowed(frameRsv);
                             }
 
-                            System.out.println(frameFinalFlag + " " + frameOpcode + " " +frameMasked + " " + framePayloadLen1 + " " + framePayloadLength);
-
                             if (frameOpcode > 7) { // control frame (have MSB in opcode set)
                                 validateControlFrame();
                             } else { // data frame
