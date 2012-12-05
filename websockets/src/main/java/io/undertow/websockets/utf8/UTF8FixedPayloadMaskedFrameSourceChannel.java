@@ -21,7 +21,6 @@ import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.protocol.WebSocketFixedPayloadMaskedFrameSourceChannel;
 import io.undertow.websockets.protocol.version07.WebSocket07Channel;
-import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
@@ -83,7 +82,7 @@ public class UTF8FixedPayloadMaskedFrameSourceChannel extends WebSocketFixedPayl
 
     @Override
     protected void complete() throws IOException {
-        if (isFinalFragment()) {
+        if (checker != null && isFinalFragment()) {
             checker.complete();
         }
         super.complete();
