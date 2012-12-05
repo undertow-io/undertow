@@ -36,6 +36,7 @@
 
     <properties>
         <test.level>INFO</test.level>
+        <serverPort>7777</serverPort>
     </properties>
 
     <dependencies>
@@ -141,6 +142,21 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <compilerArgument>-AgeneratedTranslationFilesPath=${project.build.directory}/generated-translation-files</compilerArgument>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <configuration>
+                    <executable>java</executable>
+                    <classpathScope>test</classpathScope>
+                    <arguments>
+                        <argument>-classpath</argument>
+                        <classpath/>
+                        <argument>io.undertow.websockets.protocol.server.AutobahnWebSocketServer</argument>
+                        <argument>${serverPort}</argument>
+                    </arguments>
                 </configuration>
             </plugin>
         </plugins>
