@@ -20,10 +20,12 @@ package io.undertow.websockets;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 
+import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListener.SimpleSetter;
@@ -232,60 +234,25 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
      * Once all is discarded it will call {@link #close()}
      */
     public void discard() throws IOException {
+
         if (!complete) {
-            final Pooled<ByteBuffer> pooled = wsChannel.getBufferPool().allocate();
-            final ByteBuffer buffer = pooled.getResource();
-            boolean free = true;
-            buffer.clear();
-            try {
-                for (;;) {
-
-                    int r = read(buffer);
-                    buffer.clear();
-                    if (r == -1) {
-                        close();
-                        break;
-                    }
-                    if (r == 0) {
-
-                        free = false;
-                        getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
-                            @Override
-                            public void handleEvent(StreamSourceChannel channel) {
-                                boolean free = true;
-                                try {
-                                    for (;;) {
-                                        int r = read(buffer);
-                                        if (r == -1) {
-                                            getReadSetter().set(null);
-                                            close();
-                                            break;
-                                        }
-                                        if (r == 0) {
-                                            free = false;
-                                            break;
-                                        }
-                                        buffer.clear();
-                                    }
-
-                                } catch (IOException e) {
-                                    IoUtils.safeClose(channel);
-                                } finally {
-                                    if (free) {
-                                        pooled.free();
-                                    }
-                                }
-                            }
-                        });
-                        resumeReads();
-                        break;
-                    }
-                }
-            } finally {
-                if (free) {
-                    pooled.free();
-                }
-            }
+            ChannelListener<StreamSourceChannel> drainListener = ChannelListeners.drainListener(Long.MAX_VALUE,
+                    new ChannelListener<StreamSourceChannel>() {
+                        @Override
+                        public void handleEvent(StreamSourceChannel channel) {
+                            getReadSetter().set(null);
+                            IoUtils.safeClose(channel);
+                        }
+                    }, new ChannelExceptionHandler<StreamSourceChannel>() {
+                        @Override
+                        public void handleException(StreamSourceChannel channel, IOException exception) {
+                            getReadSetter().set(null);
+                            wsChannel.markBroken();
+                            IoUtils.safeClose(channel, wsChannel);
+                        }
+                    });
+             getReadSetter().set(drainListener);
+            resumeReads();
         } else {
             close();
         }
