@@ -20,6 +20,7 @@ package io.undertow.util;
 
 import java.util.concurrent.Executor;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -50,6 +51,8 @@ public class WorkerDispatcher {
                     try {
                         executingInWorker.set(e);
                         runnable.run();
+                    } catch (Exception e) {
+                        UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
                     } finally {
                         executingInWorker.remove();
                     }
