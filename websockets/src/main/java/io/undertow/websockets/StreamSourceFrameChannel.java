@@ -20,7 +20,6 @@ package io.undertow.websockets;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
@@ -32,7 +31,6 @@ import org.xnio.ChannelListener.SimpleSetter;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
-import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
