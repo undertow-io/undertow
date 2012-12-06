@@ -1,6 +1,5 @@
 package io.undertow.servlet.handlers.security;
 
-import java.security.Principal;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,11 +33,11 @@ public class ServletSecurityRoleHandler implements BlockingHttpHandler {
         this.next = next;
         this.principleVsRoleMappings = principleVsRoleMappings;
         final Map<String, Set<String>> roleVsPrincipleMappings = new HashMap<String, Set<String>>();
-        for(Map.Entry<String, Set<String>> entry : principleVsRoleMappings.entrySet()) {
-            for(String val : entry.getValue()) {
+        for (Map.Entry<String, Set<String>> entry : principleVsRoleMappings.entrySet()) {
+            for (String val : entry.getValue()) {
                 Set<String> principles = roleVsPrincipleMappings.get(val);
-                if(principles == null) {
-                   roleVsPrincipleMappings.put(val, principles = new HashSet<String>());
+                if (principles == null) {
+                    roleVsPrincipleMappings.put(val, principles = new HashSet<String>());
                 }
                 principles.add(entry.getKey());
             }
@@ -50,6 +49,8 @@ public class ServletSecurityRoleHandler implements BlockingHttpHandler {
     public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
         List<Set<String>> roles = exchange.getExchange().getAttachmentList(ServletAttachments.REQUIRED_ROLES);
         SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
+        final ServletRoleMappings mappings = new ServletRoleMappings(sc, principleVsRoleMappings, roleVsPrincipleMappings);
+        exchange.getExchange().putAttachment(ServletAttachments.SERVLET_ROLE_MAPPINGS, mappings);
         HttpServletRequest request = HttpServletRequestImpl.getRequestImpl(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
         if (request.getDispatcherType() != DispatcherType.REQUEST) {
             next.handleRequest(exchange);
@@ -58,10 +59,9 @@ public class ServletSecurityRoleHandler implements BlockingHttpHandler {
         } else {
             assert sc.getAuthenticationState() == AuthenticationState.AUTHENTICATED;
             for (final Set<String> roleSet : roles) {
-                final Set<String> groups = getGroups(sc, roleSet);
                 boolean found = false;
-                for (String role : groups) {
-                    if (sc.isUserInRole(role)) {
+                for (String role : roleSet) {
+                    if (mappings.isUserInRole(role)) {
                         found = true;
                         break;
                     }
@@ -76,25 +76,5 @@ public class ServletSecurityRoleHandler implements BlockingHttpHandler {
         }
     }
 
-    /*
-     * Return a set of underlying groups that the user must belong too
-     */
-    public Set<String> getGroups(final SecurityContext context, final Set<String> roles) {
-        final Set<String> groups = new HashSet<String>();
-        Principal principle = context.getAuthenticatedPrincipal();
-        Set<String> principleGroups = principleVsRoleMappings.get(principle.getName());
-        if (principleGroups != null) {
-            groups.addAll(principleGroups);
-        }
-        for (final String role : roles) {
-            Set<String> groupRoles = roleVsPrincipleMappings.get(role);
-            if (groupRoles != null) {
-                groups.addAll(groupRoles);
-            } else {
-                //nothing mapped, so we just use the role name directly
-                groups.add(role);
-            }
-        }
-        return groups;
-    }
+
 }

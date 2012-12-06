@@ -5,6 +5,7 @@ import java.util.Set;
 
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.TransportGuaranteeType;
+import io.undertow.servlet.handlers.security.ServletRoleMappings;
 import io.undertow.util.AttachmentKey;
 
 /**
@@ -17,4 +18,5 @@ public class ServletAttachments {
 
     public static final AttachmentKey<List<Set<String>>> REQUIRED_ROLES = AttachmentKey.create(List.class);
     public static final AttachmentKey<TransportGuaranteeType> TRANSPORT_GUARANTEE_TYPE = AttachmentKey.create(TransportGuaranteeType.class);
+    public static final AttachmentKey<ServletRoleMappings> SERVLET_ROLE_MAPPINGS = AttachmentKey.create(ServletRoleMappings.class);
 }
