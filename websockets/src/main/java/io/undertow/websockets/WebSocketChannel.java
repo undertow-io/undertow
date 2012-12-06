@@ -450,6 +450,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             StreamSinkFrameChannel ch = senders.peek();
             if (ch != null) {
                 ChannelListeners.invokeChannelListener(ch, (ChannelListener<? super StreamSinkFrameChannel>) ch.getWriteSetter().get());
+            } else {
+                channel.suspendWrites();
             }
         }
     }
