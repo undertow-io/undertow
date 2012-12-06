@@ -522,6 +522,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public void wakeupWrites() {
         resumeWrites();
+
         ChannelListeners.invokeChannelListener(this, writeSetter.get());
     }
 

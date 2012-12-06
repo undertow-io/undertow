@@ -12,7 +12,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
-import io.undertow.server.handlers.security.AuthenticationState;
 import io.undertow.server.handlers.security.SecurityContext;
 import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -57,7 +56,6 @@ public class ServletSecurityRoleHandler implements BlockingHttpHandler {
         } else if (roles.isEmpty()) {
             next.handleRequest(exchange);
         } else {
-            assert sc.getAuthenticationState() == AuthenticationState.AUTHENTICATED;
             for (final Set<String> roleSet : roles) {
                 boolean found = false;
                 for (String role : roleSet) {

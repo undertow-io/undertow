@@ -187,7 +187,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 AuthenticationMechanismsHandler basic = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism(loginConfig.getRealmName(), HttpServletRequest.BASIC_AUTH)));
                 current = basic;
             } else {
-                throw new RuntimeException("not yet implemented");
+                //NYI
             }
         }
 
@@ -211,26 +211,30 @@ public class DeploymentManagerImpl implements DeploymentManager {
             if (securityInfo != null) {
                 final Set<String> mappings = new HashSet<String>(servlet.getMappings());
                 mappings.removeAll(urlPatterns);
-                final Set<String> methods = new HashSet<String>();
+                if (!mappings.isEmpty()) {
+                    final Set<String> methods = new HashSet<String>();
 
-                for (HttpMethodSecurityInfo method : securityInfo.getHttpMethodSecurityInfo()) {
-                    methods.add(method.getMethod());
-                    if (method.getRolesAllowed().isEmpty() && method.getEmptyRoleSemantic() == ServletSecurity.EmptyRoleSemantic.PERMIT) {
-                        //this is an implict allow
-                        continue;
+                    for (HttpMethodSecurityInfo method : securityInfo.getHttpMethodSecurityInfo()) {
+                        methods.add(method.getMethod());
+                        if (method.getRolesAllowed().isEmpty() && method.getEmptyRoleSemantic() == ServletSecurity.EmptyRoleSemantic.PERMIT) {
+                            //this is an implict allow
+                            continue;
+                        }
+                        SecurityConstraint newConstraint = new SecurityConstraint()
+                                .addRolesAllowed(method.getRolesAllowed())
+                                .setTransportGuaranteeType(method.getTransportGuaranteeType())
+                                .addWebResourceCollection(new WebResourceCollection().addUrlPatterns(mappings)
+                                        .addHttpMethod(method.getMethod()));
+                        builder.addSecurityConstraint(newConstraint);
                     }
+
                     SecurityConstraint newConstraint = new SecurityConstraint()
-                            .addRolesAllowed(method.getRolesAllowed())
-                            .setTransportGuaranteeType(method.getTransportGuaranteeType())
-                            .addWebResourceCollection(new WebResourceCollection().addUrlPatterns(mappings));
+                            .addRolesAllowed(securityInfo.getRolesAllowed())
+                            .setTransportGuaranteeType(securityInfo.getTransportGuaranteeType())
+                            .addWebResourceCollection(new WebResourceCollection().addUrlPatterns(mappings)
+                                    .addHttpMethodOmissions(methods));
                     builder.addSecurityConstraint(newConstraint);
                 }
-
-                SecurityConstraint newConstraint = new SecurityConstraint()
-                        .addRolesAllowed(securityInfo.getRolesAllowed())
-                        .setTransportGuaranteeType(securityInfo.getTransportGuaranteeType())
-                        .addWebResourceCollection(new WebResourceCollection().addUrlPatterns(mappings));
-                builder.addSecurityConstraint(newConstraint);
 
             }
         }
@@ -470,13 +474,13 @@ public class DeploymentManagerImpl implements DeploymentManager {
         BlockingHttpHandler servletHandler = new ServletSecurityRoleHandler(next, deployment.getDeploymentInfo().getPrincipleVsRoleMapping());
         servletHandler = new RequestListenerHandler(applicationListeners, servletHandler);
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
-        servletHandler = wrapHandlers(servletHandler,deployment.getDeploymentInfo().getDispatchedHandlerChainWrappers());
+        servletHandler = wrapHandlers(servletHandler, deployment.getDeploymentInfo().getDispatchedHandlerChainWrappers());
         return new ServletInitialHandler(servletHandler, setupAction, deployment.getServletContext(), managedServlet);
     }
 
     private <T> T wrapHandlers(final T wrapee, final List<HandlerWrapper<T>> wrappers) {
         T current = wrapee;
-        for(HandlerWrapper<T> wrapper : wrappers) {
+        for (HandlerWrapper<T> wrapper : wrappers) {
             current = wrapper.wrap(current);
         }
         return current;
