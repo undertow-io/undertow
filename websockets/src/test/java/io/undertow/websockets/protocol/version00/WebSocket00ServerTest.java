@@ -75,20 +75,30 @@ public class WebSocket00ServerTest {
                             new StringReadChannelListener(exchange.getConnection().getBufferPool()) {
                                 @Override
                                 protected void stringDone(final String string) {
-                                    if (string.equals("hello")) {
-                                        new StringWriteChannelListener("world")
-                                                .setup(channel.send(WebSocketFrameType.TEXT, "world".length()));
-                                    } else {
-                                        new StringWriteChannelListener(string)
-                                                .setup(channel.send(WebSocketFrameType.TEXT, string.length()));
+                                    try {
+                                        if (string.equals("hello")) {
+                                            new StringWriteChannelListener("world")
+                                                    .setup(channel.send(WebSocketFrameType.TEXT, "world".length()));
+                                        } else {
+                                            new StringWriteChannelListener(string)
+                                                    .setup(channel.send(WebSocketFrameType.TEXT, string.length()));
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                        throw new RuntimeException(e);
                                     }
                                 }
 
                                 @Override
                                 protected void error(final IOException e) {
-                                    e.printStackTrace();
-                                    new StringWriteChannelListener("ERROR")
-                                            .setup(channel.send(WebSocketFrameType.TEXT, "ERROR".length()));
+                                    try {
+                                        e.printStackTrace();
+                                        new StringWriteChannelListener("ERROR")
+                                                .setup(channel.send(WebSocketFrameType.TEXT, "ERROR".length()));
+                                    } catch (IOException ex) {
+                                        ex.printStackTrace();
+                                        throw new RuntimeException(ex);
+                                    }
                                 }
                             }.setup(ws);
                             channel.getReceiveSetter().set(null);
@@ -132,12 +142,12 @@ public class WebSocket00ServerTest {
                             }
                             Assert.assertEquals(WebSocketFrameType.BINARY, ws.getType());
                             ByteBuffer buf = ByteBuffer.allocate(32);
-                            while (ws.read(buf) != -1);
+                            while (ws.read(buf) != -1) ;
                             buf.flip();
 
                             StreamSinkFrameChannel sink = channel.send(WebSocketFrameType.BINARY, buf.remaining());
                             Assert.assertEquals(WebSocketFrameType.BINARY, sink.getType());
-                            while(buf.hasRemaining()) {
+                            while (buf.hasRemaining()) {
                                 sink.write(buf);
                             }
                             Assert.assertTrue(sink.flush());
@@ -153,7 +163,7 @@ public class WebSocket00ServerTest {
         }));
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final byte[] payload =  "payload".getBytes();
+        final byte[] payload = "payload".getBytes();
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();

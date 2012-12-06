@@ -112,4 +112,7 @@ public interface WebSocketMessages {
 
     @Message(id = 2026, value = "Invalid close frame status code: %s")
     IOException invalidCloseFrameStatusCode(int statusCode);
+
+    @Message(id = 2027, value = "Could not send data, as the underlying web socket connection has been broken")
+    IOException streamIsBroken();
 }

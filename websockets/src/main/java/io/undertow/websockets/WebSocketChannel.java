@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,7 +50,7 @@ import static org.xnio.IoUtils.safeClose;
  */
 public abstract class WebSocketChannel implements ConnectedChannel {
 
-    private final Queue<StreamSinkFrameChannel> senders = new ConcurrentLinkedQueue<StreamSinkFrameChannel>();
+    private final Queue<StreamSinkFrameChannel> senders = new ArrayDeque<StreamSinkFrameChannel>();
     private final ConnectedStreamChannel channel;
     private final WebSocketVersion version;
     private final String wsUrl;
@@ -68,6 +69,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     private boolean receivesSuspended;
     private boolean closeFrameReceived;
+
     /**
      * Create a new {@link WebSocketChannel}
      * 8
@@ -107,7 +109,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * Check if the given {@link StreamSinkChannel} is currently active
      */
     protected boolean isActive(StreamSinkChannel channel) {
-        return senders.peek() == channel;
+        synchronized (senders) {
+            return senders.peek() == channel;
+        }
     }
 
     @Override
@@ -331,19 +335,24 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * @param payloadSize The size of the payload which will be included in the WebSocket Frame. This may be 0 if you want
      *                    to transmit no payload at all.
      */
-    public StreamSinkFrameChannel send(WebSocketFrameType type, long payloadSize) {
+    public StreamSinkFrameChannel send(WebSocketFrameType type, long payloadSize) throws IOException {
         if (payloadSize < 0) {
             throw WebSocketMessages.MESSAGES.negativePayloadLength();
         }
-        StreamSinkFrameChannel ch = createStreamSinkChannel(channel, type, payloadSize);
-        boolean o = senders.offer(ch);
-        assert o;
-
-        if (isActive(ch)) {
-            // Channel is first in the queue so mark it as active
-            ch.activate();
+        if(broken.get()) {
+            throw WebSocketMessages.MESSAGES.streamIsBroken();
         }
-        return ch;
+        StreamSinkFrameChannel ch = createStreamSinkChannel(channel, type, payloadSize);
+        synchronized (senders) {
+            boolean o = senders.offer(ch);
+            assert o;
+
+            if (isActive(ch)) {
+                // Channel is first in the queue so mark it as active
+                ch.activate();
+            }
+            return ch;
+        }
     }
 
     public void sendClose() throws IOException {
@@ -381,13 +390,17 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * take care of call {@link StreamSinkFrameChannel#activate()} on the new active {@link StreamSinkFrameChannel}.
      */
     protected final void complete(StreamSinkFrameChannel channel) {
-
-        if (isActive(channel)) {
-            if (senders.remove(channel)) {
-                StreamSinkFrameChannel ch = senders.peek();
-                // check if there is some sink waiting
-                if (ch != null) {
-                    ch.activate();
+        synchronized (senders) {
+            if (isActive(channel)) {
+                if (senders.remove(channel)) {
+                    StreamSinkFrameChannel ch = senders.peek();
+                    // check if there is some sink waiting
+                    if (ch != null) {
+                        ch.activate();
+                    } else {
+                        WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on %s in complete method as there is no new sender");
+                        channel.suspendWrites();
+                    }
                 }
             }
         }
@@ -408,11 +421,12 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             if (receiver != null && receiver.isReadResumed()) {
                 ChannelListeners.invokeChannelListener(receiver, (ChannelListener<? super StreamSourceFrameChannel>) receiver.getReadSetter().get());
             }
-
-            for (final StreamSinkFrameChannel channel : senders) {
-                //we just activate them all at once
-                //the underlying channel is already closed, so they cannot write anyway
-                channel.activate();
+            synchronized (senders) {
+                for (final StreamSinkFrameChannel channel : senders) {
+                    //we just activate them all at once
+                    //the underlying channel is already closed, so they cannot write anyway
+                    channel.activate();
+                }
             }
         }
     }
@@ -451,6 +465,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             if (ch != null) {
                 ChannelListeners.invokeChannelListener(ch, (ChannelListener<? super StreamSinkFrameChannel>) ch.getWriteSetter().get());
             } else {
+                WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on channel %s due to no sender", WebSocketChannel.this);
                 channel.suspendWrites();
             }
         }
