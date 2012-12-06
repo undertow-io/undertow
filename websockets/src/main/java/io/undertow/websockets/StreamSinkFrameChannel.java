@@ -57,7 +57,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     private final Object writeWaitLock = new Object();
     private int waiters = 0;
 
-    private boolean writesSuspended;
+    private boolean writesSuspended = true;
 
     //todo: I don't think this belongs here
     private int rsv;
@@ -261,10 +261,20 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
                     }
                 } else {
                     //if the underlying channel has closed then we just invoke the write listener directly
-                    ChannelListeners.invokeChannelListener(this, writeSetter.get());
+                    invokeWriteListener();
                 }
             }
         }
+    }
+
+    private void invokeWriteListener() {
+        getWriteThread().execute(new Runnable() {
+            @Override
+            public void run() {
+                WebSocketLogger.REQUEST_LOGGER.debugf("Invoking directly queued write listener");
+                ChannelListeners.invokeChannelListener(StreamSinkFrameChannel.this, writeSetter.get());
+            }
+        });
     }
 
     /**
@@ -522,8 +532,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public void wakeupWrites() {
         resumeWrites();
-
-        ChannelListeners.invokeChannelListener(this, writeSetter.get());
+        invokeWriteListener();
     }
 
     @Override

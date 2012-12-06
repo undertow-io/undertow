@@ -223,7 +223,17 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
             throw WebSocketMessages.MESSAGES.closedBeforeAllBytesWereRead();
         }
         closed = true;
-        ChannelListeners.invokeChannelListener(this, closeSetter.get());
+        invokeReadListener();
+    }
+
+    private void invokeReadListener() {
+        getReadThread().execute(new Runnable() {
+            @Override
+            public void run() {
+                WebSocketLogger.REQUEST_LOGGER.debugf("Invoking directly queued read listener");
+                ChannelListeners.invokeChannelListener(StreamSourceFrameChannel.this, closeSetter.get());
+            }
+        });
     }
 
     /**
