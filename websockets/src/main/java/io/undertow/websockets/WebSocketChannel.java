@@ -339,7 +339,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         if (payloadSize < 0) {
             throw WebSocketMessages.MESSAGES.negativePayloadLength();
         }
-        if(broken.get()) {
+        if (broken.get()) {
             throw WebSocketMessages.MESSAGES.streamIsBroken();
         }
         StreamSinkFrameChannel ch = createStreamSinkChannel(channel, type, payloadSize);
@@ -419,7 +419,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
             StreamSourceFrameChannel receiver = this.receiver;
             if (receiver != null && receiver.isReadResumed()) {
-                ChannelListeners.invokeChannelListener(receiver, (ChannelListener<? super StreamSourceFrameChannel>) receiver.getReadSetter().get());
+                receiver.queueReadListener();
             }
             synchronized (senders) {
                 for (final StreamSinkFrameChannel channel : senders) {
@@ -442,13 +442,16 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             if (receiver != null) {
                 final ChannelListener listener = ((SimpleSetter) receiver.getReadSetter()).get();
                 if (listener != null) {
+                    WebSocketLogger.REQUEST_LOGGER.debugf("Invoking read listener %s on %s", listener, receiver);
                     ChannelListeners.invokeChannelListener(receiver, listener);
                 } else {
+                    WebSocketLogger.REQUEST_LOGGER.debugf("Suspending reads on channel %s due to no listener", receiver);
                     channel.suspendReads();
                 }
             } else {
                 final ChannelListener listener = receiveSetter.get();
                 if (listener != null) {
+                    WebSocketLogger.REQUEST_LOGGER.debugf("Invoking receive listener", receiver);
                     ChannelListeners.invokeChannelListener(WebSocketChannel.this, listener);
                 } else {
                     channel.suspendReads();
@@ -461,9 +464,14 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private class WebSocketWriteListener implements ChannelListener<ConnectedStreamChannel> {
         @Override
         public void handleEvent(final ConnectedStreamChannel channel) {
-            StreamSinkFrameChannel ch = senders.peek();
+            StreamSinkFrameChannel ch = null;
+            synchronized (senders) {
+                ch = senders.peek();
+            }
             if (ch != null) {
-                ChannelListeners.invokeChannelListener(ch, (ChannelListener<? super StreamSinkFrameChannel>) ch.getWriteSetter().get());
+                final ChannelListener<? super StreamSinkFrameChannel> channelListener = (ChannelListener<? super StreamSinkFrameChannel>) ch.getWriteSetter().get();
+                WebSocketLogger.REQUEST_LOGGER.debugf("Invoking write listener %s on %s", channelListener, ch);
+                ChannelListeners.invokeChannelListener(ch, channelListener);
             } else {
                 WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on channel %s due to no sender", WebSocketChannel.this);
                 channel.suspendWrites();

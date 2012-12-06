@@ -223,10 +223,10 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
             throw WebSocketMessages.MESSAGES.closedBeforeAllBytesWereRead();
         }
         closed = true;
-        invokeReadListener();
+        queueReadListener();
     }
 
-    private void invokeReadListener() {
+    protected void queueReadListener() {
         getReadThread().execute(new Runnable() {
             @Override
             public void run() {
@@ -285,7 +285,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         channel.wakeupReads();
         if (complete) {
             // if complete we need to invoke the listener by ourself
-            ChannelListeners.invokeChannelListener(this, (ChannelListener<? super StreamSourceFrameChannel>) readSetter.get());
+            queueReadListener();
         }
     }
 
