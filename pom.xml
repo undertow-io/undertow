@@ -70,7 +70,6 @@
         <version.netty>3.5.11.Final</version.netty>
         <version.xnio>3.1.0.Beta7</version.xnio>
         <version.io.undertow.jastow>1.0.0.Alpha1</version.io.undertow.jastow>
-        <version.org.eclipse.jetty.jetty-websocket-client>9.0.0.M1</version.org.eclipse.jetty.jetty-websocket-client>
         <version.org.jboss.logging>3.1.2.GA</version.org.jboss.logging>
         <version.org.jboss.logmanager>1.4.0.Beta1</version.org.jboss.logmanager>
         <version.org.jboss.logging.processor>1.1.0.Beta1</version.org.jboss.logging.processor>
@@ -252,13 +251,6 @@
                 <groupId>io.netty</groupId>
                 <artifactId>netty</artifactId>
                 <version>${version.netty}</version>
-                <scope>test</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>org.eclipse.jetty.websocket</groupId>
-                <artifactId>websocket-client</artifactId>
-                <version>${version.org.eclipse.jetty.jetty-websocket-client}</version>
                 <scope>test</scope>
             </dependency>
 
