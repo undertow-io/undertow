@@ -179,9 +179,6 @@ public class AutobahnWebSocketServer {
                         }, new ChannelListener<StreamSinkFrameChannel>() {
                             @Override
                             public void handleEvent(StreamSinkFrameChannel streamSinkFrameChannel) {
-                                if(!streamSinkFrameChannel.isOpen()) {
-                                    return;
-                                }
                                 try {
                                     streamSinkFrameChannel.shutdownWrites();
                                 } catch (IOException e) {
@@ -213,6 +210,8 @@ public class AutobahnWebSocketServer {
                                         if (type == WebSocketFrameType.CLOSE) {
                                             IoUtils.safeClose(channel);
                                         }
+                                        streamSinkFrameChannel.getWriteSetter().set(null);
+                                        IoUtils.safeClose(streamSinkFrameChannel);
                                     }
                                 } catch (IOException e) {
                                     e.printStackTrace();

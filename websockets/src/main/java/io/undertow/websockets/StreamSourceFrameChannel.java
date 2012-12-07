@@ -48,11 +48,14 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
 
     private final SimpleSetter<? extends StreamSourceFrameChannel> readSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private final SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
-    private volatile boolean closed;
     private final boolean finalFragment;
     private final int rsv;
-    private boolean complete;
     private final long payloadSize;
+
+    private volatile boolean readsResumed = false;
+    private volatile boolean complete;
+    private volatile boolean closed;
+
 
     public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this(streamSourceChannelControl, channel, wsChannel, type, payloadSize, 0, true);
@@ -267,25 +270,33 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     }
     @Override
     public void suspendReads() {
+        readsResumed = false;
         channel.suspendReads();
     }
 
     @Override
     public void resumeReads() {
-        channel.resumeReads();
+        readsResumed = true;
+        if(complete) {
+            queueReadListener();
+        } else {
+            channel.resumeReads();
+        }
     }
 
     @Override
     public boolean isReadResumed() {
-        return channel.isReadResumed();
+        return readsResumed;
     }
 
     @Override
     public void wakeupReads() {
-        channel.wakeupReads();
+        readsResumed = true;
         if (complete) {
             // if complete we need to invoke the listener by ourself
             queueReadListener();
+        } else {
+            channel.wakeupReads();
         }
     }
 

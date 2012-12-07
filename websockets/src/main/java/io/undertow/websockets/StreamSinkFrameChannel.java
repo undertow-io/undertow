@@ -261,13 +261,13 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
                     }
                 } else {
                     //if the underlying channel has closed then we just invoke the write listener directly
-                    invokeWriteListener();
+                    queueWriteListener();
                 }
             }
         }
     }
 
-    private void invokeWriteListener() {
+    private void queueWriteListener() {
         getWriteThread().execute(new Runnable() {
             @Override
             public void run() {
@@ -341,8 +341,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
         long toWrite = toWrite();
         if (toWrite < 1) {
-            // TODO: Is this correct ?
-            return 0;
+            return -1;
         }
         int i = offset;
         int oldLimit = -1;
@@ -390,8 +389,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         int oldLimit = src.limit();
         long toWrite = toWrite();
         if (toWrite < 1) {
-            // TODO: Is this correct ?
-            return 0;
+            return -1;
         }
         if (toWrite < src.remaining()) {
             src.limit((int) toWrite);
@@ -424,8 +422,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
         long toWrite = toWrite();
         if (toWrite < 1) {
-            // TODO: Is this correct ?
-            return 0;
+            return -1;
         }
         if (toWrite < count) {
             count = toWrite;
@@ -455,8 +452,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
         long toWrite = toWrite();
         if (toWrite < 1) {
-            // TODO: Is this correct ?
-            return 0;
+            return -1;
         }
         if (toWrite < count) {
             count = toWrite;
@@ -512,8 +508,11 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public synchronized void resumeWrites() {
         writesSuspended = false;
-        if (isActive()) {
+        ChannelState state = stateUpdater.get(this);
+        if (state == ChannelState.ACTIVE || state == ChannelState.SHUTDOWN) {
             channel.resumeWrites();
+        } else if(state == ChannelState.CLOSED) {
+            queueWriteListener();
         }
     }
 
@@ -531,8 +530,8 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void wakeupWrites() {
+        queueWriteListener();
         resumeWrites();
-        invokeWriteListener();
     }
 
     @Override
