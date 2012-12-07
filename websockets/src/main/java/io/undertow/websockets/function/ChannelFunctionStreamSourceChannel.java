@@ -18,41 +18,158 @@
 package io.undertow.websockets.function;
 
 import io.undertow.websockets.ChannelFunction;
-import io.undertow.websockets.masking.Masker;
-import io.undertow.websockets.wrapper.AbstractStreamSourceChannelWrapper;
+import org.xnio.ChannelListener;
+import org.xnio.Option;
+import org.xnio.XnioExecutor;
+import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class ChannelFunctionStreamSourceChannel extends AbstractStreamSourceChannelWrapper {
+public class ChannelFunctionStreamSourceChannel implements StreamSourceChannel {
+    private final StreamSourceChannel channel;
     private final ChannelFunction[] functions;
 
     public ChannelFunctionStreamSourceChannel(StreamSourceChannel channel, ChannelFunction... functions) {
-        super(channel);
+        this.channel = channel;
         this.functions = functions;
     }
 
     @Override
-    protected void afterReading(ByteBuffer buffer) throws IOException {
+    public long transferTo(long position, long count, FileChannel target) throws IOException {
+        return channel.transferTo(position, count, new ChannelFunctionFileChannel(target, functions));
+    }
+
+    @Override
+    public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+        return channel.transferTo(count, throughBuffer, new ChannelFunctionStreamSinkChannel(target, functions));
+    }
+
+    @Override
+    public ChannelListener.Setter<? extends StreamSourceChannel> getReadSetter() {
+        return channel.getReadSetter();
+    }
+
+    @Override
+    public ChannelListener.Setter<? extends StreamSourceChannel> getCloseSetter() {
+        return channel.getCloseSetter();
+    }
+
+    @Override
+    public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+        long r = 0;
+        for (int a = offset; a < length; a++) {
+            int i = read(dsts[a]);
+            if (i < 1) {
+                break;
+            }
+            r += i;
+        }
+        return r;
+    }
+
+    @Override
+    public long read(ByteBuffer[] dsts) throws IOException {
+        long r = 0;
+        for (ByteBuffer buf: dsts) {
+            int i = read(buf);
+            if (i < 1) {
+                break;
+            }
+            r += i;
+        }
+        return r;
+    }
+
+    @Override
+    public void suspendReads() {
+        channel.suspendReads();
+    }
+
+    @Override
+    public void resumeReads() {
+        channel.resumeReads();
+    }
+
+    @Override
+    public boolean isReadResumed() {
+        return channel.isReadResumed();
+    }
+
+    @Override
+    public void wakeupReads() {
+        channel.wakeupReads();
+    }
+
+    @Override
+    public void shutdownReads() throws IOException {
+        channel.shutdownReads();
+    }
+
+    @Override
+    public void awaitReadable() throws IOException {
+        channel.awaitReadable();
+    }
+
+    @Override
+    public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
+        channel.awaitReadable(time, timeUnit);
+    }
+
+    @Override
+    public XnioExecutor getReadThread() {
+        return channel.getReadThread();
+    }
+
+
+    @Override
+    public int read(ByteBuffer dst) throws IOException {
+        int r = channel.read(dst);
+        afterReading(dst);
+        return r;
+    }
+
+
+    @Override
+    public XnioWorker getWorker() {
+        return channel.getWorker();
+    }
+
+    @Override
+    public boolean supportsOption(Option<?> option) {
+        return channel.supportsOption(option);
+    }
+
+    @Override
+    public <T> T getOption(Option<T> option) throws IOException {
+        return channel.getOption(option);
+    }
+
+    @Override
+    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+        return channel.setOption(option, value);
+    }
+
+    private void afterReading(ByteBuffer buffer) throws IOException {
         for (ChannelFunction func: functions) {
             func.afterRead(buffer);
         }
     }
 
     @Override
-    protected StreamSinkChannel wrapStreamSinkChannel(StreamSinkChannel channel) {
-        return new ChannelFunctionStreamSinkChannel(channel, functions);
+    public boolean isOpen() {
+        return channel.isOpen();
     }
 
     @Override
-    protected FileChannel wrapFileChannel(FileChannel channel) {
-        return new ChannelFunctionFileChannel(channel, functions);
+    public void close() throws IOException {
+        channel.close();
     }
 }

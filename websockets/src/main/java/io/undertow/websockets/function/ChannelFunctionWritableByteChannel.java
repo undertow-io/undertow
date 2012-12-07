@@ -18,7 +18,6 @@
 package io.undertow.websockets.function;
 
 import io.undertow.websockets.ChannelFunction;
-import io.undertow.websockets.wrapper.ChannelWrapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -27,11 +26,12 @@ import java.nio.channels.WritableByteChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class ChannelFunctionWritableByteChannel extends ChannelWrapper<WritableByteChannel> implements WritableByteChannel {
+public class ChannelFunctionWritableByteChannel implements WritableByteChannel {
     private final ChannelFunction[] functions;
+    private final WritableByteChannel channel;
 
     public ChannelFunctionWritableByteChannel(WritableByteChannel channel, ChannelFunction... functions) {
-        super(channel);
+        this.channel = channel;
         this.functions = functions;
     }
 
@@ -43,4 +43,13 @@ public class ChannelFunctionWritableByteChannel extends ChannelWrapper<WritableB
         return channel.write(src);
     }
 
+    @Override
+    public boolean isOpen() {
+        return channel.isOpen();
+    }
+
+    @Override
+    public void close() throws IOException {
+        channel.close();
+    }
 }

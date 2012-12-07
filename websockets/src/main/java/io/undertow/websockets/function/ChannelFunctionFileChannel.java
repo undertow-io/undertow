@@ -18,51 +18,136 @@
 package io.undertow.websockets.function;
 
 import io.undertow.websockets.ChannelFunction;
-import io.undertow.websockets.wrapper.AbstractFileChannelWrapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class ChannelFunctionFileChannel extends AbstractFileChannelWrapper  {
+public class ChannelFunctionFileChannel extends FileChannel  {
     private final ChannelFunction[] functions;
+    private final FileChannel channel;
 
-    public ChannelFunctionFileChannel(FileChannel fc, ChannelFunction... functions) {
-        super(fc);
+    public ChannelFunctionFileChannel(FileChannel channel, ChannelFunction... functions) {
+        this.channel = channel;
         this.functions = functions;
     }
 
     @Override
-    protected void beforeWriting(ByteBuffer buffer) throws IOException {
+    public long position() throws IOException {
+        return channel.position();
+    }
+
+    @Override
+    public FileChannel position(long newPosition) throws IOException {
+        return new ChannelFunctionFileChannel(channel.position(newPosition), functions);
+    }
+
+    @Override
+    public long size() throws IOException {
+        return channel.size();
+    }
+
+    @Override
+    public  FileChannel truncate(long size) throws IOException {
+        return new ChannelFunctionFileChannel(channel.truncate(size), functions);
+    }
+
+    @Override
+    public void force(boolean metaData) throws IOException {
+        channel.force(metaData);
+    }
+
+    @Override
+    public MappedByteBuffer map(MapMode mode, long position, long size) throws IOException {
+        return channel.map(mode, position, size);
+    }
+
+    @Override
+    public FileLock lock(long position, long size, boolean shared) throws IOException {
+        return channel.lock(position, size, shared);
+    }
+
+    @Override
+    public FileLock tryLock(long position, long size, boolean shared) throws IOException {
+        return channel.tryLock(position, size, shared);
+    }
+
+    @Override
+    protected void implCloseChannel() throws IOException {
+        channel.close();
+    }
+
+    @Override
+    public int write(ByteBuffer src, long position) throws IOException {
+        beforeWriting(src);
+        return channel.write(src, position);
+    }
+
+    @Override
+    public int read(ByteBuffer dst) throws IOException {
+        int r = channel.read(dst);
+        afterReading(dst);
+        return r;
+    }
+
+    @Override
+    public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+        long r = channel.read(dsts, offset, length);
+        for (int i = offset; i < length; i++) {
+            afterReading(dsts[i]);
+        }
+        return r;
+    }
+
+    @Override
+    public int write(ByteBuffer src) throws IOException {
+        beforeWriting(src);
+        return channel.write(src);
+    }
+
+    @Override
+    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        for (int i = offset; i < length; i++) {
+            beforeWriting(srcs[i]);
+        }
+        return channel.write(srcs, offset, length);
+    }
+
+    @Override
+    public int read(ByteBuffer dst, long position) throws IOException {
+        int r = channel.read(dst, position);
+        afterReading(dst);
+        return r;
+    }
+
+    @Override
+    public long transferTo(long position, long count, WritableByteChannel target) throws IOException {
+        return channel.transferTo(position, count, new ChannelFunctionWritableByteChannel(target, functions));
+    }
+
+    @Override
+    public long transferFrom(ReadableByteChannel src, long position, long count) throws IOException {
+        return channel.transferFrom(new ChannelFunctionReadableByteChannel(channel, functions) ,position, count);
+    }
+
+
+    private void beforeWriting(ByteBuffer buffer) throws IOException {
         for (ChannelFunction func: functions) {
             func.beforeWrite(buffer);
         }
     }
 
-    @Override
-    protected void afterReading(ByteBuffer buffer) throws IOException {
+    private void afterReading(ByteBuffer buffer) throws IOException {
         for (ChannelFunction func: functions) {
             func.afterRead(buffer);
         }
     }
 
-    @Override
-    protected ReadableByteChannel wrapReadableByteChannel(ReadableByteChannel channel) {
-        return new ChannelFunctionReadableByteChannel(channel, functions);
-    }
-
-    @Override
-    protected WritableByteChannel wrapWritableByteChannel(WritableByteChannel channel) {
-        return new ChannelFunctionWritableByteChannel(channel, functions);
-    }
-
-    @Override
-    protected AbstractFileChannelWrapper wrapFileChannel(FileChannel channel) {
-        return new ChannelFunctionFileChannel(channel, functions);
-    }
 }

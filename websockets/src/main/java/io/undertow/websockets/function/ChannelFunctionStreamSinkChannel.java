@@ -18,40 +18,153 @@
 package io.undertow.websockets.function;
 
 import io.undertow.websockets.ChannelFunction;
-import io.undertow.websockets.masking.Masker;
-import io.undertow.websockets.wrapper.AbstractStreamSinkChannelWrapper;
+import org.xnio.ChannelListener;
+import org.xnio.Option;
+import org.xnio.XnioExecutor;
+import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class ChannelFunctionStreamSinkChannel extends AbstractStreamSinkChannelWrapper {
+public class ChannelFunctionStreamSinkChannel implements StreamSinkChannel {
+    private final StreamSinkChannel channel;
     private final ChannelFunction[] functions;
 
     public ChannelFunctionStreamSinkChannel(StreamSinkChannel channel, ChannelFunction... functions) {
-        super(channel);
+        this.channel = channel;
         this.functions = functions;
     }
 
     @Override
-    protected void beforeWriting(ByteBuffer buffer) throws IOException {
+    public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter() {
+        return channel.getWriteSetter();
+    }
+
+    @Override
+    public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
+        return channel.getCloseSetter();
+    }
+
+    @Override
+    public void suspendWrites() {
+        channel.suspendWrites();
+    }
+
+    @Override
+    public void resumeWrites() {
+        channel.resumeWrites();
+    }
+
+    @Override
+    public boolean isWriteResumed() {
+        return channel.isWriteResumed();
+    }
+
+    @Override
+    public void wakeupWrites() {
+        channel.wakeupWrites();
+    }
+
+    @Override
+    public void shutdownWrites() throws IOException {
+        channel.shutdownWrites();
+    }
+
+    @Override
+    public void awaitWritable() throws IOException {
+        channel.awaitWritable();
+    }
+
+    @Override
+    public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
+        channel.awaitWritable(time, timeUnit);
+    }
+
+    @Override
+    public XnioExecutor getWriteThread() {
+        return channel.getWriteThread();
+    }
+
+    @Override
+    public boolean flush() throws IOException {
+        return channel.flush();
+    }
+
+    @Override
+    public XnioWorker getWorker() {
+        return channel.getWorker();
+    }
+
+    @Override
+    public boolean supportsOption(Option<?> option) {
+        return channel.supportsOption(option);
+    }
+
+    @Override
+    public <T> T getOption(Option<T> option) throws IOException {
+        return channel.getOption(option);
+    }
+
+    @Override
+    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+        return channel.setOption(option, value);
+    }
+
+    @Override
+    public long transferFrom(FileChannel src, long position, long count) throws IOException {
+        return channel.transferFrom(new ChannelFunctionFileChannel(src, functions), position, count);
+    }
+
+    @Override
+    public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
+        return channel.transferFrom(new ChannelFunctionStreamSourceChannel(source, functions), count, throughBuffer);
+    }
+
+
+    @Override
+    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        for (int i = offset; i < length; i++) {
+            ByteBuffer src = srcs[i];
+            beforeWriting(src);
+        }
+        return channel.write(srcs, offset, length);
+    }
+
+    @Override
+    public long write(ByteBuffer[] srcs) throws IOException {
+        for (ByteBuffer src: srcs) {
+            beforeWriting(src);
+        }
+        return channel.write(srcs);
+    }
+
+    @Override
+    public int write(ByteBuffer src) throws IOException {
+        beforeWriting(src);
+        return channel.write(src);
+    }
+
+    @Override
+    public boolean isOpen() {
+        return channel.isOpen();
+    }
+
+    @Override
+    public void close() throws IOException {
+        channel.close();
+    }
+
+    private void beforeWriting(ByteBuffer buffer) throws IOException {
         for (ChannelFunction func: functions) {
             func.beforeWrite(buffer);
         }
     }
 
-    @Override
-    protected StreamSourceChannel wrapStreamSourceChannel(StreamSourceChannel channel) {
-        return new ChannelFunctionStreamSourceChannel(channel, functions);
-    }
-
-    @Override
-    protected FileChannel wrapFileChannel(FileChannel channel) {
-        return new ChannelFunctionFileChannel(channel, functions);
-    }
 }

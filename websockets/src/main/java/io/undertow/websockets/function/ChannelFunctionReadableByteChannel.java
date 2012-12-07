@@ -18,7 +18,6 @@
 package io.undertow.websockets.function;
 
 import io.undertow.websockets.ChannelFunction;
-import io.undertow.websockets.wrapper.ChannelWrapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -27,12 +26,13 @@ import java.nio.channels.ReadableByteChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class ChannelFunctionReadableByteChannel extends ChannelWrapper<ReadableByteChannel> implements ReadableByteChannel {
+public class ChannelFunctionReadableByteChannel implements ReadableByteChannel {
 
     private final ChannelFunction[] functions;
+    private final ReadableByteChannel channel;
 
     public ChannelFunctionReadableByteChannel(ReadableByteChannel channel, ChannelFunction... functions) {
-        super(channel);
+        this.channel = channel;
         this.functions = functions;
     }
 
@@ -43,5 +43,15 @@ public class ChannelFunctionReadableByteChannel extends ChannelWrapper<ReadableB
             func.afterRead(dst);
         }
         return r;
+    }
+
+    @Override
+    public boolean isOpen() {
+        return channel.isOpen();
+    }
+
+    @Override
+    public void close() throws IOException {
+        channel.close();
     }
 }
