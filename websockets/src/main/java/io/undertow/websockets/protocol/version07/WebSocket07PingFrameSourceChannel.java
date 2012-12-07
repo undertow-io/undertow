@@ -19,14 +19,13 @@ package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.protocol.version07.Masker;
-import io.undertow.websockets.protocol.WebSocketFixedPayloadFrameSourceChannel;
+import io.undertow.websockets.FixedPayloadFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07PingFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
+public class WebSocket07PingFrameSourceChannel extends FixedPayloadFrameSourceChannel {
     public WebSocket07PingFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, Masker masker) {
         // can not be fragmented
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PING, payloadSize, rsv, true, masker);

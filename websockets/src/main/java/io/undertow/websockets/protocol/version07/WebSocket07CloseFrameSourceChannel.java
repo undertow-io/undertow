@@ -20,9 +20,7 @@ package io.undertow.websockets.protocol.version07;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketMessages;
-import io.undertow.websockets.protocol.version07.Masker;
-import io.undertow.websockets.protocol.WebSocketFixedPayloadFrameSourceChannel;
-import io.undertow.websockets.protocol.version07.UTF8Checker;
+import io.undertow.websockets.FixedPayloadFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
@@ -31,7 +29,7 @@ import java.nio.ByteBuffer;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07CloseFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
+public class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel {
     private final ByteBuffer status = ByteBuffer.allocate(2);
     private boolean statusValidated;
     private final Masker masker;

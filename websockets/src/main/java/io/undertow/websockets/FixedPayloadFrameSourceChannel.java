@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.protocol;
+package io.undertow.websockets;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,19 +36,18 @@ import org.xnio.channels.StreamSourceChannel;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSourceFrameChannel {
+public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameChannel {
 
     protected long readBytes;
     private final ChannelFunction[] functions;
 
-    protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment, ChannelFunction... functions) {
+    protected FixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment, ChannelFunction... functions) {
         super(streamSourceChannelControl, channel, wsChannel, type, payloadSize, rsv, finalFragment);
         this.functions = functions;
     }
 
     @Override
     protected final long transferTo0(long position, long count, FileChannel target) throws IOException {
-        // TODO: Fix me
         long toRead = byteToRead();
         if (toRead < 1) {
             return -1;
@@ -148,8 +147,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
 
     @Override
     protected final long read0(ByteBuffer[] dsts) throws IOException {
-        long b =  read0(dsts, 0, dsts.length);
-        return b;
+        return read0(dsts, 0, dsts.length);
     }
 
     @Override
