@@ -19,11 +19,10 @@ package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.masking.Masker;
+import io.undertow.websockets.protocol.version07.Masker;
 import io.undertow.websockets.protocol.WebSocketFixedPayloadFrameSourceChannel;
-import io.undertow.websockets.utf8.UTF8Checker;
+import io.undertow.websockets.protocol.version07.UTF8Checker;
 
-import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**

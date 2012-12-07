@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.utf8;
+package io.undertow.websockets.protocol.version07;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;

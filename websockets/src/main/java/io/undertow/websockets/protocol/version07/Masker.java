@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.masking;
+package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.ChannelFunction;
 

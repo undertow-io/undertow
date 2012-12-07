@@ -24,7 +24,7 @@ import java.nio.channels.FileChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.function.ChannelFunctionFileChannel;
 import io.undertow.websockets.function.ChannelFunctionStreamSourceChannel;
-import io.undertow.websockets.utf8.UTF8Checker;
+import io.undertow.websockets.protocol.version07.UTF8Checker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 

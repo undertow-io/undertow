@@ -146,7 +146,6 @@ public class AutobahnWebSocketServer {
         public void handleEvent(final WebSocketChannel channel) {
             try {
                 final StreamSourceFrameChannel ws = channel.receive();
-                System.out.println(ws);
                 if (ws == null) {
                     return;
                 }
