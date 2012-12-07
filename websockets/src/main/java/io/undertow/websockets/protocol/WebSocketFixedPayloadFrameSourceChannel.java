@@ -113,8 +113,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
 
         // use this because of XNIO bug
         // See https://issues.jboss.org/browse/XNIO-185
-        long r = transfer(this, count, throughBuffer, target);
-        return r;
+        return transfer(this, count, throughBuffer, target);
     }
 
     @Override

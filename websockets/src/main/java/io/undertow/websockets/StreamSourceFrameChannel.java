@@ -56,7 +56,6 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     private volatile boolean complete;
     private volatile boolean closed;
 
-
     public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this(streamSourceChannelControl, channel, wsChannel, type, payloadSize, 0, true);
     }
