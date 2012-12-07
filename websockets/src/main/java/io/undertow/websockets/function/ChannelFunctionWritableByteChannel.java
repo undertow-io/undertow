@@ -15,30 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.masking;
+package io.undertow.websockets.function;
 
+import io.undertow.websockets.ChannelFunction;
 import io.undertow.websockets.wrapper.ChannelWrapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class MaskingReadableByteChannel extends ChannelWrapper<ReadableByteChannel> implements ReadableByteChannel {
+public class ChannelFunctionWritableByteChannel extends ChannelWrapper<WritableByteChannel> implements WritableByteChannel {
+    private final ChannelFunction[] functions;
 
-    protected final Masker masker;
-
-    public MaskingReadableByteChannel(ReadableByteChannel channel, Masker masker) {
+    public ChannelFunctionWritableByteChannel(WritableByteChannel channel, ChannelFunction... functions) {
         super(channel);
-        this.masker = masker;
+        this.functions = functions;
     }
 
     @Override
-    public int read(ByteBuffer dst) throws IOException {
-        int r = channel.read(dst);
-        masker.maskAfterRead(dst);
-        return r;
+    public int write(ByteBuffer src) throws IOException {
+        for (ChannelFunction func: functions) {
+            func.beforeWrite(src);
+        }
+        return channel.write(src);
     }
+
 }

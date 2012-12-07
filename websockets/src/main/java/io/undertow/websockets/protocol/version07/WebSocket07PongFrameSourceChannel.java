@@ -19,15 +19,21 @@ package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.protocol.WebSocketFixedPayloadMaskedFrameSourceChannel;
-import org.xnio.channels.StreamSourceChannel;
+import io.undertow.websockets.masking.Masker;
+import io.undertow.websockets.protocol.WebSocketFixedPayloadFrameSourceChannel;
+import org.xnio.channels.PushBackStreamChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07PongFrameSourceChannel extends WebSocketFixedPayloadMaskedFrameSourceChannel {
-    public WebSocket07PongFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, final boolean masked, final int mask) {
+public class WebSocket07PongFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
+    public WebSocket07PongFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, final Masker masker) {
         // can not be fragmented
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PONG, payloadSize, rsv, true, masked, mask);
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PONG, payloadSize, rsv, true, masker);
+    }
+
+    public WebSocket07PongFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv) {
+        // can not be fragmented
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PONG, payloadSize, rsv, true);
     }
 }

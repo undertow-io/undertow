@@ -15,8 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.masking;
+package io.undertow.websockets.function;
 
+import io.undertow.websockets.ChannelFunction;
+import io.undertow.websockets.masking.Masker;
 import io.undertow.websockets.wrapper.AbstractStreamSinkChannelWrapper;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -28,26 +30,28 @@ import java.nio.channels.FileChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class MaskingStreamSinkChannel extends AbstractStreamSinkChannelWrapper {
-    private final Masker masker;
+public class ChannelFunctionStreamSinkChannel extends AbstractStreamSinkChannelWrapper {
+    private final ChannelFunction[] functions;
 
-    public MaskingStreamSinkChannel(StreamSinkChannel channel, Masker masker) {
+    public ChannelFunctionStreamSinkChannel(StreamSinkChannel channel, ChannelFunction... functions) {
         super(channel);
-        this.masker = masker;
+        this.functions = functions;
     }
 
     @Override
     protected void beforeWriting(ByteBuffer buffer) throws IOException {
-        masker.maskBeforeWrite(buffer);
+        for (ChannelFunction func: functions) {
+            func.beforeWrite(buffer);
+        }
     }
 
     @Override
     protected StreamSourceChannel wrapStreamSourceChannel(StreamSourceChannel channel) {
-        return new MaskingStreamSourceChannel(channel, masker);
+        return new ChannelFunctionStreamSourceChannel(channel, functions);
     }
 
     @Override
     protected FileChannel wrapFileChannel(FileChannel channel) {
-        return new MaskingFileChannel(channel, masker);
+        return new ChannelFunctionFileChannel(channel, functions);
     }
 }

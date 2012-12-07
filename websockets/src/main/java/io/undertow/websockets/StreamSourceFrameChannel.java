@@ -127,8 +127,10 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
             return -1;
         }
         try {
-            return read0(dst);
+            int i = read0(dst);
+            return i;
         } finally {
+
             if(isComplete()) {
                 complete();
             }
@@ -250,18 +252,16 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
                     new ChannelListener<StreamSourceChannel>() {
                         @Override
                         public void handleEvent(StreamSourceChannel channel) {
-                            getReadSetter().set(null);
-                            IoUtils.safeClose(channel);
+                            IoUtils.safeClose(StreamSourceFrameChannel.this);
                         }
                     }, new ChannelExceptionHandler<StreamSourceChannel>() {
                         @Override
                         public void handleException(StreamSourceChannel channel, IOException exception) {
-                            getReadSetter().set(null);
                             wsChannel.markBroken();
                             IoUtils.safeClose(channel, wsChannel);
                         }
                     });
-             getReadSetter().set(drainListener);
+            getReadSetter().set(drainListener);
             resumeReads();
         } else {
             close();

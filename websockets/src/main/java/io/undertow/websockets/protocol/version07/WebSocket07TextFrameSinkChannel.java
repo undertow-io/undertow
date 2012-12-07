@@ -22,9 +22,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.function.ChannelFunctionFileChannel;
+import io.undertow.websockets.function.ChannelFunctionStreamSourceChannel;
 import io.undertow.websockets.utf8.UTF8Checker;
-import io.undertow.websockets.utf8.UTF8FileChannel;
-import io.undertow.websockets.utf8.UTF8StreamSourceChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -63,7 +63,7 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
     @Override
     protected int write0(ByteBuffer src) throws IOException {
         if (checker != null) {
-            checker.checkUTF8BeforeWrite(src);
+            checker.beforeWrite(src);
         }
         return super.write0(src);
     }
@@ -73,7 +73,7 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
         if (checker != null) {
             for (int i = offset; i < length; i++) {
                 ByteBuffer src = srcs[i];
-                checker.checkUTF8BeforeWrite(src);
+                checker.beforeWrite(src);
             }
         }
         return super.write0(srcs, offset, length);
@@ -84,7 +84,7 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
         if (checker == null) {
             return super.transferFrom0(src, position, count);
         }
-        return super.transferFrom0(new UTF8FileChannel(src, checker), position, count);
+        return super.transferFrom0(new ChannelFunctionFileChannel(src, checker), position, count);
     }
 
     @Override
@@ -92,6 +92,6 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
         if (checker == null) {
             return super.transferFrom0(source, count, throughBuffer);
         }
-        return super.transferFrom0(new UTF8StreamSourceChannel(source, checker), count, throughBuffer);
+        return super.transferFrom0(new ChannelFunctionStreamSourceChannel(source, checker), count, throughBuffer);
     }
 }

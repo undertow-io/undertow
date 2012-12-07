@@ -20,95 +20,39 @@ package io.undertow.websockets.protocol.version07;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketMessages;
+import io.undertow.websockets.masking.Masker;
+import io.undertow.websockets.protocol.WebSocketFixedPayloadFrameSourceChannel;
 import io.undertow.websockets.utf8.UTF8Checker;
-import io.undertow.websockets.utf8.UTF8FixedPayloadMaskedFrameSourceChannel;
-import org.xnio.Pooled;
-import org.xnio.channels.PushBackStreamChannel;
-import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07CloseFrameSourceChannel extends UTF8FixedPayloadMaskedFrameSourceChannel {
+public class WebSocket07CloseFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
     private final ByteBuffer status = ByteBuffer.allocate(2);
     private boolean statusValidated;
+    private final Masker masker;
     enum State {
         EOF,
         DONE,
         VALIDATE
     }
 
-    WebSocket07CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, final boolean masked, final int mask) {
+    WebSocket07CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, Masker masker) {
         // no fragmentation allowed per spec
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, masked, mask, new UTF8Checker());
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, masker, new UTF8Checker());
+        this.masker = masker;
     }
 
-    @Override
-    protected long transferTo0(long position, long count, FileChannel target) throws IOException {
-        if (count == 0) {
-            return 0;
-        }
-
-        // Set the position of the channel
-        target.position(position);
-
-        boolean free = true;
-        Pooled<ByteBuffer> pooled = wsChannel.getBufferPool().allocate();
-        try {
-            ByteBuffer buf = pooled.getResource();
-            // clear the buffer before use it
-            buf.clear();
-
-            long r = 0;
-            while (r < count) {
-                int remaining = (int) (count - r);
-                if (remaining < buf.limit()) {
-                    // we have left less to read as the limit of the buffer, so adjust it
-                    buf.limit(remaining);
-                }
-                // read into the buffer and flip it. It's not that effective but
-                // I can not think of a
-                // better way that would us allow to detect the end of the frame
-                if (read0(buf) > 0) {
-                    buf.flip();
-
-                    while (buf.hasRemaining()) {
-                        int written = target.write(buf);
-                        if (written == 0) {
-                            if (buf.hasRemaining()) {
-                                // nothing could be written and the buffer has something left in there, so push it back to the channel
-                                ((PushBackStreamChannel) channel).unget(pooled);
-                                free = false;
-                            }
-                            return r;
-                        } else {
-                            r += written;
-                        }
-                    }
-                    // Clear the buffer so it can get used for writing again
-                    buf.clear();
-
-                    // check if the read operation marked it as complete and if so just return
-                    // now
-                    if (isComplete()) {
-                        return r;
-                    }
-                } else {
-                    return r;
-                }
-            }
-            return r;
-        } finally {
-            if (free) {
-                // free the pooled resource again
-                pooled.free();
-            }
-        }
+    WebSocket07CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv) {
+        // no fragmentation allowed per spec
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, new UTF8Checker());
+        this.masker = null;
     }
+
 
     @Override
     protected int read0(ByteBuffer dst) throws IOException {
@@ -129,11 +73,6 @@ public class WebSocket07CloseFrameSourceChannel extends UTF8FixedPayloadMaskedFr
             default:
                 return 0;
         }
-    }
-
-    @Override
-    protected long read0(ByteBuffer[] dsts) throws IOException {
-        return read(dsts, 0, dsts.length);
     }
 
     @Override
@@ -193,11 +132,15 @@ public class WebSocket07CloseFrameSourceChannel extends UTF8FixedPayloadMaskedFr
     }
 
     @Override
-    protected final void checkUTF8(ByteBuffer buffer) throws IOException {
+    protected void afterRead(ByteBuffer buffer) throws IOException {
         // not check for utf8 when read the status code
         if (!statusValidated) {
+            if (masker != null) {
+                masker.afterRead(buffer);
+            }
             return;
         }
-        super.checkUTF8(buffer);
+        super.afterRead(buffer);
+
     }
 }

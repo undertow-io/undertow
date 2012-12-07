@@ -19,14 +19,20 @@ package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.protocol.WebSocketFixedPayloadMaskedFrameSourceChannel;
+import io.undertow.websockets.masking.Masker;
+import io.undertow.websockets.protocol.WebSocketFixedPayloadFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
+
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07BinaryFrameSourceChannel extends WebSocketFixedPayloadMaskedFrameSourceChannel {
-    WebSocket07BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, boolean finalFragment, final boolean masked, final int mask) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, payloadSize, rsv, finalFragment, masked, mask);
+public class WebSocket07BinaryFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
+    WebSocket07BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, boolean finalFragment, Masker masker) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, payloadSize, rsv, finalFragment, masker);
+    }
+
+    WebSocket07BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, boolean finalFragment) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, payloadSize, rsv, finalFragment);
     }
 }

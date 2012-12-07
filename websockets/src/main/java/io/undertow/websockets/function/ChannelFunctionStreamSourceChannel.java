@@ -15,49 +15,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.utf8;
+package io.undertow.websockets.function;
 
-import io.undertow.websockets.wrapper.AbstractFileChannelWrapper;
+import io.undertow.websockets.ChannelFunction;
+import io.undertow.websockets.masking.Masker;
+import io.undertow.websockets.wrapper.AbstractStreamSourceChannelWrapper;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public final class UTF8FileChannel extends AbstractFileChannelWrapper {
-    private final UTF8Checker checker;
+public class ChannelFunctionStreamSourceChannel extends AbstractStreamSourceChannelWrapper {
+    private final ChannelFunction[] functions;
 
-    public UTF8FileChannel(FileChannel fc, UTF8Checker checker) {
-        super(fc);
-        this.checker = checker;
-    }
-
-    @Override
-    protected void beforeWriting(ByteBuffer buffer) throws IOException {
-        checker.checkUTF8BeforeWrite(buffer);
+    public ChannelFunctionStreamSourceChannel(StreamSourceChannel channel, ChannelFunction... functions) {
+        super(channel);
+        this.functions = functions;
     }
 
     @Override
     protected void afterReading(ByteBuffer buffer) throws IOException {
-        checker.checkUTF8AfterRead(buffer);
+        for (ChannelFunction func: functions) {
+            func.afterRead(buffer);
+        }
     }
 
     @Override
-    protected ReadableByteChannel wrapReadableByteChannel(ReadableByteChannel channel) {
-        return new UTF8ReadableByteChannel(channel, checker);
+    protected StreamSinkChannel wrapStreamSinkChannel(StreamSinkChannel channel) {
+        return new ChannelFunctionStreamSinkChannel(channel, functions);
     }
 
     @Override
-    protected WritableByteChannel wrapWritableByteChannel(WritableByteChannel channel) {
-        return new UTF8WritableByteChannel(channel, checker);
-    }
-
-    @Override
-    protected AbstractFileChannelWrapper wrapFileChannel(FileChannel channel) {
-        return new UTF8FileChannel(channel, checker);
+    protected FileChannel wrapFileChannel(FileChannel channel) {
+        return new ChannelFunctionFileChannel(channel, functions);
     }
 }

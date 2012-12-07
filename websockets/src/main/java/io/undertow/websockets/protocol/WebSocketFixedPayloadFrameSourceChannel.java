@@ -23,9 +23,11 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
+import io.undertow.websockets.ChannelFunction;
 import io.undertow.websockets.StreamSourceFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
+import io.undertow.websockets.function.ChannelFunctionFileChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -37,17 +39,16 @@ import org.xnio.channels.StreamSourceChannel;
 public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSourceFrameChannel {
 
     protected long readBytes;
+    private final ChannelFunction[] functions;
 
-    protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment) {
+    protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment, ChannelFunction... functions) {
         super(streamSourceChannelControl, channel, wsChannel, type, payloadSize, rsv, finalFragment);
-    }
-
-    protected WebSocketFixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
-        super(streamSourceChannelControl, channel, wsChannel, type, payloadSize);
+        this.functions = functions;
     }
 
     @Override
-    protected long transferTo0(long position, long count, FileChannel target) throws IOException {
+    protected final long transferTo0(long position, long count, FileChannel target) throws IOException {
+        // TODO: Fix me
         long toRead = byteToRead();
         if (toRead < 1) {
             return -1;
@@ -57,12 +58,18 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
             count = toRead;
         }
 
-        long r = channel.transferTo(position, count, target);
+        long r;
+        if (functions != null && functions.length > 0) {
+            r = channel.transferTo(position, count, new ChannelFunctionFileChannel(target, functions));
+        } else {
+            r = channel.transferTo(position, count, target);
+        }
         if (r > 0) {
             readBytes += r;
         }
         return r;
     }
+
 
     protected static long transfer(final ReadableByteChannel source, final long count, final ByteBuffer throughBuffer, final WritableByteChannel sink) throws IOException {
         long res;
@@ -135,12 +142,14 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
             return r;
         } finally {
             dst.limit(old);
+            afterRead(dst);
         }
     }
 
     @Override
-    protected long read0(ByteBuffer[] dsts) throws IOException {
-        return read0(dsts, 0, dsts.length);
+    protected final long read0(ByteBuffer[] dsts) throws IOException {
+        long b =  read0(dsts, 0, dsts.length);
+        return b;
     }
 
     @Override
@@ -161,6 +170,7 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
             }
             remaining -= bufferRemaining;
             remaining = remaining < 0 ? 0 : remaining;
+
         }
         try {
             long b = channel.read(dsts, offset, length);
@@ -171,6 +181,9 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
         } finally {
             for (int i = offset; i < length; i++) {
                 dsts[i].limit(old[i - offset]);
+            }
+            for (int i = offset; i < length; i++) {
+                afterRead(dsts[i]);
             }
         }
     }
@@ -183,5 +196,22 @@ public abstract class WebSocketFixedPayloadFrameSourceChannel extends StreamSour
     protected boolean isComplete() {
         assert readBytes <= getPayloadSize();
         return readBytes == getPayloadSize();
+    }
+
+    protected void afterRead(ByteBuffer buffer) throws IOException{
+        for (ChannelFunction func: functions) {
+            func.afterRead(buffer);
+        }
+
+    }
+
+    @Override
+    protected void complete() throws IOException {
+        if (isFinalFragment()) {
+            for (ChannelFunction func: functions) {
+                func.complete();
+            }
+        }
+        super.complete();
     }
 }

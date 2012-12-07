@@ -146,6 +146,7 @@ public class AutobahnWebSocketServer {
         public void handleEvent(final WebSocketChannel channel) {
             try {
                 final StreamSourceFrameChannel ws = channel.receive();
+                System.out.println(ws);
                 if (ws == null) {
                     return;
                 }
@@ -173,7 +174,6 @@ public class AutobahnWebSocketServer {
                         type = ws.getType();
                         break;
                 }
-
                 long size = ws.getPayloadSize();
 
                 final StreamSinkFrameChannel sink = channel.send(type, size);

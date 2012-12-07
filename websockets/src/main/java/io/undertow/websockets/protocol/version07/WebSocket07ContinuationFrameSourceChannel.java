@@ -19,20 +19,20 @@ package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.protocol.WebSocketFixedPayloadMaskedFrameSourceChannel;
+import io.undertow.websockets.masking.Masker;
+import io.undertow.websockets.protocol.WebSocketFixedPayloadFrameSourceChannel;
 import io.undertow.websockets.utf8.UTF8Checker;
-import io.undertow.websockets.utf8.UTF8FixedPayloadMaskedFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07ContinuationFrameSourceChannel extends UTF8FixedPayloadMaskedFrameSourceChannel {
-    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final boolean masked, final int mask, UTF8Checker checker) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, masked, mask, checker);
+public class WebSocket07ContinuationFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
+    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final Masker masker, UTF8Checker checker) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, masker, checker);
     }
 
-    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final boolean masked, final int mask) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, masked, mask, null);
+    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, UTF8Checker checker) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, checker);
     }
 }

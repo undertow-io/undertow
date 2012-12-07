@@ -23,6 +23,7 @@ import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.protocol.WebSocketFixedPayloadFrameSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
+
 /**
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -30,6 +31,6 @@ import org.xnio.channels.StreamSourceChannel;
 public class WebSocket00BinaryFrameSourceChannel extends WebSocketFixedPayloadFrameSourceChannel {
 
     WebSocket00BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, payloadSize, 0, true);
     }
 }

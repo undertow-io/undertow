@@ -17,10 +17,10 @@
  */
 package io.undertow.websockets.utf8;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
+import io.undertow.websockets.ChannelFunction;
 import io.undertow.websockets.WebSocketMessages;
 
 /**
@@ -30,7 +30,7 @@ import io.undertow.websockets.WebSocketMessages;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public final class UTF8Checker {
+public final class UTF8Checker implements ChannelFunction {
 
 
     private static final int UTF8_ACCEPT = 0;
@@ -57,13 +57,7 @@ public final class UTF8Checker {
     private int state = UTF8_ACCEPT;
     private int codep;
 
-    /**
-     * Check if the given byte is UTF-8 data.
-     *
-     * @param b
-     * @throws IOException
-     */
-    public void checkUTF8(int b) throws UnsupportedEncodingException {
+    private void checkUTF8(int b) throws UnsupportedEncodingException {
         byte type = TYPES[b & 0xFF];
 
         codep = state != UTF8_ACCEPT ? b & 0x3f | codep << 6 : 0xff >> type & b;
@@ -78,9 +72,9 @@ public final class UTF8Checker {
     /**
      * Check if the given ByteBuffer contains non UTF-8 data.
      *
-     * @param buf   the ByteBuffer to check
-     * @param flip
-     * @throws UnsupportedEncodingException is thrown if non UTF-8 data is found
+     * @param buf                               the ByteBuffer to check
+     * @param flip                              if the ByteBuffer should be flipped
+     * @throws UnsupportedEncodingException     is thrown if non UTF-8 data is found
      */
     private void checkUTF8(ByteBuffer buf, boolean flip) throws UnsupportedEncodingException {
         ByteBuffer b;
@@ -95,19 +89,17 @@ public final class UTF8Checker {
         }
     }
 
-    public void checkUTF8AfterRead(ByteBuffer buf) throws UnsupportedEncodingException{
+    @Override
+    public void afterRead(ByteBuffer buf) throws UnsupportedEncodingException{
         checkUTF8(buf, true);
     }
 
-    public void checkUTF8BeforeWrite(ByteBuffer buf) throws UnsupportedEncodingException{
+    @Override
+    public void beforeWrite(ByteBuffer buf) throws UnsupportedEncodingException{
         checkUTF8(buf, false);
     }
 
-    /**
-     * Should be called to mark the UTF8Checker as complete. After that it MUST
-     * not been used anymore
-     *
-     */
+    @Override
     public void complete() throws UnsupportedEncodingException {
         if (state != UTF8_ACCEPT) {
             throw WebSocketMessages.MESSAGES.invalidTextFrameEncoding();

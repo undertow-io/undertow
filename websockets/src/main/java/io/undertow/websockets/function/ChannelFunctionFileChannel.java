@@ -15,8 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.masking;
+package io.undertow.websockets.function;
 
+import io.undertow.websockets.ChannelFunction;
 import io.undertow.websockets.wrapper.AbstractFileChannelWrapper;
 
 import java.io.IOException;
@@ -28,36 +29,40 @@ import java.nio.channels.WritableByteChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class MaskingFileChannel extends AbstractFileChannelWrapper  {
-    private final Masker masker;
+public class ChannelFunctionFileChannel extends AbstractFileChannelWrapper  {
+    private final ChannelFunction[] functions;
 
-    public MaskingFileChannel(FileChannel fc, Masker masker) {
+    public ChannelFunctionFileChannel(FileChannel fc, ChannelFunction... functions) {
         super(fc);
-        this.masker = masker;
+        this.functions = functions;
     }
 
     @Override
     protected void beforeWriting(ByteBuffer buffer) throws IOException {
-        masker.maskBeforeWrite(buffer);
+        for (ChannelFunction func: functions) {
+            func.beforeWrite(buffer);
+        }
     }
 
     @Override
     protected void afterReading(ByteBuffer buffer) throws IOException {
-        masker.maskAfterRead(buffer);
+        for (ChannelFunction func: functions) {
+            func.afterRead(buffer);
+        }
     }
 
     @Override
     protected ReadableByteChannel wrapReadableByteChannel(ReadableByteChannel channel) {
-        return new MaskingReadableByteChannel(channel, masker);
+        return new ChannelFunctionReadableByteChannel(channel, functions);
     }
 
     @Override
     protected WritableByteChannel wrapWritableByteChannel(WritableByteChannel channel) {
-        return new MaskingWritableByteChannel(channel, masker);
+        return new ChannelFunctionWritableByteChannel(channel, functions);
     }
 
     @Override
     protected AbstractFileChannelWrapper wrapFileChannel(FileChannel channel) {
-        return new MaskingFileChannel(channel, masker);
+        return new ChannelFunctionFileChannel(channel, functions);
     }
 }
