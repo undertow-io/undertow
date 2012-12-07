@@ -57,7 +57,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     private final Object writeWaitLock = new Object();
     private int waiters = 0;
 
-    private boolean writesSuspended = true;
+    private volatile boolean writesSuspended = true;
 
     //todo: I don't think this belongs here
     private int rsv;
@@ -502,19 +502,19 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public synchronized void suspendWrites() {
+        writesSuspended = true;
         if (isActive()) {
             channel.suspendWrites();
         }
-        writesSuspended = true;
     }
 
 
     @Override
     public synchronized void resumeWrites() {
+        writesSuspended = false;
         if (isActive()) {
             channel.resumeWrites();
         }
-        writesSuspended = false;
     }
 
     /**

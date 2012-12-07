@@ -143,7 +143,7 @@ public class AutobahnWebSocketServer {
                 }
 
                 final WebSocketFrameType type;
-                switch(ws.getType()) {
+                switch (ws.getType()) {
                     case PONG:
                         // suspend receives until we have received the whole frame
                         channel.suspendReceives();
@@ -177,34 +177,48 @@ public class AutobahnWebSocketServer {
                                 IoUtils.safeClose(streamSourceFrameChannel);
                             }
                         }, new ChannelListener<StreamSinkFrameChannel>() {
-                    @Override
-                    public void handleEvent(StreamSinkFrameChannel streamSinkFrameChannel) {
-                        try {
-                            streamSinkFrameChannel.shutdownWrites();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            IoUtils.safeClose(streamSinkFrameChannel, channel);
-                            return;
-                        }
-
-                        streamSinkFrameChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
-                                new ChannelListener<StreamSinkFrameChannel>() {
-                                    @Override
-                                    public void handleEvent(StreamSinkFrameChannel streamSinkFrameChannel) {
-                                        streamSinkFrameChannel.getWriteSetter().set(null);
-                                        IoUtils.safeClose(streamSinkFrameChannel);
+                            @Override
+                            public void handleEvent(StreamSinkFrameChannel streamSinkFrameChannel) {
+                                if(!streamSinkFrameChannel.isOpen()) {
+                                    return;
+                                }
+                                try {
+                                    streamSinkFrameChannel.shutdownWrites();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                    IoUtils.safeClose(streamSinkFrameChannel, channel);
+                                    return;
+                                }
+                                try {
+                                    if (!streamSinkFrameChannel.flush()) {
+                                        streamSinkFrameChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
+                                                new ChannelListener<StreamSinkFrameChannel>() {
+                                                    @Override
+                                                    public void handleEvent(StreamSinkFrameChannel streamSinkFrameChannel) {
+                                                        streamSinkFrameChannel.getWriteSetter().set(null);
+                                                        IoUtils.safeClose(streamSinkFrameChannel);
+                                                        if (type == WebSocketFrameType.CLOSE) {
+                                                            IoUtils.safeClose(channel);
+                                                        }
+                                                    }
+                                                }, new ChannelExceptionHandler<StreamSinkFrameChannel>() {
+                                                    @Override
+                                                    public void handleException(StreamSinkFrameChannel o, IOException e) {
+                                                        e.printStackTrace();
+                                                    }
+                                                }
+                                        ));
+                                        streamSinkFrameChannel.resumeWrites();
+                                    } else {
                                         if (type == WebSocketFrameType.CLOSE) {
                                             IoUtils.safeClose(channel);
                                         }
                                     }
-                                }, new ChannelExceptionHandler<StreamSinkFrameChannel>() {
-                                    @Override
-                                    public void handleException(StreamSinkFrameChannel o, IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                }));
-                    }
-                }, new ChannelExceptionHandler<StreamSourceFrameChannel>() {
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }, new ChannelExceptionHandler<StreamSourceFrameChannel>() {
                             @Override
                             public void handleException(StreamSourceFrameChannel streamSourceFrameChannel, IOException e) {
                                 e.printStackTrace();
@@ -217,7 +231,8 @@ public class AutobahnWebSocketServer {
 
                                 IoUtils.safeClose(streamSinkFrameChannel, channel);
                             }
-                        }, channel.getBufferPool());
+                        }, channel.getBufferPool()
+                );
             } catch (IOException e) {
                 e.printStackTrace();
                 IoUtils.safeClose(channel);

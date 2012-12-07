@@ -159,7 +159,7 @@
                         <argument>-Xrunjdwp:transport=dt_socket,address=5005,server=y,suspend=n</argument>
                         -->
                         <argument>-Djava.util.logging.manager=org.jboss.logmanager.LogManager</argument>
-                        <argument>-Dtest.level=INFO</argument>
+                        <argument>-Dtest.level=${test.level}</argument>
                         <argument>-classpath</argument>
                         <classpath/>
                         <argument>io.undertow.websockets.protocol.server.AutobahnWebSocketServer</argument>
