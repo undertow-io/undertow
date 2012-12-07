@@ -271,7 +271,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     @Override
     public void suspendReads() {
         readsResumed = false;
-        channel.suspendReads();
+        if(!complete) {
+            channel.suspendReads();
+        }
     }
 
     @Override
@@ -292,11 +294,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     @Override
     public void wakeupReads() {
         readsResumed = true;
-        if (complete) {
-            // if complete we need to invoke the listener by ourself
-            queueReadListener();
-        } else {
-            channel.wakeupReads();
+        queueReadListener();
+        if (!complete) {
+            channel.resumeReads();
         }
     }
 
