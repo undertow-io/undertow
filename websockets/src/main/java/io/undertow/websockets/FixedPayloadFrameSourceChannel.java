@@ -67,16 +67,16 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
 
 
     protected static long transfer(final ReadableByteChannel source, final long count, final ByteBuffer throughBuffer, final WritableByteChannel sink) throws IOException {
-        long res;
+
         long total = 0L;
-        throughBuffer.clear();
         while (total < count) {
+            throughBuffer.clear();
             if (count - total < throughBuffer.remaining()) {
                 throughBuffer.limit((int) (count - total));
             }
 
             try {
-                res = source.read(throughBuffer);
+                long res = source.read(throughBuffer);
                 if (res <= 0) {
                     return total == 0L ? res : total;
                 }
@@ -84,19 +84,14 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
                 throughBuffer.flip();
 
             }
-            res = sink.write(throughBuffer);
+            while (throughBuffer.hasRemaining()) {
+                long res = sink.write(throughBuffer);
 
-            if (res == 0) {
-                return total;
+                if (res == 0) {
+                    return total;
+                }
+                total += res;
             }
-            total += res;
-            if (total < count) {
-                // only compact if nothing is left otherwise we may
-                // end up with a buffer that has a lim == cap even
-                // if it not contain data that we are interested in
-                throughBuffer.compact();
-            }
-
         }
         return total;
     }
@@ -105,7 +100,6 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
     protected final long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         long toRead = byteToRead();
         if (toRead < 1) {
-            throughBuffer.clear();
             return -1;
         }
 
@@ -127,8 +121,8 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
 
         int old = dst.limit();
         try {
-            if (byteToRead() < dst.remaining()) {
-                dst.limit(dst.position() + (int) byteToRead());
+            if (toRead < dst.remaining()) {
+                dst.limit(dst.position() + (int) toRead);
             }
             int r = channel.read(dst);
             if (r > 0) {
