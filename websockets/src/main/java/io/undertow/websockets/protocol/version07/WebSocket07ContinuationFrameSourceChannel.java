@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.protocol.version07;
 
+import io.undertow.websockets.ChannelFunction;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.FixedPayloadFrameSourceChannel;
@@ -26,11 +27,8 @@ import org.xnio.channels.StreamSourceChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket07ContinuationFrameSourceChannel extends FixedPayloadFrameSourceChannel {
-    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final Masker masker, UTF8Checker checker) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, masker, checker);
+    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final ChannelFunction ... function) {
+        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, function);
     }
 
-    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, UTF8Checker checker) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, checker);
-    }
 }

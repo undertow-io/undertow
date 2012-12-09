@@ -23,10 +23,6 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-import io.undertow.websockets.ChannelFunction;
-import io.undertow.websockets.StreamSourceFrameChannel;
-import io.undertow.websockets.WebSocketChannel;
-import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.function.ChannelFunctionFileChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -196,8 +192,8 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
         return readBytes == getPayloadSize();
     }
 
-    protected void afterRead(ByteBuffer buffer) throws IOException{
-        for (ChannelFunction func: functions) {
+    protected void afterRead(ByteBuffer buffer) throws IOException {
+        for (ChannelFunction func : functions) {
             func.afterRead(buffer);
         }
 
@@ -206,7 +202,7 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
     @Override
     protected void complete() throws IOException {
         if (isFinalFragment()) {
-            for (ChannelFunction func: functions) {
+            for (ChannelFunction func : functions) {
                 func.complete();
             }
         }

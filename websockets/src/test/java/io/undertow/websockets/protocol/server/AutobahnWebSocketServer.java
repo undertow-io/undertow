@@ -523,20 +523,11 @@ public class AutobahnWebSocketServer {
                 final ChannelListener<? super O> sinkListener = this.sinkListener;
                 final I source = this.source;
                 final O sink = this.sink;
+                source.suspendReads();
+                sink.suspendWrites();
 
-                Channels.setReadListener(source, sourceListener);
-                if (sourceListener == null) {
-                    source.suspendReads();
-                } else {
-                    source.wakeupReads();
-                }
-
-                Channels.setWriteListener(sink, sinkListener);
-                if (sinkListener == null) {
-                    sink.suspendWrites();
-                } else {
-                    sink.wakeupWrites();
-                }
+                ChannelListeners.invokeChannelListener(source, sourceListener);
+                ChannelListeners.invokeChannelListener(sink, sinkListener);
             } finally {
                 pooledBuffer.free();
             }
@@ -546,4 +537,6 @@ public class AutobahnWebSocketServer {
             return "Transfer channel listener (" + source + " to " + sink + ") -> (" + sourceListener + " and " + sinkListener + ")";
         }
     }
+
+
 }

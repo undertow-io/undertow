@@ -419,7 +419,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
             StreamSourceFrameChannel receiver = this.receiver;
             if (receiver != null && receiver.isReadResumed()) {
-                receiver.queueReadListener();
+                receiver.queueListener(((ChannelListener.SimpleSetter) receiver.getReadSetter()).get());
             }
             synchronized (senders) {
                 for (final StreamSinkFrameChannel channel : senders) {

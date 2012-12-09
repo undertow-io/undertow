@@ -47,7 +47,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     protected final WebSocketChannel wsChannel;
 
     private final SimpleSetter<? extends StreamSourceFrameChannel> readSetter = new SimpleSetter<StreamSourceFrameChannel>();
-    private final SimpleSetter<StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
+    private final SimpleSetter<? extends StreamSourceFrameChannel> closeSetter = new SimpleSetter<StreamSourceFrameChannel>();
     private final boolean finalFragment;
     private final int rsv;
     private final long payloadSize;
@@ -227,15 +227,15 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
             throw WebSocketMessages.MESSAGES.closedBeforeAllBytesWereRead();
         }
         closed = true;
-        queueReadListener();
+        queueListener((ChannelListener<StreamSourceFrameChannel>) closeSetter.get());
     }
 
-    protected void queueReadListener() {
+    protected void queueListener(final ChannelListener<StreamSourceFrameChannel> listener) {
         getReadThread().execute(new Runnable() {
             @Override
             public void run() {
                 WebSocketLogger.REQUEST_LOGGER.debugf("Invoking directly queued read listener");
-                ChannelListeners.invokeChannelListener(StreamSourceFrameChannel.this, closeSetter.get());
+                ChannelListeners.invokeChannelListener(StreamSourceFrameChannel.this, listener);
             }
         });
     }
@@ -279,7 +279,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     public void resumeReads() {
         readsResumed = true;
         if(complete) {
-            queueReadListener();
+            queueListener((ChannelListener<StreamSourceFrameChannel>) readSetter.get());
         } else {
             channel.resumeReads();
         }
@@ -293,7 +293,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     @Override
     public void wakeupReads() {
         readsResumed = true;
-        queueReadListener();
+        queueListener((ChannelListener<StreamSourceFrameChannel>) readSetter.get());
         if (!complete) {
             channel.resumeReads();
         }
