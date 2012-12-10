@@ -250,16 +250,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
         synchronized (this) {
             if (writesSuspended) {
-                if (channel.isWriteResumed()) {
-                    channel.suspendWrites();
-                }
+                channel.suspendWrites();
             } else {
                 if (channel.isOpen()) {
-                    if (!channel.isWriteResumed()) {
-                        channel.resumeWrites();
-                    } else {
-                        channel.wakeupWrites();
-                    }
+                    channel.resumeWrites();
                 } else {
                     //if the underlying channel has closed then we just invoke the write listener directly
                     queueWriteListener();
@@ -503,7 +497,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public synchronized void suspendWrites() {
         writesSuspended = true;
-        if (isActive()) {
+        if (state == ChannelState.ACTIVE || state == ChannelState.SHUTDOWN) {
             channel.suspendWrites();
         }
     }

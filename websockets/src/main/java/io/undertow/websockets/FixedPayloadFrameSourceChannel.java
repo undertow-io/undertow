@@ -87,9 +87,8 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
             }
             while (throughBuffer.hasRemaining()) {
                 long res = sink.write(throughBuffer);
-
                 if (res <= 0) {
-                    return total == 0L ? res : total;
+                    return total;
                 }
                 total += res;
             }

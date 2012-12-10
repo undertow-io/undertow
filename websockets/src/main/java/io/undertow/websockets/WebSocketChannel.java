@@ -390,16 +390,16 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      */
     protected final void complete(StreamSinkFrameChannel channel) {
         synchronized (senders) {
-            if (isActive(channel)) {
-                if (senders.remove(channel)) {
-                    StreamSinkFrameChannel ch = senders.peek();
-                    // check if there is some sink waiting
-                    if (ch != null) {
-                        ch.activate();
-                    } else {
-                        WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on %s in complete method as there is no new sender");
-                        channel.suspendWrites();
-                    }
+            boolean active = isActive(channel);
+            senders.remove(channel);
+            if (active) {
+                StreamSinkFrameChannel ch = senders.peek();
+                // check if there is some sink waiting
+                if (ch != null) {
+                    ch.activate();
+                } else {
+                    WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on %s in complete method as there is no new sender");
+                    channel.suspendWrites();
                 }
             }
         }
