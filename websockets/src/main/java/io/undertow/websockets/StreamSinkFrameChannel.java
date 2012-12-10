@@ -318,20 +318,11 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
             }
         }
         try {
-            close0();
             WebSocketLogger.REQUEST_LOGGER.closedBeforeFinishedWriting(this);
             wsChannel.markBroken();
         } finally {
             ChannelListeners.invokeChannelListener(this, closeSetter.get());
         }
-    }
-
-
-    /**
-     * @throws IOException Get thrown if an problem during the close operation is detected
-     */
-    protected void close0() throws IOException {
-        // NOOP
     }
 
     @Override
@@ -360,7 +351,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
         try {
             long result = write0(srcs, offset, i);
-            this.written += result;
+            if (result > 0) {
+                this.written += result;
+            }
             return result;
         } finally {
             if (oldLimit != -1) {
@@ -400,7 +393,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
         try {
             int result = write0(src);
-            this.written += result;
+            if (result > 0) {
+                this.written += result;
+            }
             return result;
         } finally {
            src.limit(oldLimit);
@@ -432,7 +427,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
             count = toWrite;
         }
         long result = transferFrom0(src, position, count);
-        this.written += result;
+        if (result > 0) {
+            this.written += result;
+        }
         return result;
     }
 
@@ -462,8 +459,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
             count = toWrite;
         }
         long result = transferFrom0(source, count, throughBuffer);
-
-        this.written += result;
+        if (result > 0) {
+            this.written += result;
+        }
         return result;
     }
 
@@ -635,7 +633,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (flushed && state == ChannelState.SHUTDOWN) {
             state = ChannelState.CLOSED;
             try {
-                close0();
                 wsChannel.complete(this);
             } finally {
                 ChannelListeners.invokeChannelListener(this, closeSetter.get());
