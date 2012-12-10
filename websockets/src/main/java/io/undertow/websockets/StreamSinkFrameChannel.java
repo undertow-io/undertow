@@ -63,6 +63,19 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     private int rsv;
     private boolean finalFragment = true;
 
+
+    /**
+     * Buffer that holds the frame start
+     */
+    private ByteBuffer start;
+
+    /**
+     * buffer that holds the frame end
+     */
+    private ByteBuffer end;
+
+    private boolean frameStartWritten = false;
+
     private static final AtomicReferenceFieldUpdater<StreamSinkFrameChannel, ChannelState> stateUpdater = AtomicReferenceFieldUpdater.newUpdater(StreamSinkFrameChannel.class, ChannelState.class, "state");
     private volatile ChannelState state = ChannelState.WAITING;
 
@@ -132,18 +145,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         this.rsv = rsv;
     }
 
-
-    /**
-     * Buffer that holds the frame start
-     */
-    private ByteBuffer start;
-
-    /**
-     * buffer that holds the frame end
-     */
-    private ByteBuffer end;
-
-    private boolean frameStartWritten = false;
 
     /**
      * Create the {@link ByteBuffer} that will be written as start of the frame.
@@ -343,6 +344,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (toWrite < 1) {
             return -1;
         }
+        if (!writeFrameStart()) {
+            return 0;
+        }
         int i = offset;
         int oldLimit = -1;
         for (; i < length; i++) {
@@ -392,7 +396,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
             return -1;
         }
         if (toWrite < src.remaining()) {
-            src.limit((int) toWrite);
+            src.limit((int) toWrite + src.position());
         }
         try {
             int result = write0(src);
