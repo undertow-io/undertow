@@ -17,15 +17,8 @@
  */
 package io.undertow.websockets.protocol.version07;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.function.ChannelFunctionFileChannel;
-import io.undertow.websockets.function.ChannelFunctionStreamSourceChannel;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 
 /**
  * WebSocket08FrameSinkChannel that is used to write WebSocketFrameType#TEXT frames.
@@ -34,20 +27,11 @@ import org.xnio.channels.StreamSourceChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel {
-    private final UTF8Checker checker;
 
     public WebSocket07TextFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
-        this(channel, wsChannel, payloadSize, true);
+        super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
     }
 
-    public WebSocket07TextFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize, boolean checkUtf8) {
-        super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
-        if (checkUtf8) {
-            checker = new UTF8Checker();
-        } else {
-            checker = null;
-        }
-    }
 
     @Override
     public boolean isFragmentationSupported() {
@@ -57,40 +41,5 @@ public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel
     @Override
     public boolean areExtensionsSupported() {
         return true;
-    }
-
-    @Override
-    protected int write0(ByteBuffer src) throws IOException {
-        if (checker != null) {
-            checker.beforeWrite(src);
-        }
-        return super.write0(src);
-    }
-
-    @Override
-    protected long write0(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        if (checker != null) {
-            for (int i = offset; i < length; i++) {
-                ByteBuffer src = srcs[i];
-                checker.beforeWrite(src);
-            }
-        }
-        return super.write0(srcs, offset, length);
-    }
-
-    @Override
-    protected long transferFrom0(FileChannel src, long position, long count) throws IOException {
-        if (checker == null) {
-            return super.transferFrom0(src, position, count);
-        }
-        return super.transferFrom0(new ChannelFunctionFileChannel(src, checker), position, count);
-    }
-
-    @Override
-    protected long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
-        if (checker == null) {
-            return super.transferFrom0(source, count, throughBuffer);
-        }
-        return super.transferFrom0(new ChannelFunctionStreamSourceChannel(source, checker), count, throughBuffer);
     }
 }
