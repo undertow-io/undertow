@@ -163,7 +163,8 @@ public class ChannelFunctionStreamSinkChannel implements StreamSinkChannel {
 
     private void beforeWriting(ByteBuffer buffer) throws IOException {
         for (ChannelFunction func: functions) {
-            func.beforeWrite(buffer);
+            int pos = buffer.position();
+            func.beforeWrite(buffer, pos, buffer.limit() - pos);
         }
     }
 

@@ -72,31 +72,26 @@ public final class UTF8Checker implements ChannelFunction {
     /**
      * Check if the given ByteBuffer contains non UTF-8 data.
      *
-     * @param buf                               the ByteBuffer to check
-     * @param flip                              if the ByteBuffer should be flipped
+     * @param buf           the ByteBuffer to check
+     * @param position      the index in the {@link ByteBuffer} to start from
+     * @param length        the number of byted to operate on
      * @throws UnsupportedEncodingException     is thrown if non UTF-8 data is found
      */
-    private void checkUTF8(ByteBuffer buf, boolean flip) throws UnsupportedEncodingException {
-        ByteBuffer b;
-        if (flip) {
-            b = buf.duplicate();
-            b.flip();
-        } else {
-            b = buf;
-        }
-        for (int i = b.position(); i < b.limit(); i++) {
-            checkUTF8(b.get(i));
+    private void checkUTF8(ByteBuffer buf, int position, int length) throws UnsupportedEncodingException {
+        int limit = position + length;
+        for (int i = position; i < limit; i++) {
+            checkUTF8(buf.get(i));
         }
     }
 
     @Override
-    public void afterRead(ByteBuffer buf) throws UnsupportedEncodingException{
-        checkUTF8(buf, true);
+    public void afterRead(ByteBuffer buf, int position, int length) throws UnsupportedEncodingException{
+        checkUTF8(buf, position, length);
     }
 
     @Override
-    public void beforeWrite(ByteBuffer buf) throws UnsupportedEncodingException{
-        checkUTF8(buf, false);
+    public void beforeWrite(ByteBuffer buf, int position, int length) throws UnsupportedEncodingException{
+        checkUTF8(buf, position, length);
     }
 
     @Override

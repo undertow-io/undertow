@@ -131,8 +131,11 @@ public class ChannelFunctionStreamSourceChannel implements StreamSourceChannel {
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
+        int position = dst.position();
         int r = channel.read(dst);
-        afterReading(dst);
+        if (r > 0) {
+            afterReading(dst, position, r);
+        }
         return r;
     }
 
@@ -157,9 +160,9 @@ public class ChannelFunctionStreamSourceChannel implements StreamSourceChannel {
         return channel.setOption(option, value);
     }
 
-    private void afterReading(ByteBuffer buffer) throws IOException {
+    private void afterReading(ByteBuffer buffer, int position, int length) throws IOException {
         for (ChannelFunction func: functions) {
-            func.afterRead(buffer);
+            func.afterRead(buffer, position, length);
         }
     }
 

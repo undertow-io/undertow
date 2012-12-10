@@ -130,15 +130,15 @@ public class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceC
     }
 
     @Override
-    protected void afterRead(ByteBuffer buffer) throws IOException {
+    protected void afterRead(ByteBuffer buffer, int position, int length) throws IOException {
         // not check for utf8 when read the status code
         if (!statusValidated) {
             if (masker != null) {
-                masker.afterRead(buffer);
+                masker.afterRead(buffer, position, length);
             }
             return;
         }
-        super.afterRead(buffer);
+        super.afterRead(buffer, position, length);
 
     }
 }

@@ -38,7 +38,8 @@ public class ChannelFunctionWritableByteChannel implements WritableByteChannel {
     @Override
     public int write(ByteBuffer src) throws IOException {
         for(ChannelFunction func : functions) {
-            func.beforeWrite(src);
+            int pos = src.position();
+            func.beforeWrite(src, pos, src.limit() - pos);
         }
         return channel.write(src);
     }

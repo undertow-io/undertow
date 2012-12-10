@@ -19,7 +19,6 @@ package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.ChannelFunction;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -43,28 +42,22 @@ public final class Masker implements ChannelFunction {
         return key;
     }
 
-    private void mask(ByteBuffer buf, boolean flip) {
-        ByteBuffer d;
-        if (flip) {
-            d = buf.duplicate();
-            d.flip();
-        } else {
-            d = buf;
-        }
-        for (int i = d.position(); i < d.limit(); ++i) {
-            d.put(i, (byte) (d.get(i) ^ maskingKey[m++]));
+    private void mask(ByteBuffer buf, int position, int length) {
+        int limit = position + length;
+        for (int i = position ; i < limit; ++i) {
+            buf.put(i, (byte) (buf.get(i) ^ maskingKey[m++]));
             m = m % 4;
         }
     }
 
     @Override
-    public void afterRead(ByteBuffer buf) {
-        mask(buf, true);
+    public void afterRead(ByteBuffer buf, int position, int length) {
+        mask(buf, position, length);
     }
 
     @Override
-    public void beforeWrite(ByteBuffer buf) {
-        mask(buf, false);
+    public void beforeWrite(ByteBuffer buf, int position, int length) {
+        mask(buf, position, length);
     }
 
     @Override

@@ -92,16 +92,26 @@ public class ChannelFunctionFileChannel extends FileChannel  {
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
+        int pos = dst.position();
         int r = channel.read(dst);
-        afterReading(dst);
+        if (r > 0) {
+            afterReading(dst, pos, r);
+        }
         return r;
     }
 
     @Override
     public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+        int[] positions = new int[length];
+        for (int i = 0; i < positions.length; i++) {
+            positions[i] = dsts[i].position();
+        }
         long r = channel.read(dsts, offset, length);
-        for (int i = offset; i < length; i++) {
-            afterReading(dsts[i]);
+        if (r > 0) {
+            for (int i = offset; i < length; i++) {
+                ByteBuffer dst = dsts[i];
+                afterReading(dst, positions[i], dst.position());
+            }
         }
         return r;
     }
@@ -122,8 +132,11 @@ public class ChannelFunctionFileChannel extends FileChannel  {
 
     @Override
     public int read(ByteBuffer dst, long position) throws IOException {
+        int pos = dst.position();
         int r = channel.read(dst, position);
-        afterReading(dst);
+        if (r > 0) {
+            afterReading(dst, pos, r);
+        }
         return r;
     }
 
@@ -140,13 +153,14 @@ public class ChannelFunctionFileChannel extends FileChannel  {
 
     private void beforeWriting(ByteBuffer buffer) throws IOException {
         for (ChannelFunction func: functions) {
-            func.beforeWrite(buffer);
+            int pos = buffer.position();
+            func.beforeWrite(buffer, pos, buffer.limit() - pos);
         }
     }
 
-    private void afterReading(ByteBuffer buffer) throws IOException {
+    private void afterReading(ByteBuffer buffer, int position, int length) throws IOException {
         for (ChannelFunction func: functions) {
-            func.afterRead(buffer);
+            func.afterRead(buffer, position, length);
         }
     }
 

@@ -38,11 +38,18 @@ public class ChannelFunctionReadableByteChannel implements ReadableByteChannel {
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
-        int r = channel.read(dst);
-        for (ChannelFunction func: functions) {
-            func.afterRead(dst);
+        int pos = dst.position();
+        int r = 0;
+        try {
+            r = channel.read(dst);
+            return r;
+        } finally {
+            if (r > 0) {
+                for (ChannelFunction func: functions) {
+                    func.afterRead(dst, pos, r);
+                }
+            }
         }
-        return r;
     }
 
     @Override

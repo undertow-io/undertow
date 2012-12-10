@@ -29,17 +29,21 @@ public interface ChannelFunction {
      * Is called on the {@link ByteBuffer} after a read operation completes
      *
      * @param buf           the {@link ByteBuffer} to operate on
+     * @param position      the index in the {@link ByteBuffer} to start from
+     * @param length        the number of byted to operate on
      * @throws IOException  thrown if an error accour
      */
-    void afterRead(ByteBuffer buf) throws IOException;
+    void afterRead(ByteBuffer buf, int position, int length) throws IOException;
 
     /**
      * Is called on the {@link ByteBuffer} before a write operation completes
      *
      * @param buf           the {@link ByteBuffer} to operate on
+     * @param position      the index in the {@link ByteBuffer} to start from
+     * @param length        the number of byted to operate on
      * @throws IOException  thrown if an error accour
      */
-    void beforeWrite(ByteBuffer buf) throws IOException;
+    void beforeWrite(ByteBuffer buf, int position, int length) throws IOException;
 
     /**
      * Is called to complete the {@link ChannelFunction}. Access it after complete

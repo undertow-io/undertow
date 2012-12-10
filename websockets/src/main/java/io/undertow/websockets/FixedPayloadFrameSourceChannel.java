@@ -118,20 +118,23 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
         if (toRead < 1) {
             return -1;
         }
-
+        int r = 0;
+        int position = dst.position();
         int old = dst.limit();
         try {
             if (toRead < dst.remaining()) {
                 dst.limit(dst.position() + (int) toRead);
             }
-            int r = channel.read(dst);
+            r = channel.read(dst);
             if (r > 0) {
                 readBytes += r;
+
+                afterRead(dst, position, r);
             }
             return r;
         } finally {
             dst.limit(old);
-            afterRead(dst);
+
         }
     }
 
@@ -146,11 +149,12 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
         if (toRead < 1) {
             return -1;
         }
-        int[] old = new int[length];
+        Bounds[] old = new Bounds[length];
         int used = 0;
         long remaining = toRead;
         for (int i = offset; i < length; i++) {
-            old[i - offset] = dsts[i].limit();
+            ByteBuffer dst = dsts[i];
+            old[i - offset] = new Bounds(dst.position(), dst.limit());
             final int bufferRemaining = dsts[i].remaining();
             used += bufferRemaining;
             if (used > remaining) {
@@ -164,15 +168,19 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
             long b = channel.read(dsts, offset, length);
             if (b > 0) {
                 readBytes += b;
+
+                for (int i = offset; i < length; i++) {
+                    ByteBuffer dst = dsts[i];
+                    int oldPos = old[i - offset].position;
+                    afterRead(dst, oldPos, dst.position() - oldPos);
+                }
             }
             return b;
         } finally {
             for (int i = offset; i < length; i++) {
-                dsts[i].limit(old[i - offset]);
+                dsts[i].limit(old[i - offset].limit);
             }
-            for (int i = offset; i < length; i++) {
-                afterRead(dsts[i]);
-            }
+
         }
     }
 
@@ -186,9 +194,9 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
         return readBytes == getPayloadSize();
     }
 
-    protected void afterRead(ByteBuffer buffer) throws IOException {
+    protected void afterRead(ByteBuffer buffer, int position, int length) throws IOException {
         for (ChannelFunction func : functions) {
-            func.afterRead(buffer);
+            func.afterRead(buffer, position, length);
         }
 
     }
@@ -201,5 +209,15 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
             }
         }
         super.complete();
+    }
+
+    private static class Bounds {
+        final int position;
+        final int limit;
+
+        Bounds(int position, int limit) {
+            this.position = position;
+            this.limit = limit;
+        }
     }
 }
