@@ -344,8 +344,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
         StreamSinkFrameChannel ch = createStreamSinkChannel(channel, type, payloadSize);
         synchronized (senders) {
-            boolean o = senders.offer(ch);
-            assert o;
+            senders.add(ch);
 
             if (isActive(ch)) {
                 // Channel is first in the queue so mark it as active
@@ -469,6 +468,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 ch = senders.peek();
             }
             if (ch != null) {
+                if (!ch.isWriteResumed()) {
+                    return;
+                }
                 final ChannelListener<? super StreamSinkFrameChannel> channelListener = (ChannelListener<? super StreamSinkFrameChannel>) ch.getWriteSetter().get();
                 WebSocketLogger.REQUEST_LOGGER.debugf("Invoking write listener %s on %s", channelListener, ch);
                 ChannelListeners.invokeChannelListener(ch, channelListener);
@@ -490,11 +492,12 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             if (receiver != null && receiver.isOpen() && receiver.isReadResumed()) {
                 ChannelListeners.invokeChannelListener(receiver, (ChannelListener<? super StreamSourceFrameChannel>) receiver.getReadSetter().get());
             }
-
-            for (final StreamSinkFrameChannel channel : senders) {
-                //we just activate them all at once
-                //the underlying channel is already closed, so they cannot write anyway
-                channel.activate();
+            synchronized (senders) {
+                for (final StreamSinkFrameChannel channel : senders) {
+                    //we just activate them all at once
+                    //the underlying channel is already closed, so they cannot write anyway
+                    channel.activate();
+                }
             }
             ChannelListeners.invokeChannelListener(WebSocketChannel.this, closeSetter.get());
         }

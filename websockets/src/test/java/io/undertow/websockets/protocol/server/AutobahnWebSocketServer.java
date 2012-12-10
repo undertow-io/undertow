@@ -416,7 +416,7 @@ public class AutobahnWebSocketServer {
                             readFailed(e);
                             return;
                         }
-                        if (lres == 0) {
+                        if (lres == 0 && !buffer.hasRemaining()) {
                             this.count = count;
                             return;
                         }
@@ -471,7 +471,7 @@ public class AutobahnWebSocketServer {
                             readFailed(e);
                             return;
                         }
-                        if (lres == 0) {
+                        if (lres == 0 && !buffer.hasRemaining()) {
                             this.count = count;
                             this.state = 0;
                             sink.suspendWrites();
