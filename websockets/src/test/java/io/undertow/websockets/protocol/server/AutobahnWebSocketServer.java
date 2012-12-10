@@ -207,8 +207,10 @@ public class AutobahnWebSocketServer {
                                                     }
                                                 }, new ChannelExceptionHandler<StreamSinkFrameChannel>() {
                                                     @Override
-                                                    public void handleException(StreamSinkFrameChannel o, IOException e) {
+                                                    public void handleException(StreamSinkFrameChannel streamSinkFrameChannel, IOException e) {
                                                         e.printStackTrace();
+                                                        IoUtils.safeClose(streamSinkFrameChannel, channel);
+
                                                     }
                                                 }
                                         ));
@@ -286,6 +288,7 @@ public class AutobahnWebSocketServer {
         boolean free = true;
         try {
             final ByteBuffer buffer = allocated.getResource();
+            buffer.clear();
             long transferred;
             do {
                 try {
