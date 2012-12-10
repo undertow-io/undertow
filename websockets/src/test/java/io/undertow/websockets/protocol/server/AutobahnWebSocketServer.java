@@ -126,7 +126,6 @@ public class AutobahnWebSocketServer {
             server = worker.createStreamServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
 
-
             setRootHandler(new WebSocketProtocolHandshakeHandler("/", new WebSocketConnectionCallback() {
                 @Override
                 public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
@@ -178,7 +177,7 @@ public class AutobahnWebSocketServer {
                 final StreamSinkFrameChannel sink = channel.send(type, size);
                 sink.setFinalFragment(ws.isFinalFragment());
                 sink.setRsv(ws.getRsv());
-                initiateTransfer(Long.MAX_VALUE, ws, sink, new ChannelListener<StreamSourceFrameChannel>() {
+                initiateTransfer(ws, sink, new ChannelListener<StreamSourceFrameChannel>() {
                             @Override
                             public void handleEvent(StreamSourceFrameChannel streamSourceFrameChannel) {
                                 IoUtils.safeClose(streamSourceFrameChannel);
@@ -266,21 +265,19 @@ public class AutobahnWebSocketServer {
     }
 
 
-
     /**
      * Initiate a low-copy transfer between two stream channels.  The pool should be a direct buffer pool for best
      * performance.
      *
-     * @param count the number of bytes to transfer, or {@link Long#MAX_VALUE} to transfer all remaining bytes
-     * @param source the source channel
-     * @param sink the target channel
-     * @param sourceListener the source listener to set and call when the transfer is complete, or {@code null} to clear the listener at that time
-     * @param sinkListener the target listener to set and call when the transfer is complete, or {@code null} to clear the listener at that time
-     * @param readExceptionHandler the read exception handler to call if an error occurs during a read operation
+     * @param source                the source channel
+     * @param sink                  the target channel
+     * @param sourceListener        the source listener to set and call when the transfer is complete, or {@code null} to clear the listener at that time
+     * @param sinkListener          the target listener to set and call when the transfer is complete, or {@code null} to clear the listener at that time
+     * @param readExceptionHandler  the read exception handler to call if an error occurs during a read operation
      * @param writeExceptionHandler the write exception handler to call if an error occurs during a write operation
-     * @param pool the pool from which the transfer buffer should be allocated
+     * @param pool                  the pool from which the transfer buffer should be allocated
      */
-    public static <I extends StreamSourceChannel, O extends StreamSinkChannel> void initiateTransfer(long count, final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super I> readExceptionHandler, final ChannelExceptionHandler<? super O> writeExceptionHandler, Pool<ByteBuffer> pool) {
+    public static <I extends StreamSourceChannel, O extends StreamSinkChannel> void initiateTransfer(final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super I> readExceptionHandler, final ChannelExceptionHandler<? super O> writeExceptionHandler, Pool<ByteBuffer> pool) {
         if (pool == null) {
             throw new IllegalArgumentException("pool is null");
         }
@@ -292,26 +289,14 @@ public class AutobahnWebSocketServer {
             long transferred;
             do {
                 try {
-                    transferred = source.transferTo(count, buffer, sink);
+                    transferred = source.transferTo(Long.MAX_VALUE, buffer, sink);
                 } catch (IOException e) {
                     invokeChannelExceptionHandler(source, readExceptionHandler, e);
                     return;
                 }
                 if (transferred == -1) {
-                    if (count == Long.MAX_VALUE) {
-                        ChannelListeners.invokeChannelListener(source, sourceListener);
-                        ChannelListeners.invokeChannelListener(sink, sinkListener);
-                    } else {
-                        source.suspendReads();
-                        sink.suspendWrites();
-                        invokeChannelExceptionHandler(source, readExceptionHandler, new EOFException());
-                    }
-                    return;
-                }
-                if (count != Long.MAX_VALUE) {
-                    count -= transferred;
-                }
-                if(count == 0) {
+                    source.suspendReads();
+                    sink.suspendWrites();
                     ChannelListeners.invokeChannelListener(source, sourceListener);
                     ChannelListeners.invokeChannelListener(sink, sinkListener);
                     return;
@@ -320,16 +305,13 @@ public class AutobahnWebSocketServer {
                     final int res;
                     try {
                         res = sink.write(buffer);
-                        if (count != Long.MAX_VALUE) {
-                            count -= res;
-                        }
                     } catch (IOException e) {
                         invokeChannelExceptionHandler(sink, writeExceptionHandler, e);
                         return;
                     }
                     if (res == 0) {
                         // write first listener
-                        final TransferListener<I, O> listener = new TransferListener<I, O>(count, allocated, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, 1);
+                        final TransferListener<I, O> listener = new TransferListener<I, O>(allocated, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, 1);
                         source.suspendReads();
                         source.getReadSetter().set(listener);
                         sink.getWriteSetter().set(listener);
@@ -337,26 +319,22 @@ public class AutobahnWebSocketServer {
                         free = false;
                         return;
                     } else if (res == -1) {
-                        if (count == Long.MAX_VALUE || count == 0) {
-                            ChannelListeners.invokeChannelListener(source, sourceListener);
-                            ChannelListeners.invokeChannelListener(sink, sinkListener);
-                        } else {
-                            source.suspendReads();
-                            sink.suspendWrites();
-                            invokeChannelExceptionHandler(source, readExceptionHandler, new EOFException());
-                        }
+                        source.suspendReads();
+                        sink.suspendWrites();
+                        ChannelListeners.invokeChannelListener(source, sourceListener);
+                        ChannelListeners.invokeChannelListener(sink, sinkListener);
                         return;
                     }
                 }
             } while (transferred > 0L);
-            // read first listener
-            final TransferListener<I, O> listener = new TransferListener<I, O>(count, allocated, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, 0);
+            final TransferListener<I, O> listener = new TransferListener<I, O>(allocated, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, 0);
             sink.suspendWrites();
             sink.getWriteSetter().set(listener);
             source.getReadSetter().set(listener);
+            // read first listener
+            sink.suspendWrites();
             source.resumeReads();
             free = false;
-            return;
         } finally {
             if (free) allocated.free();
         }
@@ -366,10 +344,10 @@ public class AutobahnWebSocketServer {
     /**
      * Safely invoke a channel exception handler, logging any errors.
      *
-     * @param channel the channel
+     * @param channel          the channel
      * @param exceptionHandler the exception handler
-     * @param exception the exception to pass in
-     * @param <T> the exception type
+     * @param exception        the exception to pass in
+     * @param <T>              the exception type
      */
     public static <T extends Channel> void invokeChannelExceptionHandler(final T channel, final ChannelExceptionHandler<? super T> exceptionHandler, final IOException exception) {
         try {
@@ -388,11 +366,9 @@ public class AutobahnWebSocketServer {
         private final ChannelListener<? super O> sinkListener;
         private final ChannelExceptionHandler<? super O> writeExceptionHandler;
         private final ChannelExceptionHandler<? super I> readExceptionHandler;
-        private long count;
         private volatile int state;
 
-        TransferListener(final long count, final Pooled<ByteBuffer> pooledBuffer, final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super O> writeExceptionHandler, final ChannelExceptionHandler<? super I> readExceptionHandler, final int state) {
-            this.count = count;
+        TransferListener(final Pooled<ByteBuffer> pooledBuffer, final I source, final O sink, final ChannelListener<? super I> sourceListener, final ChannelListener<? super O> sinkListener, final ChannelExceptionHandler<? super O> writeExceptionHandler, final ChannelExceptionHandler<? super I> readExceptionHandler, final int state) {
             this.pooledBuffer = pooledBuffer;
             this.source = source;
             this.sink = sink;
@@ -406,38 +382,30 @@ public class AutobahnWebSocketServer {
         public void handleEvent(final Channel channel) {
             final ByteBuffer buffer = pooledBuffer.getResource();
             int state = this.state;
-            // always read after and write before state
-            long count = this.count;
             long lres;
             int ires;
 
             switch (state) {
                 case 0: {
                     // read listener
-                    for (;;) {
+                    for (; ; ) {
+                        if(buffer.hasRemaining()) {
+                            WebSocketLogger.REQUEST_LOGGER.error("BUFFER HAS REMAINING!!!!!");
+                        }
                         try {
-                            lres = source.transferTo(count, buffer, sink);
+                            lres = source.transferTo(Long.MAX_VALUE, buffer, sink);
                         } catch (IOException e) {
                             readFailed(e);
                             return;
                         }
                         if (lres == 0 && !buffer.hasRemaining()) {
-                            this.count = count;
                             return;
                         }
                         if (lres == -1) {
                             // possibly unexpected EOF
-                            if (count == Long.MAX_VALUE) {
-                                // it's OK; just be done
-                                done();
-                                return;
-                            } else {
-                                readFailed(new EOFException());
-                                return;
-                            }
-                        }
-                        if (count != Long.MAX_VALUE) {
-                            count -= lres;
+                            // it's OK; just be done
+                            done();
+                            return;
                         }
                         while (buffer.hasRemaining()) {
                             try {
@@ -447,7 +415,6 @@ public class AutobahnWebSocketServer {
                                 return;
                             }
                             if (ires == 0) {
-                                this.count = count;
                                 this.state = 1;
                                 source.suspendReads();
                                 sink.resumeWrites();
@@ -458,7 +425,7 @@ public class AutobahnWebSocketServer {
                 }
                 case 1: {
                     // write listener
-                    for (;;) {
+                    for (; ; ) {
                         while (buffer.hasRemaining()) {
                             try {
                                 ires = sink.write(buffer);
@@ -471,31 +438,20 @@ public class AutobahnWebSocketServer {
                             }
                         }
                         try {
-                            lres = source.transferTo(count, buffer, sink);
+                            lres = source.transferTo(Long.MAX_VALUE, buffer, sink);
                         } catch (IOException e) {
                             readFailed(e);
                             return;
                         }
                         if (lres == 0 && !buffer.hasRemaining()) {
-                            this.count = count;
                             this.state = 0;
                             sink.suspendWrites();
                             source.resumeReads();
                             return;
                         }
                         if (lres == -1) {
-                            // possibly unexpected EOF
-                            if (count == Long.MAX_VALUE) {
-                                // it's OK; just be done
-                                done();
-                                return;
-                            } else {
-                                readFailed(new EOFException());
-                                return;
-                            }
-                        }
-                        if (count != Long.MAX_VALUE) {
-                            count -= lres;
+                            done();
+                            return;
                         }
                     }
                 }
