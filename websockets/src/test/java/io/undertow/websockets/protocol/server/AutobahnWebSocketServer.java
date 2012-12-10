@@ -222,6 +222,8 @@ public class AutobahnWebSocketServer {
                                     }
                                 } catch (IOException e) {
                                     e.printStackTrace();
+                                    IoUtils.safeClose(streamSinkFrameChannel, channel);
+
                                 }
                             }
                         }, new ChannelExceptionHandler<StreamSourceFrameChannel>() {

@@ -17,7 +17,6 @@
  */
 package io.undertow.websockets.function;
 
-import io.undertow.websockets.ChannelFunction;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;

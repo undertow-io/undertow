@@ -17,8 +17,6 @@
  */
 package io.undertow.websockets.function;
 
-import io.undertow.websockets.ChannelFunction;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;

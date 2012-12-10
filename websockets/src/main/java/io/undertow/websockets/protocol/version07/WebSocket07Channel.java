@@ -19,7 +19,7 @@ package io.undertow.websockets.protocol.version07;
 
 import java.nio.ByteBuffer;
 
-import io.undertow.websockets.ChannelFunction;
+import io.undertow.websockets.function.ChannelFunction;
 import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.StreamSourceFrameChannel;
 import io.undertow.websockets.WebSocketChannel;
