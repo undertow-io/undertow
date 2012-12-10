@@ -383,11 +383,13 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!writeFrameStart()) {
             return 0;
         }
-        int oldLimit = src.limit();
         long toWrite = toWrite();
         if (toWrite < 1) {
             return -1;
         }
+
+        int oldLimit = src.limit();
+
         if (toWrite < src.remaining()) {
             src.limit((int) toWrite + src.position());
         }
