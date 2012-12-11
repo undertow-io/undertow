@@ -463,20 +463,35 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private class WebSocketWriteListener implements ChannelListener<ConnectedStreamChannel> {
         @Override
         public void handleEvent(final ConnectedStreamChannel channel) {
-            StreamSinkFrameChannel ch = null;
-            synchronized (senders) {
-                ch = senders.peek();
-            }
-            if (ch != null) {
-                if (!ch.isWriteResumed()) {
+            StreamSinkFrameChannel ch = null, oldCh;
+            for (; ; ) {
+                oldCh = ch;
+                boolean writeResumed = false;
+                synchronized (senders) {
+                    ch = senders.peek();
+                    if(ch != null) {
+                        writeResumed = ch.isWriteResumed();
+                    }
+                }
+                if (ch != null && ch != oldCh) {
+                    if (!writeResumed) {
+                        return;
+                    }
+                    final ChannelListener<? super StreamSinkFrameChannel> channelListener = (ChannelListener<? super StreamSinkFrameChannel>) ch.getWriteSetter().get();
+                    WebSocketLogger.REQUEST_LOGGER.debugf("Invoking write listener %s on %s", channelListener, ch);
+                    ChannelListeners.invokeChannelListener(ch, channelListener);
+                } else if (ch == null) {
+                    //we have to make sure that another channel has not been added in the mean time
+                    synchronized (senders) {
+                        if (senders.peek() == null) {
+                            WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on channel %s due to no sender", WebSocketChannel.this);
+                            channel.suspendWrites();
+                        }
+                    }
+                    return;
+                } else {
                     return;
                 }
-                final ChannelListener<? super StreamSinkFrameChannel> channelListener = (ChannelListener<? super StreamSinkFrameChannel>) ch.getWriteSetter().get();
-                WebSocketLogger.REQUEST_LOGGER.debugf("Invoking write listener %s on %s", channelListener, ch);
-                ChannelListeners.invokeChannelListener(ch, channelListener);
-            } else {
-                WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on channel %s due to no sender", WebSocketChannel.this);
-                channel.suspendWrites();
             }
         }
     }
