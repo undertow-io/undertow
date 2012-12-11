@@ -27,8 +27,6 @@ import io.undertow.jsp.HackInstanceManager;
 import io.undertow.jsp.JspServletBuilder;
 import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.session.InMemorySessionManager;
-import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
@@ -59,10 +57,8 @@ public class SimpleJspTestCase {
     public static void setup() throws ServletException {
 
         final CookieHandler cookieHandler = new CookieHandler();
-        final SessionAttachmentHandler session = new SessionAttachmentHandler(new InMemorySessionManager());
-        cookieHandler.setNext(session);
         final PathHandler servletPath = new PathHandler();
-        session.setNext(servletPath);
+        cookieHandler.setNext(servletPath);
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
 

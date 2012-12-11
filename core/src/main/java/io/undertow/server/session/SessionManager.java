@@ -48,6 +48,10 @@ public interface SessionManager {
      * as the new session ID. If a session with this ID already exists then an {@link IllegalStateException} must be
      * thrown.
      *
+     * this method *MUST* call {@link SessionConfig#attachSession(io.undertow.server.HttpServerExchange, Session)}
+     * on the newly created session to attach it to the exchange.
+     *
+     *
      * This requirement exists to allow forwards across servlet contexts to work correctly.
      *
      *

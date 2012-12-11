@@ -44,16 +44,22 @@ public class SessionAttachmentHandler implements HttpHandler {
 
     private volatile SessionManager sessionManager;
 
-    private volatile SessionConfig defaultSessionCookieConfig = new SessionCookieConfig();
+    /**
+     * The config that is used for this session. It is possible for multiple session to be attached to the same
+     * HTTP request. Handlers that wish to share a session must also share the session configuration.
+     */
+    private final SessionConfig sessionConfig;
 
-    public SessionAttachmentHandler(final SessionManager sessionManager) {
+    public SessionAttachmentHandler(final SessionManager sessionManager, final SessionConfig sessionConfig) {
+        this.sessionConfig = sessionConfig;
         if (sessionManager == null) {
             throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
         this.sessionManager = sessionManager;
     }
 
-    public SessionAttachmentHandler(final HttpHandler next, final SessionManager sessionManager) {
+    public SessionAttachmentHandler(final HttpHandler next, final SessionManager sessionManager, final SessionConfig sessionConfig) {
+        this.sessionConfig = sessionConfig;
         if (sessionManager == null) {
             throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
@@ -68,23 +74,14 @@ public class SessionAttachmentHandler implements HttpHandler {
         }
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
 
-        SessionConfig config = exchange.getAttachment(SessionConfig.ATTACHMENT_KEY);
-        if(config == null) {
-            config = defaultSessionCookieConfig;
-            exchange.putAttachment(SessionConfig.ATTACHMENT_KEY, config);
-        }
-
-        final IoFuture<Session> session = sessionManager.getSession(exchange, config);
-        final UpdateLastAccessTimeCompletionHandler handler = new UpdateLastAccessTimeCompletionHandler(completionHandler, exchange);
+        final IoFuture<Session> session = sessionManager.getSession(exchange, sessionConfig);
+        final UpdateLastAccessTimeCompletionHandler handler = new UpdateLastAccessTimeCompletionHandler(completionHandler, exchange, sessionConfig);
         session.addNotifier(new IoFuture.Notifier<Session, Session>() {
             @Override
             public void notify(final IoFuture<? extends Session> ioFuture, final Session attachment) {
                 try {
                     if (ioFuture.getStatus() == IoFuture.Status.DONE) {
                         final Session session = ioFuture.get();
-                        if (session != null) {
-                            exchange.putAttachment(Session.ATTACHMENT_KEY, session);
-                        }
                         HttpHandlers.executeHandler(next, exchange, handler);
                     } else if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
                         //we failed to get the session
@@ -125,31 +122,24 @@ public class SessionAttachmentHandler implements HttpHandler {
         return this;
     }
 
-    public SessionConfig getDefaultSessionCookieConfig() {
-        return defaultSessionCookieConfig;
-    }
-
-    public SessionAttachmentHandler setDefaultSessionCookieConfig(final SessionConfig defaultSessionCookieConfig) {
-        this.defaultSessionCookieConfig = defaultSessionCookieConfig;
-        return this;
-    }
-
     private static class UpdateLastAccessTimeCompletionHandler implements HttpCompletionHandler {
 
         private final HttpCompletionHandler completionHandler;
         private final HttpServerExchange exchange;
+        private final SessionConfig sessionConfig;
 
-        private UpdateLastAccessTimeCompletionHandler(final HttpCompletionHandler completionHandler, final HttpServerExchange exchange) {
+        private UpdateLastAccessTimeCompletionHandler(final HttpCompletionHandler completionHandler, final HttpServerExchange exchange, final SessionConfig sessionConfig) {
             this.completionHandler = completionHandler;
             this.exchange = exchange;
+            this.sessionConfig = sessionConfig;
         }
 
         @Override
         public void handleComplete() {
-            Session session = exchange.getAttachment(Session.ATTACHMENT_KEY);
-            if (session != null) {
-                session.updateLastAccessedTime();
-            }
+                final Session session = sessionConfig.getAttachedSession(exchange);
+                if (session != null) {
+                    session.updateLastAccessedTime();
+                }
             completionHandler.handleComplete();
         }
     }

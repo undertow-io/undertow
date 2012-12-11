@@ -42,7 +42,6 @@ import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
-import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
@@ -398,7 +397,7 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public SessionCookieConfig getSessionCookieConfig() {
+    public SessionCookieConfigImpl getSessionCookieConfig() {
         return sessionCookieConfig;
     }
 
@@ -480,17 +479,20 @@ public class ServletContextImpl implements ServletContext {
      * @return
      */
     public HttpSessionImpl getSession(final HttpServerExchange exchange, boolean create) {
+        final SessionCookieConfigImpl c = getSessionCookieConfig();
         HttpSessionImpl httpSession = exchange.getAttachment(sessionAttachmentKey);
         if (httpSession == null) {
             try {
-                final SessionCookieConfig c = getSessionCookieConfig();
                 final SessionManager sessionManager = deploymentInfo.getSessionManager();
-                final Session session = sessionManager.getSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
+                Session session = c.getAttachedSession(exchange);
+                if(session == null) {
+                    session = sessionManager.getSession(exchange, c).get();
+                }
                 if(session != null) {
                     httpSession = new HttpSessionImpl(session, this, getDeployment().getApplicationListeners(), exchange, false);
                     exchange.putAttachment(sessionAttachmentKey, httpSession);
                 } else if(create) {
-                    final Session newSession = sessionManager.createSession(exchange, new io.undertow.server.session.SessionCookieConfig(c.getName(), c.getPath(), c.getDomain(), false, c.isSecure(), c.isHttpOnly(), c.getMaxAge(), c.getComment())).get();
+                    final Session newSession = sessionManager.createSession(exchange, c).get();
                     httpSession = new HttpSessionImpl(newSession, this, getDeployment().getApplicationListeners(), exchange, true);
                     exchange.putAttachment(sessionAttachmentKey, httpSession);
                     getDeployment().getApplicationListeners().sessionCreated(httpSession);

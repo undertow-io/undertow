@@ -20,9 +20,8 @@ package io.undertow.server.session;
 
 import java.util.Set;
 
-import io.undertow.util.AttachmentKey;
-import org.xnio.IoFuture;
 import io.undertow.server.HttpServerExchange;
+import org.xnio.IoFuture;
 
 /**
  * Represents a HTTP session.
@@ -36,8 +35,6 @@ import io.undertow.server.HttpServerExchange;
  * @author Stuart Douglas
  */
 public interface Session {
-
-    AttachmentKey<Session> ATTACHMENT_KEY = AttachmentKey.create(Session.class);
 
     /**
      * Returns a string containing the unique identifier assigned

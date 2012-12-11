@@ -21,6 +21,7 @@ package io.undertow.server.session;
 import javax.net.ssl.SSLSession;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
 
 /**
  * Session config that stores the session ID in the current SSL session.
@@ -32,17 +33,28 @@ import io.undertow.server.HttpServerExchange;
 public class SslSessionConfig implements SessionConfig {
 
     private final SessionConfig fallbackSessionConfig;
+    private final AttachmentKey<Session> attachmentKey;
+
+    public SslSessionConfig(final SessionConfig fallbackSessionConfig, final AttachmentKey<Session> attachmentKey) {
+        this.fallbackSessionConfig = fallbackSessionConfig;
+        this.attachmentKey = attachmentKey;
+    }
 
     public SslSessionConfig(final SessionConfig fallbackSessionConfig) {
-        this.fallbackSessionConfig = fallbackSessionConfig;
+        this(fallbackSessionConfig, AttachmentKey.create(Session.class));
+    }
+
+    public SslSessionConfig(final AttachmentKey<Session> attachmentKey) {
+        this(null, attachmentKey);
     }
 
     public SslSessionConfig() {
-        this(null);
+        this(null, AttachmentKey.create(Session.class));
     }
 
     @Override
     public void attachSession(final HttpServerExchange exchange, final Session session) {
+        exchange.putAttachment(attachmentKey, session);
         SSLSession sslSession = exchange.getConnection().getSslSession();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
@@ -66,11 +78,16 @@ public class SslSessionConfig implements SessionConfig {
     }
 
     @Override
-    public String findSession(final HttpServerExchange exchange) {
+    public Session getAttachedSession(final HttpServerExchange exchange) {
+        return exchange.getAttachment(attachmentKey);
+    }
+
+    @Override
+    public String findSessionId(final HttpServerExchange exchange) {
         SSLSession sslSession = exchange.getConnection().getSslSession();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
-                return fallbackSessionConfig.findSession(exchange);
+                return fallbackSessionConfig.findSessionId(exchange);
             }
         } else {
             return (String) sslSession.getValue(SslSessionConfig.class.getName());

@@ -29,7 +29,7 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionAttachmentHandler;
-import io.undertow.server.session.SessionConfig;
+import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
@@ -54,20 +54,21 @@ public class InMemorySessionTestCase {
     public static final String COUNT = "count";
 
     @Test
-    public void testBasicPathHanding() throws IOException {
+    public void inMemorySessionTest() throws IOException {
         DefaultHttpClient client = new DefaultHttpClient();
         client.setCookieStore(new BasicCookieStore());
         final CookieHandler cookieHandler = new CookieHandler();
         try {
-            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager());
+            final SessionCookieConfig sessionConfig = new SessionCookieConfig();
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(), sessionConfig);
             handler.setNext(new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
                     try {
-                        Session session = exchange.getAttachment(Session.ATTACHMENT_KEY);
+                        Session session = sessionConfig.getAttachedSession(exchange);
                         if(session == null) {
                             final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
-                            session = manager.createSession(exchange, exchange.getAttachment(SessionConfig.ATTACHMENT_KEY)).get();
+                            session = manager.createSession(exchange, sessionConfig).get();
                             session.setAttribute(COUNT, 0);
                         }
                         Integer count = (Integer)session.getAttribute(COUNT).get();

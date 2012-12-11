@@ -58,7 +58,7 @@ public class InMemorySessionManager implements SessionManager {
         if (config == null) {
             throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
         }
-        String sessionID = config.findSession(serverExchange);
+        String sessionID = config.findSessionId(serverExchange);
         if (sessionID != null) {
             InMemorySession session = sessions.get(sessionID);
             if (session != null) {
@@ -81,7 +81,7 @@ public class InMemorySessionManager implements SessionManager {
 
     @Override
     public IoFuture<Session> getSession(final HttpServerExchange serverExchange, final SessionConfig config) {
-        String sessionId = config.findSession(serverExchange);
+        String sessionId = config.findSessionId(serverExchange);
         if (sessionId == null) {
             return new FinishedIoFuture<Session>(null);
         }

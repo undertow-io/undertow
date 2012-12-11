@@ -18,20 +18,80 @@
 
 package io.undertow.servlet.spec;
 
+import java.util.Map;
+
 import javax.servlet.SessionCookieConfig;
+
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
+import io.undertow.server.session.Session;
+import io.undertow.server.session.SessionConfig;
+import io.undertow.util.AttachmentKey;
 
 /**
  * @author Stuart Douglas
  */
-public class SessionCookieConfigImpl implements SessionCookieConfig {
+public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConfig {
 
-    private volatile String name = "JSESSIONID";
-    private volatile String domain;
-    private volatile String path = "/";
-    private volatile String comment;
-    private volatile boolean httpOnly;
-    private volatile boolean secure;
-    private volatile int maxAge;
+    public static final String DEFAULT_SESSION_ID = "JSESSIONID";
+
+    private final AttachmentKey<Session> attachmentKey = AttachmentKey.create(Session.class);
+    private String name = DEFAULT_SESSION_ID;
+    private String path = "/";
+    private String domain;
+    private boolean secure;
+    private boolean httpOnly;
+    private int maxAge;
+    private String comment;
+
+
+    public void attachSession(final HttpServerExchange exchange, final Session session) {
+        exchange.putAttachment(attachmentKey, session);
+        Cookie cookie = new CookieImpl(name, session.getId())
+                .setPath(path)
+                .setDomain(domain)
+                .setSecure(secure)
+                .setHttpOnly(httpOnly)
+                .setComment(comment);
+        if(maxAge > 0) {
+            cookie.setMaxAge(maxAge);
+        }
+        CookieImpl.addResponseCookie(exchange, cookie);
+
+    }
+
+    public void clearSession(final HttpServerExchange exchange, final Session session) {
+        Cookie cookie = new CookieImpl(name, session.getId())
+                .setPath(path)
+                .setDomain(domain)
+                .setSecure(secure)
+                .setHttpOnly(httpOnly)
+                .setMaxAge(0);
+        CookieImpl.addResponseCookie(exchange, cookie);
+    }
+
+    @Override
+    public Session getAttachedSession(final HttpServerExchange exchange) {
+        return exchange.getAttachment(attachmentKey);
+    }
+
+    @Override
+    public String rewriteUrl(final String originalUrl, final Session session) {
+        return originalUrl;
+    }
+
+    @Override
+    public String findSessionId(final HttpServerExchange exchange) {
+        Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
+        if (cookies != null) {
+            Cookie sessionId = cookies.get(name);
+            if (sessionId != null) {
+                return sessionId.getValue();
+            }
+        }
+        return null;
+    }
 
     public String getName() {
         return name;
