@@ -41,7 +41,7 @@ public class SslSessionConfig implements SessionConfig {
     }
 
     public SslSessionConfig(final SessionConfig fallbackSessionConfig) {
-        this(fallbackSessionConfig, AttachmentKey.create(Session.class));
+        this(fallbackSessionConfig, AttachmentKey.<Session>create(Session.class));
     }
 
     public SslSessionConfig(final AttachmentKey<Session> attachmentKey) {
@@ -49,7 +49,7 @@ public class SslSessionConfig implements SessionConfig {
     }
 
     public SslSessionConfig() {
-        this(null, AttachmentKey.create(Session.class));
+        this(null, AttachmentKey.<Session>create(Session.class));
     }
 
     @Override
