@@ -146,7 +146,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
             try {
-                httpServerExchange.setRequestScheme("http"); //todo: determine if this is https
+                httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
                 state = null;
                 this.httpServerExchange = null;
                 connection.getRootHandler().handleRequest(httpServerExchange, new CompletionHandler(httpServerExchange, startNextRequestAction));

@@ -20,6 +20,8 @@ package io.undertow.server;
 
 import java.nio.ByteBuffer;
 
+import javax.net.ssl.SSLSession;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import org.xnio.ChannelListener;
@@ -27,6 +29,7 @@ import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
+import org.xnio.channels.SslChannel;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -58,7 +61,11 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(channel);
-        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
+        SSLSession sslSession = null;
+        if(channel instanceof SslChannel) {
+            sslSession = ((SslChannel)channel).getSslSession();
+        }
+        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize, sslSession);
         HttpReadListener readListener = new HttpReadListener(channel, pushBackStreamChannel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);

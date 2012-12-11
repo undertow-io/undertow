@@ -18,9 +18,9 @@
 
 package io.undertow.test.utils;
 
-import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
+import java.net.URL;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
@@ -41,6 +41,7 @@ import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.ssl.XnioSsl;
 
 /**
  * A class that starts a server before the test suite. By swapping out the root handler
@@ -56,13 +57,42 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static HttpOpenListener openListener;
     private static XnioWorker worker;
     private static AcceptingChannel<? extends ConnectedStreamChannel> server;
+    private static AcceptingChannel<? extends ConnectedStreamChannel> sslServer;
     private static Xnio xnio;
 
+
+    private static final String KEY_STORE_PROPERTY = "javax.net.ssl.keyStore";
+    private static final String KEY_STORE_PASSWORD_PROPERTY = "javax.net.ssl.keyStorePassword";
+    private static final String TRUST_STORE_PROPERTY = "javax.net.ssl.trustStore";
+    private static final String TRUST_STORE_PASSWORD_PROPERTY = "javax.net.ssl.trustStorePassword";
+    private static final String DEFAULT_KEY_STORE = "keystore.jks";
+    private static final String DEFAULT_KEY_STORE_PASSWORD = "password";
+
+
+    public static void setKeyStoreAndTrustStore() {
+        final URL storePath = DefaultServer.class.getClassLoader().getResource(DEFAULT_KEY_STORE);
+        if (System.getProperty(KEY_STORE_PROPERTY) == null) {
+            System.setProperty(KEY_STORE_PROPERTY, storePath.getFile());
+        }
+        if (System.getProperty(KEY_STORE_PASSWORD_PROPERTY) == null) {
+            System.setProperty(KEY_STORE_PASSWORD_PROPERTY, DEFAULT_KEY_STORE_PASSWORD);
+        }
+        if (System.getProperty(TRUST_STORE_PROPERTY) == null) {
+            System.setProperty(TRUST_STORE_PROPERTY, storePath.getFile());
+        }
+        if (System.getProperty(TRUST_STORE_PASSWORD_PROPERTY) == null) {
+            System.setProperty(TRUST_STORE_PASSWORD_PROPERTY, DEFAULT_KEY_STORE_PASSWORD);
+        }
+    }
     /**
      * @return The base URL that can be used to make connections to this server
      */
     public static String getDefaultServerAddress() {
         return "http://" + getHostAddress(DEFAULT) + ":" + getHostPort(DEFAULT);
+    }
+
+    public static String getDefaultServerSSLAddress() {
+        return "https://" + getHostAddress(DEFAULT) + ":" + getHostSSLPort(DEFAULT);
     }
 
     public DefaultServer(Class<?> klass) throws InitializationError {
@@ -83,6 +113,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static void runInternal(final RunNotifier notifier) {
         if (first) {
             first = false;
+            setKeyStoreAndTrustStore();
             xnio = Xnio.getInstance("nio", DefaultServer.class.getClassLoader());
             try {
                 worker = xnio.createWorker(OptionMap.builder()
@@ -105,13 +136,19 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
                 server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
                 server.resumeAccepts();
-            } catch (IOException e) {
+
+
+                final XnioSsl xnioSsl = xnio.getSslProvider(OptionMap.EMPTY);
+                sslServer = xnioSsl.createSslTcpServer(worker, new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostSSLPort(DEFAULT)), acceptListener, serverOptions);
+                sslServer.resumeAccepts();
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
             notifier.addListener(new RunListener() {
                 @Override
                 public void testRunFinished(final Result result) throws Exception {
                     server.close();
+                    sslServer.close();
                     worker.shutdown();
                 }
             });
@@ -137,6 +174,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return Integer.getInteger(serverName + ".server.port", 7777);
     }
 
+    public static int getHostSSLPort(String serverName) {
+        return Integer.getInteger(serverName + ".server.sslPort", 7778);
+    }
 
     public static OptionMap getUndertowOptions() {
         return openListener.getUndertowOptions();
