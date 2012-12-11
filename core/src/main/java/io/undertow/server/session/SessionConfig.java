@@ -1,6 +1,7 @@
 package io.undertow.server.session;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
 
 /**
  * Interface that abstracts the process of attaching a session to an exchange.
@@ -11,6 +12,8 @@ import io.undertow.server.HttpServerExchange;
  */
 public interface SessionConfig {
 
+
+    AttachmentKey<SessionConfig> ATTACHMENT_KEY = AttachmentKey.create(SessionConfig.class);
 
     void attachSession(final HttpServerExchange exchange, final Session session);
 

@@ -44,17 +44,7 @@ public class SessionAttachmentHandler implements HttpHandler {
 
     private volatile SessionManager sessionManager;
 
-    /**
-     * The path of the session cookie.
-     */
-    private volatile String path = "/";
-    private volatile String domain;
-    private volatile boolean discardOnExit = false;
-    private volatile boolean secure = false;
-    private volatile boolean httpOnly = false;
-    private volatile int maxAge = 30 * 60;
-    private volatile String comment;
-    private volatile String cookieName = SessionCookieConfig.DEFAULT_SESSION_ID;
+    private volatile SessionConfig defaultSessionCookieConfig = new SessionCookieConfig();
 
     public SessionAttachmentHandler(final SessionManager sessionManager) {
         if (sessionManager == null) {
@@ -77,12 +67,11 @@ public class SessionAttachmentHandler implements HttpHandler {
             throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
-        String path = this.path;
 
-        SessionCookieConfig config = exchange.getAttachment(SessionCookieConfig.ATTACHMENT_KEY);
+        SessionConfig config = exchange.getAttachment(SessionConfig.ATTACHMENT_KEY);
         if(config == null) {
-            config = new SessionCookieConfig(cookieName, path, domain, discardOnExit, secure, httpOnly, maxAge, comment);
-            exchange.putAttachment(SessionCookieConfig.ATTACHMENT_KEY, config);
+            config = defaultSessionCookieConfig;
+            exchange.putAttachment(SessionConfig.ATTACHMENT_KEY, config);
         }
 
         final IoFuture<Session> session = sessionManager.getSession(exchange, config);
@@ -118,84 +107,31 @@ public class SessionAttachmentHandler implements HttpHandler {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public SessionAttachmentHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 
     public SessionManager getSessionManager() {
         return sessionManager;
     }
 
-    public void setSessionManager(final SessionManager sessionManager) {
+    public SessionAttachmentHandler setSessionManager(final SessionManager sessionManager) {
         if (sessionManager == null) {
             throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
         this.sessionManager = sessionManager;
+        return this;
     }
 
-    public String getPath() {
-        return path;
+    public SessionConfig getDefaultSessionCookieConfig() {
+        return defaultSessionCookieConfig;
     }
 
-    public synchronized void setPath(final String path) {
-        this.path = path;
-    }
-
-    public String getDomain() {
-        return domain;
-    }
-
-    public synchronized void setDomain(final String domain) {
-        this.domain = domain;
-    }
-
-    public boolean isDiscardOnExit() {
-        return discardOnExit;
-    }
-
-    public synchronized void setDiscardOnExit(final boolean discardOnExit) {
-        this.discardOnExit = discardOnExit;
-    }
-
-    public boolean isSecure() {
-        return secure;
-    }
-
-    public synchronized void setSecure(final boolean secure) {
-        this.secure = secure;
-    }
-
-    public String getCookieName() {
-        return cookieName;
-    }
-
-    public void setCookieName(final String cookieName) {
-        this.cookieName = cookieName;
-    }
-
-    public boolean isHttpOnly() {
-        return httpOnly;
-    }
-
-    public void setHttpOnly(final boolean httpOnly) {
-        this.httpOnly = httpOnly;
-    }
-
-    public int getMaxAge() {
-        return maxAge;
-    }
-
-    public void setMaxAge(final int maxAge) {
-        this.maxAge = maxAge;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(final String comment) {
-        this.comment = comment;
+    public SessionAttachmentHandler setDefaultSessionCookieConfig(final SessionConfig defaultSessionCookieConfig) {
+        this.defaultSessionCookieConfig = defaultSessionCookieConfig;
+        return this;
     }
 
     private static class UpdateLastAccessTimeCompletionHandler implements HttpCompletionHandler {

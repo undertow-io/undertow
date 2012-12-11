@@ -18,9 +18,13 @@
 
 package io.undertow.test.utils;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
-import java.net.URL;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
@@ -35,6 +39,7 @@ import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Xnio;
@@ -70,15 +75,35 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
 
     public static void setKeyStoreAndTrustStore() {
-        final URL storePath = DefaultServer.class.getClassLoader().getResource(DEFAULT_KEY_STORE);
+        final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(DEFAULT_KEY_STORE);
+        OutputStream out = null;
+        String fileName = null;
+        try {
+            File store = File.createTempFile("keystore", "keys");
+            store.deleteOnExit();
+            fileName = store.getAbsolutePath();
+            out = new FileOutputStream(store);
+
+            byte[] data = new byte[1024];
+            int r = 0;
+            while ((r = stream.read(data)) > 0) {
+                out.write(data, 0, r);
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            IoUtils.safeClose(stream);
+            IoUtils.safeClose(out);
+        }
         if (System.getProperty(KEY_STORE_PROPERTY) == null) {
-            System.setProperty(KEY_STORE_PROPERTY, storePath.getFile());
+            System.setProperty(KEY_STORE_PROPERTY, fileName);
         }
         if (System.getProperty(KEY_STORE_PASSWORD_PROPERTY) == null) {
             System.setProperty(KEY_STORE_PASSWORD_PROPERTY, DEFAULT_KEY_STORE_PASSWORD);
         }
         if (System.getProperty(TRUST_STORE_PROPERTY) == null) {
-            System.setProperty(TRUST_STORE_PROPERTY, storePath.getFile());
+            System.setProperty(TRUST_STORE_PROPERTY, fileName);
         }
         if (System.getProperty(TRUST_STORE_PASSWORD_PROPERTY) == null) {
             System.setProperty(TRUST_STORE_PASSWORD_PROPERTY, DEFAULT_KEY_STORE_PASSWORD);
