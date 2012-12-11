@@ -56,7 +56,7 @@ public class MultipartFormDataParserTestCase {
         fd.setNext(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-                final FormDataParser parser = (FormDataParser) exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
                 try {
                     FormData data = parser.parse().get();
                     exchange.setResponseCode(500);
