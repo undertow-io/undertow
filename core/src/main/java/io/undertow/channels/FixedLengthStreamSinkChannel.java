@@ -341,9 +341,7 @@ public final class FixedLengthStreamSinkChannel implements StreamSinkChannel, Pr
     private void exitWrite(long oldVal, long consumed) {
         long newVal = oldVal - consumed;
         state = newVal;
-        if (allAreSet(newVal, FLAG_CLOSE_COMPLETE)) {
-            // closed while we were in flight.  Call the listener.
-            callClosed();
+        if (anyAreSet(oldVal, MASK_COUNT) && allAreClear(newVal, MASK_COUNT)) {
             callFinish();
         }
     }
