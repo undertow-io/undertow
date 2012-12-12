@@ -33,7 +33,7 @@ import io.undertow.util.HttpString;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -51,7 +51,7 @@ public class PathTestCase {
 
     @Test
     public void testBasicPathHanding() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             final PathHandler handler = new PathHandler();
             handler.addPath("a", new RemainingPathHandler("/a"));
@@ -91,10 +91,10 @@ public class PathTestCase {
         }
     }
 
-    private void runPathTest(DefaultHttpClient client, String path, String expectedMatch, String expectedRemaining) throws IOException {
+    private void runPathTest(TestHttpClient client, String path, String expectedMatch, String expectedRemaining) throws IOException {
         runPathTest(client, path, expectedMatch, expectedRemaining, Collections.<String, String>emptyMap());
     }
-    private void runPathTest(DefaultHttpClient client, String path, String expectedMatch, String expectedRemaining, Map<String, String> queryParams) throws IOException {
+    private void runPathTest(TestHttpClient client, String path, String expectedMatch, String expectedRemaining, Map<String, String> queryParams) throws IOException {
         HttpResponse result;HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + path);
         result = client.execute(get);
         Assert.assertEquals(200, result.getStatusLine().getStatusCode());

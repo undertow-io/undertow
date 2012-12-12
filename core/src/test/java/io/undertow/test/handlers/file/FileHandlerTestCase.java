@@ -28,7 +28,7 @@ import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,7 +42,7 @@ public class FileHandlerTestCase {
 
     @Test
     public void testFileIsServed() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             final FileHandler handler = new FileHandler(new File(getClass().getResource("page.html").getFile()).getParentFile());
             handler.setDirectoryListingEnabled(true);

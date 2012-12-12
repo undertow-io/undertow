@@ -38,7 +38,7 @@ import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -91,7 +91,7 @@ public class CrossContextServletSessionTestCase {
 
     @Test
     public void testCrossContextSessionInvocation() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerAddress() + "/1/servlet");
             HttpGet forward1 = new HttpGet(DefaultServer.getDefaultServerAddress() + "/1/forward?context=/2&path=/servlet");

@@ -38,7 +38,7 @@ import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -82,7 +82,7 @@ public class MultipartFormDataParserTestCase {
 
     @Test
     public void testFileUpload() throws Exception {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");

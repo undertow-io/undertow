@@ -38,7 +38,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCookieStore;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,7 +55,7 @@ public class InMemorySessionTestCase {
 
     @Test
     public void inMemorySessionTest() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         client.setCookieStore(new BasicCookieStore());
         final CookieHandler cookieHandler = new CookieHandler();
         try {

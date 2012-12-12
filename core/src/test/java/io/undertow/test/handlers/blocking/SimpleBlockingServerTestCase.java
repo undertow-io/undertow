@@ -32,7 +32,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -82,7 +82,7 @@ public class SimpleBlockingServerTestCase {
     @Test
     public void sendHttpRequest() throws IOException {
         message = "My HTTP Request!";
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
             HttpResponse result = client.execute(get);
@@ -101,7 +101,7 @@ public class SimpleBlockingServerTestCase {
             messageBuilder.append("*");
         }
         message = messageBuilder.toString();
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
             HttpResponse result = client.execute(get);
@@ -119,7 +119,7 @@ public class SimpleBlockingServerTestCase {
         for (int i = 0; i < 6919638; ++i) {
             messageBuilder.append("+");
         }
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
             post.setEntity(new StringEntity(messageBuilder.toString()));

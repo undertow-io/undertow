@@ -30,11 +30,12 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -90,7 +91,7 @@ public class ChunkedRequestTransferCodingTestCase {
     public void testChunkedRequest() throws IOException {
         connection = null;
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             generateMessage(1);
             post.setEntity(new StringEntity(message) {
@@ -146,7 +147,7 @@ public class ChunkedRequestTransferCodingTestCase {
         OptionMap existing = DefaultServer.getUndertowOptions();
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
         post.setHeader(HttpHeaders.CONNECTION, "close");
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             generateMessage(1);
             post.setEntity(new StringEntity(message) {

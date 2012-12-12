@@ -34,7 +34,7 @@ import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -64,7 +64,7 @@ public class FileHandlerStressTestCase {
                 futures.add(executor.submit(new Runnable() {
                     @Override
                     public void run() {
-                        DefaultHttpClient client = new DefaultHttpClient();
+                        TestHttpClient client = new TestHttpClient();
                         try {
                             for (int i = 0; i < NUM_REQUESTS; ++i) {
                                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path/page.html");

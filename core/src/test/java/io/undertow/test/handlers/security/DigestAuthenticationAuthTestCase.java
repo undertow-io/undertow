@@ -43,7 +43,7 @@ import java.util.Random;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -183,7 +183,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
     public void testDigestSuccess() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -204,7 +204,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
         assertNotNull(opaque);
         // Send 5 requests with an incrementing nonce count on each call.
         for (int i = 0; i < 5; i++) {
-            client = new DefaultHttpClient();
+            client = new TestHttpClient();
             get = new HttpGet(DefaultServer.getDefaultServerAddress());
 
             int thisNonceCount = nonceCount++;
@@ -240,7 +240,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
     public void testBadUsername() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -260,7 +260,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
         String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
         assertNotNull(opaque);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
 
         int thisNonceCount = nonceCount++;
@@ -279,7 +279,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
     public void testBadPassword() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -299,7 +299,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
         String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
         assertNotNull(opaque);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
 
         int thisNonceCount = nonceCount++;
@@ -318,7 +318,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
     public void testBadNonce() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -338,7 +338,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
         String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
         assertNotNull(opaque);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
 
         int thisNonceCount = nonceCount++;
@@ -359,7 +359,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
     public void testNonceCountReUse() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -380,7 +380,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
         assertNotNull(opaque);
         // Send 5 requests with an incrementing nonce count on each call.
         for (int i = 0; i < 2; i++) {
-            client = new DefaultHttpClient();
+            client = new TestHttpClient();
             get = new HttpGet(DefaultServer.getDefaultServerAddress());
 
             int thisNonceCount = nonceCount; // Note - No increment

@@ -39,7 +39,7 @@ import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -99,7 +99,7 @@ public class FilterPathMappingTestCase {
 
 
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             runTest(client, "aa","/aa", "/*", "/aa");
             runTest(client, "a/c","/a/*", "/*", "/a/*");
@@ -143,7 +143,7 @@ public class FilterPathMappingTestCase {
         DefaultServer.setRootHandler(root);
 
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             runTest(client, "aa.jsp","*.jsp", "/*");
 
@@ -152,7 +152,7 @@ public class FilterPathMappingTestCase {
         }
     }
 
-    private void runTest(final DefaultHttpClient client, final String path, final String expected, final String ... headers) throws IOException {
+    private void runTest(final TestHttpClient client, final String path, final String expected, final String ... headers) throws IOException {
         final HttpGet get;
         final HttpResponse result;
         final String response;

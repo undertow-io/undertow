@@ -43,7 +43,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.junit.Assert;
 import org.junit.Test;
@@ -129,7 +129,7 @@ public class FormDataParserTestCase {
 
     private void runTest(final NameValuePair... pairs) throws Exception {
         DefaultServer.setRootHandler(rootHandler);
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
 
             final List<NameValuePair> data = new ArrayList<NameValuePair>();

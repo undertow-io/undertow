@@ -36,7 +36,7 @@ import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.apache.jasper.deploy.JspPropertyGroup;
 import org.apache.jasper.deploy.TagLibraryInfo;
 import org.junit.AfterClass;
@@ -87,7 +87,7 @@ public class SimpleJspTestCase {
 
     @Test
     public void testSimpleHttpServlet() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/a.jsp");
             HttpResponse result = client.execute(get);

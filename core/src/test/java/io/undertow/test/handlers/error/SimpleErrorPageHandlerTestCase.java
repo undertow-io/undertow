@@ -26,7 +26,7 @@ import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,7 +40,7 @@ public class SimpleErrorPageHandlerTestCase {
 
     @Test
     public void testSimpleErrorPageIsGenerated() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             final SimpleErrorPageHandler handler = new SimpleErrorPageHandler();
             DefaultServer.setRootHandler(handler);

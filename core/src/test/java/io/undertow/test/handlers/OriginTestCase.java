@@ -28,7 +28,7 @@ import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -51,7 +51,7 @@ public class OriginTestCase {
      */
     @Test
     public void testStrictOrigin() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             final OriginHandler handler = new OriginHandler();
             handler.addAllowedOrigins("http://www.mysite.com:80", "http://mysite.com:80");

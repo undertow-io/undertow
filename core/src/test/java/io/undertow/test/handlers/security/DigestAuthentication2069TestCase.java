@@ -43,7 +43,7 @@ import java.util.Map;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -104,7 +104,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
     public void testDigestSuccess() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -121,7 +121,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
 
         String response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
@@ -146,7 +146,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
         nonce = parsedAuthInfo.get(AuthenticationInfoToken.NEXT_NONCE);
         response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
         sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
@@ -175,7 +175,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
     public void testBadUserName() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -191,7 +191,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
 
         String response = createResponse("badUser", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
@@ -213,7 +213,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
     public void testBadPassword() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -229,7 +229,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
 
         String response = createResponse("userOne", REALM_NAME, "badPassword", "GET", "/", nonce);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
@@ -252,7 +252,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
     public void testDifferentNonce() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -268,7 +268,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
 
         String response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
@@ -293,7 +293,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
         nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
         response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
         sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
@@ -320,7 +320,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
     public void testNonceReUse() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -336,7 +336,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
 
         String response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
@@ -353,7 +353,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
@@ -372,7 +372,7 @@ public class DigestAuthentication2069TestCase extends UsernamePasswordAuthentica
         nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
         response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
-        client = new DefaultHttpClient();
+        client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerAddress());
         sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");

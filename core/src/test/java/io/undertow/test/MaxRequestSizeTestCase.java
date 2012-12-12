@@ -27,6 +27,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -76,7 +77,7 @@ public class MaxRequestSizeTestCase {
     public void testMaxRequestHeaderSize() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
         try {
-            final DefaultHttpClient client = new DefaultHttpClient();
+            final TestHttpClient client = new TestHttpClient();
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
@@ -109,7 +110,7 @@ public class MaxRequestSizeTestCase {
     public void testMaxRequestEntitySize() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
         try {
-            final DefaultHttpClient client = new DefaultHttpClient();
+            final TestHttpClient client = new TestHttpClient();
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");

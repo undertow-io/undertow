@@ -49,7 +49,7 @@ import io.undertow.util.HttpString;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -156,7 +156,7 @@ public abstract class UsernamePasswordAuthenticationTestBase {
     public void testNoMechanisms() throws Exception {
         DefaultServer.setRootHandler(new ResponseHandler());
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(200, result.getStatusLine().getStatusCode());

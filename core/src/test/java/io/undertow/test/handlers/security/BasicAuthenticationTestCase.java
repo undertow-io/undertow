@@ -25,7 +25,7 @@ import io.undertow.util.FlexBase64;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -51,7 +51,7 @@ public class BasicAuthenticationTestCase extends UsernamePasswordAuthenticationT
     public void testBasicSuccess() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -75,7 +75,7 @@ public class BasicAuthenticationTestCase extends UsernamePasswordAuthenticationT
     public void testBadUserName() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
@@ -95,7 +95,7 @@ public class BasicAuthenticationTestCase extends UsernamePasswordAuthenticationT
     public void testBadPassword() throws Exception {
         setAuthenticationChain();
 
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());

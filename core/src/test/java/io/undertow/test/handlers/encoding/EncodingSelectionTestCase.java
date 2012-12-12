@@ -28,7 +28,7 @@ import io.undertow.util.Headers;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -53,7 +53,7 @@ public class EncodingSelectionTestCase {
      */
     @Test
     public void testBasicEncodingSelect() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             final EncodingHandler handler = new EncodingHandler();
             handler.addEncodingHandler("compress", new SetHeaderHandler(HEADER, "compress"), 50);
@@ -124,7 +124,7 @@ public class EncodingSelectionTestCase {
      */
     @Test
     public void testEncodingSelectWithQValue() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             final EncodingHandler handler = new EncodingHandler();
             handler.addEncodingHandler("compress", new SetHeaderHandler(HEADER, "compress"), 100);

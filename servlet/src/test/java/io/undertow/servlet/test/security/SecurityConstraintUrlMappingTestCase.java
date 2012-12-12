@@ -23,7 +23,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
+import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -136,7 +136,7 @@ public class SecurityConstraintUrlMappingTestCase {
 
     @Test
     public void testHttpMethod() throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         final String url = DefaultServer.getDefaultServerAddress() + "/servletContext/public/postSecured/a";
         try {
             HttpGet initialGet = new HttpGet(url);
@@ -175,7 +175,7 @@ public class SecurityConstraintUrlMappingTestCase {
     }
 
     public void runSimpleUrlTest(final String url, final String badUser, final String goodUser) throws IOException {
-        DefaultHttpClient client = new DefaultHttpClient();
+        TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(url);
             HttpResponse result = client.execute(get);
