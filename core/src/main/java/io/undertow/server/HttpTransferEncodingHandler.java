@@ -27,11 +27,11 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.util.BrokenStreamSourceChannel;
-import io.undertow.util.ChunkedStreamSinkChannel;
-import io.undertow.util.ChunkedStreamSourceChannel;
-import io.undertow.util.FixedLengthStreamSinkChannel;
-import io.undertow.util.FixedLengthStreamSourceChannel;
+import io.undertow.channels.BrokenStreamSourceChannel;
+import io.undertow.channels.ChunkedStreamSinkChannel;
+import io.undertow.channels.ChunkedStreamSourceChannel;
+import io.undertow.channels.FixedLengthStreamSinkChannel;
+import io.undertow.channels.FixedLengthStreamSourceChannel;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -240,25 +240,25 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                         try {
                             contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
                             // fixed-length response
-                            wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, !stillPersistent, finishListener, null);
+                            wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, true, !stillPersistent, finishListener, null);
                         } catch (NumberFormatException e) {
                             // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
                             stillPersistent = false;
                             wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
                         }
                     } else {
-                        wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, false, !stillPersistent, finishListener, null);
+                        wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, true, !stillPersistent, finishListener, null);
                     }
                 } else if (!transferEncoding.equals(Headers.IDENTITY)) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    wrappedChannel = new ChunkedStreamSinkChannel(channel, false, !stillPersistent, finishListener, exchange.getConnection().getBufferPool());
+                    wrappedChannel = new ChunkedStreamSinkChannel(channel, true, !stillPersistent, finishListener, exchange.getConnection().getBufferPool());
                 } else if (responseHeaders.contains(Headers.CONTENT_LENGTH)) {
                     final long contentLength;
                     try {
                         contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
                         final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                         // fixed-length response
-                        wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, false, !stillPersistent, finishListener, null);
+                        wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, true, !stillPersistent, finishListener, null);
                     } catch (NumberFormatException e) {
                         // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
                         stillPersistent = false;
@@ -295,7 +295,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
     private static ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler) {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
-                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channel, chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool(), false, maxEntitySize(exchange)));
+                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channel, true, chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool(), false, maxEntitySize(exchange)));
             }
         };
     }
@@ -307,7 +307,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 if(contentLength > max) {
                     return new BrokenStreamSourceChannel(UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getSourceAddress(), max), channel);
                 }
-                return ourCompletionHandler.setRequestStream(new FixedLengthStreamSourceChannel(channel, contentLength, false, fixedLengthDrainListener(channel, exchange), null));
+                return ourCompletionHandler.setRequestStream(new FixedLengthStreamSourceChannel(channel, contentLength, true, fixedLengthDrainListener(channel, exchange), null));
             }
         };
     }

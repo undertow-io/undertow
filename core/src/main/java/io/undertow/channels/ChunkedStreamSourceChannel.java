@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.util;
+package io.undertow.channels;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,7 +40,6 @@ import org.xnio.channels.StreamSourceChannel;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 import static org.xnio.Bits.longBitMask;
 
@@ -81,10 +80,10 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
     private static final AtomicLongFieldUpdater<ChunkedStreamSourceChannel> stateUpdater = AtomicLongFieldUpdater.newUpdater(ChunkedStreamSourceChannel.class, "state");
 
     public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener, final Pool<ByteBuffer> bufferPool, boolean delegateClose, final long maxLength) {
-        this(delegate, false, bufferPool, finishListener, delegateClose, maxLength);
+        this(delegate, false, finishListener, bufferPool, delegateClose, maxLength);
     }
 
-    public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final boolean configurable, final Pool<ByteBuffer> bufferPool, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener, boolean delegateClose, final long maxLength) {
+    public ChunkedStreamSourceChannel(final PushBackStreamChannel delegate, final boolean configurable, final ChannelListener<? super ChunkedStreamSourceChannel> finishListener, final Pool<ByteBuffer> bufferPool, boolean delegateClose, final long maxLength) {
         this.bufferPool = bufferPool;
         this.finishListener = finishListener;
         this.delegate = delegate;
@@ -103,7 +102,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
         if (anyAreSet(oldVal, FLAG_FINISHED)) {
             return -1;
         }
-        if (anyAreClear(oldVal, FLAG_CLOSED)) {
+        if (anyAreSet(oldVal, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
         long newVal;
@@ -224,7 +223,7 @@ public class ChunkedStreamSourceChannel implements StreamSourceChannel {
         if (anyAreSet(oldVal, FLAG_FINISHED)) {
             return -1;
         }
-        if (anyAreClear(oldVal, FLAG_CLOSED)) {
+        if (anyAreSet(oldVal, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
         long newVal;

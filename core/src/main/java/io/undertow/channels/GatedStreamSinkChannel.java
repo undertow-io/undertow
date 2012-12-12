@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.util;
+package io.undertow.channels;
 
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;

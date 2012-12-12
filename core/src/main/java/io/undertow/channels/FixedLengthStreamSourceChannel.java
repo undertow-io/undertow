@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package io.undertow.util;
+package io.undertow.channels;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.util.GatedStreamSinkChannel;
+import io.undertow.channels.GatedStreamSinkChannel;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
