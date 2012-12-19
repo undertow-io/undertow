@@ -65,6 +65,10 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private final StreamSinkChannel underlyingResponseChannel;
     private final StreamSourceChannel underlyingRequestChannel;
+    /**
+     * The actual response channel. May be null if it has not been created yet.
+     */
+    private StreamSinkChannel responseChannel;
 
     private final Runnable requestTerminateAction;
     private final Runnable responseTerminateAction;
@@ -122,14 +126,14 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_CLEANUP = 1 << 13;
 
-    HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel, final Runnable requestTerminateAction, final Runnable responseTerminateAction) {
+    public HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel, final Runnable requestTerminateAction, final Runnable responseTerminateAction) {
         this.connection = connection;
         this.underlyingRequestChannel = requestChannel;
         if(connection == null) {
             //just for unit tests
             this.underlyingResponseChannel = null;
         } else {
-            this.underlyingResponseChannel = new HttpResponseChannel(responseChannel, connection.getBufferPool(), this);
+            this.underlyingResponseChannel = responseChannel;
         }
         this.requestTerminateAction = requestTerminateAction;
         this.responseTerminateAction = responseTerminateAction;
@@ -416,7 +420,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return queryParameters;
     }
 
-    void addQueryParam(final String name, final String param) {
+    public void addQueryParam(final String name, final String param) {
         Deque<String> list = queryParameters.get(name);
         if (list == null) {
             queryParameters.put(name, list = new ArrayDeque<String>());
@@ -471,7 +475,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Force the codec to treat the request as fully read.  Should only be invoked by handlers which downgrade
      * the socket or implement a transfer coding.
      */
-    void terminateRequest() {
+    public void terminateRequest() {
         int oldVal, newVal;
         do {
             oldVal = state;
@@ -534,6 +538,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                     channel = oldChannel;
                 }
             }
+            exchange.responseChannel = channel;
             exchange.startResponse();
             return channel;
         }
@@ -670,7 +675,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
 
-    void cleanup() {
+    public void cleanup() {
         // All other cleanup handlers have been called.  We will inspect the state of the exchange
         // and attempt to fix any leftover or broken crap as best as we can.
         //
@@ -690,7 +695,10 @@ public final class HttpServerExchange extends AbstractAttachable {
             newVal = oldVal | FLAG_CLEANUP | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
         } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
         final StreamSourceChannel requestChannel = underlyingRequestChannel;
-        final StreamSinkChannel responseChannel = underlyingResponseChannel;
+        StreamSinkChannel responseChannel = this.responseChannel;
+        if(responseChannel == null) {
+            responseChannel = getResponseChannelFactory().create();
+        }
         if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
             // we're good; a transfer coding handler took care of things.
             return;

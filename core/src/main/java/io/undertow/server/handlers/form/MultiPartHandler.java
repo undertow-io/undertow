@@ -202,6 +202,7 @@ public class MultiPartHandler implements HttpHandler {
                         IoUtils.safeClose(requestChannel);
                         UndertowLogger.REQUEST_LOGGER.connectionTerminatedReadingMultiPartData();
                         completionHandler.handleComplete();
+                        return;
                     } else if (c != 0) {
                         parser.parse(buf);
                     }

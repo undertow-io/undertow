@@ -82,8 +82,10 @@ public final class Headers {
     public static final String SEC_WEB_SOCKET_PROTOCOL_STRING = "Sec-WebSocket-Protocol";
     public static final String SEC_WEB_SOCKET_VERSION_STRING = "Sec-WebSocket-Version";
     public static final String SERVER_STRING = "Server";
+    public static final String SERVLET_ENGINE_STRING = "Servlet-Engine";
     public static final String SET_COOKIE_STRING = "Set-Cookie";
     public static final String SET_COOKIE2_STRING = "Set-Cookie2";
+    public static final String STATUS_STRING = "Status";
     public static final String STRICT_TRANSPORT_SECURITY_STRING = "Strict-Transport-Security";
     public static final String TE_STRING = "TE";
     public static final String TRAILER_STRING = "Trailer";
@@ -149,8 +151,10 @@ public final class Headers {
     public static final HttpString SEC_WEB_SOCKET_PROTOCOL = new HttpString(SEC_WEB_SOCKET_PROTOCOL_STRING);
     public static final HttpString SEC_WEB_SOCKET_VERSION = new HttpString(SEC_WEB_SOCKET_VERSION_STRING);
     public static final HttpString SERVER = new HttpString(SERVER_STRING);
+    public static final HttpString SERVLET_ENGINE = new HttpString(SERVLET_ENGINE_STRING);
     public static final HttpString SET_COOKIE = new HttpString(SET_COOKIE_STRING);
     public static final HttpString SET_COOKIE2 = new HttpString(SET_COOKIE2_STRING);
+    public static final HttpString STATUS = new HttpString(STATUS_STRING);
     public static final HttpString STRICT_TRANSPORT_SECURITY = new HttpString(STRICT_TRANSPORT_SECURITY_STRING);
     public static final HttpString TE = new HttpString(TE_STRING);
     public static final HttpString TRAILER = new HttpString(TRAILER_STRING);

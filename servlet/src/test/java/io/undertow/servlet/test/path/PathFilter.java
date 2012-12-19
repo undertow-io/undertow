@@ -43,7 +43,7 @@ public class PathFilter implements Filter {
     @Override
     public void doFilter(final ServletRequest request, final ServletResponse response, final FilterChain chain) throws IOException, ServletException {
         HttpServletResponse resp = (HttpServletResponse) response;
-        resp.addHeader("filter", filterConfig.getFilterName());
+        resp.addHeader("filter" + filterConfig.getFilterName(), filterConfig.getFilterName());
         chain.doFilter(request, response);
     }
 

@@ -26,14 +26,19 @@ import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 
+import io.undertow.ajp.AjpOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
 import io.undertow.server.HttpTransferEncodingHandler;
+import io.undertow.server.OpenListener;
+import org.junit.Ignore;
+import org.junit.internal.runners.model.EachTestNotifier;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
+import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
@@ -59,7 +64,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final String DEFAULT = "default";
 
     private static boolean first = true;
-    private static HttpOpenListener openListener;
+    private static OpenListener openListener;
     private static XnioWorker worker;
     private static AcceptingChannel<? extends ConnectedStreamChannel> server;
     private static AcceptingChannel<? extends ConnectedStreamChannel> sslServer;
@@ -73,6 +78,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final String DEFAULT_KEY_STORE = "keystore.jks";
     private static final String DEFAULT_KEY_STORE_PASSWORD = "password";
 
+    private static final boolean ajp = Boolean.getBoolean("ajp");
 
     public static void setKeyStoreAndTrustStore() {
         final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(DEFAULT_KEY_STORE);
@@ -157,9 +163,16 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         .set(Options.TCP_NODELAY, true)
                         .set(Options.REUSE_ADDRESSES, true)
                         .getMap();
-                openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192), 8192);
-                ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
+                ChannelListener acceptListener;
+                if(ajp) {
+                    openListener = new AjpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192), 8192);
+                    acceptListener = ChannelListeners.openListenerAdapter(openListener);
+                    server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 7777), acceptListener, serverOptions);
+                } else {
+                    openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192), 8192);
+                    acceptListener = ChannelListeners.openListenerAdapter(openListener);
+                    server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
+                }
                 server.resumeAccepts();
 
 
@@ -180,15 +193,30 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         }
     }
 
+    @Override
+    protected void runChild(FrameworkMethod method, RunNotifier notifier) {
+        if(ajp && (method.getAnnotation(AjpIgnore.class) != null || method.getMethod().getDeclaringClass().isAnnotationPresent(AjpIgnore.class))) {
+            return;
+        } else {
+            super.runChild(method, notifier);
+        }
+    }
+
+
     /**
      * Sets the root handler for the default web server
      *
      * @param rootHandler The handler to use
      */
     public static void setRootHandler(HttpHandler rootHandler) {
-        final HttpTransferEncodingHandler ph = new HttpTransferEncodingHandler();
-        ph.setNext(rootHandler);
-        openListener.setRootHandler(ph);
+        if(ajp) {
+            openListener.setRootHandler(rootHandler);
+        } else {
+            final HttpTransferEncodingHandler ph = new HttpTransferEncodingHandler();
+            ph.setNext(rootHandler);
+            openListener.setRootHandler(ph);
+        }
+
     }
 
     public static String getHostAddress(String serverName) {
@@ -196,7 +224,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static int getHostPort(String serverName) {
-        return Integer.getInteger(serverName + ".server.port", 7777);
+        return Integer.getInteger(serverName + ".server.port", 7777)  + (ajp ? 1111 : 0);
     }
 
     public static int getHostSSLPort(String serverName) {
@@ -222,5 +250,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             runInternal(notifier);
             super.run(notifier);
         }
+    }
+
+    public static boolean isAjp() {
+        return ajp;
     }
 }

@@ -1,0 +1,6 @@
+Listen 8888
+NameVirtualHost *:8888
+<VirtualHost *:8888>
+	ProxyPass / ajp://localhost:7777/
+	ProxyPassReverse / ajp://localhost:7777/
+</VirtualHost>

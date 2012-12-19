@@ -29,7 +29,7 @@ import io.undertow.util.HttpString;
  *
  * @author Stuart Douglas
  */
-public class ParseState {
+class ParseState {
 
     //parsing states
     public static final int VERB = 0;

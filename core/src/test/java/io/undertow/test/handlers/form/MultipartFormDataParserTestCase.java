@@ -41,6 +41,7 @@ import org.apache.http.entity.mime.content.StringBody;
 import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 

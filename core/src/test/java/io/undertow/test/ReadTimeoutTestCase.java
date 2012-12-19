@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.Headers;
 import io.undertow.util.StringWriteChannelListener;
@@ -34,6 +35,7 @@ import org.xnio.channels.StreamSourceChannel;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@AjpIgnore
 public class ReadTimeoutTestCase {
 
     private volatile Exception exception;

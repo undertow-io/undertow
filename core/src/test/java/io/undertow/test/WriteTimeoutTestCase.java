@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.TestHttpClient;
 import org.apache.http.HttpResponse;
@@ -28,13 +29,14 @@ import org.xnio.channels.WriteTimeoutException;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@AjpIgnore
 public class WriteTimeoutTestCase {
 
     private volatile Exception exception;
     private static final CountDownLatch errorLatch = new CountDownLatch(1);
 
     @Test
-    public void testReadTimeout() throws IOException, InterruptedException {
+    public void testWriteTimeout() throws IOException, InterruptedException {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
@@ -100,12 +102,12 @@ public class WriteTimeoutTestCase {
                         return;
                     }
                 }
-                Assert.fail("Read did not time out");
+                Assert.fail("Write did not time out");
             } catch (IOException e) {
                 if (errorLatch.await(5, TimeUnit.SECONDS)) {
                     Assert.assertEquals(WriteTimeoutException.class, exception.getClass());
                 } else {
-                    Assert.fail("Read did not time out");
+                    Assert.fail("Write did not time out");
                 }
             }
             } finally {

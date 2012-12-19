@@ -214,11 +214,11 @@ public abstract class HttpParser {
      * @param buffer    The buffer
      * @param remaining The number of bytes remaining
      * @param state     The current state
-     * @param builder   The exchange builder
+     * @param exchange   The exchange builder
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final int handlePath(ByteBuffer buffer, int remaining, ParseState state, HttpServerExchange builder) {
+    final int handlePath(ByteBuffer buffer, int remaining, ParseState state, HttpServerExchange exchange) {
         StringBuilder stringBuilder = state.stringBuilder;
         int parseState = state.parseState;
         int canonicalPathStart = state.pos;
@@ -235,20 +235,20 @@ public abstract class HttpParser {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
                     if (parseState < QUERY_PARAM_NAME) {
-                        builder.setRequestURI(path);
+                        exchange.setRequestURI(path);
                         if (parseState < HOST_DONE) {
-                            builder.setParsedRequestPath(path);
+                            exchange.setParsedRequestPath(path);
                         } else {
-                            builder.setParsedRequestPath(path.substring(canonicalPathStart));
+                            exchange.setParsedRequestPath(path.substring(canonicalPathStart));
                         }
-                        builder.setQueryString("");
+                        exchange.setQueryString("");
                     } else {
-                        builder.setQueryString(path.substring(requestEnd));
+                        exchange.setQueryString(path.substring(requestEnd));
                     }
                     if (parseState == QUERY_PARAM_NAME) {
-                        builder.addQueryParam(stringBuilder.substring(queryParamPos), "");
+                        exchange.addQueryParam(stringBuilder.substring(queryParamPos), "");
                     } else if (parseState == QUERY_PARAM_VALUE) {
-                        builder.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
+                        exchange.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
                     }
                     state.state = ParseState.VERSION;
                     state.stringBuilder = null;
@@ -273,11 +273,11 @@ public abstract class HttpParser {
                     parseState = START;
                 } else if (next == '?' && (parseState == START || parseState == HOST_DONE)) {
                     final String path = stringBuilder.toString();
-                    builder.setRequestURI(path);
+                    exchange.setRequestURI(path);
                     if (parseState < HOST_DONE) {
-                        builder.setParsedRequestPath(path);
+                        exchange.setParsedRequestPath(path);
                     } else {
-                        builder.setParsedRequestPath(path.substring(canonicalPathStart));
+                        exchange.setParsedRequestPath(path.substring(canonicalPathStart));
                     }
                     parseState = QUERY_PARAM_NAME;
                     queryParamPos = stringBuilder.length() + 1;
@@ -288,12 +288,12 @@ public abstract class HttpParser {
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && parseState == QUERY_PARAM_NAME) {
                     parseState = QUERY_PARAM_NAME;
-                    builder.addQueryParam(stringBuilder.substring(queryParamPos), "");
+                    exchange.addQueryParam(stringBuilder.substring(queryParamPos), "");
                     nextQueryParam = null;
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && parseState == QUERY_PARAM_VALUE) {
                     parseState = QUERY_PARAM_NAME;
-                    builder.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
+                    exchange.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
                     nextQueryParam = null;
                     queryParamPos = stringBuilder.length() + 1;
                 }

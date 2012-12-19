@@ -30,6 +30,7 @@ import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionManager;
 import io.undertow.server.session.SslSessionConfig;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.HttpString;
@@ -47,6 +48,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@AjpIgnore
 public class SSLSessionTestCase {
 
     public static final String COUNT = "count";

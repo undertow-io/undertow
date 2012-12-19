@@ -24,6 +24,7 @@ import java.security.GeneralSecurityException;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.HttpString;
 import org.apache.http.Header;
@@ -37,6 +38,7 @@ import org.junit.runner.RunWith;
 /**
  * @author Stuart Douglas
  */
+@AjpIgnore
 @RunWith(DefaultServer.class)
 public class SimpleSSLTestCase {
 

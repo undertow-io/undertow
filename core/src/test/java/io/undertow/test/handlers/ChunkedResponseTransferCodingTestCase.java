@@ -56,7 +56,7 @@ public class ChunkedResponseTransferCodingTestCase {
                 try {
                     if(connection == null) {
                         connection = exchange.getExchange().getConnection();
-                    } else if(connection.getChannel() != exchange.getExchange().getConnection().getChannel()){
+                    } else if(!DefaultServer.isAjp() && connection.getChannel() != exchange.getExchange().getConnection().getChannel()){
                         exchange.getOutputStream().write("Connection not persistent".getBytes());
                         exchange.getOutputStream().close();
                         return;

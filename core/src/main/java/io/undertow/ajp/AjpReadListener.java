@@ -1,52 +1,42 @@
-/*
- * JBoss, Home of Professional Open Source.
- * Copyright 2012 Red Hat, Inc., and individual contributors
- * as indicated by the @author tags.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package io.undertow.server;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+package io.undertow.ajp;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.channels.GatedStreamSinkChannel;
+import io.undertow.server.ChannelWrapper;
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpServerConnection;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
+import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Deque;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.IoUtils.safeClose;
 
 /**
- * Listener which reads requests and headers off of an HTTP stream.
- *
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author Stuart Douglas
  */
-final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
+final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
 
     private final StreamSinkChannel responseChannel;
 
-    private ParseState state = new ParseState();
+    private AjpParseState state = new AjpParseState();
     private HttpServerExchange httpServerExchange;
     private StartNextRequestAction startNextRequestAction;
 
@@ -55,7 +45,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     private volatile int read = 0;
     private final int maxRequestSize;
 
-    HttpReadListener(final StreamSinkChannel responseChannel, final PushBackStreamChannel requestChannel, final HttpServerConnection connection) {
+    AjpReadListener(final StreamSinkChannel responseChannel, final PushBackStreamChannel requestChannel, final HttpServerConnection connection) {
         this.responseChannel = responseChannel;
         this.connection = connection;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
@@ -73,12 +63,6 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         }
         final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(requestChannel, nextRequestResponseChannel, connection);
         httpServerExchange = new HttpServerExchange(connection, requestChannel, this.responseChannel, startNextRequestAction, responseTerminateAction);
-        httpServerExchange.addResponseWrapper(new ChannelWrapper<StreamSinkChannel>() {
-            @Override
-            public StreamSinkChannel wrap(StreamSinkChannel channel, HttpServerExchange exchange) {
-                return new HttpResponseChannel(channel, connection.getBufferPool(), exchange);
-            }
-        });
         this.startNextRequestAction = startNextRequestAction;
 
     }
@@ -130,13 +114,13 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 }
                 //TODO: we need to handle parse errors
                 buffer.flip();
-                int remaining = HttpParser.INSTANCE.handle(buffer, res, state, httpServerExchange);
-                if (remaining > 0) {
+                int begin = buffer.remaining();
+                AjpParser.INSTANCE.parse(buffer, state, httpServerExchange);
+                read += (begin - buffer.remaining());
+                if (buffer.hasRemaining()) {
                     free = false;
                     channel.unget(pooled);
                 }
-                int total = read + res - remaining;
-                read = total;
                 if (read > maxRequestSize) {
                     UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
                     IoUtils.safeClose(connection);
@@ -151,6 +135,9 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
+            AjpChannelWrapper channelWrapper = new AjpChannelWrapper(new AjpResponseChannel(responseChannel, connection.getBufferPool(), httpServerExchange));
+            httpServerExchange.addResponseWrapper(channelWrapper);
+            httpServerExchange.addRequestWrapper(channelWrapper.getRequestWrapper());
             try {
                 httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
                 state = null;
@@ -223,7 +210,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
         private void startNextRequest() {
             final PushBackStreamChannel channel = this.channel;
-            final HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, channel, connection);
+            final AjpReadListener listener = new AjpReadListener(nextRequestResponseChannel, channel, connection);
             if (channel.isReadResumed()) {
                 channel.suspendReads();
             }
@@ -250,10 +237,10 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         }
 
         private static class DoNextRequestRead implements Runnable {
-            private final HttpReadListener listener;
+            private final AjpReadListener listener;
             private final PushBackStreamChannel channel;
 
-            public DoNextRequestRead(HttpReadListener listener, PushBackStreamChannel channel) {
+            public DoNextRequestRead(AjpReadListener listener, PushBackStreamChannel channel) {
                 this.listener = listener;
                 this.channel = channel;
             }
@@ -303,6 +290,56 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     startNextRequestAction.completionHandler();
                 }
             }
+        }
+    }
+
+    private class AjpChannelWrapper implements ChannelWrapper<StreamSinkChannel> {
+
+        private final AjpResponseChannel responseChannel;
+
+        private AjpChannelWrapper(AjpResponseChannel responseChannel) {
+            this.responseChannel = responseChannel;
+        }
+
+        @Override
+        public StreamSinkChannel wrap(StreamSinkChannel channel, HttpServerExchange exchange) {
+            return responseChannel;
+        }
+
+        public ChannelWrapper<StreamSourceChannel> getRequestWrapper() {
+            return new ChannelWrapper<StreamSourceChannel>() {
+                @Override
+                public StreamSourceChannel wrap(StreamSourceChannel channel, HttpServerExchange exchange) {
+                    final HeaderMap requestHeaders = exchange.getRequestHeaders();
+                    HttpString transferEncoding = Headers.IDENTITY;
+                    Long length;
+                    boolean hasTransferEncoding = requestHeaders.contains(Headers.TRANSFER_ENCODING);
+                    if (hasTransferEncoding) {
+                        transferEncoding = new HttpString(requestHeaders.getLast(Headers.TRANSFER_ENCODING));
+                    }
+
+                    if (hasTransferEncoding) {
+                        length = null; //unkown length
+                    } else if (exchange.getRequestHeaders().contains(Headers.CONTENT_LENGTH)) {
+                        final long contentLength = Long.parseLong(requestHeaders.get(Headers.CONTENT_LENGTH).getFirst());
+                        if (contentLength == 0L) {
+                            UndertowLogger.REQUEST_LOGGER.trace("No content, starting next request");
+                            // no content - immediately start the next request, returning an empty stream for this one
+                            exchange.terminateRequest();
+                            return new EmptyStreamSourceChannel(channel.getWorker(), channel.getReadThread());
+                        } else {
+                            length = contentLength;
+                        }
+                    } else {
+                        UndertowLogger.REQUEST_LOGGER.trace("No content length or transfer coding, starting next request");
+                        // no content - immediately start the next request, returning an empty stream for this one
+                        exchange.terminateRequest();
+                        return new EmptyStreamSourceChannel(channel.getWorker(), channel.getReadThread());
+                    }
+                    String contentLength = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+                    return new AjpRequestChannel(channel, responseChannel, length);
+                }
+            };
         }
     }
 }

@@ -65,7 +65,7 @@ public class FixedLengthRequestTestCase {
                 try {
                     if (connection == null) {
                         connection = exchange.getExchange().getConnection();
-                    } else if (connection.getChannel() != exchange.getExchange().getConnection().getChannel()) {
+                    } else if (!DefaultServer.isAjp() && connection.getChannel() != exchange.getExchange().getConnection().getChannel()) {
                         exchange.getExchange().setResponseCode(500);
                         exchange.getOutputStream().write("Connection not persistent".getBytes());
                         exchange.getOutputStream().close();
@@ -85,7 +85,7 @@ public class FixedLengthRequestTestCase {
     }
 
     @Test
-    public void testChunkedRequest() throws IOException {
+    public void testFixedLengthRequest() throws IOException {
         connection = null;
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
         TestHttpClient client = new TestHttpClient();

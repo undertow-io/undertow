@@ -19,8 +19,10 @@
 package io.undertow.servlet.test.path;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import javax.servlet.DispatcherType;
@@ -165,9 +167,15 @@ public class FilterPathMappingTestCase {
     }
 
     private void requireHeaders(final HttpResponse result, final String... headers) {
-        final Header[] resultHeaders = result.getHeaders("filter");
+        final Header[] resultHeaders = result.getAllHeaders();
+        final List<Header> realResultHeaders = new ArrayList<Header>();
+        for(Header header: resultHeaders) {
+            if(header.getName().startsWith("filter")) {
+                realResultHeaders.add(header);
+            }
+        }
         final Set<String> found = new HashSet<String>(Arrays.asList(headers));
-        for (Header header : resultHeaders) {
+        for (Header header : realResultHeaders) {
             if (!found.remove(header.getValue())) {
                 Assert.fail("Found unexpected header " + header.getValue());
             }
