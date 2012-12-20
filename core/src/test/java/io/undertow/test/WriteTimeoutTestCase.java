@@ -47,7 +47,7 @@ public class WriteTimeoutTestCase {
                     throw new RuntimeException(e);
                 }
 
-                final int capacity = 30 * 1024 * 1024; //30mb, should be too big to fit into the network buffer
+                final int capacity = 50 * 1024 * 1024; //50mb, should be too big to fit into the network buffer
                 final ByteBuffer buffer = ByteBuffer.allocateDirect(capacity);
                 for (int i = 0; i < capacity; ++i) {
                     buffer.put((byte) '*');
@@ -96,7 +96,7 @@ public class WriteTimeoutTestCase {
                 byte[] buffer = new byte[512];
                 int r = 0;
                 while ((r = content.read(buffer)) > 0) {
-                    Thread.sleep(30);
+                    Thread.sleep(100);
                     if(exception != null) {
                         Assert.assertEquals(WriteTimeoutException.class, exception.getClass());
                         return;

@@ -54,7 +54,7 @@ public class SSLSessionTestCase {
     public static final String COUNT = "count";
 
     @Test
-    public void testBasicPathHanding() throws IOException {
+    public void testSslSession() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
             final SslSessionConfig sessionConfig = new SslSessionConfig();
