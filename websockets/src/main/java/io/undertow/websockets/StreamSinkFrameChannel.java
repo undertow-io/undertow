@@ -111,14 +111,14 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     /**
      * Set if this {@link StreamSinkFrameChannel} is the final fragement.
-     *
+     * <p/>
      * This can only be set before any write or transfer operations where passed
      * to the wrapped {@link StreamSinkChannel}, after that an {@link IllegalStateException} will be thrown.
      *
      * @param finalFragment
      */
     public void setFinalFragment(boolean finalFragment) {
-        if (!isFragmentationSupported() && !finalFragment)   {
+        if (!isFragmentationSupported() && !finalFragment) {
             throw WebSocketMessages.MESSAGES.fragmentationNotSupported();
         }
         if (written > 0) {
@@ -129,14 +129,14 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     /**
      * Set the RSV which is used for extensions.
-     *
+     * <p/>
      * This can only be set before any write or transfer operations where passed
      * to the wrapped {@link StreamSinkChannel}, after that an {@link IllegalStateException} will be thrown.
      *
      * @param rsv
      */
     public void setRsv(int rsv) {
-        if (!areExtensionsSupported() && rsv != 0)   {
+        if (!areExtensionsSupported() && rsv != 0) {
             throw WebSocketMessages.MESSAGES.extensionsNotSupported();
         }
         if (written > 0) {
@@ -173,6 +173,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      * todo: when we get serious about performance we will need to make sure we use direct buffers
      * and a gathering write for this, so we can write out the whole message with a single write()
      * call
+     *
      * @return true if the frame start was written
      * @throws IOException
      */
@@ -223,16 +224,22 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
         return false;
     }
+
     /**
      * Mark this channel as active
      */
     protected final void activate() {
-        ChannelState old = state;
-        if (old == ChannelState.WAITING) {
-            if (!stateUpdater.compareAndSet(this, ChannelState.WAITING, ChannelState.ACTIVE)) {
-                old = state;
+        ChannelState old, newState;
+        do {
+            old = state;
+            if(old == ChannelState.WAITING) {
+                newState = ChannelState.ACTIVE;
+            } else if (old == ChannelState.WAITING_SHUTDOWN) {
+                newState = ChannelState.SHUTDOWN;
+            } else {
+                break;
             }
-        }
+        } while (!stateUpdater.compareAndSet(this, old, newState));
 
         // now notify the waiters if any
         synchronized (writeWaitLock) {
@@ -394,7 +401,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
             }
             return result;
         } finally {
-           src.limit(oldLimit);
+            src.limit(oldLimit);
         }
     }
 
@@ -471,7 +478,8 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public boolean isOpen() {
-        return state != ChannelState.CLOSED && state != ChannelState.SHUTDOWN;
+        final ChannelState state = this.state;
+        return state != ChannelState.CLOSED && state != ChannelState.SHUTDOWN && state != ChannelState.WAITING_SHUTDOWN;
     }
 
     @Override
@@ -497,6 +505,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public synchronized void suspendWrites() {
         writesSuspended = true;
+        ChannelState state = this.state;
         if (state == ChannelState.ACTIVE || state == ChannelState.SHUTDOWN) {
             channel.suspendWrites();
         }
@@ -509,7 +518,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         ChannelState state = stateUpdater.get(this);
         if (state == ChannelState.ACTIVE || state == ChannelState.SHUTDOWN) {
             channel.resumeWrites();
-        } else if(state == ChannelState.CLOSED) {
+        } else if (state == ChannelState.CLOSED) {
             queueWriteListener();
         }
     }
@@ -518,7 +527,8 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      * Return <code>true</code> if this {@link StreamSinkFrameChannel} is currently in use.
      */
     protected final boolean isActive() {
-        return state != ChannelState.WAITING;
+        final ChannelState state = this.state;
+        return state != ChannelState.WAITING && state != ChannelState.WAITING_SHUTDOWN;
     }
 
     @Override
@@ -534,14 +544,19 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public void shutdownWrites() throws IOException {
-        ChannelState oldState;
+        ChannelState oldState, newState;
         do {
             oldState = state;
-            if (oldState == ChannelState.SHUTDOWN || oldState == ChannelState.CLOSED) {
+            if (oldState == ChannelState.SHUTDOWN || oldState == ChannelState.CLOSED || oldState == ChannelState.WAITING_SHUTDOWN) {
                 return;
             }
+            if(oldState == ChannelState.WAITING) {
+                newState = ChannelState.WAITING_SHUTDOWN;
+            } else {
+                newState = ChannelState.SHUTDOWN;
+            }
 
-        } while (stateUpdater.compareAndSet(this, oldState, ChannelState.SHUTDOWN));
+        } while (stateUpdater.compareAndSet(this, oldState, newState));
 
         //if we have blocked threads we should wake them up just in case
         if (oldState == ChannelState.WAITING) {
@@ -646,7 +661,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      */
     protected final void checkClosed() throws IOException {
         final ChannelState state = this.state;
-        if (state == ChannelState.CLOSED || state == ChannelState.SHUTDOWN) {
+        if (state == ChannelState.CLOSED || state == ChannelState.SHUTDOWN || state == ChannelState.WAITING_SHUTDOWN) {
             throw WebSocketMessages.MESSAGES.channelClosed();
         }
     }
@@ -656,6 +671,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
          * channel is waiting to be the active writer
          */
         WAITING,
+        /**
+         * Channel is shut down, but has not been activated yet
+         */
+        WAITING_SHUTDOWN,
         /**
          * channel is the active writer
          */
