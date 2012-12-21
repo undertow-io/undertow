@@ -34,7 +34,7 @@ import org.xnio.channels.StreamSinkChannel;
 public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel {
 
 
-    public WebSocket07FrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, WebSocketFrameType type,
+    protected WebSocket07FrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, WebSocketFrameType type,
                                        long payloadSize) {
         super(channel, wsChannel, type, payloadSize);
     }
@@ -62,27 +62,27 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     protected ByteBuffer createFrameStart() {
         byte b0 = 0;
         if (isFinalFragment()) {
-            b0 |= (1 << 7);
+            b0 |= 1 << 7;
         }
-        b0 |= ((getRsv() & 7) << 4);
-        b0 |= (opCode() & 0xf);
+        b0 |= (getRsv() & 7) << 4;
+        b0 |= opCode() & 0xf;
 
         final ByteBuffer header;
         int maskLength = 0; // handle masking for clients but we are currently only
                             // support servers this is not a priority by now
         if (payloadSize <= 125) {
             header = ByteBuffer.allocate(2 + maskLength);
-            header.put((byte) b0);
+            header.put(b0);
             header.put((byte)payloadSize);
         } else if (payloadSize <= 0xFFFF) {
             header = ByteBuffer.allocate(4 + maskLength);
-            header.put((byte) b0);
+            header.put(b0);
             header.put((byte) 126);
             header.put((byte) (payloadSize >>> 8 & 0xFF));
             header.put((byte) (payloadSize & 0xFF));
         } else {
             header = ByteBuffer.allocate(10 + maskLength);
-            header.put((byte) b0);
+            header.put(b0);
             header.put((byte) 127);
             header.putLong(payloadSize);
         }
