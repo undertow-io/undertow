@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import io.undertow.websockets.StreamSinkFrameChannel;
 import io.undertow.websockets.WebSocketFrameType;
 import org.xnio.Buffers;
+import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
@@ -30,6 +31,7 @@ import org.xnio.channels.StreamSinkChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket00BinaryFrameSinkChannel extends StreamSinkFrameChannel {
+    private Pooled<ByteBuffer> start;
 
     WebSocket00BinaryFrameSinkChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
@@ -38,7 +40,8 @@ class WebSocket00BinaryFrameSinkChannel extends StreamSinkFrameChannel {
     @Override
     protected ByteBuffer createFrameStart() {
         int dataLen = (int) payloadSize;
-        ByteBuffer buffer = ByteBuffer.allocate(5);
+        start = wsChannel.getBufferPool().allocate();
+        ByteBuffer buffer = start.getResource();
         // Encode type.
         buffer.put((byte) 0x80);
 
@@ -67,6 +70,14 @@ class WebSocket00BinaryFrameSinkChannel extends StreamSinkFrameChannel {
             buffer.put((byte) b4);
         }
         return buffer;
+    }
+
+    @Override
+    protected void frameStartComplete() {
+        super.frameStartComplete();
+        if (start != null) {
+            start.free();
+        }
     }
 
     @Override
