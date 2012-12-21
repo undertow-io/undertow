@@ -59,7 +59,7 @@ public final class WebSocketUtils {
      * @return buffer   The {@link ByteBuffer} which was created
      */
     public static ByteBuffer fromUtf8String(String utfString) {
-        if (utfString == null || utfString.length() == 0) {
+        if (utfString == null || utfString.isEmpty()) {
             return Buffers.EMPTY_BYTE_BUFFER;
         } else {
             return ByteBuffer.wrap(utfString.getBytes(UTF_8));

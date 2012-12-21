@@ -53,7 +53,8 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      * Create a new {@link WebSocketProtocolHandshakeHandler}
      *
      * @param websocketPath The path which is used to serve the WebSocket requests
-     * @param callback
+     * @param callback      The {@link WebSocketConnectionCallback} which will be executed once the handshake was
+     *                      established
      */
     public WebSocketProtocolHandshakeHandler(String websocketPath, final WebSocketConnectionCallback callback) {
         this.websocketPath = websocketPath;
@@ -72,7 +73,8 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      *
      * @param websocketPath The path which is used to serve the WebSocket requests
      * @param handshakes    The supported handshake methods
-     * @param callback
+     * @param callback      The {@link WebSocketConnectionCallback} which will be executed once the handshake was
+     *                      established
      */
     public WebSocketProtocolHandshakeHandler(String websocketPath, List<Handshake> handshakes, final WebSocketConnectionCallback callback) {
         this.websocketPath = websocketPath;

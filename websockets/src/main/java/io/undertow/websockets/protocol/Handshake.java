@@ -40,8 +40,9 @@ public abstract class Handshake {
     private final String hashAlgorithm;
     private final String magicNumber;
     private final List<String> subprotocols;
+    private static final byte[] EMPTY = new byte[0];
 
-    public Handshake(String version, String hashAlgorithm, String magicNumber, final List<String> subprotocols) {
+    protected Handshake(String version, String hashAlgorithm, String magicNumber, final List<String> subprotocols) {
         this.version = version;
         this.hashAlgorithm = hashAlgorithm;
         this.magicNumber = magicNumber;
@@ -49,7 +50,7 @@ public abstract class Handshake {
     }
 
     public String getVersion() {
-        return this.version;
+        return version;
     }
 
     public String getHashAlgorithm() {
@@ -60,9 +61,9 @@ public abstract class Handshake {
         return magicNumber;
     }
 
-    protected String getWebSocketLocation(HttpServerExchange exchange) {
+    protected static String getWebSocketLocation(HttpServerExchange exchange) {
         String scheme;
-        if (exchange.getRequestScheme().equals("https")) {
+        if ("https".equals(exchange.getRequestScheme())) {
             scheme = "wss";
         } else {
             scheme = "ws";
@@ -73,13 +74,11 @@ public abstract class Handshake {
     /**
      * Issue the WebSocket upgrade
      *
-     * @param exchange The {@link io.undertow.server.HttpServerExchange} for which the handshake and upgrade should occur.
-     * @throws io.undertow.websockets.WebSocketHandshakeException
-     *          Thrown if the handshake fails for what-ever reason.
+     * @param exchange The {@link HttpServerExchange} for which the handshake and upgrade should occur.
      */
     public abstract IoFuture<WebSocketChannel> handshake(HttpServerExchange exchange);
 
-    public abstract boolean matches(final HttpServerExchange exchange);
+    public abstract boolean matches(HttpServerExchange exchange);
 
     protected abstract WebSocketChannel createChannel(HttpServerExchange exchange);
 
@@ -87,7 +86,7 @@ public abstract class Handshake {
      * convenience method to perform the upgrade
      */
     protected void performUpgrade(final ConcreteIoFuture<WebSocketChannel> ioFuture, final HttpServerExchange exchange, final byte[] data) {
-        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + data.length);
+        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(data.length));
         exchange.getResponseHeaders().put(Headers.UPGRADE, "WebSocket");
         exchange.getResponseHeaders().put(Headers.CONNECTION, "Upgrade");
 
@@ -137,7 +136,7 @@ public abstract class Handshake {
 
     protected IoFuture<WebSocketChannel> performUpgrade(final HttpServerExchange exchange) {
         final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
-        performUpgrade(ioFuture, exchange, new byte[0]);
+        performUpgrade(ioFuture, exchange, EMPTY);
         return ioFuture;
     }
 
@@ -174,8 +173,6 @@ public abstract class Handshake {
     /**
      * Selects the first matching supported sub protocol
      *
-     * @return sub
-     *         First matching supported sub protocol.
      * @throws WebSocketHandshakeException Get thrown if no subprotocol could be found
      */
     protected final void selectSubprotocol(final HttpServerExchange exchange) throws WebSocketHandshakeException {

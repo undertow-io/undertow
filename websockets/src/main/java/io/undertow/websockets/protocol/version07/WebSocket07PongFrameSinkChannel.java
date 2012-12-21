@@ -18,7 +18,6 @@
 package io.undertow.websockets.protocol.version07;
 
 import io.undertow.websockets.WebSocketFrameType;
-import io.undertow.websockets.protocol.version08.WebSocket08Channel;
 import org.xnio.channels.StreamSinkChannel;
 
 /**

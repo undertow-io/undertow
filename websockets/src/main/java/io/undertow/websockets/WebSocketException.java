@@ -30,7 +30,6 @@ public class WebSocketException extends Exception {
     private static final long serialVersionUID = -6784834646314672530L;
 
     public WebSocketException() {
-        super();
     }
 
     public WebSocketException(String msg, Throwable cause) {

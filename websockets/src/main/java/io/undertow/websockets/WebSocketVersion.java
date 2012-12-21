@@ -67,9 +67,11 @@ public enum WebSocketVersion {
     public String toHttpHeaderValue() {
         if (this == V00) {
             return "0";
-        } else if (this == V08) {
+        }
+        if (this == V08) {
             return "8";
-        } else if (this == V13) {
+        }
+        if (this == V13) {
             return "13";
         }
         // Should never hit here.

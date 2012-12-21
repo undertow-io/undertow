@@ -62,8 +62,8 @@ public class WebSocket00Channel extends WebSocketChannel {
             private boolean receivedClosingHandshake;
             private State state = State.FRAME_START;
             private StreamSourceFrameChannel channel;
-            private long frameSize = 0;
-            private int lengthFieldSize = 0;
+            private long frameSize;
+            private int lengthFieldSize;
 
             @Override
             public StreamSourceFrameChannel getChannel() {

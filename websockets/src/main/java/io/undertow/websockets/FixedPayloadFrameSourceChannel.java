@@ -118,7 +118,7 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
         if (toRead < 1) {
             return -1;
         }
-        int r = 0;
+        int r;
         int position = dst.position();
         int old = dst.limit();
         try {

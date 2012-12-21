@@ -69,7 +69,7 @@ public class Hybi00Handshake extends Handshake {
 
         final StreamSourceChannel channel = exchange.getRequestChannel();
         final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
-        int r = 0, read = 0;
+        int r, read = 0;
         do {
             try {
                 r = channel.read(buffer);
@@ -91,7 +91,7 @@ public class Hybi00Handshake extends Handshake {
             channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
                 @Override
                 public void handleEvent(final StreamSourceChannel channel) {
-                    int r = 0, read = soFar;
+                    int r, read = soFar;
                     do {
                         try {
                             r = channel.read(buffer);

@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 public final class Masker implements ChannelFunction {
 
     private final byte[] maskingKey;
-    int m = 0;
+    int m;
 
     public Masker(int maskingKey) {
         this.maskingKey = createsMaskingKey(maskingKey);
@@ -35,9 +35,9 @@ public final class Masker implements ChannelFunction {
 
     private static byte[] createsMaskingKey(int maskingKey) {
         byte[] key = new byte[4];
-        key[0] = (byte) ((maskingKey >> 24) & 0xFF);
-        key[1] = (byte) ((maskingKey >> 16) & 0xFF);
-        key[2] = (byte) ((maskingKey >> 8) & 0xFF);
+        key[0] = (byte) (maskingKey >> 24 & 0xFF);
+        key[1] = (byte) (maskingKey >> 16 & 0xFF);
+        key[2] = (byte) (maskingKey >> 8 & 0xFF);
         key[3] = (byte) (maskingKey & 0xFF);
         return key;
     }
@@ -46,7 +46,7 @@ public final class Masker implements ChannelFunction {
         int limit = position + length;
         for (int i = position ; i < limit; ++i) {
             buf.put(i, (byte) (buf.get(i) ^ maskingKey[m++]));
-            m = m % 4;
+            m %= 4;
         }
     }
 

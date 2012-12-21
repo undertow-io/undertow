@@ -25,32 +25,32 @@ package io.undertow.websockets;
 public enum WebSocketFrameType {
 
     /**
-     * {@link WebSocketFrame} contains binary data
+     * WebSocketFrame contains binary data
      */
     BINARY,
 
     /**
-     * {@link WebSocketFrame} contains UTF-8 encoded {@link String}
+     * WebSocketFrame contains UTF-8 encoded {@link String}
      */
     TEXT,
 
     /**
-     * {@link WebSocketFrame} which represent a ping request
+     * WebSocketFrame which represent a ping request
      */
     PING,
 
     /**
-     * {@link WebSocketFrame} which should be issued after a {@link #PING} was received
+     * WebSocketFrame which should be issued after a {@link #PING} was received
      */
     PONG,
 
     /**
-     * {@link WebSocketFrame} which requests the close of the WebSockets connection
+     * WebSocketFrame which requests the close of the WebSockets connection
      */
     CLOSE,
 
     /**
-     * {@link WebSocketFrame} which notify about more data to come
+     * WebSocketFrame which notify about more data to come
      */
     CONTINUATION,
 

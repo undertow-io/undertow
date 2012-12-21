@@ -74,12 +74,12 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      */
     private ByteBuffer end;
 
-    private boolean frameStartWritten = false;
+    private boolean frameStartWritten;
 
     private static final AtomicReferenceFieldUpdater<StreamSinkFrameChannel, ChannelState> stateUpdater = AtomicReferenceFieldUpdater.newUpdater(StreamSinkFrameChannel.class, ChannelState.class, "state");
     private volatile ChannelState state = ChannelState.WAITING;
 
-    public StreamSinkFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
+    protected StreamSinkFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this.channel = channel;
         this.wsChannel = wsChannel;
         this.type = type;
@@ -103,7 +103,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     /**
-     * Return <code>true</code> if this {@link StreamSinkFrameChannel} is the final fragement
+     * Return {@code true} if this {@link StreamSinkFrameChannel} is the final fragement
      */
     public boolean isFinalFragment() {
         return finalFragment;
@@ -115,7 +115,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      * This can only be set before any write or transfer operations where passed
      * to the wrapped {@link StreamSinkChannel}, after that an {@link IllegalStateException} will be thrown.
      *
-     * @param finalFragment
      */
     public void setFinalFragment(boolean finalFragment) {
         if (!isFragmentationSupported() && !finalFragment) {
@@ -133,7 +132,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      * This can only be set before any write or transfer operations where passed
      * to the wrapped {@link StreamSinkChannel}, after that an {@link IllegalStateException} will be thrown.
      *
-     * @param rsv
      */
     public void setRsv(int rsv) {
         if (!areExtensionsSupported() && rsv != 0) {
@@ -312,7 +310,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      * for normal shutdowns.
      */
     @Override
-    public final void close() throws IOException {
+    public final void close() {
         ChannelState oldState;
         do {
             oldState = state;
@@ -364,7 +362,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         try {
             long result = write0(srcs, offset, i);
             if (result > 0) {
-                this.written += result;
+                written += result;
             }
             return result;
         } finally {
@@ -408,7 +406,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         try {
             int result = write0(src);
             if (result > 0) {
-                this.written += result;
+                written += result;
             }
             return result;
         } finally {
@@ -442,7 +440,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
         long result = transferFrom0(src, position, count);
         if (result > 0) {
-            this.written += result;
+            written += result;
         }
         return result;
     }
@@ -474,7 +472,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
         long result = transferFrom0(source, count, throughBuffer);
         if (result > 0) {
-            this.written += result;
+            written += result;
         }
         return result;
     }
@@ -504,7 +502,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     @Override
-    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+    public <T> T setOption(Option<T> option, T value) throws IOException {
         return channel.setOption(option, value);
     }
 
@@ -535,7 +533,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     /**
-     * Return <code>true</code> if this {@link StreamSinkFrameChannel} is currently in use.
+     * Return {@code true} if this {@link StreamSinkFrameChannel} is currently in use.
      */
     protected final boolean isActive() {
         final ChannelState state = this.state;
@@ -668,7 +666,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     /**
-     * Throws an {@link IOException} if the {@link #isOpen()} returns <code>false</code>
+     * Throws an {@link IOException} if the {@link #isOpen()} returns {@code false}
      */
     protected final void checkClosed() throws IOException {
         final ChannelState state = this.state;
@@ -677,7 +675,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         }
     }
 
-    public static enum ChannelState {
+    public enum ChannelState {
         /**
          * channel is waiting to be the active writer
          */

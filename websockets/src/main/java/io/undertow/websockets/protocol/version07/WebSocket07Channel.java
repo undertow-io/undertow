@@ -37,14 +37,14 @@ import org.xnio.channels.StreamSinkChannel;
 
 
 /**
- * {@link io.undertow.websockets.WebSocketChannel} which is used for {@link io.undertow.websockets.WebSocketVersion#V08}
+ * {@link WebSocketChannel} which is used for {@link WebSocketVersion#V08}
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket07Channel extends WebSocketChannel {
 
 
-    private static enum State {
+    private enum State {
         READING_FIRST,
         READING_SECOND,
         READING_EXTENDED_SIZE1,
@@ -76,12 +76,13 @@ public class WebSocket07Channel extends WebSocketChannel {
 
     private final boolean allowExtensions;
 
+    private static final ChannelFunction[] EMPTY_FUNCTIONS = new ChannelFunction[0];
     /**
      * Create a new {@link WebSocket07Channel}
      *
-     * @param channel    The {@link org.xnio.channels.ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
+     * @param channel    The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
      *                   Be aware that it already must be "upgraded".
-     * @param bufferPool The {@link org.xnio.Pool} which will be used to acquire {@link java.nio.ByteBuffer}'s from.
+     * @param bufferPool The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
      * @param wsUrl      The url for which the {@link WebSocket07Channel} was created.
      */
     public WebSocket07Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool,
@@ -97,9 +98,9 @@ public class WebSocket07Channel extends WebSocketChannel {
             private boolean frameFinalFlag;
             private int frameRsv;
             private int frameOpcode;
-            private int maskingKey = 0;
+            private int maskingKey;
             private boolean frameMasked;
-            private long framePayloadLength = 0;
+            private long framePayloadLength;
             private State state = State.READING_FIRST;
             private int framePayloadLen1;
 
@@ -108,11 +109,6 @@ public class WebSocket07Channel extends WebSocketChannel {
             @Override
             public StreamSourceFrameChannel getChannel() {
                 return channel;
-            }
-
-            private void protocolViolation(PushBackStreamChannel channel, String reason) throws WebSocketFrameCorruptedException {
-                IoUtils.safeClose(channel);
-                throw new WebSocketFrameCorruptedException(reason);
             }
 
             @Override
@@ -251,28 +247,28 @@ public class WebSocket07Channel extends WebSocketChannel {
                                 return;
                             }
                             b = buffer.get();
-                            maskingKey = (b & 0xFF);
+                            maskingKey = b & 0xFF;
                             state = State.READING_MASK_2;
                         case READING_MASK_2:
                             if (!buffer.hasRemaining()) {
                                 return;
                             }
                             b = buffer.get();
-                            maskingKey = (maskingKey << 8) | ((int) b & 0xFF);
+                            maskingKey = maskingKey << 8 | b & 0xFF;
                             state = State.READING_MASK_3;
                         case READING_MASK_3:
                             if (!buffer.hasRemaining()) {
                                 return;
                             }
                             b = buffer.get();
-                            maskingKey = (maskingKey << 8) | ((int) b & 0xFF);
+                            maskingKey = maskingKey << 8 | b & 0xFF;
                             state = State.READING_MASK_4;
                         case READING_MASK_4:
                             if (!buffer.hasRemaining()) {
                                 return;
                             }
                             b = buffer.get();
-                            maskingKey = (maskingKey << 8) | ((int) b & 0xFF);
+                            maskingKey = maskingKey << 8 | b & 0xFF;
                             state = State.DONE;
                             break;
                         default:
@@ -288,14 +284,16 @@ public class WebSocket07Channel extends WebSocketChannel {
                         this.channel = new WebSocket07PingFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv);
                     }
                     return;
-                } else if (frameOpcode == OPCODE_PONG) {
+                }
+                if (frameOpcode == OPCODE_PONG) {
                     if (frameMasked) {
                         this.channel = new WebSocket07PongFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, new Masker(maskingKey));
                     } else {
                         this.channel = new WebSocket07PongFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv);
                     }
                     return;
-                } else if (frameOpcode == OPCODE_CLOSE) {
+                }
+                if (frameOpcode == OPCODE_CLOSE) {
                     if (frameMasked) {
                         this.channel = new WebSocket07CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, new Masker(maskingKey));
                     } else {
@@ -336,14 +334,12 @@ public class WebSocket07Channel extends WebSocketChannel {
                         WebSocket07Channel.this.checker = null;
                     }
 
-                    return;
                 } else if (frameOpcode == OPCODE_BINARY) {
                     if (frameMasked) {
                         this.channel = new WebSocket07BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, new Masker(maskingKey));
                     } else {
                         this.channel = new WebSocket07BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag);
                     }
-                    return;
                 } else if (frameOpcode == OPCODE_CONT) {
                     final ChannelFunction[] functions;
                     if(frameMasked && checker != null) {
@@ -357,14 +353,13 @@ public class WebSocket07Channel extends WebSocketChannel {
                         functions = new ChannelFunction[1];
                         functions[0] = checker;
                     } else {
-                        functions = new ChannelFunction[0];
+                        functions = EMPTY_FUNCTIONS;
                     }
                     if (frameMasked) {
                         this.channel = new WebSocket07ContinuationFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, functions);
                     } else {
                         this.channel = new WebSocket07ContinuationFrameSourceChannel(streamSourceChannelControl, channel, WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, functions);
                     }
-                    return;
                 } else {
                     throw WebSocketMessages.MESSAGES.unsupportedOpCode(frameOpcode);
                 }

@@ -26,6 +26,6 @@ import io.undertow.websockets.WebSocketChannel;
  */
 public interface WebSocketConnectionCallback {
 
-    void onConnect(final HttpServerExchange exchange, WebSocketChannel channel);
+    void onConnect(HttpServerExchange exchange, WebSocketChannel channel);
 
 }
