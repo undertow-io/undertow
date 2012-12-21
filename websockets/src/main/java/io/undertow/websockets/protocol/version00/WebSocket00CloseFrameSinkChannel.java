@@ -29,12 +29,12 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- * {@link io.undertow.websockets.protocol.AbstractFrameSinkChannel} implementation for writing {@link WebSocketFrameType#CLOSE}
+ * {@link StreamSinkFrameChannel} implementation for writing {@link WebSocketFrameType#CLOSE}
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket00CloseFrameSinkChannel extends StreamSinkFrameChannel {
-    private static final ByteBuffer END = ByteBuffer.allocate(2).put((byte) 0xFF).put((byte) 0x00);
+    private static final ByteBuffer END = ByteBuffer.allocateDirect(2).put((byte) 0xFF).put((byte) 0x00);
 
 
     WebSocket00CloseFrameSinkChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel) {

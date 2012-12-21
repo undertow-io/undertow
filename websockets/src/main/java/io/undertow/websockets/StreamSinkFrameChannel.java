@@ -186,6 +186,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
             while (start.hasRemaining()) {
                 final int result = channel.write(start);
                 if (result == -1) {
+                    frameStartComplete();
                     throw WebSocketMessages.MESSAGES.channelClosed();
                 } else if (result == 0) {
                     return false;
@@ -193,10 +194,18 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
             }
             frameStartWritten = true;
             start = null;
+            frameStartComplete();
         }
         return true;
     }
 
+    protected void frameStartComplete() {
+
+    }
+
+    protected void endFrameComplete() {
+
+    }
 
     protected boolean flush0() throws IOException {
         if (writeFrameStart()) {
@@ -212,11 +221,13 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
                     int b = channel.write(end);
 
                     if (b == -1) {
+                        endFrameComplete();
                         throw WebSocketMessages.MESSAGES.channelClosed();
                     } else if (b == 0) {
                         return false;
                     }
                 }
+                endFrameComplete();
                 return true;
             } else {
                 return true;

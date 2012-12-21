@@ -25,7 +25,7 @@ import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
- * {@link io.undertow.websockets.protocol.AbstractFrameSinkChannel} implementation for writing {@link WebSocketFrameType#BINARY}
+ * {@link StreamSinkFrameChannel} implementation for writing {@link WebSocketFrameType#BINARY}
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */

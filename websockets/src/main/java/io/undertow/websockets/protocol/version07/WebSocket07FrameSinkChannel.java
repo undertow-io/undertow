@@ -24,6 +24,7 @@ import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketMessages;
 import io.undertow.websockets.WebSocketVersion;
 import org.xnio.Buffers;
+import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
@@ -32,6 +33,8 @@ import org.xnio.channels.StreamSinkChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel {
+
+    private Pooled<ByteBuffer> start;
 
 
     protected WebSocket07FrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, WebSocketFrameType type,
@@ -67,26 +70,34 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
         b0 |= (getRsv() & 7) << 4;
         b0 |= opCode() & 0xf;
 
-        final ByteBuffer header;
+        start = wsChannel.getBufferPool().allocate();
+
+        final ByteBuffer header = start.getResource();
         int maskLength = 0; // handle masking for clients but we are currently only
                             // support servers this is not a priority by now
+
         if (payloadSize <= 125) {
-            header = ByteBuffer.allocate(2 + maskLength);
             header.put(b0);
             header.put((byte)payloadSize);
         } else if (payloadSize <= 0xFFFF) {
-            header = ByteBuffer.allocate(4 + maskLength);
             header.put(b0);
             header.put((byte) 126);
             header.put((byte) (payloadSize >>> 8 & 0xFF));
             header.put((byte) (payloadSize & 0xFF));
         } else {
-            header = ByteBuffer.allocate(10 + maskLength);
             header.put(b0);
             header.put((byte) 127);
             header.putLong(payloadSize);
         }
         return header;
+    }
+
+    @Override
+    protected void frameStartComplete() {
+        super.frameStartComplete();
+        if (start != null) {
+            start.free();
+        }
     }
 
     @Override

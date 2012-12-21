@@ -24,14 +24,14 @@ import io.undertow.websockets.WebSocketFrameType;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
- * {@link io.undertow.websockets.protocol.AbstractFrameSinkChannel} implementation for writing {@link WebSocketFrameType#TEXT}
+ * {@link StreamSinkFrameChannel} implementation for writing {@link WebSocketFrameType#TEXT}
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket00TextFrameSinkChannel extends StreamSinkFrameChannel {
 
-    private static final ByteBuffer START = ByteBuffer.allocate(1).put((byte) 0x00);
-    private static final ByteBuffer END = ByteBuffer.allocate(1).put((byte) 0xFF);
+    private static final ByteBuffer START = ByteBuffer.allocateDirect(1).put((byte) 0x00);
+    private static final ByteBuffer END = ByteBuffer.allocateDirect(1).put((byte) 0xFF);
 
     WebSocket00TextFrameSinkChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
