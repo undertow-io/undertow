@@ -73,7 +73,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
         start = wsChannel.getBufferPool().allocate();
 
         final ByteBuffer header = start.getResource();
-        int maskLength = 0; // handle masking for clients but we are currently only
+        //int maskLength = 0; // handle masking for clients but we are currently only
                             // support servers this is not a priority by now
 
         if (payloadSize <= 125) {

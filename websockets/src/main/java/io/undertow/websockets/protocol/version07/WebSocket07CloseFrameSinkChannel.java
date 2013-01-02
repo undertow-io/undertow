@@ -23,8 +23,8 @@ import org.xnio.channels.StreamSinkChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07CloseFrameSinkChannel extends WebSocket07FrameSinkChannel {
-    public WebSocket07CloseFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
+class WebSocket07CloseFrameSinkChannel extends WebSocket07FrameSinkChannel {
+    WebSocket07CloseFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize);
     }
 

@@ -25,13 +25,13 @@ import org.xnio.channels.StreamSourceChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07PingFrameSourceChannel extends FixedPayloadFrameSourceChannel {
-    public WebSocket07PingFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, Masker masker) {
+class WebSocket07PingFrameSourceChannel extends FixedPayloadFrameSourceChannel {
+    WebSocket07PingFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, Masker masker) {
         // can not be fragmented
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PING, payloadSize, rsv, true, masker);
     }
 
-    public WebSocket07PingFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv) {
+    WebSocket07PingFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv) {
         // can not be fragmented
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PING, payloadSize, rsv, true);
     }
