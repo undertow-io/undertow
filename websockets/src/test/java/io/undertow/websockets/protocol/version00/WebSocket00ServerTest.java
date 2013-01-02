@@ -60,7 +60,7 @@ public class WebSocket00ServerTest {
             return;
         }
         final AtomicBoolean connected = new AtomicBoolean(false);
-        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler("", new WebSocketConnectionCallback() {
+        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
             public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
@@ -128,7 +128,7 @@ public class WebSocket00ServerTest {
             return;
         }
         final AtomicBoolean connected = new AtomicBoolean(false);
-        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler("/", new WebSocketConnectionCallback() {
+        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
             public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
@@ -182,7 +182,7 @@ public class WebSocket00ServerTest {
         final CountDownLatch latch = new CountDownLatch(1);
 
         final AtomicBoolean connected = new AtomicBoolean(false);
-        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler("/", new WebSocketConnectionCallback() {
+        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
             public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);

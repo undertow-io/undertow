@@ -124,7 +124,7 @@ public class AutobahnWebSocketServer {
             server = worker.createStreamServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
 
-            setRootHandler(new WebSocketProtocolHandshakeHandler("/", new WebSocketConnectionCallback() {
+            setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
                 @Override
                 public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
                     channel.getReceiveSetter().set(new Receiver());

@@ -52,7 +52,7 @@ public class WebSocket07ServerTest extends WebSocket00ServerTest {
     @org.junit.Test
     public void testPing() throws Exception {
         final AtomicBoolean connected = new AtomicBoolean(false);
-        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler("/", new WebSocketConnectionCallback() {
+        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
             public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);

@@ -44,7 +44,6 @@ import org.xnio.IoUtils;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocketProtocolHandshakeHandler implements HttpHandler {
-    private final String websocketPath;
     private final List<Handshake> handshakes;
 
     private final WebSocketConnectionCallback callback;
@@ -52,12 +51,10 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     /**
      * Create a new {@link WebSocketProtocolHandshakeHandler}
      *
-     * @param websocketPath The path which is used to serve the WebSocket requests
      * @param callback      The {@link WebSocketConnectionCallback} which will be executed once the handshake was
      *                      established
      */
-    public WebSocketProtocolHandshakeHandler(String websocketPath, final WebSocketConnectionCallback callback) {
-        this.websocketPath = websocketPath;
+    public WebSocketProtocolHandshakeHandler(final WebSocketConnectionCallback callback) {
         this.callback = callback;
         List<Handshake> handshakes = new ArrayList<Handshake>();
         handshakes.add(new Hybi13Handshake());
@@ -71,13 +68,11 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     /**
      * Create a new {@link WebSocketProtocolHandshakeHandler}
      *
-     * @param websocketPath The path which is used to serve the WebSocket requests
      * @param handshakes    The supported handshake methods
      * @param callback      The {@link WebSocketConnectionCallback} which will be executed once the handshake was
      *                      established
      */
-    public WebSocketProtocolHandshakeHandler(String websocketPath, List<Handshake> handshakes, final WebSocketConnectionCallback callback) {
-        this.websocketPath = websocketPath;
+    public WebSocketProtocolHandshakeHandler(List<Handshake> handshakes, final WebSocketConnectionCallback callback) {
         this.callback = callback;
         this.handshakes = new ArrayList<Handshake>(handshakes);
     }
