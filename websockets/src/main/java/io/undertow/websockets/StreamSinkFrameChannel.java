@@ -251,11 +251,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         } while (!stateUpdater.compareAndSet(this, old, newState));
 
         // now notify the waiters if any
-        synchronized (writeWaitLock) {
-            if (waiters > 0) {
-                writeWaitLock.notifyAll();
-            }
-        }
+        notifyWriteWaiters();
 
         if (old == ChannelState.CLOSED) {
             //the channel was closed with nothing being written
@@ -321,17 +317,21 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
         if (oldState == ChannelState.WAITING) {
             // now notify the waiter
-            synchronized (writeWaitLock) {
-                if (waiters > 0) {
-                    writeWaitLock.notifyAll();
-                }
-            }
+            notifyWriteWaiters();
         }
         try {
             WebSocketLogger.REQUEST_LOGGER.closedBeforeFinishedWriting(this);
             wsChannel.markBroken();
         } finally {
             ChannelListeners.invokeChannelListener(this, closeSetter.get());
+        }
+    }
+
+    private void notifyWriteWaiters() {
+        synchronized (writeWaitLock) {
+            if (waiters > 0) {
+                writeWaitLock.notifyAll();
+            }
         }
     }
 
@@ -570,11 +570,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         //if we have blocked threads we should wake them up just in case
         if (oldState == ChannelState.WAITING) {
             // now notify the waiter
-            synchronized (writeWaitLock) {
-                if (waiters > 0) {
-                    writeWaitLock.notifyAll();
-                }
-            }
+            notifyWriteWaiters();
         }
     }
 
