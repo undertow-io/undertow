@@ -94,7 +94,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         channel.getCloseSetter().set(new WebSocketCloseListener());
     }
 
-
     /**
      * Get the buffer pool for this connection.
      *
@@ -298,7 +297,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
-
     public Setter<WebSocketChannel> getReceiveSetter() {
         return receiveSetter;
     }
@@ -458,7 +456,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
-
     private class WebSocketWriteListener implements ChannelListener<ConnectedStreamChannel> {
         @Override
         public void handleEvent(final ConnectedStreamChannel channel) {
@@ -517,7 +514,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
-
     /**
      * Interface that represenets a channel that is in the process of being created
      */
@@ -540,12 +536,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         boolean isDone();
     }
 
-
     public class StreamSourceChannelControl {
 
-        private StreamSourceChannelControl() {
-
-        }
+        private StreamSourceChannelControl() {}
 
         public void readFrameDone(StreamSourceFrameChannel channel) {
             synchronized (WebSocketChannel.this) {

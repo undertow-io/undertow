@@ -63,7 +63,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     private int rsv;
     private boolean finalFragment = true;
 
-
     /**
      * Buffer that holds the frame start
      */

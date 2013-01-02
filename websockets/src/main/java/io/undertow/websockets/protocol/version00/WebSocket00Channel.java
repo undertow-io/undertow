@@ -55,7 +55,6 @@ public class WebSocket00Channel extends WebSocketChannel {
         super(channel, bufferPool, WebSocketVersion.V00, wsUrl);
     }
 
-
     @Override
     protected PartialFrame receiveFrame(final StreamSourceChannelControl streamSourceChannelControl) {
         return new PartialFrame() {

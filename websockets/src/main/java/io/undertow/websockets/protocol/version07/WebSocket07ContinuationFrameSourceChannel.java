@@ -30,5 +30,4 @@ class WebSocket07ContinuationFrameSourceChannel extends FixedPayloadFrameSourceC
     WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final ChannelFunction ... function) {
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, function);
     }
-
 }

@@ -113,13 +113,18 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
 
     @Override
     public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+        // clear the buffer
+        throughBuffer.clear();
+
         if (complete) {
             return -1;
         }
 
+        if (count == 0) {
+            return 0;
+        }
+
         try {
-            // clear the buffer
-            throughBuffer.clear();
 
             if (count < throughBuffer.limit()) {
                 throughBuffer.limit((int) count);

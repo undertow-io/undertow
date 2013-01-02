@@ -43,7 +43,6 @@ import org.xnio.channels.StreamSinkChannel;
  */
 public class WebSocket07Channel extends WebSocketChannel {
 
-
     private enum State {
         READING_FIRST,
         READING_SECOND,
@@ -103,7 +102,6 @@ public class WebSocket07Channel extends WebSocketChannel {
             private long framePayloadLength;
             private State state = State.READING_FIRST;
             private int framePayloadLen1;
-
             private StreamSourceFrameChannel channel;
 
             @Override
@@ -163,7 +161,6 @@ public class WebSocket07Channel extends WebSocketChannel {
                                 }
                                 continue;
                             }
-
                         case READING_EXTENDED_SIZE1:
                             // Read frame payload length
                             if (!buffer.hasRemaining()) {
@@ -383,7 +380,6 @@ public class WebSocket07Channel extends WebSocketChannel {
             }
 
             private void validateControlFrame() throws WebSocketFrameCorruptedException {
-
                 // control frames MUST NOT be fragmented
                 if (!frameFinalFlag) {
                     throw WebSocketMessages.MESSAGES.fragmentedControlFrame();
@@ -406,7 +402,6 @@ public class WebSocket07Channel extends WebSocketChannel {
                     throw WebSocketMessages.MESSAGES.controlFrameWithPayloadLen1();
                 }
             }
-
 
             @Override
             public boolean isDone() {
@@ -434,5 +429,4 @@ public class WebSocket07Channel extends WebSocketChannel {
                 throw WebSocketMessages.MESSAGES.unsupportedFrameType(type);
         }
     }
-
 }

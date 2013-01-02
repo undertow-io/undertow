@@ -66,9 +66,7 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
         return r;
     }
 
-
     protected static long transfer(final ReadableByteChannel source, final long count, final ByteBuffer throughBuffer, final WritableByteChannel sink) throws IOException {
-
         long total = 0L;
         while (total < count) {
             throughBuffer.clear();

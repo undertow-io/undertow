@@ -32,7 +32,6 @@ class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel {
         super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
     }
 
-
     @Override
     public boolean isFragmentationSupported() {
         return true;

@@ -38,5 +38,4 @@ class WebSocket07BinaryFrameSinkChannel extends WebSocket07FrameSinkChannel {
     public boolean areExtensionsSupported() {
         return true;
     }
-
 }

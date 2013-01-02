@@ -36,7 +36,6 @@ import org.xnio.channels.StreamSourceChannel;
 class WebSocket00CloseFrameSinkChannel extends StreamSinkFrameChannel {
     private static final ByteBuffer END = ByteBuffer.allocateDirect(2).put((byte) 0xFF).put((byte) 0x00);
 
-
     WebSocket00CloseFrameSinkChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel) {
         super(channel, wsChannel, WebSocketFrameType.CLOSE, 0);
     }
@@ -71,5 +70,4 @@ class WebSocket00CloseFrameSinkChannel extends StreamSinkFrameChannel {
     protected ByteBuffer createFrameEnd() {
         return END.duplicate();
     }
-
 }

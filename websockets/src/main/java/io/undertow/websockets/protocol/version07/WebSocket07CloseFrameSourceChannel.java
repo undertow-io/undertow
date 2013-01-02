@@ -51,7 +51,6 @@ class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel 
         masker = null;
     }
 
-
     @Override
     protected int read0(ByteBuffer dst) throws IOException {
         switch (validateStatus()) {

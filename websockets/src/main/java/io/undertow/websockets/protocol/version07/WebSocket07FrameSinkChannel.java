@@ -36,7 +36,6 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
 
     private Pooled<ByteBuffer> start;
 
-
     protected WebSocket07FrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, WebSocketFrameType type,
                                        long payloadSize) {
         super(channel, wsChannel, type, payloadSize);

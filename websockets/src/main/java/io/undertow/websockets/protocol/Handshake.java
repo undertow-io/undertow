@@ -82,6 +82,9 @@ public abstract class Handshake {
 
     public abstract boolean matches(HttpServerExchange exchange);
 
+    /**
+     * Create the {@link WebSocketChannel} from the {@link HttpServerExchange}
+     */
     protected abstract WebSocketChannel createChannel(HttpServerExchange exchange);
 
     /**
@@ -135,7 +138,6 @@ public abstract class Handshake {
 
     }
 
-
     protected IoFuture<WebSocketChannel> performUpgrade(final HttpServerExchange exchange) {
         final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
         performUpgrade(ioFuture, exchange, EMPTY);
@@ -164,13 +166,10 @@ public abstract class Handshake {
             } else {
                 ioFuture.setResult(createChannel(exchange));
             }
-
         } catch (IOException e) {
             throw new WebSocketHandshakeException(e);
         }
-
     }
-
 
     /**
      * Selects the first matching supported sub protocol
