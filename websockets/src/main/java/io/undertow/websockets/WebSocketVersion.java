@@ -68,6 +68,9 @@ public enum WebSocketVersion {
         if (this == V00) {
             return "0";
         }
+        if (this == V07) {
+            return "7";
+        }
         if (this == V08) {
             return "8";
         }
