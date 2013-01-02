@@ -27,6 +27,7 @@ import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketMessages;
+import io.undertow.websockets.WebSocketVersion;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -37,21 +38,21 @@ import org.xnio.channels.StreamSinkChannel;
  * @author Mike Brock
  */
 public abstract class Handshake {
-    private final String version;
+    private final WebSocketVersion version;
     private final String hashAlgorithm;
     private final String magicNumber;
     private final List<String> subprotocols;
     private static final byte[] EMPTY = new byte[0];
     private static final Pattern PATTERN = Pattern.compile(",");
 
-    protected Handshake(String version, String hashAlgorithm, String magicNumber, final List<String> subprotocols) {
+    protected Handshake(WebSocketVersion version, String hashAlgorithm, String magicNumber, final List<String> subprotocols) {
         this.version = version;
         this.hashAlgorithm = hashAlgorithm;
         this.magicNumber = magicNumber;
         this.subprotocols = subprotocols;
     }
 
-    public String getVersion() {
+    public WebSocketVersion getVersion() {
         return version;
     }
 
@@ -80,6 +81,9 @@ public abstract class Handshake {
      */
     public abstract IoFuture<WebSocketChannel> handshake(HttpServerExchange exchange);
 
+    /**
+     * Return {@code true} if this implementation can be used to issue a handshake.
+     */
     public abstract boolean matches(HttpServerExchange exchange);
 
     /**

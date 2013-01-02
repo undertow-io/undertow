@@ -29,6 +29,7 @@ import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketHandshakeException;
 import io.undertow.websockets.WebSocketUtils;
+import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.protocol.Handshake;
 import org.xnio.IoFuture;
 
@@ -40,24 +41,25 @@ import org.xnio.IoFuture;
 public class Hybi07Handshake extends Handshake {
     protected final boolean allowExtensions;
 
-    protected Hybi07Handshake(final String version, final List<String> subprotocols, boolean allowExtensions) {
+    protected Hybi07Handshake(final WebSocketVersion version, final List<String> subprotocols, boolean allowExtensions) {
         super(version, "SHA1", "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", subprotocols);
         this.allowExtensions = allowExtensions;
     }
 
     public Hybi07Handshake(final List<String> subprotocols, boolean allowExtensions) {
-        this("7", subprotocols, allowExtensions);
+        this(WebSocketVersion.V07, subprotocols, allowExtensions);
     }
 
     public Hybi07Handshake() {
-        this("7", Collections.<String>emptyList(), false);
+        this(WebSocketVersion.V07, Collections.<String>emptyList(), false);
     }
 
     @Override
     public boolean matches(final HttpServerExchange exchange) {
         if (exchange.getRequestHeaders().contains(Headers.SEC_WEB_SOCKET_KEY) &&
                 exchange.getRequestHeaders().contains(Headers.SEC_WEB_SOCKET_VERSION)) {
-            return exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_VERSION).equals(getVersion());
+            return exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_VERSION)
+                    .equals(getVersion().toHttpHeaderValue());
         }
         return false;
     }

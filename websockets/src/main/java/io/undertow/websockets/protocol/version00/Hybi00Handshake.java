@@ -30,6 +30,7 @@ import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketMessages;
+import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.protocol.Handshake;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
@@ -43,11 +44,11 @@ public class Hybi00Handshake extends Handshake {
     private static final Pattern PATTERN = Pattern.compile("[^0-9]");
 
     public Hybi00Handshake() {
-        super("0", "MD5", null, Collections.<String>emptyList());
+        super(WebSocketVersion.V00, "MD5", null, Collections.<String>emptyList());
     }
 
     public Hybi00Handshake(final List<String> subprotocols) {
-        super("0", "MD5", null, subprotocols);
+        super(WebSocketVersion.V00, "MD5", null, subprotocols);
     }
 
     @Override
