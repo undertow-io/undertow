@@ -55,7 +55,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     private long written;
 
     private final Object writeWaitLock = new Object();
-    private int waiters = 0;
+    private int waiters;
 
     private volatile boolean writesSuspended = true;
 
@@ -586,7 +586,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         } else if (currentState == ChannelState.WAITING) {
             try {
                 synchronized (writeWaitLock) {
-                    if (state == ChannelState.WAITING) {
+                    while (state == ChannelState.WAITING) {
                         waiters++;
                         try {
                             writeWaitLock.wait();
@@ -595,7 +595,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
                         }
                     }
                 }
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignore) {
                 Thread.currentThread().interrupt();
                 throw new InterruptedIOException();
             }
@@ -611,7 +611,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         } else if (currentState == ChannelState.WAITING) {
             try {
                 synchronized (writeWaitLock) {
-                    if (state == ChannelState.WAITING) {
+                    while (state == ChannelState.WAITING) {
                         waiters++;
                         try {
                             writeWaitLock.wait(timeUnit.toMillis(time));
@@ -620,7 +620,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
                         }
                     }
                 }
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignore) {
                 Thread.currentThread().interrupt();
                 throw new InterruptedIOException();
             }
