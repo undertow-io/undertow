@@ -23,6 +23,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
@@ -39,6 +40,8 @@ import org.xnio.channels.StreamSourceChannel;
  * @author Mike Brock
  */
 public class Hybi00Handshake extends Handshake {
+    private static final Pattern PATTERN = Pattern.compile("[^0-9]");
+
     public Hybi00Handshake() {
         super("0", "MD5", null, Collections.<String>emptyList());
     }
@@ -164,8 +167,7 @@ public class Hybi00Handshake extends Handshake {
                 ++numSpaces;
             }
         }
-
-        final String digits = encoded.replaceAll("[^0-9]", "");
+        final String digits = PATTERN.matcher(encoded).replaceAll("");
         final long product = Long.parseLong(digits);
         return product / numSpaces;
     }

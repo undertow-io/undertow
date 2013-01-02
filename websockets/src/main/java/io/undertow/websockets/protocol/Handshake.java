@@ -19,6 +19,7 @@ package io.undertow.websockets.protocol;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
@@ -41,6 +42,7 @@ public abstract class Handshake {
     private final String magicNumber;
     private final List<String> subprotocols;
     private static final byte[] EMPTY = new byte[0];
+    private static final Pattern PATTERN = Pattern.compile(",");
 
     protected Handshake(String version, String hashAlgorithm, String magicNumber, final List<String> subprotocols) {
         this.version = version;
@@ -181,7 +183,7 @@ public abstract class Handshake {
             return;
         }
 
-        String[] requestedSubprotocolArray = requestedSubprotocols.split(",");
+        String[] requestedSubprotocolArray = PATTERN.split(requestedSubprotocols);
         for (String p : requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 
