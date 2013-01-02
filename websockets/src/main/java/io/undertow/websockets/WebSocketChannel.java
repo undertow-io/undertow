@@ -106,7 +106,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     /**
      * Check if the given {@link StreamSinkChannel} is currently active
      */
-    protected boolean isActive(StreamSinkChannel channel) {
+    protected final boolean isActive(StreamSinkChannel channel) {
         synchronized (senders) {
             return senders.peek() == channel;
         }
@@ -213,7 +213,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         return getLocalAddress(InetSocketAddress.class);
     }
 
-
     /**
      * Async receive, returns null if no frame is ready. Otherwise returns a
      * channel that can be used to read the frame contents.
@@ -297,10 +296,17 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
+    /**
+     * Return the {@link Setter} which will holds the {@link ChannelListener} that gets notified once a frame was
+     * received.
+     */
     public Setter<WebSocketChannel> getReceiveSetter() {
         return receiveSetter;
     }
 
+    /**
+     * Suspend the receive of new frames via {@link #receive()}
+     */
     public synchronized void suspendReceives() {
         receivesSuspended = true;
         if (receiver == null) {
@@ -308,6 +314,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
+    /**
+     * Resume the receive of new frames via {@link #receive()}
+     */
     public synchronized void resumeReceives() {
         receivesSuspended = false;
         if (receiver == null) {
@@ -351,6 +360,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
+    /**
+     * Send a Close frame without a payload
+     */
     public void sendClose() throws IOException {
         StreamSinkFrameChannel closeChannel = createStreamSinkChannel(channel, WebSocketFrameType.CLOSE, 0);
         closeChannel.close();
@@ -540,6 +552,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
         private StreamSourceChannelControl() {}
 
+        /**
+         * Called once the frame was read for the given {@link StreamSourceFrameChannel}.
+         */
         public void readFrameDone(StreamSourceFrameChannel channel) {
             synchronized (WebSocketChannel.this) {
                 if (channel == receiver) {

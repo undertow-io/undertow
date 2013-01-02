@@ -78,6 +78,29 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     private static final AtomicReferenceFieldUpdater<StreamSinkFrameChannel, ChannelState> stateUpdater = AtomicReferenceFieldUpdater.newUpdater(StreamSinkFrameChannel.class, ChannelState.class, "state");
     private volatile ChannelState state = ChannelState.WAITING;
 
+    protected enum ChannelState {
+        /**
+         * channel is waiting to be the active writer
+         */
+        WAITING,
+        /**
+         * Channel is shut down, but has not been activated yet
+         */
+        WAITING_SHUTDOWN,
+        /**
+         * channel is the active writer
+         */
+        ACTIVE,
+        /**
+         * writes have been shutdown
+         */
+        SHUTDOWN,
+        /**
+         * channel is closed
+         */
+        CLOSED,
+    }
+
     protected StreamSinkFrameChannel(StreamSinkChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this.channel = channel;
         this.wsChannel = wsChannel;
@@ -196,10 +219,16 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return true;
     }
 
+    /**
+     * Is called once the start of the frame was witten. Sub-classes may override this to free up resources
+     */
     protected void frameStartComplete() {
 
     }
 
+    /**
+     * Is called once the end of the frame was witten. Sub-classes may override this to free up resources
+     */
     protected void endFrameComplete() {
 
     }
@@ -340,7 +369,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        long toWrite = toWrite();
+        long toWrite = bytesToWrite();
         if (toWrite < 1) {
             return -1;
         }
@@ -392,7 +421,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!writeFrameStart()) {
             return 0;
         }
-        long toWrite = toWrite();
+        long toWrite = bytesToWrite();
         if (toWrite < 1) {
             return -1;
         }
@@ -430,7 +459,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!writeFrameStart()) {
             return 0;
         }
-        long toWrite = toWrite();
+        long toWrite = bytesToWrite();
         if (toWrite < 1) {
             return -1;
         }
@@ -462,7 +491,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!writeFrameStart()) {
             return 0;
         }
-        long toWrite = toWrite();
+        long toWrite = bytesToWrite();
         if (toWrite < 1) {
             return -1;
         }
@@ -623,10 +652,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         //otherwise we just return, next attempt to write should throw an exception
     }
 
-    protected long getWritten() {
-        return written;
-    }
-
     protected ChannelState getState() {
         return state;
     }
@@ -656,7 +681,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return flushed;
     }
 
-    private long toWrite() {
+    /**
+     * Return the bytes which need to get written before the frame is complete
+     */
+    protected long bytesToWrite() {
         return payloadSize - written;
     }
 
@@ -668,28 +696,5 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (state == ChannelState.CLOSED || state == ChannelState.SHUTDOWN || state == ChannelState.WAITING_SHUTDOWN) {
             throw WebSocketMessages.MESSAGES.channelClosed();
         }
-    }
-
-    public enum ChannelState {
-        /**
-         * channel is waiting to be the active writer
-         */
-        WAITING,
-        /**
-         * Channel is shut down, but has not been activated yet
-         */
-        WAITING_SHUTDOWN,
-        /**
-         * channel is the active writer
-         */
-        ACTIVE,
-        /**
-         * writes have been shutdown
-         */
-        SHUTDOWN,
-        /**
-         * channel is closed
-         */
-        CLOSED,
     }
 }

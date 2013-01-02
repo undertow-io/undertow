@@ -35,6 +35,8 @@ import org.xnio.IoFuture;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
+ * Abstract base class for doing a WebSocket Handshake.
+ *
  * @author Mike Brock
  */
 public abstract class Handshake {
@@ -67,6 +69,9 @@ public abstract class Handshake {
         return hashAlgorithm;
     }
 
+    /**
+     * Return the magic number which will be mixed in
+     */
     public String getMagicNumber() {
         return magicNumber;
     }
