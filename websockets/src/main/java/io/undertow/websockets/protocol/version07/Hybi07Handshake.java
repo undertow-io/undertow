@@ -89,15 +89,13 @@ public class Hybi07Handshake extends Handshake {
 
     }
 
-
-    public String solve(final String nonceBase64) throws NoSuchAlgorithmException {
+    protected final String solve(final String nonceBase64) throws NoSuchAlgorithmException {
         final String concat = nonceBase64.trim() + getMagicNumber();
         final MessageDigest digest = MessageDigest.getInstance(getHashAlgorithm());
         digest.update(concat.getBytes(WebSocketUtils.UTF_8));
         final String result = Base64.encodeBytes(digest.digest()).trim();
         return result;
     }
-
 
     @Override
     protected WebSocketChannel createChannel(final HttpServerExchange exchange) {

@@ -37,6 +37,8 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
+ * Base class for processes Frame bases StreamSourceChannels.
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
@@ -230,7 +232,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         queueListener((ChannelListener<StreamSourceFrameChannel>) closeSetter.get());
     }
 
-    protected void queueListener(final ChannelListener<StreamSourceFrameChannel> listener) {
+    protected final void queueListener(final ChannelListener<StreamSourceFrameChannel> listener) {
         getReadThread().execute(new Runnable() {
             @Override
             public void run() {
@@ -246,7 +248,6 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
      * Once all is discarded it will call {@link #close()}
      */
     public void discard() throws IOException {
-
         if (!complete) {
             ChannelListener<StreamSourceChannel> drainListener = ChannelListeners.drainListener(Long.MAX_VALUE,
                     new ChannelListener<StreamSourceChannel>() {
@@ -267,6 +268,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
             close();
         }
     }
+
     @Override
     public void suspendReads() {
         readsResumed = false;

@@ -187,7 +187,7 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
     }
 
     @Override
-    protected boolean isComplete() {
+    protected final boolean isComplete() {
         assert readBytes <= getPayloadSize();
         return readBytes == getPayloadSize();
     }

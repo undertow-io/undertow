@@ -30,7 +30,7 @@ import io.undertow.websockets.WebSocketMessages;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public final class UTF8Checker implements ChannelFunction {
+final class UTF8Checker implements ChannelFunction {
 
 
     private static final int UTF8_ACCEPT = 0;

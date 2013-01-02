@@ -52,10 +52,17 @@ public abstract class Handshake {
         this.subprotocols = subprotocols;
     }
 
+    /**
+     * Return the version for which the {@link Handshake} can be used.
+     */
     public WebSocketVersion getVersion() {
         return version;
     }
 
+    /**
+     * Return the algorithm that is used to hash during the handshake
+     * @return
+     */
     public String getHashAlgorithm() {
         return hashAlgorithm;
     }
@@ -64,6 +71,9 @@ public abstract class Handshake {
         return magicNumber;
     }
 
+    /**
+     * Return the full url of the websocket location of the given {@link HttpServerExchange}
+     */
     protected static String getWebSocketLocation(HttpServerExchange exchange) {
         String scheme;
         if ("https".equals(exchange.getRequestScheme())) {
@@ -94,7 +104,7 @@ public abstract class Handshake {
     /**
      * convenience method to perform the upgrade
      */
-    protected void performUpgrade(final ConcreteIoFuture<WebSocketChannel> ioFuture, final HttpServerExchange exchange, final byte[] data) {
+    protected final void performUpgrade(final ConcreteIoFuture<WebSocketChannel> ioFuture, final HttpServerExchange exchange, final byte[] data) {
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(data.length));
         exchange.getResponseHeaders().put(Headers.UPGRADE, "WebSocket");
         exchange.getResponseHeaders().put(Headers.CONNECTION, "Upgrade");
@@ -142,7 +152,10 @@ public abstract class Handshake {
 
     }
 
-    protected IoFuture<WebSocketChannel> performUpgrade(final HttpServerExchange exchange) {
+    /**
+     * Perform the upgrade using no payload
+     */
+    protected final IoFuture<WebSocketChannel> performUpgrade(final HttpServerExchange exchange) {
         final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
         performUpgrade(ioFuture, exchange, EMPTY);
         return ioFuture;
@@ -176,7 +189,7 @@ public abstract class Handshake {
     }
 
     /**
-     * Selects the first matching supported sub protocol
+     * Selects the first matching supported sub protocol and add it the the headers of the exchange.
      *
      * @throws WebSocketHandshakeException Get thrown if no subprotocol could be found
      */
