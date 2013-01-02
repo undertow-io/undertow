@@ -54,6 +54,9 @@ public enum WebSocketFrameType {
      */
     CONTINUATION,
 
+    /**
+     * Unknown frame-type
+     */
     UNKOWN,
 
 }
