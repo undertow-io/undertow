@@ -20,8 +20,9 @@ package io.undertow.websockets.handler;
 
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
@@ -44,7 +45,7 @@ import org.xnio.IoUtils;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocketProtocolHandshakeHandler implements HttpHandler {
-    private final List<Handshake> handshakes;
+    private final Set<Handshake> handshakes;
 
     private final WebSocketConnectionCallback callback;
 
@@ -56,7 +57,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      */
     public WebSocketProtocolHandshakeHandler(final WebSocketConnectionCallback callback) {
         this.callback = callback;
-        List<Handshake> handshakes = new ArrayList<Handshake>();
+        Set<Handshake> handshakes = new HashSet<Handshake>();
         handshakes.add(new Hybi13Handshake());
         handshakes.add(new Hybi08Handshake());
         handshakes.add(new Hybi07Handshake());
@@ -72,9 +73,9 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      * @param callback      The {@link WebSocketConnectionCallback} which will be executed once the handshake was
      *                      established
      */
-    public WebSocketProtocolHandshakeHandler(List<Handshake> handshakes, final WebSocketConnectionCallback callback) {
+    public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final WebSocketConnectionCallback callback) {
         this.callback = callback;
-        this.handshakes = new ArrayList<Handshake>(handshakes);
+        this.handshakes = new HashSet<Handshake>(handshakes);
     }
 
     @Override
