@@ -26,7 +26,6 @@ import io.undertow.websockets.WebSocketFrameType;
 import io.undertow.websockets.WebSocketMessages;
 import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 
 /**
  * {@link StreamSinkFrameChannel} implementation for writing {@link WebSocketFrameType#CLOSE}
@@ -41,23 +40,12 @@ class WebSocket00CloseFrameSinkChannel extends StreamSinkFrameChannel {
     }
 
     @Override
-    protected int write0(ByteBuffer src) throws IOException {
-        throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
-    }
-
-
-    @Override
     protected long write0(ByteBuffer[] srcs, int offset, int length) throws IOException {
         throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
     }
 
     @Override
     protected long transferFrom0(FileChannel src, long position, long count) throws IOException {
-        throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
-    }
-
-    @Override
-    protected long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
         throw WebSocketMessages.MESSAGES.payloadNotSupportedInCloseFrames();
     }
 

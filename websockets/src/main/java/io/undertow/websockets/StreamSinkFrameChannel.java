@@ -74,6 +74,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     private ByteBuffer end;
 
     private boolean frameStartWritten;
+    private boolean frameEndWritten;
 
     private static final AtomicReferenceFieldUpdater<StreamSinkFrameChannel, ChannelState> stateUpdater = AtomicReferenceFieldUpdater.newUpdater(StreamSinkFrameChannel.class, ChannelState.class, "state");
     private volatile ChannelState state = ChannelState.WAITING;
@@ -189,72 +190,153 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         return false;
     }
 
-    /**
-     * todo: when we get serious about performance we will need to make sure we use direct buffers
-     * and a gathering write for this, so we can write out the whole message with a single write()
-     * call
-     *
-     * @return true if the frame start was written
-     * @throws IOException
-     */
-    private boolean writeFrameStart() throws IOException {
-        if (!frameStartWritten) {
-            if (start == null) {
-                start = createFrameStart();
-                start.flip();
-            }
-            while (start.hasRemaining()) {
-                final int result = channel.write(start);
-                if (result == -1) {
-                    frameStartComplete();
-                    throw WebSocketMessages.MESSAGES.channelClosed();
-                } else if (result == 0) {
-                    return false;
-                }
-            }
-            frameStartWritten = true;
-            start = null;
-            frameStartComplete();
+    private ByteBuffer getFrameStart() {
+        if (start == null) {
+            start = createFrameStart();
+            start.flip();
         }
-        return true;
+        return start;
+    }
+
+    private ByteBuffer getFrameEnd() {
+        if (end == null) {
+            end = createFrameEnd();
+            end.flip();
+        }
+        return end;
+    }
+
+    private void freeStartAndEndFrame() {
+        freeFrameStart();
+        freeFrameEnd();
+    }
+
+    private void freeFrameStart() {
+        if (start != null) {
+            if(!start.hasRemaining()) {
+                frameStartWritten = true;
+                frameStartComplete();
+            }
+        }
+    }
+
+    private void freeFrameEnd() {
+        if (end != null) {
+            if(!end.hasRemaining()) {
+                frameEndWritten = true;
+                endFrameComplete();
+            }
+        }
     }
 
     /**
      * Is called once the start of the frame was witten. Sub-classes may override this to free up resources
      */
     protected void frameStartComplete() {
-
+        // NOOP
     }
 
     /**
      * Is called once the end of the frame was witten. Sub-classes may override this to free up resources
      */
     protected void endFrameComplete() {
+        // NOOP
+    }
 
+    /**
+     * Compose a new array of ByteBuffer which contains also the start and end of the frame if possible. This allows
+     * us to use gathering writes.
+     */
+    private ByteBuffer[] composeBuffers(ByteBuffer[] buffers, int offset, int length) {
+        boolean needsStart = !frameStartWritten;
+        boolean needsEnd = bytesToWrite() <= maxBytes(buffers, offset, length);
+
+        if (!needsStart && !needsEnd) {
+            ByteBuffer[] bufs = new ByteBuffer[length];
+            System.arraycopy(buffers, offset, bufs, 0, bufs.length);
+            return bufs;
+        }
+        if (!needsStart && needsEnd) {
+            ByteBuffer[] bufs = new ByteBuffer[length + 1];
+            System.arraycopy(buffers, offset, bufs, 0, length);
+            bufs[bufs.length -1] = getFrameEnd();
+            return bufs;
+        }
+        if (needsStart && !needsEnd) {
+            ByteBuffer[] bufs = new ByteBuffer[length + 1];
+            System.arraycopy(buffers, offset, bufs, 1, length);
+            bufs[0] = getFrameStart();
+            return bufs;
+        }
+        if (needsStart && needsEnd) {
+            ByteBuffer[] bufs = new ByteBuffer[length + 2];
+            System.arraycopy(buffers, offset, bufs, 1, length);
+            bufs[0] = getFrameStart();
+            bufs[bufs.length -1] = getFrameEnd();
+            return bufs;
+        }
+        throw new IllegalStateException();
+    }
+
+    /**
+     * Return the max bytes that can be written from the given ByteBuffers with the offset and length
+     */
+    private static long maxBytes(ByteBuffer[] buffers, int offset, int length) {
+        long max = 0;
+        for (; offset < length; offset++) {
+            max += buffers[offset].remaining();
+        }
+        return max;
     }
 
     protected boolean flush0() throws IOException {
-        if (writeFrameStart()) {
+        if (payloadSize == 0) {
+           // if the payload is 0 it is possible that we need to handle the start and end of the frame
+           // in the flush.
+           if (!frameStartWritten) {
+
+               // the start of the fame was not written yet, try to use gathering writes to write out the start and
+               // end of the frame for performance reasons
+               ByteBuffer[] bufs = {getFrameStart(), getFrameEnd()};
+               while(!frameStartWritten || !frameEndWritten) {
+                   try {
+                       long w = channel.write(bufs);
+                       if (w == -1) {
+                           throw WebSocketMessages.MESSAGES.channelClosed();
+                       } else if (w == 0) {
+                           return false;
+                       }
+                   } finally {
+                       freeStartAndEndFrame();
+                   }
+               }
+               return true;
+           }
+        }
+
+        if (frameStartWritten) {
             if (getState() == ChannelState.SHUTDOWN) {
 
-                //we know end has not been written yet, or the state would be CLOSED
-                if (end == null) {
-                    end = createFrameEnd();
-                    end.flip();
-                }
+                try {
+                    // write the end if needed
+                    if (!frameEndWritten) {
+                        ByteBuffer end = getFrameEnd();
+                        while (end.hasRemaining()) {
+                            int b = channel.write(end);
 
-                while (end.hasRemaining()) {
-                    int b = channel.write(end);
-
-                    if (b == -1) {
-                        endFrameComplete();
-                        throw WebSocketMessages.MESSAGES.channelClosed();
-                    } else if (b == 0) {
-                        return false;
+                            if (b == -1) {
+                                throw WebSocketMessages.MESSAGES.channelClosed();
+                            } else if (b == 0) {
+                                return false;
+                            }
+                        }
                     }
+
+                    return true;
+                } finally {
+                    freeStartAndEndFrame();
                 }
-                endFrameComplete();
-                return true;
+
             } else {
                 return true;
             }
@@ -366,37 +448,67 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     @Override
     public final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
         checkClosed();
+
         if (!isActive()) {
             return 0;
         }
         long toWrite = bytesToWrite();
+
         if (toWrite < 1) {
             return -1;
         }
-        if (!writeFrameStart()) {
-            return 0;
-        }
-        int i = offset;
+        ByteBuffer[] bufs = composeBuffers(srcs, offset, length);
         int oldLimit = -1;
-        for (; i < length; i++) {
-            ByteBuffer src = srcs[i];
+
+        long extra = 0;
+        int i = 0;
+        int e = 0;
+        if (bufs.length == length + 2) {
+            i = 1;
+            e = bufs.length -1;
+            extra = getFrameStart().remaining() + getFrameEnd().remaining();
+        } else if (bufs.length == length + 1) {
+            if (frameStartWritten) {
+                e = bufs.length - 1;
+                extra = getFrameEnd().remaining();
+            } else {
+                i = 1;
+                extra = getFrameStart().remaining();
+            }
+        }
+
+        int last = -1;
+        for (; i < e; i++) {
+            ByteBuffer src = bufs[i];
             if (toWrite < src.remaining()) {
                 oldLimit = src.limit();
                 src.limit((int) toWrite);
-                i++;
+                last = i;
                 break;
             }
+            toWrite=- src.remaining();
         }
         try {
-            long result = write0(srcs, offset, i);
-            if (result > 0) {
-                written += result;
+            long result = write0(bufs, 0, bufs.length);
+
+            if (result < 1) {
+                return result;
             }
+
+            result -= extra;
+
+            if (result < 1) {
+                return 0;
+            }
+
+            written += result;
             return result;
         } finally {
+
             if (oldLimit != -1) {
-                srcs[offset + i].limit(oldLimit);
+                bufs[last].limit(oldLimit);
             }
+            freeStartAndEndFrame();
         }
     }
 
@@ -414,41 +526,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
 
     @Override
     public final int write(ByteBuffer src) throws IOException {
-        checkClosed();
-        if (!isActive()) {
-            return 0;
-        }
-        if (!writeFrameStart()) {
-            return 0;
-        }
-        long toWrite = bytesToWrite();
-        if (toWrite < 1) {
-            return -1;
-        }
-
-        int oldLimit = src.limit();
-
-        if (toWrite < src.remaining()) {
-            src.limit((int) toWrite + src.position());
-        }
-        try {
-            int result = write0(src);
-            if (result > 0) {
-                written += result;
-            }
-            return result;
-        } finally {
-            src.limit(oldLimit);
-        }
+        // TODO: Maybe implement directly to safe array creation
+        return (int) write(new ByteBuffer[] {src});
     }
-
-    /**
-     * @see StreamSinkChannel#write(ByteBuffer)
-     */
-    protected int write0(ByteBuffer src) throws IOException {
-        return channel.write(src);
-    }
-
 
     @Override
     public final long transferFrom(FileChannel src, long position, long count) throws IOException {
@@ -456,13 +536,27 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        if (!writeFrameStart()) {
-            return 0;
-        }
+
         long toWrite = bytesToWrite();
         if (toWrite < 1) {
             return -1;
         }
+
+        if (!frameStartWritten) {
+            ByteBuffer start = getFrameStart();
+            while (start.hasRemaining()) {
+                int w = channel.write(start);
+                if (w == 0) {
+                    return 0;
+                }
+                if (w == -1) {
+                    throw WebSocketMessages.MESSAGES.channelClosed();
+                }
+            }
+            // start was written free it.
+            freeFrameStart();
+        }
+
         if (toWrite < count) {
             count = toWrite;
         }
@@ -488,9 +582,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (!isActive()) {
             return 0;
         }
-        if (!writeFrameStart()) {
-            return 0;
-        }
+
         long toWrite = bytesToWrite();
         if (toWrite < 1) {
             return -1;
@@ -498,20 +590,8 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
         if (toWrite < count) {
             count = toWrite;
         }
-        long result = transferFrom0(source, count, throughBuffer);
-        if (result > 0) {
-            written += result;
-        }
-        return result;
+        return WebSocketUtils.transfer(source, count, throughBuffer, this);
     }
-
-    /**
-     * @see StreamSinkChannel#transferFrom(StreamSourceChannel, long, ByteBuffer)
-     */
-    protected long transferFrom0(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
-        return channel.transferFrom(source, count, throughBuffer);
-    }
-
 
     @Override
     public boolean isOpen() {
@@ -684,7 +764,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     /**
      * Return the bytes which need to get written before the frame is complete
      */
-    protected long bytesToWrite() {
+    protected final long bytesToWrite() {
         return payloadSize - written;
     }
 

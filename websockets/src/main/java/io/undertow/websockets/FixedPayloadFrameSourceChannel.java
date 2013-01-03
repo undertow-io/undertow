@@ -20,8 +20,6 @@ package io.undertow.websockets;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 
 import io.undertow.websockets.function.ChannelFunction;
 import io.undertow.websockets.function.ChannelFunctionFileChannel;
@@ -66,34 +64,6 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
         return r;
     }
 
-    protected static long transfer(final ReadableByteChannel source, final long count, final ByteBuffer throughBuffer, final WritableByteChannel sink) throws IOException {
-        long total = 0L;
-        while (total < count) {
-            throughBuffer.clear();
-            if (count - total < throughBuffer.remaining()) {
-                throughBuffer.limit((int) (count - total));
-            }
-
-            try {
-                long res = source.read(throughBuffer);
-                if (res <= 0) {
-                    return total == 0L ? res : total;
-                }
-            } finally {
-                throughBuffer.flip();
-
-            }
-            while (throughBuffer.hasRemaining()) {
-                long res = sink.write(throughBuffer);
-                if (res <= 0) {
-                    return total;
-                }
-                total += res;
-            }
-        }
-        return total;
-    }
-
     @Override
     protected final long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         long toRead = bytesToRead();
@@ -107,7 +77,7 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
 
         // use this because of XNIO bug
         // See https://issues.jboss.org/browse/XNIO-185
-        return transfer(this, count, throughBuffer, target);
+        return WebSocketUtils.transfer(this, count, throughBuffer, target);
     }
 
     @Override
