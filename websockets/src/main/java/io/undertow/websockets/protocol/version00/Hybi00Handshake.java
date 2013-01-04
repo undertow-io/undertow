@@ -138,11 +138,11 @@ public class Hybi00Handshake extends Handshake {
         return new WebSocket00Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange));
     }
 
-    public static byte[] solve(final String hashAlgorithm, String encodedKey1, String encodedKey2, byte[] key3) {
+    protected static byte[] solve(final String hashAlgorithm, String encodedKey1, String encodedKey2, byte[] key3) {
         return solve(hashAlgorithm, decodeKey(encodedKey1), decodeKey(encodedKey2), key3);
     }
 
-    public static byte[] solve(final String hashAlgorithm, long key1, long key2, byte[] key3) {
+    protected static byte[] solve(final String hashAlgorithm, long key1, long key2, byte[] key3) {
         ByteBuffer buffer = ByteBuffer.allocate(16).order(ByteOrder.BIG_ENDIAN);
 
         buffer.putInt((int) key1);
@@ -159,7 +159,7 @@ public class Hybi00Handshake extends Handshake {
         }
     }
 
-    public static long decodeKey(final String encoded) {
+    protected static long decodeKey(final String encoded) {
         final int len = encoded.length();
         int numSpaces = 0;
 

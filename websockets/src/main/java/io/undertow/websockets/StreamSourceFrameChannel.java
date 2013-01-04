@@ -183,6 +183,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
      */
     protected abstract long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException;
 
+    /**
+     * Is called once the whole frame was read.
+     */
     protected void complete() throws IOException {
         complete = true;
         streamSourceChannelControl.readFrameDone(this);

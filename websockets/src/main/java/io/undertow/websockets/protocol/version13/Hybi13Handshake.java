@@ -72,5 +72,4 @@ public class Hybi13Handshake extends Hybi07Handshake {
     protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
         return new WebSocket13Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange), allowExtensions);
     }
-
 }

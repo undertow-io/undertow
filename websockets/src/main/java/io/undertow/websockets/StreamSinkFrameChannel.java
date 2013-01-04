@@ -182,10 +182,16 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
      */
     protected abstract ByteBuffer createFrameEnd();
 
+    /**
+     * {@code true} if fragementation is supported for the {@link WebSocketFrameType}.
+     */
     public boolean isFragmentationSupported() {
         return false;
     }
 
+    /**
+     * {@code true} if extendsions are supported for the {@link WebSocketFrameType}.
+     */
     public boolean areExtensionsSupported() {
         return false;
     }
@@ -742,7 +748,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
     }
 
     @Override
-    public boolean flush() throws IOException {
+    public final boolean flush() throws IOException {
         if (!isActive()) {
             return false;
         }
