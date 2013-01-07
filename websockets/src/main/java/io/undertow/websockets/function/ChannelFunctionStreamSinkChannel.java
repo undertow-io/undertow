@@ -112,7 +112,7 @@ public class ChannelFunctionStreamSinkChannel implements StreamSinkChannel {
     }
 
     @Override
-    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+    public <T> T setOption(Option<T> option, T value) throws IOException {
         return channel.setOption(option, value);
     }
 

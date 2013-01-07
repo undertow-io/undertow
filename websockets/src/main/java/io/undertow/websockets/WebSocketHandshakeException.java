@@ -27,7 +27,6 @@ public class WebSocketHandshakeException extends WebSocketException {
     private static final long serialVersionUID = 1L;
 
     public WebSocketHandshakeException() {
-        super();
     }
 
     public WebSocketHandshakeException(String s) {

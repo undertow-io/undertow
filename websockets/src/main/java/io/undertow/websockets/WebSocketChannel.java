@@ -23,7 +23,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.undertow.UndertowLogger;
@@ -85,8 +84,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         this.version = version;
         this.wsUrl = wsUrl;
         this.bufferPool = bufferPool;
-        this.closeSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
-        this.receiveSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
+        closeSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
+        receiveSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
         channel.getReadSetter().set(null);
         channel.suspendReads();
         pushBackStreamChannel = new PushBackStreamChannel(channel);
@@ -94,7 +93,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         channel.getWriteSetter().set(new WebSocketWriteListener());
         channel.getCloseSetter().set(new WebSocketCloseListener());
     }
-
 
     /**
      * Get the buffer pool for this connection.
@@ -108,7 +106,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     /**
      * Check if the given {@link StreamSinkChannel} is currently active
      */
-    protected boolean isActive(StreamSinkChannel channel) {
+    protected final boolean isActive(StreamSinkChannel channel) {
         synchronized (senders) {
             return senders.peek() == channel;
         }
@@ -140,7 +138,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     }
 
     @Override
-    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+    public <T> T setOption(Option<T> option, T value) throws IOException {
         return channel.setOption(option, value);
     }
 
@@ -173,10 +171,10 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     }
 
     /**
-     * Return <code>true</code> if this is handled via WebSocket Secure.
+     * Return {@code true} if this is handled via WebSocket Secure.
      */
     public boolean isSecure() {
-        return getRequestScheme().equals("wss");
+        return "wss".equals(getRequestScheme());
     }
 
     /**
@@ -215,13 +213,12 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         return getLocalAddress(InetSocketAddress.class);
     }
 
-
     /**
      * Async receive, returns null if no frame is ready. Otherwise returns a
      * channel that can be used to read the frame contents.
      */
     public StreamSourceFrameChannel receive() throws IOException {
-        if (this.receiver != null) {
+        if (receiver != null) {
             return null;
         }
         final Pooled<ByteBuffer> pooled = getBufferPool().allocate();
@@ -299,11 +296,17 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
-
+    /**
+     * Return the {@link Setter} which will holds the {@link ChannelListener} that gets notified once a frame was
+     * received.
+     */
     public Setter<WebSocketChannel> getReceiveSetter() {
         return receiveSetter;
     }
 
+    /**
+     * Suspend the receive of new frames via {@link #receive()}
+     */
     public synchronized void suspendReceives() {
         receivesSuspended = true;
         if (receiver == null) {
@@ -311,6 +314,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
+    /**
+     * Resume the receive of new frames via {@link #receive()}
+     */
     public synchronized void resumeReceives() {
         receivesSuspended = false;
         if (receiver == null) {
@@ -354,13 +360,16 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
+    /**
+     * Send a Close frame without a payload
+     */
     public void sendClose() throws IOException {
         StreamSinkFrameChannel closeChannel = createStreamSinkChannel(channel, WebSocketFrameType.CLOSE, 0);
         closeChannel.close();
     }
 
     @Override
-    public ChannelListener.Setter<? extends WebSocketChannel> getCloseSetter() {
+    public Setter<? extends WebSocketChannel> getCloseSetter() {
         return closeSetter;
     }
 
@@ -369,11 +378,10 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      *
      * @param streamSourceChannelControl@return
      *         channel                  A {@link StreamSourceFrameChannel} will be used to read a Frame from.
-     *         This will return <code>null</code> if the right {@link StreamSourceFrameChannel} could not be detected with the given
+     *         This will return {@code null} if the right {@link StreamSourceFrameChannel} could not be detected with the given
      *         buffer and so more data is needed.
-     * @throws WebSocketException Is thrown if something goes wrong
      */
-    protected abstract PartialFrame receiveFrame(final StreamSourceChannelControl streamSourceChannelControl);
+    protected abstract PartialFrame receiveFrame(StreamSourceChannelControl streamSourceChannelControl);
 
     /**
      * Create a new StreamSinkFrameChannel which can be used to send a WebSocket Frame of the type {@link WebSocketFrameType}.
@@ -412,6 +420,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * listeners notified. It is expected that these listeners will then attempt to use the channel, and their standard
      * error handling logic will take over
      */
+    @SuppressWarnings({"unchecked", "rawtypes"})
     void markBroken() {
         if (broken.compareAndSet(false, true)) {
             safeClose(pushBackStreamChannel);
@@ -458,7 +467,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             }
         }
     }
-
 
     private class WebSocketWriteListener implements ChannelListener<ConnectedStreamChannel> {
         @Override
@@ -518,7 +526,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
-
     /**
      * Interface that represenets a channel that is in the process of being created
      */
@@ -532,9 +539,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         /**
          * Handles the data, any remaining data will be pushed back
          *
-         * @param data
          */
-        void handle(ByteBuffer data, final PushBackStreamChannel channel) throws WebSocketException;
+        void handle(ByteBuffer data, PushBackStreamChannel channel) throws WebSocketException;
 
         /**
          * @return true if the channel is available
@@ -542,13 +548,13 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         boolean isDone();
     }
 
-
     public class StreamSourceChannelControl {
 
-        private StreamSourceChannelControl() {
+        private StreamSourceChannelControl() {}
 
-        }
-
+        /**
+         * Called once the frame was read for the given {@link StreamSourceFrameChannel}.
+         */
         public void readFrameDone(StreamSourceFrameChannel channel) {
             synchronized (WebSocketChannel.this) {
                 if (channel == receiver) {

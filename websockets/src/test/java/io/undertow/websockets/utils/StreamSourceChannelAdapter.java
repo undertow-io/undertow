@@ -129,7 +129,7 @@ public class StreamSourceChannelAdapter implements StreamSourceChannel {
     }
 
     @Override
-    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+    public <T> T setOption(Option<T> option, T value) throws IOException {
         return null;
     }
 

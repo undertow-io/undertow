@@ -38,6 +38,8 @@ import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.jboss.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
+import org.junit.Test;
+
 import org.xnio.ChannelListener;
 
 import java.io.IOException;
@@ -60,7 +62,7 @@ public class WebSocket00ServerTest {
             return;
         }
         final AtomicBoolean connected = new AtomicBoolean(false);
-        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler("", new WebSocketConnectionCallback() {
+        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
             public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
@@ -128,7 +130,7 @@ public class WebSocket00ServerTest {
             return;
         }
         final AtomicBoolean connected = new AtomicBoolean(false);
-        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler("/", new WebSocketConnectionCallback() {
+        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
             public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
@@ -173,7 +175,7 @@ public class WebSocket00ServerTest {
         client.destroy();
     }
 
-    @org.junit.Test
+    @Test
     public void testCloseFrame() throws Exception {
         if (getVersion() == WebSocketVersion.V00) {
             // ignore 00 tests for now
@@ -182,7 +184,7 @@ public class WebSocket00ServerTest {
         final CountDownLatch latch = new CountDownLatch(1);
 
         final AtomicBoolean connected = new AtomicBoolean(false);
-        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler("/", new WebSocketConnectionCallback() {
+        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
             public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);

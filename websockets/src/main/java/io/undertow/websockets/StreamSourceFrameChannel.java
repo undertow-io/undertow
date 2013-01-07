@@ -37,6 +37,8 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
+ * Base class for processes Frame bases StreamSourceChannels.
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
@@ -52,15 +54,15 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     private final int rsv;
     private final long payloadSize;
 
-    private volatile boolean readsResumed = false;
+    private volatile boolean readsResumed;
     private volatile boolean complete;
     private volatile boolean closed;
 
-    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
+    protected StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize) {
         this(streamSourceChannelControl, channel, wsChannel, type, payloadSize, 0, true);
     }
 
-    public StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment) {
+    protected StreamSourceFrameChannel(final WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment) {
         this.streamSourceChannelControl = streamSourceChannelControl;
         this.channel = channel;
         this.wsChannel = wsChannel;
@@ -71,7 +73,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     }
 
     /**
-     * Return the payload size of <code>-1</code> if unknown on creation
+     * Return the payload size of {@code -1}if unknown on creation
      *
      * @return payloadSize
      */
@@ -79,7 +81,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         return payloadSize;
     }
     /**
-     * Returns <code>true</code> if the frame was complete.
+     * Returns {@code true} if the frame was complete.
      */
     protected abstract boolean isComplete();
 
@@ -181,13 +183,16 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
      */
     protected abstract long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException;
 
+    /**
+     * Is called once the whole frame was read.
+     */
     protected void complete() throws IOException {
         complete = true;
         streamSourceChannelControl.readFrameDone(this);
     }
 
     /**
-     * Return the {@link WebSocketFrameType} or <code>null</code> if its not known at the calling time.
+     * Return the {@link WebSocketFrameType} or {@code null} if its not known at the calling time.
      */
     public WebSocketFrameType getType() {
         return type;
@@ -230,7 +235,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
         queueListener((ChannelListener<StreamSourceFrameChannel>) closeSetter.get());
     }
 
-    protected void queueListener(final ChannelListener<StreamSourceFrameChannel> listener) {
+    protected final void queueListener(final ChannelListener<StreamSourceFrameChannel> listener) {
         getReadThread().execute(new Runnable() {
             @Override
             public void run() {
@@ -246,7 +251,6 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
      * Once all is discarded it will call {@link #close()}
      */
     public void discard() throws IOException {
-
         if (!complete) {
             ChannelListener<StreamSourceChannel> drainListener = ChannelListeners.drainListener(Long.MAX_VALUE,
                     new ChannelListener<StreamSourceChannel>() {
@@ -267,6 +271,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
             close();
         }
     }
+
     @Override
     public void suspendReads() {
         readsResumed = false;
@@ -335,7 +340,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     }
 
     @Override
-    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+    public <T> T setOption(Option<T> option, T value) throws IOException {
         return channel.setOption(option, value);
     }
 

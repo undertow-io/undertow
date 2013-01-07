@@ -25,6 +25,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketChannel;
+import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.protocol.version07.Hybi07Handshake;
 import org.xnio.IoFuture;
 
@@ -36,11 +37,11 @@ import org.xnio.IoFuture;
  */
 public class Hybi13Handshake extends Hybi07Handshake {
     public Hybi13Handshake() {
-        super("13", Collections.<String>emptyList(), false);
+        super(WebSocketVersion.V13, Collections.<String>emptyList(), false);
     }
 
     public Hybi13Handshake(List<String> subprotocols, boolean allowExtensions) {
-        super("13", subprotocols, allowExtensions);
+        super(WebSocketVersion.V13, subprotocols, allowExtensions);
     }
 
     @Override
@@ -71,5 +72,4 @@ public class Hybi13Handshake extends Hybi07Handshake {
     protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
         return new WebSocket13Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange), allowExtensions);
     }
-
 }

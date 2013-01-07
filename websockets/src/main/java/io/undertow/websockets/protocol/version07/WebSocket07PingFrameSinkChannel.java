@@ -24,8 +24,8 @@ import org.xnio.channels.StreamSinkChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07PingFrameSinkChannel extends WebSocket07FrameSinkChannel {
-    public WebSocket07PingFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
+class WebSocket07PingFrameSinkChannel extends WebSocket07FrameSinkChannel {
+    WebSocket07PingFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.PING, payloadSize);
         if (payloadSize > 125) {
             throw WebSocketMessages.MESSAGES.invalidPayloadLengthForPing(payloadSize);

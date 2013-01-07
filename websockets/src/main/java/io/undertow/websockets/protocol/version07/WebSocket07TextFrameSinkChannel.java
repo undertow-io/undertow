@@ -26,12 +26,11 @@ import org.xnio.channels.StreamSinkChannel;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel {
+class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel {
 
-    public WebSocket07TextFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
+    WebSocket07TextFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
     }
-
 
     @Override
     public boolean isFragmentationSupported() {

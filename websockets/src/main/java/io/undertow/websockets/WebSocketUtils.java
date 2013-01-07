@@ -17,7 +17,10 @@
  */
 package io.undertow.websockets;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -59,11 +62,42 @@ public final class WebSocketUtils {
      * @return buffer   The {@link ByteBuffer} which was created
      */
     public static ByteBuffer fromUtf8String(String utfString) {
-        if (utfString == null || utfString.length() == 0) {
+        if (utfString == null || utfString.isEmpty()) {
             return Buffers.EMPTY_BYTE_BUFFER;
         } else {
             return ByteBuffer.wrap(utfString.getBytes(UTF_8));
         }
+    }
+
+    /**
+     * Transfer the data from the source to the sink using the given throughbuffer to pass data through.
+     */
+    public static long transfer(final ReadableByteChannel source, final long count, final ByteBuffer throughBuffer, final WritableByteChannel sink) throws IOException {
+        long total = 0L;
+        while (total < count) {
+            throughBuffer.clear();
+            if (count - total < throughBuffer.remaining()) {
+                throughBuffer.limit((int) (count - total));
+            }
+
+            try {
+                long res = source.read(throughBuffer);
+                if (res <= 0) {
+                    return total == 0L ? res : total;
+                }
+            } finally {
+                throughBuffer.flip();
+
+            }
+            while (throughBuffer.hasRemaining()) {
+                long res = sink.write(throughBuffer);
+                if (res <= 0) {
+                    return total;
+                }
+                total += res;
+            }
+        }
+        return total;
     }
 
     private WebSocketUtils() {

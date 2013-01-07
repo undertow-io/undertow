@@ -25,13 +25,13 @@ import org.xnio.channels.PushBackStreamChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07PongFrameSourceChannel extends FixedPayloadFrameSourceChannel {
-    public WebSocket07PongFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, final Masker masker) {
+class WebSocket07PongFrameSourceChannel extends FixedPayloadFrameSourceChannel {
+    WebSocket07PongFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, final Masker masker) {
         // can not be fragmented
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PONG, payloadSize, rsv, true, masker);
     }
 
-    public WebSocket07PongFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv) {
+    WebSocket07PongFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv) {
         // can not be fragmented
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PONG, payloadSize, rsv, true);
     }

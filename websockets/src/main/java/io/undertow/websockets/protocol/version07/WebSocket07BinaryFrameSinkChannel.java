@@ -23,9 +23,9 @@ import org.xnio.channels.StreamSinkChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07BinaryFrameSinkChannel extends WebSocket07FrameSinkChannel {
+class WebSocket07BinaryFrameSinkChannel extends WebSocket07FrameSinkChannel {
 
-    public WebSocket07BinaryFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
+    WebSocket07BinaryFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
         super(channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
     }
 
@@ -38,5 +38,4 @@ public class WebSocket07BinaryFrameSinkChannel extends WebSocket07FrameSinkChann
     public boolean areExtensionsSupported() {
         return true;
     }
-
 }

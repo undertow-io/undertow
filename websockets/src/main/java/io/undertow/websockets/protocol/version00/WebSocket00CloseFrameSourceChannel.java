@@ -43,7 +43,7 @@ class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     /**
-     * Always returns <code>-1</code> as the frame can not contain any payload
+     * Always returns {@code -1} as the frame can not contain any payload
      */
     @Override
     public long transferTo0(long position, long count, FileChannel target) throws IOException {
@@ -51,7 +51,7 @@ class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     /**
-     * Always returns <code>-1</code> as the frame can not contain any payload
+     * Always returns {@code -1} as the frame can not contain any payload
      */
     @Override
     public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
@@ -59,7 +59,7 @@ class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     /**
-     * Always returns <code>-1</code> as the frame can not contain any payload
+     * Always returns {@code -1} as the frame can not contain any payload
      */
     @Override
     public int read0(ByteBuffer arg0) throws IOException {
@@ -67,7 +67,7 @@ class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     /**
-     * Always returns <code>-1</code> as the frame can not contain any payload
+     * Always returns {@code -1} as the frame can not contain any payload
      */
     @Override
     public long read0(ByteBuffer[] arg0) throws IOException {
@@ -75,7 +75,7 @@ class WebSocket00CloseFrameSourceChannel extends StreamSourceFrameChannel {
     }
 
     /**
-     * Always returns <code>-1</code> as the frame can not contain any payload
+     * Always returns {@code -1} as the frame can not contain any payload
      */
     @Override
     public long read0(ByteBuffer[] arg0, int arg1, int arg2) throws IOException {

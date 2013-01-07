@@ -23,12 +23,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketChannel;
 import io.undertow.websockets.WebSocketMessages;
+import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.protocol.Handshake;
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
@@ -39,12 +41,14 @@ import org.xnio.channels.StreamSourceChannel;
  * @author Mike Brock
  */
 public class Hybi00Handshake extends Handshake {
+    private static final Pattern PATTERN = Pattern.compile("[^0-9]");
+
     public Hybi00Handshake() {
-        super("0", "MD5", null, Collections.<String>emptyList());
+        super(WebSocketVersion.V00, "MD5", null, Collections.<String>emptyList());
     }
 
     public Hybi00Handshake(final List<String> subprotocols) {
-        super("0", "MD5", null, subprotocols);
+        super(WebSocketVersion.V00, "MD5", null, subprotocols);
     }
 
     @Override
@@ -69,7 +73,7 @@ public class Hybi00Handshake extends Handshake {
 
         final StreamSourceChannel channel = exchange.getRequestChannel();
         final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
-        int r = 0, read = 0;
+        int r, read = 0;
         do {
             try {
                 r = channel.read(buffer);
@@ -91,7 +95,7 @@ public class Hybi00Handshake extends Handshake {
             channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
                 @Override
                 public void handleEvent(final StreamSourceChannel channel) {
-                    int r = 0, read = soFar;
+                    int r, read = soFar;
                     do {
                         try {
                             r = channel.read(buffer);
@@ -134,11 +138,11 @@ public class Hybi00Handshake extends Handshake {
         return new WebSocket00Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange));
     }
 
-    public static byte[] solve(final String hashAlgorithm, String encodedKey1, String encodedKey2, byte[] key3) {
+    protected static byte[] solve(final String hashAlgorithm, String encodedKey1, String encodedKey2, byte[] key3) {
         return solve(hashAlgorithm, decodeKey(encodedKey1), decodeKey(encodedKey2), key3);
     }
 
-    public static byte[] solve(final String hashAlgorithm, long key1, long key2, byte[] key3) {
+    protected static byte[] solve(final String hashAlgorithm, long key1, long key2, byte[] key3) {
         ByteBuffer buffer = ByteBuffer.allocate(16).order(ByteOrder.BIG_ENDIAN);
 
         buffer.putInt((int) key1);
@@ -155,7 +159,7 @@ public class Hybi00Handshake extends Handshake {
         }
     }
 
-    public static long decodeKey(final String encoded) {
+    protected static long decodeKey(final String encoded) {
         final int len = encoded.length();
         int numSpaces = 0;
 
@@ -164,8 +168,7 @@ public class Hybi00Handshake extends Handshake {
                 ++numSpaces;
             }
         }
-
-        final String digits = encoded.replaceAll("[^0-9]", "");
+        final String digits = PATTERN.matcher(encoded).replaceAll("");
         final long product = Long.parseLong(digits);
         return product / numSpaces;
     }

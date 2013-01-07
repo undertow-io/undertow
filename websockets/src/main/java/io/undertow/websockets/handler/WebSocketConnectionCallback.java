@@ -26,6 +26,10 @@ import io.undertow.websockets.WebSocketChannel;
  */
 public interface WebSocketConnectionCallback {
 
-    void onConnect(final HttpServerExchange exchange, WebSocketChannel channel);
+    /**
+     * Is called once the WebSocket connection is established, which means the handshake was successful.
+     *
+     */
+    void onConnect(HttpServerExchange exchange, WebSocketChannel channel);
 
 }

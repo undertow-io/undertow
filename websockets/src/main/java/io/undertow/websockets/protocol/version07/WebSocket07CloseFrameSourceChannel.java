@@ -29,7 +29,7 @@ import java.nio.ByteBuffer;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel {
+class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel {
     private final ByteBuffer status = ByteBuffer.allocate(2);
     private boolean statusValidated;
     private final Masker masker;
@@ -48,9 +48,8 @@ public class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceC
     WebSocket07CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv) {
         // no fragmentation allowed per spec
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, new UTF8Checker());
-        this.masker = null;
+        masker = null;
     }
-
 
     @Override
     protected int read0(ByteBuffer dst) throws IOException {

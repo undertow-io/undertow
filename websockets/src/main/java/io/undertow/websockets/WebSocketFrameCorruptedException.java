@@ -23,6 +23,9 @@ package io.undertow.websockets;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocketFrameCorruptedException extends WebSocketException {
+
+    private static final long serialVersionUID = -6784834646314476130L;
+
     public WebSocketFrameCorruptedException() {
     }
 

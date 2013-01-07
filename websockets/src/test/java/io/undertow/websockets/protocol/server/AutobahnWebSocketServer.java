@@ -39,12 +39,10 @@ import org.xnio.Pooled;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
-import org.xnio.channels.Channels;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -126,7 +124,7 @@ public class AutobahnWebSocketServer {
             server = worker.createStreamServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
 
-            setRootHandler(new WebSocketProtocolHandshakeHandler("/", new WebSocketConnectionCallback() {
+            setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
                 @Override
                 public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
                     channel.getReceiveSetter().set(new Receiver());
@@ -260,7 +258,7 @@ public class AutobahnWebSocketServer {
         openListener.setRootHandler(ph);
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         new AutobahnWebSocketServer(7777).run();
     }
 
@@ -336,7 +334,9 @@ public class AutobahnWebSocketServer {
             source.resumeReads();
             free = false;
         } finally {
-            if (free) allocated.free();
+            if (free) {
+                allocated.free();
+            }
         }
     }
 
@@ -379,6 +379,7 @@ public class AutobahnWebSocketServer {
             this.state = state;
         }
 
+        @Override
         public void handleEvent(final Channel channel) {
             final ByteBuffer buffer = pooledBuffer.getResource();
             int state = this.state;
@@ -495,7 +496,7 @@ public class AutobahnWebSocketServer {
         }
 
         public String toString() {
-            return "Transfer channel listener (" + source + " to " + sink + ") -> (" + sourceListener + " and " + sinkListener + ")";
+            return "Transfer channel listener (" + source + " to " + sink + ") -> (" + sourceListener + " and " + sinkListener + ')';
         }
     }
 

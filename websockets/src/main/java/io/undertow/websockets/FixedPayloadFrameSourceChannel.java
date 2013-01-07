@@ -20,8 +20,6 @@ package io.undertow.websockets;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 
 import io.undertow.websockets.function.ChannelFunction;
 import io.undertow.websockets.function.ChannelFunctionFileChannel;
@@ -35,7 +33,7 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameChannel {
 
-    protected long readBytes;
+    private long readBytes;
     private final ChannelFunction[] functions;
 
     protected FixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment, ChannelFunction... functions) {
@@ -45,7 +43,7 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
 
     @Override
     protected final long transferTo0(long position, long count, FileChannel target) throws IOException {
-        long toRead = byteToRead();
+        long toRead = bytesToRead();
         if (toRead < 1) {
             return -1;
         }
@@ -66,39 +64,9 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
         return r;
     }
 
-
-    protected static long transfer(final ReadableByteChannel source, final long count, final ByteBuffer throughBuffer, final WritableByteChannel sink) throws IOException {
-
-        long total = 0L;
-        while (total < count) {
-            throughBuffer.clear();
-            if (count - total < throughBuffer.remaining()) {
-                throughBuffer.limit((int) (count - total));
-            }
-
-            try {
-                long res = source.read(throughBuffer);
-                if (res <= 0) {
-                    return total == 0L ? res : total;
-                }
-            } finally {
-                throughBuffer.flip();
-
-            }
-            while (throughBuffer.hasRemaining()) {
-                long res = sink.write(throughBuffer);
-                if (res <= 0) {
-                    return total;
-                }
-                total += res;
-            }
-        }
-        return total;
-    }
-
     @Override
     protected final long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        long toRead = byteToRead();
+        long toRead = bytesToRead();
         if (toRead < 1) {
             return -1;
         }
@@ -109,16 +77,16 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
 
         // use this because of XNIO bug
         // See https://issues.jboss.org/browse/XNIO-185
-        return transfer(this, count, throughBuffer, target);
+        return WebSocketUtils.transfer(this, count, throughBuffer, target);
     }
 
     @Override
     protected int read0(ByteBuffer dst) throws IOException {
-        long toRead = byteToRead();
+        long toRead = bytesToRead();
         if (toRead < 1) {
             return -1;
         }
-        int r = 0;
+        int r;
         int position = dst.position();
         int old = dst.limit();
         try {
@@ -145,7 +113,7 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
 
     @Override
     protected long read0(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        long toRead = byteToRead();
+        long toRead = bytesToRead();
         if (toRead < 1) {
             return -1;
         }
@@ -184,16 +152,27 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
         }
     }
 
-    private long byteToRead() {
+    /**
+     * Read the number of bytes which needs get read before the frame is complete
+     */
+    private long bytesToRead() {
         return getPayloadSize() - readBytes;
     }
 
     @Override
-    protected boolean isComplete() {
+    protected final boolean isComplete() {
         assert readBytes <= getPayloadSize();
         return readBytes == getPayloadSize();
     }
 
+    /**
+     * Caled after data was read into the {@link ByteBuffer}
+     *
+     * @param buffer        the {@link ByteBuffer} into which the data was read
+     * @param position      the position it was written to
+     * @param length        the number of bytes there were written
+     * @throws IOException  thrown if an error accour
+     */
     protected void afterRead(ByteBuffer buffer, int position, int length) throws IOException {
         for (ChannelFunction func : functions) {
             func.afterRead(buffer, position, length);

@@ -55,15 +55,14 @@ public class WebSocket00Channel extends WebSocketChannel {
         super(channel, bufferPool, WebSocketVersion.V00, wsUrl);
     }
 
-
     @Override
     protected PartialFrame receiveFrame(final StreamSourceChannelControl streamSourceChannelControl) {
         return new PartialFrame() {
             private boolean receivedClosingHandshake;
             private State state = State.FRAME_START;
             private StreamSourceFrameChannel channel;
-            private long frameSize = 0;
-            private int lengthFieldSize = 0;
+            private long frameSize;
+            private int lengthFieldSize;
 
             @Override
             public StreamSourceFrameChannel getChannel() {

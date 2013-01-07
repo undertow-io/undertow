@@ -21,6 +21,7 @@ import java.util.List;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.websockets.WebSocketChannel;
+import io.undertow.websockets.WebSocketVersion;
 import io.undertow.websockets.protocol.version07.Hybi07Handshake;
 
 /**
@@ -31,11 +32,11 @@ import io.undertow.websockets.protocol.version07.Hybi07Handshake;
  */
 public class Hybi08Handshake extends Hybi07Handshake {
     public Hybi08Handshake() {
-        super("8", Collections.<String>emptyList(), false);
+        super(WebSocketVersion.V08, Collections.<String>emptyList(), false);
     }
 
     public Hybi08Handshake(List<String> subprotocols, boolean allowExtensions) {
-        super("8", subprotocols, allowExtensions);
+        super(WebSocketVersion.V08, subprotocols, allowExtensions);
     }
 
     @Override

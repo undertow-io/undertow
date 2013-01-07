@@ -38,7 +38,7 @@ import io.undertow.websockets.WebSocketFrameType;
 class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
 
     private static final byte END_FRAME_MARKER = (byte) 0xFF;
-    private boolean complete = false;
+    private boolean complete;
 
     WebSocket00TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocket00Channel wsChannel) {
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, -1);
@@ -113,13 +113,18 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
 
     @Override
     public long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+        // clear the buffer
+        throughBuffer.clear();
+
         if (complete) {
             return -1;
         }
 
+        if (count == 0) {
+            return 0;
+        }
+
         try {
-            // clear the buffer
-            throughBuffer.clear();
 
             if (count < throughBuffer.limit()) {
                 throughBuffer.limit((int) count);
@@ -190,7 +195,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                     if (pos + 1 < r) {
                         ByteBuffer remainingBytes;
                         if (pos == 0) {
-                            remainingBytes = (ByteBuffer) buf.duplicate().position(pos + 1).limit(buf.limit());
+                            remainingBytes = (ByteBuffer) buf.duplicate().position(1).limit(buf.limit());
                         } else {
                             remainingBytes = (ByteBuffer) buf.duplicate().position(pos + 1).limit(buf.limit() - pos + 1);
                         }
@@ -229,10 +234,11 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                         } else {
                             return pos;
                         }
-                    } else {
-                        // Set the new position so that once the buffer is flipped it will be the new limit
-                        buf.position(pos);
                     }
+
+                    // Set the new position so that once the buffer is flipped it will be the new limit
+                    buf.position(pos);
+
 
                     // return the read bytes
                     return r - pos + 1;
@@ -260,7 +266,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
         while (index < length) {
             int i = read(bufs[index++]);
             if (i > 0) {
-                r = +i;
+                r += i;
             } else {
                 break;
             }
