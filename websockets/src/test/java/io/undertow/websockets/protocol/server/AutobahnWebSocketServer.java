@@ -258,7 +258,7 @@ public class AutobahnWebSocketServer {
         openListener.setRootHandler(ph);
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         new AutobahnWebSocketServer(7777).run();
     }
 
@@ -334,7 +334,9 @@ public class AutobahnWebSocketServer {
             source.resumeReads();
             free = false;
         } finally {
-            if (free) allocated.free();
+            if (free) {
+                allocated.free();
+            }
         }
     }
 
@@ -377,6 +379,7 @@ public class AutobahnWebSocketServer {
             this.state = state;
         }
 
+        @Override
         public void handleEvent(final Channel channel) {
             final ByteBuffer buffer = pooledBuffer.getResource();
             int state = this.state;
@@ -493,7 +496,7 @@ public class AutobahnWebSocketServer {
         }
 
         public String toString() {
-            return "Transfer channel listener (" + source + " to " + sink + ") -> (" + sourceListener + " and " + sinkListener + ")";
+            return "Transfer channel listener (" + source + " to " + sink + ") -> (" + sourceListener + " and " + sinkListener + ')';
         }
     }
 

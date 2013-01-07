@@ -142,7 +142,7 @@ public class StreamSinkChannelAdapter implements StreamSinkChannel {
     }
 
     @Override
-    public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+    public <T> T setOption(Option<T> option, T value) throws IOException {
         return null;
     }
 
@@ -154,7 +154,7 @@ public class StreamSinkChannelAdapter implements StreamSinkChannel {
     @Override
     public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
         long transfered = 0;
-        while(transfered < count) {
+        while (transfered < count) {
             int r = source.read(throughBuffer);
             if (r > 0) {
                 throughBuffer.flip();

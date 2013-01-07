@@ -32,6 +32,7 @@ import org.jboss.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.Assert;
+import org.junit.Test;
 import org.xnio.ChannelListener;
 
 import java.io.IOException;
@@ -49,7 +50,7 @@ public class WebSocket07ServerTest extends WebSocket00ServerTest {
         return WebSocketVersion.V07;
     }
 
-    @org.junit.Test
+    @Test
     public void testPing() throws Exception {
         final AtomicBoolean connected = new AtomicBoolean(false);
         DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
@@ -66,7 +67,9 @@ public class WebSocket07ServerTest extends WebSocket00ServerTest {
                             }
                             Assert.assertEquals(WebSocketFrameType.PING, ws.getType());
                             ByteBuffer buf = ByteBuffer.allocate(32);
-                            while (ws.read(buf) != -1) ;
+                            while (ws.read(buf) != -1) {
+                                // consume
+                            }
                             buf.flip();
 
                             StreamSinkFrameChannel sink = channel.send(WebSocketFrameType.PONG, buf.remaining());
@@ -88,7 +91,7 @@ public class WebSocket07ServerTest extends WebSocket00ServerTest {
         final CountDownLatch latch = new CountDownLatch(1);
         final byte[] payload =  "payload".getBytes();
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ':' + DefaultServer.getHostPort("default") + '/'));
         client.connect();
         client.send(new PingWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(PongWebSocketFrame.class, payload, latch));
         latch.await();

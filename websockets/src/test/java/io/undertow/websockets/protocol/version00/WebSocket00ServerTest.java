@@ -38,6 +38,8 @@ import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.jboss.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
+import org.junit.Test;
+
 import org.xnio.ChannelListener;
 
 import java.io.IOException;
@@ -173,7 +175,7 @@ public class WebSocket00ServerTest {
         client.destroy();
     }
 
-    @org.junit.Test
+    @Test
     public void testCloseFrame() throws Exception {
         if (getVersion() == WebSocketVersion.V00) {
             // ignore 00 tests for now
