@@ -47,7 +47,7 @@ public class WriteTimeoutTestCase {
                     throw new RuntimeException(e);
                 }
 
-                final int capacity = 50 * 1024 * 1024; //50mb, should be too big to fit into the network buffer
+                final int capacity = 40 * 1024 * 1024; //40mb, should be too big to fit into the network buffer
                 final ByteBuffer buffer = ByteBuffer.allocateDirect(capacity);
                 for (int i = 0; i < capacity; ++i) {
                     buffer.put((byte) '*');
