@@ -32,6 +32,7 @@ import org.xnio.channels.WriteTimeoutException;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@Ignore("This test fails intermittently")
 public class WriteTimeoutTestCase {
 
     private volatile Exception exception;
