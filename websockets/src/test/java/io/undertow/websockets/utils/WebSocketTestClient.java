@@ -64,7 +64,7 @@ public final class WebSocketTestClient {
      *
      * @throws Exception
      */
-    public WebSocketTestClient  connect() throws Exception {
+    public WebSocketTestClient connect() throws Exception {
         String protocol = uri.getScheme();
         if (!"ws".equals(protocol)) {
             throw new IllegalArgumentException("Unsupported protocol: " + protocol);
@@ -95,7 +95,7 @@ public final class WebSocketTestClient {
 
         ch = future.getChannel();
 
-        handshaker.handshake(ch);
+        handshaker.handshake(ch).syncUninterruptibly();
         handshakeLatch.await();
         return this;
     }
