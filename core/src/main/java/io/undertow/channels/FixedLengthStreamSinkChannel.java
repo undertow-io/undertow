@@ -63,7 +63,8 @@ public final class FixedLengthStreamSinkChannel implements StreamSinkChannel, Pr
 
     private static final long FLAG_CLOSE_REQUESTED = 1L << 63L;
     private static final long FLAG_CLOSE_COMPLETE = 1L << 62L;
-    private static final long MASK_COUNT = longBitMask(0, 61);
+    private static final long FLAG_FINISHED_CALLED = 1L << 61L;
+    private static final long MASK_COUNT = longBitMask(0, 60);
 
     /**
      * Construct a new instance.
@@ -341,22 +342,25 @@ public final class FixedLengthStreamSinkChannel implements StreamSinkChannel, Pr
     private void exitWrite(long oldVal, long consumed) {
         long newVal = oldVal - consumed;
         state = newVal;
-        if (anyAreSet(oldVal, MASK_COUNT) && allAreClear(newVal, MASK_COUNT)) {
-            callFinish();
-        }
     }
 
     private void exitFlush(long oldVal, boolean flushed) {
         long newVal = oldVal;
+        boolean callFinish = false;
         if (anyAreSet(oldVal, FLAG_CLOSE_REQUESTED) && flushed) {
             newVal |= FLAG_CLOSE_COMPLETE;
+        }
+
+        if (flushed && !anyAreSet(oldVal, FLAG_FINISHED_CALLED)) {
+            newVal |= FLAG_FINISHED_CALLED;
+            callFinish = true;
         }
         state = newVal;
         if (allAreSet(newVal, FLAG_CLOSE_COMPLETE)) {
             // closed while we were in flight or by us.
             callClosed();
         }
-        if (anyAreSet(oldVal, MASK_COUNT) && allAreClear(newVal, MASK_COUNT)) {
+        if (callFinish) {
             callFinish();
         }
     }
