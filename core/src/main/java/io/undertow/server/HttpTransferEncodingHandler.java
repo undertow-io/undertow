@@ -183,7 +183,6 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                 factory.create();
             }
-            IoUtils.safeClose(requestStream);
             try {
                 responseStream.shutdownWrites();
                 if (responseStream.flush()) {
