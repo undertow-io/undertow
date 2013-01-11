@@ -52,7 +52,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
     private final HttpServerConnection connection;
 
-    private volatile int read = 0;
+    private int read = 0;
     private final int maxRequestSize;
 
     HttpReadListener(final StreamSinkChannel responseChannel, final PushBackStreamChannel requestChannel, final HttpServerConnection connection) {
@@ -176,9 +176,9 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
      */
     private static class StartNextRequestAction implements Runnable {
 
-        private volatile PushBackStreamChannel channel;
-        private volatile StreamSinkChannel nextRequestResponseChannel;
-        private volatile HttpServerConnection connection;
+        private PushBackStreamChannel channel;
+        private StreamSinkChannel nextRequestResponseChannel;
+        private HttpServerConnection connection;
 
         /**
          * maintains the current state.

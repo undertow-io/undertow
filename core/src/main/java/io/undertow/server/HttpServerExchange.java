@@ -78,34 +78,34 @@ public final class HttpServerExchange extends AbstractAttachable {
     // mutable state
 
     private volatile int state = 200;
-    private volatile HttpString requestMethod;
-    private volatile String requestScheme;
+    private HttpString requestMethod;
+    private String requestScheme;
     /**
      * The original request URI. This will include the host name if it was specified by the client
      */
-    private volatile String requestURI;
+    private String requestURI;
     /**
      * The original request path.
      */
-    private volatile String requestPath;
+    private String requestPath;
     /**
      * The canonical version of the original path.
      */
-    private volatile String canonicalPath;
+    private String canonicalPath;
     /**
      * The remaining unresolved portion of the canonical path.
      */
-    private volatile String relativePath;
+    private String relativePath;
 
     /**
      * The resolved part of the canonical path.
      */
-    private volatile String resolvedPath = "";
+    private String resolvedPath = "";
 
     /**
      * the query string
      */
-    private volatile String queryString;
+    private String queryString;
 
     private boolean complete = false;
 
