@@ -340,13 +340,25 @@ final class HttpResponseChannel implements StreamSinkChannel {
                             this.valueIterator = null;
                             this.string = null;
                             buffer.flip();
-                            do {
-                                res = delegate.write(buffer);
-                                if (res == 0) {
-                                    log.trace("Continuation");
-                                    return STATE_BUF_FLUSH;
-                                }
-                            } while (buffer.hasRemaining());
+                            //for performance reasons we use a gather write if there is user data
+                            if(userData == null) {
+                                do {
+                                    res = delegate.write(buffer);
+                                    if (res == 0) {
+                                        log.trace("Continuation");
+                                        return STATE_BUF_FLUSH;
+                                    }
+                                } while (buffer.hasRemaining());
+                            } else {
+                                ByteBuffer[] b = {buffer, userData};
+                                do {
+                                    long r = delegate.write(b);
+                                    if (r == 0 && buffer.hasRemaining()) {
+                                        log.trace("Continuation");
+                                        return STATE_BUF_FLUSH;
+                                    }
+                                } while (buffer.hasRemaining());
+                            }
                             pooledBuffer.free();
                             pooledBuffer = null;
                             log.trace("Body");
