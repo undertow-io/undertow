@@ -156,7 +156,8 @@ public class WebSocket00TextFrameSourceChannelTest {
 
         // check that the rest was pushed back to the stream
         readBuffer.clear();
-        assertEquals(2, pch.read(readBuffer));
+        assertEquals(1, pch.read(readBuffer));
+        assertEquals(1, pch.read(readBuffer));
         readBuffer.flip();
 
         assertArrayEquals(new byte[] {(byte)1, (byte)2 }, TestUtils.readableBytes(readBuffer));
@@ -210,7 +211,8 @@ public class WebSocket00TextFrameSourceChannelTest {
 
         // check that the rest was pushed back to the stream
         readBuffer.clear();
-        assertEquals(2, pch.read(readBuffer));
+        assertEquals(1, pch.read(readBuffer));
+        assertEquals(1, pch.read(readBuffer));
         readBuffer.flip();
 
         assertArrayEquals(new byte[] {(byte)1, (byte)2 }, TestUtils.readableBytes(readBuffer));
