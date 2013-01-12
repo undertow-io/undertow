@@ -19,6 +19,7 @@
 package io.undertow.util;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -31,7 +32,7 @@ import io.undertow.UndertowMessages;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public abstract class AbstractAttachable implements Attachable {
-    private final ConcurrentMap<Object, Object> attachments = new SecureHashMap<Object, Object>();
+    private final Map<Object, Object> attachments = new HashMap<Object, Object>(32);
 
     @Override
     public Object getAttachment(String name) {
@@ -47,31 +48,8 @@ public abstract class AbstractAttachable implements Attachable {
     }
 
     @Override
-    public Object putAttachmentIfAbsent(String name, Object value) {
-        if (name == null) {
-            throw new IllegalArgumentException("name is null");
-        }
-        return attachments.putIfAbsent(name, value);
-    }
-
-    @Override
-    public Object replaceAttachment(String name, Object newValue) {
-        return attachments.replace(name, newValue);
-    }
-
-    @Override
     public Object removeAttachment(String name) {
         return attachments.remove(name);
-    }
-
-    @Override
-    public boolean replaceAttachment(String name, Object expectValue, Object newValue) {
-        return attachments.replace(name, expectValue, newValue);
-    }
-
-    @Override
-    public boolean removeAttachment(String name, Object expectValue) {
-        return attachments.remove(name, expectValue);
     }
 
     /**
@@ -109,17 +87,6 @@ public abstract class AbstractAttachable implements Attachable {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull();
         }
         return key.cast(attachments.put(key, key.cast(value)));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public <T> T putAttachmentIfAbsent(final AttachmentKey<T> key, final T value) {
-        if (key == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
-        }
-        return key.cast(attachments.putIfAbsent(key, key.cast(value)));
     }
 
     /**

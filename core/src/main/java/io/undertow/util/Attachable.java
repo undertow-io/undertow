@@ -30,15 +30,7 @@ public interface Attachable {
 
     Object putAttachment(String name, Object value);
 
-    Object putAttachmentIfAbsent(String name, Object value);
-
-    Object replaceAttachment(String name, Object newValue);
-
     Object removeAttachment(String name);
-
-    boolean replaceAttachment(String name, Object expectValue, Object newValue);
-
-    boolean removeAttachment(String name, Object expectValue);
 
     /**
      * Get an attachment value.  If no attachment exists for this key, {@code null} is returned.
@@ -68,16 +60,6 @@ public interface Attachable {
      * @return the old value, or {@code null} if there was none
      */
     <T> T putAttachment(AttachmentKey<T> key, T value);
-
-    /**
-     * Set an attachment value, if an existing value is not present. If an existing value is present it will be returned
-     *
-     * @param key the attachment key
-     * @param value the new value
-     * @param <T> the value type
-     * @return the old value, or {@code null} if there was none
-     */
-    <T> T putAttachmentIfAbsent(AttachmentKey<T> key, T value);
 
     /**
      * Remove an attachment, returning its previous value.
