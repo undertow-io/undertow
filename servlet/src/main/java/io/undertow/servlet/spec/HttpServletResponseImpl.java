@@ -38,8 +38,6 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.core.ServletPrintWriter;
-import io.undertow.servlet.core.ServletPrintWriterDelegate;
 import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;

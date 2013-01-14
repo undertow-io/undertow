@@ -123,12 +123,27 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         updateWritten(len);
     }
 
-    private void updateWritten(final int len) throws IOException {
+    void updateWritten(final int len) throws IOException {
         this.written += len;
         if (contentLength != null && this.written >= contentLength) {
             flush();
             close();
         }
+    }
+
+    /**
+     * Returns the underlying buffer. If this has not been created yet then
+     * it is created.
+     *
+     * Callers that use this method must call {@link #updateWritten(int)} to update the written
+     * amount.
+     *
+     * This allows the buffer to be filled directly, which can be more efficient.
+     *
+     * @return The underlying buffer
+     */
+    ByteBuffer underlyingBuffer() {
+        return buffer();
     }
 
     /**

@@ -1,4 +1,4 @@
-package io.undertow.servlet.core;
+package io.undertow.servlet.spec;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
