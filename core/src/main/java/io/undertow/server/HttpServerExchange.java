@@ -20,11 +20,12 @@ package io.undertow.server;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.undertow.UndertowMessages;
@@ -77,7 +78,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     // mutable state
 
-    private volatile int state = 200;
+    private int state = 200;
     private HttpString requestMethod;
     private String requestScheme;
     /**
@@ -109,16 +110,8 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private boolean complete = false;
 
-    private static final ChannelWrapper<StreamSourceChannel>[] NO_SOURCE_WRAPPERS = new ChannelWrapper[0];
-    private static final ChannelWrapper<StreamSinkChannel>[] NO_SINK_WRAPPERS = new ChannelWrapper[0];
-
-    private volatile ChannelWrapper[] requestWrappers = NO_SOURCE_WRAPPERS;
-    private volatile ChannelWrapper[] responseWrappers = NO_SINK_WRAPPERS;
-
-    private static final AtomicReferenceFieldUpdater<HttpServerExchange, ChannelWrapper[]> requestWrappersUpdater = AtomicReferenceFieldUpdater.newUpdater(HttpServerExchange.class, ChannelWrapper[].class, "requestWrappers");
-    private static final AtomicReferenceFieldUpdater<HttpServerExchange, ChannelWrapper[]> responseWrappersUpdater = AtomicReferenceFieldUpdater.newUpdater(HttpServerExchange.class, ChannelWrapper[].class, "responseWrappers");
-
-    private static final AtomicIntegerFieldUpdater<HttpServerExchange> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpServerExchange.class, "state");
+    private List<ChannelWrapper<StreamSourceChannel>> requestWrappers = new ArrayList<ChannelWrapper<StreamSourceChannel>>(3);
+    private List<ChannelWrapper<StreamSinkChannel>> responseWrappers = new ArrayList<ChannelWrapper<StreamSinkChannel>>(3);
 
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
     private static final int FLAG_RESPONSE_SENT = 1 << 10;
@@ -364,15 +357,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     public void upgradeChannel(){
         setResponseCode(101);
 
-        int oldVal, newVal;
-        do {
-            oldVal = state;
+        int   oldVal = state;
             if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
                 // idempotent
                 return;
             }
-            newVal = oldVal | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+            this.state = oldVal | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
     }
 
     /**
@@ -444,7 +434,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the channel for the inbound request, or {@code null} if another party already acquired the channel
      */
     public StreamSourceChannel getRequestChannel() {
-        final ChannelWrapper[] wrappers = requestWrappersUpdater.getAndSet(this, null);
+        final List<ChannelWrapper<StreamSourceChannel>> wrappers = this.requestWrappers;
+        this.requestWrappers = null;
         if (wrappers == null) {
             return null;
         }
@@ -476,15 +467,12 @@ public final class HttpServerExchange extends AbstractAttachable {
      * the socket or implement a transfer coding.
      */
     public void terminateRequest() {
-        int oldVal, newVal;
-        do {
-            oldVal = state;
-            if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
-                // idempotent
-                return;
-            }
-            newVal = oldVal | FLAG_REQUEST_TERMINATED;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+        int oldVal = state;
+        if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
+            // idempotent
+            return;
+        }
+        this.state = oldVal | FLAG_REQUEST_TERMINATED;
         requestTerminateAction.run();
     }
 
@@ -505,7 +493,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the response channel factory, or {@code null} if another party already acquired the channel factory
      */
     public ChannelFactory<StreamSinkChannel> getResponseChannelFactory() {
-        final ChannelWrapper[] wrappers = responseWrappersUpdater.getAndSet(this, null);
+        final List<ChannelWrapper<StreamSinkChannel>> wrappers = responseWrappers;
+        this.responseWrappers = null;
         if (wrappers == null) {
             return null;
         }
@@ -513,27 +502,26 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     private static final class ResponseChannelFactory implements ChannelFactory<StreamSinkChannel> {
-        private static final AtomicReferenceFieldUpdater<ResponseChannelFactory, ChannelWrapper[]> wrappersUpdater = AtomicReferenceFieldUpdater.newUpdater(ResponseChannelFactory.class, ChannelWrapper[].class, "wrappers");
         private final HttpServerExchange exchange;
         private final StreamSinkChannel firstChannel;
-        @SuppressWarnings("unused")
-        private volatile ChannelWrapper[] wrappers;
+        private List<ChannelWrapper<StreamSinkChannel>> wrappers;
 
-        ResponseChannelFactory(final HttpServerExchange exchange, final StreamSinkChannel firstChannel, final ChannelWrapper[] wrappers) {
+        ResponseChannelFactory(final HttpServerExchange exchange, final StreamSinkChannel firstChannel, final List<ChannelWrapper<StreamSinkChannel>> wrappers) {
             this.exchange = exchange;
             this.firstChannel = firstChannel;
             this.wrappers = wrappers;
         }
 
         public StreamSinkChannel create() {
-            final ChannelWrapper[] wrappers = wrappersUpdater.getAndSet(this, null);
+            final List<ChannelWrapper<StreamSinkChannel>> wrappers = this.wrappers;
+            this.wrappers = null;
             if (wrappers == null) {
                 return null;
             }
             StreamSinkChannel oldChannel = firstChannel;
             StreamSinkChannel channel = oldChannel;
-            for (ChannelWrapper wrapper : wrappers) {
-                channel = ((ChannelWrapper<StreamSinkChannel>) wrapper).wrap(channel, exchange);
+            for (ChannelWrapper<StreamSinkChannel> wrapper : wrappers) {
+                channel = wrapper.wrap(channel, exchange);
                 if (channel == null) {
                     channel = oldChannel;
                 }
@@ -562,14 +550,11 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (responseCode < 0 || responseCode > 999) {
             throw new IllegalArgumentException("Invalid response code");
         }
-        int oldVal, newVal;
-        do {
-            oldVal = state;
-            if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
-                throw UndertowMessages.MESSAGES.responseAlreadyStarted();
-            }
-            newVal = oldVal & ~MASK_RESPONSE_CODE | responseCode & MASK_RESPONSE_CODE;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+        int oldVal = state;
+        if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
+            throw UndertowMessages.MESSAGES.responseAlreadyStarted();
+        }
+        this.state = oldVal & ~MASK_RESPONSE_CODE | responseCode & MASK_RESPONSE_CODE;
     }
 
     /**
@@ -578,18 +563,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param wrapper the wrapper
      */
     public void addRequestWrapper(final ChannelWrapper<StreamSourceChannel> wrapper) {
-        ChannelWrapper[] oldVal;
-        ChannelWrapper[] newVal;
-        int oldLen;
-        do {
-            oldVal = requestWrappers;
-            if (oldVal == null) {
-                throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
-            }
-            oldLen = oldVal.length;
-            newVal = Arrays.copyOf(oldVal, oldLen + 1);
-            newVal[oldLen] = wrapper;
-        } while (!requestWrappersUpdater.compareAndSet(this, oldVal, newVal));
+        List<ChannelWrapper<StreamSourceChannel>> wrappers = requestWrappers;
+        if (wrappers == null) {
+            throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
+        }
+        wrappers.add(wrapper);
     }
 
     /**
@@ -598,18 +576,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param wrapper the wrapper
      */
     public void addResponseWrapper(final ChannelWrapper<StreamSinkChannel> wrapper) {
-        ChannelWrapper[] oldVal;
-        ChannelWrapper[] newVal;
-        int oldLen;
-        do {
-            oldVal = responseWrappers;
-            if (oldVal == null) {
-                throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
-            }
-            oldLen = oldVal.length;
-            newVal = Arrays.copyOf(oldVal, oldLen + 1);
-            newVal[oldLen] = wrapper;
-        } while (!responseWrappersUpdater.compareAndSet(this, oldVal, newVal));
+        List<ChannelWrapper<StreamSinkChannel>> wrappers = responseWrappers;
+        if (wrappers == null) {
+            throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
+        }
+        wrappers.add(wrapper);
     }
 
     /**
@@ -626,15 +597,12 @@ public final class HttpServerExchange extends AbstractAttachable {
      * the socket or implement a transfer coding.
      */
     void terminateResponse() {
-        int oldVal, newVal;
-        do {
-            oldVal = state;
-            if (allAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
-                // idempotent
-                return;
-            }
-            newVal = oldVal | FLAG_RESPONSE_TERMINATED;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+        int oldVal = state;
+        if (allAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
+            // idempotent
+            return;
+        }
+        this.state = oldVal | FLAG_RESPONSE_TERMINATED;
         if (responseTerminateAction != null) {
             responseTerminateAction.run();
         }
@@ -660,14 +628,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException if the response headers were already sent
      */
     void startResponse() throws IllegalStateException {
-        int oldVal, newVal;
-        do {
-            oldVal = state;
-            if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
-                throw UndertowMessages.MESSAGES.responseAlreadyStarted();
-            }
-            newVal = oldVal | FLAG_RESPONSE_SENT;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+        int oldVal = state;
+        if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
+            throw UndertowMessages.MESSAGES.responseAlreadyStarted();
+        }
+        this.state = oldVal | FLAG_RESPONSE_SENT;
 
         log.tracef("Starting to write response for %s using channel %s", this, underlyingResponseChannel);
         final HeaderMap responseHeaders = this.responseHeaders;
@@ -686,17 +651,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         // The only thing we can do is to determine if the request and reply were both terminated; if not,
         // consume the request body nicely, send whatever HTTP response we have, and close down the connection.
         complete = true;
-        int oldVal, newVal;
-        do {
-            oldVal = state;
-            if (allAreSet(oldVal, FLAG_CLEANUP)) {
-                return;
-            }
-            newVal = oldVal | FLAG_CLEANUP | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
-        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+        int oldVal = state;
+        if (allAreSet(oldVal, FLAG_CLEANUP)) {
+            return;
+        }
+        this.state = oldVal | FLAG_CLEANUP | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
         final StreamSourceChannel requestChannel = underlyingRequestChannel;
         StreamSinkChannel responseChannel = this.responseChannel;
-        if(responseChannel == null) {
+        if (responseChannel == null) {
             responseChannel = getResponseChannelFactory().create();
         }
         if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
