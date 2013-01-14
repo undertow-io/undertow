@@ -51,7 +51,7 @@ import io.undertow.util.HttpString;
 /**
  * @author Stuart Douglas
  */
-public class HttpServletResponseImpl implements HttpServletResponse {
+public final class HttpServletResponseImpl implements HttpServletResponse {
 
     public static final AttachmentKey<ServletResponse> ATTACHMENT_KEY = AttachmentKey.create(ServletResponse.class);
 

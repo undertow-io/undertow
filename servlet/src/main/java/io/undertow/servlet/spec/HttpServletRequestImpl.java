@@ -88,7 +88,7 @@ import org.xnio.LocalSocketAddress;
  *
  * @author Stuart Douglas
  */
-public class HttpServletRequestImpl implements HttpServletRequest {
+public final class HttpServletRequestImpl implements HttpServletRequest {
 
     public static final AttachmentKey<ServletRequest> ATTACHMENT_KEY = AttachmentKey.create(ServletRequest.class);
     public static final AttachmentKey<DispatcherType> DISPATCHER_TYPE_ATTACHMENT_KEY = AttachmentKey.create(DispatcherType.class);
