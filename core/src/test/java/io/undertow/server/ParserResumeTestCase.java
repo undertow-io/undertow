@@ -20,8 +20,6 @@ package io.undertow.server;
 
 import java.nio.ByteBuffer;
 
-import io.undertow.server.HttpParser;
-import io.undertow.server.ParseState;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
@@ -53,7 +51,7 @@ public class ParserResumeTestCase {
     public void testOneCharacterAtATime() {
         byte[] in = DATA.getBytes();
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null, null, null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         while (context.state != ParseState.PARSE_COMPLETE) {
             HttpParser.INSTANCE.handle(buffer, 1, context, result);
@@ -63,7 +61,7 @@ public class ParserResumeTestCase {
 
     private void testResume(final int split, byte[] in) {
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null, null, null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         int left = HttpParser.INSTANCE.handle(buffer, split, context, result);
         Assert.assertEquals(0, left);

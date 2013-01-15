@@ -20,8 +20,6 @@ package io.undertow.server;
 
 import java.nio.ByteBuffer;
 
-import io.undertow.server.HttpParser;
-import io.undertow.server.ParseState;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
@@ -71,7 +69,7 @@ public class SimpleParserTestCase {
         byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
         Assert.assertEquals("/somepath", result.getRelativePath());
         Assert.assertEquals("http://www.somehost.net/somepath", result.getRequestURI());
@@ -82,7 +80,7 @@ public class SimpleParserTestCase {
         byte[] in = "GET\t/aa\tHTTP/1.1\n\n\n".getBytes();
 
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
         Assert.assertTrue(context.isComplete());
         Assert.assertEquals("/aa", result.getRelativePath());
@@ -93,7 +91,7 @@ public class SimpleParserTestCase {
         byte[] in = "GET\thttp://www.somehost.net/somepath?a=b&b=c&d&e&f=\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
         Assert.assertEquals("/somepath", result.getRelativePath());
         Assert.assertEquals("http://www.somehost.net/somepath", result.getRequestURI());
@@ -111,11 +109,11 @@ public class SimpleParserTestCase {
         byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nAccept-Charset:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context1 = new ParseState();
-        HttpServerExchange result1 = new HttpServerExchange(null, null, null, null, null);
+        HttpServerExchange result1 = new HttpServerExchange(null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context1, result1);
 
         final ParseState context2 = new ParseState();
-        HttpServerExchange result2 = new HttpServerExchange(null, null, null, null, null);
+        HttpServerExchange result2 = new HttpServerExchange(null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context2, result2);
 
         Assert.assertSame(result1.getProtocol(), result2.getProtocol());
@@ -135,7 +133,7 @@ public class SimpleParserTestCase {
 
     private void runTest(final byte[] in) {
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null, null, null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
         Assert.assertEquals("/somepath", result.getRequestURI());

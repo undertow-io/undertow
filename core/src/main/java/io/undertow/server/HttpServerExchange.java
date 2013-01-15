@@ -21,12 +21,10 @@ package io.undertow.server;
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.undertow.UndertowMessages;
 import io.undertow.util.AbstractAttachable;
@@ -44,6 +42,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreSet;
 import static org.xnio.Bits.intBitMask;
 import static org.xnio.IoUtils.safeClose;
 
@@ -71,8 +70,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private StreamSinkChannel responseChannel;
 
-    private final Runnable requestTerminateAction;
-    private final Runnable responseTerminateAction;
+    private Runnable requestTerminateAction;
+    private Runnable responseTerminateAction;
 
     private HttpString protocol;
 
@@ -108,8 +107,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private String queryString;
 
-    private boolean complete = false;
-
     private List<ChannelWrapper<StreamSourceChannel>> requestWrappers = new ArrayList<ChannelWrapper<StreamSourceChannel>>(3);
     private List<ChannelWrapper<StreamSinkChannel>> responseWrappers = new ArrayList<ChannelWrapper<StreamSinkChannel>>(3);
 
@@ -118,8 +115,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_RESPONSE_TERMINATED = 1 << 11;
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_CLEANUP = 1 << 13;
+    private static final int FLAG_PERSISTENT = 1 << 14;
 
-    public HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel, final Runnable requestTerminateAction, final Runnable responseTerminateAction) {
+    public HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
         this.connection = connection;
         this.underlyingRequestChannel = requestChannel;
         if(connection == null) {
@@ -128,8 +126,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         } else {
             this.underlyingResponseChannel = responseChannel;
         }
-        this.requestTerminateAction = requestTerminateAction;
-        this.responseTerminateAction = responseTerminateAction;
     }
 
     /**
@@ -346,6 +342,34 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection;
     }
 
+    public boolean isPersistent() {
+        return anyAreSet(state, FLAG_PERSISTENT);
+    }
+
+    public void setPersistent(final boolean persistent) {
+        if(persistent) {
+            this.state = this.state | FLAG_PERSISTENT;
+        } else {
+            this.state = this.state & ~FLAG_PERSISTENT;
+        }
+    }
+
+    public Runnable getRequestTerminateAction() {
+        return requestTerminateAction;
+    }
+
+    public void setRequestTerminateAction(final Runnable requestTerminateAction) {
+        this.requestTerminateAction = requestTerminateAction;
+    }
+
+    public Runnable getResponseTerminateAction() {
+        return responseTerminateAction;
+    }
+
+    public void setResponseTerminateAction(final Runnable responseTerminateAction) {
+        this.responseTerminateAction = responseTerminateAction;
+    }
+
     /**
      * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
      * request and response as terminated, which means that once the current request is completed the raw channel
@@ -459,7 +483,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * finished.
      */
     public boolean isComplete() {
-        return complete;
+        return (state & FLAG_CLEANUP) != 0;
     }
 
     /**
@@ -650,7 +674,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         //
         // The only thing we can do is to determine if the request and reply were both terminated; if not,
         // consume the request body nicely, send whatever HTTP response we have, and close down the connection.
-        complete = true;
         int oldVal = state;
         if (allAreSet(oldVal, FLAG_CLEANUP)) {
             return;

@@ -1,5 +1,10 @@
 package io.undertow.ajp;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.channels.GatedStreamSinkChannel;
@@ -19,12 +24,6 @@ import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Deque;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -62,7 +61,9 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
             responseTerminateAction = null;
         }
         final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(requestChannel, nextRequestResponseChannel, connection);
-        httpServerExchange = new HttpServerExchange(connection, requestChannel, this.responseChannel, startNextRequestAction, responseTerminateAction);
+        httpServerExchange = new HttpServerExchange(connection, requestChannel, this.responseChannel);
+        httpServerExchange.setResponseTerminateAction(responseTerminateAction);
+        httpServerExchange.setRequestTerminateAction(startNextRequestAction);
         this.startNextRequestAction = startNextRequestAction;
 
     }

@@ -71,8 +71,10 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             nextRequestResponseChannel = connection.getChannel();
             responseTerminateAction = null;
         }
-        final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(requestChannel, nextRequestResponseChannel, connection);
-        httpServerExchange = new HttpServerExchange(connection, requestChannel, this.responseChannel, startNextRequestAction, responseTerminateAction);
+        httpServerExchange = new HttpServerExchange(connection, requestChannel, this.responseChannel);
+        final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(requestChannel, nextRequestResponseChannel, connection, httpServerExchange);
+        httpServerExchange.setResponseTerminateAction(responseTerminateAction);
+        httpServerExchange.setRequestTerminateAction(startNextRequestAction);
         httpServerExchange.addResponseWrapper(new ChannelWrapper<StreamSinkChannel>() {
             @Override
             public StreamSinkChannel wrap(StreamSinkChannel channel, HttpServerExchange exchange) {
@@ -179,6 +181,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         private PushBackStreamChannel channel;
         private StreamSinkChannel nextRequestResponseChannel;
         private HttpServerConnection connection;
+        private HttpServerExchange exchange;
 
         /**
          * maintains the current state.
@@ -192,10 +195,11 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         private static final AtomicIntegerFieldUpdater<StartNextRequestAction> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(StartNextRequestAction.class, "state");
 
 
-        public StartNextRequestAction(final PushBackStreamChannel channel, final StreamSinkChannel nextRequestResponseChannel, final HttpServerConnection connection) {
+        public StartNextRequestAction(final PushBackStreamChannel channel, final StreamSinkChannel nextRequestResponseChannel, final HttpServerConnection connection, final HttpServerExchange exchange) {
             this.channel = channel;
             this.nextRequestResponseChannel = nextRequestResponseChannel;
             this.connection = connection;
+            this.exchange = exchange;
         }
 
         /**
@@ -222,6 +226,10 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         }
 
         private void startNextRequest() {
+            if(!exchange.isPersistent()) {
+                IoUtils.safeClose(connection.getChannel());
+                return;
+            }
             final PushBackStreamChannel channel = this.channel;
             final HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, channel, connection);
             if (channel.isReadResumed()) {

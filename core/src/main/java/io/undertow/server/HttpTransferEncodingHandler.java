@@ -144,6 +144,8 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             exchange.addRequestWrapper(emptyStreamSourceChannelWrapper());
         }
 
+        exchange.setPersistent(persistentConnection);
+
         //now the response wrapper, to add in the appropriate connection control headers
         exchange.addResponseWrapper(responseWrapper(ourCompletionHandler, persistentConnection));
         HttpHandlers.executeHandler(next, exchange, ourCompletionHandler);

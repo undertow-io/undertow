@@ -1,5 +1,10 @@
 package io.undertow.ajp;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
@@ -7,11 +12,6 @@ import io.undertow.util.Protocols;
 import junit.framework.Assert;
 import org.junit.Test;
 import org.xnio.IoUtils;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
 
 /**
  * @author Stuart Douglas
@@ -41,7 +41,7 @@ public class AjpParsingUnitTestCase {
     @Test
     public void testAjpParsing() {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
-        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null, null, null);
         final AjpParseState state = new AjpParseState();
         AjpParser.INSTANCE.parse(buffer, state, result);
         Assert.assertEquals(165, state.dataSize);
@@ -55,7 +55,7 @@ public class AjpParsingUnitTestCase {
     public void testByteByByteAjpParsing() {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
 
-        HttpServerExchange result = new HttpServerExchange(null, null, null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null, null, null);
         final AjpParseState state = new AjpParseState();
         int limit = buffer.limit();
         for (int i = 1; i <= limit; ++i) {
