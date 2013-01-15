@@ -60,14 +60,14 @@ public class ServletRoleMappings {
                     Set<String> groupRoles = roleVsPrincipleMappings.get(role);
                     if (groupRoles != null) {
                         for (String group : groupRoles) {
-                            if(securityContext.isUserInRole(group)) {
+                            if(securityContext.isUserInGroup(group)) {
                                 result = true;
                                 break;
                             }
                         }
                     } else {
                         //the role was not mapped, we check it directly
-                        result = securityContext.isUserInRole(role);
+                        result = securityContext.isUserInGroup(role);
                     }
                 }
             }

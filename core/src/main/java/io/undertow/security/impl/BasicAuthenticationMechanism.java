@@ -101,14 +101,14 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
                     // By this point we had a header we should have been able to verify but for some reason
                     // it was not correctly structured.
-                    result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                    result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                     return result;
                 }
             }
         }
 
         // No suitable header has been found in this request,
-        result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_ATTEMPTED, null));
+        result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_ATTEMPTED));
         return result;
     }
 
@@ -136,12 +136,10 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
             try {
                 Account account = idm.lookupAccount(userName);
                 if (account != null && idm.verifyCredential(account, credential)) {
-                    result = new AuthenticationResult(new UndertowPrincipal(account), AuthenticationOutcome.AUTHENTICATED,
-                            idm.getRoles(account));
+                    result = new AuthenticationResult(new UndertowPrincipal(account), account);
                 }
             } finally {
-                this.result.setResult(result != null ? result : new AuthenticationResult(null,
-                        AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                this.result.setResult(result != null ? result : new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
 
                 for (int i = 0; i < password.length; i++) {
                     password[i] = 0x00;

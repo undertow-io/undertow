@@ -17,17 +17,16 @@
  */
 package io.undertow.servlet.test.security;
 
-import io.undertow.security.idm.Account;
-import io.undertow.security.idm.Credential;
-import io.undertow.security.idm.IdentityManager;
-import io.undertow.security.idm.PasswordCredential;
-
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import io.undertow.security.idm.Account;
+import io.undertow.security.idm.Credential;
+import io.undertow.security.idm.IdentityManager;
+import io.undertow.security.idm.PasswordCredential;
 
 /**
  * A mock {@link IdentityManager} implementation for servlet security testing.
@@ -69,12 +68,17 @@ public class ServletIdentityManager implements IdentityManager {
     }
 
     @Override
-    public Set<String> getRoles(Account account) {
-        if (account instanceof User) {
-            return ((User) account).roles;
-        }
+    public char[] getPassword(final Account account) {
+        return null;
+    }
 
-        return Collections.emptySet();
+    @Override
+    public boolean isUserInGroup(final Account account, final String group) {
+        if (account instanceof User) {
+            return ((User) account).roles.contains(group);
+        }
+        return false;
+
     }
 
     private static class User implements Account {

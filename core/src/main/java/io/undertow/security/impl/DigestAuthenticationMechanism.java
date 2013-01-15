@@ -16,7 +16,6 @@
  */
 package io.undertow.security.impl;
 
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -29,14 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.NameCallback;
-import javax.security.auth.callback.PasswordCallback;
-import javax.security.auth.callback.UnsupportedCallbackException;
-
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.NonceManager;
+import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
@@ -93,7 +87,6 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     private final String qopString;
     private final String realmName; // TODO - Will offer choice once backing store API/SPI is in.
     private final byte[] realmBytes;
-    private final CallbackHandler callbackHandler;
     private final NonceManager nonceManager;
 
     // Where do session keys fit? Do we just hang onto a session key or keep visiting the user store to check if the password
@@ -101,12 +94,11 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     // Maybe even support registration of a session so it can be invalidated?
 
     public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
-            final String realmName, final CallbackHandler callbackHandler, final NonceManager nonceManager) {
+            final String realmName, final NonceManager nonceManager) {
         this.supportedAlgorithms = supportedAlgorithms;
         this.supportedQops = supportedQops;
         this.realmName = realmName;
         this.realmBytes = realmName.getBytes(UTF_8);
-        this.callbackHandler = callbackHandler;
         this.nonceManager = nonceManager;
 
         if (supportedQops.size() > 0) {
@@ -142,7 +134,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                         // Some form of Digest authentication is going to occur so get the DigestContext set on the exchange.
                         exchange.putAttachment(DigestContext.ATTACHMENT_KEY, context);
 
-                        dispatch(exchange, new DigestRunnable(result, exchange));
+                        dispatch(exchange, new DigestRunnable(result, exchange, identityManager));
 
                         // The request has now potentially been dispatched to a different worker thread, the run method
                         // within BasicRunnable is now responsible for ensuring the request continues.
@@ -156,13 +148,13 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 // it was not correctly structured.
                 // By this point we had a header we should have been able to verify but for some reason
                 // it was not correctly structured.
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                 return result;
             }
         }
 
         // No suitable header has been found in this request,
-        result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_ATTEMPTED, null));
+        result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_ATTEMPTED));
         return result;
     }
 
@@ -181,13 +173,15 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         private final HttpServerExchange exchange;
         private final DigestContext context;
         private final Map<DigestAuthorizationToken, String> parsedHeader;
+        private final IdentityManager identityManager;
         private MessageDigest digest;
 
-        private DigestRunnable(final ConcreteIoFuture<AuthenticationResult> result, HttpServerExchange exchange) {
+        private DigestRunnable(final ConcreteIoFuture<AuthenticationResult> result, HttpServerExchange exchange, final IdentityManager identityManager) {
             this.result = result;
             this.exchange = exchange;
             context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
             this.parsedHeader = context.getParsedHeader();
+            this.identityManager = identityManager;
         }
 
         public void run() {
@@ -211,7 +205,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     REQUEST_LOGGER.invalidTokenReceived(DigestAuthorizationToken.MESSAGE_QOP.getName(),
                             parsedHeader.get(DigestAuthorizationToken.MESSAGE_QOP));
                     // TODO - This actually needs to result in a HTTP 400 Bad Request response and not a new challenge.
-                    result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                    result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                     return;
                 }
                 context.setQop(qop);
@@ -228,7 +222,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     REQUEST_LOGGER.missingAuthorizationToken(currentToken.getName());
                 }
                 // TODO - This actually needs to result in a HTTP 400 Bad Request response and not a new challenge.
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
@@ -237,7 +231,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 REQUEST_LOGGER.invalidTokenReceived(DigestAuthorizationToken.REALM.getName(),
                         parsedHeader.get(DigestAuthorizationToken.REALM));
                 // TODO - This actually needs to result in a HTTP 400 Bad Request response and not a new challenge.
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
@@ -247,7 +241,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 if (OPAQUE_VALUE.equals(parsedHeader.get(DigestAuthorizationToken.OPAQUE)) == false) {
                     REQUEST_LOGGER.invalidTokenReceived(DigestAuthorizationToken.OPAQUE.getName(),
                             parsedHeader.get(DigestAuthorizationToken.OPAQUE));
-                    result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                    result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                     return;
                 }
             }
@@ -260,7 +254,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     REQUEST_LOGGER.invalidTokenReceived(DigestAuthorizationToken.ALGORITHM.getName(),
                             parsedHeader.get(DigestAuthorizationToken.ALGORITHM));
                     // TODO - This actually needs to result in a HTTP 400 Bad Request response and not a new challenge.
-                    result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                    result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                     return;
                 }
             } else {
@@ -276,23 +270,33 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             } catch (NoSuchAlgorithmException e) {
                 // This is really not expected but the API makes us consider it.
                 REQUEST_LOGGER.exceptionProcessingRequest(e);
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
             byte[] ha1;
+
+
+            final String userName = parsedHeader.get(DigestAuthorizationToken.USERNAME);
+            final Account account = identityManager.lookupAccount(userName);
+            if(account == null) {
+                //the user does not exist.
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                return;
+            }
+
             // Step 2.1 Calculate H(A1)
             try {
                 if (algorithm.isSession()) {
                     ha1 = lookupOrCreateSessionHA1(parsedHeader);
                 } else {
                     // This is the most simple form of a hash involving the username, realm and password.
-                    ha1 = createHA1();
+                    ha1 = createHA1(userName.getBytes(UTF_8), account);
                 }
                 context.setHa1(ha1);
             } catch (AuthenticationException e) {
                 // Most likely the user does not exist.
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
@@ -316,7 +320,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 // TODO - We should look at still marking the nonce as used, a failure in authentication due to say a failure
                 // looking up the users password would leave it open to the packet being replayed.
                 REQUEST_LOGGER.authenticationFailed(parsedHeader.get(DigestAuthorizationToken.USERNAME), DIGEST.toString());
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
@@ -327,20 +331,13 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 // side could leave a packet that could be 're-played' after the failed auth.
                 // The username and password verification passed but for some reason we do not like the nonce.
                 context.markStale();
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
             // We have authenticated the remote user.
-            final String userName = parsedHeader.get(DigestAuthorizationToken.USERNAME);
-            Principal principal = (new Principal() {
-
-                @Override
-                public String getName() {
-                    return userName;
-                }
-            });
-            result.setResult(new AuthenticationResult(principal, AuthenticationOutcome.AUTHENTICATED, Collections.<String>emptySet()));
+            Principal principal = new UndertowPrincipal(account);
+            result.setResult(new AuthenticationResult(principal, account));
 
             // Step 4 - Set up any QOP related requirements.
 
@@ -361,24 +358,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             return (nonceManager.validateNonce(suppliedNonce, nonceCount, exchange));
         }
 
-        private byte[] getExpectedPassword() throws AuthenticationException {
-            NameCallback ncb = new NameCallback("Username", parsedHeader.get(DigestAuthorizationToken.USERNAME));
-            PasswordCallback pcp = new PasswordCallback("Password", false);
-
-            try {
-                callbackHandler.handle(new Callback[] { ncb, pcp });
-            } catch (IOException e) {
-                throw new AuthenticationException(e);
-            } catch (UnsupportedCallbackException e) {
-                throw new AuthenticationException(e);
-            }
-
-            return new String(pcp.getPassword()).getBytes(UTF_8);
-        }
-
-        private byte[] createHA1() throws AuthenticationException {
-            byte[] userName = parsedHeader.get(DigestAuthorizationToken.USERNAME).getBytes(UTF_8);
-            byte[] password = getExpectedPassword();
+        private byte[] createHA1(final byte[] userName, final Account account) throws AuthenticationException {
+            byte[] password = new String(identityManager.getPassword(account)).getBytes(UTF_8);
 
             try {
                 digest.update(userName);

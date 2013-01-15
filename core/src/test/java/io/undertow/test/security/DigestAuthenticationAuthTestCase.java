@@ -17,35 +17,35 @@
  */
 package io.undertow.test.security;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.DIGEST;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import io.undertow.security.impl.AuthenticationInfoToken;
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.impl.DigestAlgorithm;
-import io.undertow.security.impl.DigestAuthenticationMechanism;
-import io.undertow.security.impl.DigestAuthorizationToken;
-import io.undertow.security.impl.DigestQop;
-import io.undertow.security.impl.DigestWWWAuthenticateToken;
-import io.undertow.util.HexConverter;
-import io.undertow.security.impl.SimpleNonceManager;
-import io.undertow.test.utils.DefaultServer;
-
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Random;
 
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.impl.AuthenticationInfoToken;
+import io.undertow.security.impl.DigestAlgorithm;
+import io.undertow.security.impl.DigestAuthenticationMechanism;
+import io.undertow.security.impl.DigestAuthorizationToken;
+import io.undertow.security.impl.DigestQop;
+import io.undertow.security.impl.DigestWWWAuthenticateToken;
+import io.undertow.security.impl.SimpleNonceManager;
+import io.undertow.test.utils.DefaultServer;
+import io.undertow.util.HexConverter;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.util.TestHttpClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.DIGEST;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test case for Digest authentication based on RFC2617 with QOP of auth.
@@ -65,7 +65,7 @@ public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthentica
     @Override
     protected AuthenticationMechanism getTestMechanism() {
         return new DigestAuthenticationMechanism(Collections.singletonList(DigestAlgorithm.MD5),
-                Collections.singletonList(DigestQop.AUTH), REALM_NAME, callbackHandler, new SimpleNonceManager());
+                Collections.singletonList(DigestQop.AUTH), REALM_NAME, new SimpleNonceManager());
     }
 
     private String createNonce() {

@@ -30,6 +30,7 @@ import javax.security.auth.kerberos.KerberosPrincipal;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.GSSAPIServerSubjectFactory;
+import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerConnection;
@@ -38,7 +39,6 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.HeaderMap;
-
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
@@ -85,7 +85,9 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
         if (negContext != null) {
             exchange.putAttachment(NegotiationContext.ATTACHMENT_KEY, negContext);
             if (negContext.isEstablished()) {
-                result.setResult(new AuthenticationResult(negContext.getPrincipal(), AuthenticationOutcome.AUTHENTICATED, null));
+                final Principal principal = negContext.getPrincipal();
+                final Account account = identityManager.lookupAccount(principal.getName());
+                result.setResult(new AuthenticationResult(principal, account));
             }
         }
 
@@ -96,7 +98,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                     String base64Challenge = current.substring(NEGOTIATE_PREFIX.length());
                     try {
                         ByteBuffer challenge = FlexBase64.decode(base64Challenge);
-                        dispatch(exchange, new GSSAPIRunnable(result, exchange, challenge));
+                        dispatch(exchange, new GSSAPIRunnable(result, exchange, challenge, identityManager));
                         // The request has now potentially been dispatched to a different worker thread, the run method
                         // within GSSAPIRunnable is now responsible for ensuring the request continues.
                         return result;
@@ -105,14 +107,14 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
                     // By this point we had a header we should have been able to verify but for some reason
                     // it was not correctly structured.
-                    result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                    result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
                     return result;
                 }
             }
         }
 
         // No suitable header was found so authentication was not even attempted.
-        result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_ATTEMPTED, null));
+        result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_ATTEMPTED));
         return result;
     }
 
@@ -162,25 +164,27 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
         private final ConcreteIoFuture<AuthenticationResult> result;
         private final HttpServerExchange exchange;
         private final ByteBuffer challenge;
+        private final IdentityManager identityManager;
 
         private GSSAPIRunnable(final ConcreteIoFuture<AuthenticationResult> result, final HttpServerExchange exchange,
-                final ByteBuffer challenge) {
+                               final ByteBuffer challenge, final IdentityManager identityManager) {
             this.result = result;
             this.exchange = exchange;
             this.challenge = challenge;
+            this.identityManager = identityManager;
         }
 
         public void run() {
             try {
                 Subject server = subjectFactory.getSubjectForHost(getHostName(exchange));
                 // The AcceptSecurityContext takes over responsibility for setting the result.
-                Subject.doAs(server, new AcceptSecurityContext(result, exchange, challenge));
+                Subject.doAs(server, new AcceptSecurityContext(result, exchange, challenge, identityManager));
             } catch (GeneralSecurityException e) {
                 e.printStackTrace();
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
             } catch (PrivilegedActionException e) {
                 e.printStackTrace();
-                result.setResult(new AuthenticationResult(null, AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
             }
         }
 
@@ -191,12 +195,14 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
         private final ConcreteIoFuture<AuthenticationResult> result;
         private final HttpServerExchange exchange;
         private final ByteBuffer challenge;
+        private final IdentityManager identityManager;
 
         private AcceptSecurityContext(final ConcreteIoFuture<AuthenticationResult> result, final HttpServerExchange exchange,
-                final ByteBuffer challenge) {
+                                      final ByteBuffer challenge, final IdentityManager identityManager) {
             this.result = result;
             this.exchange = exchange;
             this.challenge = challenge;
+            this.identityManager = identityManager;
         }
 
         public Void run() throws GSSException {
@@ -220,10 +226,12 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             negContext.setResponseToken(respToken);
 
             if (negContext.isEstablished()) {
-                result.setResult(new AuthenticationResult(negContext.getPrincipal(), AuthenticationOutcome.AUTHENTICATED, null));
+                final Principal principal = negContext.getPrincipal();
+                final Account account = identityManager.lookupAccount(principal.getName());
+                result.setResult(new AuthenticationResult(principal, account));
             } else {
                 // This isn't a failure but as the context is not established another round trip with the client is needed.
-                result.setResult(new AuthenticationResult(negContext.getPrincipal(), AuthenticationOutcome.NOT_AUTHENTICATED, null));
+                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
             }
 
             return null;

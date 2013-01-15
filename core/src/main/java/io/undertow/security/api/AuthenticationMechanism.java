@@ -19,12 +19,12 @@
 package io.undertow.security.api;
 
 import java.security.Principal;
-import java.util.Set;
 
+import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
+import io.undertow.security.impl.SecurityContext;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.security.impl.SecurityContext;
 import org.xnio.IoFuture;
 
 /**
@@ -109,18 +109,27 @@ public interface AuthenticationMechanism {
         private final Principal principle;
 
         /**
+         * The account that this authentication result corresponds to
+         */
+        private final Account account;
+
+        /**
          * The result of the authentication call
          */
         private final AuthenticationOutcome outcome;
 
-        private final Set<String> roles;
-
         // TODO - Should a mechanism be able to report using an Exception?
 
-        public AuthenticationResult(final Principal principle, final AuthenticationOutcome outcome, final Set<String> roles) {
+        public AuthenticationResult(final Principal principle, final Account account) {
             this.principle = principle;
+            this.account = account;
+            this.outcome = AuthenticationOutcome.AUTHENTICATED;
+        }
+
+        public AuthenticationResult(AuthenticationOutcome outcome) {
             this.outcome = outcome;
-            this.roles = roles;
+            this.account = null;
+            this.principle = null;
         }
 
         public Principal getPrinciple() {
@@ -131,8 +140,8 @@ public interface AuthenticationMechanism {
             return outcome;
         }
 
-        public Set<String> getRoles() {
-            return roles;
+        public Account getAccount() {
+            return account;
         }
     }
 

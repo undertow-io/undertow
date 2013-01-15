@@ -24,16 +24,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationState;
+import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
-import io.undertow.security.api.AuthenticationState;
 import io.undertow.util.AttachmentKey;
 import org.xnio.IoFuture;
 
@@ -62,7 +62,7 @@ public class SecurityContext {
     private AuthenticationState authenticationState = AuthenticationState.NOT_REQUIRED;
     private Principal authenticatedPrincipal;
     private String mechanismName;
-    private Set<String> roles;
+    private Account account;
 
     public SecurityContext(final IdentityManager identityManager) {
         this.identityManager = identityManager;
@@ -109,8 +109,8 @@ public class SecurityContext {
         return mechanismName;
     }
 
-    public boolean isUserInRole(String role) {
-        return roles.contains(role);
+    public boolean isUserInGroup(String group) {
+        return identityManager.isUserInGroup(account, group);
     }
 
     IdentityManager getIdentityManager() {
@@ -156,7 +156,7 @@ public class SecurityContext {
                                     case AUTHENTICATED:
                                         SecurityContext.this.authenticatedPrincipal = result.getPrinciple();
                                         SecurityContext.this.mechanismName = mechanism.getName();
-                                        SecurityContext.this.roles = result.getRoles();
+                                        SecurityContext.this.account = result.getAccount();
                                         SecurityContext.this.authenticationState = AuthenticationState.AUTHENTICATED;
 
                                         HttpCompletionHandler singleComplete = new SingleMechanismCompletionHandler(mechanism,

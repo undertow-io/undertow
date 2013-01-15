@@ -17,19 +17,16 @@
  */
 package io.undertow.test.security;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.NameCallback;
-import javax.security.auth.callback.PasswordCallback;
-import javax.security.auth.callback.UnsupportedCallbackException;
-
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.handlers.AuthenticationCallHandler;
+import io.undertow.security.handlers.AuthenticationConstraintHandler;
+import io.undertow.security.handlers.AuthenticationMechanismsHandler;
+import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.IdentityManager;
@@ -37,18 +34,13 @@ import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.security.handlers.AuthenticationCallHandler;
-import io.undertow.security.handlers.AuthenticationConstraintHandler;
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.handlers.AuthenticationMechanismsHandler;
-import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.util.TestHttpClient;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -60,36 +52,13 @@ import static org.junit.Assert.assertEquals;
  */
 public abstract class UsernamePasswordAuthenticationTestBase {
 
-    protected static final CallbackHandler callbackHandler;
     protected static final IdentityManager identityManager;
 
     static {
         final Map<String, char[]> users = new HashMap<String, char[]>(2);
         users.put("userOne", "passwordOne".toCharArray());
         users.put("userTwo", "passwordTwo".toCharArray());
-        callbackHandler = new CallbackHandler() {
 
-            @Override
-            public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
-                NameCallback ncb = null;
-                PasswordCallback pcb = null;
-                for (Callback current : callbacks) {
-                    if (current instanceof NameCallback) {
-                        ncb = (NameCallback) current;
-                    } else if (current instanceof PasswordCallback) {
-                        pcb = (PasswordCallback) current;
-                    } else {
-                        throw new UnsupportedCallbackException(current);
-                    }
-                }
-
-                char[] password = users.get(ncb.getDefaultName());
-                if (password == null) {
-                    throw new IOException("User not found");
-                }
-                pcb.setPassword(password);
-            }
-        };
         identityManager = new IdentityManager() {
 
             @Override
@@ -100,6 +69,16 @@ public abstract class UsernamePasswordAuthenticationTestBase {
 
                     return Arrays.equals(password, expectedPassword);
                 }
+                return false;
+            }
+
+            @Override
+            public char[] getPassword(final Account account) {
+                return users.get(account.getName());
+            }
+
+            @Override
+            public boolean isUserInGroup(final Account account, final String group) {
                 return false;
             }
 
@@ -123,10 +102,6 @@ public abstract class UsernamePasswordAuthenticationTestBase {
                 return null;
             }
 
-            @Override
-            public Set<String> getRoles(Account account) {
-                return Collections.emptySet();
-            }
         };
     }
 

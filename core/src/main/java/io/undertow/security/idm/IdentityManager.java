@@ -17,8 +17,6 @@
  */
 package io.undertow.security.idm;
 
-import java.util.Set;
-
 /**
  * The IdentityManager interface to be implemented by an identity manager implementation providing user verification and
  * identity loading to Undertow.
@@ -33,7 +31,30 @@ public interface IdentityManager {
 
     boolean verifyCredential(final Account account, final Credential credential);
 
-    // TODO - Don't think this will remain but retaining for now.
-    Set<String> getRoles(final Account account);
+    /**
+     * Return the password for an account. This is an optional method, as is only used
+     * for digest auth where the original password is needed to compute the digest.
+     *
+     * This is an optional method. It is recommended that passwords be stored in a hashed
+     * format, so for most identity managers it will not be possible nor desirable to
+     * implement this method.
+     *
+     * @param account the account
+     * @return The accounts password
+     */
+    char[] getPassword(final Account account);
+
+
+    /**
+     * Check if the given account is in the specified group.
+     *
+     * Note that this check is for identity manager level groups, such as LDAP groups. These groups
+     * are then mapped to roles in the servlet module.
+     *
+     * @param account The account
+     * @param group The group
+     * @return <code>true</code> if the user is in the specified group
+     */
+    boolean isUserInGroup(final Account account, final String group);
 
 }
