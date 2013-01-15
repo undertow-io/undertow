@@ -22,8 +22,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import io.undertow.server.handlers.security.AuthenticationState;
-import io.undertow.server.handlers.security.SecurityContext;
+import io.undertow.security.api.AuthenticationState;
+import io.undertow.security.impl.SecurityContext;
 
 /**
  * @author Stuart Douglas

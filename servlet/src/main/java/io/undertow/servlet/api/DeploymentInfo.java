@@ -34,7 +34,7 @@ import java.util.concurrent.ExecutorService;
 import javax.servlet.DispatcherType;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
-import io.undertow.idm.IdentityManager;
+import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.session.InMemorySessionManager;

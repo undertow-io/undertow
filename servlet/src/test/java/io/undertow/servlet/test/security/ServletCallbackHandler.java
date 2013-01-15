@@ -13,8 +13,6 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
-import io.undertow.server.handlers.security.RoleCallback;
-
 /**
  * @author Stuart Douglas
  */
@@ -33,14 +31,11 @@ public class ServletCallbackHandler implements CallbackHandler {
     public void handle(final Callback[] callbacks) throws IOException, UnsupportedCallbackException {
         NameCallback ncb = null;
         PasswordCallback pcb = null;
-        RoleCallback rcb = null;
         for (Callback current : callbacks) {
             if (current instanceof NameCallback) {
                 ncb = (NameCallback) current;
             } else if (current instanceof PasswordCallback) {
                 pcb = (PasswordCallback) current;
-            } else if (current instanceof RoleCallback) {
-                rcb = (RoleCallback) current;
             } else {
                 throw new UnsupportedCallbackException(current);
             }
@@ -51,7 +46,6 @@ public class ServletCallbackHandler implements CallbackHandler {
             throw new IOException("User not found");
         }
         pcb.setPassword(user.password);
-        rcb.setRoles(user.roles);
     }
 
     private static class User {

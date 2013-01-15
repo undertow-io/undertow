@@ -63,7 +63,7 @@ import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartHandler;
-import io.undertow.server.handlers.security.SecurityContext;
+import io.undertow.security.impl.SecurityContext;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.SecurityRoleRef;

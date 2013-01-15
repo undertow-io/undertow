@@ -5,7 +5,7 @@ import java.util.Set;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.security.AuthenticationConstraintHandler;
+import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.servlet.handlers.ServletAttachments;
 
 /**

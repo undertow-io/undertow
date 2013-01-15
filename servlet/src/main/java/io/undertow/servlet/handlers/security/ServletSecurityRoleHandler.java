@@ -12,7 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
-import io.undertow.server.handlers.security.SecurityContext;
+import io.undertow.security.impl.SecurityContext;
 import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;

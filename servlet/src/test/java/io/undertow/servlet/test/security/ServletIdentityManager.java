@@ -17,10 +17,10 @@
  */
 package io.undertow.servlet.test.security;
 
-import io.undertow.idm.Account;
-import io.undertow.idm.Credential;
-import io.undertow.idm.IdentityManager;
-import io.undertow.idm.PasswordCredential;
+import io.undertow.security.idm.Account;
+import io.undertow.security.idm.Credential;
+import io.undertow.security.idm.IdentityManager;
+import io.undertow.security.idm.PasswordCredential;
 
 import java.util.Arrays;
 import java.util.Collections;

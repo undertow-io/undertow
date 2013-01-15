@@ -22,7 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
 
-import io.undertow.server.handlers.security.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMechanism;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
