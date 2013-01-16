@@ -238,8 +238,8 @@ final class AjpResponseChannel implements StreamSinkChannel {
             final ByteBuffer buffer = currentDataBuffer.getResource();
             packetHeaderAndDataBuffer = new ByteBuffer[1];
             packetHeaderAndDataBuffer[0] = buffer;
-            buffer.put((byte) 0x12);
-            buffer.put((byte) 0x34);
+            buffer.put((byte) 'A');
+            buffer.put((byte) 'B');
             buffer.put((byte) 0);
             buffer.put((byte) 2);
             buffer.put((byte) 5);
