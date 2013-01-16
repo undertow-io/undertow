@@ -52,10 +52,6 @@ public class WebSocket07ServerTest extends WebSocket00ServerTest {
 
     @Test
     public void testPing() throws Exception {
-        if (getVersion() == WebSocketVersion.V07) {
-            // Skip till Netty 3.6.2.Final was released
-            return;
-        }
         final AtomicBoolean connected = new AtomicBoolean(false);
         DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
@@ -100,32 +96,5 @@ public class WebSocket07ServerTest extends WebSocket00ServerTest {
         client.send(new PingWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(PongWebSocketFrame.class, payload, latch));
         latch.await();
         client.destroy();
-    }
-
-    @Override
-    public void testText() throws Exception {
-        if (getVersion() == WebSocketVersion.V07) {
-            // Skip till Netty 3.6.2.Final was released
-            return;
-        }
-        super.testText();
-    }
-
-    @Override
-    public void testBinary() throws Exception {
-        if (getVersion() == WebSocketVersion.V07) {
-            // Skip till Netty 3.6.2.Final was released
-            return;
-        }
-        super.testBinary();
-    }
-
-    @Override
-    public void testCloseFrame() throws Exception {
-        if (getVersion() == WebSocketVersion.V07) {
-            // Skip till Netty 3.6.2.Final was released
-            return;
-        }
-        super.testCloseFrame();
     }
 }
