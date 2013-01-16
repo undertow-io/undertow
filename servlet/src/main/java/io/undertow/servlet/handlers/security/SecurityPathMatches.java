@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.annotation.ServletSecurity;
+
 import io.undertow.servlet.api.SecurityConstraint;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
@@ -84,19 +86,29 @@ public class SecurityPathMatches {
         List<SecurityInformation> roles = exact.defaultRequiredRoles;
         for (SecurityInformation role : roles) {
             type = transport(type, role.transportGuaranteeType);
-            roleSet.add(role.roles);
+            if(!role.roles.isEmpty() ||
+                    role.emptyRoleSemantic == ServletSecurity.EmptyRoleSemantic.DENY) {
+                roleSet.add(role.roles);
+            }
         }
         List<SecurityInformation> methodInfo = exact.perMethodRequiredRoles.get(method);
         if (methodInfo != null) {
             for (SecurityInformation role : methodInfo) {
                 type = transport(type, role.transportGuaranteeType);
-                roleSet.add(role.roles);
+                if(!role.roles.isEmpty() ||
+                        role.emptyRoleSemantic == ServletSecurity.EmptyRoleSemantic.DENY) {
+                    roleSet.add(role.roles);
+                }
             }
         }
         for (ExcludedMethodRoles excluded : exact.excludedMethodRoles) {
             if (!excluded.methods.contains(method)) {
                 type = transport(type, excluded.securityInformation.transportGuaranteeType);
+
+                if(!excluded.securityInformation.roles.isEmpty() ||
+                        excluded.securityInformation.emptyRoleSemantic == ServletSecurity.EmptyRoleSemantic.DENY) {
                 roleSet.add(excluded.securityInformation.roles);
+                }
             }
         }
         return type;
@@ -125,7 +137,8 @@ public class SecurityPathMatches {
         }
 
         public void addSecurityConstraint(final SecurityConstraint securityConstraint) {
-            final SecurityInformation securityInformation = new SecurityInformation(securityConstraint.getRolesAllowed(), securityConstraint.getTransportGuaranteeType());
+
+            final SecurityInformation securityInformation = new SecurityInformation(securityConstraint.getRolesAllowed(), securityConstraint.getTransportGuaranteeType(), securityConstraint.getEmptyRoleSemantic());
             for (final WebResourceCollection webResources : securityConstraint.getWebResourceCollections()) {
                 if (webResources.getUrlPatterns().isEmpty()) {
                     //default that is applied to everything
@@ -200,8 +213,10 @@ public class SecurityPathMatches {
     private static final class SecurityInformation {
         final Set<String> roles;
         final TransportGuaranteeType transportGuaranteeType;
+        final ServletSecurity.EmptyRoleSemantic emptyRoleSemantic;
 
-        private SecurityInformation(final Set<String> roles, final TransportGuaranteeType transportGuaranteeType) {
+        private SecurityInformation(final Set<String> roles, final TransportGuaranteeType transportGuaranteeType, final ServletSecurity.EmptyRoleSemantic emptyRoleSemantic) {
+            this.emptyRoleSemantic = emptyRoleSemantic;
             this.roles = new HashSet<String>(roles);
             this.transportGuaranteeType = transportGuaranteeType;
         }

@@ -174,7 +174,7 @@ public interface AuthenticationMechanism {
 
         public static boolean shouldChallenge(final HttpServerExchange exchange) {
             SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-            return context.getAuthenticationState() != AuthenticationState.AUTHENTICATED;
+            return context.getAuthenticationState() == AuthenticationState.REQUIRED;
         }
 
     }

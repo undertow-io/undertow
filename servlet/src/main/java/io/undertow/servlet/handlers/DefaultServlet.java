@@ -245,6 +245,14 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
     }
 
     private boolean isAllowed(String path) {
+        if (!path.isEmpty()) {
+            if (path.startsWith("/META-INF") ||
+                    path.startsWith("META-INF") ||
+                    path.startsWith("/WEB-INF") ||
+                    path.startsWith("WEB-INF")) {
+                return false;
+            }
+        }
         int pos = path.lastIndexOf('/');
         final String lastSegment;
         if (pos == -1) {

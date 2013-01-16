@@ -264,16 +264,13 @@ public class CookieHandler implements HttpHandler {
 
             final List<Cookie> cookies = exchange.getAttachmentList(Cookie.RESPONSE_COOKIES);
             if (!cookies.isEmpty()) {
-                StringBuilder builder = new StringBuilder();
                 ListIterator<Cookie> it = cookies.listIterator();
                 while (it.hasNext()) {
+                    StringBuilder builder = new StringBuilder();
                     Cookie cookie = it.next();
                     builder.append(getCookieString(cookie));
-                    if (it.hasNext()) {
-                        builder.append(", ");
-                    }
+                    exchange.getResponseHeaders().add(Headers.SET_COOKIE, builder.toString());
                 }
-                exchange.getResponseHeaders().put(Headers.SET_COOKIE, builder.toString());
             }
             return channel;
         }

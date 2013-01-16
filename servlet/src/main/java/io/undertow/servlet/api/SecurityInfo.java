@@ -5,14 +5,25 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.servlet.annotation.ServletSecurity;
+
 /**
  * @author Stuart Douglas
  */
 public class SecurityInfo<T extends SecurityInfo> implements Cloneable {
 
+    private volatile ServletSecurity.EmptyRoleSemantic emptyRoleSemantic = ServletSecurity.EmptyRoleSemantic.DENY;
     private final Set<String> rolesAllowed = new HashSet<String>();
     private volatile TransportGuaranteeType transportGuaranteeType = TransportGuaranteeType.NONE;
 
+    public ServletSecurity.EmptyRoleSemantic getEmptyRoleSemantic() {
+        return emptyRoleSemantic;
+    }
+
+    public T setEmptyRoleSemantic(final ServletSecurity.EmptyRoleSemantic emptyRoleSemantic) {
+        this.emptyRoleSemantic = emptyRoleSemantic;
+        return (T)this;
+    }
 
     public TransportGuaranteeType getTransportGuaranteeType() {
         return transportGuaranteeType;
@@ -43,6 +54,7 @@ public class SecurityInfo<T extends SecurityInfo> implements Cloneable {
     @Override
     public T clone() {
         final SecurityInfo info = createInstance();
+        info.emptyRoleSemantic = emptyRoleSemantic;
         info.transportGuaranteeType = transportGuaranteeType;
         info.rolesAllowed.addAll(rolesAllowed);
         return (T) info;

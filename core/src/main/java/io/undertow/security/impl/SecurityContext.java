@@ -150,7 +150,7 @@ public class SecurityContext {
                             final RunnableCompletionHandler handler = new RunnableCompletionHandler(exchange, completionHandler, result.getRequestCompletionTasks());
                             if (result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
                                 HttpHandlers.executeHandler(nextHandler, exchange, handler);
-                            } else if (getAuthenticationState() == AuthenticationState.REQUIRED) {
+                            } else if (getAuthenticationState() == AuthenticationState.REQUIRED || result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_AUTHENTICATED) {
                                 handler.handleComplete();
                             } else {
                                 HttpHandlers.executeHandler(nextHandler, exchange, handler);
@@ -277,6 +277,10 @@ public class SecurityContext {
                                         SecurityContext.this.account = result.getAccount();
                                         SecurityContext.this.authenticationState = AuthenticationState.AUTHENTICATED;
 
+                                        if(result.isRequiresSession()) {
+                                            authenticatedSessionManager.userAuthenticated(exchange, result.getPrinciple(), result.getAccount());
+                                        }
+
                                         Runnable singleComplete = new SingleMechanismCompletionTask(mechanism, exchange);
                                         authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED, singleComplete));
                                         break;
@@ -308,7 +312,7 @@ public class SecurityContext {
                     }
                 }, null);
             } else {
-                authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_AUTHENTICATED, new AllMechanismCompletionTask(authMechanisms.iterator(), exchange)));
+                authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_ATTEMPTED, new AllMechanismCompletionTask(authMechanisms.iterator(), exchange)));
             }
 
         }

@@ -35,17 +35,18 @@ import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.ServletSecurity;
-import javax.servlet.http.HttpServletRequest;
 
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.handlers.AuthenticationCallHandler;
+import io.undertow.security.handlers.AuthenticationMechanismsHandler;
+import io.undertow.security.handlers.SecurityInitialHandler;
+import io.undertow.security.impl.BasicAuthenticationMechanism;
+import io.undertow.security.impl.FormAuthenticationMechanism;
+import io.undertow.security.impl.FormAuthenticationRedirectHandler;
 import io.undertow.security.impl.RoleMappingManagerImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.AttachmentHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.security.handlers.AuthenticationCallHandler;
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.handlers.AuthenticationMechanismsHandler;
-import io.undertow.security.impl.BasicAuthenticationMechanism;
-import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
@@ -83,6 +84,9 @@ import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.util.WorkerDispatcher;
+
+import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
+import static javax.servlet.http.HttpServletRequest.FORM_AUTH;
 
 /**
  * The deployment manager. This manager is responsible for controlling the lifecycle of a servlet deployment.
@@ -175,18 +179,27 @@ public class DeploymentManagerImpl implements DeploymentManager {
      * @param initialHandler The handler to wrap with security handlers
      */
     private HttpHandler setupSecurityHandlers(HttpHandler initialHandler) {
+        final DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
+        final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
         HttpHandler current = initialHandler;
+
+        if (loginConfig != null && loginConfig.getAuthMethod().equalsIgnoreCase(FORM_AUTH)) {
+            //this is the handler that does the redirect after a form auth
+            //it has to be at the end of the chain
+            current = new FormAuthenticationRedirectHandler(current);
+        }
+
         current = new AuthenticationCallHandler(current);
         current = new ServletAuthenticationConstraintHandler(current);
         current = new ServletSecurityConstraintHandler(buildSecurityConstraints(), current);
 
-        final DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
-        final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
         if (loginConfig != null) {
-            if (loginConfig.getAuthMethod().equalsIgnoreCase("BASIC")) {
+            if (loginConfig.getAuthMethod().equalsIgnoreCase(BASIC_AUTH)) {
                 // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be comparable using '=='
-                AuthenticationMechanismsHandler basic = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism(loginConfig.getRealmName(), HttpServletRequest.BASIC_AUTH)));
+                AuthenticationMechanismsHandler basic = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH)));
                 current = basic;
+            } else if (loginConfig.getAuthMethod().equalsIgnoreCase(FORM_AUTH)) {
+                current = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new FormAuthenticationMechanism(deploymentInfo.getContextPath() + loginConfig.getLoginPage(), deploymentInfo.getContextPath() + loginConfig.getErrorPage())));
             } else {
                 //NYI
             }
@@ -472,7 +485,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private ServletInitialHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners, final ManagedServlet managedServlet) {
-        BlockingHttpHandler servletHandler = new ServletSecurityRoleHandler(next, new RoleMappingManagerImpl( deployment.getDeploymentInfo().getPrincipleVsRoleMapping()));
+        BlockingHttpHandler servletHandler = new ServletSecurityRoleHandler(next, new RoleMappingManagerImpl(deployment.getDeploymentInfo().getPrincipleVsRoleMapping()));
         servletHandler = new RequestListenerHandler(applicationListeners, servletHandler);
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
         servletHandler = wrapHandlers(servletHandler, deployment.getDeploymentInfo().getDispatchedHandlerChainWrappers());

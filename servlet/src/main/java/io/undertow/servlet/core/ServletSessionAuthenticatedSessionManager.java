@@ -28,13 +28,13 @@ public class ServletSessionAuthenticatedSessionManager implements AuthenticatedS
     @Override
     public void userAuthenticated(final HttpServerExchange exchange, final Principal principal, final Account account) {
         HttpSession session = servletContext.getSession(exchange, true);
-        session.setAttribute(ATTRIBUTE_NAME, account.getName());
+        session.setAttribute(ATTRIBUTE_NAME, account);
     }
 
     @Override
     public void userLoggedOut(final HttpServerExchange exchange, final Principal principal, final Account account) {
         HttpSession session = servletContext.getSession(exchange, false);
-        if(session != null) {
+        if (session != null) {
             session.removeAttribute(ATTRIBUTE_NAME);
         }
 
@@ -43,14 +43,11 @@ public class ServletSessionAuthenticatedSessionManager implements AuthenticatedS
     @Override
     public AuthenticationMechanism.AuthenticationMechanismResult lookupSession(final HttpServerExchange exchange, final IdentityManager identityManager) {
         HttpSession session = servletContext.getSession(exchange, false);
-        if(session != null) {
-            Object name = session.getAttribute(ATTRIBUTE_NAME);
-            if(name != null) {
-                Account account = identityManager.lookupAccount(name.toString());
-                if(account != null) {
-                    UndertowPrincipal principal = new UndertowPrincipal(account);
-                    return new AuthenticationMechanism.AuthenticationMechanismResult(principal, account, true);
-                }
+        if (session != null) {
+            Account account = (Account) session.getAttribute(ATTRIBUTE_NAME);
+            if (account != null) {
+                UndertowPrincipal principal = new UndertowPrincipal(account);
+                return new AuthenticationMechanism.AuthenticationMechanismResult(principal, account, true);
             }
         }
         return new AuthenticationMechanism.AuthenticationMechanismResult(AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_ATTEMPTED);
