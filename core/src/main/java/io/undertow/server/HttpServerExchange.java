@@ -380,13 +380,34 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void upgradeChannel(){
         setResponseCode(101);
+        int oldVal = state;
+        if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+            // idempotent
+            return;
+        }
+        this.state = oldVal | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
+    }
 
-        int   oldVal = state;
-            if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
-                // idempotent
-                return;
-            }
-            this.state = oldVal | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
+    /**
+     * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
+     * request and response as terminated, which means that once the current request is completed the raw channel
+     * can be obtained from {@link io.undertow.server.HttpServerConnection#getChannel()}
+     *
+     * @param productName the product name to report to the client
+     * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
+     *                               read
+     */
+    public void upgradeChannel(String productName) {
+        setResponseCode(101);
+        final HeaderMap headers = getResponseHeaders();
+        headers.add(Headers.UPGRADE, productName);
+        headers.add(Headers.CONNECTION, Headers.UPGRADE_STRING);
+        int oldVal = state;
+        if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+            // idempotent
+            return;
+        }
+        this.state = oldVal | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
     }
 
     /**
