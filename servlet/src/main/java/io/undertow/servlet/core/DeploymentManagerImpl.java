@@ -37,6 +37,7 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.http.HttpServletRequest;
 
+import io.undertow.security.impl.RoleMappingManagerImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.AttachmentHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
@@ -471,7 +472,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private ServletInitialHandler servletChain(BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners, final ManagedServlet managedServlet) {
-        BlockingHttpHandler servletHandler = new ServletSecurityRoleHandler(next, deployment.getDeploymentInfo().getPrincipleVsRoleMapping());
+        BlockingHttpHandler servletHandler = new ServletSecurityRoleHandler(next, new RoleMappingManagerImpl( deployment.getDeploymentInfo().getPrincipleVsRoleMapping()));
         servletHandler = new RequestListenerHandler(applicationListeners, servletHandler);
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
         servletHandler = wrapHandlers(servletHandler, deployment.getDeploymentInfo().getDispatchedHandlerChainWrappers());

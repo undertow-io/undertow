@@ -58,18 +58,18 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 
+import io.undertow.security.api.RoleMappingManager;
+import io.undertow.security.impl.SecurityContext;
 import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartHandler;
-import io.undertow.security.impl.SecurityContext;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.SecurityRoleRef;
 import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.handlers.ServletPathMatch;
-import io.undertow.servlet.handlers.security.ServletRoleMappings;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
@@ -252,18 +252,19 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isUserInRole(final String role) {
-        final ServletRoleMappings roleMappings = exchange.getExchange().getAttachment(ServletAttachments.SERVLET_ROLE_MAPPINGS);
+        final RoleMappingManager roleMappings = exchange.getExchange().getAttachment(ServletAttachments.SERVLET_ROLE_MAPPINGS);
         if(roleMappings == null) {
             return false;
         }
+        SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
         final ServletPathMatch servlet = exchange.getExchange().getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
         //TODO: a more efficient imple
         for (SecurityRoleRef ref : servlet.getHandler().getManagedServlet().getServletInfo().getSecurityRoleRefs()) {
             if(ref.getRole().equals(role)) {
-                return roleMappings.isUserInRole(ref.getLinkedRole());
+                return roleMappings.isUserInRole(ref.getLinkedRole(), sc);
             }
         }
-        return roleMappings.isUserInRole(role);
+        return roleMappings.isUserInRole(role, sc);
     }
 
     @Override
