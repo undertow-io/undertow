@@ -58,6 +58,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationState;
 import io.undertow.security.api.RoleMappingManager;
 import io.undertow.security.impl.SecurityContext;
 import io.undertow.server.handlers.CookieImpl;
@@ -329,17 +331,44 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean authenticate(final HttpServletResponse response) throws IOException, ServletException {
-        return false;
+        if(response.isCommitted()) {
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+        }
+
+        SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
+        sc.setAuthenticationRequired();
+        SecurityContext.AuthenticationResult result = sc.authenticate(exchange.getExchange());
+        if(result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
+            return true;
+        } else {
+            //TODO: this will set the status code and headers without going through any potential
+            //wrappers, is this a problem?
+
+            //authentication failed, so run the completion tasks to setup the challenges
+            result.getRequestCompletionTasks().run();
+            //now commit the response
+            HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
+            responseImpl.closeStreamAndWriter();
+            return false;
+        }
+
     }
 
     @Override
     public void login(final String username, final String password) throws ServletException {
-
+        SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
+        if(sc.getAuthenticationState() == AuthenticationState.AUTHENTICATED) {
+            throw UndertowServletMessages.MESSAGES.userAlreadyLoggedIn();
+        }
+        if(!sc.login(exchange.getExchange(), username, password)) {
+            throw UndertowServletMessages.MESSAGES.loginFailed();
+        }
     }
 
     @Override
     public void logout() throws ServletException {
-
+        SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
+        sc.logout(exchange.getExchange());
     }
 
     @Override

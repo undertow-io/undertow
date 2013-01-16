@@ -133,4 +133,10 @@ public interface UndertowServletMessages {
 
     @Message(id = 10029, value = "Stream is closed")
     IOException streamIsClosed();
+
+    @Message(id = 10030, value = "User already logged in")
+    ServletException userAlreadyLoggedIn();
+
+    @Message(id = 10031, value = "Login failed")
+    ServletException loginFailed();
 }

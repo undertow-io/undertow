@@ -27,12 +27,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.NonceManager;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
@@ -50,7 +50,6 @@ import static io.undertow.util.Headers.DIGEST;
 import static io.undertow.util.Headers.NEXT_NONCE;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.CODE_401;
-import static io.undertow.util.WorkerDispatcher.dispatch;
 
 /**
  * {@link HttpHandler} to handle HTTP Digest authentication, both according to RFC-2617 and draft update to allow additional
@@ -94,7 +93,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     // Maybe even support registration of a session so it can be invalidated?
 
     public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
-            final String realmName, final NonceManager nonceManager) {
+                                         final String realmName, final NonceManager nonceManager) {
         this.supportedAlgorithms = supportedAlgorithms;
         this.supportedQops = supportedQops;
         this.realmName = realmName;
@@ -119,8 +118,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         return null;
     }
 
-    public IoFuture<AuthenticationResult> authenticate(HttpServerExchange exchange, final IdentityManager identityManager) {
-        ConcreteIoFuture<AuthenticationResult> result = new ConcreteIoFuture<AuthenticationResult>();
+    public IoFuture<AuthenticationMechanismResult> authenticate(HttpServerExchange exchange, final IdentityManager identityManager, final Executor handOffExecutor) {
+        ConcreteIoFuture<AuthenticationMechanismResult> result = new ConcreteIoFuture<AuthenticationMechanismResult>();
         Deque<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
         if (authHeaders != null) {
             for (String current : authHeaders) {
@@ -134,7 +133,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                         // Some form of Digest authentication is going to occur so get the DigestContext set on the exchange.
                         exchange.putAttachment(DigestContext.ATTACHMENT_KEY, context);
 
-                        dispatch(exchange, new DigestRunnable(result, exchange, identityManager));
+                        handOffExecutor.execute(new DigestRunnable(result, exchange, identityManager));
 
                         // The request has now potentially been dispatched to a different worker thread, the run method
                         // within BasicRunnable is now responsible for ensuring the request continues.
@@ -148,35 +147,35 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 // it was not correctly structured.
                 // By this point we had a header we should have been able to verify but for some reason
                 // it was not correctly structured.
-                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                 return result;
             }
         }
 
         // No suitable header has been found in this request,
-        result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_ATTEMPTED));
+        result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_ATTEMPTED));
         return result;
     }
 
     @Override
-    public void handleComplete(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
+    public void sendChallenge(HttpServerExchange exchange) {
         if (Util.shouldChallenge(exchange)) {
-            dispatch(exchange, new SendChallengeRunnable(exchange, completionHandler));
+            sendChallengeHeaders(exchange);
         } else {
-            dispatch(exchange, new SendAuthenticationInfoHeader(exchange, completionHandler));
+            sendAuthenticationInfoHeader(exchange);
         }
     }
 
     private final class DigestRunnable implements Runnable {
 
-        private final ConcreteIoFuture<AuthenticationResult> result;
+        private final ConcreteIoFuture<AuthenticationMechanismResult> result;
         private final HttpServerExchange exchange;
         private final DigestContext context;
         private final Map<DigestAuthorizationToken, String> parsedHeader;
         private final IdentityManager identityManager;
         private MessageDigest digest;
 
-        private DigestRunnable(final ConcreteIoFuture<AuthenticationResult> result, HttpServerExchange exchange, final IdentityManager identityManager) {
+        private DigestRunnable(final ConcreteIoFuture<AuthenticationMechanismResult> result, HttpServerExchange exchange, final IdentityManager identityManager) {
             this.result = result;
             this.exchange = exchange;
             context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
@@ -205,7 +204,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     REQUEST_LOGGER.invalidTokenReceived(DigestAuthorizationToken.MESSAGE_QOP.getName(),
                             parsedHeader.get(DigestAuthorizationToken.MESSAGE_QOP));
                     // TODO - This actually needs to result in a HTTP 400 Bad Request response and not a new challenge.
-                    result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                    result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                     return;
                 }
                 context.setQop(qop);
@@ -222,7 +221,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     REQUEST_LOGGER.missingAuthorizationToken(currentToken.getName());
                 }
                 // TODO - This actually needs to result in a HTTP 400 Bad Request response and not a new challenge.
-                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
@@ -231,7 +230,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 REQUEST_LOGGER.invalidTokenReceived(DigestAuthorizationToken.REALM.getName(),
                         parsedHeader.get(DigestAuthorizationToken.REALM));
                 // TODO - This actually needs to result in a HTTP 400 Bad Request response and not a new challenge.
-                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
@@ -241,7 +240,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 if (OPAQUE_VALUE.equals(parsedHeader.get(DigestAuthorizationToken.OPAQUE)) == false) {
                     REQUEST_LOGGER.invalidTokenReceived(DigestAuthorizationToken.OPAQUE.getName(),
                             parsedHeader.get(DigestAuthorizationToken.OPAQUE));
-                    result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                    result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                     return;
                 }
             }
@@ -254,7 +253,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     REQUEST_LOGGER.invalidTokenReceived(DigestAuthorizationToken.ALGORITHM.getName(),
                             parsedHeader.get(DigestAuthorizationToken.ALGORITHM));
                     // TODO - This actually needs to result in a HTTP 400 Bad Request response and not a new challenge.
-                    result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                    result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                     return;
                 }
             } else {
@@ -270,7 +269,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             } catch (NoSuchAlgorithmException e) {
                 // This is really not expected but the API makes us consider it.
                 REQUEST_LOGGER.exceptionProcessingRequest(e);
-                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
@@ -279,9 +278,9 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
             final String userName = parsedHeader.get(DigestAuthorizationToken.USERNAME);
             final Account account = identityManager.lookupAccount(userName);
-            if(account == null) {
+            if (account == null) {
                 //the user does not exist.
-                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
@@ -296,7 +295,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 context.setHa1(ha1);
             } catch (AuthenticationException e) {
                 // Most likely the user does not exist.
-                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
@@ -320,7 +319,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 // TODO - We should look at still marking the nonce as used, a failure in authentication due to say a failure
                 // looking up the users password would leave it open to the packet being replayed.
                 REQUEST_LOGGER.authenticationFailed(parsedHeader.get(DigestAuthorizationToken.USERNAME), DIGEST.toString());
-                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
@@ -331,13 +330,13 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 // side could leave a packet that could be 're-played' after the failed auth.
                 // The username and password verification passed but for some reason we do not like the nonce.
                 context.markStale();
-                result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                 return;
             }
 
             // We have authenticated the remote user.
             Principal principal = new UndertowPrincipal(account);
-            result.setResult(new AuthenticationResult(principal, account));
+            result.setResult(new AuthenticationMechanismResult(principal, account));
 
             // Step 4 - Set up any QOP related requirements.
 
@@ -442,145 +441,119 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
     }
 
-    private class SendChallengeRunnable implements Runnable {
+    public void sendChallengeHeaders(final HttpServerExchange exchange) {
+        DigestContext context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
+        boolean stale = context == null ? false : context.isStale();
 
-        private final HttpServerExchange exchange;
-        private final HttpCompletionHandler next;
-
-        private SendChallengeRunnable(final HttpServerExchange exchange, final HttpCompletionHandler next) {
-            this.exchange = exchange;
-            this.next = next;
+        StringBuilder rb = new StringBuilder(DIGEST_PREFIX);
+        rb.append(Headers.REALM.toString()).append("=\"").append(realmName).append("\",");
+        rb.append(Headers.DOMAIN.toString()).append("=\"/\","); // TODO - This will need to be generated
+        // based on security constraints.
+        rb.append(Headers.NONCE.toString()).append("=\"").append(nonceManager.nextNonce(null, exchange)).append("\",");
+        // Not currently using OPAQUE as it offers no integrity, used for session data leaves it vulnerable to
+        // session fixation type issues as well.
+        rb.append(Headers.OPAQUE.toString()).append("=\"00000000000000000000000000000000\"");
+        if (stale) {
+            rb.append(",stale=true");
+        }
+        if (supportedAlgorithms.size() > 0) {
+            // This header will need to be repeated once for each algorithm.
+            rb.append(",").append(Headers.ALGORITHM.toString()).append("=%s");
+        }
+        if (qopString != null) {
+            rb.append(",").append(Headers.QOP.toString()).append("=\"").append(qopString).append("\"");
         }
 
-        public void run() {
-            DigestContext context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
-            boolean stale = context == null ? false : context.isStale();
+        String theChallenge = rb.toString();
+        HeaderMap responseHeader = exchange.getResponseHeaders();
+        if (supportedAlgorithms.size() > 0) {
+            for (DigestAlgorithm current : supportedAlgorithms) {
+                responseHeader.add(WWW_AUTHENTICATE, String.format(theChallenge, current.getToken()));
+            }
+        } else {
+            responseHeader.add(WWW_AUTHENTICATE, theChallenge);
+        }
+        exchange.setResponseCode(CODE_401.getCode());
+    }
 
-            StringBuilder rb = new StringBuilder(DIGEST_PREFIX);
-            rb.append(Headers.REALM.toString()).append("=\"").append(realmName).append("\",");
-            rb.append(Headers.DOMAIN.toString()).append("=\"/\","); // TODO - This will need to be generated
-                                                                    // based on security constraints.
-            rb.append(Headers.NONCE.toString()).append("=\"").append(nonceManager.nextNonce(null, exchange)).append("\",");
-            // Not currently using OPAQUE as it offers no integrity, used for session data leaves it vulnerable to
-            // session fixation type issues as well.
-            rb.append(Headers.OPAQUE.toString()).append("=\"00000000000000000000000000000000\"");
-            if (stale) {
-                rb.append(",stale=true");
-            }
-            if (supportedAlgorithms.size() > 0) {
-                // This header will need to be repeated once for each algorithm.
-                rb.append(",").append(Headers.ALGORITHM.toString()).append("=%s");
-            }
-            if (qopString != null) {
-                rb.append(",").append(Headers.QOP.toString()).append("=\"").append(qopString).append("\"");
-            }
 
-            String theChallenge = rb.toString();
-            HeaderMap responseHeader = exchange.getResponseHeaders();
-            if (supportedAlgorithms.size() > 0) {
-                for (DigestAlgorithm current : supportedAlgorithms) {
-                    responseHeader.add(WWW_AUTHENTICATE, String.format(theChallenge, current.getToken()));
+    public void sendAuthenticationInfoHeader(final HttpServerExchange exchange) {
+        DigestContext context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
+        DigestQop qop = context.getQop();
+        String currentNonce = context.getNonce();
+        String nextNonce = nonceManager.nextNonce(currentNonce, exchange);
+        if (qop != null || nextNonce.equals(currentNonce) == false) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(NEXT_NONCE).append("=\"").append(nextNonce).append("\"");
+            if (qop != null) {
+                Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
+                sb.append(",").append(Headers.QOP.toString()).append("=\"").append(qop.getToken()).append("\"");
+                byte[] ha1 = context.getHa1();
+                byte[] ha2;
+
+                if (qop == DigestQop.AUTH) {
+                    ha2 = createHA2Auth(context);
+                } else {
+                    ha2 = createHA2AuthInt();
                 }
-            } else {
-                responseHeader.add(WWW_AUTHENTICATE, theChallenge);
+                String rspauth = createRFC2617RequestDigest(ha1, ha2, context);
+                sb.append(",").append(Headers.RESPONSE_AUTH.toString()).append("=\"").append(rspauth).append("\"");
+                sb.append(",").append(Headers.CNONCE.toString()).append("=\"").append(parsedHeader.get(DigestAuthorizationToken.CNONCE)).append("\"");
+                sb.append(",").append(Headers.NONCE_COUNT.toString()).append("=").append(parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT));
             }
-            exchange.setResponseCode(CODE_401.getCode());
 
-            next.handleComplete();
+            HeaderMap responseHeader = exchange.getResponseHeaders();
+            responseHeader.add(AUTHENTICATION_INFO, sb.toString());
+        }
+
+        exchange.removeAttachment(DigestContext.ATTACHMENT_KEY);
+    }
+
+    private byte[] createHA2Auth(final DigestContext context) {
+        byte[] digestUri = context.getParsedHeader().get(DigestAuthorizationToken.DIGEST_URI).getBytes(UTF_8);
+
+        MessageDigest digest = context.getDigest();
+        try {
+            digest.update(COLON);
+            digest.update(digestUri);
+
+            return HexConverter.convertToHexBytes(digest.digest());
+        } finally {
+            digest.reset();
         }
     }
 
-    private class SendAuthenticationInfoHeader implements Runnable {
+    private byte[] createHA2AuthInt() {
+        // TODO - Implement method.
+        throw new IllegalStateException("Method not implemented.");
+    }
 
-        private final HttpServerExchange exchange;
-        private final HttpCompletionHandler next;
-        private final DigestContext context;
+    // TODO - Get all digesting into a single wrapper of the MessageDigest.
+    private String createRFC2617RequestDigest(final byte[] ha1, final byte[] ha2, final DigestContext context) {
+        Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
+        byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
+        byte[] nonceCount = parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT).getBytes(UTF_8);
+        byte[] cnonce = parsedHeader.get(DigestAuthorizationToken.CNONCE).getBytes(UTF_8);
+        byte[] qop = parsedHeader.get(DigestAuthorizationToken.MESSAGE_QOP).getBytes(UTF_8);
+        MessageDigest digest = context.getDigest();
 
-        private SendAuthenticationInfoHeader(final HttpServerExchange exchange, final HttpCompletionHandler next) {
-            this.exchange = exchange;
-            context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
-            this.next = next;
+        try {
+            digest.update(ha1);
+            digest.update(COLON);
+            digest.update(nonce);
+            digest.update(COLON);
+            digest.update(nonceCount);
+            digest.update(COLON);
+            digest.update(cnonce);
+            digest.update(COLON);
+            digest.update(qop);
+            digest.update(COLON);
+            digest.update(ha2);
+
+            return HexConverter.convertToHexString(digest.digest());
+        } finally {
+            digest.reset();
         }
-
-        public void run() {
-            DigestQop qop = context.getQop();
-            String currentNonce = context.getNonce();
-            String nextNonce = nonceManager.nextNonce(currentNonce, exchange);
-            if (qop != null || nextNonce.equals(currentNonce) == false) {
-                StringBuilder sb = new StringBuilder();
-                sb.append(NEXT_NONCE).append("=\"").append(nextNonce).append("\"");
-                if (qop != null) {
-                    Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
-                    sb.append(",").append(Headers.QOP.toString()).append("=\"").append(qop.getToken()).append("\"");
-                    byte[] ha1 = context.getHa1();
-                    byte[] ha2;
-
-                    if (qop == DigestQop.AUTH) {
-                        ha2 = createHA2Auth();
-                    } else {
-                        ha2 = createHA2AuthInt();
-                    }
-                    String rspauth = createRFC2617RequestDigest(ha1, ha2);
-                    sb.append(",").append(Headers.RESPONSE_AUTH.toString()).append("=\"").append(rspauth).append("\"");
-                    sb.append(",").append(Headers.CNONCE.toString()).append("=\"").append(parsedHeader.get(DigestAuthorizationToken.CNONCE)).append("\"");
-                    sb.append(",").append(Headers.NONCE_COUNT.toString()).append("=").append(parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT));
-                }
-
-                HeaderMap responseHeader = exchange.getResponseHeaders();
-                responseHeader.add(AUTHENTICATION_INFO, sb.toString());
-            }
-
-            exchange.removeAttachment(DigestContext.ATTACHMENT_KEY);
-            next.handleComplete();
-        }
-
-        private byte[] createHA2Auth() {
-            byte[] digestUri = context.getParsedHeader().get(DigestAuthorizationToken.DIGEST_URI).getBytes(UTF_8);
-
-            MessageDigest digest = context.getDigest();
-            try {
-                digest.update(COLON);
-                digest.update(digestUri);
-
-                return HexConverter.convertToHexBytes(digest.digest());
-            } finally {
-                digest.reset();
-            }
-        }
-
-        private byte[] createHA2AuthInt() {
-            // TODO - Implement method.
-            throw new IllegalStateException("Method not implemented.");
-        }
-
-        // TODO - Get all digesting into a single wrapper of the MessageDigest.
-        private String createRFC2617RequestDigest(final byte[] ha1, final byte[] ha2) {
-            Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
-            byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
-            byte[] nonceCount = parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT).getBytes(UTF_8);
-            byte[] cnonce = parsedHeader.get(DigestAuthorizationToken.CNONCE).getBytes(UTF_8);
-            byte[] qop = parsedHeader.get(DigestAuthorizationToken.MESSAGE_QOP).getBytes(UTF_8);
-            MessageDigest digest = context.getDigest();
-
-            try {
-                digest.update(ha1);
-                digest.update(COLON);
-                digest.update(nonce);
-                digest.update(COLON);
-                digest.update(nonceCount);
-                digest.update(COLON);
-                digest.update(cnonce);
-                digest.update(COLON);
-                digest.update(qop);
-                digest.update(COLON);
-                digest.update(ha2);
-
-                return HexConverter.convertToHexString(digest.digest());
-            } finally {
-                digest.reset();
-            }
-        }
-
     }
 
     private static class DigestContext {

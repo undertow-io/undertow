@@ -24,17 +24,22 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
+import io.undertow.security.api.AuthenticatedSessionManager;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationState;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
+import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.ConcreteIoFuture;
+import io.undertow.util.WorkerDispatcher;
 import org.xnio.IoFuture;
 
 /**
@@ -49,10 +54,18 @@ public class SecurityContext {
 
     public static AttachmentKey<SecurityContext> ATTACHMENT_KEY = AttachmentKey.create(SecurityContext.class);
 
+    private static final Executor SAME_THREAD_EXECUTOR = new Executor() {
+        @Override
+        public void execute(final Runnable command) {
+            command.run();
+        }
+    };
+
     private final List<AuthenticationMechanism> authMechanisms = new ArrayList<AuthenticationMechanism>();
     private final IdentityManager identityManager;
+    private final AuthenticatedSessionManager authenticatedSessionManager;
 
-    // TODO - We also need to supply a login method that allows app to supply a username and password.
+
     // Maybe this will need to be a custom mechanism that doesn't exchange tokens with the client but will then
     // be configured to either associate with the connection, the session or some other arbitrary whatever.
     //
@@ -65,10 +78,49 @@ public class SecurityContext {
     private Account account;
 
     public SecurityContext(final IdentityManager identityManager) {
+        this(identityManager, null);
+    }
+
+    public SecurityContext(final IdentityManager identityManager, final AuthenticatedSessionManager authenticatedSessionManager) {
         this.identityManager = identityManager;
-        if(System.getSecurityManager() != null) {
+        this.authenticatedSessionManager = authenticatedSessionManager;
+        if (System.getSecurityManager() != null) {
             System.getSecurityManager().checkPermission(PERMISSION);
         }
+    }
+
+    /**
+     * Performs authentication on the request, returning the result. This method can potentially block, so should not
+     * be invoked from an async handler.
+     * <p/>
+     * If the authentication fails this {@code AuthenticationResult} can be used to send a challenge back to the client.
+     * <p/>
+     * Note that challenges with only be set if {@link #setAuthenticationRequired()} has been previously called this
+     * request
+     *
+     * @param exchange The exchange
+     */
+    public AuthenticationResult authenticate(final HttpServerExchange exchange) throws IOException {
+        return new RequestAuthenticator(authMechanisms.iterator(), exchange, SAME_THREAD_EXECUTOR).authenticate().get();
+    }
+
+    /**
+     * Performs authentication on the request, returning an IoFuture that can be used to retrieve the result.
+     * <p/>
+     * If the authentication fails this {@code AuthenticationResult} can be used to send a challenge back to the client.
+     * <p/>
+     * Invoking this method can result in worker handoff, once it has been invoked the current handler should not modify the
+     * exchange.
+     * <p/>
+     * <p/>
+     * Note that challenges with only be set if {@link #setAuthenticationRequired()} has been previously called this
+     * request
+     *
+     * @param exchange The exchange
+     * @param executor The executor to use for blocking operations
+     */
+    public IoFuture<AuthenticationResult> authenticate(final HttpServerExchange exchange, final Executor executor) {
+        return new RequestAuthenticator(authMechanisms.iterator(), exchange, executor).authenticate();
     }
 
     /**
@@ -77,17 +129,37 @@ public class SecurityContext {
      * <p/>
      * Invoking this method can result in worker handoff, once it has been invoked the current handler should not modify the
      * exchange.
+     * <p/>
+     * <p/>
+     * Note that challenges with only be set if {@link #setAuthenticationRequired()} has been previously called this
+     * request
      *
-     * @param exchange The exchange
+     * @param exchange          The exchange
      * @param completionHandler The completion handler
-     * @param nextHandler The next handler to invoke once auth succeeds
+     * @param nextHandler       The next handler to invoke once auth succeeds
      */
     public void authenticate(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler,
-            final HttpHandler nextHandler) {
-        // TODO - A slight variation will be required if called from a servlet, in that case by being called authentication will
-        // automatically become required, also will need to cope with control returning to the caller should it be successful.
+                             final HttpHandler nextHandler) {
+        authenticate(exchange, new WorkerDispatcherExecutor(exchange))
+                .addNotifier(new IoFuture.Notifier<AuthenticationResult, Object>() {
+                    @Override
+                    public void notify(final IoFuture<? extends AuthenticationResult> ioFuture, final Object o) {
+                        try {
+                            final AuthenticationResult result = ioFuture.get();
 
-        new RequestAuthenticator(authMechanisms.iterator(), completionHandler, exchange, nextHandler).authenticate();
+                            final RunnableCompletionHandler handler = new RunnableCompletionHandler(exchange, completionHandler, result.getRequestCompletionTasks());
+                            if (result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
+                                HttpHandlers.executeHandler(nextHandler, exchange, handler);
+                            } else if (getAuthenticationState() == AuthenticationState.REQUIRED) {
+                                handler.handleComplete();
+                            } else {
+                                HttpHandlers.executeHandler(nextHandler, exchange, handler);
+                            }
+                        } catch (IOException e) {
+                            completionHandler.handleComplete();
+                        }
+                    }
+                }, null);
     }
 
     public void setAuthenticationRequired() {
@@ -113,11 +185,6 @@ public class SecurityContext {
         return identityManager.isUserInGroup(account, group);
     }
 
-    IdentityManager getIdentityManager() {
-        // Mechanisms can access this through the AuthenticationMechanism Util class.
-        return identityManager;
-    }
-
     public void addAuthenticationMechanism(final AuthenticationMechanism handler) {
         authMechanisms.add(handler);
     }
@@ -126,32 +193,63 @@ public class SecurityContext {
         return Collections.unmodifiableList(authMechanisms);
     }
 
+    public boolean login(final HttpServerExchange exchange, final String username, final String password) {
+        final Account account = identityManager.lookupAccount(username);
+        if (account == null) {
+            return false;
+        }
+        if (!identityManager.verifyCredential(account, new PasswordCredential(password.toCharArray()))) {
+            return false;
+        }
+        this.account = account;
+        this.authenticationState = AuthenticationState.AUTHENTICATED;
+        this.authenticatedPrincipal = new UndertowPrincipal(account);
+
+        if (authenticatedSessionManager != null) {
+            authenticatedSessionManager.userAuthenticated(exchange, authenticatedPrincipal, account);
+        }
+        return true;
+
+    }
+
+    public void logout(HttpServerExchange exchange) {
+        if (authenticatedSessionManager != null) {
+            authenticatedSessionManager.userLoggedOut(exchange, authenticatedPrincipal, account);
+        }
+        this.account = null;
+        this.authenticationState = AuthenticationState.NOT_REQUIRED;
+        this.authenticatedPrincipal = null;
+    }
+
     private class RequestAuthenticator {
 
         private final Iterator<AuthenticationMechanism> mechanismIterator;
-        private final HttpCompletionHandler completionHandler;
         private final HttpServerExchange exchange;
-        private final HttpHandler nextHandler;
+        private final Executor handOffExecutor;
 
-        private RequestAuthenticator(final Iterator<AuthenticationMechanism> handlerIterator,
-                final HttpCompletionHandler completionHandler, final HttpServerExchange exchange, final HttpHandler nextHandler) {
+        private RequestAuthenticator(final Iterator<AuthenticationMechanism> handlerIterator, final HttpServerExchange exchange, final Executor handOffExecutor) {
             this.mechanismIterator = handlerIterator;
-            this.completionHandler = completionHandler;
             this.exchange = exchange;
-            this.nextHandler = nextHandler;
+            this.handOffExecutor = handOffExecutor;
         }
 
-        void authenticate() {
+        IoFuture<AuthenticationResult> authenticate() {
+            final ConcreteIoFuture<AuthenticationResult> authResult = new ConcreteIoFuture<AuthenticationResult>();
+            authenticate(authResult);
+            return authResult;
+        }
+
+        private void authenticate(final ConcreteIoFuture<AuthenticationResult> authResult) {
             if (mechanismIterator.hasNext()) {
                 final AuthenticationMechanism mechanism = mechanismIterator.next();
-                IoFuture<AuthenticationMechanism.AuthenticationResult> resultFuture = mechanism.authenticate(exchange, identityManager);
-                resultFuture.addNotifier(new IoFuture.Notifier<AuthenticationMechanism.AuthenticationResult, Object>() {
+                IoFuture<AuthenticationMechanism.AuthenticationMechanismResult> resultFuture = mechanism.authenticate(exchange, identityManager, handOffExecutor);
+                resultFuture.addNotifier(new IoFuture.Notifier<AuthenticationMechanism.AuthenticationMechanismResult, Object>() {
                     @Override
-                    public void notify(final IoFuture<? extends AuthenticationMechanism.AuthenticationResult> ioFuture,
-                            final Object attachment) {
-                        if (ioFuture.getStatus() == IoFuture.Status.DONE) {
-                            try {
-                                AuthenticationMechanism.AuthenticationResult result = ioFuture.get();
+                    public void notify(final IoFuture<? extends AuthenticationMechanism.AuthenticationMechanismResult> ioFuture,
+                                       final Object attachment) {
+                        try {
+                            if (ioFuture.getStatus() == IoFuture.Status.DONE) {
+                                AuthenticationMechanism.AuthenticationMechanismResult result = ioFuture.get();
                                 switch (result.getOutcome()) {
                                     case AUTHENTICATED:
                                         SecurityContext.this.authenticatedPrincipal = result.getPrinciple();
@@ -159,52 +257,41 @@ public class SecurityContext {
                                         SecurityContext.this.account = result.getAccount();
                                         SecurityContext.this.authenticationState = AuthenticationState.AUTHENTICATED;
 
-                                        HttpCompletionHandler singleComplete = new SingleMechanismCompletionHandler(mechanism,
-                                                exchange, completionHandler);
-                                        HttpHandlers.executeHandler(nextHandler, exchange, singleComplete);
+                                        Runnable singleComplete = new SingleMechanismCompletionTask(mechanism, exchange);
+                                        authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED, singleComplete));
                                         break;
                                     case NOT_ATTEMPTED:
                                         // That mechanism didn't attempt at all so see if there is another mechanism to try.
-                                        authenticate();
+                                        authenticate(authResult);
                                         break;
                                     default:
                                         UndertowLogger.REQUEST_LOGGER.debug("authentication not complete, sending challenges.");
+
 
                                         // Either authentication failed or the mechanism is in an intermediate state and
                                         // requires
                                         // an additional round trip with the client - either way all mechanisms must now
                                         // complete.
-                                        new AllMechanismCompletionHandler(authMechanisms.iterator(), exchange,
-                                                completionHandler).handleComplete();
+                                        authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_AUTHENTICATED,
+                                                new AllMechanismCompletionTask(authMechanisms.iterator(), exchange)));
+                                        break;
                                 }
-
-                            } catch (IOException e) {
-                                // will never happen, as state is DONE
-                                new AllMechanismCompletionHandler(authMechanisms.iterator(), exchange,
-                                        completionHandler).handleComplete();
+                            } else if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
+                                UndertowLogger.REQUEST_LOGGER.exceptionWhileAuthenticating(mechanism, ioFuture.getException());
+                                authResult.setException(ioFuture.getException());
+                            } else if (ioFuture.getStatus() == IoFuture.Status.CANCELLED) {
+                                authResult.setException(new IOException());
                             }
-                        } else if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
-                            UndertowLogger.REQUEST_LOGGER.exceptionWhileAuthenticating(mechanism, ioFuture.getException());
-                        } else if (ioFuture.getStatus() == IoFuture.Status.CANCELLED) {
-                            // this should never happen
-                            new AllMechanismCompletionHandler(authMechanisms.iterator(), exchange, completionHandler)
-                                    .handleComplete();
+                        } catch (IOException e) {
+                            authResult.setException(e);
                         }
                     }
                 }, null);
             } else {
-                if (SecurityContext.this.authenticationState == AuthenticationState.REQUIRED) {
-                    // We have run through all of the mechanisms, authentication has not occurred but it is required so send
-                    // challenges to the client.
-                    new AllMechanismCompletionHandler(authMechanisms.iterator(), exchange, completionHandler)
-                            .handleComplete();
-                } else {
-                    // Authentication was not actually required to the request can proceed.
-                    HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
-                }
+                authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_AUTHENTICATED, new AllMechanismCompletionTask(authMechanisms.iterator(), exchange)));
             }
-        }
 
+        }
     }
 
     /**
@@ -212,50 +299,95 @@ public class SecurityContext {
      * {@link AuthenticationMechanism#handleComplete(HttpServerExchange, HttpCompletionHandler)} need to be called on each
      * {@link AuthenticationMechanism} in turn.
      */
-    private class AllMechanismCompletionHandler implements HttpCompletionHandler {
+    private class AllMechanismCompletionTask implements Runnable {
 
         private final Iterator<AuthenticationMechanism> handlerIterator;
         private final HttpServerExchange exchange;
-        private final HttpCompletionHandler finalCompletionHandler;
 
-        private AllMechanismCompletionHandler(Iterator<AuthenticationMechanism> handlerIterator, HttpServerExchange exchange,
-                HttpCompletionHandler finalCompletionHandler) {
+        private AllMechanismCompletionTask(Iterator<AuthenticationMechanism> handlerIterator, HttpServerExchange exchange) {
             this.handlerIterator = handlerIterator;
             this.exchange = exchange;
-            this.finalCompletionHandler = finalCompletionHandler;
         }
 
-        public void handleComplete() {
-            if (handlerIterator.hasNext()) {
-                handlerIterator.next().handleComplete(exchange, this);
-            } else {
-                finalCompletionHandler.handleComplete();
+        public void run() {
+            while (handlerIterator.hasNext()) {
+                handlerIterator.next().sendChallenge(exchange);
             }
-
         }
-
     }
 
-    /**
-     * A {@link HttpCompletionHandler} that is used when
-     * {@link AuthenticationMechanism#handleComplete(HttpServerExchange, HttpCompletionHandler)} only needs to be called on a
-     * single {@link AuthenticationMechanism}.
-     */
-    private class SingleMechanismCompletionHandler implements HttpCompletionHandler {
+    private class SingleMechanismCompletionTask implements Runnable {
 
         private final AuthenticationMechanism mechanism;
         private final HttpServerExchange exchange;
-        private final HttpCompletionHandler completionHandler;
 
-        private SingleMechanismCompletionHandler(AuthenticationMechanism mechanism, HttpServerExchange exchange,
-                HttpCompletionHandler completionHandler) {
+        private SingleMechanismCompletionTask(AuthenticationMechanism mechanism, HttpServerExchange exchange) {
             this.mechanism = mechanism;
             this.exchange = exchange;
-            this.completionHandler = completionHandler;
         }
 
-        public void handleComplete() {
-            mechanism.handleComplete(exchange, completionHandler);
+        public void run() {
+            mechanism.sendChallenge(exchange);
         }
     }
+
+
+    private static final class WorkerDispatcherExecutor implements Executor {
+
+        private final HttpServerExchange exchange;
+
+        private WorkerDispatcherExecutor(final HttpServerExchange exchange) {
+            this.exchange = exchange;
+        }
+
+        @Override
+        public void execute(final Runnable command) {
+            WorkerDispatcher.dispatch(exchange, command);
+        }
+    }
+
+
+    public static class AuthenticationResult {
+
+        private final AuthenticationMechanism.AuthenticationMechanismOutcome outcome;
+        private final Runnable requestCompletionTasks;
+
+        public AuthenticationResult(final AuthenticationMechanism.AuthenticationMechanismOutcome outcome, final Runnable requestCompletionTasks) {
+            this.outcome = outcome;
+            this.requestCompletionTasks = requestCompletionTasks;
+        }
+
+        public AuthenticationMechanism.AuthenticationMechanismOutcome getOutcome() {
+            return outcome;
+        }
+
+        public Runnable getRequestCompletionTasks() {
+            return requestCompletionTasks;
+        }
+    }
+
+    private static final class RunnableCompletionHandler implements HttpCompletionHandler {
+
+        private final HttpServerExchange exchange;
+        private final HttpCompletionHandler completionHandler;
+        private final Runnable runnable;
+
+        private RunnableCompletionHandler(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final Runnable runnable) {
+            this.exchange = exchange;
+            this.completionHandler = completionHandler;
+            this.runnable = runnable;
+        }
+
+        @Override
+        public void handleComplete() {
+            try {
+                if(!exchange.isResponseStarted()) {
+                    runnable.run();
+                }
+            } finally {
+                completionHandler.handleComplete();
+            }
+        }
+    }
+
 }

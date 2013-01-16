@@ -21,12 +21,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Deque;
+import java.util.concurrent.Executor;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.FlexBase64;
@@ -36,7 +36,6 @@ import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.BASIC;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.CODE_401;
-import static io.undertow.util.WorkerDispatcher.dispatch;
 
 /**
  * The authentication handler responsible for BASIC authentication as described by RFC2617
@@ -73,8 +72,8 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
      *      io.undertow.server.HttpCompletionHandler)
      */
     @Override
-    public IoFuture<AuthenticationResult> authenticate(final HttpServerExchange exchange, final IdentityManager identityManager) {
-        ConcreteIoFuture<AuthenticationResult> result = new ConcreteIoFuture<AuthenticationResult>();
+    public IoFuture<AuthenticationMechanismResult> authenticate(final HttpServerExchange exchange, final IdentityManager identityManager, final Executor executor) {
+        ConcreteIoFuture<AuthenticationMechanismResult> result = new ConcreteIoFuture<AuthenticationMechanismResult>();
 
         Deque<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
         if (authHeaders != null) {
@@ -91,8 +90,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                     if (plainChallenge != null && (colonPos = plainChallenge.indexOf(COLON)) > -1) {
                         String userName = plainChallenge.substring(0, colonPos);
                         String password = plainChallenge.substring(colonPos + 1);
-                        dispatch(exchange,
-                                new BasicRunnable(identityManager, result, userName, password.toCharArray()));
+                        executor.execute(new BasicRunnable(identityManager, result, userName, password.toCharArray()));
 
                         // The request has now potentially been dispatched to a different worker thread, the run method
                         // within BasicRunnable is now responsible for ensuring the request continues.
@@ -101,25 +99,25 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
                     // By this point we had a header we should have been able to verify but for some reason
                     // it was not correctly structured.
-                    result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                    result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
                     return result;
                 }
             }
         }
 
         // No suitable header has been found in this request,
-        result.setResult(new AuthenticationResult(AuthenticationOutcome.NOT_ATTEMPTED));
+        result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_ATTEMPTED));
         return result;
     }
 
     private final class BasicRunnable implements Runnable {
 
         private final IdentityManager idm;
-        private final ConcreteIoFuture<AuthenticationResult> result;
+        private final ConcreteIoFuture<AuthenticationMechanismResult> result;
         private final String userName;
         private final char[] password;
 
-        private BasicRunnable(final IdentityManager identityManager, final ConcreteIoFuture<AuthenticationResult> result,
+        private BasicRunnable(final IdentityManager identityManager, final ConcreteIoFuture<AuthenticationMechanismResult> result,
                 final String userName, final char[] password) {
             this.idm = identityManager;
             this.result = result;
@@ -131,15 +129,15 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         public void run() {
             // To reach this point we must have been supplied a username and password.
 
-            AuthenticationResult result = null;
+            AuthenticationMechanismResult result = null;
             PasswordCredential credential = new PasswordCredential(password);
             try {
                 Account account = idm.lookupAccount(userName);
                 if (account != null && idm.verifyCredential(account, credential)) {
-                    result = new AuthenticationResult(new UndertowPrincipal(account), account);
+                    result = new AuthenticationMechanismResult(new UndertowPrincipal(account), account);
                 }
             } finally {
-                this.result.setResult(result != null ? result : new AuthenticationResult(AuthenticationOutcome.NOT_AUTHENTICATED));
+                this.result.setResult(result != null ? result : new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
 
                 for (int i = 0; i < password.length; i++) {
                     password[i] = 0x00;
@@ -148,13 +146,11 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         }
     }
 
-    public void handleComplete(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
+    public void sendChallenge(HttpServerExchange exchange) {
         if (Util.shouldChallenge(exchange)) {
             exchange.getResponseHeaders().add(WWW_AUTHENTICATE, challenge);
             exchange.setResponseCode(CODE_401.getCode());
         }
-
-        completionHandler.handleComplete();
     }
 
 }

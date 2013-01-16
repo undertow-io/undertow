@@ -1,0 +1,103 @@
+package io.undertow.servlet.test.security.login;
+
+import java.io.IOException;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.FilterInfo;
+import io.undertow.servlet.api.LoginConfig;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.security.SendUsernameServlet;
+import io.undertow.servlet.test.security.ServletIdentityManager;
+import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.test.utils.DefaultServer;
+import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.util.TestHttpClient;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import static org.junit.Assert.assertEquals;
+
+/**
+ * @author Stuart Douglas
+ */
+@RunWith(DefaultServer.class)
+public class ServletLoginTestCase {
+
+
+    @BeforeClass
+    public static void setup() throws ServletException {
+
+        final PathHandler root = new PathHandler();
+        final ServletContainer container = ServletContainer.Factory.newInstance();
+
+        ServletInfo s = new ServletInfo("servlet", SendUsernameServlet.class)
+                .addMapping("/*");
+
+        ServletIdentityManager identityManager = new ServletIdentityManager();
+        identityManager.addUser("user1", "password1", "group1");
+        identityManager.addUser("user2", "password2", "group2");
+        identityManager.addUser("user3", "password3", "group3");
+
+        DeploymentInfo builder = new DeploymentInfo()
+                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
+                .setContextPath("/servletContext")
+                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setDeploymentName("servletContext.war")
+                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
+                .setIdentityManager(identityManager)
+                .setLoginConfig(new LoginConfig("BASIC", "Test Realm"))
+                .addServlet(s)
+                .addFilter(new FilterInfo("LoginFilter", LoginFilter.class))
+                .addFilterServletNameMapping("LoginFilter", "servlet", DispatcherType.REQUEST);
+
+
+        builder.addPrincipleVsRoleMapping("group1", "role1");
+        builder.addPrincipleVsRoleMapping("group2", "role2");
+        builder.addPrincipleVsRoleMapping("group3", "role1");
+        builder.addPrincipleVsRoleMapping("group3", "role2");
+
+        DeploymentManager manager = container.addDeployment(builder);
+        manager.deploy();
+        root.addPath(builder.getContextPath(), manager.start());
+
+        DefaultServer.setRootHandler(root);
+    }
+
+    @Test
+    public void testHttpMethod() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        final String url = DefaultServer.getDefaultServerAddress() + "/servletContext/login";
+        try {
+            HttpGet get = new HttpGet(url);
+            get.addHeader("username", "bob");
+            get.addHeader("password", "bogus");
+            HttpResponse result = client.execute(get);
+            assertEquals(401, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            get = new HttpGet(url);
+            get.addHeader("username", "user1");
+            get.addHeader("password", "password1");
+            result = client.execute(get);
+            assertEquals(200, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("user1", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+}

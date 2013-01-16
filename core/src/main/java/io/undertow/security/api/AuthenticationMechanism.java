@@ -19,11 +19,11 @@
 package io.undertow.security.api;
 
 import java.security.Principal;
+import java.util.concurrent.Executor;
 
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.SecurityContext;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.IoFuture;
 
@@ -67,9 +67,24 @@ import org.xnio.IoFuture;
  */
 public interface AuthenticationMechanism {
 
-    IoFuture<AuthenticationResult> authenticate(final HttpServerExchange exchange, final IdentityManager identityManager);
+    /**
+     * Perform authentication of the request. Any potentially blocking work should be performed in the handoff executor provided
+     *
+     * @param exchange        The exchange
+     * @param identityManager The identity manager
+     * @param handOffExecutor The executor to use for potentially blocking tasks
+     * @return
+     */
+    IoFuture<AuthenticationMechanismResult> authenticate(final HttpServerExchange exchange, final IdentityManager identityManager, final Executor handOffExecutor);
 
-    void handleComplete(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler);
+    /**
+     * Sets any headers or status codes required by this authentication mechanism.
+     *
+     * TODO: this needs a better name, it can be used for other things other than just sending the challenge
+     *
+     * @param exchange The exchange to modify
+     */
+    void sendChallenge(final HttpServerExchange exchange);
 
     /**
      * @return The name of the mechanism.
@@ -81,7 +96,7 @@ public interface AuthenticationMechanism {
      * overall authentication process will then used this along with the current AuthenticationState to decide how to proceed
      * with the current request.
      */
-    public enum AuthenticationOutcome {
+    public enum AuthenticationMechanismOutcome {
         /**
          * Based on the current request the mechanism has successfully performed authentication.
          */
@@ -101,7 +116,7 @@ public interface AuthenticationMechanism {
         NOT_AUTHENTICATED;
     }
 
-    public class AuthenticationResult {
+    public class AuthenticationMechanismResult {
 
         /**
          * The authenticated principle if this result was a success
@@ -116,17 +131,15 @@ public interface AuthenticationMechanism {
         /**
          * The result of the authentication call
          */
-        private final AuthenticationOutcome outcome;
+        private final AuthenticationMechanismOutcome outcome;
 
-        // TODO - Should a mechanism be able to report using an Exception?
-
-        public AuthenticationResult(final Principal principle, final Account account) {
+        public AuthenticationMechanismResult(final Principal principle, final Account account) {
             this.principle = principle;
             this.account = account;
-            this.outcome = AuthenticationOutcome.AUTHENTICATED;
+            this.outcome = AuthenticationMechanismOutcome.AUTHENTICATED;
         }
 
-        public AuthenticationResult(AuthenticationOutcome outcome) {
+        public AuthenticationMechanismResult(AuthenticationMechanismOutcome outcome) {
             this.outcome = outcome;
             this.account = null;
             this.principle = null;
@@ -136,7 +149,7 @@ public interface AuthenticationMechanism {
             return principle;
         }
 
-        public AuthenticationOutcome getOutcome() {
+        public AuthenticationMechanismOutcome getOutcome() {
             return outcome;
         }
 
