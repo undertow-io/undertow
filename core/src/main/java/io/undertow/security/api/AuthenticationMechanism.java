@@ -133,9 +133,16 @@ public interface AuthenticationMechanism {
          */
         private final AuthenticationMechanismOutcome outcome;
 
-        public AuthenticationMechanismResult(final Principal principle, final Account account) {
+        /**
+         * If this is true then the authentication result must be stored in the {@link AuthenticatedSessionManager},
+         * as the browser will not re-send the credentials on every request
+         */
+        private final boolean requiresSession;
+
+        public AuthenticationMechanismResult(final Principal principle, final Account account, final boolean requiresSession) {
             this.principle = principle;
             this.account = account;
+            this.requiresSession = requiresSession;
             this.outcome = AuthenticationMechanismOutcome.AUTHENTICATED;
         }
 
@@ -143,6 +150,7 @@ public interface AuthenticationMechanism {
             this.outcome = outcome;
             this.account = null;
             this.principle = null;
+            this.requiresSession = false;
         }
 
         public Principal getPrinciple() {
@@ -155,6 +163,10 @@ public interface AuthenticationMechanism {
 
         public Account getAccount() {
             return account;
+        }
+
+        public boolean isRequiresSession() {
+            return requiresSession;
         }
     }
 

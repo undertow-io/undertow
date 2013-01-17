@@ -5,6 +5,7 @@ import java.io.IOException;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 
+import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -39,7 +40,9 @@ public class ServletLoginTestCase {
     @BeforeClass
     public static void setup() throws ServletException {
 
-        final PathHandler root = new PathHandler();
+        final CookieHandler cookieHandler = new CookieHandler();
+        final PathHandler path = new PathHandler();
+        cookieHandler.setNext(path);
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
         ServletInfo s = new ServletInfo("servlet", SendUsernameServlet.class)
@@ -70,9 +73,9 @@ public class ServletLoginTestCase {
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
-        root.addPath(builder.getContextPath(), manager.start());
+        path.addPath(builder.getContextPath(), manager.start());
 
-        DefaultServer.setRootHandler(root);
+        DefaultServer.setRootHandler(cookieHandler);
     }
 
     @Test
@@ -92,9 +95,14 @@ public class ServletLoginTestCase {
             get.addHeader("password", "password1");
             result = client.execute(get);
             assertEquals(200, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
+            String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("user1", response);
 
+            get = new HttpGet(url);
+            result = client.execute(get);
+            assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("user1", response);
         } finally {
             client.getConnectionManager().shutdown();
         }

@@ -17,6 +17,7 @@
  */
 package io.undertow.security.handlers;
 
+import io.undertow.security.api.AuthenticatedSessionManager;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
@@ -45,10 +46,16 @@ import io.undertow.server.session.Session;
 public class SecurityInitialHandler implements HttpHandler {
 
     private final IdentityManager identityManager;
+    private final AuthenticatedSessionManager authenticatedSessionManager;
     private final HttpHandler next;
 
     public SecurityInitialHandler(final IdentityManager identityManager, final HttpHandler next) {
+        this(identityManager, null, next);
+    }
+
+    public SecurityInitialHandler(final IdentityManager identityManager, final AuthenticatedSessionManager authenticatedSessionManager, final HttpHandler next) {
         this.identityManager = identityManager;
+        this.authenticatedSessionManager = authenticatedSessionManager;
         this.next = next;
     }
 
@@ -59,7 +66,7 @@ public class SecurityInitialHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
         SecurityContext existingContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        SecurityContext newContext = new SecurityContext(identityManager);
+        SecurityContext newContext = new SecurityContext(identityManager, authenticatedSessionManager);
         exchange.putAttachment(SecurityContext.ATTACHMENT_KEY, newContext);
 
         HttpCompletionHandler wrapperHandler = new InitialCompletionHandler(exchange, existingContext, completionHandler);

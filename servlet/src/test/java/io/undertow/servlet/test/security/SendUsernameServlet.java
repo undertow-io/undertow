@@ -18,6 +18,5 @@ public class SendUsernameServlet extends HttpServlet {
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         OutputStream stream = resp.getOutputStream();
         stream.write(req.getUserPrincipal().getName().getBytes());
-
     }
 }

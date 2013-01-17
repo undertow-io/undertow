@@ -234,7 +234,27 @@ public class SecurityContext {
         }
 
         IoFuture<AuthenticationResult> authenticate() {
+
             final ConcreteIoFuture<AuthenticationResult> authResult = new ConcreteIoFuture<AuthenticationResult>();
+            //first look for an existing authenticated session
+            if (authenticatedSessionManager != null) {
+                AuthenticationMechanism.AuthenticationMechanismResult result = authenticatedSessionManager.lookupSession(exchange, identityManager);
+                if (result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
+
+                    SecurityContext.this.authenticatedPrincipal = result.getPrinciple();
+                    SecurityContext.this.mechanismName = "SESSION"; //TODO
+                    SecurityContext.this.account = result.getAccount();
+                    SecurityContext.this.authenticationState = AuthenticationState.AUTHENTICATED;
+
+                    authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED, new Runnable() {
+                        @Override
+                        public void run() {
+
+                        }
+                    }));
+                    return authResult;
+                }
+            }
             authenticate(authResult);
             return authResult;
         }
@@ -381,7 +401,7 @@ public class SecurityContext {
         @Override
         public void handleComplete() {
             try {
-                if(!exchange.isResponseStarted()) {
+                if (!exchange.isResponseStarted()) {
                     runnable.run();
                 }
             } finally {

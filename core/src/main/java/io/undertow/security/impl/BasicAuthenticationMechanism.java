@@ -134,7 +134,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
             try {
                 Account account = idm.lookupAccount(userName);
                 if (account != null && idm.verifyCredential(account, credential)) {
-                    result = new AuthenticationMechanismResult(new UndertowPrincipal(account), account);
+                    result = new AuthenticationMechanismResult(new UndertowPrincipal(account), account, false);
                 }
             } finally {
                 this.result.setResult(result != null ? result : new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));

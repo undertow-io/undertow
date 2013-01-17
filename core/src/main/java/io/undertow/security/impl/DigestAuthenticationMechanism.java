@@ -336,7 +336,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
             // We have authenticated the remote user.
             Principal principal = new UndertowPrincipal(account);
-            result.setResult(new AuthenticationMechanismResult(principal, account));
+            result.setResult(new AuthenticationMechanismResult(principal, account, false));
 
             // Step 4 - Set up any QOP related requirements.
 

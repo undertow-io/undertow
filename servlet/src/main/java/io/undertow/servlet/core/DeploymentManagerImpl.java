@@ -192,7 +192,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
         }
 
-        current = new SecurityInitialHandler(deploymentInfo.getIdentityManager(), current);
+        current = new SecurityInitialHandler(deploymentInfo.getIdentityManager(), new ServletSessionAuthenticatedSessionManager(this.deployment.getServletContext()), current);
 
         return current;
     }

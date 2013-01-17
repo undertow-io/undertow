@@ -17,9 +17,9 @@
  */
 package io.undertow.security.impl;
 
-import io.undertow.security.idm.Account;
-
 import java.security.Principal;
+
+import io.undertow.security.idm.Account;
 
 /**
  * A Principal implementation to wrap the Account representation from the identity manager.
@@ -30,7 +30,7 @@ public class UndertowPrincipal implements Principal {
 
     private final Account account;
 
-    UndertowPrincipal(final Account account) {
+    public UndertowPrincipal(final Account account) {
         this.account = account;
     }
 

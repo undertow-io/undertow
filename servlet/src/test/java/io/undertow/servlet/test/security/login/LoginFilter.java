@@ -27,6 +27,7 @@ public class LoginFilter implements Filter {
         String password = req.getHeader("password");
         if(username == null) {
             chain.doFilter(request, response);
+            return;
         }
         try {
             req.login(username, password);

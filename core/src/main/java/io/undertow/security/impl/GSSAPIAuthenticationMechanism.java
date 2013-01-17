@@ -86,7 +86,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             if (negContext.isEstablished()) {
                 final Principal principal = negContext.getPrincipal();
                 final Account account = identityManager.lookupAccount(principal.getName());
-                result.setResult(new AuthenticationMechanismResult(principal, account));
+                result.setResult(new AuthenticationMechanismResult(principal, account, false));
             }
         }
 
@@ -225,7 +225,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             if (negContext.isEstablished()) {
                 final Principal principal = negContext.getPrincipal();
                 final Account account = identityManager.lookupAccount(principal.getName());
-                result.setResult(new AuthenticationMechanismResult(principal, account));
+                result.setResult(new AuthenticationMechanismResult(principal, account, false));
             } else {
                 // This isn't a failure but as the context is not established another round trip with the client is needed.
                 result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
