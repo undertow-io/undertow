@@ -61,7 +61,7 @@ import javax.servlet.http.Part;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationState;
 import io.undertow.security.api.RoleMappingManager;
-import io.undertow.security.impl.SecurityContext;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
@@ -337,7 +337,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
         SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
         sc.setAuthenticationRequired();
-        SecurityContext.AuthenticationResult result = sc.authenticate(exchange.getExchange());
+        SecurityContext.AuthenticationResult result = sc.authenticate();
         if(result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
             return true;
         } else {
@@ -360,7 +360,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if(sc.getAuthenticationState() == AuthenticationState.AUTHENTICATED) {
             throw UndertowServletMessages.MESSAGES.userAlreadyLoggedIn();
         }
-        if(!sc.login(exchange.getExchange(), username, password)) {
+        if(!sc.login(username, password)) {
             throw UndertowServletMessages.MESSAGES.loginFailed();
         }
     }
@@ -368,7 +368,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public void logout() throws ServletException {
         SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
-        sc.logout(exchange.getExchange());
+        sc.logout();
     }
 
     @Override

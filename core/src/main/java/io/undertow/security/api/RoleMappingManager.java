@@ -1,7 +1,5 @@
 package io.undertow.security.api;
 
-import io.undertow.security.impl.SecurityContext;
-
 /**
  *
  * Interface that is responsible for mapping a security context to a given application rules.

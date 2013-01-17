@@ -8,6 +8,7 @@ import java.util.Set;
 
 import io.undertow.security.api.AuthenticationState;
 import io.undertow.security.api.RoleMappingManager;
+import io.undertow.security.api.SecurityContext;
 
 /**
  * @author Stuart Douglas

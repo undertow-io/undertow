@@ -30,6 +30,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticatedSessionManager;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationState;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
@@ -37,7 +38,6 @@ import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.IoFuture;
@@ -48,11 +48,9 @@ import org.xnio.IoFuture;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  * @author Stuart Douglas
  */
-public class SecurityContext {
+public class SecurityContextImpl implements SecurityContext {
 
-    public static final RuntimePermission PERMISSION = new RuntimePermission("MODIFY_UNDERTOW_SECURITY_CONTEXT");
-
-    public static AttachmentKey<SecurityContext> ATTACHMENT_KEY = AttachmentKey.create(SecurityContext.class);
+    private static final RuntimePermission PERMISSION = new RuntimePermission("MODIFY_UNDERTOW_SECURITY_CONTEXT");
 
     private static final Executor SAME_THREAD_EXECUTOR = new Executor() {
         @Override
@@ -61,6 +59,7 @@ public class SecurityContext {
         }
     };
 
+    private final HttpServerExchange exchange;
     private final List<AuthenticationMechanism> authMechanisms = new ArrayList<AuthenticationMechanism>();
     private final IdentityManager identityManager;
     private final AuthenticatedSessionManager authenticatedSessionManager;
@@ -77,70 +76,36 @@ public class SecurityContext {
     private String mechanismName;
     private Account account;
 
-    public SecurityContext(final IdentityManager identityManager) {
-        this(identityManager, null);
+    public SecurityContextImpl(final HttpServerExchange exchange, final IdentityManager identityManager) {
+        this(exchange, identityManager, null);
     }
 
-    public SecurityContext(final IdentityManager identityManager, final AuthenticatedSessionManager authenticatedSessionManager) {
+    public SecurityContextImpl(final HttpServerExchange exchange, final IdentityManager identityManager, final AuthenticatedSessionManager authenticatedSessionManager) {
         this.identityManager = identityManager;
         this.authenticatedSessionManager = authenticatedSessionManager;
+        this.exchange = exchange;
         if (System.getSecurityManager() != null) {
             System.getSecurityManager().checkPermission(PERMISSION);
         }
     }
 
-    /**
-     * Performs authentication on the request, returning the result. This method can potentially block, so should not
-     * be invoked from an async handler.
-     * <p/>
-     * If the authentication fails this {@code AuthenticationResult} can be used to send a challenge back to the client.
-     * <p/>
-     * Note that challenges with only be set if {@link #setAuthenticationRequired()} has been previously called this
-     * request
-     *
-     * @param exchange The exchange
-     */
-    public AuthenticationResult authenticate(final HttpServerExchange exchange) throws IOException {
+
+    @Override
+    public AuthenticationResult authenticate() throws IOException {
         return new RequestAuthenticator(authMechanisms.iterator(), exchange, SAME_THREAD_EXECUTOR).authenticate().get();
     }
 
-    /**
-     * Performs authentication on the request, returning an IoFuture that can be used to retrieve the result.
-     * <p/>
-     * If the authentication fails this {@code AuthenticationResult} can be used to send a challenge back to the client.
-     * <p/>
-     * Invoking this method can result in worker handoff, once it has been invoked the current handler should not modify the
-     * exchange.
-     * <p/>
-     * <p/>
-     * Note that challenges with only be set if {@link #setAuthenticationRequired()} has been previously called this
-     * request
-     *
-     * @param exchange The exchange
-     * @param executor The executor to use for blocking operations
-     */
-    public IoFuture<AuthenticationResult> authenticate(final HttpServerExchange exchange, final Executor executor) {
+
+    @Override
+    public IoFuture<AuthenticationResult> authenticate(final Executor executor) {
         return new RequestAuthenticator(authMechanisms.iterator(), exchange, executor).authenticate();
     }
 
-    /**
-     * Performs authentication on the request. If the auth succeeds then the next handler will be invoked, otherwise the
-     * completion handler will be called.
-     * <p/>
-     * Invoking this method can result in worker handoff, once it has been invoked the current handler should not modify the
-     * exchange.
-     * <p/>
-     * <p/>
-     * Note that challenges with only be set if {@link #setAuthenticationRequired()} has been previously called this
-     * request
-     *
-     * @param exchange          The exchange
-     * @param completionHandler The completion handler
-     * @param nextHandler       The next handler to invoke once auth succeeds
-     */
-    public void authenticate(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler,
+
+    @Override
+    public void authenticate(final HttpCompletionHandler completionHandler,
                              final HttpHandler nextHandler) {
-        authenticate(exchange, new WorkerDispatcherExecutor(exchange))
+        authenticate(new WorkerDispatcherExecutor(exchange))
                 .addNotifier(new IoFuture.Notifier<AuthenticationResult, Object>() {
                     @Override
                     public void notify(final IoFuture<? extends AuthenticationResult> ioFuture, final Object o) {
@@ -162,14 +127,17 @@ public class SecurityContext {
                 }, null);
     }
 
+    @Override
     public void setAuthenticationRequired() {
         authenticationState = AuthenticationState.REQUIRED;
     }
 
+    @Override
     public AuthenticationState getAuthenticationState() {
         return authenticationState;
     }
 
+    @Override
     public Principal getAuthenticatedPrincipal() {
         return authenticatedPrincipal;
     }
@@ -177,23 +145,28 @@ public class SecurityContext {
     /**
      * @return The name of the mechanism used to authenticate the request.
      */
+    @Override
     public String getMechanismName() {
         return mechanismName;
     }
 
+    @Override
     public boolean isUserInGroup(String group) {
         return identityManager.isUserInGroup(account, group);
     }
 
+    @Override
     public void addAuthenticationMechanism(final AuthenticationMechanism handler) {
         authMechanisms.add(handler);
     }
 
+    @Override
     public List<AuthenticationMechanism> getAuthenticationMechanisms() {
         return Collections.unmodifiableList(authMechanisms);
     }
 
-    public boolean login(final HttpServerExchange exchange, final String username, final String password) {
+    @Override
+    public boolean login(final String username, final String password) {
         final Account account = identityManager.lookupAccount(username);
         if (account == null) {
             return false;
@@ -212,7 +185,8 @@ public class SecurityContext {
 
     }
 
-    public void logout(HttpServerExchange exchange) {
+    @Override
+    public void logout() {
         if (authenticatedSessionManager != null) {
             authenticatedSessionManager.userLoggedOut(exchange, authenticatedPrincipal, account);
         }
@@ -241,10 +215,10 @@ public class SecurityContext {
                 AuthenticationMechanism.AuthenticationMechanismResult result = authenticatedSessionManager.lookupSession(exchange, identityManager);
                 if (result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
 
-                    SecurityContext.this.authenticatedPrincipal = result.getPrinciple();
-                    SecurityContext.this.mechanismName = "SESSION"; //TODO
-                    SecurityContext.this.account = result.getAccount();
-                    SecurityContext.this.authenticationState = AuthenticationState.AUTHENTICATED;
+                    SecurityContextImpl.this.authenticatedPrincipal = result.getPrinciple();
+                    SecurityContextImpl.this.mechanismName = "SESSION"; //TODO
+                    SecurityContextImpl.this.account = result.getAccount();
+                    SecurityContextImpl.this.authenticationState = AuthenticationState.AUTHENTICATED;
 
                     authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED, new Runnable() {
                         @Override
@@ -272,10 +246,10 @@ public class SecurityContext {
                                 AuthenticationMechanism.AuthenticationMechanismResult result = ioFuture.get();
                                 switch (result.getOutcome()) {
                                     case AUTHENTICATED:
-                                        SecurityContext.this.authenticatedPrincipal = result.getPrinciple();
-                                        SecurityContext.this.mechanismName = mechanism.getName();
-                                        SecurityContext.this.account = result.getAccount();
-                                        SecurityContext.this.authenticationState = AuthenticationState.AUTHENTICATED;
+                                        SecurityContextImpl.this.authenticatedPrincipal = result.getPrinciple();
+                                        SecurityContextImpl.this.mechanismName = mechanism.getName();
+                                        SecurityContextImpl.this.account = result.getAccount();
+                                        SecurityContextImpl.this.authenticationState = AuthenticationState.AUTHENTICATED;
 
                                         if(result.isRequiresSession()) {
                                             authenticatedSessionManager.userAuthenticated(exchange, result.getPrinciple(), result.getAccount());
@@ -370,25 +344,6 @@ public class SecurityContext {
         }
     }
 
-
-    public static class AuthenticationResult {
-
-        private final AuthenticationMechanism.AuthenticationMechanismOutcome outcome;
-        private final Runnable requestCompletionTasks;
-
-        public AuthenticationResult(final AuthenticationMechanism.AuthenticationMechanismOutcome outcome, final Runnable requestCompletionTasks) {
-            this.outcome = outcome;
-            this.requestCompletionTasks = requestCompletionTasks;
-        }
-
-        public AuthenticationMechanism.AuthenticationMechanismOutcome getOutcome() {
-            return outcome;
-        }
-
-        public Runnable getRequestCompletionTasks() {
-            return requestCompletionTasks;
-        }
-    }
 
     private static final class RunnableCompletionHandler implements HttpCompletionHandler {
 

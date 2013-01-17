@@ -18,12 +18,13 @@
 package io.undertow.security.handlers;
 
 import io.undertow.security.api.AuthenticatedSessionManager;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.IdentityManager;
+import io.undertow.security.impl.SecurityContextImpl;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.security.impl.SecurityContext;
 import io.undertow.server.session.Session;
 
 /**
@@ -33,7 +34,7 @@ import io.undertow.server.session.Session;
  * be added to the context, a decision will then be made if authentication is required or optional and the associated mechanisms
  * will be called.
  *
- * If any existing {@link io.undertow.security.impl.SecurityContext} has been set it will be replaced and then restored as the the
+ * If any existing {@link io.undertow.security.impl.SecurityContextImpl} has been set it will be replaced and then restored as the the
  * {@link HttpCompletionHandler} is called, this allows for a general security configuration to be applied to a server and then
  * replaced with a context specific config.
  *
@@ -66,7 +67,7 @@ public class SecurityInitialHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
         SecurityContext existingContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        SecurityContext newContext = new SecurityContext(identityManager, authenticatedSessionManager);
+        SecurityContext newContext = new SecurityContextImpl(exchange, identityManager, authenticatedSessionManager);
         exchange.putAttachment(SecurityContext.ATTACHMENT_KEY, newContext);
 
         HttpCompletionHandler wrapperHandler = new InitialCompletionHandler(exchange, existingContext, completionHandler);

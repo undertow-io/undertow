@@ -19,7 +19,7 @@
 package io.undertow.security.handlers;
 
 import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.impl.SecurityContext;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;

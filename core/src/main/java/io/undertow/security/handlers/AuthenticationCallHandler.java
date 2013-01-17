@@ -17,10 +17,10 @@
  */
 package io.undertow.security.handlers;
 
+import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.security.impl.SecurityContext;
 
 /**
  * This is the final {@link HttpHandler} in the security chain, it's purpose is to act as a barrier at the end of the chain to
@@ -45,7 +45,7 @@ public class AuthenticationCallHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
         SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        context.authenticate(exchange, completionHandler, next);
+        context.authenticate(completionHandler, next);
     }
 
 }

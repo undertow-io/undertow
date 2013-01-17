@@ -23,7 +23,6 @@ import java.util.concurrent.Executor;
 
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
-import io.undertow.security.impl.SecurityContext;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.IoFuture;
 

@@ -17,10 +17,10 @@
  */
 package io.undertow.security.handlers;
 
+import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.security.impl.SecurityContext;
 
 /**
  * Handler responsible for checking the constraints for the current request and marking authentication as required if

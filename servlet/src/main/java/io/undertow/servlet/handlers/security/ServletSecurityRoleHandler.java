@@ -8,7 +8,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.security.api.RoleMappingManager;
-import io.undertow.security.impl.SecurityContext;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.handlers.ServletAttachments;
