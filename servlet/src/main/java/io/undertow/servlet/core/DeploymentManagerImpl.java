@@ -211,7 +211,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private SecurityPathMatches buildSecurityConstraints() {
-        SecurityPathMatches.Builder builder = SecurityPathMatches.builder();
+        SecurityPathMatches.Builder builder = SecurityPathMatches.builder(deployment.getDeploymentInfo());
         final Set<String> urlPatterns = new HashSet<String>();
         for (SecurityConstraint constraint : deployment.getDeploymentInfo().getSecurityConstraints()) {
             builder.addSecurityConstraint(constraint);

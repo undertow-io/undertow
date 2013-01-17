@@ -9,6 +9,7 @@ import java.util.Set;
 
 import javax.servlet.annotation.ServletSecurity;
 
+import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.SecurityConstraint;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
@@ -86,7 +87,7 @@ public class SecurityPathMatches {
         List<SecurityInformation> roles = exact.defaultRequiredRoles;
         for (SecurityInformation role : roles) {
             type = transport(type, role.transportGuaranteeType);
-            if(!role.roles.isEmpty() ||
+            if (!role.roles.isEmpty() ||
                     role.emptyRoleSemantic == ServletSecurity.EmptyRoleSemantic.DENY) {
                 roleSet.add(role.roles);
             }
@@ -95,7 +96,7 @@ public class SecurityPathMatches {
         if (methodInfo != null) {
             for (SecurityInformation role : methodInfo) {
                 type = transport(type, role.transportGuaranteeType);
-                if(!role.roles.isEmpty() ||
+                if (!role.roles.isEmpty() ||
                         role.emptyRoleSemantic == ServletSecurity.EmptyRoleSemantic.DENY) {
                     roleSet.add(role.roles);
                 }
@@ -105,9 +106,9 @@ public class SecurityPathMatches {
             if (!excluded.methods.contains(method)) {
                 type = transport(type, excluded.securityInformation.transportGuaranteeType);
 
-                if(!excluded.securityInformation.roles.isEmpty() ||
+                if (!excluded.securityInformation.roles.isEmpty() ||
                         excluded.securityInformation.emptyRoleSemantic == ServletSecurity.EmptyRoleSemantic.DENY) {
-                roleSet.add(excluded.securityInformation.roles);
+                    roleSet.add(excluded.securityInformation.roles);
                 }
             }
         }
@@ -121,24 +122,24 @@ public class SecurityPathMatches {
         return existing;
     }
 
-    public static Builder builder() {
-        return new Builder();
+    public static Builder builder(final DeploymentInfo deploymentInfo) {
+        return new Builder(deploymentInfo);
     }
 
     public static class Builder {
-
+        private final DeploymentInfo deploymentInfo;
         private final PathSecurityInformation defaultPathSecurityInformation = new PathSecurityInformation();
         private final Map<String, PathSecurityInformation> exactPathRoleInformation = new HashMap<String, PathSecurityInformation>();
         private final Map<String, PathSecurityInformation> prefixPathRoleInformation = new HashMap<String, PathSecurityInformation>();
         private final Map<String, PathSecurityInformation> extensionRoleInformation = new HashMap<String, PathSecurityInformation>();
 
-        private Builder() {
-
+        private Builder(final DeploymentInfo deploymentInfo) {
+            this.deploymentInfo = deploymentInfo;
         }
 
         public void addSecurityConstraint(final SecurityConstraint securityConstraint) {
-
-            final SecurityInformation securityInformation = new SecurityInformation(securityConstraint.getRolesAllowed(), securityConstraint.getTransportGuaranteeType(), securityConstraint.getEmptyRoleSemantic());
+            final Set<String> roles = expandRolesAllowed(securityConstraint.getRolesAllowed());
+            final SecurityInformation securityInformation = new SecurityInformation(roles, securityConstraint.getTransportGuaranteeType(), securityConstraint.getEmptyRoleSemantic());
             for (final WebResourceCollection webResources : securityConstraint.getWebResourceCollections()) {
                 if (webResources.getUrlPatterns().isEmpty()) {
                     //default that is applied to everything
@@ -169,6 +170,20 @@ public class SecurityPathMatches {
                 }
             }
 
+        }
+
+        private Set<String> expandRolesAllowed(final Set<String> rolesAllowed) {
+            final Set<String> roles = new HashSet<String>();
+            for (final String role : rolesAllowed) {
+                if (role.equals("*")) {
+                    for(Map.Entry<String, Set<String>> entry : deploymentInfo.getPrincipleVsRoleMapping().entrySet()) {
+                        roles.addAll(deploymentInfo.getSecurityRoles());
+                    }
+                } else {
+                    roles.add(role);
+                }
+            }
+            return roles;
         }
 
         private void setupPathSecurityInformation(final PathSecurityInformation info, final SecurityInformation securityConstraint, final WebResourceCollection webResources) {

@@ -80,6 +80,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<MimeMapping> mimeMappings = new ArrayList<MimeMapping>();
     private final List<SecurityConstraint> securityConstraints = new ArrayList<SecurityConstraint>();
     private final Map<String, Set<String>> principleVsRoleMapping = new HashMap<String, Set<String>>();
+    private final Set<String> securityRoles = new HashSet<String>();
 
     /**
      * Handler chain wrappers that are applied outside all other handlers, including security but after the initial
@@ -516,6 +517,25 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableMap(principleVsRoleMapping);
     }
 
+    public DeploymentInfo addSecurityRole(final String role) {
+        this.securityRoles.add(role);
+        return this;
+    }
+
+    public DeploymentInfo addSecurityRoles(final String... roles) {
+        this.securityRoles.addAll(Arrays.asList(roles));
+        return this;
+    }
+
+    public DeploymentInfo addSecurityRoles(final Collection<String> roles) {
+        this.securityRoles.addAll(roles);
+        return this;
+    }
+
+    public Set<String> getSecurityRoles() {
+        return Collections.unmodifiableSet(securityRoles);
+    }
+
     public DeploymentInfo addOuterHandlerChainWrapper(final HandlerWrapper<HttpHandler> wrapper) {
         outerHandlerChainWrappers.add(wrapper);
         return this;
@@ -585,6 +605,7 @@ public class DeploymentInfo implements Cloneable {
         info.outerHandlerChainWrappers.addAll(outerHandlerChainWrappers);
         info.innerHandlerChainWrappers.addAll(innerHandlerChainWrappers);
         info.dispatchedHandlerChainWrappers.addAll(dispatchedHandlerChainWrappers);
+        info.securityRoles.addAll(securityRoles);
         return info;
     }
 
