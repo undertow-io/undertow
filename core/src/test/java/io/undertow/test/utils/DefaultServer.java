@@ -18,21 +18,31 @@
 
 package io.undertow.test.utils;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
+import static org.xnio.SslClientAuthMode.REQUESTED;
+
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 
 import io.undertow.ajp.AjpOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
 import io.undertow.server.HttpTransferEncodingHandler;
 import io.undertow.server.OpenListener;
-import org.junit.Ignore;
-import org.junit.internal.runners.model.EachTestNotifier;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
@@ -51,6 +61,7 @@ import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
 
 /**
@@ -64,57 +75,79 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final String DEFAULT = "default";
 
     private static boolean first = true;
+    private static OptionMap serverOptions;
     private static OpenListener openListener;
+    private static ChannelListener acceptListener;
     private static XnioWorker worker;
     private static AcceptingChannel<? extends ConnectedStreamChannel> server;
     private static AcceptingChannel<? extends ConnectedStreamChannel> sslServer;
+    private static SSLContext clientSslContext;
     private static Xnio xnio;
 
-
-    private static final String KEY_STORE_PROPERTY = "javax.net.ssl.keyStore";
-    private static final String KEY_STORE_PASSWORD_PROPERTY = "javax.net.ssl.keyStorePassword";
-    private static final String TRUST_STORE_PROPERTY = "javax.net.ssl.trustStore";
-    private static final String TRUST_STORE_PASSWORD_PROPERTY = "javax.net.ssl.trustStorePassword";
-    private static final String DEFAULT_KEY_STORE = "keystore.jks";
-    private static final String DEFAULT_KEY_STORE_PASSWORD = "password";
+    private static final String SERVER_KEY_STORE = "server.keystore";
+    private static final String SERVER_TRUST_STORE = "server.truststore";
+    private static final String CLIENT_KEY_STORE = "client.keystore";
+    private static final String CLIENT_TRUST_STORE = "client.truststore";
+    private static final char[] STORE_PASSWORD = "password".toCharArray();
 
     private static final boolean ajp = Boolean.getBoolean("ajp");
 
-    public static void setKeyStoreAndTrustStore() {
-        final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(DEFAULT_KEY_STORE);
-        OutputStream out = null;
-        String fileName = null;
+    private static KeyStore loadKeyStore(final String name) throws IOException {
+        final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(SERVER_KEY_STORE);
         try {
-            File store = File.createTempFile("keystore", "keys");
-            store.deleteOnExit();
-            fileName = store.getAbsolutePath();
-            out = new FileOutputStream(store);
+            KeyStore loadedKeystore = KeyStore.getInstance("JKS");
+            loadedKeystore.load(stream, STORE_PASSWORD);
 
-            byte[] data = new byte[1024];
-            int r = 0;
-            while ((r = stream.read(data)) > 0) {
-                out.write(data, 0, r);
-            }
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            return loadedKeystore;
+        } catch (KeyStoreException e) {
+            throw new IOException(String.format("Unable to load KeyStore %s", name), e);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException(String.format("Unable to load KeyStore %s", name), e);
+        } catch (CertificateException e) {
+            throw new IOException(String.format("Unable to load KeyStore %s", name), e);
         } finally {
             IoUtils.safeClose(stream);
-            IoUtils.safeClose(out);
-        }
-        if (System.getProperty(KEY_STORE_PROPERTY) == null) {
-            System.setProperty(KEY_STORE_PROPERTY, fileName);
-        }
-        if (System.getProperty(KEY_STORE_PASSWORD_PROPERTY) == null) {
-            System.setProperty(KEY_STORE_PASSWORD_PROPERTY, DEFAULT_KEY_STORE_PASSWORD);
-        }
-        if (System.getProperty(TRUST_STORE_PROPERTY) == null) {
-            System.setProperty(TRUST_STORE_PROPERTY, fileName);
-        }
-        if (System.getProperty(TRUST_STORE_PASSWORD_PROPERTY) == null) {
-            System.setProperty(TRUST_STORE_PASSWORD_PROPERTY, DEFAULT_KEY_STORE_PASSWORD);
         }
     }
+
+    private static SSLContext createSSLContext(final KeyStore keyStore, final KeyStore trustStore) throws IOException {
+        KeyManager[] keyManagers;
+        try {
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(keyStore, STORE_PASSWORD);
+            keyManagers = keyManagerFactory.getKeyManagers();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException("Unable to initialise KeyManager[]", e);
+        } catch (UnrecoverableKeyException e) {
+            throw new IOException("Unable to initialise KeyManager[]", e);
+        } catch (KeyStoreException e) {
+            throw new IOException("Unable to initialise KeyManager[]", e);
+        }
+
+        TrustManager[] trustManagers = null;
+        try {
+            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            trustManagerFactory.init(trustStore);
+            trustManagers = trustManagerFactory.getTrustManagers();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException("Unable to initialise TrustManager[]", e);
+        } catch (KeyStoreException e) {
+            throw new IOException("Unable to initialise TrustManager[]", e);
+        }
+
+        SSLContext sslContext;
+        try {
+            sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(keyManagers, trustManagers, null);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException("Unable to create and initialise the SSLContext", e);
+        } catch (KeyManagementException e) {
+            throw new IOException("Unable to create and initialise the SSLContext", e);
+        }
+
+        return sslContext;
+    }
+
     /**
      * @return The base URL that can be used to make connections to this server
      */
@@ -123,6 +156,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static String getDefaultServerSSLAddress() {
+        if (sslServer == null) {
+            throw new IllegalStateException("SSL Server not started.");
+        }
         return "https://" + getHostAddress(DEFAULT) + ":" + getHostSSLPort(DEFAULT);
     }
 
@@ -144,7 +180,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static void runInternal(final RunNotifier notifier) {
         if (first) {
             first = false;
-            setKeyStoreAndTrustStore();
             xnio = Xnio.getInstance("nio", DefaultServer.class.getClassLoader());
             try {
                 worker = xnio.createWorker(OptionMap.builder()
@@ -158,12 +193,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         .set(Options.CORK, true)
                         .getMap());
 
-                OptionMap serverOptions = OptionMap.builder()
+                serverOptions = OptionMap.builder()
                         .set(Options.WORKER_ACCEPT_THREADS, 4)
                         .set(Options.TCP_NODELAY, true)
                         .set(Options.REUSE_ADDRESSES, true)
                         .getMap();
-                ChannelListener acceptListener;
                 if(ajp) {
                     openListener = new AjpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192), 8192);
                     acceptListener = ChannelListeners.openListenerAdapter(openListener);
@@ -174,11 +208,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
                 }
                 server.resumeAccepts();
-
-
-                final XnioSsl xnioSsl = xnio.getSslProvider(OptionMap.EMPTY);
-                sslServer = xnioSsl.createSslTcpServer(worker, new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostSSLPort(DEFAULT)), acceptListener, serverOptions);
-                sslServer.resumeAccepts();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -186,7 +215,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 @Override
                 public void testRunFinished(final Result result) throws Exception {
                     server.close();
-                    sslServer.close();
+                    stopSSLServer();
                     worker.shutdown();
                 }
             });
@@ -216,7 +245,60 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             ph.setNext(rootHandler);
             openListener.setRootHandler(ph);
         }
+    }
 
+    /**
+     * When using the default SSL settings returns the corresponding client context.
+     *
+     * If a test case is initialising a custom server side SSLContext then the test case will be responsible for creating it's
+     * own client side.
+     *
+     * @return The client side SSLContext.
+     */
+    public static SSLContext getClientSSLContext() {
+        return clientSslContext;
+    }
+
+    /**
+     * Start the SSL server using the default settings.
+     *
+     * The default settings initialise a server with a key for 'localhost' and a trust store containing the certificate of a
+     * single client, the client authentication mode is set to 'REQUESTED' to optionally allow progression to CLIENT-CERT
+     * authentication.
+     */
+    public static void startSSLServer() throws IOException {
+        SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
+        clientSslContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
+
+        startSSLServer(serverContext, OptionMap.create(SSL_CLIENT_AUTH_MODE, REQUESTED));
+    }
+
+    /**
+     * Start the SSL server using a custom SSLContext with additional options to pass to the JsseXnioSsl instance.
+     *
+     * @param context - The SSLContext to use for JsseXnioSsl initialisation.
+     * @param options - Additional options to be passed to the JsseXnioSsl, this will be merged with the default options where
+     *        applicable.
+     */
+    public static void startSSLServer(final SSLContext context, final OptionMap options) throws IOException {
+        OptionMap combined = OptionMap.builder().addAll(serverOptions).addAll(options).getMap();
+
+        XnioSsl xnioSsl = new JsseXnioSsl(xnio, combined, context);
+        sslServer = xnioSsl.createSslTcpServer(worker, new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)),
+                getHostSSLPort(DEFAULT)), acceptListener, combined);
+        sslServer.resumeAccepts();
+    }
+
+    /**
+     * Stop any previously created SSL server - as this is for test clean up calling when no SSL server is running will not
+     * cause an error.
+     */
+    public static void stopSSLServer() throws IOException {
+        if (sslServer != null) {
+            sslServer.close();
+            sslServer = null;
+        }
+        clientSslContext = null;
     }
 
     public static String getHostAddress(String serverName) {

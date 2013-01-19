@@ -78,6 +78,8 @@ public class SSLSessionTestCase {
                             }
                         }
                     });
+            DefaultServer.startSSLServer();
+            client.setSSLContext(DefaultServer.getClientSSLContext());
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/notamatchingpath");
@@ -105,6 +107,7 @@ public class SSLSessionTestCase {
 
 
         } finally {
+            DefaultServer.stopSSLServer();
             client.getConnectionManager().shutdown();
         }
     }
