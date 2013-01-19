@@ -54,7 +54,9 @@ public class SimpleSSLTestCase {
             }
         });
 
+        DefaultServer.startSSLServer();
         TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
             HttpResponse result = client.execute(get);
@@ -63,6 +65,7 @@ public class SimpleSSLTestCase {
             Assert.assertEquals("https", header[0].getValue());
         } finally {
             client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
         }
     }
 
