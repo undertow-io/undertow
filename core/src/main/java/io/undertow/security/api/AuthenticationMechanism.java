@@ -138,6 +138,10 @@ public interface AuthenticationMechanism {
          */
         private final boolean requiresSession;
 
+        /**
+         * Constructor for a sucessful authentication result
+         *
+         */
         public AuthenticationMechanismResult(final Principal principle, final Account account, final boolean requiresSession) {
             this.principle = principle;
             this.account = account;
@@ -146,6 +150,7 @@ public interface AuthenticationMechanism {
         }
 
         public AuthenticationMechanismResult(AuthenticationMechanismOutcome outcome) {
+            assert outcome != AuthenticationMechanismOutcome.AUTHENTICATED;
             this.outcome = outcome;
             this.account = null;
             this.principle = null;
