@@ -65,6 +65,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile SessionManager sessionManager = new InMemorySessionManager();
     private volatile LoginConfig loginConfig;
     private volatile IdentityManager identityManager;
+    private volatile ConfidentialPortManager confidentialPortManager;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -502,6 +503,14 @@ public class DeploymentInfo implements Cloneable {
     public DeploymentInfo setIdentityManager(IdentityManager identityManager) {
         this.identityManager = identityManager;
         return this;
+    }
+
+    public ConfidentialPortManager getConfidentialPortManager() {
+        return confidentialPortManager;
+    }
+
+    public void setConfidentialPortManager(ConfidentialPortManager confidentialPortManager) {
+        this.confidentialPortManager = confidentialPortManager;
     }
 
     public DeploymentInfo addPrincipleVsRoleMapping(final String principle, final String role) {

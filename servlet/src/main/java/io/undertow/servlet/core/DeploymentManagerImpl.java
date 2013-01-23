@@ -78,6 +78,7 @@ import io.undertow.servlet.handlers.ServletMatchingHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.handlers.security.SecurityPathMatches;
 import io.undertow.servlet.handlers.security.ServletAuthenticationConstraintHandler;
+import io.undertow.servlet.handlers.security.ServletConfidentialityConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletSecurityConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletSecurityRoleHandler;
 import io.undertow.servlet.spec.AsyncContextImpl;
@@ -191,6 +192,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         current = new AuthenticationCallHandler(current);
         current = new ServletAuthenticationConstraintHandler(current);
+        current = new ServletConfidentialityConstraintHandler(deploymentInfo.getConfidentialPortManager(), current);
         current = new ServletSecurityConstraintHandler(buildSecurityConstraints(), current);
 
         if (loginConfig != null) {
