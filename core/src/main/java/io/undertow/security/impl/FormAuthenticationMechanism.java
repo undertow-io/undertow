@@ -146,6 +146,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
         if (host == null) {
             host = exchange.getDestinationAddress().getAddress().getHostAddress();
         }
+        // TODO - String concatenation to construct URLS is extremely error prone - switch to a URI which will better handle this.
         String loc = exchange.getRequestScheme() + "://" + host + location;
         exchange.getResponseHeaders().put(Headers.LOCATION, loc);
     }
