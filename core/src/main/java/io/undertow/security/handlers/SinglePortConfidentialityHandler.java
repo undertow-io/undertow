@@ -41,6 +41,10 @@ public class SinglePortConfidentialityHandler extends AbstractConfidentialityHan
 
     @Override
     protected URI getRedirectURI(HttpServerExchange exchange) throws URISyntaxException {
+        return getRedirectURI(exchange, redirectPort);
+    }
+
+    protected URI getRedirectURI(HttpServerExchange exchange, int port) throws URISyntaxException {
         String host = exchange.getRequestHeaders().getFirst(Headers.HOST);
         if (host == null) {
             host = exchange.getDestinationAddress().getAddress().getHostAddress();
