@@ -27,7 +27,7 @@ import io.undertow.server.HttpServerExchange;
  * applicable.
  *
  * Sub classes can override isAuthenticationRequired to provide a constraint check, by default this handler will set
- * authentication as always requried, authentication will be optional if this handler is omitted.
+ * authentication as always required, authentication will be optional if this handler is omitted.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
