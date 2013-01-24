@@ -157,7 +157,7 @@
                         <argument>-Dtest.level=${test.level}</argument>
                         <argument>-classpath</argument>
                         <classpath/>
-                        <argument>io.undertow.websockets.protocol.server.AutobahnWebSocketServer</argument>
+                        <argument>io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer</argument>
                         <argument>${serverPort}</argument>
                     </arguments>
                 </configuration>
