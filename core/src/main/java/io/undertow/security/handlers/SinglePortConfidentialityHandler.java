@@ -56,8 +56,9 @@ public class SinglePortConfidentialityHandler extends AbstractConfidentialityHan
             }
         }
 
-        return new URI("https", null, host, redirectPort, exchange.getCanonicalPath(), exchange.getQueryString(), null);
-
+        String queryString = exchange.getQueryString();
+        return new URI("https", null, host, port, exchange.getRequestURI(),
+                queryString == null || queryString.length() == 0 ? null : queryString, null);
     }
 
 }

@@ -509,8 +509,9 @@ public class DeploymentInfo implements Cloneable {
         return confidentialPortManager;
     }
 
-    public void setConfidentialPortManager(ConfidentialPortManager confidentialPortManager) {
+    public DeploymentInfo setConfidentialPortManager(ConfidentialPortManager confidentialPortManager) {
         this.confidentialPortManager = confidentialPortManager;
+        return this;
     }
 
     public DeploymentInfo addPrincipleVsRoleMapping(final String principle, final String role) {
@@ -609,6 +610,7 @@ public class DeploymentInfo implements Cloneable {
         info.sessionManager = sessionManager;
         info.loginConfig = loginConfig;
         info.identityManager = identityManager;
+        info.confidentialPortManager = confidentialPortManager;
         info.securityConstraints.addAll(securityConstraints);
         info.principleVsRoleMapping.putAll(principleVsRoleMapping);
         info.outerHandlerChainWrappers.addAll(outerHandlerChainWrappers);

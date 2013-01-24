@@ -34,7 +34,7 @@ public class ServletSecurityConstraintHandler implements HttpHandler {
         list.addAll(securityMatch.getRequiredRoles());
         TransportGuaranteeType type = exchange.getAttachment(ServletAttachments.TRANSPORT_GUARANTEE_TYPE);
         if(type == null || type.ordinal() < securityMatch.getTransportGuaranteeType().ordinal()) {
-            exchange.putAttachment(ServletAttachments.TRANSPORT_GUARANTEE_TYPE, type);
+            exchange.putAttachment(ServletAttachments.TRANSPORT_GUARANTEE_TYPE, securityMatch.getTransportGuaranteeType());
         }
         HttpHandlers.executeHandler(next, exchange);
     }
