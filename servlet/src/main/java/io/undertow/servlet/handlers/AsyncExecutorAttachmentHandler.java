@@ -27,7 +27,7 @@ import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.servlet.spec.AsyncContextImpl;
 
 /**
- * Handler that attaches the executor used for asu
+ * Handler that attaches the executor used for async requests
  *
  * @author Stuart Douglas
  */
