@@ -31,6 +31,7 @@ import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.ImmediateChannelFactory;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import org.jboss.logging.Logger;
@@ -484,15 +485,19 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (wrappers == null) {
             return null;
         }
-        StreamSourceChannel channel = underlyingRequestChannel;
-        for (ChannelWrapper wrapper : wrappers) {
-            final StreamSourceChannel oldChannel = channel;
-            channel = ((ChannelWrapper<StreamSourceChannel>) wrapper).wrap(oldChannel, this);
-            if (channel == null) {
-                channel = oldChannel;
-            }
+
+
+        ChannelFactory<StreamSourceChannel> factory = new ImmediateChannelFactory<StreamSourceChannel>(underlyingRequestChannel);
+        for (final ChannelWrapper<StreamSourceChannel> wrapper : wrappers) {
+            final ChannelFactory oldFactory = factory;
+            factory = new ChannelFactory<StreamSourceChannel>() {
+                @Override
+                public StreamSourceChannel create() {
+                    return wrapper.wrap(oldFactory, HttpServerExchange.this);
+                }
+            };
         }
-        return channel;
+        return factory.create();
     }
 
     public boolean isRequestChannelAvailable() {
@@ -563,14 +568,20 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (wrappers == null) {
                 return null;
             }
-            StreamSinkChannel oldChannel = firstChannel;
-            StreamSinkChannel channel = oldChannel;
-            for (ChannelWrapper<StreamSinkChannel> wrapper : wrappers) {
-                channel = wrapper.wrap(channel, exchange);
-                if (channel == null) {
-                    channel = oldChannel;
-                }
+
+
+
+            ChannelFactory<StreamSinkChannel> factory = new ImmediateChannelFactory<StreamSinkChannel>(firstChannel);
+            for (final ChannelWrapper<StreamSinkChannel> wrapper : wrappers) {
+                final ChannelFactory oldFactory = factory;
+                factory = new ChannelFactory<StreamSinkChannel>() {
+                    @Override
+                    public StreamSinkChannel create() {
+                        return wrapper.wrap(oldFactory, exchange);
+                    }
+                };
             }
+            final StreamSinkChannel channel = factory.create();
             exchange.responseChannel = channel;
             exchange.startResponse();
             return channel;

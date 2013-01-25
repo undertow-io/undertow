@@ -76,8 +76,8 @@ public abstract class DelegatingStreamSinkChannel<T extends DelegatingStreamSink
         return delegate.supportsOption(option);
     }
 
-    public long write(final ByteBuffer[] srcs) throws IOException {
-        return delegate.write(srcs);
+    public final long write(final ByteBuffer[] srcs) throws IOException {
+        return write(srcs, 0, srcs.length);
     }
 
     public void resumeWrites() {

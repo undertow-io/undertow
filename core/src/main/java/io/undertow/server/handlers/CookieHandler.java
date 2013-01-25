@@ -34,6 +34,7 @@ import io.undertow.util.AttachmentList;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
+import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
@@ -260,7 +261,7 @@ public class CookieHandler implements HttpHandler {
         public static CookieChannelWrapper INSTANCE = new CookieChannelWrapper();
 
         @Override
-        public StreamSinkChannel wrap(final StreamSinkChannel channel, final HttpServerExchange exchange) {
+        public StreamSinkChannel wrap(final ChannelFactory<StreamSinkChannel> channel, final HttpServerExchange exchange) {
 
             final List<Cookie> cookies = exchange.getAttachmentList(Cookie.RESPONSE_COOKIES);
             if (!cookies.isEmpty()) {
@@ -272,7 +273,7 @@ public class CookieHandler implements HttpHandler {
                     exchange.getResponseHeaders().add(Headers.SET_COOKIE, builder.toString());
                 }
             }
-            return channel;
+            return channel.create();
         }
     }
 }

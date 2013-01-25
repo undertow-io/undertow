@@ -20,6 +20,8 @@ package io.undertow.server;
 
 import java.nio.channels.Channel;
 
+import org.xnio.channels.ChannelFactory;
+
 /**
  * Interface that provides a means of wrapping a {@link java.nio.channels.Channel}.  Every channel wrapper has a chance
  * to replace the channel with a channel which either wraps or replaces the passed in channel.  However it is the responsibility
@@ -38,5 +40,5 @@ public interface ChannelWrapper<T extends Channel> {
      * @param exchange the in-flight HTTP exchange
      * @return the replacement channel
      */
-    T wrap(final T channel, final HttpServerExchange exchange);
+    T wrap(final ChannelFactory<T> channel, final HttpServerExchange exchange);
 }

@@ -31,6 +31,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
+import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -77,8 +78,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         httpServerExchange.setRequestTerminateAction(startNextRequestAction);
         httpServerExchange.addResponseWrapper(new ChannelWrapper<StreamSinkChannel>() {
             @Override
-            public StreamSinkChannel wrap(StreamSinkChannel channel, HttpServerExchange exchange) {
-                return new HttpResponseChannel(channel, connection.getBufferPool(), exchange);
+            public StreamSinkChannel wrap(final ChannelFactory<StreamSinkChannel> channelFactory, HttpServerExchange exchange) {
+                return new HttpResponseChannel(channelFactory.create(), connection.getBufferPool(), exchange);
             }
         });
         this.startNextRequestAction = startNextRequestAction;

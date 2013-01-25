@@ -213,7 +213,8 @@ public class HttpTransferEncodingHandler implements HttpHandler {
 
     private static ChannelWrapper<StreamSinkChannel> responseWrapper(final CompletionHandler ourCompletionHandler, final boolean requestLooksPersistent) {
         return new ChannelWrapper<StreamSinkChannel>() {
-            public StreamSinkChannel wrap(final StreamSinkChannel channel, final HttpServerExchange exchange) {
+            public StreamSinkChannel wrap(final ChannelFactory<StreamSinkChannel> channelFactory, final HttpServerExchange exchange) {
+                final StreamSinkChannel channel = channelFactory.create();
                 final HeaderMap responseHeaders = exchange.getResponseHeaders();
                 // test to see if we're still persistent
                 boolean stillPersistent = requestLooksPersistent;
@@ -295,15 +296,16 @@ public class HttpTransferEncodingHandler implements HttpHandler {
 
     private static ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler) {
         return new ChannelWrapper<StreamSourceChannel>() {
-            public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
-                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channel, true, chunkedDrainListener(channel, exchange), exchange.getConnection().getBufferPool(), false, maxEntitySize(exchange)));
+            public StreamSourceChannel wrap(final ChannelFactory<StreamSourceChannel> channelFactory, final HttpServerExchange exchange) {
+                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channelFactory.create(), true, chunkedDrainListener(channelFactory.create(), exchange), exchange.getConnection().getBufferPool(), false, maxEntitySize(exchange)));
             }
         };
     }
 
     private static ChannelWrapper<StreamSourceChannel> fixedLengthStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler, final long contentLength) {
         return new ChannelWrapper<StreamSourceChannel>() {
-            public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
+            public StreamSourceChannel wrap(final ChannelFactory<StreamSourceChannel> channelFactory, final HttpServerExchange exchange) {
+                StreamSourceChannel channel = channelFactory.create();
                 final long max = maxEntitySize(exchange);
                 if(contentLength > max) {
                     return new BrokenStreamSourceChannel(UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getSourceAddress(), max), channel);
@@ -315,7 +317,8 @@ public class HttpTransferEncodingHandler implements HttpHandler {
 
     private static ChannelWrapper<StreamSourceChannel> emptyStreamSourceChannelWrapper() {
         return new ChannelWrapper<StreamSourceChannel>() {
-            public StreamSourceChannel wrap(final StreamSourceChannel channel, final HttpServerExchange exchange) {
+            public StreamSourceChannel wrap(final ChannelFactory<StreamSourceChannel> channelFactory, final HttpServerExchange exchange) {
+                StreamSourceChannel channel = channelFactory.create();
                 return new EmptyStreamSourceChannel(channel.getWorker(), channel.getReadThread());
             }
         };

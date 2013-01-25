@@ -20,6 +20,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
+import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
@@ -303,14 +304,15 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
         }
 
         @Override
-        public StreamSinkChannel wrap(StreamSinkChannel channel, HttpServerExchange exchange) {
+        public StreamSinkChannel wrap(ChannelFactory<StreamSinkChannel> channel, HttpServerExchange exchange) {
             return responseChannel;
         }
 
         public ChannelWrapper<StreamSourceChannel> getRequestWrapper() {
             return new ChannelWrapper<StreamSourceChannel>() {
                 @Override
-                public StreamSourceChannel wrap(StreamSourceChannel channel, HttpServerExchange exchange) {
+                public StreamSourceChannel wrap(ChannelFactory<StreamSourceChannel> channelFactory, HttpServerExchange exchange) {
+                    StreamSourceChannel channel = channelFactory.create();
                     final HeaderMap requestHeaders = exchange.getRequestHeaders();
                     HttpString transferEncoding = Headers.IDENTITY;
                     Long length;
