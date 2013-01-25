@@ -20,15 +20,16 @@ package io.undertow.test.handlers.encoding;
 
 import java.io.IOException;
 
+import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.encoding.ContentEncoding;
 import io.undertow.server.handlers.encoding.EncodingHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
-import io.undertow.test.utils.SetHeaderHandler;
 import io.undertow.util.Headers;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,7 +42,7 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class EncodingSelectionTestCase {
 
-    private static final String HEADER = "selected";
+    private static final String HEADER = Headers.CONTENT_ENCODING_STRING;
 
     /**
      * Tests encoding selection with no qvalue
@@ -56,16 +57,16 @@ public class EncodingSelectionTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             final EncodingHandler handler = new EncodingHandler();
-            handler.addEncodingHandler("compress", new SetHeaderHandler(HEADER, "compress"), 50);
-            handler.addEncodingHandler("bzip", new SetHeaderHandler(HEADER, "bzip"), 100);
-            handler.setIdentityHandler(new SetHeaderHandler(HEADER, "identity"));
+            handler.addEncodingHandler("compress", ContentEncoding.IDENTITY, 50);
+            handler.addEncodingHandler("bzip", ContentEncoding.IDENTITY, 100);
+            handler.setNext(ResponseCodeHandler.HANDLE_200);
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders(HEADER);
-            Assert.assertEquals("identity", header[0].getValue());
+            Assert.assertEquals(0, header.length);
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
@@ -127,9 +128,9 @@ public class EncodingSelectionTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             final EncodingHandler handler = new EncodingHandler();
-            handler.addEncodingHandler("compress", new SetHeaderHandler(HEADER, "compress"), 100);
-            handler.addEncodingHandler("bzip", new SetHeaderHandler(HEADER, "bzip"), 50);
-            handler.setIdentityHandler(new SetHeaderHandler(HEADER, "identity"));
+            handler.addEncodingHandler("compress", ContentEncoding.IDENTITY, 100);
+            handler.addEncodingHandler("bzip", ContentEncoding.IDENTITY, 50);
+            handler.setNext(ResponseCodeHandler.HANDLE_200);
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");

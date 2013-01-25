@@ -49,9 +49,9 @@ import io.undertow.util.QValueParser;
  */
 public class EncodingHandler implements HttpHandler {
 
-    private volatile HttpHandler identityHandler = ResponseCodeHandler.HANDLE_406;
+    private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
-    private final Map<String, Encoding> encodingMap = new CopyOnWriteMap<String, Encoding>();
+    private final Map<String, EncodingMapping> encodingMap = new CopyOnWriteMap<String, EncodingMapping>();
 
     private volatile HttpHandler noEncodingHandler = ResponseCodeHandler.HANDLE_406;
 
@@ -60,10 +60,10 @@ public class EncodingHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         final Deque<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
-        HttpHandler identityHandler = this.identityHandler;
+        HttpHandler nextHandler = this.next;
         if (res == null || res.isEmpty()) {
-            if (identityHandler != null) {
-                HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
+            if (nextHandler != null) {
+                HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
             } else {
                 //we don't have an identity handler
                 HttpHandlers.executeHandler(noEncodingHandler, exchange, completionHandler);
@@ -72,15 +72,15 @@ public class EncodingHandler implements HttpHandler {
         }
         final List<List<QValueParser.QValueResult>> found = QValueParser.parse(res);
         for(List<QValueParser.QValueResult> result : found) {
-            List<Encoding> available = new ArrayList<Encoding>();
+            List<EncodingMapping> available = new ArrayList<EncodingMapping>();
             boolean includesIdentity = false;
             boolean isQValue0 = false;
 
             for(final QValueParser.QValueResult value : result) {
-                Encoding encoding;
+                EncodingMapping encoding;
                 if(value.getValue().equals("*")) {
                     includesIdentity = true;
-                    encoding = new Encoding(identityHandler, 0);
+                    encoding = new EncodingMapping(IDENTITY, ContentEncoding.IDENTITY, 0);
                 } else {
                     encoding = encodingMap.get(value.getValue());
                 }
@@ -96,32 +96,33 @@ public class EncodingHandler implements HttpHandler {
                     HttpHandlers.executeHandler(noEncodingHandler, exchange, completionHandler);
                     return;
                 } else {
-                    HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
+                    HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
                     return;
                 }
             } else if(!available.isEmpty()) {
                 Collections.sort(available, Collections.reverseOrder());
-                HttpHandlers.executeHandler(available.get(0).handler, exchange, completionHandler);
+                final EncodingMapping mapping = available.get(0);
+                mapping.encoding.setupContentEncoding(exchange);
+                exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, mapping.name);
+                HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
                 return;
             }
         }
-        HttpHandlers.executeHandler(identityHandler, exchange, completionHandler);
+        HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
     }
 
 
-    public HttpHandler getIdentityHandler() {
-        return identityHandler;
+    public HttpHandler getNext() {
+        return next;
     }
 
-    public void setIdentityHandler(final HttpHandler identityHandler) {
-        HttpHandlers.handlerNotNull(identityHandler);
-        this.identityHandler = identityHandler;
-        addEncodingHandler(IDENTITY, identityHandler, 0);
+    public void setNext(final HttpHandler next) {
+        HttpHandlers.handlerNotNull(next);
+        this.next = next;
     }
 
-    public synchronized void addEncodingHandler(final String encoding, final HttpHandler handler, int priority) {
-        HttpHandlers.handlerNotNull(handler);
-        this.encodingMap.put(encoding, new Encoding(handler, priority));
+    public synchronized void addEncodingHandler(final String encoding, final ContentEncoding encoder, int priority) {
+        this.encodingMap.put(encoding, new EncodingMapping(encoding, encoder, priority));
     }
 
     public synchronized void removeEncodingHandler(final String encoding) {
@@ -137,19 +138,23 @@ public class EncodingHandler implements HttpHandler {
         this.noEncodingHandler = noEncodingHandler;
     }
 
-    private static final class Encoding implements Comparable<Encoding> {
+    private static final class EncodingMapping implements Comparable<EncodingMapping> {
 
-        private final HttpHandler handler;
+        private final String name;
+        private final ContentEncoding encoding;
         private final int priority;
 
-        private Encoding(final HttpHandler handler, final int priority) {
-            this.handler = handler;
+        private EncodingMapping(final String name, final ContentEncoding encoding, final int priority) {
+            this.name = name;
+            this.encoding = encoding;
             this.priority = priority;
         }
 
         @Override
-        public int compareTo(final Encoding o) {
+        public int compareTo(final EncodingMapping o) {
             return priority - o.priority;
         }
     }
+
+
 }
