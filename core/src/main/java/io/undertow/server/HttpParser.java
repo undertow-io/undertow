@@ -39,14 +39,6 @@ import static io.undertow.util.Headers.ALLOW_STRING;
 import static io.undertow.util.Headers.AUTHORIZATION_STRING;
 import static io.undertow.util.Headers.CACHE_CONTROL_STRING;
 import static io.undertow.util.Headers.CONNECTION_STRING;
-import static io.undertow.util.Headers.CONTENT_DISPOSITION_STRING;
-import static io.undertow.util.Headers.CONTENT_ENCODING_STRING;
-import static io.undertow.util.Headers.CONTENT_LANGUAGE_STRING;
-import static io.undertow.util.Headers.CONTENT_LENGTH_STRING;
-import static io.undertow.util.Headers.CONTENT_LOCATION_STRING;
-import static io.undertow.util.Headers.CONTENT_MD5_STRING;
-import static io.undertow.util.Headers.CONTENT_RANGE_STRING;
-import static io.undertow.util.Headers.CONTENT_TYPE_STRING;
 import static io.undertow.util.Headers.COOKIE_STRING;
 import static io.undertow.util.Headers.DATE_STRING;
 import static io.undertow.util.Headers.ETAG_STRING;
@@ -59,7 +51,6 @@ import static io.undertow.util.Headers.IF_MODIFIED_SINCE_STRING;
 import static io.undertow.util.Headers.IF_NONE_MATCH_STRING;
 import static io.undertow.util.Headers.IF_RANGE_STRING;
 import static io.undertow.util.Headers.IF_UNMODIFIED_SINCE_STRING;
-import static io.undertow.util.Headers.LAST_MODIFIED_STRING;
 import static io.undertow.util.Headers.LOCATION_STRING;
 import static io.undertow.util.Headers.MAX_FORWARDS_STRING;
 import static io.undertow.util.Headers.ORIGIN_STRING;
@@ -73,10 +64,7 @@ import static io.undertow.util.Headers.RETRY_AFTER_STRING;
 import static io.undertow.util.Headers.SEC_WEB_SOCKET_KEY_STRING;
 import static io.undertow.util.Headers.SEC_WEB_SOCKET_VERSION_STRING;
 import static io.undertow.util.Headers.SERVER_STRING;
-import static io.undertow.util.Headers.SET_COOKIE2_STRING;
-import static io.undertow.util.Headers.SET_COOKIE_STRING;
 import static io.undertow.util.Headers.STRICT_TRANSPORT_SECURITY_STRING;
-import static io.undertow.util.Headers.TE_STRING;
 import static io.undertow.util.Headers.TRAILER_STRING;
 import static io.undertow.util.Headers.TRANSFER_ENCODING_STRING;
 import static io.undertow.util.Headers.UPGRADE_STRING;
@@ -132,14 +120,6 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 CACHE_CONTROL_STRING,
                 COOKIE_STRING,
                 CONNECTION_STRING,
-                CONTENT_DISPOSITION_STRING,
-                CONTENT_ENCODING_STRING,
-                CONTENT_LANGUAGE_STRING,
-                CONTENT_LENGTH_STRING,
-                CONTENT_LOCATION_STRING,
-                CONTENT_MD5_STRING,
-                CONTENT_RANGE_STRING,
-                CONTENT_TYPE_STRING,
                 DATE_STRING,
                 ETAG_STRING,
                 EXPECT_STRING,
@@ -151,7 +131,6 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 IF_NONE_MATCH_STRING,
                 IF_RANGE_STRING,
                 IF_UNMODIFIED_SINCE_STRING,
-                LAST_MODIFIED_STRING,
                 LOCATION_STRING,
                 MAX_FORWARDS_STRING,
                 ORIGIN_STRING,
@@ -165,10 +144,7 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 SEC_WEB_SOCKET_KEY_STRING,
                 SEC_WEB_SOCKET_VERSION_STRING,
                 SERVER_STRING,
-                SET_COOKIE_STRING,
-                SET_COOKIE2_STRING,
                 STRICT_TRANSPORT_SECURITY_STRING,
-                TE_STRING,
                 TRAILER_STRING,
                 TRANSFER_ENCODING_STRING,
                 UPGRADE_STRING,
