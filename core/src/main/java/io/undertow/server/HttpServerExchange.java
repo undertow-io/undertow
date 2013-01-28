@@ -22,7 +22,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +33,7 @@ import io.undertow.util.HttpString;
 import io.undertow.util.ImmediateChannelFactory;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
+import io.undertow.util.SecureHashMap;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -62,7 +62,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final HeaderMap requestHeaders = new HeaderMap();
     private final HeaderMap responseHeaders = new HeaderMap();
 
-    private final Map<String, Deque<String>> queryParameters = new HashMap<String, Deque<String>>(0);
+    private final Map<String, Deque<String>> queryParameters = new SecureHashMap<String, Deque<String>>(0);
 
     private final StreamSinkChannel underlyingResponseChannel;
     private final StreamSourceChannel underlyingRequestChannel;
