@@ -54,7 +54,7 @@ import org.junit.runner.RunWith;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 @RunWith(DefaultServer.class)
-public class DigestAuthentication2069TestCase extends UsernamePasswordAuthenticationTestBase {
+public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
     private static final String REALM_NAME = "Digest_Realm";

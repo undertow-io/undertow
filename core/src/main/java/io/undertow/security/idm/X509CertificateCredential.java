@@ -17,21 +17,23 @@
  */
 package io.undertow.security.idm;
 
+import java.security.cert.X509Certificate;
+
 /**
- * A Credential representing the password of an Account.
+ * A {@see Credential} implementation which wraps an X.509 certificate.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public final class PasswordCredential implements Credential {
+public final class X509CertificateCredential implements Credential {
 
-    private final char[] password;
+    private final X509Certificate certificate;
 
-    public PasswordCredential(final char[] password) {
-        this.password = password;
+    public X509CertificateCredential(final X509Certificate certificate) {
+        this.certificate = certificate;
     }
 
-    public char[] getPassword() {
-        return password;
+    public X509Certificate getCertificate() {
+        return certificate;
     }
 
 }
