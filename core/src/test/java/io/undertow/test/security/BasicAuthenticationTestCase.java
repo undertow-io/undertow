@@ -40,7 +40,7 @@ import static org.junit.Assert.assertEquals;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 @RunWith(DefaultServer.class)
-public class BasicAuthenticationTestCase extends UsernamePasswordAuthenticationTestBase {
+public class BasicAuthenticationTestCase extends AuthenticationTestBase {
 
     @Override
     protected AuthenticationMechanism getTestMechanism() {

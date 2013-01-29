@@ -53,14 +53,14 @@ import static org.junit.Assert.assertTrue;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 @RunWith(DefaultServer.class)
-public class DigestAuthenticationAuthTestCase extends UsernamePasswordAuthenticationTestBase {
+public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
     private static final String REALM_NAME = "Digest_Realm";
     private static final String ZERO = "00000000";
 
     /**
-     * @see io.undertow.test.security.UsernamePasswordAuthenticationTestBase#getTestMechanism()
+     * @see io.undertow.test.security.AuthenticationTestBase#getTestMechanism()
      */
     @Override
     protected AuthenticationMechanism getTestMechanism() {

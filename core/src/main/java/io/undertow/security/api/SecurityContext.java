@@ -17,13 +17,10 @@
  */
 package io.undertow.security.api;
 
-import org.xnio.IoFuture.Notifier;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
-import io.undertow.server.HttpHandler;
 import io.undertow.util.AttachmentKey;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.xnio.IoFuture;

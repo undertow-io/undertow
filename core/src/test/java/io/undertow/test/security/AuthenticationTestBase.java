@@ -17,9 +17,11 @@
  */
 package io.undertow.test.security;
 
+
 import static org.junit.Assert.assertEquals;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.security.handlers.AuthenticationCallHandler;
 import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
@@ -28,6 +30,7 @@ import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
+import io.undertow.security.idm.X509CertificateCredential;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
@@ -39,7 +42,9 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -47,18 +52,21 @@ import org.apache.http.client.methods.HttpGet;
 import org.junit.Test;
 
 /**
- * Base class for the username / password based tests.
+ * Base class for the authentication tests.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public abstract class UsernamePasswordAuthenticationTestBase {
+public abstract class AuthenticationTestBase {
 
     protected static final IdentityManager identityManager;
 
     static {
-        final Map<String, char[]> users = new HashMap<String, char[]>(2);
-        users.put("userOne", "passwordOne".toCharArray());
-        users.put("userTwo", "passwordTwo".toCharArray());
+        final Set<String> certUsers = new HashSet<String>();
+        certUsers.add("");
+
+        final Map<String, char[]> passwordUsers = new HashMap<String, char[]>(2);
+        passwordUsers.put("userOne", "passwordOne".toCharArray());
+        passwordUsers.put("userTwo", "passwordTwo".toCharArray());
 
         identityManager = new IdentityManager() {
 
@@ -67,6 +75,12 @@ public abstract class UsernamePasswordAuthenticationTestBase {
                 // An existing account so for testing assume still valid.
                 return account;
             }
+
+            public boolean verifyCredential(Account account, Credential credential) {
+                if (credential instanceof PasswordCredential) {
+                    char[] password = ((PasswordCredential) credential).getPassword();
+                    char[] expectedPassword = passwordUsers.get(account.getName());
+
 
             @Override
             public Account verify(String id, Credential credential) {
@@ -79,9 +93,13 @@ public abstract class UsernamePasswordAuthenticationTestBase {
             }
 
             @Override
+
             public Account verify(Credential credential) {
                 // TODO Auto-generated method stub
                 return null;
+
+            public char[] getPassword(final Account account) {
+                return passwordUsers.get(account.getName());
             }
 
             private boolean verifyCredential(Account account, Credential credential) {
@@ -95,6 +113,7 @@ public abstract class UsernamePasswordAuthenticationTestBase {
             }
 
             @Override
+
             public char[] getPassword(final Account account) {
                 return users.get(account.getPrincipal().getName());
             }
@@ -102,6 +121,28 @@ public abstract class UsernamePasswordAuthenticationTestBase {
             @Override
             public Account getAccount(final String id) {
                 if (users.containsKey(id)) {
+
+            public Account verifyCredential(Credential credential) {
+                if (credential instanceof X509CertificateCredential) {
+                    final Principal p = ((X509CertificateCredential) credential).getCertificate().getSubjectX500Principal();
+                    if (certUsers.contains(p.getName())) {
+                        return new Account() {
+
+                            public String getName() {
+                                return p.getName();
+                            }
+
+                        };
+                    }
+
+                }
+
+                return null;
+            }
+
+            @Override
+            public Account lookupAccount(final String id) {
+                if (passwordUsers.containsKey(id)) {
                     return new Account() {
 
                         private Principal principal = new Principal() {
@@ -139,8 +180,12 @@ public abstract class UsernamePasswordAuthenticationTestBase {
 
         HttpHandler methodsAddHandler = new AuthenticationMechanismsHandler(constraintHandler,
                 Collections.<AuthenticationMechanism> singletonList(authMech));
+
         HttpHandler initialHandler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager,
                 methodsAddHandler);
+
+        HttpHandler initialHandler = new SecurityInitialHandler(identityManager, methodsAddHandler);
+
         DefaultServer.setRootHandler(initialHandler);
     }
 
@@ -161,6 +206,11 @@ public abstract class UsernamePasswordAuthenticationTestBase {
         Header[] values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
+    }
+
+    protected Principal getPrincipal(final HttpServerExchange exchange) {
+        SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        return context.getAuthenticatedPrincipal();
     }
 
     /**
