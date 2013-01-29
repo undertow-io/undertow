@@ -38,6 +38,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import io.undertow.UndertowOptions;
 import io.undertow.ajp.AjpOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
@@ -203,7 +204,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     acceptListener = ChannelListeners.openListenerAdapter(openListener);
                     server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 7777), acceptListener, serverOptions);
                 } else {
-                    openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192), 8192);
+                    openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                     acceptListener = ChannelListeners.openListenerAdapter(openListener);
                     server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
                 }

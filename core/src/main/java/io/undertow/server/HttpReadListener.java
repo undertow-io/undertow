@@ -20,11 +20,13 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.channels.BufferingStreamSinkChannel;
 import io.undertow.channels.GatedStreamSinkChannel;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.ChannelListener;
@@ -34,6 +36,7 @@ import org.xnio.Pooled;
 import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -76,6 +79,9 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(requestChannel, nextRequestResponseChannel, connection, httpServerExchange);
         httpServerExchange.setResponseTerminateAction(responseTerminateAction);
         httpServerExchange.setRequestTerminateAction(startNextRequestAction);
+        if(connection.getPipeLiningBuffer() != null) {
+            httpServerExchange.addResponseWrapper(connection.getPipeLiningBuffer().getChannelWrapper());
+        }
         httpServerExchange.addResponseWrapper(new ChannelWrapper<StreamSinkChannel>() {
             @Override
             public StreamSinkChannel wrap(final ChannelFactory<StreamSinkChannel> channelFactory, HttpServerExchange exchange) {
@@ -105,7 +111,31 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     return;
                 }
                 if (res == 0) {
-                    if (!channel.isReadResumed()) {
+
+                    //if we ever fail to read then we flush the pipeline buffer
+                    //this relies on us always doing an eager read when starting a request,
+                    //rather than waiting to be notified of data being available
+                    final PipeLiningBuffer pipeLiningBuffer = connection.getPipeLiningBuffer();
+                    if (pipeLiningBuffer != null && !pipeLiningBuffer.flushPipelinedData()) {
+                            channel.suspendReads();
+                            connection.getChannel().getWriteSetter().set(new ChannelListener<Channel>() {
+                                @Override
+                                public void handleEvent(Channel c) {
+                                    try {
+                                        if (pipeLiningBuffer.flushPipelinedData()) {
+                                            connection.getChannel().getWriteSetter().set(null);
+                                            connection.getChannel().suspendWrites();
+
+                                            channel.getReadSetter().set(this);
+                                            channel.resumeReads();
+                                        }
+                                    } catch (IOException e) {
+                                        UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+                                        IoUtils.safeClose(connection.getChannel());
+                                    }
+                                }
+                            });
+                    } else if (!channel.isReadResumed()) {
                         channel.getReadSetter().set(this);
                         channel.resumeReads();
                     }

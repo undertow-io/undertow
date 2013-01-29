@@ -50,19 +50,21 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     private final OptionMap undertowOptions;
     private final int bufferSize;
     private final SSLSession sslSession;
+    private final PipeLiningBuffer pipeLiningBuffer;
 
     @SuppressWarnings("unused")
     private volatile int runningRequestCount = 1;
 
     private static final AtomicIntegerFieldUpdater<HttpServerConnection> runningRequestCountUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpServerConnection.class, "runningRequestCount");
 
-    public HttpServerConnection(ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize, final SSLSession sslSession) {
+    public HttpServerConnection(ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize, final SSLSession sslSession, PipeLiningBuffer pipeLiningBuffer) {
         this.channel = channel;
         this.bufferPool = bufferPool;
         this.rootHandler = rootHandler;
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
         this.sslSession = sslSession;
+        this.pipeLiningBuffer = pipeLiningBuffer;
         this.maxConcurrentRequests = undertowOptions.get(UndertowOptions.MAX_REQUESTS_PER_CONNECTION, 1);
         closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
     }
@@ -185,5 +187,9 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
 
     public SSLSession getSslSession() {
         return sslSession;
+    }
+
+    public PipeLiningBuffer getPipeLiningBuffer() {
+        return pipeLiningBuffer;
     }
 }

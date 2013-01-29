@@ -60,7 +60,7 @@ public class AjpOpenListener implements OpenListener{
         if (channel instanceof SslChannel) {
             sslSession = ((SslChannel) channel).getSslSession();
         }
-        HttpServerConnection connection = new HttpServerConnection(new AssembledConnectedStreamChannel(channel, readChannel, writeChannel), bufferPool, rootHandler, undertowOptions, bufferSize, sslSession);
+        HttpServerConnection connection = new HttpServerConnection(new AssembledConnectedStreamChannel(channel, readChannel, writeChannel), bufferPool, rootHandler, undertowOptions, bufferSize, sslSession, null);
         AjpReadListener readListener = new AjpReadListener(writeChannel, pushBackStreamChannel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);

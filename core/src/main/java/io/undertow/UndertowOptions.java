@@ -50,6 +50,11 @@ public class UndertowOptions {
      */
     public static Option<Integer> MAX_REQUESTS_PER_CONNECTION = Option.simple(UndertowOptions.class, "MAX_REQUESTS_PER_CONNECTION", Integer.class);
 
+    /**
+     * If we should buffer pipelined requests. Defaults to false.
+     */
+    public static Option<Boolean> BUFFER_PIPELINED_DATA = Option.simple(UndertowOptions.class, "BUFFER_PIPELINED_DATA", Boolean.class);
+
     private UndertowOptions() {
 
     }

@@ -24,6 +24,8 @@ import javax.net.ssl.SSLSession;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.channels.BufferingStreamSinkChannel;
 import io.undertow.channels.ReadTimeoutStreamSourceChannel;
 import io.undertow.channels.WriteTimeoutStreamSinkChannel;
 import org.xnio.ChannelListener;
@@ -75,12 +77,17 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
         if (channel.supportsOption(Options.WRITE_TIMEOUT)) {
             writeChannel = new WriteTimeoutStreamSinkChannel(writeChannel);
         }
+        PipeLiningBuffer pipeLiningBuffer = null;
+        if(undertowOptions.get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
+            pipeLiningBuffer = new BufferingStreamSinkChannel(writeChannel, bufferPool);
+        }
+
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(readChannel);
         SSLSession sslSession = null;
         if (channel instanceof SslChannel) {
             sslSession = ((SslChannel) channel).getSslSession();
         }
-        HttpServerConnection connection = new HttpServerConnection(new AssembledConnectedStreamChannel(channel, readChannel, writeChannel), bufferPool, rootHandler, undertowOptions, bufferSize, sslSession);
+        HttpServerConnection connection = new HttpServerConnection(new AssembledConnectedStreamChannel(channel, readChannel, writeChannel), bufferPool, rootHandler, undertowOptions, bufferSize, sslSession, pipeLiningBuffer);
         HttpReadListener readListener = new HttpReadListener(writeChannel, pushBackStreamChannel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);

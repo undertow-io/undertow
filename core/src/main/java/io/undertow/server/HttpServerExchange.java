@@ -387,6 +387,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             return;
         }
         this.state = oldVal | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
+        if(connection.getPipeLiningBuffer() != null) {
+            connection.getPipeLiningBuffer().upgradeUnderlyingChannel();
+        }
     }
 
     /**
@@ -409,6 +412,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             return;
         }
         this.state = oldVal | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
+        if(connection.getPipeLiningBuffer() != null) {
+            connection.getPipeLiningBuffer().upgradeUnderlyingChannel();
+        }
     }
 
     /**

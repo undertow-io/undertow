@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.channels.GatedStreamSinkChannel;
 import io.undertow.server.ChannelWrapper;
