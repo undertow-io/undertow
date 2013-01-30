@@ -43,7 +43,7 @@ public class AuthenticationCallHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) {
         SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        context.authenticate(null, next);
+        context.authenticate(next);
     }
 
 }

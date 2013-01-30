@@ -21,7 +21,6 @@ import io.undertow.security.api.AuthenticatedSessionManager;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.SecurityContextImpl;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;

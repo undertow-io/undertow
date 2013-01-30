@@ -34,7 +34,6 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -103,8 +102,7 @@ public class SecurityContextImpl implements SecurityContext {
 
 
     @Override
-    public void authenticate(final HttpCompletionHandler completionHandler,
-                             final HttpHandler nextHandler) {
+    public void authenticate(final HttpHandler nextHandler) {
         authenticate(new WorkerDispatcherExecutor(exchange))
                 .addNotifier(new IoFuture.Notifier<AuthenticationResult, Object>() {
                     @Override
@@ -341,31 +339,6 @@ public class SecurityContextImpl implements SecurityContext {
         @Override
         public void execute(final Runnable command) {
             WorkerDispatcher.dispatch(exchange, command);
-        }
-    }
-
-
-    private static final class RunnableCompletionHandler implements HttpCompletionHandler {
-
-        private final HttpServerExchange exchange;
-        private final HttpCompletionHandler completionHandler;
-        private final Runnable runnable;
-
-        private RunnableCompletionHandler(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final Runnable runnable) {
-            this.exchange = exchange;
-            this.completionHandler = completionHandler;
-            this.runnable = runnable;
-        }
-
-        @Override
-        public void handleComplete() {
-            try {
-                if (!exchange.isResponseStarted()) {
-                    runnable.run();
-                }
-            } finally {
-                exchange.endExchange();
-            }
         }
     }
 

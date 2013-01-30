@@ -5,7 +5,6 @@ import java.security.Principal;
 import java.util.List;
 import java.util.concurrent.Executor;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.util.AttachmentKey;
 import org.xnio.IoFuture;
@@ -61,10 +60,9 @@ public interface SecurityContext {
      * Note that challenges with only be set if {@link #setAuthenticationRequired()} has been previously called this
      * request, otherwise the request will continue as normal
      *
-     * @param completionHandler The completion handler
      * @param nextHandler       The next handler to invoke once auth succeeds
      */
-    void authenticate(HttpCompletionHandler completionHandler, HttpHandler nextHandler);
+    void authenticate(HttpHandler nextHandler);
 
     /**
      * Marks this request as requiring authentication. Authentication challenge headers will only be sent if this
