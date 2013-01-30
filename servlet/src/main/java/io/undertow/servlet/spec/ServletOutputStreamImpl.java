@@ -23,8 +23,6 @@ import java.nio.ByteBuffer;
 
 import javax.servlet.ServletOutputStream;
 
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.Headers;
 import org.xnio.ChannelListener;
@@ -204,9 +202,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      * @param handler
      * @throws IOException
      */
-    public void closeAsync(final HttpCompletionHandler handler) throws IOException {
+    public void closeAsync() throws IOException {
         if (closed) {
-            handler.handleComplete();
+            servletResponse.getExchange().endExchange();
             return;
         }
         closed = true;
@@ -231,7 +229,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                         if (pooledBuffer != null) {
                             pooledBuffer.free();
                         }
-                        HttpHandlers.flushAndCompleteRequest(channel, handler);
+                        servletResponse.getExchange().endExchange();
                         return;
                     }
                 } while (res > 0);
@@ -248,7 +246,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                                 } catch (IOException e) {
                                     channel.suspendWrites();
                                     IoUtils.safeClose(channel);
-                                    handler.handleComplete();
+                                    servletResponse.getExchange().endExchange();
                                     return;
                                 } finally {
                                     if (!ok) {
@@ -263,30 +261,30 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                                 if (result == -1) {
                                     channel.suspendWrites();
                                     IoUtils.safeClose(channel);
-                                    handler.handleComplete();
+                                    servletResponse.getExchange().endExchange();
                                 }
                             } while (buffer.hasRemaining());
                             if (pooledBuffer != null) {
                                 pooledBuffer.free();
                             }
-                            HttpHandlers.flushAndCompleteRequest(channel, handler);
+                            servletResponse.getExchange().endExchange();
                         }
 
                     });
                     channel.resumeWrites();
                 } else if (res == -1) {
                     IoUtils.safeClose(channel);
-                    handler.handleComplete();
+                    servletResponse.getExchange().endExchange();
                 } else {
                     buffer = null;
                     pooledBuffer = null;
                 }
             } catch (IOException e) {
                 IoUtils.safeClose(channel);
-                handler.handleComplete();
+                servletResponse.getExchange().endExchange();
             }
         } else {
-            HttpHandlers.flushAndCompleteRequest(channel, handler);
+            servletResponse.getExchange().endExchange();
             buffer = null;
             pooledBuffer = null;
         }

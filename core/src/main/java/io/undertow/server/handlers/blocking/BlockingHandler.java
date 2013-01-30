@@ -62,7 +62,7 @@ public final class BlockingHandler implements HttpHandler {
                     }
                     UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", exchange);
                 } finally {
-                    completionHandler.handleComplete();
+                    exchange.endExchange();
                 }
             }
         };

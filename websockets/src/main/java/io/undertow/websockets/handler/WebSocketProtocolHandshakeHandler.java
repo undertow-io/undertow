@@ -83,7 +83,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
         if (!exchange.getRequestMethod().equals(Methods.GET)) {
             // Only GET is supported to start the handshake
             exchange.setResponseCode(403);
-            completionHandler.handleComplete();
+            exchange.endExchange();
             return;
         }
         Handshake handshaker = null;
@@ -97,7 +97,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
         if (handshaker == null) {
             UndertowLogger.REQUEST_LOGGER.debug("Could not find hand shaker for web socket request");
             exchange.setResponseCode(403);
-            completionHandler.handleComplete();
+            exchange.endExchange();
             return;
         }
 
@@ -111,7 +111,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
                         // close connection on exception
                         IoUtils.safeClose(exchange.getConnection());
                     } finally {
-                        completionHandler.handleComplete();
+                        exchange.endExchange();
                     }
                 }
             }, null);

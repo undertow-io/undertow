@@ -150,14 +150,14 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         } else if (resource.isDirectory()) {
             handleWelcomePage(exchange, completionHandler, resource);
         } else {
-            fileCache.serveFile(exchange, completionHandler, resource, false);
+            fileCache.serveFile(exchange, resource, false);
         }
     }
 
     private void handleWelcomePage(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File resource) {
         File welcomePage = findWelcomeFile(resource);
         if (welcomePage != null) {
-            fileCache.serveFile(exchange, completionHandler, welcomePage, false);
+            fileCache.serveFile(exchange, welcomePage, false);
         } else {
             ServletPathMatch handler = findWelcomeServlet(exchange.getRelativePath().endsWith("/") ? exchange.getRelativePath() : exchange.getRelativePath() + "/");
             if (handler != null && handler.getHandler() != null) {
@@ -167,7 +167,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
                 handler.getHandler().handleRequest(exchange, completionHandler);
             } else {
                 exchange.setResponseCode(404);
-                completionHandler.handleComplete();
+                exchange.endExchange();
             }
         }
     }

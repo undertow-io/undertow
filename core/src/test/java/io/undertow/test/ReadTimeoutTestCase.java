@@ -60,14 +60,14 @@ public class ReadTimeoutTestCase {
                                 new StringWriteChannelListener("COMPLETED") {
                                     @Override
                                     protected void writeDone(final StreamSinkChannel channel) {
-                                        completionHandler.handleComplete();
+                                        exchange.endExchange();
                                     }
                                 }.setup(response);
                             }
                         }, new ChannelExceptionHandler<StreamSourceChannel>() {
                             @Override
                             public void handleException(final StreamSourceChannel channel, final IOException e) {
-                                completionHandler.handleComplete();
+                                exchange.endExchange();
                                 exception = e;
                                 errorLatch.countDown();
                             }

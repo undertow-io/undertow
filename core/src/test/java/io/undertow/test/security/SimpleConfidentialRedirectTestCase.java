@@ -53,7 +53,7 @@ public class SimpleConfidentialRedirectTestCase {
             @Override
             public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
                 exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
-                completionHandler.handleComplete();
+                exchange.endExchange();
             }
         };
 

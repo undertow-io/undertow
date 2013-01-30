@@ -121,7 +121,7 @@ public class SecurityContextImpl implements SecurityContext {
                                 HttpHandlers.executeHandler(nextHandler, exchange, handler);
                             }
                         } catch (IOException e) {
-                            completionHandler.handleComplete();
+                            exchange.endExchange();
                         }
                     }
                 }, null);
@@ -364,7 +364,7 @@ public class SecurityContextImpl implements SecurityContext {
                     runnable.run();
                 }
             } finally {
-                completionHandler.handleComplete();
+                exchange.endExchange();
             }
         }
     }

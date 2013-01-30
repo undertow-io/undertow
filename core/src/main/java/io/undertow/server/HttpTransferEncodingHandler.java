@@ -25,13 +25,13 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.server.handlers.HttpHandlers;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.channels.BrokenStreamSourceChannel;
 import io.undertow.channels.ChunkedStreamSinkChannel;
 import io.undertow.channels.ChunkedStreamSourceChannel;
 import io.undertow.channels.FixedLengthStreamSinkChannel;
 import io.undertow.channels.FixedLengthStreamSourceChannel;
+import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -120,7 +120,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 log.trace("Invalid request due to unparsable content length");
                 // content length is bad; invalid request
                 exchange.setResponseCode(400);
-                completionHandler.handleComplete();
+                exchange.endExchange();
                 return;
             }
             if (contentLength == 0L) {
@@ -296,7 +296,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
     private static ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler) {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final ChannelFactory<StreamSourceChannel> channelFactory, final HttpServerExchange exchange) {
-                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channelFactory.create(), true, chunkedDrainListener(channelFactory.create(), exchange), exchange.getConnection().getBufferPool(), false, maxEntitySize(exchange)));
+                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channelFactory.create(), true, chunkedDrainListener(exchange), exchange.getConnection().getBufferPool(), false, maxEntitySize(exchange)));
             }
         };
     }
@@ -309,7 +309,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 if(contentLength > max) {
                     return new BrokenStreamSourceChannel(UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getSourceAddress(), max), channel);
                 }
-                return ourCompletionHandler.setRequestStream(new FixedLengthStreamSourceChannel(channel, contentLength, true, fixedLengthDrainListener(channel, exchange), null));
+                return ourCompletionHandler.setRequestStream(new FixedLengthStreamSourceChannel(channel, contentLength, true, fixedLengthDrainListener(exchange), null));
             }
         };
     }
@@ -323,27 +323,27 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         };
     }
 
-    private static ChannelListener<FixedLengthStreamSourceChannel> fixedLengthDrainListener(final StreamSourceChannel channel, final HttpServerExchange exchange) {
+    private static ChannelListener<FixedLengthStreamSourceChannel> fixedLengthDrainListener(final HttpServerExchange exchange) {
         return new ChannelListener<FixedLengthStreamSourceChannel>() {
             public void handleEvent(final FixedLengthStreamSourceChannel fixedLengthChannel) {
                 long remaining = fixedLengthChannel.getRemaining();
                 if (remaining > 0L) {
                     UndertowLogger.REQUEST_LOGGER.requestWasNotFullyConsumed();
-                } else {
-                    exchange.terminateRequest();
+                    exchange.setPersistent(false);
                 }
+                exchange.terminateRequest();
             }
         };
     }
 
-    private static ChannelListener<ChunkedStreamSourceChannel> chunkedDrainListener(final StreamSourceChannel channel, final HttpServerExchange exchange) {
+    private static ChannelListener<ChunkedStreamSourceChannel> chunkedDrainListener(final HttpServerExchange exchange) {
         return new ChannelListener<ChunkedStreamSourceChannel>() {
             public void handleEvent(final ChunkedStreamSourceChannel chunkedStreamSourceChannel) {
                 if(!chunkedStreamSourceChannel.isFinished()) {
                     UndertowLogger.REQUEST_LOGGER.requestWasNotFullyConsumed();
-                } else {
-                    exchange.terminateRequest();
+                    exchange.setPersistent(false);
                 }
+                exchange.terminateRequest();
             }
         };
     }
@@ -352,14 +352,6 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         return new ChannelListener<StreamSinkChannel>() {
             public void handleEvent(final StreamSinkChannel channel) {
                 exchange.terminateResponse();
-            }
-        };
-    }
-
-    private static ChannelListener<StreamSourceChannel> terminateRequestListener(final HttpServerExchange exchange) {
-        return new ChannelListener<StreamSourceChannel>() {
-            public void handleEvent(final StreamSourceChannel channel) {
-                exchange.terminateRequest();
             }
         };
     }

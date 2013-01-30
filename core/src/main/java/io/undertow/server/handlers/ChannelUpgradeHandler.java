@@ -112,7 +112,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
                         }
                         return;
                     } catch (IOException e) {
-                        completionHandler.handleComplete();
+                        exchange.endExchange();
                         UndertowLogger.REQUEST_LOGGER.debug("Exception handling request", e);
                     }
                 }

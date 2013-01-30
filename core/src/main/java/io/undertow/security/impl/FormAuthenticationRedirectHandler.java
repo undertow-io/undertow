@@ -23,7 +23,7 @@ public class FormAuthenticationRedirectHandler implements HttpHandler {
         final String location = exchange.getAttachment(FormAuthenticationMechanism.ORIGINAL_URL_LOCATION);
         if(location != null) {
             FormAuthenticationMechanism.sendRedirect(exchange, location);
-            completionHandler.handleComplete();
+            exchange.endExchange();
         } else {
             HttpHandlers.executeHandler(next, exchange, completionHandler);
         }

@@ -20,9 +20,7 @@ package io.undertow.server.handlers.file;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
@@ -35,7 +33,6 @@ import org.xnio.channels.StreamSinkChannel;
 * @author Jason T. Greene
 */
 public class BufferTransfer implements ChannelListener<StreamSinkChannel> {
-    private final HttpCompletionHandler completionHandler;
     private final ByteBuffer[] buffers;
     private final boolean recurse;
     private final TransferCompletionCallback callback;
@@ -46,13 +43,12 @@ public class BufferTransfer implements ChannelListener<StreamSinkChannel> {
         void complete();
     }
 
-    public static void transfer(HttpServerExchange exchange, StreamSinkChannel channel, HttpCompletionHandler completionHandler, TransferCompletionCallback callback, ByteBuffer[] buffers) {
-        new BufferTransfer(callback, exchange, completionHandler, buffers, true).handleEvent(channel);
+    public static void transfer(HttpServerExchange exchange, StreamSinkChannel channel, TransferCompletionCallback callback, ByteBuffer[] buffers) {
+        new BufferTransfer(callback, exchange, buffers, true).handleEvent(channel);
     }
 
-    private BufferTransfer(TransferCompletionCallback callback, HttpServerExchange exchange, HttpCompletionHandler completionHandler, ByteBuffer[] buffers, boolean recurse) {
+    private BufferTransfer(TransferCompletionCallback callback, HttpServerExchange exchange, ByteBuffer[] buffers, boolean recurse) {
         this.callback = callback;
-        this.completionHandler = completionHandler;
         this.buffers = buffers;
         this.recurse = recurse;
         this.exchange = exchange;
@@ -68,14 +64,14 @@ public class BufferTransfer implements ChannelListener<StreamSinkChannel> {
                     res = channel.write(buffers);
                 } catch (IOException e) {
                     IoUtils.safeClose(channel);
-                    completionHandler.handleComplete();
                     exchange.setResponseCode(500);
+                    exchange.endExchange();
                     return;
                 }
 
                 if (res == 0L) {
                     if (recurse) {
-                        channel.getWriteSetter().set(new BufferTransfer(callback, exchange, completionHandler, buffers, false));
+                        channel.getWriteSetter().set(new BufferTransfer(callback, exchange, buffers, false));
                         channel.resumeWrites();
                     }
                     complete = false; // Entry still in-use
@@ -87,6 +83,6 @@ public class BufferTransfer implements ChannelListener<StreamSinkChannel> {
                 callback.complete();
             }
         }
-        HttpHandlers.flushAndCompleteRequest(channel, completionHandler);
+        exchange.endExchange();
     }
 }

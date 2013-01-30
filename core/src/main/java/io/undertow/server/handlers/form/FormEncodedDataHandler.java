@@ -169,7 +169,7 @@ public class FormEncodedDataHandler implements HttpHandler {
                 ioFuture.setException(e);
                 IoUtils.safeClose(channel);
                 UndertowLogger.REQUEST_LOGGER.ioExceptionReadingFromChannel(e);
-                completionHandler.handleComplete();
+                exchange.endExchange();
 
             } finally {
                 pooled.free();

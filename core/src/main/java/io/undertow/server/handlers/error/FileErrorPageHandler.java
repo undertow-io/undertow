@@ -68,9 +68,9 @@ public class FileErrorPageHandler implements HttpHandler {
                 if (!exchange.isResponseStarted() && codes.contains(exchange.getResponseCode())) {
                     //we don't want any headers from the original request hanging around
                     exchange.getResponseHeaders().clear();
-                    fileCache.serveFile(exchange, completionHandler, file, false);
+                    fileCache.serveFile(exchange, file, false);
                 } else {
-                    completionHandler.handleComplete();
+                    exchange.endExchange();
                 }
             }
         });

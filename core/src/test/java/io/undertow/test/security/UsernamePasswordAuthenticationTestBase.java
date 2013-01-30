@@ -151,7 +151,7 @@ public abstract class UsernamePasswordAuthenticationTestBase {
             HeaderMap responseHeader = exchange.getResponseHeaders();
             responseHeader.add(PROCESSED_BY, "ResponseHandler");
 
-            completionHandler.handleComplete();
+            exchange.endExchange();
         }
 
     }

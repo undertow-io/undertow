@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.server.ExchangeCompleteListener;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -33,7 +34,7 @@ import org.xnio.IoFuture;
  * Handler that attaches the session to the request.
  * <p/>
  * This handler is also the place where session cookie configuration properties are configured.
- *
+ * <p/>
  * note: this approach is not used by Servlet, which has its own session handlers
  *
  * @author Stuart Douglas
@@ -75,14 +76,15 @@ public class SessionAttachmentHandler implements HttpHandler {
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
 
         final IoFuture<Session> session = sessionManager.getSession(exchange, sessionConfig);
-        final UpdateLastAccessTimeCompletionHandler handler = new UpdateLastAccessTimeCompletionHandler(completionHandler, exchange, sessionConfig);
+        final UpdateLastAccessTimeListener handler = new UpdateLastAccessTimeListener(sessionConfig);
         session.addNotifier(new IoFuture.Notifier<Session, Session>() {
             @Override
             public void notify(final IoFuture<? extends Session> ioFuture, final Session attachment) {
                 try {
                     if (ioFuture.getStatus() == IoFuture.Status.DONE) {
                         final Session session = ioFuture.get();
-                        HttpHandlers.executeHandler(next, exchange, handler);
+                        exchange.addExchangeCompleteListener(handler);
+                        HttpHandlers.executeHandler(next, exchange, completionHandler);
                     } else if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
                         //we failed to get the session
                         UndertowLogger.REQUEST_LOGGER.getSessionFailed(ioFuture.getException());
@@ -122,25 +124,20 @@ public class SessionAttachmentHandler implements HttpHandler {
         return this;
     }
 
-    private static class UpdateLastAccessTimeCompletionHandler implements HttpCompletionHandler {
+    private static class UpdateLastAccessTimeListener implements ExchangeCompleteListener {
 
-        private final HttpCompletionHandler completionHandler;
-        private final HttpServerExchange exchange;
         private final SessionConfig sessionConfig;
 
-        private UpdateLastAccessTimeCompletionHandler(final HttpCompletionHandler completionHandler, final HttpServerExchange exchange, final SessionConfig sessionConfig) {
-            this.completionHandler = completionHandler;
-            this.exchange = exchange;
+        private UpdateLastAccessTimeListener(final SessionConfig sessionConfig) {
             this.sessionConfig = sessionConfig;
         }
 
         @Override
-        public void handleComplete() {
-                final Session session = sessionConfig.getAttachedSession(exchange);
-                if (session != null) {
-                    session.updateLastAccessedTime();
-                }
-            completionHandler.handleComplete();
+        public void exchangeComplete(final HttpServerExchange exchange, final boolean isUpgrade) {
+            final Session session = sessionConfig.getAttachedSession(exchange);
+            if (session != null) {
+                session.updateLastAccessedTime();
+            }
         }
     }
 

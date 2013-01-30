@@ -71,13 +71,13 @@ public class SimpleErrorPageHandler implements HttpHandler {
                     StringWriteChannelListener listener = new StringWriteChannelListener(errorPage) {
                         @Override
                         protected void writeDone(final StreamSinkChannel channel) {
-                            HttpHandlers.flushAndCompleteRequest(channel, completionHandler);
+                            exchange.endExchange();
                         }
                     };
                     listener.setup(response);
                     return;
                 }
-                completionHandler.handleComplete();
+                exchange.endExchange();
             }
         });
     }

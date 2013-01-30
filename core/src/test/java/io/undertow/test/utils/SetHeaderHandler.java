@@ -39,6 +39,6 @@ public class SetHeaderHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         exchange.getResponseHeaders().put(new HttpString(header), value);
-        completionHandler.handleComplete();
+        exchange.endExchange();
     }
 }

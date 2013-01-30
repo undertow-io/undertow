@@ -59,7 +59,7 @@ public class EagerFormParsingHandler implements HttpHandler {
                 } else if(ioFuture.getStatus() == IoFuture.Status.FAILED) {
                     UndertowLogger.REQUEST_LOGGER.ioExceptionReadingFromChannel(ioFuture.getException());
                     IoUtils.safeClose(exchange.getRequestChannel());
-                    completionHandler.handleComplete();
+                    exchange.endExchange();
                 }
             }
         }, null);

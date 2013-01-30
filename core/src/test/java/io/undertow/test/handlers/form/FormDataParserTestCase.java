@@ -83,10 +83,10 @@ public class FormDataParserTestCase {
                             exchange.getResponseHeaders().add(new HttpString(fd), val.getValue());
                         }
                     }
-                    completionHandler.handleComplete();
+                    exchange.endExchange();
                 } catch (IOException e) {
                     exchange.setResponseCode(500);
-                    completionHandler.handleComplete();
+                    exchange.endExchange();
                 } finally {
                     IoUtils.safeClose(parser);
                 }

@@ -18,9 +18,10 @@
 
 package io.undertow.util;
 
-import io.undertow.server.HttpCompletionHandler;
 import java.io.IOException;
 import java.nio.channels.Channel;
+
+import io.undertow.server.HttpServerExchange;
 import org.xnio.ChannelExceptionHandler;
 
 /**
@@ -29,18 +30,14 @@ import org.xnio.ChannelExceptionHandler;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class CompletionChannelExceptionHandler implements ChannelExceptionHandler<Channel> {
-    private final HttpCompletionHandler handler;
+    private final HttpServerExchange exchange;
 
-    /**
-     * Construct a new instance.
-     *
-     * @param handler the completion handler to invoke
-     */
-    public CompletionChannelExceptionHandler(final HttpCompletionHandler handler) {
-        this.handler = handler;
+    public CompletionChannelExceptionHandler(final HttpServerExchange exchange) {
+        this.exchange = exchange;
     }
 
+
     public void handleException(final Channel channel, final IOException exception) {
-        handler.handleComplete();
+        exchange.endExchange();
     }
 }

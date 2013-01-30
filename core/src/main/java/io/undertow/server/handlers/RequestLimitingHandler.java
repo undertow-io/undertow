@@ -20,10 +20,10 @@ package io.undertow.server.handlers;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import io.undertow.server.ExchangeCompleteListener;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -52,6 +52,19 @@ public final class RequestLimitingHandler implements HttpHandler {
 
     private static final Class<Queue> linkedTransferQueue;
 
+    private final ExchangeCompleteListener COMPLETION_LISTENER = new ExchangeCompleteListener() {
+
+        @Override
+        public void exchangeComplete(final HttpServerExchange exchange, final boolean isUpgrade) {
+            final QueuedRequest task = queue.poll();
+            if (task != null) {
+                WorkerDispatcher.dispatch(exchange, task);
+            } else {
+                decrementRequests();
+            }
+        }
+    };
+
     static {
         Class<Queue> q;
         try {
@@ -67,7 +80,7 @@ public final class RequestLimitingHandler implements HttpHandler {
      * must not be {@code null}.
      *
      * @param maximumConcurrentRequests the maximum concurrent requests
-     * @param nextHandler the next handler
+     * @param nextHandler               the next handler
      */
     public RequestLimitingHandler(int maximumConcurrentRequests, HttpHandler nextHandler) {
         if (nextHandler == null) {
@@ -79,7 +92,7 @@ public final class RequestLimitingHandler implements HttpHandler {
         state = (maximumConcurrentRequests & 0xFFFFFFFFL) << 32;
         this.nextHandler = nextHandler;
         Queue<QueuedRequest> queue;
-        if(linkedTransferQueue == null) {
+        if (linkedTransferQueue == null) {
             queue = new ConcurrentLinkedQueue<QueuedRequest>();
         } else {
             try {
@@ -92,6 +105,7 @@ public final class RequestLimitingHandler implements HttpHandler {
     }
 
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+        exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
         long oldVal, newVal;
         do {
             oldVal = state;
@@ -102,8 +116,8 @@ public final class RequestLimitingHandler implements HttpHandler {
                 return;
             }
             newVal = oldVal + 1;
-        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
-        HttpHandlers.executeHandler(nextHandler, exchange, new CompletionHandler(completionHandler, exchange));
+        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
+        HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
     }
 
     /**
@@ -131,7 +145,7 @@ public final class RequestLimitingHandler implements HttpHandler {
             current = (int) (oldVal & MASK_CURRENT);
             oldMax = (int) ((oldVal & MASK_MAX) >> 32L);
             newVal = current | newMax & 0xFFFFFFFFL << 32L;
-        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
+        } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
         while (current < newMax) {
             // more space opened up!  Process queue entries for a while
             final QueuedRequest request = queue.poll();
@@ -179,38 +193,8 @@ public final class RequestLimitingHandler implements HttpHandler {
         }
 
         public void run() {
-            HttpHandlers.executeHandler(nextHandler, exchange, new CompletionHandler(completionHandler, exchange));
+            HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
         }
     }
 
-    /**
-     * Our completion handler.  Put off instantiating as late as possible to maximize chances of being collected by
-     * the copying collector.
-     */
-    private class CompletionHandler extends AtomicBoolean implements HttpCompletionHandler {
-
-        private final HttpCompletionHandler completionHandler;
-        private final HttpServerExchange exchange;
-
-        public CompletionHandler(final HttpCompletionHandler completionHandler, final HttpServerExchange exchange) {
-            this.completionHandler = completionHandler;
-            this.exchange = exchange;
-        }
-
-        public void handleComplete() {
-            if (! compareAndSet(false, true)) {
-                return;
-            }
-            try {
-                completionHandler.handleComplete();
-            } finally {
-                final QueuedRequest task = queue.poll();
-                if (task != null) {
-                    WorkerDispatcher.dispatch(exchange, task);
-                } else {
-                    decrementRequests();
-                }
-            }
-        }
-    }
 }

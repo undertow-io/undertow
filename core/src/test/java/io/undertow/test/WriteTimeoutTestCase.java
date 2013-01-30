@@ -78,7 +78,7 @@ public class WriteTimeoutTestCase {
                                 buffer = originalBuffer.duplicate();
                             }
                         } while (count < 1000);
-                        completionHandler.handleComplete();
+                        exchange.endExchange();
                     }
                 });
                 response.wakeupWrites();

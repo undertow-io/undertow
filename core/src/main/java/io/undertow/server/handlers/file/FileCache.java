@@ -20,7 +20,6 @@ package io.undertow.server.handlers.file;
 
 import java.io.File;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -38,12 +37,12 @@ public interface FileCache {
      * <p/>
      * This method must set the Content-Length header on the {@link HttpServerExchange}.
      *
+     *
      * @param exchange                The exchange
-     * @param completionHandler       The completion handler
      * @param file                    The file to serve
      * @param directoryListingEnabled If the handler should serve up a directory listing page
      * @throws IllegalStateException If the response channel has already been acquired
      */
-    void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file, boolean directoryListingEnabled);
+    void serveFile(final HttpServerExchange exchange, final File file, boolean directoryListingEnabled);
 
 }

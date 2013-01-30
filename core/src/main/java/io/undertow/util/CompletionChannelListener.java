@@ -18,8 +18,9 @@
 
 package io.undertow.util;
 
-import io.undertow.server.HttpCompletionHandler;
 import java.nio.channels.Channel;
+
+import io.undertow.server.HttpServerExchange;
 import org.xnio.ChannelListener;
 
 /**
@@ -28,18 +29,14 @@ import org.xnio.ChannelListener;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class CompletionChannelListener implements ChannelListener<Channel> {
-    private final HttpCompletionHandler handler;
+    private final HttpServerExchange exchange;
 
-    /**
-     * Construct a new instance.
-     *
-     * @param handler the completion handler to invoke
-     */
-    public CompletionChannelListener(final HttpCompletionHandler handler) {
-        this.handler = handler;
+    public CompletionChannelListener(final HttpServerExchange exchange) {
+        this.exchange = exchange;
     }
 
+
     public void handleEvent(final Channel channel) {
-        handler.handleComplete();
+        exchange.endExchange();
     }
 }

@@ -77,7 +77,7 @@ public final class ResponseCodeHandler implements HttpHandler, BlockingHttpHandl
         if(traceEnabled) {
             log.tracef("Setting response code %s for exchange %s", responseCode, exchange);
         }
-        completionHandler.handleComplete();
+        exchange.endExchange();
     }
 
     @Override

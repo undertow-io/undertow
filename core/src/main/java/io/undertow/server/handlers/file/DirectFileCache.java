@@ -25,7 +25,6 @@ import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -50,22 +49,20 @@ public class DirectFileCache implements FileCache {
     public static final FileCache INSTANCE = new DirectFileCache();
 
     @Override
-    public void serveFile(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file, final boolean directoryListingEnabled) {
+    public void serveFile(final HttpServerExchange exchange, final File file, final boolean directoryListingEnabled) {
         // ignore request body
         IoUtils.safeShutdownReads(exchange.getRequestChannel());
 
-        WorkerDispatcher.dispatch(exchange, new FileWriteTask(exchange, completionHandler, file));
+        WorkerDispatcher.dispatch(exchange, new FileWriteTask(exchange, file));
     }
 
     private static class FileWriteTask implements Runnable {
 
         private final HttpServerExchange exchange;
-        private final HttpCompletionHandler completionHandler;
         private final File file;
 
-        private FileWriteTask(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file) {
+        private FileWriteTask(final HttpServerExchange exchange,  final File file) {
             this.exchange = exchange;
-            this.completionHandler = completionHandler;
             this.file = file;
         }
 
@@ -80,24 +77,24 @@ public class DirectFileCache implements FileCache {
                     fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
                 } catch (FileNotFoundException e) {
                     exchange.setResponseCode(404);
-                    completionHandler.handleComplete();
+                    exchange.endExchange();
                     return;
                 }
                 length = fileChannel.size();
             } catch (IOException e) {
                 UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file, e);
                 exchange.setResponseCode(500);
-                completionHandler.handleComplete();
+                exchange.endExchange();
                 return;
             }
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
             if (method.equals(Methods.HEAD)) {
-                completionHandler.handleComplete();
+                exchange.endExchange();
                 return;
             }
             if (!method.equals(Methods.GET)) {
                 exchange.setResponseCode(500);
-                completionHandler.handleComplete();
+                exchange.endExchange();
                 return;
             }
             final StreamSinkChannel response = exchange.getResponseChannel();
@@ -116,11 +113,11 @@ public class DirectFileCache implements FileCache {
                 log.tracef("Finished serving %s, flushing (blocking)", fileChannel);
                 Channels.flushBlocking(response);
                 log.tracef("Finished serving %s (complete)", fileChannel);
-                completionHandler.handleComplete();
+                exchange.endExchange();
             } catch (IOException ignored) {
                 log.tracef("Failed to serve %s: %s", fileChannel, ignored);
                 IoUtils.safeClose(fileChannel);
-                completionHandler.handleComplete();
+                exchange.endExchange();
             } finally {
                 IoUtils.safeClose(fileChannel);
                 IoUtils.safeClose(response);

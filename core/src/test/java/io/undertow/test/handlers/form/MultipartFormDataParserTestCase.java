@@ -70,10 +70,10 @@ public class MultipartFormDataParserTestCase {
                             }
                         }
                     }
-                    completionHandler.handleComplete();
+                    exchange.endExchange();
                 } catch (IOException e) {
                     exchange.setResponseCode(500);
-                    completionHandler.handleComplete();
+                    exchange.endExchange();
                 } finally {
                     IoUtils.safeClose(parser);
                 }

@@ -17,17 +17,15 @@
  */
 package io.undertow.security.handlers;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.util.Headers;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 /**
  * Handler responsible for checking of confidentiality is required for the requested resource and if so rejecting the request
@@ -57,7 +55,7 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
                 UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
                 exchange.setResponseCode(500);
             }
-            completionHandler.handleComplete();
+            exchange.endExchange();
         }
     }
 

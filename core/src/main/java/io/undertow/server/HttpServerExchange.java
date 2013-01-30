@@ -18,13 +18,16 @@
 
 package io.undertow.server;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.channels.Channel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
@@ -35,12 +38,18 @@ import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.SecureHashMap;
 import org.jboss.logging.Logger;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.ChannelFactory;
+import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 import static org.xnio.Bits.intBitMask;
 
@@ -69,6 +78,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      * The actual response channel. May be null if it has not been created yet.
      */
     private StreamSinkChannel responseChannel;
+    /**
+     * The actual request channel. May be null if it has not been created yet.
+     */
+    private StreamSourceChannel requestChannel;
 
     private HttpString protocol;
 
@@ -480,7 +493,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 }
             };
         }
-        return factory.create();
+        return requestChannel = factory.create();
     }
 
     public boolean isRequestChannelAvailable() {
@@ -629,6 +642,86 @@ public final class HttpServerExchange extends AbstractAttachable {
             for(ExchangeCompleteListener listener : exchangeCompleteListeners) {
                 listener.exchangeComplete(this, upgrade);
             }
+        }
+    }
+
+    /**
+     * Ends the exchange by fully draining the request channel, and flushing the response channel.
+     * <p/>
+     * This can result in handoff to an XNIO worker, so after this method is called the exchange should
+     * not be modified by the caller.
+     * <p/>
+     * If the exchange is already complete this method is a noop
+     */
+    public void endExchange() {
+        final int state = this.state;
+        try {
+            if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
+                if (isRequestChannelAvailable()) {
+                    getRequestChannel();
+                }
+                long res;
+                do {
+                    res = Channels.drain(requestChannel, Long.MAX_VALUE);
+                    if (res == 0) {
+                        requestChannel.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, new ChannelListener<StreamSourceChannel>() {
+                                    @Override
+                                    public void handleEvent(final StreamSourceChannel channel) {
+                                        channel.suspendReads();
+                                        channel.getReadSetter().set(null);
+                                        closeAndFlushResponse();
+                                    }
+                                }, new ChannelExceptionHandler<StreamSourceChannel>() {
+                                    @Override
+                                    public void handleException(final StreamSourceChannel channel, final IOException exception) {
+                                        UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", exception);
+                                        IoUtils.safeClose(connection.getChannel());
+                                    }
+                                }
+                        ));
+                        requestChannel.resumeReads();
+                        return;
+                    }
+                } while (res > 0);
+            }
+            if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
+                closeAndFlushResponse();
+            }
+        } catch (IOException e) {
+            UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", e);
+            IoUtils.safeClose(connection.getChannel());
+        }
+    }
+
+    private void closeAndFlushResponse() {
+        try {
+            if (isResponseChannelAvailable()) {
+                getResponseChannel();
+            }
+            if (responseChannel.isOpen()) {
+                responseChannel.shutdownWrites();
+                if (!responseChannel.flush()) {
+                    responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
+                            new ChannelListener<StreamSinkChannel>() {
+                                @Override
+                                public void handleEvent(final StreamSinkChannel channel) {
+                                    channel.suspendWrites();
+                                    channel.getWriteSetter().set(null);
+                                }
+                            }, new ChannelExceptionHandler<Channel>() {
+                                @Override
+                                public void handleException(final Channel channel, final IOException exception) {
+                                    UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", exception);
+                                    IoUtils.safeClose(connection.getChannel());
+                                }
+                            }
+                    ));
+                    responseChannel.resumeWrites();
+                }
+            }
+        } catch (IOException e) {
+            UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", e);
+            IoUtils.safeClose(connection.getChannel());
         }
     }
 

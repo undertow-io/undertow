@@ -60,7 +60,7 @@ public class FileHandler implements HttpHandler {
         if (File.separatorChar != '/') {
             if (path.indexOf(File.separatorChar) != -1) {
                 exchange.setResponseCode(404);
-                completionHandler.handleComplete();
+                exchange.endExchange();
                 return;
             }
             path = path.replace('/', File.separatorChar);
@@ -70,7 +70,7 @@ public class FileHandler implements HttpHandler {
             return;
         }
 
-        fileCache.serveFile(exchange, completionHandler, new File(base, path), directoryListingEnabled);
+        fileCache.serveFile(exchange, new File(base, path), directoryListingEnabled);
     }
 
     public File getBase() {
@@ -110,12 +110,12 @@ public class FileHandler implements HttpHandler {
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(buffer.limit()));
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, type);
             if (Methods.HEAD.equals(exchange.getRequestMethod())) {
-                completionHandler.handleComplete();
+                exchange.endExchange();
                 return true;
             }
 
             StreamSinkChannel channel = exchange.getResponseChannel();
-            BufferTransfer.transfer(exchange, channel, completionHandler, null, new ByteBuffer[]{buffer});
+            BufferTransfer.transfer(exchange, channel, null, new ByteBuffer[]{buffer});
 
             return true;
         }
@@ -123,12 +123,12 @@ public class FileHandler implements HttpHandler {
         return false;
     }
 
-    public static void renderDirectoryListing(HttpServerExchange exchange, HttpCompletionHandler completionHandler, File file) {
+    public static void renderDirectoryListing(HttpServerExchange exchange, File file) {
         String requestPath = exchange.getRequestPath();
         if (! requestPath.endsWith("/")) {
             exchange.setResponseCode(302);
             exchange.getResponseHeaders().put(Headers.LOCATION, requestPath + "/");
-            completionHandler.handleComplete();
+            exchange.endExchange();
             return;
         }
 
@@ -197,7 +197,7 @@ public class FileHandler implements HttpHandler {
             exchange.setResponseCode(500);
         }
 
-        completionHandler.handleComplete();
+        exchange.endExchange();
         return;
     }
 

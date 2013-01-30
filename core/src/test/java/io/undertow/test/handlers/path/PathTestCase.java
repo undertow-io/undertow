@@ -124,7 +124,7 @@ public class PathTestCase {
             for(Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
                 exchange.getResponseHeaders().put(new HttpString(param.getKey()), param.getValue().getFirst());
             }
-            completionHandler.handleComplete();
+            exchange.endExchange();
         }
     }
 

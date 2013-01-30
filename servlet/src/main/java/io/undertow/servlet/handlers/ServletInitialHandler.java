@@ -101,7 +101,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                     handler.handleBlockingRequest(exchange);
                 } catch (Throwable t) {
                     UndertowLogger.REQUEST_LOGGER.errorf(t, "Internal error handling servlet request %s", exchange.getRequestURI());
-                    completionHandler.handleComplete();
+                    exchange.endExchange();
                 }
             }
         };
