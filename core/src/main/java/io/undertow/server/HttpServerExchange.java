@@ -533,7 +533,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the factory to produce the response channel.  The resultant channel's {@link StreamSinkChannel#close()} or
+     * Get the response channel.  The resultant channel's {@link StreamSinkChannel#close()} or
      * {@link StreamSinkChannel#shutdownWrites()} method must be called at some point after the request is processed to
      * prevent resource leakage and to allow the next request to proceed.  Closing a fixed-length response before the
      * corresponding number of bytes has been written will cause the connection to be reset and subsequent requests to
@@ -546,56 +546,33 @@ public final class HttpServerExchange extends AbstractAttachable {
      * {@link java.nio.channels.Channel#close()} is called on the channel with no content being written.  Once the channel
      * is acquired, however, the response code and headers may not be modified.
      *
-     * @return the response channel factory, or {@code null} if another party already acquired the channel factory
+     * @return the response channel, or {@code null} if another party already acquired the channel
      */
-    public ChannelFactory<StreamSinkChannel> getResponseChannelFactory() {
+    public StreamSinkChannel getResponseChannel() {
         final List<ChannelWrapper<StreamSinkChannel>> wrappers = responseWrappers;
         this.responseWrappers = null;
         if (wrappers == null) {
             return null;
         }
-        return new ResponseChannelFactory(this, underlyingResponseChannel, wrappers);
-    }
 
-    private static final class ResponseChannelFactory implements ChannelFactory<StreamSinkChannel> {
-        private final HttpServerExchange exchange;
-        private final StreamSinkChannel firstChannel;
-        private List<ChannelWrapper<StreamSinkChannel>> wrappers;
-
-        ResponseChannelFactory(final HttpServerExchange exchange, final StreamSinkChannel firstChannel, final List<ChannelWrapper<StreamSinkChannel>> wrappers) {
-            this.exchange = exchange;
-            this.firstChannel = firstChannel;
-            this.wrappers = wrappers;
+        ChannelFactory<StreamSinkChannel> factory = new ImmediateChannelFactory<StreamSinkChannel>(underlyingResponseChannel);
+        for (final ChannelWrapper<StreamSinkChannel> wrapper : wrappers) {
+            final ChannelFactory oldFactory = factory;
+            factory = new ChannelFactory<StreamSinkChannel>() {
+                @Override
+                public StreamSinkChannel create() {
+                    return wrapper.wrap(oldFactory, HttpServerExchange.this);
+                }
+            };
         }
-
-        public StreamSinkChannel create() {
-            final List<ChannelWrapper<StreamSinkChannel>> wrappers = this.wrappers;
-            this.wrappers = null;
-            if (wrappers == null) {
-                return null;
-            }
-
-
-
-            ChannelFactory<StreamSinkChannel> factory = new ImmediateChannelFactory<StreamSinkChannel>(firstChannel);
-            for (final ChannelWrapper<StreamSinkChannel> wrapper : wrappers) {
-                final ChannelFactory oldFactory = factory;
-                factory = new ChannelFactory<StreamSinkChannel>() {
-                    @Override
-                    public StreamSinkChannel create() {
-                        return wrapper.wrap(oldFactory, exchange);
-                    }
-                };
-            }
-            final StreamSinkChannel channel = factory.create();
-            exchange.responseChannel = channel;
-            exchange.startResponse();
-            return channel;
-        }
+        final StreamSinkChannel channel = factory.create();
+        this.responseChannel = channel;
+        this.startResponse();
+        return channel;
     }
 
     /**
-     * @return <code>true</code> if {@link #getResponseChannelFactory()} has not been called
+     * @return <code>true</code> if {@link #getResponseChannel()} has not been called
      */
     public boolean isResponseChannelAvailable() {
         return responseWrappers != null;
@@ -720,7 +697,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         final StreamSourceChannel requestChannel = underlyingRequestChannel;
         StreamSinkChannel responseChannel = this.responseChannel;
         if (responseChannel == null) {
-            responseChannel = getResponseChannelFactory().create();
+            responseChannel = getResponseChannel();
         }
         if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
             // we're good; a transfer coding handler took care of things.

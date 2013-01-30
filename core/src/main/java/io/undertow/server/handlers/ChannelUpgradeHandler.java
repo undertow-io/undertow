@@ -98,7 +98,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
                     try {
                         exchange.upgradeChannel(string);
                         exchange.getRequestChannel().shutdownReads();
-                        final StreamSinkChannel sinkChannel = exchange.getResponseChannelFactory().create();
+                        final StreamSinkChannel sinkChannel = exchange.getResponseChannel();
                         sinkChannel.shutdownWrites();
                         if (!sinkChannel.flush()) {
                             sinkChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(new ChannelListener<Channel>() {

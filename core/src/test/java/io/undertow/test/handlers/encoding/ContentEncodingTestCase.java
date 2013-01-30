@@ -39,7 +39,7 @@ public class ContentEncodingTestCase {
             public void handleBlockingRequest(final HttpServerExchange exchange) {
                 try {
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
-                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
                     outputStream.write(message.getBytes());
                     outputStream.close();
                 } catch (IOException e) {

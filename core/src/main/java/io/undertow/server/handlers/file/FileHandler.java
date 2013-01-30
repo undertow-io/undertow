@@ -31,7 +31,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -115,8 +114,7 @@ public class FileHandler implements HttpHandler {
                 return true;
             }
 
-            ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
-            StreamSinkChannel channel = factory.create();
+            StreamSinkChannel channel = exchange.getResponseChannel();
             BufferTransfer.transfer(exchange, channel, completionHandler, null, new ByteBuffer[]{buffer});
 
             return true;
@@ -125,7 +123,7 @@ public class FileHandler implements HttpHandler {
         return false;
     }
 
-    public static void renderDirectoryListing(HttpServerExchange exchange, HttpCompletionHandler completionHandler, File file, ChannelFactory<StreamSinkChannel> factory) {
+    public static void renderDirectoryListing(HttpServerExchange exchange, HttpCompletionHandler completionHandler, File file) {
         String requestPath = exchange.getRequestPath();
         if (! requestPath.endsWith("/")) {
             exchange.setResponseCode(302);
@@ -192,7 +190,7 @@ public class FileHandler implements HttpHandler {
         try {
             ByteBuffer output = ByteBuffer.wrap(builder.toString().getBytes("UTF-8"));
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(output.limit()));
-            Channels.writeBlocking(factory.create(), output);
+            Channels.writeBlocking(exchange.getResponseChannel(), output);
         } catch (UnsupportedEncodingException e) {
             throw new IllegalStateException(e);
         } catch (IOException e) {

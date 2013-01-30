@@ -2,7 +2,6 @@ package io.undertow.test;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.util.concurrent.CountDownLatch;
@@ -43,7 +42,7 @@ public class WriteTimeoutTestCase {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-                final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
+                final StreamSinkChannel response = exchange.getResponseChannel();
                 try {
                     response.setOption(Options.WRITE_TIMEOUT, 10);
                 } catch (IOException e) {

@@ -115,7 +115,7 @@ public abstract class Handshake {
         exchange.getResponseHeaders().put(Headers.CONNECTION, "Upgrade");
 
         exchange.upgradeChannel();
-        final StreamSinkChannel channel = exchange.getResponseChannelFactory().create();
+        final StreamSinkChannel channel = exchange.getResponseChannel();
 
         if(data.length > 0) {
             writePayload(ioFuture, exchange, channel, ByteBuffer.wrap(data));

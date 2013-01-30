@@ -30,7 +30,6 @@ import io.undertow.util.Headers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
-import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -39,7 +38,6 @@ import org.xnio.channels.StreamSinkChannel;
  */
 public class ServletOutputStreamImpl extends ServletOutputStream {
 
-    protected final ChannelFactory<StreamSinkChannel> channelFactory;
     private final HttpServletResponseImpl servletResponse;
     private boolean closed;
     private ByteBuffer buffer;
@@ -55,11 +53,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      *
      * @param channelFactory the channel to wrap
      */
-    public ServletOutputStreamImpl(ChannelFactory<StreamSinkChannel> channelFactory, Integer contentLength, final HttpServletResponseImpl servletResponse) {
-        if (channelFactory == null) {
-            throw new IllegalArgumentException("Null ChannelFactory");
-        }
-        this.channelFactory = channelFactory;
+    public ServletOutputStreamImpl(Integer contentLength, final HttpServletResponseImpl servletResponse) {
         this.servletResponse = servletResponse;
         this.contentLength = contentLength;
     }
@@ -69,11 +63,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      *
      * @param channelFactory the channel to wrap
      */
-    public ServletOutputStreamImpl(ChannelFactory<StreamSinkChannel> channelFactory, Integer contentLength, final HttpServletResponseImpl servletResponse, int bufferSize) {
-        if (channelFactory == null) {
-            throw new IllegalArgumentException("Null ChannelFactory");
-        }
-        this.channelFactory = channelFactory;
+    public ServletOutputStreamImpl(Integer contentLength, final HttpServletResponseImpl servletResponse, int bufferSize) {
         this.servletResponse = servletResponse;
         this.bufferSize = bufferSize;
         this.contentLength = contentLength;
@@ -157,7 +147,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             writeBuffer();
         }
         if (channel == null) {
-            channel = channelFactory.create();
+            channel = servletResponse.getExchange().getResponseChannel();
         }
         Channels.flushBlocking(channel);
     }
@@ -165,7 +155,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     private void writeBuffer() throws IOException {
         buffer.flip();
         if (channel == null) {
-            channel = channelFactory.create();
+            channel = servletResponse.getExchange().getResponseChannel();
         }
         Channels.writeBlocking(channel, buffer);
         buffer.clear();
@@ -190,7 +180,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                 writeBuffer();
             }
             if (channel == null) {
-                channel = channelFactory.create();
+                channel = servletResponse.getExchange().getResponseChannel();
             }
             StreamSinkChannel channel = this.channel;
             channel.shutdownWrites();
@@ -229,7 +219,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         }
 
         if (channel == null) {
-            channel = channelFactory.create();
+            channel = servletResponse.getExchange().getResponseChannel();
         }
         if (buffer != null) {
             buffer.flip();

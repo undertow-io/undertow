@@ -18,12 +18,6 @@
 
 package io.undertow.server.handlers.file;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -31,11 +25,16 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import io.undertow.UndertowLogger;
+import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 import io.undertow.util.WorkerDispatcher;
 import org.jboss.logging.Logger;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
-import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -94,12 +93,7 @@ public class PermanentFileCache implements FileCache {
             completionHandler.handleComplete();
             return;
         }
-        final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
-        if (factory == null) {
-            completionHandler.handleComplete();
-            return;
-        }
-        final StreamSinkChannel response = factory.create();
+        final StreamSinkChannel response = exchange.getResponseChannel();
         WorkerDispatcher.dispatch(exchange, new FileWriteTask(completionHandler, response, fileChannel, length));
     }
 

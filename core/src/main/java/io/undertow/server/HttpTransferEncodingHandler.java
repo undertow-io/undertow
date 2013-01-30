@@ -180,10 +180,9 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             }
             // create the channels if they haven't yet been
             exchange.getRequestChannel();
-            final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
-            if (factory != null) {
+            if(exchange.isResponseChannelAvailable()) {
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
-                factory.create();
+               exchange.getResponseChannel();
             }
             try {
                 responseStream.shutdownWrites();

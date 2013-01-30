@@ -303,9 +303,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private void createOutputStream() {
         if (servletOutputStream == null) {
             if (bufferSize == null) {
-                servletOutputStream = new ServletOutputStreamImpl(exchange.getResponseChannelFactory(), contentLength, this);
+                servletOutputStream = new ServletOutputStreamImpl(contentLength, this);
             } else {
-                servletOutputStream = new ServletOutputStreamImpl(exchange.getResponseChannelFactory(), contentLength, this, bufferSize);
+                servletOutputStream = new ServletOutputStreamImpl(contentLength, this, bufferSize);
             }
         }
     }

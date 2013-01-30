@@ -33,7 +33,6 @@ import io.undertow.util.WorkerDispatcher;
 import org.jboss.logging.Logger;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
-import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -84,10 +83,9 @@ public class CachingFileCache implements FileCache {
             completionHandler.handleComplete();
             return;
         }
-        final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
         final DirectBufferCache.CacheEntry entry = cache.get(file.getAbsolutePath());
         if (entry == null) {
-            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, factory, file, directoryListingEnabled));
+            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, file, directoryListingEnabled));
             return;
         }
 
@@ -99,17 +97,15 @@ public class CachingFileCache implements FileCache {
 
         // It's loading retry later
         if (!entry.enabled() || !entry.reference()) {
-            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, factory, file, directoryListingEnabled));
+            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, completionHandler, file, directoryListingEnabled));
             return;
         }
 
-        final StreamSinkChannel responseChannel;
         final ByteBuffer[] buffers;
 
 
         boolean ok = false;
         try {
-            responseChannel = factory.create();
             LimitedBufferSlicePool.PooledByteBuffer[] pooled = entry.buffers();
             buffers = new ByteBuffer[pooled.length];
             for (int i = 0; i < buffers.length; i++) {
@@ -125,7 +121,7 @@ public class CachingFileCache implements FileCache {
 
         // Transfer Inline, or register and continue transfer
         // Pass off the entry dereference call to the listener
-        BufferTransfer.transfer(exchange, responseChannel, completionHandler, new DereferenceCallback(entry), buffers);
+        BufferTransfer.transfer(exchange, exchange.getResponseChannel(), completionHandler, new DereferenceCallback(entry), buffers);
     }
 
     private class FileWriteLoadTask implements Runnable {
@@ -133,12 +129,10 @@ public class CachingFileCache implements FileCache {
         private final HttpCompletionHandler completionHandler;
         private final File file;
         private final HttpServerExchange exchange;
-        private final ChannelFactory<StreamSinkChannel> factory;
         private final boolean renderDirectoryListing;
 
-        public FileWriteLoadTask(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final ChannelFactory<StreamSinkChannel> factory, final File file, final boolean renderDirectoryListing) {
+        public FileWriteLoadTask(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final File file, final boolean renderDirectoryListing) {
             this.completionHandler = completionHandler;
-            this.factory = factory;
             this.file = file;
             this.exchange = exchange;
             this.renderDirectoryListing = renderDirectoryListing;
@@ -152,7 +146,7 @@ public class CachingFileCache implements FileCache {
 
             if (file.isDirectory()) {
                 if (renderDirectoryListing) {
-                    FileHandler.renderDirectoryListing(exchange, completionHandler, file, factory);
+                    FileHandler.renderDirectoryListing(exchange, completionHandler, file);
                 } else {
                     //we send a 404 so as to not leak any information
                     exchange.setResponseCode(404);
@@ -186,13 +180,12 @@ public class CachingFileCache implements FileCache {
                 return;
             }
 
-            final StreamSinkChannel channel = factory.create();
-
             DirectBufferCache.CacheEntry entry = null;
             String path = file.getAbsolutePath();
             if (length < maxFileSize) {
                 entry = cache.add(path, (int) length);
             }
+            final StreamSinkChannel channel = exchange.getResponseChannel();
 
             if (entry == null || entry.buffers().length == 0 || !entry.claimEnable()) {
                 transfer(channel, fileChannel, length);

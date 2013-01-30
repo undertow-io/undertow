@@ -35,7 +35,6 @@ import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
-import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -101,13 +100,7 @@ public class DirectFileCache implements FileCache {
                 completionHandler.handleComplete();
                 return;
             }
-            final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
-            if (factory == null) {
-                IoUtils.safeClose(fileChannel);
-                completionHandler.handleComplete();
-                return;
-            }
-            final StreamSinkChannel response = factory.create();
+            final StreamSinkChannel response = exchange.getResponseChannel();
             response.getCloseSetter().set(new ChannelListener<Channel>() {
                 public void handleEvent(final Channel channel) {
                     IoUtils.safeClose(fileChannel);

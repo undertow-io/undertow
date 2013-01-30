@@ -46,7 +46,7 @@ public class ReadTimeoutTestCase {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-                final StreamSinkChannel response = exchange.getResponseChannelFactory().create();
+                final StreamSinkChannel response = exchange.getResponseChannel();
                 final StreamSourceChannel request = exchange.getRequestChannel();
                 try {
                     request.setOption(Options.READ_TIMEOUT, 100);

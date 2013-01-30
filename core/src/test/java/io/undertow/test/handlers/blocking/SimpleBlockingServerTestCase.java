@@ -66,7 +66,7 @@ public class SimpleBlockingServerTestCase {
                         byte[] buffer = new byte[1024];
                         final ByteArrayOutputStream b = new ByteArrayOutputStream();
                         int r = 0;
-                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
                         final InputStream inputStream = new ChannelInputStream(exchange.getRequestChannel());
                         while ((r = inputStream.read(buffer)) > 0) {
                             b.write(buffer, 0 , r);
@@ -74,7 +74,7 @@ public class SimpleBlockingServerTestCase {
                         outputStream.write(b.toByteArray());
                         outputStream.close();
                     } else {
-                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
                         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
                         outputStream.write(message.getBytes());
                         outputStream.close();

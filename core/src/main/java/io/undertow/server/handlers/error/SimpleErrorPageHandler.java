@@ -31,7 +31,6 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringWriteChannelListener;
-import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
@@ -60,23 +59,23 @@ public class SimpleErrorPageHandler implements HttpHandler {
         HttpHandlers.executeHandler(next, exchange, new HttpCompletionHandler() {
             @Override
             public void handleComplete() {
+                if (!exchange.isResponseChannelAvailable()) {
+                    return;
+                }
                 Set<Integer> codes = responseCodes;
                 if (codes == null ? exchange.getResponseCode() >= 400 : codes.contains(Integer.valueOf(exchange.getResponseCode()))) {
-                    final ChannelFactory<StreamSinkChannel> factory = exchange.getResponseChannelFactory();
-                    if (factory != null) {
-                        final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getResponseCode() + " - " + StatusCodes.getReason(exchange.getResponseCode()) + "</body></html>";
-                        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + errorPage.length());
+                    final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getResponseCode() + " - " + StatusCodes.getReason(exchange.getResponseCode()) + "</body></html>";
+                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + errorPage.length());
 
-                        final StreamSinkChannel response = factory.create();
-                        StringWriteChannelListener listener = new StringWriteChannelListener(errorPage) {
-                            @Override
-                            protected void writeDone(final StreamSinkChannel channel) {
-                                HttpHandlers.flushAndCompleteRequest(channel, completionHandler);
-                            }
-                        };
-                        listener.setup(response);
-                        return;
-                    }
+                    final StreamSinkChannel response = exchange.getResponseChannel();
+                    StringWriteChannelListener listener = new StringWriteChannelListener(errorPage) {
+                        @Override
+                        protected void writeDone(final StreamSinkChannel channel) {
+                            HttpHandlers.flushAndCompleteRequest(channel, completionHandler);
+                        }
+                    };
+                    listener.setup(response);
+                    return;
                 }
                 completionHandler.handleComplete();
             }

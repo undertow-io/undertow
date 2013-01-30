@@ -59,12 +59,12 @@ public class ChunkedResponseTransferCodingTestCase {
                     if(connection == null) {
                         connection = exchange.getConnection();
                     } else if(!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()){
-                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
                         outputStream.write("Connection not persistent".getBytes());
                         outputStream.close();
                         return;
                     }
-                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
                     outputStream.write(message.getBytes());
                     outputStream.close();
                 } catch (IOException e) {

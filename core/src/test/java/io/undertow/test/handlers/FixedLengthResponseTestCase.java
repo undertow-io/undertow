@@ -62,12 +62,12 @@ public class FixedLengthResponseTestCase {
                     if(connection == null) {
                         connection = exchange.getConnection();
                     } else if(!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()){
-                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
                         outputStream.write("Connection not persistent".getBytes());
                         outputStream.close();
                         return;
                     }
-                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
                     outputStream.write(message.getBytes());
                     outputStream.close();
