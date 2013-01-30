@@ -137,19 +137,19 @@ public interface SecurityContext {
     class AuthenticationResult {
 
         private final AuthenticationMechanism.AuthenticationMechanismOutcome outcome;
-        private final Runnable requestCompletionTasks;
+        private final Runnable sendChallengeTask;
 
-        public AuthenticationResult(final AuthenticationMechanism.AuthenticationMechanismOutcome outcome, final Runnable requestCompletionTasks) {
+        public AuthenticationResult(final AuthenticationMechanism.AuthenticationMechanismOutcome outcome, final Runnable sendChallengeTask) {
             this.outcome = outcome;
-            this.requestCompletionTasks = requestCompletionTasks;
+            this.sendChallengeTask = sendChallengeTask;
         }
 
         public AuthenticationMechanism.AuthenticationMechanismOutcome getOutcome() {
             return outcome;
         }
 
-        public Runnable getRequestCompletionTasks() {
-            return requestCompletionTasks;
+        public Runnable getSendChallengeTask() {
+            return sendChallengeTask;
         }
     }
 }

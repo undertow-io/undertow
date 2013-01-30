@@ -161,8 +161,6 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     public void sendChallenge(HttpServerExchange exchange) {
         if (Util.shouldChallenge(exchange)) {
             sendChallengeHeaders(exchange);
-        } else {
-            sendAuthenticationInfoHeader(exchange);
         }
     }
 
@@ -335,6 +333,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             }
 
             // We have authenticated the remote user.
+
+            sendAuthenticationInfoHeader(exchange);
             Principal principal = new UndertowPrincipal(account);
             result.setResult(new AuthenticationMechanismResult(principal, account, false));
 

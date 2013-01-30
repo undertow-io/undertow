@@ -347,7 +347,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             //wrappers, is this a problem?
 
             //authentication failed, so run the completion tasks to setup the challenges
-            result.getRequestCompletionTasks().run();
+            result.getSendChallengeTask().run();
             //now commit the response
             HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
             responseImpl.closeStreamAndWriter();
