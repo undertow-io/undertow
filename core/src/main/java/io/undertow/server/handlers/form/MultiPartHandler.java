@@ -66,24 +66,7 @@ public class MultiPartHandler implements HttpHandler {
             String boundary = Headers.extractTokenFromHeader(mimeType, "boundary");
             final MultiPartUploadHandler multiPartUploadHandler = new MultiPartUploadHandler(exchange, completionHandler, boundary);
             exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, multiPartUploadHandler);
-
-            HttpHandlers.executeHandler(next, exchange, new HttpCompletionHandler() {
-                @Override
-                public void handleComplete() {
-                    try {
-                        completionHandler.handleComplete();
-                    } finally {
-                        for (final File file : multiPartUploadHandler.getCreatedFiles()) {
-                            if (file.exists()) {
-                                if (!file.delete()) {
-                                    UndertowLogger.REQUEST_LOGGER.cannotRemoveUploadedFile(file);
-                                }
-                            }
-                        }
-                    }
-
-                }
-            });
+            HttpHandlers.executeHandler(next, exchange, completionHandler);
         } else {
             HttpHandlers.executeHandler(next, exchange, completionHandler);
         }
@@ -279,6 +262,23 @@ public class MultiPartHandler implements HttpHandler {
             return createdFiles;
         }
 
+        @Override
+        public void close() throws IOException {
+            //we have to dispatch this, as it may result in file IO
+            WorkerDispatcher.dispatch(exchange, new Runnable() {
+                @Override
+                public void run() {
+                    for (final File file : getCreatedFiles()) {
+                        if (file.exists()) {
+                            if (!file.delete()) {
+                                UndertowLogger.REQUEST_LOGGER.cannotRemoveUploadedFile(file);
+                            }
+                        }
+                    }
+                }
+            });
+
+        }
     }
 
 }

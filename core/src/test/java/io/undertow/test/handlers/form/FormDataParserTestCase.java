@@ -48,6 +48,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.xnio.IoUtils;
 
 /**
  * @author Stuart Douglas
@@ -86,6 +87,8 @@ public class FormDataParserTestCase {
                 } catch (IOException e) {
                     exchange.setResponseCode(500);
                     completionHandler.handleComplete();
+                } finally {
+                    IoUtils.safeClose(parser);
                 }
             }
         });

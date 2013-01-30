@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.form;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 import io.undertow.util.AttachmentKey;
@@ -27,11 +28,11 @@ import org.xnio.IoFuture;
  * Parser for form data. This can be used by down-stream handlers to parse
  * form data.
  *
- *
+ * This parser must be closed to make sure any temporary files have been cleaned up.
  *
  * @author Stuart Douglas
  */
-public interface FormDataParser {
+public interface FormDataParser extends Closeable {
 
     AttachmentKey<FormDataParser> ATTACHMENT_KEY = AttachmentKey.create(FormDataParser.class);
 
@@ -51,5 +52,12 @@ public interface FormDataParser {
      * @throws IOException If the data could not be read
      */
     FormData parseBlocking() throws IOException;
+
+    /**
+     * Closes the parser, and removes and temporary files that may have been created.
+     *
+     * @throws IOException
+     */
+    void close() throws IOException;
 
 }

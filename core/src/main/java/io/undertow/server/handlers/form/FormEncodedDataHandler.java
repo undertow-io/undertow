@@ -58,7 +58,7 @@ public class FormEncodedDataHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (mimeType != null && mimeType.equals(APPLICATION_X_WWW_FORM_URLENCODED)) {
-            exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, new AsyncFormEncodedDataParser(exchange, completionHandler));
+            exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, new FormEncodedDataParser(exchange, completionHandler));
         }
         HttpHandlers.executeHandler(next, exchange, completionHandler);
     }
@@ -72,7 +72,7 @@ public class FormEncodedDataHandler implements HttpHandler {
         this.next = next;
     }
 
-    private static final class AsyncFormEncodedDataParser implements ChannelListener<StreamSourceChannel>, FormDataParser {
+    private static final class FormEncodedDataParser implements ChannelListener<StreamSourceChannel>, FormDataParser {
 
         private final HttpServerExchange exchange;
         private final HttpCompletionHandler completionHandler;
@@ -88,7 +88,7 @@ public class FormEncodedDataHandler implements HttpHandler {
         //4=finished
         private int state = 0;
 
-        private AsyncFormEncodedDataParser(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+        private FormEncodedDataParser(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
             this.exchange = exchange;
             this.completionHandler = completionHandler;
         }
@@ -228,6 +228,11 @@ public class FormEncodedDataHandler implements HttpHandler {
                 }
             }
             return ioFuture.get();
+        }
+
+        @Override
+        public void close() throws IOException {
+
         }
     }
 
