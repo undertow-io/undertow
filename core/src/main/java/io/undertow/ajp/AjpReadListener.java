@@ -5,10 +5,8 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.channels.GatedStreamSinkChannel;
 import io.undertow.server.ChannelWrapper;
 import io.undertow.server.ExchangeCompleteListener;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
@@ -32,14 +30,6 @@ import static org.xnio.IoUtils.safeClose;
  */
 
 final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
-
-
-    private static final HttpCompletionHandler COMPLETION_HANDLER = new HttpCompletionHandler() {
-        @Override
-        public void handleComplete() {
-
-        }
-    };
 
     private final StreamSinkChannel responseChannel;
 
@@ -190,22 +180,6 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
             public void run() {
                 listener.handleEvent(channel);
             }
-        }
-    }
-
-    private static class ResponseTerminateAction implements Runnable {
-        private volatile GatedStreamSinkChannel nextRequestResponseChannel;
-        private volatile Object permit;
-
-        public ResponseTerminateAction(GatedStreamSinkChannel nextRequestResponseChannel, Object permit) {
-            this.nextRequestResponseChannel = nextRequestResponseChannel;
-            this.permit = permit;
-        }
-
-        public void run() {
-            nextRequestResponseChannel.openGate(permit);
-            nextRequestResponseChannel = null;
-            permit = null;
         }
     }
 

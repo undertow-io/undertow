@@ -42,14 +42,6 @@ import static org.xnio.IoUtils.safeClose;
  */
 final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
-
-    private static HttpCompletionHandler COMPLETION_HANDLER = new HttpCompletionHandler() {
-        @Override
-        public void handleComplete() {
-
-        }
-    };
-
     private final StreamSinkChannel responseChannel;
 
     private ParseState state = new ParseState();
