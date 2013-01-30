@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import io.undertow.UndertowMessages;
+import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -60,6 +61,18 @@ public class FileErrorPageHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
+        exchange.addDefaultResponseListener(new DefaultResponseListener() {
+            @Override
+            public boolean handleDefaultResponse(final HttpServerExchange exchange) {
+                Set<Integer> codes = responseCodes;
+                if (!exchange.isResponseStarted() && codes.contains(exchange.getResponseCode())) {
+                    fileCache.serveFile(exchange, file, false);
+                    return true;
+                }
+                return false;
+            }
+        });
+
         HttpHandlers.executeHandler(next, exchange);
     }
 

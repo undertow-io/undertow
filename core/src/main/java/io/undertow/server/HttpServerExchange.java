@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.Channel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -68,9 +69,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final HeaderMap requestHeaders = new HeaderMap();
     private final HeaderMap responseHeaders = new HeaderMap();
 
-    private List<ExchangeCompleteListener> exchangeCompleteListeners = new ArrayList<ExchangeCompleteListener>(1);
+    private List<ExchangeCompletionListener> exchangeCompleteListeners = new ArrayList<ExchangeCompletionListener>(1);
+    private Deque<DefaultResponseListener> defaultResponseListeners = new ArrayDeque<DefaultResponseListener>(1);
 
-    private final Map<String, Deque<String>> queryParameters = new SecureHashMap<String, Deque<String>>(0);
+    private Map<String, Deque<String>> queryParameters;
 
     private final StreamSinkChannel underlyingResponseChannel;
     private final StreamSourceChannel underlyingRequestChannel;
@@ -403,8 +405,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
-    public void addExchangeCompleteListener(final ExchangeCompleteListener listener){
+    public void addExchangeCompleteListener(final ExchangeCompletionListener listener){
         exchangeCompleteListeners.add(listener);
+    }
+
+    public void addDefaultResponseListener(final DefaultResponseListener listener){
+        defaultResponseListeners.add(listener);
     }
 
     /**
@@ -444,15 +450,22 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Returns a mutable map of very parameters.
+     * Returns a immutable map of very parameters.
      *
      * @return The query parameters
      */
     public Map<String, Deque<String>> getQueryParameters() {
-        return queryParameters;
+        if(queryParameters == null) {
+            return Collections.emptyMap();
+        } else {
+            return Collections.unmodifiableMap(queryParameters);
+        }
     }
 
     public void addQueryParam(final String name, final String param) {
+        if(queryParameters == null) {
+            queryParameters = new SecureHashMap<String, Deque<String>>();
+        }
         Deque<String> list = queryParameters.get(name);
         if (list == null) {
             queryParameters.put(name, list = new ArrayDeque<String>());
@@ -521,8 +534,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.state = oldVal | FLAG_REQUEST_TERMINATED;
         if(anyAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
             boolean upgrade = getResponseCode() == 101;
-            for(ExchangeCompleteListener listener : exchangeCompleteListeners) {
-                listener.exchangeComplete(this, upgrade);
+            for(ExchangeCompletionListener listener : exchangeCompleteListeners) {
+                listener.exchangeEvent(this);
             }
         }
     }
@@ -639,8 +652,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.state = oldVal | FLAG_RESPONSE_TERMINATED;
         if(anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
             boolean upgrade = getResponseCode() == 101;
-            for(ExchangeCompleteListener listener : exchangeCompleteListeners) {
-                listener.exchangeComplete(this, upgrade);
+            for(ExchangeCompletionListener listener : exchangeCompleteListeners) {
+                listener.exchangeEvent(this);
             }
         }
     }
@@ -654,6 +667,17 @@ public final class HttpServerExchange extends AbstractAttachable {
      * If the exchange is already complete this method is a noop
      */
     public void endExchange() {
+        while (!defaultResponseListeners.isEmpty()) {
+            DefaultResponseListener listener = defaultResponseListeners.poll();
+            try {
+                if (listener.handleDefaultResponse(this)) {
+                    return;
+                }
+            } catch (Exception e) {
+                UndertowLogger.REQUEST_LOGGER.debug("Exception running default response listener", e);
+            }
+        }
+
         final int state = this.state;
         try {
             if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {

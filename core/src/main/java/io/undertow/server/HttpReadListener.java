@@ -185,7 +185,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     /**
      * Action that starts the next request
      */
-    private static class StartNextRequestAction implements ExchangeCompleteListener {
+    private static class StartNextRequestAction implements ExchangeCompletionListener {
 
         private PushBackStreamChannel requestChannel;
         private StreamSinkChannel responseChannel;
@@ -197,7 +197,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         }
 
         @Override
-        public void exchangeComplete(final HttpServerExchange exchange, final boolean isUpgrade) {
+        public void exchangeEvent(final HttpServerExchange exchange) {
             if (exchange.isPersistent() && !exchange.isUpgrade()) {
                 final PushBackStreamChannel channel = this.requestChannel;
                 final HttpReadListener listener = new HttpReadListener(responseChannel, channel, exchange.getConnection());

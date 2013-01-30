@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.server.ChannelWrapper;
-import io.undertow.server.ExchangeCompleteListener;
+import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
@@ -143,7 +143,7 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
     /**
      * Action that starts the next request
      */
-    private static class StartNextRequestAction implements ExchangeCompleteListener {
+    private static class StartNextRequestAction implements ExchangeCompletionListener {
 
         private PushBackStreamChannel requestChannel;
         private StreamSinkChannel responseChannel;
@@ -155,7 +155,7 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
         }
 
         @Override
-        public void exchangeComplete(final HttpServerExchange exchange, final boolean isUpgrade) {
+        public void exchangeEvent(final HttpServerExchange exchange) {
 
             final PushBackStreamChannel channel = this.requestChannel;
             final AjpReadListener listener = new AjpReadListener(responseChannel, channel, exchange.getConnection());

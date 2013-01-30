@@ -8,7 +8,7 @@ package io.undertow.server;
  *
  * @author Stuart Douglas
  */
-public interface ExchangeCompleteListener {
+public interface ExchangeCompletionListener {
 
-    void exchangeComplete(final HttpServerExchange exchange, boolean isUpgrade);
+    void exchangeEvent(final HttpServerExchange exchange);
 }

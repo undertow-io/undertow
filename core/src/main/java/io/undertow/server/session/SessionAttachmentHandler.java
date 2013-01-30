@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.server.ExchangeCompleteListener;
+import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -123,7 +123,7 @@ public class SessionAttachmentHandler implements HttpHandler {
         return this;
     }
 
-    private static class UpdateLastAccessTimeListener implements ExchangeCompleteListener {
+    private static class UpdateLastAccessTimeListener implements ExchangeCompletionListener {
 
         private final SessionConfig sessionConfig;
 
@@ -132,7 +132,7 @@ public class SessionAttachmentHandler implements HttpHandler {
         }
 
         @Override
-        public void exchangeComplete(final HttpServerExchange exchange, final boolean isUpgrade) {
+        public void exchangeEvent(final HttpServerExchange exchange) {
             final Session session = sessionConfig.getAttachedSession(exchange);
             if (session != null) {
                 session.updateLastAccessedTime();

@@ -23,8 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import io.undertow.server.ExchangeCompleteListener;
-import io.undertow.server.HttpCompletionHandler;
+import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.WorkerDispatcher;
@@ -52,10 +51,10 @@ public final class RequestLimitingHandler implements HttpHandler {
 
     private static final Class<Queue> linkedTransferQueue;
 
-    private final ExchangeCompleteListener COMPLETION_LISTENER = new ExchangeCompleteListener() {
+    private final ExchangeCompletionListener COMPLETION_LISTENER = new ExchangeCompletionListener() {
 
         @Override
-        public void exchangeComplete(final HttpServerExchange exchange, final boolean isUpgrade) {
+        public void exchangeEvent(final HttpServerExchange exchange) {
             final QueuedRequest task = queue.poll();
             if (task != null) {
                 WorkerDispatcher.dispatch(exchange, task);
