@@ -20,7 +20,6 @@ package io.undertow.util;
 
 import java.io.IOException;
 
-import io.undertow.server.handlers.form.FormData;
 import org.xnio.AbstractIoFuture;
 
 /**

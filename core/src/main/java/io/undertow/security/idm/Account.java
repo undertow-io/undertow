@@ -17,6 +17,8 @@
  */
 package io.undertow.security.idm;
 
+import java.security.Principal;
+
 /**
  * Representation of an account, most likely a user account.
  *
@@ -24,6 +26,22 @@ package io.undertow.security.idm;
  */
 public interface Account {
 
-    String getName();
+    Principal getPrincipal();
+
+    /**
+     * Check if the given account is in the specified group.
+     *
+     * Note that this check is for identity manager level groups, such as LDAP groups. These groups are then mapped to roles in
+     * the servlet module.
+     *
+     * @param group The group
+     * @return <code>true</code> if the user is in the specified group
+     */
+    boolean isUserInGroup(final String group);
+
+    // TODO - Do we need a way to pass back to IDM that account is logging out?  A few scenarios: -
+    // 1 - Session expiration so cached account known to be logging out.
+    // 2 - API call to logout.
+    // 3 - End of HTTP request where account not cached, not strictly logging out but then again no real log-in.
 
 }

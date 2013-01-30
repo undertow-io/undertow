@@ -17,16 +17,17 @@
  */
 package io.undertow.servlet.test.security;
 
+import io.undertow.security.idm.Account;
+import io.undertow.security.idm.Credential;
+import io.undertow.security.idm.IdentityManager;
+import io.undertow.security.idm.PasswordCredential;
+
+import java.security.Principal;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import io.undertow.security.idm.Account;
-import io.undertow.security.idm.Credential;
-import io.undertow.security.idm.IdentityManager;
-import io.undertow.security.idm.PasswordCredential;
 
 /**
  * A mock {@link IdentityManager} implementation for servlet security testing.
@@ -35,10 +36,10 @@ import io.undertow.security.idm.PasswordCredential;
  */
 public class ServletIdentityManager implements IdentityManager {
 
-    private final Map<String, User> users = new HashMap<String, User>();
+    private final Map<String, UserAccount> users = new HashMap<String, UserAccount>();
 
     public void addUser(final String name, final String password, final String... roles) {
-        User user = new User();
+        UserAccount user = new UserAccount();
         user.name = name;
         user.password = password.toCharArray();
         user.roles = new HashSet<String>(Arrays.asList(roles));
@@ -46,20 +47,30 @@ public class ServletIdentityManager implements IdentityManager {
     }
 
     @Override
-    public Account lookupAccount(String id) {
-        return users.get(id);
+    public Account verify(Account account) {
+        // Just re-use the exising account.
+        return account;
     }
 
     @Override
-    public Account verifyCredential(Credential credential) {
+    public Account verify(String id, Credential credential) {
+        Account account = getAccount(id);
+        if (account != null && verifyCredential(account, credential)) {
+            return account;
+        }
+
         return null;
     }
 
     @Override
-    public boolean verifyCredential(Account account, Credential credential) {
+    public Account verify(Credential credential) {
+        return null;
+    }
+
+    private boolean verifyCredential(Account account, Credential credential) {
         // This approach should never be copied in a realm IdentityManager.
-        if (account instanceof User && credential instanceof PasswordCredential) {
-            char[] expectedPassword = ((User) account).password;
+        if (account instanceof UserAccount && credential instanceof PasswordCredential) {
+            char[] expectedPassword = ((UserAccount) account).password;
             char[] suppliedPassword = ((PasswordCredential) credential).getPassword();
 
             return Arrays.equals(expectedPassword, suppliedPassword);
@@ -68,20 +79,16 @@ public class ServletIdentityManager implements IdentityManager {
     }
 
     @Override
+    public Account getAccount(String id) {
+        return users.get(id);
+    }
+
+    @Override
     public char[] getPassword(final Account account) {
         return null;
     }
 
-    @Override
-    public boolean isUserInGroup(final Account account, final String group) {
-        if (account instanceof User) {
-            return ((User) account).roles.contains(group);
-        }
-        return false;
-
-    }
-
-    private static class User implements Account {
+    private static class UserAccount implements Account {
         // In no way whatsoever should a class like this be considered a good idea for a real IdentityManager implementation,
         // this is for testing only.
 
@@ -89,9 +96,22 @@ public class ServletIdentityManager implements IdentityManager {
         char[] password;
         Set<String> roles;
 
+        private final Principal principal = new Principal() {
+
+            @Override
+            public String getName() {
+                return name;
+            }
+        };
+
         @Override
-        public String getName() {
-            return name;
+        public Principal getPrincipal() {
+            return principal;
+        }
+
+        @Override
+        public boolean isUserInGroup(String group) {
+            return roles.contains(group);
         }
     }
 

@@ -42,7 +42,7 @@ import org.xnio.IoUtils;
  * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
  * and attaches them the to exchange.
  * <p/>
- * This is both an async and a blocking handler, if it recieves an asyncrounous request it translates it to a blocking
+ * This is both an async and a blocking handler, if it receives an asynchronous request it translates it to a blocking
  * request before continuing
  *
  * @author Stuart Douglas

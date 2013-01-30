@@ -15,36 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.security.impl;
+package io.undertow.security.idm;
 
-import java.security.Principal;
-
-import io.undertow.security.idm.Account;
+import org.ietf.jgss.GSSContext;
 
 /**
- * A Principal implementation to wrap the Account representation from the identity manager.
+ * A {@link Credential} to wrap an established GSSContext.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public class UndertowPrincipal implements Principal {
+public class GSSContextCredential implements Credential {
 
-    private final Account account;
+    private final GSSContext gssContext;
 
-    public UndertowPrincipal(final Account account) {
-        this.account = account;
+    public GSSContextCredential(final GSSContext gssContext) {
+        this.gssContext = gssContext;
     }
 
-    /**
-     *
-     * @see java.security.Principal#getName()
-     */
-    @Override
-    public String getName() {
-        return account.getName();
-    }
-
-    Account getAccount() {
-        return account;
+    public GSSContext getGssContext() {
+        return gssContext;
     }
 
 }

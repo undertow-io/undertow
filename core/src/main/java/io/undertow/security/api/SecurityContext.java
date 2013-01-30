@@ -1,68 +1,102 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2013 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.undertow.security.api;
 
-import java.io.IOException;
-import java.security.Principal;
-import java.util.List;
-import java.util.concurrent.Executor;
-
+import org.xnio.IoFuture.Notifier;
+import io.undertow.security.idm.Account;
+import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpHandler;
 import io.undertow.util.AttachmentKey;
+
+import java.io.IOException;
+import java.util.List;
+
 import org.xnio.IoFuture;
 
 /**
- * The servlet security context. This context is attached to the exchange and holds all security
- * related information.
+ * The security context.
+ *
+ * This context is attached to the exchange and holds all security related information.
  *
  * @author Stuart Douglas
+ * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  * @see io.undertow.security.impl.SecurityContextImpl
  */
 public interface SecurityContext {
 
+    // TODO - Some of this is used within the core of undertow, some by the servlet integration and some by the mechanisms -
+    // once released the use by mechanisms will require the greatest level of backwards compatibility maintenace so may be
+    // better to split the rest out.
 
     /**
      * The attachment key that is used to attach this context to the exchange
      */
     AttachmentKey<SecurityContext> ATTACHMENT_KEY = AttachmentKey.create(SecurityContext.class);
 
-    /**
-     * Performs authentication on the request, returning the result. This method can potentially block, so should not
-     * be invoked from an async handler.
-     * <p/>
-     * If the authentication fails this {@code AuthenticationResult} can be used to send a challenge back to the client.
-     * <p/>
-     * Note that challenges with only be set if {@link #setAuthenticationRequired()} has been previously called this
-     * request
-     *
+    /*
+     * Methods Used To Run Authentication Process
      */
-    SecurityContext.AuthenticationResult authenticate() throws IOException;
 
     /**
-     * Performs authentication on the request, returning an IoFuture that can be used to retrieve the result.
-     * <p/>
-     * If the authentication fails this {@code AuthenticationResult} can be used to send a challenge back to the client.
-     * <p/>
-     * Invoking this method can result in worker handoff, once it has been invoked the current handler should not modify the
-     * exchange.
-     * <p/>
+     * Performs authentication on the request.
      *
-     * @param executor The executor to use for blocking operations
+     * If authentication is REQUIRED then setAuthenticationRequired() should be called before calling this method.
+     *
+     * If the result indicates that a response has been sent to the client then no further attempts should be made to modify the
+     * response. The caller of this method is responsible for ending the exchange.
+     *
+     * When this method is called depending on the authentication mechanisms and the current thread making the call the request
+     * could occur in the same thread or be dispatched to a different thread, unless the caller is required to block it should
+     * register a {@link IoFuture.Notifier} to handle the response.
+     *
+     * return {@link IoFuture<Boolean>} to indicate if a response has been sent to the calling client.
      */
-    IoFuture<SecurityContext.AuthenticationResult> authenticate(Executor executor);
+    IoFuture<Boolean> authenticate();
+
+    /*
+     * API for Direct Control of Authentication
+     */
 
     /**
-     * Performs authentication on the request. If the auth succeeds then the next handler will be invoked, otherwise the
-     * completion handler will be called.
+     * Attempts to log the user in using the provided credentials. This result will be stored in the current
+     * {@link AuthenticatedSessionManager} (if any), so subsequent requests will automatically be authenticated
+     * as this user.
      * <p/>
-     * Invoking this method can result in worker handoff, once it has been invoked the current handler should not modify the
-     * exchange.
-     * <p/>
-     * <p/>
-     * Note that challenges with only be set if {@link #setAuthenticationRequired()} has been previously called this
-     * request, otherwise the request will continue as normal
+     * This operation may block
      *
-     * @param nextHandler       The next handler to invoke once auth succeeds
+     * @param username The username
+     * @param password The password
+     * @return <code>true</code> if the login succeeded, false otherwise
      */
-    void authenticate(HttpHandler nextHandler);
+    boolean login(String username, String password);
+
+    /**
+     * de-authenticates the current exchange.
+     *
+     */
+    void logout();
+
+    /*
+     * Methods Used To Control/Configure The Authentication Process.
+     */
+
+    // TODO - May be better to pass a parameter to the authenticate methods to indicate that authentication is required.
+
 
     /**
      * Marks this request as requiring authentication. Authentication challenge headers will only be sent if this
@@ -71,33 +105,6 @@ public interface SecurityContext {
      * was not successful.
      */
     void setAuthenticationRequired();
-
-    /**
-     *
-     * @return The current {@link AuthenticationState} of the exchange
-     */
-    AuthenticationState getAuthenticationState();
-
-    /**
-     *
-     * @return The authenticated principle, or <code>null</code> if the request has not been authenticated yet
-     */
-    Principal getAuthenticatedPrincipal();
-
-    /**
-     *
-     * @return The name of the mechanism that was used to authenticate
-     */
-    String getMechanismName();
-
-    /**
-     * Check if the current user is in the specified group. This method does not take any role mappings into account,
-     * rather it only checks if the underlying identity store reports the user as belonging to this group.
-     *
-     * @param group The group to check
-     * @return <code>true</code> if the user belongs to this group
-     */
-    boolean isUserInGroup(String group);
 
     /**
      * Adds an authentication mechanism to this context. When {@link #authenticate()} is
@@ -113,29 +120,84 @@ public interface SecurityContext {
      */
     List<AuthenticationMechanism> getAuthenticationMechanisms();
 
-    /**
-     * Attempts to log the user in using the provided credentials. This result will be stored in the current
-     * {@link AuthenticatedSessionManager} (if any), so subsequent requests will automatically be authenticated
-     * as this user.
-     * <p/>
-     * This operation may block
-     *
-     * @param username The username
-     * @param password The password
-     * @return <code>true</code> if the login suceeded, false otherwise
+    /*
+     * Methods to access information about the current authentication status.
      */
-    boolean login(String username, String password);
 
     /**
-     * de-authenticates the current exchange.
      *
+     * @return true if a user has been authenticated for this request, false otherwise.
      */
-    void logout();
+    boolean isAuthenticated();
+
+
+
+    /**
+     * Obtain the {@link Account} for the currently authenticated identity.
+     *
+     * @return The {@link Account} for the currently authenticated identity or <code>null</code> if no account is currently authenticated.
+     */
+    Account getAuthenticatedAccount();
+
+    /**
+     *
+     * @return The name of the mechanism that was used to authenticate
+     */
+    String getMechanismName();
+
+    /*
+     * Methods Used by AuthenticationMechanism implementations.
+     */
+
+    /**
+     * Obtain the associated {@link IdentityManager} to use to make account verification decisions.
+     *
+     * @return The associated {@link IdentityManager}
+     */
+    IdentityManager getIdentityManager();
+
+    /**
+     * Called by the {@link AuthenticationMechanism} to indicate that an account has been successfully authenticated.
+     *
+     * Note: A successful verification of an account using the {@link IdentityManager} is not the same as a successful
+     * authentication decision, other factors could be taken into account to make the final decision.
+     *
+     * @param account - The authenticated {@link Account}
+     * @param mechanismName - The name of the mechanism used to authenticate the account.
+     * @param cachable - Is the authentication cache-able i.e. can it be stored in a session to skip authentication for
+     *        subsequent requests.
+     */
+    void authenticationComplete(final Account account, final String mechanismName, final boolean cacheable);
+
+    // TODO - Should there be an authenticationFailed method that can be called by a mechanism for audit purposes to indicate that an authentication attempt failed.
+
+    /*
+     * Methods for the management of NotificationHandler registrations.
+     */
+
+    /**
+     * Register a {@link NotificationHandler} interested in receiving notifications for security events that happen on this SecurityContext.
+     *
+     * @param handler - The {@link NotificationHandler} to register.
+     */
+    void registerNotificationHandler(final NotificationHandler handler);
+
+    /**
+     * Remove a previously registered {@link NotificationHandler} from this SecurityContext.
+     *
+     * If the supplied handler has not been previously registered this method will fail silently.
+     *
+     * @param handler - The {@link NotificationHandler} to remove.
+     */
+    void removeNotificationHandler(final NotificationHandler handler);
 
     class AuthenticationResult {
 
         private final AuthenticationMechanism.AuthenticationMechanismOutcome outcome;
+
         private final Runnable sendChallengeTask;
+
+
 
         public AuthenticationResult(final AuthenticationMechanism.AuthenticationMechanismOutcome outcome, final Runnable sendChallengeTask) {
             this.outcome = outcome;

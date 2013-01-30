@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,10 +38,12 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.ServletSecurity;
 
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.handlers.AuthenticationCallHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
+import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.security.impl.FormAuthenticationRedirectHandler;
 import io.undertow.security.impl.RoleMappingManagerImpl;
@@ -76,6 +79,7 @@ import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletMatchingHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
+import io.undertow.servlet.handlers.security.CachedAuthenticatedSessionHandler;
 import io.undertow.servlet.handlers.security.SecurityPathMatches;
 import io.undertow.servlet.handlers.security.ServletAuthenticationConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletConfidentialityConstraintHandler;
@@ -196,18 +200,24 @@ public class DeploymentManagerImpl implements DeploymentManager {
         current = new ServletSecurityConstraintHandler(buildSecurityConstraints(), current);
 
         if (loginConfig != null) {
+            List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<AuthenticationMechanism>();
+            authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism());
+
             if (loginConfig.getAuthMethod().equalsIgnoreCase(BASIC_AUTH)) {
                 // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be comparable using '=='
-                AuthenticationMechanismsHandler basic = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH)));
-                current = basic;
+                authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH));
             } else if (loginConfig.getAuthMethod().equalsIgnoreCase(FORM_AUTH)) {
-                current = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism>singletonList(new FormAuthenticationMechanism(deploymentInfo.getContextPath() + loginConfig.getLoginPage(), deploymentInfo.getContextPath() + loginConfig.getErrorPage())));
+                authenticationMechanisms.add(new FormAuthenticationMechanism(FORM_AUTH, deploymentInfo.getContextPath() + loginConfig.getLoginPage(), deploymentInfo.getContextPath() + loginConfig.getErrorPage()));
             } else {
                 //NYI
             }
+            current = new AuthenticationMechanismsHandler(current, authenticationMechanisms);
         }
 
-        current = new SecurityInitialHandler(deploymentInfo.getIdentityManager(), new ServletSessionAuthenticatedSessionManager(this.deployment.getServletContext()), current);
+        current = new CachedAuthenticatedSessionHandler(current, this.deployment.getServletContext());
+        // TODO - A switch to constraint driven could be configurable, however before we can support that with servlets we would
+        // need additional tracking within sessions if a servlet has specifically requested that authentication occurs.
+        current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, deploymentInfo.getIdentityManager(), current);
 
         return current;
     }

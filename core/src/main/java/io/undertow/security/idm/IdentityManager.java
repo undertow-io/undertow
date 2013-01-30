@@ -21,40 +21,62 @@ package io.undertow.security.idm;
  * The IdentityManager interface to be implemented by an identity manager implementation providing user verification and
  * identity loading to Undertow.
  *
+ * Note: The IdentityManager interface is very much work in progress, methods are added to cover use cases as identified and
+ * then simplified as common cases are defined.
+ *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 public interface IdentityManager {
 
-    Account lookupAccount(final String id);
-
-    Account verifyCredential(final Credential credential);
-
-    boolean verifyCredential(final Account account, final Credential credential);
+    /**
+     * Verify a previously authenticated account.
+     *
+     * Typical checks could be along the lines of verifying that the account is not now locked or that the password has not been
+     * reset since last verified, also this provides an opportunity for roles to be re-loaded if membership information has
+     * changed.
+     *
+     * @param account - The {@link Account} to verify.
+     * @return An updates {@link Account} if verification is successful, null otherwise.
+     */
+    Account verify(final Account account);
 
     /**
-     * Return the password for an account. This is an optional method, as is only used
-     * for digest auth where the original password is needed to compute the digest.
+     * Verify a supplied {@link Credential} against a requested ID.
      *
-     * This is an optional method. It is recommended that passwords be stored in a hashed
-     * format, so for most identity managers it will not be possible nor desirable to
-     * implement this method.
+     * @param id - The requested ID for the account.
+     * @param credential - The {@link Credential} to verify.
+     * @return The {@link Account} for the user if verification was successful, null otherwise.
+     */
+    Account verify(final String id, final Credential credential);
+
+    /**
+     * Perform verification when all we have is the Credential, in this case the IdentityManager is also responsible for mapping the Credential to an account.
+     *
+     * The most common scenario for this would be mapping an X509Certificate to the user it is associated with.
+     *
+     * @param credential
+     * @return
+     */
+    Account verify(final Credential credential);
+
+    /**
+     * A temporary method for the Digest mechanism.
+     *
+     * @param id
+     * @return
+     */
+    Account getAccount(final String id);
+
+    /**
+     * Return the password for an account. This is an optional method, as is only used for digest auth where the original
+     * password is needed to compute the digest.
+     *
+     * This is an optional method. It is recommended that passwords be stored in a hashed format, so for most identity managers
+     * it will not be possible nor desirable to implement this method.
      *
      * @param account the account
      * @return The accounts password
      */
     char[] getPassword(final Account account);
-
-
-    /**
-     * Check if the given account is in the specified group.
-     *
-     * Note that this check is for identity manager level groups, such as LDAP groups. These groups
-     * are then mapped to roles in the servlet module.
-     *
-     * @param account The account
-     * @param group The group
-     * @return <code>true</code> if the user is in the specified group
-     */
-    boolean isUserInGroup(final Account account, final String group);
 
 }

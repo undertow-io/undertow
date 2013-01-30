@@ -18,12 +18,11 @@
 
 package io.undertow.security.api;
 
-import java.security.Principal;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.StatusCodes;
+
 import java.util.concurrent.Executor;
 
-import io.undertow.security.idm.Account;
-import io.undertow.security.idm.IdentityManager;
-import io.undertow.server.HttpServerExchange;
 import org.xnio.IoFuture;
 
 /**
@@ -33,14 +32,12 @@ import org.xnio.IoFuture;
  * and handleComplete calls then it should be held in the HttpServerExchange.
  * <p/>
  * As an in-bound request is received the authenticate method is called on each mechanism in turn until one of the following
- * occurs: -
- * - A mechanism successfully authenticates the incoming request.
- * - A mechanism attempts but fails to authenticate the request.
- * - The list of mechanisms is exhausted.
+ * occurs: - - A mechanism successfully authenticates the incoming request. - A mechanism attempts but fails to authenticate the
+ * request. - The list of mechanisms is exhausted.
  * <p/>
- * This means that if the authenticate method is called on a mechanism it should assume it is required to check if it can actually
- * authenticate the incoming request, anything that would prevent it from performing the check would have already stopped the authenticate
- * method from being called.
+ * This means that if the authenticate method is called on a mechanism it should assume it is required to check if it can
+ * actually authenticate the incoming request, anything that would prevent it from performing the check would have already
+ * stopped the authenticate method from being called.
  * <p/>
  * Authentication is allowed to proceed if either authentication was required AND one handler authenticated the request or it is
  * allowed to proceed if it is not required AND no handler failed to authenticate the request.
@@ -57,9 +54,9 @@ import org.xnio.IoFuture;
  * <p/>
  * Finally if authentication was not required handleComplete will not be called for any of the mechanisms.
  * <p/>
- * The mechanisms will need to double check why handleComplete is being called, if the request was authenticated then they should
- * do nothing unless the mechanism has intermediate state to send back.  If the request was not authenticated then a challenge should
- * be sent.
+ * The mechanisms will need to double check why handleComplete is being called, if the request was authenticated then they
+ * should do nothing unless the mechanism has intermediate state to send back. If the request was not authenticated then a
+ * challenge should be sent.
  *
  * @author Stuart Douglas
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
@@ -67,28 +64,35 @@ import org.xnio.IoFuture;
 public interface AuthenticationMechanism {
 
     /**
+     * @return The name of the mechanism.
+     */
+    String getName();
+
+    /**
      * Perform authentication of the request. Any potentially blocking work should be performed in the handoff executor provided
      *
-     * @param exchange        The exchange
+     * @param exchange The exchange
      * @param identityManager The identity manager
      * @param handOffExecutor The executor to use for potentially blocking tasks
      * @return
      */
-    IoFuture<AuthenticationMechanismResult> authenticate(final HttpServerExchange exchange, final IdentityManager identityManager, final Executor handOffExecutor);
+    IoFuture<AuthenticationMechanismOutcome> authenticate(final HttpServerExchange exchange,
+            final SecurityContext securityContext, final Executor handOffExecutor);
 
     /**
-     * Sets any headers or status codes required by this authentication mechanism.
+     * Send an authentication challenge to the remote client.
      *
-     * TODO: this needs a better name, it can be used for other things other than just sending the challenge
+     * The individual mechanisms should update the response headers and body of the message as appropriate however they should
+     * not set the response code, instead that should be indicated in the {@link ChallengeResult} and the most appropriate
+     * overall response code will be selected.
      *
-     * @param exchange The exchange to modify
+     * @param exchange The exchange
+     * @param securityContext The security context
+     * @param handOffExecutor The executor to use for potentially blocking tasks.
+     * @return A {@link ChallengeResult} indicating if a challenge was sent and the desired response code.
      */
-    void sendChallenge(final HttpServerExchange exchange);
-
-    /**
-     * @return The name of the mechanism.
-     */
-    String getName();
+    IoFuture<ChallengeResult> sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext,
+            final Executor handOffExecutor);
 
     /**
      * The AuthenticationOutcome is used by an AuthenticationMechanism to indicate the outcome of the call to authenticate, the
@@ -115,70 +119,45 @@ public interface AuthenticationMechanism {
         NOT_AUTHENTICATED;
     }
 
-    public class AuthenticationMechanismResult {
+    /**
+     * Simple class to wrap the result of requesting a mechanism sends it's challenge.
+     */
+    public class ChallengeResult {
+
+        private final boolean challengeSent;
+        private final StatusCodes statusCode;
+
+        public ChallengeResult(final boolean challengeSent, final StatusCodes statusCode) {
+            this.statusCode = statusCode;
+            this.challengeSent = challengeSent;
+        }
+
+        public ChallengeResult(final boolean challengeSent) {
+            this(challengeSent, null);
+        }
 
         /**
-         * The authenticated principle if this result was a success
-         */
-        private final Principal principle;
-
-        /**
-         * The account that this authentication result corresponds to
-         */
-        private final Account account;
-
-        /**
-         * The result of the authentication call
-         */
-        private final AuthenticationMechanismOutcome outcome;
-
-        /**
-         * If this is true then the authentication result must be stored in the {@link AuthenticatedSessionManager},
-         * as the browser will not re-send the credentials on every request
-         */
-        private final boolean requiresSession;
-
-        /**
-         * Constructor for a sucessful authentication result
+         * Obtain the response code desired by this mechanism for the challenge.
          *
+         * Where multiple mechanisms are in use concurrently all of the requested response codes will be checked and the most
+         * suitable one selected. If no specific response code is required any value less than 0 can be set.
+         *
+         * @return The desired response code or null if no code specified.
          */
-        public AuthenticationMechanismResult(final Principal principle, final Account account, final boolean requiresSession) {
-            this.principle = principle;
-            this.account = account;
-            this.requiresSession = requiresSession;
-            this.outcome = AuthenticationMechanismOutcome.AUTHENTICATED;
+        public StatusCodes getDesiredResponseCode() {
+            return statusCode;
         }
 
-        public AuthenticationMechanismResult(AuthenticationMechanismOutcome outcome) {
-            assert outcome != AuthenticationMechanismOutcome.AUTHENTICATED;
-            this.outcome = outcome;
-            this.account = null;
-            this.principle = null;
-            this.requiresSession = false;
-        }
-
-        public Principal getPrinciple() {
-            return principle;
-        }
-
-        public AuthenticationMechanismOutcome getOutcome() {
-            return outcome;
-        }
-
-        public Account getAccount() {
-            return account;
-        }
-
-        public boolean isRequiresSession() {
-            return requiresSession;
-        }
-    }
-
-    class Util {
-
-        public static boolean shouldChallenge(final HttpServerExchange exchange) {
-            SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-            return context.getAuthenticationState() == AuthenticationState.REQUIRED;
+        /**
+         * Check if the mechanism did send a challenge.
+         *
+         * Some mechanisms do not send a challenge and just rely on the correct information to authenticate a user being
+         * available in the request, in that case it would be normal for the mechanism to set this to false.
+         *
+         * @return true if a challenge was sent, false otherwise.
+         */
+        public boolean isChallengeSent() {
+            return challengeSent;
         }
 
     }

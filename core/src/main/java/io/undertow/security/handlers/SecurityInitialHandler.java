@@ -17,7 +17,7 @@
  */
 package io.undertow.security.handlers;
 
-import io.undertow.security.api.AuthenticatedSessionManager;
+import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.SecurityContextImpl;
@@ -33,10 +33,6 @@ import io.undertow.server.session.Session;
  * be added to the context, a decision will then be made if authentication is required or optional and the associated mechanisms
  * will be called.
  *
- * If any existing {@link io.undertow.security.impl.SecurityContextImpl} has been set it will be replaced and then restored as the the
- * {@link HttpCompletionHandler} is called, this allows for a general security configuration to be applied to a server and then
- * replaced with a context specific config.
- *
  * In addition to the HTTPExchange authentication state can also be associated with the {@link HttpServerConnection} and with
  * the {@link Session} however this is mechanism specific so it is down to the actual mechanisms to decide if there is state
  * that can be re-used.
@@ -45,17 +41,13 @@ import io.undertow.server.session.Session;
  */
 public class SecurityInitialHandler implements HttpHandler {
 
+    private final AuthenticationMode authenticationMode;
     private final IdentityManager identityManager;
-    private final AuthenticatedSessionManager authenticatedSessionManager;
     private final HttpHandler next;
 
-    public SecurityInitialHandler(final IdentityManager identityManager, final HttpHandler next) {
-        this(identityManager, null, next);
-    }
-
-    public SecurityInitialHandler(final IdentityManager identityManager, final AuthenticatedSessionManager authenticatedSessionManager, final HttpHandler next) {
+    public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager, final HttpHandler next) {
+        this.authenticationMode = authenticationMode;
         this.identityManager = identityManager;
-        this.authenticatedSessionManager = authenticatedSessionManager;
         this.next = next;
     }
 
@@ -64,7 +56,7 @@ public class SecurityInitialHandler implements HttpHandler {
      */
     @Override
     public void handleRequest(HttpServerExchange exchange) {
-        SecurityContext newContext = new SecurityContextImpl(exchange, identityManager, authenticatedSessionManager);
+        SecurityContext newContext = new SecurityContextImpl(exchange, authenticationMode, identityManager);
         exchange.putAttachment(SecurityContext.ATTACHMENT_KEY, newContext);
         next.handleRequest(exchange);
     }
