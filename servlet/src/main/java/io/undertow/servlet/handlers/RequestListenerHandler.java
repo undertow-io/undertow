@@ -21,8 +21,8 @@ package io.undertow.servlet.handlers;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletRequest;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 
@@ -41,29 +41,29 @@ public class RequestListenerHandler implements BlockingHttpHandler {
     }
 
     @Override
-    public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        DispatcherType type = exchange.getExchange().getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
+    public void handleBlockingRequest(final HttpServerExchange exchange) throws Exception {
+        DispatcherType type = exchange.getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
         if (type == DispatcherType.REQUEST) {
-            final ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+            final ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
             listeners.requestInitialized(request);
             try {
-                next.handleRequest(exchange);
+                next.handleBlockingRequest(exchange);
             } finally {
                 if (!request.isAsyncStarted()) {
                     listeners.requestDestroyed(request);
                 }
             }
         } else if (type == DispatcherType.ASYNC) {
-            final ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+            final ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
             try {
-                next.handleRequest(exchange);
+                next.handleBlockingRequest(exchange);
             } finally {
                 if (!request.isAsyncStarted()) {
                     listeners.requestDestroyed(request);
                 }
             }
         } else {
-            next.handleRequest(exchange);
+            next.handleBlockingRequest(exchange);
         }
     }
 

@@ -312,7 +312,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             this.buffer = ByteBuffer.allocateDirect(bufferSize);
             return this.buffer;
         } else {
-            this.pooledBuffer = servletResponse.getExchange().getExchange().getConnection().getBufferPool().allocate();
+            this.pooledBuffer = servletResponse.getExchange().getConnection().getBufferPool().allocate();
             this.buffer = pooledBuffer.getResource();
             return this.buffer;
         }

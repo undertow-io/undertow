@@ -19,11 +19,13 @@
 package io.undertow.test;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import io.undertow.UndertowOptions;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
@@ -31,13 +33,14 @@ import io.undertow.util.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
+import org.xnio.streams.ChannelOutputStream;
+import sun.nio.ch.ChannelInputStream;
 
 /**
  * @author Stuart Douglas
@@ -54,16 +57,18 @@ public class MaxRequestSizeTestCase {
         DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(new BlockingHttpHandler() {
             @Override
-            public void handleRequest(final BlockingHttpServerExchange exchange) {
+            public void handleBlockingRequest(final HttpServerExchange exchange) {
                 try {
-                    String m = HttpClientUtils.readResponse(exchange.getInputStream());
+                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                    final InputStream inputSream = new ChannelInputStream(exchange.getRequestChannel());
+                    String m = HttpClientUtils.readResponse(inputSream);
                     Assert.assertEquals(A_MESSAGE, m);
-                    exchange.getInputStream().close();
-                    exchange.getOutputStream().close();
+                    inputSream.close();
+                    outputStream.close();
                 } catch (IOException e) {
                     try {
-                        exchange.getExchange().getResponseHeaders().put(Headers.CONNECTION, "close");
-                        exchange.getExchange().setResponseCode(500);
+                        exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
+                        exchange.setResponseCode(500);
                     } catch (Exception ignore) {
 
                     }

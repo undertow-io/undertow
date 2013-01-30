@@ -1,11 +1,12 @@
 package io.undertow.test.handlers.encoding;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Random;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.encoding.DeflateEncoding;
 import io.undertow.server.handlers.encoding.EncodingHandler;
 import io.undertow.test.utils.DefaultServer;
@@ -19,6 +20,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.streams.ChannelOutputStream;
 
 /**
  * @author Stuart Douglas
@@ -34,11 +36,12 @@ public class ContentEncodingTestCase {
         handler.addEncodingHandler("deflate", new DeflateEncoding(), 50);
         handler.setNext(new BlockingHandler(new BlockingHttpHandler() {
             @Override
-            public void handleRequest(final BlockingHttpServerExchange exchange) {
+            public void handleBlockingRequest(final HttpServerExchange exchange) {
                 try {
-                    exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
-                    exchange.getOutputStream().write(message.getBytes());
-                    exchange.getOutputStream().close();
+                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
+                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                    outputStream.write(message.getBytes());
+                    outputStream.close();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

@@ -48,20 +48,19 @@ public final class BlockingHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        final BlockingHttpServerExchange blockingExchange = new BlockingHttpServerExchange(exchange, completionHandler);
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
                 try {
                     final BlockingHttpHandler handler = BlockingHandler.this.handler;
                     if (handler != null) {
-                        handler.handleRequest(blockingExchange);
+                        handler.handleBlockingRequest(exchange);
                     }
                 } catch (Throwable t) {
                     if (!exchange.isResponseStarted()) {
                         exchange.setResponseCode(500);
                     }
-                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", blockingExchange);
+                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", exchange);
                 } finally {
                     completionHandler.handleComplete();
                 }

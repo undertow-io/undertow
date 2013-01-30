@@ -19,20 +19,22 @@
 package io.undertow.test.handlers;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
 import io.undertow.server.HttpServerConnection;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.streams.ChannelOutputStream;
 
 /**
  * @author Stuart Douglas
@@ -52,17 +54,19 @@ public class ChunkedResponseTransferCodingTestCase {
         DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(new BlockingHttpHandler() {
             @Override
-            public void handleRequest(final BlockingHttpServerExchange exchange) {
+            public void handleBlockingRequest(final HttpServerExchange exchange) {
                 try {
                     if(connection == null) {
-                        connection = exchange.getExchange().getConnection();
-                    } else if(!DefaultServer.isAjp() && connection.getChannel() != exchange.getExchange().getConnection().getChannel()){
-                        exchange.getOutputStream().write("Connection not persistent".getBytes());
-                        exchange.getOutputStream().close();
+                        connection = exchange.getConnection();
+                    } else if(!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()){
+                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                        outputStream.write("Connection not persistent".getBytes());
+                        outputStream.close();
                         return;
                     }
-                    exchange.getOutputStream().write(message.getBytes());
-                    exchange.getOutputStream().close();
+                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                    outputStream.write(message.getBytes());
+                    outputStream.close();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

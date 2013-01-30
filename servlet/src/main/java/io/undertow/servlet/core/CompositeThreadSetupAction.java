@@ -21,7 +21,7 @@ package io.undertow.servlet.core;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.ThreadSetupAction;
 
 /**
@@ -36,7 +36,7 @@ public class CompositeThreadSetupAction implements ThreadSetupAction {
     }
 
     @Override
-    public Handle setup(final BlockingHttpServerExchange exchange) {
+    public Handle setup(final HttpServerExchange exchange) {
         final List<Handle> handles = new ArrayList<Handle>(actions.size());
         try {
             for (ThreadSetupAction action : actions) {

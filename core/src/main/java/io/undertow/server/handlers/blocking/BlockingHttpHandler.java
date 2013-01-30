@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers.blocking;
 
+import io.undertow.server.HttpServerExchange;
+
 /**
  * A handler for blocking HTTP requests
  *
@@ -25,5 +27,5 @@ package io.undertow.server.handlers.blocking;
  */
 public interface BlockingHttpHandler {
 
-    void handleRequest(final BlockingHttpServerExchange exchange)  throws Exception;
+    void handleBlockingRequest(final HttpServerExchange exchange)  throws Exception;
 }

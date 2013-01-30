@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.spec;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -62,8 +63,8 @@ import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationState;
 import io.undertow.security.api.RoleMappingManager;
 import io.undertow.security.api.SecurityContext;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.CookieImpl;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartHandler;
@@ -84,6 +85,7 @@ import io.undertow.util.LocaleUtils;
 import io.undertow.util.Methods;
 import io.undertow.util.QValueParser;
 import org.xnio.LocalSocketAddress;
+import sun.nio.ch.ChannelInputStream;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -97,7 +99,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     private static final Charset DEFAULT_CHARSET = Charset.forName("ISO-8859-1");
 
-    private final BlockingHttpServerExchange exchange;
+    private final HttpServerExchange exchange;
     private ServletContextImpl servletContext;
 
     private final List<BoundAsyncListener> asyncListeners = new CopyOnWriteArrayList<BoundAsyncListener>();
@@ -114,19 +116,19 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     private Charset characterEncoding;
     private boolean readStarted;
 
-    public HttpServletRequestImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
+    public HttpServletRequestImpl(final HttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
         this.servletContext = servletContext;
-        this.queryParameters = exchange.getExchange().getQueryParameters();
+        this.queryParameters = exchange.getQueryParameters();
     }
 
-    public BlockingHttpServerExchange getExchange() {
+    public HttpServerExchange getExchange() {
         return exchange;
     }
 
     @Override
     public String getAuthType() {
-        SecurityContext securityContext = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext securityContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
 
         return securityContext != null ? securityContext.getMechanismName() : null;
     }
@@ -134,7 +136,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Cookie[] getCookies() {
         if (cookies == null) {
-            Map<String, io.undertow.server.handlers.Cookie> cookies = CookieImpl.getRequestCookies(exchange.getExchange());
+            Map<String, io.undertow.server.handlers.Cookie> cookies = CookieImpl.getRequestCookies(exchange);
             if (cookies.isEmpty()) {
                 return null;
             }
@@ -164,7 +166,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public long getDateHeader(final String name) {
-        String header = exchange.getExchange().getRequestHeaders().getFirst(new HttpString(name));
+        String header = exchange.getRequestHeaders().getFirst(new HttpString(name));
         if (header == null) {
             return -1;
         }
@@ -181,7 +183,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     public String getHeader(final HttpString name) {
-        HeaderMap headers = exchange.getExchange().getRequestHeaders();
+        HeaderMap headers = exchange.getRequestHeaders();
         if (headers == null) {
             return null;
         }
@@ -191,7 +193,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Enumeration<String> getHeaders(final String name) {
-        Deque<String> headers = exchange.getExchange().getRequestHeaders().get(new HttpString(name));
+        Deque<String> headers = exchange.getRequestHeaders().get(new HttpString(name));
         if (headers == null) {
             return EmptyEnumeration.instance();
         }
@@ -201,7 +203,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Enumeration<String> getHeaderNames() {
         final Set<String> headers = new HashSet<String>();
-        for (final HttpString i : exchange.getExchange().getRequestHeaders()) {
+        for (final HttpString i : exchange.getRequestHeaders()) {
             headers.add(i.toString());
         }
         return new IteratorEnumeration<String>(headers.iterator());
@@ -218,12 +220,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getMethod() {
-        return exchange.getExchange().getRequestMethod().toString();
+        return exchange.getRequestMethod().toString();
     }
 
     @Override
     public String getPathInfo() {
-        ServletPathMatch match = exchange.getExchange().getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
+        ServletPathMatch match = exchange.getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
         if (match != null) {
             return match.getRemaining();
         }
@@ -242,7 +244,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getQueryString() {
-        return exchange.getExchange().getQueryString();
+        return exchange.getQueryString();
     }
 
     @Override
@@ -254,12 +256,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isUserInRole(final String role) {
-        final RoleMappingManager roleMappings = exchange.getExchange().getAttachment(ServletAttachments.SERVLET_ROLE_MAPPINGS);
+        final RoleMappingManager roleMappings = exchange.getAttachment(ServletAttachments.SERVLET_ROLE_MAPPINGS);
         if(roleMappings == null) {
             return false;
         }
-        SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
-        final ServletPathMatch servlet = exchange.getExchange().getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
+        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        final ServletPathMatch servlet = exchange.getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
         //TODO: a more efficient imple
         for (SecurityRoleRef ref : servlet.getHandler().getManagedServlet().getServletInfo().getSecurityRoleRefs()) {
             if(ref.getRole().equals(role)) {
@@ -271,7 +273,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Principal getUserPrincipal() {
-        SecurityContext securityContext = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext securityContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         return securityContext != null ? securityContext.getAuthenticatedPrincipal() : null;
     }
 
@@ -282,17 +284,17 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRequestURI() {
-        return exchange.getExchange().getRequestPath();
+        return exchange.getRequestPath();
     }
 
     @Override
     public StringBuffer getRequestURL() {
-        return new StringBuffer(exchange.getExchange().getRequestURL());
+        return new StringBuffer(exchange.getRequestURL());
     }
 
     @Override
     public String getServletPath() {
-        ServletPathMatch match = exchange.getExchange().getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
+        ServletPathMatch match = exchange.getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
         if (match != null) {
             return match.getMatched();
         }
@@ -301,7 +303,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public HttpSession getSession(final boolean create) {
-        return servletContext.getSession(exchange.getExchange(), create);
+        return servletContext.getSession(exchange, create);
     }
 
     @Override
@@ -335,7 +337,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
 
-        SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         sc.setAuthenticationRequired();
         SecurityContext.AuthenticationResult result = sc.authenticate();
         if(result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
@@ -356,7 +358,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void login(final String username, final String password) throws ServletException {
-        SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         if(sc.getAuthenticationState() == AuthenticationState.AUTHENTICATED) {
             throw UndertowServletMessages.MESSAGES.userAlreadyLoggedIn();
         }
@@ -367,7 +369,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void logout() throws ServletException {
-        SecurityContext sc = exchange.getExchange().getAttachment(SecurityContext.ATTACHMENT_KEY);
+        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         sc.logout();
     }
 
@@ -396,9 +398,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         readStarted = true;
         if (parts == null) {
             final List<Part> parts = new ArrayList<Part>();
-            String mimeType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+            String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             if (mimeType != null && mimeType.startsWith(MultiPartHandler.MULTIPART_FORM_DATA)) {
-                final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
                 final FormData value = parser.parseBlocking();
                 for (final String namedPart : value) {
                     for (FormData.FormValue part : value.get(namedPart)) {
@@ -428,7 +430,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (characterEncoding != null) {
             return characterEncoding.name();
         }
-        String contentType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+        String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (contentType == null) {
             return null;
         }
@@ -467,7 +469,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (reader != null) {
                 throw UndertowServletMessages.MESSAGES.getReaderAlreadyCalled();
             }
-            servletInputStream = new ServletInputStreamImpl(exchange.getInputStream());
+            servletInputStream = new ServletInputStreamImpl(new BufferedInputStream(new ChannelInputStream(exchange.getRequestChannel())));
         }
         readStarted = true;
         return servletInputStream;
@@ -477,9 +479,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public String getParameter(final String name) {
         Deque<String> params = queryParameters.get(name);
         if (params == null) {
-            if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
+            if (exchange.getRequestMethod().equals(Methods.POST)) {
                 readStarted = true;
-                final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
                 if (parser != null) {
                     try {
                         FormData.FormValue res = parser.parseBlocking().getFirst(name);
@@ -502,9 +504,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Enumeration<String> getParameterNames() {
         final Set<String> parameterNames = new HashSet<String>(queryParameters.keySet());
-        if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
+        if (exchange.getRequestMethod().equals(Methods.POST)) {
             readStarted = true;
-            final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
             if (parser != null) {
                 try {
                     FormData formData = parser.parseBlocking();
@@ -527,9 +529,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (params != null) {
             ret.addAll(params);
         }
-        if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
+        if (exchange.getRequestMethod().equals(Methods.POST)) {
             readStarted = true;
-            final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
             if (parser != null) {
                 try {
                     Deque<FormData.FormValue> res = parser.parseBlocking().get(name);
@@ -558,9 +560,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
             ret.put(entry.getKey(), entry.getValue().toArray(new String[entry.getValue().size()]));
         }
-        if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
+        if (exchange.getRequestMethod().equals(Methods.POST)) {
             readStarted = true;
-            final FormDataParser parser = exchange.getExchange().getAttachment(FormDataParser.ATTACHMENT_KEY);
+            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
             if (parser != null) {
                 try {
                     FormData formData = parser.parseBlocking();
@@ -596,22 +598,22 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getProtocol() {
-        return exchange.getExchange().getProtocol().toString();
+        return exchange.getProtocol().toString();
     }
 
     @Override
     public String getScheme() {
-        return exchange.getExchange().getRequestScheme();
+        return exchange.getRequestScheme();
     }
 
     @Override
     public String getServerName() {
-        return exchange.getExchange().getDestinationAddress().getHostName();
+        return exchange.getDestinationAddress().getHostName();
     }
 
     @Override
     public int getServerPort() {
-        return exchange.getExchange().getDestinationAddress().getPort();
+        return exchange.getDestinationAddress().getPort();
     }
 
     @Override
@@ -624,7 +626,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (characterEncoding != null) {
                 charSet = DEFAULT_CHARSET;
             } else {
-                String contentType = exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+                String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
                 if (contentType != null) {
                     String c = Headers.extractTokenFromHeader(contentType, "charset");
                     if (c != null) {
@@ -637,7 +639,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 }
             }
 
-            reader = new BufferedReader(new InputStreamReader(exchange.getInputStream(), charSet));
+            reader = new BufferedReader(new InputStreamReader(new ChannelInputStream(exchange.getRequestChannel()), charSet));
         }
         readStarted = true;
         return reader;
@@ -645,12 +647,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRemoteAddr() {
-        return exchange.getExchange().getSourceAddress().getAddress().getHostAddress();
+        return exchange.getSourceAddress().getAddress().getHostAddress();
     }
 
     @Override
     public String getRemoteHost() {
-        return exchange.getExchange().getSourceAddress().getHostName();
+        return exchange.getSourceAddress().getHostName();
     }
 
     @Override
@@ -676,7 +678,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Enumeration<Locale> getLocales() {
-        final Deque<String> acceptLanguage = exchange.getExchange().getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
+        final Deque<String> acceptLanguage = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
         if (acceptLanguage == null || acceptLanguage.isEmpty()) {
             return new IteratorEnumeration<Locale>(Collections.singleton(Locale.getDefault()).iterator());
         }
@@ -704,7 +706,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (path.startsWith("/")) {
             realPath = path;
         } else {
-            String current = exchange.getExchange().getRelativePath();
+            String current = exchange.getRelativePath();
             int lastSlash = current.lastIndexOf("/");
             if (lastSlash != -1) {
                 current = current.substring(0, lastSlash + 1);
@@ -721,17 +723,17 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public int getRemotePort() {
-        return exchange.getExchange().getSourceAddress().getPort();
+        return exchange.getSourceAddress().getPort();
     }
 
     @Override
     public String getLocalName() {
-        return exchange.getExchange().getDestinationAddress().getHostName();
+        return exchange.getDestinationAddress().getHostName();
     }
 
     @Override
     public String getLocalAddr() {
-        SocketAddress address = exchange.getExchange().getConnection().getLocalAddress();
+        SocketAddress address = exchange.getConnection().getLocalAddress();
         if (address instanceof InetSocketAddress) {
             return ((InetSocketAddress) address).getHostName();
         } else if (address instanceof LocalSocketAddress) {
@@ -742,7 +744,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public int getLocalPort() {
-        SocketAddress address = exchange.getExchange().getConnection().getLocalAddress();
+        SocketAddress address = exchange.getConnection().getLocalAddress();
         if (address instanceof InetSocketAddress) {
             return ((InetSocketAddress) address).getPort();
         }
@@ -763,7 +765,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         onAsyncStart();
         asyncListeners.clear();
-        return asyncContext = new AsyncContextImpl(exchange, exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
+        return asyncContext = new AsyncContextImpl(exchange, exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
     }
 
     @Override
@@ -785,7 +787,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isAsyncSupported() {
-        Boolean supported = exchange.getExchange().getAttachment(AsyncContextImpl.ASYNC_SUPPORTED);
+        Boolean supported = exchange.getAttachment(AsyncContextImpl.ASYNC_SUPPORTED);
         return supported == null || supported;
     }
 
@@ -799,7 +801,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public DispatcherType getDispatcherType() {
-        return exchange.getExchange().getAttachment(DISPATCHER_TYPE_ATTACHMENT_KEY);
+        return exchange.getAttachment(DISPATCHER_TYPE_ATTACHMENT_KEY);
     }
 
     public Map<String, Deque<String>> getQueryParameters() {
@@ -837,7 +839,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
 
     public void addAsyncListener(final AsyncListener listener) {
-        asyncListeners.add(new BoundAsyncListener(listener, this, exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY)));
+        asyncListeners.add(new BoundAsyncListener(listener, this, exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY)));
     }
 
     public void addAsyncListener(final AsyncListener listener, final ServletRequest servletRequest, final ServletResponse servletResponse) {

@@ -22,7 +22,6 @@ import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import org.jboss.logging.Logger;
 
 /**
@@ -82,8 +81,8 @@ public final class ResponseCodeHandler implements HttpHandler, BlockingHttpHandl
     }
 
     @Override
-    public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        exchange.getExchange().setResponseCode(responseCode);
+    public void handleBlockingRequest(final HttpServerExchange exchange) throws Exception {
+        exchange.setResponseCode(responseCode);
         if(traceEnabled) {
             log.tracef("Setting response code %s for exchange %s", responseCode, exchange);
         }

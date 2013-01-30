@@ -20,10 +20,12 @@ package io.undertow.test.handlers.blocking;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
@@ -37,6 +39,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.streams.ChannelOutputStream;
+import sun.nio.ch.ChannelInputStream;
 
 /**
  * @author Stuart Douglas
@@ -52,25 +56,28 @@ public class SimpleBlockingServerTestCase {
         DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(new BlockingHttpHandler() {
             @Override
-            public void handleRequest(final BlockingHttpServerExchange exchange) {
+            public void handleBlockingRequest(final HttpServerExchange exchange) {
                 try {
-                    if (exchange.getExchange().getRequestMethod().equals(Methods.POST)) {
+                    if (exchange.getRequestMethod().equals(Methods.POST)) {
                         //for a post we just echo back what was sent
-                        exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, exchange.getExchange().getRequestHeaders().getFirst(Headers.CONTENT_LENGTH));
+                        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH));
                         //we need to fully buffer it, as otherwise the send buffer fills up, and the client will still be blocked
                         //on writing and will never read
                         byte[] buffer = new byte[1024];
                         final ByteArrayOutputStream b = new ByteArrayOutputStream();
                         int r = 0;
-                        while ((r = exchange.getInputStream().read(buffer)) > 0) {
+                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                        final InputStream inputStream = new ChannelInputStream(exchange.getRequestChannel());
+                        while ((r = inputStream.read(buffer)) > 0) {
                             b.write(buffer, 0 , r);
                         }
-                        exchange.getOutputStream().write(b.toByteArray());
-                        exchange.getOutputStream().close();
+                        outputStream.write(b.toByteArray());
+                        outputStream.close();
                     } else {
-                        exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
-                        exchange.getOutputStream().write(message.getBytes());
-                        exchange.getOutputStream().close();
+                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannelFactory().create());
+                        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
+                        outputStream.write(message.getBytes());
+                        outputStream.close();
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);

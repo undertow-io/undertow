@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.core;
 
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.ThreadSetupAction;
 
 /**
@@ -33,7 +33,7 @@ public class ContextClassLoaderSetupAction implements ThreadSetupAction {
     }
 
     @Override
-    public Handle setup(final BlockingHttpServerExchange exchange) {
+    public Handle setup(final HttpServerExchange exchange) {
         final ClassLoader old = SecurityActions.getContextClassLoader();
         Thread.currentThread().setContextClassLoader(classLoader);
         return new Handle() {

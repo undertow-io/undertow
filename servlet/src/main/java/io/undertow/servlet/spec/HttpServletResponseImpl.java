@@ -36,7 +36,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.HttpCompletionHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.util.AttachmentKey;
@@ -53,7 +53,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     public static final AttachmentKey<ServletResponse> ATTACHMENT_KEY = AttachmentKey.create(ServletResponse.class);
 
-    private final BlockingHttpServerExchange exchange;
+    private final HttpServerExchange exchange;
+    private final HttpCompletionHandler completionHandler;
     private volatile ServletContextImpl servletContext;
 
     private ServletOutputStreamImpl servletOutputStream;
@@ -68,13 +69,18 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private Locale locale;
     private boolean responseDone = false;
 
-    public HttpServletResponseImpl(final BlockingHttpServerExchange exchange, final ServletContextImpl servletContext) {
+    public HttpServletResponseImpl(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final ServletContextImpl servletContext) {
         this.exchange = exchange;
+        this.completionHandler = completionHandler;
         this.servletContext = servletContext;
     }
 
-    public BlockingHttpServerExchange getExchange() {
+    public HttpServerExchange getExchange() {
         return exchange;
+    }
+
+    public HttpCompletionHandler getCompletionHandler() {
+        return completionHandler;
     }
 
     @Override
@@ -82,13 +88,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude) {
             return;
         }
-        final AttachmentList<io.undertow.server.handlers.Cookie> cookies = exchange.getExchange().getAttachment(io.undertow.server.handlers.Cookie.RESPONSE_COOKIES);
+        final AttachmentList<io.undertow.server.handlers.Cookie> cookies = exchange.getAttachment(io.undertow.server.handlers.Cookie.RESPONSE_COOKIES);
         cookies.add(new ServletCookieAdaptor(cookie));
     }
 
     @Override
     public boolean containsHeader(final String name) {
-        return exchange.getExchange().getResponseHeaders().contains(new HttpString(name));
+        return exchange.getResponseHeaders().contains(new HttpString(name));
     }
 
     @Override
@@ -113,19 +119,19 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendError(final int sc, final String msg) throws IOException {
-        if (exchange.getExchange().isResponseStarted()) {
+        if (exchange.isResponseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         resetBuffer();
         writer = null;
         responseState = ResponseState.NONE;
-        exchange.getExchange().setResponseCode(sc);
+        exchange.setResponseCode(sc);
         //todo: is this the best way to handle errors?
         final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
         if (location != null) {
             RequestDispatcherImpl requestDispatcher = new RequestDispatcherImpl(location, servletContext);
             try {
-                requestDispatcher.error(exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), exchange.getExchange().getAttachment(ServletAttachments.CURRENT_SERVLET).getName(), msg);
+                requestDispatcher.error(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), exchange.getAttachment(ServletAttachments.CURRENT_SERVLET).getName(), msg);
             } catch (ServletException e) {
                 throw new RuntimeException(e);
             }
@@ -134,7 +140,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             getWriter().write(msg);
             getWriter().close();
         }
-        responseDone(exchange.getCompletionHandler());
+        responseDone(completionHandler);
     }
 
     @Override
@@ -144,7 +150,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendRedirect(final String location) throws IOException {
-        if (exchange.getExchange().isResponseStarted()) {
+        if (exchange.isResponseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         resetBuffer();
@@ -153,20 +159,20 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (location.startsWith("/")) {
             realPath = location;
         } else {
-            String current = exchange.getExchange().getRelativePath();
+            String current = exchange.getRelativePath();
             int lastSlash = current.lastIndexOf("/");
             if (lastSlash != -1) {
                 current = current.substring(0, lastSlash + 1);
             }
             realPath = servletContext.getContextPath() + CanonicalPathUtils.canonicalize(current + location);
         }
-        String host = exchange.getExchange().getRequestHeaders().getFirst(Headers.HOST);
+        String host = exchange.getRequestHeaders().getFirst(Headers.HOST);
         if (host == null) {
-            host = exchange.getExchange().getDestinationAddress().getAddress().getHostAddress();
+            host = exchange.getDestinationAddress().getAddress().getHostAddress();
         }
-        String loc = exchange.getExchange().getRequestScheme() + "://" + host + realPath;
-        exchange.getExchange().getResponseHeaders().put(Headers.LOCATION, loc);
-        responseDone(exchange.getCompletionHandler());
+        String loc = exchange.getRequestScheme() + "://" + host + realPath;
+        exchange.getResponseHeaders().put(Headers.LOCATION, loc);
+        responseDone(completionHandler);
     }
 
     @Override
@@ -189,7 +195,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude) {
             return;
         }
-        exchange.getExchange().getResponseHeaders().put(name, value);
+        exchange.getResponseHeaders().put(name, value);
     }
 
     @Override
@@ -201,7 +207,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude) {
             return;
         }
-        exchange.getExchange().getResponseHeaders().add(name, value);
+        exchange.getResponseHeaders().add(name, value);
     }
 
     @Override
@@ -219,7 +225,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude) {
             return;
         }
-        exchange.getExchange().setResponseCode(sc);
+        exchange.setResponseCode(sc);
     }
 
     @Override
@@ -232,23 +238,23 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public int getStatus() {
-        return exchange.getExchange().getResponseCode();
+        return exchange.getResponseCode();
     }
 
     @Override
     public String getHeader(final String name) {
-        return exchange.getExchange().getResponseHeaders().getFirst(new HttpString(name));
+        return exchange.getResponseHeaders().getFirst(new HttpString(name));
     }
 
     @Override
     public Collection<String> getHeaders(final String name) {
-        return new ArrayList<String>(exchange.getExchange().getResponseHeaders().get(new HttpString(name)));
+        return new ArrayList<String>(exchange.getResponseHeaders().get(new HttpString(name)));
     }
 
     @Override
     public Collection<String> getHeaderNames() {
         final Set<String> headers = new HashSet<String>();
-        for (final HttpString i : exchange.getExchange().getResponseHeaders()) {
+        for (final HttpString i : exchange.getResponseHeaders()) {
             headers.add(i.toString());
         }
         return headers;
@@ -297,37 +303,37 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private void createOutputStream() {
         if (servletOutputStream == null) {
             if (bufferSize == null) {
-                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), contentLength, this);
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getResponseChannelFactory(), contentLength, this);
             } else {
-                servletOutputStream = new ServletOutputStreamImpl(exchange.getExchange().getResponseChannelFactory(), contentLength, this, bufferSize);
+                servletOutputStream = new ServletOutputStreamImpl(exchange.getResponseChannelFactory(), contentLength, this, bufferSize);
             }
         }
     }
 
     @Override
     public void setCharacterEncoding(final String charset) {
-        if (insideInclude || exchange.getExchange().isResponseStarted() || writer != null || isCommitted()) {
+        if (insideInclude || exchange.isResponseStarted() || writer != null || isCommitted()) {
             return;
         }
         charsetSet = true;
         this.charset = charset;
         if (contentType != null) {
-            exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
         }
     }
 
     @Override
     public void setContentLength(final int len) {
-        if (insideInclude || exchange.getExchange().isResponseStarted()) {
+        if (insideInclude || exchange.isResponseStarted()) {
             return;
         }
-        exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
+        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
         this.contentLength = len;
     }
 
     @Override
     public void setContentType(final String type) {
-        if (insideInclude || exchange.getExchange().isResponseStarted()) {
+        if (insideInclude || exchange.isResponseStarted()) {
             return;
         }
         contentType = type;
@@ -350,7 +356,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                 }
             }
         }
-        exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
     }
 
     @Override
@@ -364,7 +370,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public int getBufferSize() {
         if(bufferSize == null){
-            return exchange.getExchange().getConnection().getBufferSize();
+            return exchange.getConnection().getBufferSize();
         }
         return bufferSize;
     }
@@ -406,7 +412,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public boolean isCommitted() {
-        return exchange.getExchange().isResponseStarted();
+        return exchange.isResponseStarted();
     }
 
     @Override
@@ -416,17 +422,17 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         }
         writer = null;
         responseState = ResponseState.NONE;
-        exchange.getExchange().getResponseHeaders().clear();
-        exchange.getExchange().setResponseCode(200);
+        exchange.getResponseHeaders().clear();
+        exchange.setResponseCode(200);
     }
 
     @Override
     public void setLocale(final Locale loc) {
-        if (insideInclude || exchange.getExchange().isResponseStarted()) {
+        if (insideInclude || exchange.isResponseStarted()) {
             return;
         }
         this.locale = loc;
-        exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_LANGUAGE, loc.getLanguage() + "-" + loc.getCountry());
+        exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, loc.getLanguage() + "-" + loc.getCountry());
         if (!charsetSet && writer == null) {
             final Map<String, String> localeCharsetMapping = servletContext.getDeployment().getDeploymentInfo().getLocaleCharsetMapping();
             // Match full language_country_variant first, then language_country,
@@ -442,7 +448,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             if (charset != null) {
                 this.charset = charset;
                 if (contentType != null) {
-                    exchange.getExchange().getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
+                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
                 }
             }
         }
@@ -461,7 +467,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (responseDone) {
             return;
         }
-        servletContext.updateSessionAccessTime(exchange.getExchange());
+        servletContext.updateSessionAccessTime(exchange);
         responseDone = true;
         if (writer != null) {
             writer.close();

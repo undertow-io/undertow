@@ -40,7 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.server.handlers.file.DirectFileCache;
 import io.undertow.server.handlers.file.FileCache;
 import io.undertow.servlet.api.DefaultServletConfig;
@@ -185,12 +184,12 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             ServletPathMatch handler = findWelcomeServlet(pathInfo.endsWith("/") ? pathInfo : pathInfo + "/");
             if (handler != null) {
                 HttpServletRequestImpl servletRequestImpl = HttpServletRequestImpl.getRequestImpl(req);
-                BlockingHttpServerExchange exchange = servletRequestImpl.getExchange();
-                exchange.getExchange().setRequestPath(exchange.getExchange().getResolvedPath() + handler.getMatched());
-                exchange.getExchange().setRequestURI(exchange.getExchange().getResolvedPath() + handler.getMatched());
-                exchange.getExchange().putAttachment(ServletAttachments.SERVLET_PATH_MATCH, handler);
+                HttpServerExchange exchange = servletRequestImpl.getExchange();
+                exchange.setRequestPath(exchange.getResolvedPath() + handler.getMatched());
+                exchange.setRequestURI(exchange.getResolvedPath() + handler.getMatched());
+                exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, handler);
                 try {
-                    handler.getHandler().handleRequest(exchange);
+                    handler.getHandler().handleBlockingRequest(exchange);
                 } catch (ServletException e) {
                     throw e;
                 } catch (Exception e) {

@@ -34,7 +34,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
@@ -56,7 +56,7 @@ public class AsyncContextImpl implements AsyncContext {
     public static final AttachmentKey<Boolean> ASYNC_SUPPORTED = AttachmentKey.create(Boolean.class);
     public static final AttachmentKey<Executor> ASYNC_EXECUTOR = AttachmentKey.create(Executor.class);
 
-    private final BlockingHttpServerExchange exchange;
+    private final HttpServerExchange exchange;
     private final ServletRequest servletRequest;
     private final ServletResponse servletResponse;
     private final TimeoutTask timeoutTask = new TimeoutTask();
@@ -72,7 +72,7 @@ public class AsyncContextImpl implements AsyncContext {
     private boolean initialRequestDone;
     private Thread initiatingThread;
 
-    public AsyncContextImpl(final BlockingHttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse) {
+    public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse) {
         this.exchange = exchange;
         this.servletRequest = servletRequest;
         this.servletResponse = servletResponse;
@@ -87,7 +87,7 @@ public class AsyncContextImpl implements AsyncContext {
             }
         }
         if (timeout > 0) {
-            this.timeoutKey = exchange.getExchange().getWriteThread().executeAfter(timeoutTask, timeout, TimeUnit.MILLISECONDS);
+            this.timeoutKey = exchange.getWriteThread().executeAfter(timeoutTask, timeout, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -115,26 +115,26 @@ public class AsyncContextImpl implements AsyncContext {
         if (servletRequest instanceof HttpServletRequest) {
             handler = deployment.getServletPaths().getServletHandlerByPath(((HttpServletRequest) servletRequest).getServletPath()).getHandler();
         } else {
-            handler = deployment.getServletPaths().getServletHandlerByPath(exchange.getExchange().getRelativePath()).getHandler();
+            handler = deployment.getServletPaths().getServletHandlerByPath(exchange.getRelativePath()).getHandler();
         }
 
-        final BlockingHttpServerExchange exchange = requestImpl.getExchange();
+        final HttpServerExchange exchange = requestImpl.getExchange();
 
-        exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.ASYNC);
+        exchange.putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.ASYNC);
 
-        exchange.getExchange().putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, servletRequest);
-        exchange.getExchange().putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, servletResponse);
+        exchange.putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, servletRequest);
+        exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, servletResponse);
 
         dispatchAsyncRequest(requestImpl, handler, exchange);
     }
 
-    private void dispatchAsyncRequest(final HttpServletRequestImpl requestImpl, final ServletInitialHandler handler, final BlockingHttpServerExchange exchange) {
-        Executor executor = exchange.getExchange().getAttachment(ASYNC_EXECUTOR);
+    private void dispatchAsyncRequest(final HttpServletRequestImpl requestImpl, final ServletInitialHandler handler, final HttpServerExchange exchange) {
+        Executor executor = exchange.getAttachment(ASYNC_EXECUTOR);
         if (executor == null) {
-            executor = exchange.getExchange().getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
+            executor = exchange.getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
         }
         if (executor == null) {
-            executor = exchange.getExchange().getConnection().getWorker();
+            executor = exchange.getConnection().getWorker();
         }
 
         final Executor e = executor;
@@ -146,7 +146,7 @@ public class AsyncContextImpl implements AsyncContext {
                     public void run() {
 
                         try {
-                            handler.handleRequest(requestImpl.getExchange());
+                            handler.handleBlockingRequest(requestImpl.getExchange());
                         } catch (Exception e) {
                             //ignore
                         }
@@ -167,9 +167,9 @@ public class AsyncContextImpl implements AsyncContext {
         HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(servletRequest);
         HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(servletResponse);
         final ServletInitialHandler handler;
-        final BlockingHttpServerExchange exchange = requestImpl.getExchange();
+        final HttpServerExchange exchange = requestImpl.getExchange();
 
-        exchange.getExchange().putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.ASYNC);
+        exchange.putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.ASYNC);
 
         requestImpl.setAttribute(ASYNC_REQUEST_URI, requestImpl.getRequestURI());
         requestImpl.setAttribute(ASYNC_CONTEXT_PATH, requestImpl.getContextPath());
@@ -203,16 +203,16 @@ public class AsyncContextImpl implements AsyncContext {
         }
         requestImpl.setQueryParameters(newQueryParameters);
 
-        requestImpl.getExchange().getExchange().setRelativePath(newServletPath);
-        requestImpl.getExchange().getExchange().setQueryString(newQueryString);
-        requestImpl.getExchange().getExchange().setRequestPath(newRequestUri);
-        requestImpl.getExchange().getExchange().setRequestURI(newRequestUri);
+        requestImpl.getExchange().setRelativePath(newServletPath);
+        requestImpl.getExchange().setQueryString(newQueryString);
+        requestImpl.getExchange().setRequestPath(newRequestUri);
+        requestImpl.getExchange().setRequestURI(newRequestUri);
         requestImpl.setServletContext((ServletContextImpl) context);
         responseImpl.setServletContext((ServletContextImpl) context);
 
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         ServletPathMatch info = deployment.getServletPaths().getServletHandlerByPath(newServletPath);
-        requestImpl.getExchange().getExchange().putAttachment(ServletAttachments.SERVLET_PATH_MATCH, info);
+        requestImpl.getExchange().putAttachment(ServletAttachments.SERVLET_PATH_MATCH, info);
         handler = info.getHandler();
 
         dispatchAsyncRequest(requestImpl, handler, exchange);
@@ -243,7 +243,7 @@ public class AsyncContextImpl implements AsyncContext {
                     try {
                         request.getServletContext().getDeployment().getApplicationListeners().requestDestroyed(request);
                     } finally {
-                        response.responseDone(exchange.getCompletionHandler());
+                        response.responseDone(response.getCompletionHandler());
                     }
                 }
             });
@@ -252,12 +252,12 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public void start(final Runnable run) {
-        Executor executor = exchange.getExchange().getAttachment(ASYNC_EXECUTOR);
+        Executor executor = exchange.getAttachment(ASYNC_EXECUTOR);
         if (executor == null) {
-            executor = exchange.getExchange().getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
+            executor = exchange.getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
         }
         if (executor == null) {
-            executor = exchange.getExchange().getConnection().getWorker();
+            executor = exchange.getConnection().getWorker();
         }
         final CompositeThreadSetupAction setup = HttpServletRequestImpl.getRequestImpl(servletRequest).getServletContext().getDeployment().getThreadSetupAction();
         executor.execute(new Runnable() {

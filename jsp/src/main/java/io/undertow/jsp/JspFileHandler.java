@@ -2,8 +2,8 @@ package io.undertow.jsp;
 
 import javax.servlet.ServletRequest;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import org.apache.jasper.Constants;
 
@@ -23,12 +23,12 @@ public class JspFileHandler implements BlockingHttpHandler {
     }
 
     @Override
-    public void handleRequest(final BlockingHttpServerExchange exchange) throws Exception {
-        ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+    public void handleBlockingRequest(final HttpServerExchange exchange) throws Exception {
+        ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         Object old = request.getAttribute(Constants.JSP_FILE);
         try {
             request.setAttribute(Constants.JSP_FILE, jspFile);
-            next.handleRequest(exchange);
+            next.handleBlockingRequest(exchange);
         } finally {
             request.setAttribute(Constants.JSP_FILE, old);
         }

@@ -28,8 +28,8 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.UnavailableException;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.core.ManagedServlet;
@@ -60,10 +60,10 @@ public class ServletHandler implements BlockingHttpHandler {
     }
 
     @Override
-    public void handleRequest(final BlockingHttpServerExchange exchange) throws IOException, ServletException {
+    public void handleBlockingRequest(final HttpServerExchange exchange) throws IOException, ServletException {
         if (managedServlet.isPermanentlyUnavailable()) {
             UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 404 for servlet %s due to permanent unavailability", managedServlet.getServletInfo().getName());
-            exchange.getExchange().setResponseCode(404);
+            exchange.setResponseCode(404);
             return;
         }
 
@@ -71,17 +71,17 @@ public class ServletHandler implements BlockingHttpHandler {
         if (until != 0) {
             UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 503 for servlet %s due to temporary unavailability", managedServlet.getServletInfo().getName());
             if (System.currentTimeMillis() < until) {
-                exchange.getExchange().setResponseCode(503);
+                exchange.setResponseCode(503);
                 return;
             } else {
                 unavailableUntilUpdater.compareAndSet(this, until, 0);
             }
         }
         if(!asyncSupported) {
-            exchange.getExchange().putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, false);
+            exchange.putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, false);
         }
-        ServletRequest request = exchange.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        ServletResponse response = exchange.getExchange().getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+        ServletResponse response = exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
         InstanceHandle<? extends Servlet> servlet = null;
         try {
             servlet = managedServlet.getServlet();
@@ -91,11 +91,11 @@ public class ServletHandler implements BlockingHttpHandler {
                 UndertowServletLogger.REQUEST_LOGGER.stoppingServletDueToPermanentUnavailability(managedServlet.getServletInfo().getName(), e);
                 managedServlet.stop();
                 managedServlet.setPermanentlyUnavailable(true);
-                exchange.getExchange().setResponseCode(404);
+                exchange.setResponseCode(404);
             } else {
                 unavailableUntilUpdater.set(this, System.currentTimeMillis() + e.getUnavailableSeconds() * 1000);
                 UndertowServletLogger.REQUEST_LOGGER.stoppingServletUntilDueToTemporaryUnavailability(managedServlet.getServletInfo().getName(), new Date(until), e);
-                exchange.getExchange().setResponseCode(503);
+                exchange.setResponseCode(503);
             }
         } finally {
             if(servlet != null) {

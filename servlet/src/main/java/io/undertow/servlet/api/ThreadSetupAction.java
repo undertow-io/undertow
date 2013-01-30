@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.api;
 
-import io.undertow.server.handlers.blocking.BlockingHttpServerExchange;
+import io.undertow.server.HttpServerExchange;
 
 /**
  * Interface that can be implemented by classes that need to setup
@@ -34,7 +34,7 @@ public interface ThreadSetupAction {
      * @param exchange The exchange, this may be null
      * @return A handle to tear down the request when the invocation is finished, or null
      */
-    Handle setup(final BlockingHttpServerExchange exchange);
+    Handle setup(final HttpServerExchange exchange);
 
     public interface Handle {
         void tearDown();
