@@ -35,8 +35,6 @@ import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.SecureHashMap;
 import org.jboss.logging.Logger;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.StreamSinkChannel;
@@ -45,7 +43,6 @@ import org.xnio.channels.StreamSourceChannel;
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreSet;
 import static org.xnio.Bits.intBitMask;
-import static org.xnio.IoUtils.safeClose;
 
 /**
  * An HTTP server request/response exchange.  An instance of this class is constructed as soon as the request headers are
@@ -62,6 +59,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final HeaderMap requestHeaders = new HeaderMap();
     private final HeaderMap responseHeaders = new HeaderMap();
 
+    private List<ExchangeCompleteListener> exchangeCompleteListeners = new ArrayList<ExchangeCompleteListener>(1);
+
     private final Map<String, Deque<String>> queryParameters = new SecureHashMap<String, Deque<String>>(0);
 
     private final StreamSinkChannel underlyingResponseChannel;
@@ -70,9 +69,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      * The actual response channel. May be null if it has not been created yet.
      */
     private StreamSinkChannel responseChannel;
-
-    private Runnable requestTerminateAction;
-    private Runnable responseTerminateAction;
 
     private HttpString protocol;
 
@@ -347,28 +343,16 @@ public final class HttpServerExchange extends AbstractAttachable {
         return anyAreSet(state, FLAG_PERSISTENT);
     }
 
+    public boolean isUpgrade() {
+        return getResponseCode() == 101;
+    }
+
     public void setPersistent(final boolean persistent) {
         if(persistent) {
             this.state = this.state | FLAG_PERSISTENT;
         } else {
             this.state = this.state & ~FLAG_PERSISTENT;
         }
-    }
-
-    public Runnable getRequestTerminateAction() {
-        return requestTerminateAction;
-    }
-
-    public void setRequestTerminateAction(final Runnable requestTerminateAction) {
-        this.requestTerminateAction = requestTerminateAction;
-    }
-
-    public Runnable getResponseTerminateAction() {
-        return responseTerminateAction;
-    }
-
-    public void setResponseTerminateAction(final Runnable responseTerminateAction) {
-        this.responseTerminateAction = responseTerminateAction;
     }
 
     /**
@@ -382,11 +366,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     public void upgradeChannel(){
         setResponseCode(101);
         int oldVal = state;
-        if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
-            // idempotent
-            return;
-        }
-        this.state = oldVal | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
         if(connection.getPipeLiningBuffer() != null) {
             connection.getPipeLiningBuffer().upgradeUnderlyingChannel();
         }
@@ -406,15 +385,13 @@ public final class HttpServerExchange extends AbstractAttachable {
         final HeaderMap headers = getResponseHeaders();
         headers.add(Headers.UPGRADE, productName);
         headers.add(Headers.CONNECTION, Headers.UPGRADE_STRING);
-        int oldVal = state;
-        if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
-            // idempotent
-            return;
-        }
-        this.state = oldVal | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
         if(connection.getPipeLiningBuffer() != null) {
             connection.getPipeLiningBuffer().upgradeUnderlyingChannel();
         }
+    }
+
+    public void addExchangeCompleteListener(final ExchangeCompleteListener listener){
+        exchangeCompleteListeners.add(listener);
     }
 
     /**
@@ -529,7 +506,12 @@ public final class HttpServerExchange extends AbstractAttachable {
             return;
         }
         this.state = oldVal | FLAG_REQUEST_TERMINATED;
-        requestTerminateAction.run();
+        if(anyAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
+            boolean upgrade = getResponseCode() == 101;
+            for(ExchangeCompleteListener listener : exchangeCompleteListeners) {
+                listener.exchangeComplete(this, upgrade);
+            }
+        }
     }
 
     /**
@@ -642,8 +624,11 @@ public final class HttpServerExchange extends AbstractAttachable {
             return;
         }
         this.state = oldVal | FLAG_RESPONSE_TERMINATED;
-        if (responseTerminateAction != null) {
-            responseTerminateAction.run();
+        if(anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
+            boolean upgrade = getResponseCode() == 101;
+            for(ExchangeCompleteListener listener : exchangeCompleteListeners) {
+                listener.exchangeComplete(this, upgrade);
+            }
         }
     }
 
@@ -676,56 +661,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         log.tracef("Starting to write response for %s using channel %s", this, underlyingResponseChannel);
         final HeaderMap responseHeaders = this.responseHeaders;
         responseHeaders.lock();
-    }
-
-
-    public void cleanup() {
-        // All other cleanup handlers have been called.  We will inspect the state of the exchange
-        // and attempt to fix any leftover or broken crap as best as we can.
-        //
-        // At this point if any channels were not acquired, we know that not even default handlers have
-        // handled the request, meaning we basically have no idea what their state is; the response headers
-        // may not even be valid.
-        //
-        // The only thing we can do is to determine if the request and reply were both terminated; if not,
-        // consume the request body nicely, send whatever HTTP response we have, and close down the connection.
-        int oldVal = state;
-        if (allAreSet(oldVal, FLAG_CLEANUP)) {
-            return;
-        }
-        this.state = oldVal | FLAG_CLEANUP | FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED;
-        final StreamSourceChannel requestChannel = underlyingRequestChannel;
-        StreamSinkChannel responseChannel = this.responseChannel;
-        if (responseChannel == null) {
-            responseChannel = getResponseChannel();
-        }
-        if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
-            // we're good; a transfer coding handler took care of things.
-            return;
-        } else {
-            try {
-                //we do not attempt to drain the read side, as one of the reasons this could
-                //be happening is because the request was too large
-                requestChannel.shutdownReads();
-                responseChannel.shutdownWrites();
-                if (!responseChannel.flush()) {
-                    responseChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
-                        public void handleEvent(final StreamSinkChannel channel) {
-                            // this shouldn't be necessary...
-                            channel.suspendWrites();
-                            channel.getWriteSetter().set(null);
-                        }
-                    }, ChannelListeners.closingChannelExceptionHandler()));
-                    responseChannel.resumeWrites();
-                }
-            } catch (Throwable t) {
-                // All sorts of things could go wrong, from runtime exceptions to java.io.IOException to errors.
-                // Just kill off the connection, it's fucked beyond repair.
-                safeClose(requestChannel);
-                safeClose(responseChannel);
-                safeClose(connection);
-            }
-        }
     }
 
     public XnioExecutor getWriteThread() {

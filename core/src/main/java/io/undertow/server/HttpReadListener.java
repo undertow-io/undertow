@@ -21,13 +21,9 @@ package io.undertow.server;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.channels.BufferingStreamSinkChannel;
-import io.undertow.channels.GatedStreamSinkChannel;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -36,7 +32,6 @@ import org.xnio.Pooled;
 import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -48,11 +43,17 @@ import static org.xnio.IoUtils.safeClose;
 final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
 
 
+    private static HttpCompletionHandler COMPLETION_HANDLER = new HttpCompletionHandler() {
+        @Override
+        public void handleComplete() {
+
+        }
+    };
+
     private final StreamSinkChannel responseChannel;
 
     private ParseState state = new ParseState();
     private HttpServerExchange httpServerExchange;
-    private StartNextRequestAction startNextRequestAction;
 
     private final HttpServerConnection connection;
 
@@ -63,22 +64,8 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         this.responseChannel = responseChannel;
         this.connection = connection;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
-
-        final StreamSinkChannel nextRequestResponseChannel;
-        final Runnable responseTerminateAction;
-        if (connection.getMaxConcurrentRequests() > 1) {
-            final Object permit = new Object();
-            GatedStreamSinkChannel gatedStreamSinkChannel = new GatedStreamSinkChannel(connection.getChannel(), permit, false, true);
-            nextRequestResponseChannel = gatedStreamSinkChannel;
-            responseTerminateAction = new ResponseTerminateAction(gatedStreamSinkChannel, permit);
-        } else {
-            nextRequestResponseChannel = connection.getChannel();
-            responseTerminateAction = null;
-        }
         httpServerExchange = new HttpServerExchange(connection, requestChannel, this.responseChannel);
-        final StartNextRequestAction startNextRequestAction = new StartNextRequestAction(requestChannel, nextRequestResponseChannel, connection, httpServerExchange);
-        httpServerExchange.setResponseTerminateAction(responseTerminateAction);
-        httpServerExchange.setRequestTerminateAction(startNextRequestAction);
+        httpServerExchange.addExchangeCompleteListener(new StartNextRequestAction(requestChannel, responseChannel));
         if(connection.getPipeLiningBuffer() != null) {
             httpServerExchange.addResponseWrapper(connection.getPipeLiningBuffer().getChannelWrapper());
         }
@@ -88,7 +75,6 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 return new HttpResponseChannel(channelFactory.create(), connection.getBufferPool(), exchange);
             }
         });
-        this.startNextRequestAction = startNextRequestAction;
 
     }
 
@@ -188,7 +174,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
                 state = null;
                 this.httpServerExchange = null;
-                connection.getRootHandler().handleRequest(httpServerExchange, new CompletionHandler(httpServerExchange, startNextRequestAction));
+                connection.getRootHandler().handleRequest(httpServerExchange, COMPLETION_HANDLER);
 
             } catch (Throwable t) {
                 //TODO: we should attempt to return a 500 status code in this situation
@@ -207,88 +193,33 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
     /**
      * Action that starts the next request
      */
-    private static class StartNextRequestAction implements Runnable {
+    private static class StartNextRequestAction implements ExchangeCompleteListener {
 
-        private PushBackStreamChannel channel;
-        private StreamSinkChannel nextRequestResponseChannel;
-        private HttpServerConnection connection;
-        private HttpServerExchange exchange;
-
-        /**
-         * maintains the current state.
-         * 0= request has not finished, completion handler has not run
-         * 1=next request started
-         * 2=previous request finished, but request not started
-         * 3=completion handler run, but next request not started
-         */
-        @SuppressWarnings("unused")
-        private volatile int state = 0;
-        private static final AtomicIntegerFieldUpdater<StartNextRequestAction> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(StartNextRequestAction.class, "state");
+        private PushBackStreamChannel requestChannel;
+        private StreamSinkChannel responseChannel;
 
 
-        public StartNextRequestAction(final PushBackStreamChannel channel, final StreamSinkChannel nextRequestResponseChannel, final HttpServerConnection connection, final HttpServerExchange exchange) {
-            this.channel = channel;
-            this.nextRequestResponseChannel = nextRequestResponseChannel;
-            this.connection = connection;
-            this.exchange = exchange;
+        public StartNextRequestAction(final PushBackStreamChannel requestChannel, final StreamSinkChannel responseChannel) {
+            this.requestChannel = requestChannel;
+            this.responseChannel = responseChannel;
         }
 
-        /**
-         * This method is called when the
-         */
-        public void run() {
-            int state;
-            do {
-                state = stateUpdater.get(this);
-                if (state == 3) {
-                    if (stateUpdater.compareAndSet(this, state, 1)) {
-                        startNextRequest();
-                        return;
-                    }
-                } else if (state == 0 && connection.startRequest()) {
-                    if (stateUpdater.compareAndSet(this, state, 1)) {
-                        startNextRequest();
-                        return;
-                    }
-                } else if (state == 1) {
-                    return;
+        @Override
+        public void exchangeComplete(final HttpServerExchange exchange, final boolean isUpgrade) {
+            if (exchange.isPersistent() && !exchange.isUpgrade()) {
+                final PushBackStreamChannel channel = this.requestChannel;
+                final HttpReadListener listener = new HttpReadListener(responseChannel, channel, exchange.getConnection());
+                if (channel.isReadResumed()) {
+                    channel.suspendReads();
                 }
-            } while (!stateUpdater.compareAndSet(this, state, 2));
-        }
-
-        private void startNextRequest() {
-            if(!exchange.isPersistent()) {
-                IoUtils.safeClose(connection.getChannel());
-                return;
+                WorkerDispatcher.dispatchNextRequest(channel, new DoNextRequestRead(listener, channel));
+                responseChannel = null;
+                this.requestChannel = null;
             }
-            final PushBackStreamChannel channel = this.channel;
-            final HttpReadListener listener = new HttpReadListener(nextRequestResponseChannel, channel, connection);
-            if (channel.isReadResumed()) {
-                channel.suspendReads();
-            }
-            WorkerDispatcher.dispatchNextRequest(channel, new DoNextRequestRead(listener, channel));
-            nextRequestResponseChannel = null;
-            connection = null;
-            this.channel = null;
-        }
-
-        public void completionHandler() {
-            int state;
-            do {
-                state = stateUpdater.get(this);
-                if (state == 1) {
-                    return;
-                }
-                if (state == 2) {
-                    if (stateUpdater.compareAndSet(this, state, 1)) {
-                        startNextRequest();
-                        return;
-                    }
-                }
-            } while (!stateUpdater.compareAndSet(this, state, 3));
         }
 
         private static class DoNextRequestRead implements Runnable {
+
             private final HttpReadListener listener;
             private final PushBackStreamChannel channel;
 
@@ -300,47 +231,6 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
             @Override
             public void run() {
                 listener.handleEvent(channel);
-            }
-        }
-    }
-
-    private static class ResponseTerminateAction implements Runnable {
-        private volatile GatedStreamSinkChannel nextRequestResponseChannel;
-        private volatile Object permit;
-
-        public ResponseTerminateAction(GatedStreamSinkChannel nextRequestResponseChannel, Object permit) {
-            this.nextRequestResponseChannel = nextRequestResponseChannel;
-            this.permit = permit;
-        }
-
-        public void run() {
-            nextRequestResponseChannel.openGate(permit);
-            nextRequestResponseChannel = null;
-            permit = null;
-        }
-    }
-
-    private static class CompletionHandler extends AtomicBoolean implements HttpCompletionHandler {
-        private final HttpServerExchange httpServerExchange;
-        private final StartNextRequestAction startNextRequestAction;
-
-        public CompletionHandler(final HttpServerExchange httpServerExchange, final StartNextRequestAction startNextRequestAction) {
-            this.httpServerExchange = httpServerExchange;
-            this.startNextRequestAction = startNextRequestAction;
-        }
-
-        public void handleComplete() {
-            if (!compareAndSet(false, true)) {
-                return;
-            }
-            try {
-                httpServerExchange.cleanup();
-            } finally {
-                //mark this request as finished to allow the next request to run
-                //but only if this is not an upgrade response
-                if (httpServerExchange.getResponseCode() != 101) {
-                    startNextRequestAction.completionHandler();
-                }
             }
         }
     }
