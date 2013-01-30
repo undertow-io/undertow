@@ -18,7 +18,6 @@
 package io.undertow.test.security;
 
 import io.undertow.security.handlers.SinglePortConfidentialityHandler;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.test.utils.AjpIgnore;
@@ -51,7 +50,7 @@ public class SimpleConfidentialRedirectTestCase {
 
         HttpHandler current = new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
                 exchange.endExchange();
             }

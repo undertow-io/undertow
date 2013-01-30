@@ -23,7 +23,6 @@ import java.nio.channels.Channel;
 import java.util.Deque;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
@@ -89,7 +88,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         this.nonUpgradeHandler = nonUpgradeHandler;
     }
 
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         final Deque<String> upgradeStrings = exchange.getRequestHeaders().get(Headers.UPGRADE);
         if (upgradeStrings != null && exchange.getRequestMethod().equals(Methods.GET)) {
             for (String string : upgradeStrings) {
@@ -119,6 +118,6 @@ public final class ChannelUpgradeHandler implements HttpHandler {
             }
         }
         final HttpHandler handler = nonUpgradeHandler;
-        HttpHandlers.executeHandler(handler, exchange, completionHandler);
+        HttpHandlers.executeHandler(handler, exchange);
     }
 }

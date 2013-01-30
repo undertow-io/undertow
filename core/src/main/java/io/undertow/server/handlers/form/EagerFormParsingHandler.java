@@ -19,7 +19,6 @@
 package io.undertow.server.handlers.form;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -44,10 +43,10 @@ public class EagerFormParsingHandler implements HttpHandler {
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
         if(parser == null) {
-            HttpHandlers.executeHandler(next, exchange, completionHandler);
+            HttpHandlers.executeHandler(next, exchange);
             return;
         }
         final IoFuture<FormData> future = parser.parse();
@@ -55,7 +54,7 @@ public class EagerFormParsingHandler implements HttpHandler {
             @Override
             public void notify(final IoFuture<? extends FormData> ioFuture, final Object attachment) {
                 if(ioFuture.getStatus() == IoFuture.Status.DONE) {
-                    HttpHandlers.executeHandler(next, exchange, completionHandler);
+                    HttpHandlers.executeHandler(next, exchange);
                 } else if(ioFuture.getStatus() == IoFuture.Status.FAILED) {
                     UndertowLogger.REQUEST_LOGGER.ioExceptionReadingFromChannel(ioFuture.getException());
                     IoUtils.safeClose(exchange.getRequestChannel());

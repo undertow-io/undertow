@@ -696,6 +696,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private void closeAndFlushResponse() {
         try {
             if (isResponseChannelAvailable()) {
+                getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                 getResponseChannel();
             }
             if (responseChannel.isOpen()) {

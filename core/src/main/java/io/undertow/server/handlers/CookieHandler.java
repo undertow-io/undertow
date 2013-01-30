@@ -27,7 +27,6 @@ import java.util.ListIterator;
 import java.util.Map;
 
 import io.undertow.server.ChannelWrapper;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentList;
@@ -48,13 +47,13 @@ public class CookieHandler implements HttpHandler {
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
 
         final Map<String, Cookie> cookies = parseCookies(exchange);
         exchange.putAttachment(Cookie.REQUEST_COOKIES, new CopyOnWriteMap<String, Cookie>(cookies));
         exchange.putAttachment(Cookie.RESPONSE_COOKIES, new AttachmentList<Cookie>(Cookie.class));
         exchange.addResponseWrapper(CookieChannelWrapper.INSTANCE);
-        HttpHandlers.executeHandler(next, exchange, completionHandler);
+        HttpHandlers.executeHandler(next, exchange);
     }
 
     private static Map<String, Cookie> parseCookies(final HttpServerExchange exchange) {

@@ -18,7 +18,6 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CanonicalPathUtils;
@@ -38,10 +37,10 @@ public class CanonicalPathHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         exchange.setCanonicalPath(CanonicalPathUtils.canonicalize(exchange.getRequestPath()));
         exchange.setRelativePath(CanonicalPathUtils.canonicalize(exchange.getRelativePath()));
-        HttpHandlers.executeHandler(next, exchange, completionHandler);
+        HttpHandlers.executeHandler(next, exchange);
     }
 
     public HttpHandler getNext() {

@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import io.undertow.UndertowMessages;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -60,20 +59,8 @@ public class FileErrorPageHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
-        HttpHandlers.executeHandler(next, exchange, new HttpCompletionHandler() {
-            @Override
-            public void handleComplete() {
-                Set<Integer> codes = responseCodes;
-                if (!exchange.isResponseStarted() && codes.contains(exchange.getResponseCode())) {
-                    //we don't want any headers from the original request hanging around
-                    exchange.getResponseHeaders().clear();
-                    fileCache.serveFile(exchange, file, false);
-                } else {
-                    exchange.endExchange();
-                }
-            }
-        });
+    public void handleRequest(final HttpServerExchange exchange) {
+        HttpHandlers.executeHandler(next, exchange);
     }
 
     public HttpHandler getNext() {

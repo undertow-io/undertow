@@ -31,7 +31,6 @@ import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
@@ -147,7 +146,7 @@ public abstract class UsernamePasswordAuthenticationTestBase {
         static final HttpString PROCESSED_BY = new HttpString("ProcessedBy");
 
         @Override
-        public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
+        public void handleRequest(HttpServerExchange exchange) {
             HeaderMap responseHeader = exchange.getResponseHeaders();
             responseHeader.add(PROCESSED_BY, "ResponseHandler");
 

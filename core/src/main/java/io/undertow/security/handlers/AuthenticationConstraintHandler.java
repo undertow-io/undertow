@@ -18,7 +18,6 @@
 package io.undertow.security.handlers;
 
 import io.undertow.security.api.SecurityContext;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
@@ -40,17 +39,16 @@ public class AuthenticationConstraintHandler implements HttpHandler {
     }
 
     /**
-     * @see io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange,
-     *      io.undertow.server.HttpCompletionHandler)
+     * @see io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange)
      */
     @Override
-    public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
+    public void handleRequest(HttpServerExchange exchange) {
         if (isAuthenticationRequired(exchange)) {
             SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
             context.setAuthenticationRequired();
         }
 
-        next.handleRequest(exchange, completionHandler);
+        next.handleRequest(exchange);
     }
 
     /**

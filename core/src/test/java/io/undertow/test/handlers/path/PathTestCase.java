@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
@@ -118,7 +117,7 @@ public class PathTestCase {
         }
 
         @Override
-        public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
+        public void handleRequest(HttpServerExchange exchange) {
             exchange.getResponseHeaders().add(new HttpString(MATCHED), matched);
             exchange.getResponseHeaders().add(new HttpString(PATH), exchange.getRelativePath());
             for(Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {

@@ -22,7 +22,6 @@ import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -36,7 +35,6 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.IoUtils;
 
@@ -64,8 +62,6 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
      */
     private final ManagedServlet managedServlet;
 
-    private static final AttachmentKey<HttpCompletionHandler> HACK_COMPLETION_HANDLER_KEY = AttachmentKey.create(HttpCompletionHandler.class);
-
     public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ManagedServlet managedServlet) {
         this.next = next;
         this.asyncPath = asyncPath;
@@ -79,10 +75,10 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         if (asyncPath != null) {
             //if the next handler is the default servlet we just execute it directly
-            HttpHandlers.executeHandler(asyncPath, exchange, completionHandler);
+            HttpHandlers.executeHandler(asyncPath, exchange);
             //this is not great, but as the file was not found we need to do error handling
             //so re just run the request again but via the normal servlet path
             //todo: fix this, we should just be able to run the error handling code without copy/pasting heaps of
@@ -96,7 +92,6 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
             @Override
             public void run() {
                 try {
-                    exchange.putAttachment(HACK_COMPLETION_HANDLER_KEY, completionHandler);
                     final BlockingHttpHandler handler = ServletInitialHandler.this;
                     handler.handleBlockingRequest(exchange);
                 } catch (Throwable t) {
@@ -138,11 +133,10 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     private void handleFirstRequest(final HttpServerExchange exchange, final DispatcherType dispatcherType) throws Exception {
 
-        final HttpCompletionHandler completionHandler = exchange.getAttachment(HACK_COMPLETION_HANDLER_KEY);
         ThreadSetupAction.Handle handle = setupAction.setup(exchange);
         try {
             if (dispatcherType == null) {
-                final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, completionHandler, servletContext);
+                final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
                 HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
                 exchange.putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.REQUEST);
                 exchange.putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
@@ -190,7 +184,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         //the response may have been completed if sendError was invoked
         if (!exchange.isComplete()) {
             if (!request.isAsyncStarted()) {
-                response.responseDone(completionHandler);
+                response.responseDone();
             } else {
                 request.asyncInitialRequestDone();
             }

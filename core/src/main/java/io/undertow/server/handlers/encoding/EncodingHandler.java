@@ -24,7 +24,6 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -58,15 +57,15 @@ public class EncodingHandler implements HttpHandler {
     private static final String IDENTITY = "identity";
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         final Deque<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
         HttpHandler nextHandler = this.next;
         if (res == null || res.isEmpty()) {
             if (nextHandler != null) {
-                HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
+                HttpHandlers.executeHandler(nextHandler, exchange);
             } else {
                 //we don't have an identity handler
-                HttpHandlers.executeHandler(noEncodingHandler, exchange, completionHandler);
+                HttpHandlers.executeHandler(noEncodingHandler, exchange);
             }
             return;
         }
@@ -93,10 +92,10 @@ public class EncodingHandler implements HttpHandler {
             }
             if(isQValue0) {
                 if(includesIdentity) {
-                    HttpHandlers.executeHandler(noEncodingHandler, exchange, completionHandler);
+                    HttpHandlers.executeHandler(noEncodingHandler, exchange);
                     return;
                 } else {
-                    HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
+                    HttpHandlers.executeHandler(nextHandler, exchange);
                     return;
                 }
             } else if(!available.isEmpty()) {
@@ -104,11 +103,11 @@ public class EncodingHandler implements HttpHandler {
                 final EncodingMapping mapping = available.get(0);
                 mapping.encoding.setupContentEncoding(exchange);
                 exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, mapping.name);
-                HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
+                HttpHandlers.executeHandler(nextHandler, exchange);
                 return;
             }
         }
-        HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
+        HttpHandlers.executeHandler(nextHandler, exchange);
     }
 
 

@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
@@ -72,7 +71,7 @@ public class FormDataParserTestCase {
         final FormEncodedDataHandler fd = new FormEncodedDataHandler();
         fd.setNext(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+            public void handleRequest(final HttpServerExchange exchange) {
                 final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
                 try {
                     FormData data = parser.parse().get();

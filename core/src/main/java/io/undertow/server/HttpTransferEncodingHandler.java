@@ -18,10 +18,6 @@
 
 package io.undertow.server;
 
-import java.io.IOException;
-import java.nio.channels.Channel;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -37,16 +33,12 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
-import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
 import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-import org.xnio.channels.SuspendableWriteChannel;
 
 /**
  * Handler responsible for dealing with wrapping the response stream and request stream to deal with persistent
@@ -83,7 +75,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         boolean persistentConnection;
         final boolean hasConnectionHeader = requestHeaders.contains(Headers.CONNECTION);
@@ -105,13 +97,12 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             log.trace("Connection not persistent");
             persistentConnection = false;
         }
-        CompletionHandler ourCompletionHandler = new CompletionHandler(exchange, completionHandler);
         HttpString transferEncoding = Headers.IDENTITY;
         if (hasTransferEncoding) {
             transferEncoding = new HttpString(requestHeaders.getLast(Headers.TRANSFER_ENCODING));
         }
         if (hasTransferEncoding && !transferEncoding.equals(Headers.IDENTITY)) {
-            exchange.addRequestWrapper(chunkedStreamSourceChannelWrapper(ourCompletionHandler));
+            exchange.addRequestWrapper(chunkedStreamSourceChannelWrapper());
         } else if (hasContentLength) {
             final long contentLength;
             try {
@@ -130,7 +121,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 exchange.terminateRequest();
             } else {
                 // fixed-length content - add a wrapper for a fixed-length stream
-                exchange.addRequestWrapper(fixedLengthStreamSourceChannelWrapper(ourCompletionHandler, contentLength));
+                exchange.addRequestWrapper(fixedLengthStreamSourceChannelWrapper(contentLength));
             }
         } else if (hasTransferEncoding) {
             if (transferEncoding.equals(Headers.IDENTITY)) {
@@ -147,70 +138,11 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         exchange.setPersistent(persistentConnection);
 
         //now the response wrapper, to add in the appropriate connection control headers
-        exchange.addResponseWrapper(responseWrapper(ourCompletionHandler, persistentConnection));
-        HttpHandlers.executeHandler(next, exchange, ourCompletionHandler);
+        exchange.addResponseWrapper(responseWrapper(persistentConnection));
+        HttpHandlers.executeHandler(next, exchange);
     }
 
-    private static final class CompletionHandler implements HttpCompletionHandler {
-        private final HttpServerExchange exchange;
-        private final HttpCompletionHandler delegate;
-        private volatile StreamSourceChannel requestStream;
-        private volatile StreamSinkChannel responseStream;
-        @SuppressWarnings("unused")
-        private volatile int called;
-
-        private static final AtomicIntegerFieldUpdater<CompletionHandler> calledUpdater = AtomicIntegerFieldUpdater.newUpdater(CompletionHandler.class, "called");
-
-        private CompletionHandler(final HttpServerExchange exchange, final HttpCompletionHandler delegate) {
-            this.exchange = exchange;
-            this.delegate = delegate;
-        }
-
-        public StreamSourceChannel setRequestStream(final StreamSourceChannel requestStream) {
-            return this.requestStream = requestStream;
-        }
-
-        public StreamSinkChannel setResponseStream(final StreamSinkChannel responseStream) {
-            return this.responseStream = responseStream;
-        }
-
-        public void handleComplete() {
-            if (! calledUpdater.compareAndSet(this, 0, 1)) {
-                return;
-            }
-            // create the channels if they haven't yet been
-            exchange.getRequestChannel();
-            if(exchange.isResponseChannelAvailable()) {
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
-               exchange.getResponseChannel();
-            }
-            try {
-                responseStream.shutdownWrites();
-                if (responseStream.flush()) {
-                    delegate.handleComplete();
-                    return;
-                } else {
-                    responseStream.getWriteSetter().set(ChannelListeners.flushingChannelListener(new ChannelListener<SuspendableWriteChannel>() {
-                        public void handleEvent(final SuspendableWriteChannel channel) {
-                            delegate.handleComplete();
-                        }
-                    }, new ChannelExceptionHandler<Channel>() {
-                        public void handleException(final Channel channel, final IOException exception) {
-                            delegate.handleComplete();
-                        }
-                    }));
-                    responseStream.resumeWrites();
-                    return;
-                }
-            } catch (Throwable e) {
-                // oh well...
-                IoUtils.safeClose(responseStream);
-                delegate.handleComplete();
-            }
-        }
-    }
-
-    private static ChannelWrapper<StreamSinkChannel> responseWrapper(final CompletionHandler ourCompletionHandler, final boolean requestLooksPersistent) {
+    private static ChannelWrapper<StreamSinkChannel> responseWrapper(final boolean requestLooksPersistent) {
         return new ChannelWrapper<StreamSinkChannel>() {
             public StreamSinkChannel wrap(final ChannelFactory<StreamSinkChannel> channelFactory, final HttpServerExchange exchange) {
                 final StreamSinkChannel channel = channelFactory.create();
@@ -288,20 +220,20 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                         }
                     }
                 }
-                return ourCompletionHandler.setResponseStream(wrappedChannel);
+                return wrappedChannel;
             }
         };
     }
 
-    private static ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler) {
+    private static ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper() {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final ChannelFactory<StreamSourceChannel> channelFactory, final HttpServerExchange exchange) {
-                return ourCompletionHandler.setRequestStream(new ChunkedStreamSourceChannel((PushBackStreamChannel) channelFactory.create(), true, chunkedDrainListener(exchange), exchange.getConnection().getBufferPool(), false, maxEntitySize(exchange)));
+                return new ChunkedStreamSourceChannel((PushBackStreamChannel) channelFactory.create(), true, chunkedDrainListener(exchange), exchange.getConnection().getBufferPool(), false, maxEntitySize(exchange));
             }
         };
     }
 
-    private static ChannelWrapper<StreamSourceChannel> fixedLengthStreamSourceChannelWrapper(final CompletionHandler ourCompletionHandler, final long contentLength) {
+    private static ChannelWrapper<StreamSourceChannel> fixedLengthStreamSourceChannelWrapper(final long contentLength) {
         return new ChannelWrapper<StreamSourceChannel>() {
             public StreamSourceChannel wrap(final ChannelFactory<StreamSourceChannel> channelFactory, final HttpServerExchange exchange) {
                 StreamSourceChannel channel = channelFactory.create();
@@ -309,7 +241,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 if(contentLength > max) {
                     return new BrokenStreamSourceChannel(UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getSourceAddress(), max), channel);
                 }
-                return ourCompletionHandler.setRequestStream(new FixedLengthStreamSourceChannel(channel, contentLength, true, fixedLengthDrainListener(exchange), null));
+                return new FixedLengthStreamSourceChannel(channel, contentLength, true, fixedLengthDrainListener(exchange), null);
             }
         };
     }

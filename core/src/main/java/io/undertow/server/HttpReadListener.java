@@ -174,7 +174,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
                 state = null;
                 this.httpServerExchange = null;
-                connection.getRootHandler().handleRequest(httpServerExchange, COMPLETION_HANDLER);
+                connection.getRootHandler().handleRequest(httpServerExchange);
 
             } catch (Throwable t) {
                 //TODO: we should attempt to return a 500 status code in this situation

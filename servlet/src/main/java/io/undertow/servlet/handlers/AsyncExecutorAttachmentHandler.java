@@ -20,7 +20,6 @@ package io.undertow.servlet.handlers;
 
 import java.util.concurrent.Executor;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -42,8 +41,8 @@ public class AsyncExecutorAttachmentHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         exchange.putAttachment(AsyncContextImpl.ASYNC_EXECUTOR, executor);
-        HttpHandlers.executeHandler(next, exchange, completionHandler);
+        HttpHandlers.executeHandler(next, exchange);
     }
 }

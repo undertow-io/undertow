@@ -20,7 +20,6 @@ package io.undertow.test.session.inmemory;
 
 import java.io.IOException;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.CookieHandler;
@@ -63,7 +62,7 @@ public class InMemorySessionTestCase {
             final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(), sessionConfig);
             handler.setNext(new HttpHandler() {
                 @Override
-                public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+                public void handleRequest(final HttpServerExchange exchange) {
                     try {
                         Session session = sessionConfig.getAttachedSession(exchange);
                         if(session == null) {
@@ -74,7 +73,7 @@ public class InMemorySessionTestCase {
                         Integer count = (Integer)session.getAttribute(COUNT).get();
                         exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());
                         session.setAttribute(COUNT, ++count);
-                        HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_200, exchange, completionHandler);
+                        HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_200, exchange);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }

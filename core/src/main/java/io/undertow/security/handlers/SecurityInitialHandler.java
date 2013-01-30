@@ -61,37 +61,14 @@ public class SecurityInitialHandler implements HttpHandler {
     }
 
     /**
-     * @see io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange,
-     *      io.undertow.server.HttpCompletionHandler)
+     * @see io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange)
      */
     @Override
-    public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
-        SecurityContext existingContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+    public void handleRequest(HttpServerExchange exchange) {
         SecurityContext newContext = new SecurityContextImpl(exchange, identityManager, authenticatedSessionManager);
         exchange.putAttachment(SecurityContext.ATTACHMENT_KEY, newContext);
-
-        HttpCompletionHandler wrapperHandler = new InitialCompletionHandler(exchange, existingContext, completionHandler);
-        next.handleRequest(exchange, wrapperHandler);
+        next.handleRequest(exchange);
     }
 
-    private final class InitialCompletionHandler implements HttpCompletionHandler {
-
-        private final HttpServerExchange exchange;
-        private final SecurityContext originalSecurityContext;
-        private final HttpCompletionHandler next;
-
-        private InitialCompletionHandler(final HttpServerExchange exchange, final SecurityContext originalSecurityContext,
-                final HttpCompletionHandler next) {
-            this.exchange = exchange;
-            this.originalSecurityContext = originalSecurityContext;
-            this.next = next;
-        }
-
-        public void handleComplete() {
-            exchange.putAttachment(SecurityContext.ATTACHMENT_KEY, originalSecurityContext);
-            next.handleComplete();
-        }
-
-    }
 
 }

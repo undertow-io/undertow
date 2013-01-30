@@ -21,7 +21,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -42,9 +41,9 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
+    public void handleRequest(HttpServerExchange exchange) {
         if (isConfidential(exchange) || (confidentialityRequired(exchange) == false)) {
-            HttpHandlers.executeHandler(next, exchange, completionHandler);
+            HttpHandlers.executeHandler(next, exchange);
         } else {
             try {
                 URI redirectUri = getRedirectURI(exchange);

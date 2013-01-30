@@ -1,6 +1,5 @@
 package io.undertow.security.impl;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -19,13 +18,13 @@ public class FormAuthenticationRedirectHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         final String location = exchange.getAttachment(FormAuthenticationMechanism.ORIGINAL_URL_LOCATION);
         if(location != null) {
             FormAuthenticationMechanism.sendRedirect(exchange, location);
             exchange.endExchange();
         } else {
-            HttpHandlers.executeHandler(next, exchange, completionHandler);
+            HttpHandlers.executeHandler(next, exchange);
         }
     }
 

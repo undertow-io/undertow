@@ -20,7 +20,6 @@ package io.undertow.server.handlers;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
@@ -38,11 +37,10 @@ public final class HttpHandlers {
      *
      * @param handler           the handler to execute
      * @param exchange          the HTTP exchange for the request
-     * @param completionHandler the completion handler
      */
-    public static void executeHandler(final HttpHandler handler, final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public static void executeHandler(final HttpHandler handler, final HttpServerExchange exchange) {
         try {
-            handler.handleRequest(exchange, completionHandler);
+            handler.handleRequest(exchange);
         } catch (Throwable t) {
             try {
                 UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);

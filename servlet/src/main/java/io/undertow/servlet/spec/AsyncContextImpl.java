@@ -243,7 +243,7 @@ public class AsyncContextImpl implements AsyncContext {
                     try {
                         request.getServletContext().getDeployment().getApplicationListeners().requestDestroyed(request);
                     } finally {
-                        response.responseDone(response.getCompletionHandler());
+                        response.responseDone();
                     }
                 }
             });

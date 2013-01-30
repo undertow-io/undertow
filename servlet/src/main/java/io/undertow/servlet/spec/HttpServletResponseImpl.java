@@ -35,7 +35,6 @@ import javax.servlet.ServletResponseWrapper;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletAttachments;
@@ -54,7 +53,6 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     public static final AttachmentKey<ServletResponse> ATTACHMENT_KEY = AttachmentKey.create(ServletResponse.class);
 
     private final HttpServerExchange exchange;
-    private final HttpCompletionHandler completionHandler;
     private volatile ServletContextImpl servletContext;
 
     private ServletOutputStreamImpl servletOutputStream;
@@ -69,18 +67,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private Locale locale;
     private boolean responseDone = false;
 
-    public HttpServletResponseImpl(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler, final ServletContextImpl servletContext) {
+    public HttpServletResponseImpl(final HttpServerExchange exchange,  final ServletContextImpl servletContext) {
         this.exchange = exchange;
-        this.completionHandler = completionHandler;
         this.servletContext = servletContext;
     }
 
     public HttpServerExchange getExchange() {
         return exchange;
-    }
-
-    public HttpCompletionHandler getCompletionHandler() {
-        return completionHandler;
     }
 
     @Override
@@ -140,7 +133,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             getWriter().write(msg);
             getWriter().close();
         }
-        responseDone(completionHandler);
+        responseDone();
     }
 
     @Override
@@ -172,7 +165,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         }
         String loc = exchange.getRequestScheme() + "://" + host + realPath;
         exchange.getResponseHeaders().put(Headers.LOCATION, loc);
-        responseDone(completionHandler);
+        responseDone();
     }
 
     @Override
@@ -463,7 +456,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         return Locale.getDefault();
     }
 
-    public void responseDone(final HttpCompletionHandler handler) {
+    public void responseDone() {
         if (responseDone) {
             return;
         }
@@ -479,7 +472,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                 throw new RuntimeException(e);
             }
         } else {
-            handler.handleComplete();
+            exchange.endExchange();
         }
     }
 

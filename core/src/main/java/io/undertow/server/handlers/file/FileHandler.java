@@ -26,7 +26,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import io.undertow.UndertowMessages;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -55,7 +54,7 @@ public class FileHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         String path = exchange.getRelativePath();
         if (File.separatorChar != '/') {
             if (path.indexOf(File.separatorChar) != -1) {
@@ -66,7 +65,7 @@ public class FileHandler implements HttpHandler {
             path = path.replace('/', File.separatorChar);
         }
 
-        if (sendRequestedBlobs(exchange, completionHandler)) {
+        if (sendRequestedBlobs(exchange)) {
             return;
         }
 
@@ -95,7 +94,7 @@ public class FileHandler implements HttpHandler {
         this.fileCache = fileCache;
     }
 
-    private boolean sendRequestedBlobs(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
+    private boolean sendRequestedBlobs(HttpServerExchange exchange) {
         ByteBuffer buffer = null;
         String type = null;
         if ("css".equals(exchange.getQueryString())) {

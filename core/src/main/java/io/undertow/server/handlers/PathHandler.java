@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import io.undertow.UndertowMessages;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
@@ -48,7 +47,7 @@ public class PathHandler implements HttpHandler {
     private final ConcurrentMap<String, HttpHandler> paths = new CopyOnWriteMap<String, HttpHandler>();
 
     @Override
-    public void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler) {
+    public void handleRequest(HttpServerExchange exchange) {
         int pos = 0;
         final String path = exchange.getRelativePath();
         final int length = path.length();
@@ -64,9 +63,9 @@ public class PathHandler implements HttpHandler {
         if(next != null) {
             exchange.setRelativePath(path.substring(pos));
             exchange.setResolvedPath(exchange.getResolvedPath() + part);
-            HttpHandlers.executeHandler(next, exchange, completionHandler);
+            HttpHandlers.executeHandler(next, exchange);
         } else {
-            HttpHandlers.executeHandler(defaultHandler, exchange, completionHandler);
+            HttpHandlers.executeHandler(defaultHandler, exchange);
         }
     }
 

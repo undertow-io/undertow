@@ -104,7 +104,7 @@ public final class RequestLimitingHandler implements HttpHandler {
         this.queue = queue;
     }
 
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
         long oldVal, newVal;
         do {
@@ -112,12 +112,12 @@ public final class RequestLimitingHandler implements HttpHandler {
             final long current = oldVal & MASK_CURRENT;
             final long max = (oldVal & MASK_MAX) >> 32L;
             if (current >= max) {
-                queue.add(new QueuedRequest(exchange, completionHandler));
+                queue.add(new QueuedRequest(exchange));
                 return;
             }
             newVal = oldVal + 1;
         } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
-        HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
+        HttpHandlers.executeHandler(nextHandler, exchange);
     }
 
     /**
@@ -185,15 +185,13 @@ public final class RequestLimitingHandler implements HttpHandler {
 
     private final class QueuedRequest implements Runnable {
         private final HttpServerExchange exchange;
-        private final HttpCompletionHandler completionHandler;
 
-        QueuedRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+        QueuedRequest(final HttpServerExchange exchange) {
             this.exchange = exchange;
-            this.completionHandler = completionHandler;
         }
 
         public void run() {
-            HttpHandlers.executeHandler(nextHandler, exchange, completionHandler);
+            HttpHandlers.executeHandler(nextHandler, exchange);
         }
     }
 

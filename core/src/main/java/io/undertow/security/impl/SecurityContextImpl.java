@@ -114,11 +114,11 @@ public class SecurityContextImpl implements SecurityContext {
 
                             final RunnableCompletionHandler handler = new RunnableCompletionHandler(exchange, completionHandler, result.getRequestCompletionTasks());
                             if (result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
-                                HttpHandlers.executeHandler(nextHandler, exchange, handler);
+                                HttpHandlers.executeHandler(nextHandler, exchange);
                             } else if (getAuthenticationState() == AuthenticationState.REQUIRED || result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_AUTHENTICATED) {
                                 handler.handleComplete();
                             } else {
-                                HttpHandlers.executeHandler(nextHandler, exchange, handler);
+                                HttpHandlers.executeHandler(nextHandler, exchange);
                             }
                         } catch (IOException e) {
                             exchange.endExchange();

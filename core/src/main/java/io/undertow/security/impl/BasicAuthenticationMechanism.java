@@ -68,8 +68,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     /**
-     * @see io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange,
-     *      io.undertow.server.HttpCompletionHandler)
+     * @see io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange)
      */
     @Override
     public IoFuture<AuthenticationMechanismResult> authenticate(final HttpServerExchange exchange, final IdentityManager identityManager, final Executor executor) {

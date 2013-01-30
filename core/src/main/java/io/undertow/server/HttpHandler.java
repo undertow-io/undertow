@@ -30,7 +30,7 @@ public interface HttpHandler {
      * Handle the request.
      *
      * @param exchange the HTTP request/response exchange
-     * @param completionHandler the completion handler
+     *
      */
-    void handleRequest(HttpServerExchange exchange, HttpCompletionHandler completionHandler);
+    void handleRequest(HttpServerExchange exchange);
 }

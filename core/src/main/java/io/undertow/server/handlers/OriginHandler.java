@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.HttpCompletionHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -46,7 +45,7 @@ public class OriginHandler implements HttpHandler {
 
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange, final HttpCompletionHandler completionHandler) {
+    public void handleRequest(final HttpServerExchange exchange) {
         final Deque<String> origin = exchange.getRequestHeaders().get(Headers.ORIGIN);
         if (origin == null) {
             if (requireOriginHeader) {
@@ -54,7 +53,7 @@ public class OriginHandler implements HttpHandler {
                 if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                     UndertowLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to lack of Origin: header", exchange.getRequestPath());
                 }
-                HttpHandlers.executeHandler(originFailedHandler, exchange, completionHandler);
+                HttpHandlers.executeHandler(originFailedHandler, exchange);
                 return;
             }
         } else {
@@ -70,7 +69,7 @@ public class OriginHandler implements HttpHandler {
                     if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         UndertowLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to Origin %s not being in the allowed origins list", exchange.getRequestPath(), header);
                     }
-                    HttpHandlers.executeHandler(originFailedHandler, exchange, completionHandler);
+                    HttpHandlers.executeHandler(originFailedHandler, exchange);
                     return;
                 }
             }
@@ -78,11 +77,11 @@ public class OriginHandler implements HttpHandler {
                 if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                     UndertowLogger.REQUEST_LOGGER.debugf("Refusing request for %s as none of the specified origins %s were in the allowed origins list", exchange.getRequestPath(), origin);
                 }
-                HttpHandlers.executeHandler(originFailedHandler, exchange, completionHandler);
+                HttpHandlers.executeHandler(originFailedHandler, exchange);
                 return;
             }
         }
-        HttpHandlers.executeHandler(next, exchange, completionHandler);
+        HttpHandlers.executeHandler(next, exchange);
     }
 
     public synchronized void addAllowedOrigin(final String origin) {
