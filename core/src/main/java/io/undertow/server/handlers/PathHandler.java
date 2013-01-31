@@ -36,7 +36,7 @@ import io.undertow.util.CopyOnWriteMap;
  * <p/>
  * This handler can only match a single part of this request (namely /foo). To match the full path
  * two of these handlers must be chained together.
- *
+ * <p/>
  * Note that
  *
  * @author Stuart Douglas
@@ -45,28 +45,39 @@ public class PathHandler implements HttpHandler {
 
     private volatile HttpHandler defaultHandler = ResponseCodeHandler.HANDLE_404;
     private final ConcurrentMap<String, HttpHandler> paths = new CopyOnWriteMap<String, HttpHandler>();
+    /**
+     * internal tracker of the largest path we have.
+     */
+    private volatile int maxPathLength = 0;
 
     @Override
     public void handleRequest(HttpServerExchange exchange) {
-        int pos = 0;
         final String path = exchange.getRelativePath();
-        final int length = path.length();
-
-        while (pos < length) {
-            if(path.charAt(pos) == '/' && pos != 0) {
-                break;
-            }
-            ++pos;
-        }
-        final String part = path.substring(0, pos);
-        final HttpHandler next = paths.get(part);
-        if(next != null) {
+        int length = path.length();
+        int pos = length > maxPathLength ? maxPathLength : length;
+        String part = path.substring(0, pos);
+        HttpHandler next = paths.get(part);
+        if (next != null) {
             exchange.setRelativePath(path.substring(pos));
             exchange.setResolvedPath(exchange.getResolvedPath() + part);
             HttpHandlers.executeHandler(next, exchange);
-        } else {
-            HttpHandlers.executeHandler(defaultHandler, exchange);
+            return;
         }
+
+        while (pos > 1) {
+            --pos;
+            if (path.charAt(pos) == '/') {
+                part = path.substring(0, pos);
+                next = paths.get(part);
+                if (next != null) {
+                    exchange.setRelativePath(path.substring(pos));
+                    exchange.setResolvedPath(exchange.getResolvedPath() + part);
+                    HttpHandlers.executeHandler(next, exchange);
+                    return;
+                }
+            }
+        }
+        HttpHandlers.executeHandler(defaultHandler, exchange);
     }
 
     public HttpHandler getDefaultHandler() {
@@ -81,15 +92,19 @@ public class PathHandler implements HttpHandler {
     /**
      * Adds a path and a handler for that path. If the path does not start
      * with a / then one will be prepended
-     * @param path The path
+     *
+     * @param path    The path
      * @param handler The handler
      */
     public void addPath(final String path, final HttpHandler handler) {
+        if(path.length() > maxPathLength) {
+            maxPathLength = path.length();
+        }
         HttpHandlers.handlerNotNull(handler);
-        if(path == null || path.isEmpty()) {
+        if (path == null || path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
-        if(path.charAt(0) != '/') {
+        if (path.charAt(0) != '/') {
             paths.put("/" + path, handler);
         } else {
             paths.put(path, handler);
@@ -97,14 +112,21 @@ public class PathHandler implements HttpHandler {
     }
 
     public void removePath(final String path) {
-        if(path == null || path.isEmpty()) {
+        if (path == null || path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
-        if(path.charAt(0) != '/') {
+        if (path.charAt(0) != '/') {
             paths.remove("/" + path);
         } else {
             paths.remove(path);
         }
+        int max = 0;
+        for (Map.Entry<String, HttpHandler> entry : paths.entrySet()) {
+            if(entry.getKey().length() > max) {
+                max = entry.getKey().length();
+            }
+        }
+        this.maxPathLength = max;
     }
 
     public void clearPaths() {

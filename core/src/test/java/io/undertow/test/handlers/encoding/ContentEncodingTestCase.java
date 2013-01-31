@@ -63,8 +63,8 @@ public class ContentEncodingTestCase {
 
     @Test
     public void testDeflateEncodingBigResponse() throws IOException {
-        final StringBuilder messageBuilder = new StringBuilder(6919638);
-        for (int i = 0; i < 6919638; ++i) {
+        final StringBuilder messageBuilder = new StringBuilder(691963);
+        for (int i = 0; i < 691963; ++i) {
             messageBuilder.append("*");
         }
         runTest(messageBuilder.toString());
@@ -75,7 +75,7 @@ public class ContentEncodingTestCase {
         int seed = new Random().nextInt();
         try {
             final Random random = new Random(seed);
-            int size = random.nextInt(6919638);
+            int size = random.nextInt(691963);
             final StringBuilder messageBuilder = new StringBuilder(size);
             for (int i = 0; i < size; ++i) {
                 messageBuilder.append('*' + random.nextInt(10));

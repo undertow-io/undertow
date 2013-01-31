@@ -55,6 +55,7 @@ public class PathTestCase {
             final PathHandler handler = new PathHandler();
             handler.addPath("a", new RemainingPathHandler("/a"));
             handler.addPath("/aa", new RemainingPathHandler("/aa"));
+            handler.addPath("/aa/anotherSubPath", new RemainingPathHandler("/aa/anotherSubPath"));
 
             final PathHandler sub = new PathHandler();
 
@@ -81,6 +82,8 @@ public class PathTestCase {
             runPathTest(client, "/path/subpath/", "/subpath", "/");
             runPathTest(client, "/path/subpath/foo", "/subpath", "/foo");
             runPathTest(client, "/a", "/a", "");
+            runPathTest(client, "/aa/anotherSubPath", "/aa/anotherSubPath", "");
+            runPathTest(client, "/aa/anotherSubPath/bob", "/aa/anotherSubPath", "/bob");
             runPathTest(client, "/aa?a=b", "/aa", "", Collections.singletonMap("a", "b"));
 
 
