@@ -1,31 +1,27 @@
 package io.undertow.channels;
 
-import io.undertow.UndertowLogger;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+
 import io.undertow.server.ChannelWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.PipeLiningBuffer;
-import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.ChannelFactory;
-import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Buffer for pipelined requests. Basic behaviour is as follows:
  * <p/>
- * If incoming data  > 1k it is written out directly, along with any previously buffered data
- * If incoming data < 1k then it is cached.
  *
  * @author Stuart Douglas
  */
@@ -46,11 +42,25 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
      */
     private boolean flushing = false;
 
+    private final Pool<ByteBuffer> pool;
     private Pooled<ByteBuffer> buffer;
 
     public BufferingStreamSinkChannel(StreamSinkChannel delegate, final Pool<ByteBuffer> pool) {
         super(delegate);
-        buffer = pool.allocate();
+        this.pool = pool;
+        delegate.getCloseSetter().set(new ChannelListener<Channel>() {
+            @Override
+            public void handleEvent(final Channel channel) {
+                try {
+                ChannelListeners.invokeChannelListener(BufferingStreamSinkChannel.this, closeSetter.get());
+                } finally {
+                    if(buffer != null) {
+                        buffer.free();
+                        buffer = null;
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -97,8 +107,11 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
                 return 0;
             }
         }
-
-        final ByteBuffer buffer = this.buffer.getResource();
+        Pooled<ByteBuffer> pooled = this.buffer;
+        if(pooled == null) {
+            this.buffer = pooled = pool.allocate();
+        }
+        final ByteBuffer buffer = pooled.getResource();
         if (buffer.remaining() > src.remaining()) {
             int put = src.remaining();
             buffer.put(src);
@@ -158,12 +171,8 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
                 return false;
             }
         } while (byteBuffer.hasRemaining());
-        if (shutdown) {
-            buffer.free();
-            this.buffer.free();
-        } else {
-            byteBuffer.clear();
-        }
+        buffer.free();
+        this.buffer = null;
         flushing = false;
         return true;
     }
@@ -205,5 +214,13 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
         delegate.shutdownWrites();
     }
 
+    @Override
+    public void close() throws IOException {
+        if(this.buffer != null) {
+            this.buffer.free();
+            this.buffer = null;
+        }
+        super.close();
+    }
 }
 
