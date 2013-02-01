@@ -246,6 +246,9 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
                 if (anyAreSet(DELEGATE_SHUTDOWN, state)) {
                     return delegate.flush();
                 } else {
+                    if (!performFlushIfRequired()) {
+                        return false;
+                    }
                     //if the deflater has not been fully flushed we need to flush it
                     if (!deflater.finished()) {
                         deflateData();
@@ -348,6 +351,7 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
             final ByteBuffer outputBuffer = pooled.getResource();
 
             final boolean shutdown = anyAreSet(SHUTDOWN, state);
+
             byte[] buffer = new byte[1024]; //TODO: we should pool this and make it configurable or something
             while (!deflater.needsInput() || (shutdown && !deflater.finished())) {
                 int count = deflater.deflate(buffer);
