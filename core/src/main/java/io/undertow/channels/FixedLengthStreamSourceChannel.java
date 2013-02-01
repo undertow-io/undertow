@@ -214,7 +214,7 @@ public final class FixedLengthStreamSourceChannel implements StreamSourceChannel
             final int lim = dst.limit();
             final int pos = dst.position();
             if (lim - pos > remaining) {
-                dst.limit((int) (remaining - (long) pos));
+                dst.limit((int) (remaining + (long) pos));
                 try {
                     return res = delegate.read(dst);
                 } finally {
