@@ -96,7 +96,7 @@ public class PathHandler implements HttpHandler {
      * @param path    The path
      * @param handler The handler
      */
-    public void addPath(final String path, final HttpHandler handler) {
+    public synchronized void addPath(final String path, final HttpHandler handler) {
         if(path.length() > maxPathLength) {
             maxPathLength = path.length();
         }
@@ -111,7 +111,7 @@ public class PathHandler implements HttpHandler {
         }
     }
 
-    public void removePath(final String path) {
+    public synchronized void removePath(final String path) {
         if (path == null || path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
@@ -129,7 +129,7 @@ public class PathHandler implements HttpHandler {
         this.maxPathLength = max;
     }
 
-    public void clearPaths() {
+    public synchronized void clearPaths() {
         paths.clear();
     }
 
