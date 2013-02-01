@@ -112,4 +112,7 @@ public interface UndertowMessages {
 
     @Message(id = 28, value = "Session %s already exists")
     IllegalStateException sessionAlreadyExists(final String id);
+
+    @Message(id = 29, value = "Channel was closed mid chunk, if you have attempted to write chunked data you cannot shutdown the channel until after it has all been written.")
+    IOException chunkedChannelClosedMidChunk();
 }

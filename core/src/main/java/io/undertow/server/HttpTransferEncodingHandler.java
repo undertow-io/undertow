@@ -184,7 +184,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                     }
                 } else if (!transferEncoding.equals(Headers.IDENTITY)) {
                     final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    wrappedChannel = new ChunkedStreamSinkChannel(channel, true, !stillPersistent, finishListener, exchange.getConnection().getBufferPool());
+                    wrappedChannel = new ChunkedStreamSinkChannel(channel, true, !stillPersistent, finishListener);
                 } else if (responseHeaders.contains(Headers.CONTENT_LENGTH)) {
                     final long contentLength;
                     try {
