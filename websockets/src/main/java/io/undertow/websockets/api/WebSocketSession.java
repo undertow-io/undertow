@@ -106,4 +106,21 @@ public interface WebSocketSession extends BinaryFrameSender, TextFrameSender, Pi
      */
     int getIdleTimeout();
 
+
+    /**
+     * Set the send timeout for this {@link WebSocketSession} when sending a Websocket frame in an async fashion
+     * The session will be closed if the send did not complete in the specified timeout.
+     *
+     * @param asyncSendTimeout   the async send timeout in ms. If the smaller then 1 no timeout is used.
+     */
+    void setAsyncSendTimeout(int asyncSendTimeout);
+
+    /**
+     * Get the send timeout for this {@link WebSocketSession} when sending a Websocket frame in an async fashion
+     * The session will be closed if the send did not complete in the specified timeout.
+     *
+     * @return the async send timeout in ms. If the smaller then 1 no timeout is used.
+     */
+    int getAsyncSendTimeout();
+
 }

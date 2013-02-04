@@ -199,6 +199,14 @@ final class StreamSinkChannelUtils {
         channel.close();
     }
 
+    public static StreamSinkChannel applyAsyncSendTimeout(WebSocketChannelSession session, StreamSinkChannel sink) {
+        int asyncSendtime = session.getAsyncSendTimeout();
+        if (asyncSendtime > 0) {
+            return new AsyncSendTimeoutStreamChannelSink(session.getChannel(), sink, asyncSendtime);
+        }
+        return sink;
+    }
+
     private StreamSinkChannelUtils() {
         // utility
     }

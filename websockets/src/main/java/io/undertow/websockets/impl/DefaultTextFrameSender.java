@@ -16,7 +16,6 @@
 package io.undertow.websockets.impl;
 
 import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.api.SendCallback;
@@ -33,10 +32,10 @@ import java.nio.ByteBuffer;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class DefaultTextFrameSender implements TextFrameSender {
-    protected final WebSocketChannel channel;
+    protected final WebSocketChannelSession session;
 
-    public DefaultTextFrameSender(WebSocketChannel channel) {
-        this.channel = channel;
+    public DefaultTextFrameSender(WebSocketChannelSession session) {
+        this.session = session;
     }
 
     /**
@@ -44,14 +43,14 @@ class DefaultTextFrameSender implements TextFrameSender {
      *
      */
     protected StreamSinkFrameChannel createSink(long payloadSize) throws IOException {
-        return channel.send(WebSocketFrameType.TEXT, payloadSize);
+        return session.getChannel().send(WebSocketFrameType.TEXT, payloadSize);
     }
 
     @Override
     public void sendText(CharSequence payload, final SendCallback callback) {
         try {
             final ByteBuffer buffer = WebSocketUtils.fromUtf8String(payload);
-            StreamSinkChannel sink = createSink(buffer.remaining());
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session, createSink(buffer.remaining()));
             StreamSinkChannelUtils.send(sink, buffer, callback);
         } catch (IOException e) {
             StreamSinkChannelUtils.safeNotify(callback, e);
@@ -68,6 +67,6 @@ class DefaultTextFrameSender implements TextFrameSender {
 
     @Override
     public Writer sendText(long payloadSize) throws IOException {
-        return new TextWriter(channel, createSink(payloadSize));
+        return new TextWriter(session.getChannel(), createSink(payloadSize));
     }
 }
