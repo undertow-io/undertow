@@ -22,10 +22,12 @@ import java.io.IOException;
 
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.SetHeaderHandler;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpVersion;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.util.TestHttpClient;
+import org.apache.http.params.CoreProtocolPNames;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -57,4 +59,18 @@ public class SimpleNonBlockingServerTestCase {
         }
     }
 
+    @Test
+    public void sendHttpOneZeroRequest() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            get.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_0);
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Header[] header = result.getHeaders("MyHeader");
+            Assert.assertEquals("MyValue", header[0].getValue());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }

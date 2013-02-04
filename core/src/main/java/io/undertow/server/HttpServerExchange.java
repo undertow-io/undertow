@@ -680,7 +680,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         final int state = this.state;
         try {
-            if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
+            if (anyAreClear(state, FLAG_REQUEST_TERMINATED) && isPersistent()) {
                 if (isRequestChannelAvailable()) {
                     getRequestChannel();
                 }
