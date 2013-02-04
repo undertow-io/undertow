@@ -313,12 +313,14 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isRequestedSessionIdValid() {
-        return false;
+        HttpSessionImpl session = servletContext.getSession(exchange, false);
+        return session != null;
     }
 
     @Override
     public boolean isRequestedSessionIdFromCookie() {
-        return false;
+        HttpSessionImpl session = servletContext.getSession(exchange, false);
+        return session != null;
     }
 
     @Override
