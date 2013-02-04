@@ -358,6 +358,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void login(final String username, final String password) throws ServletException {
+        if(username == null || password == null) {
+            throw UndertowServletMessages.MESSAGES.loginFailed();
+        }
         SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         if(sc.getAuthenticationState() == AuthenticationState.AUTHENTICATED) {
             throw UndertowServletMessages.MESSAGES.userAlreadyLoggedIn();
