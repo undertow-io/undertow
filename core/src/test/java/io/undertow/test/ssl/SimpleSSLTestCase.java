@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.ssl;
+package io.undertow.test.ssl;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
