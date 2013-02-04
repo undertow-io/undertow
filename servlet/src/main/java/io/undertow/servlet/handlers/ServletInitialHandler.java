@@ -50,7 +50,7 @@ import org.xnio.IoUtils;
 public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     private final BlockingHttpHandler next;
-    private final HttpHandler asyncPath;
+    //private final HttpHandler asyncPath;
 
     private final CompositeThreadSetupAction setupAction;
 
@@ -64,7 +64,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ManagedServlet managedServlet) {
         this.next = next;
-        this.asyncPath = asyncPath;
+        //this.asyncPath = asyncPath;
         this.setupAction = setupAction;
         this.servletContext = servletContext;
         this.managedServlet = managedServlet;
@@ -76,17 +76,17 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
-        if (asyncPath != null) {
-            //if the next handler is the default servlet we just execute it directly
-            HttpHandlers.executeHandler(asyncPath, exchange);
-            //this is not great, but as the file was not found we need to do error handling
-            //so re just run the request again but via the normal servlet path
-            //todo: fix this, we should just be able to run the error handling code without copy/pasting heaps of
-            //code
-            if (exchange.getResponseCode() != 404) {
-                return;
-            }
-        }
+//        if (asyncPath != null) {
+//            //if the next handler is the default servlet we just execute it directly
+//            HttpHandlers.executeHandler(asyncPath, exchange);
+//            //this is not great, but as the file was not found we need to do error handling
+//            //so re just run the request again but via the normal servlet path
+//            //todo: fix this, we should just be able to run the error handling code without copy/pasting heaps of
+//            //code
+//            if (exchange.getResponseCode() != 404) {
+//                return;
+//            }
+//        }
 
         Runnable runnable = new Runnable() {
             @Override
@@ -181,17 +181,13 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         final HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
         final HttpServletResponseImpl response = HttpServletResponseImpl.getResponseImpl(exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
 
-        //the response may have been completed if sendError was invoked
-        if (!exchange.isComplete()) {
-            if (!request.isAsyncStarted()) {
-                response.responseDone();
-            } else {
-                request.asyncInitialRequestDone();
-            }
-        } else {
+        if (!request.isAsyncStarted()) {
+            response.responseDone();
             //this request is done, so we close any parser that may have been used
             final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
             IoUtils.safeClose(parser);
+        } else {
+            request.asyncInitialRequestDone();
         }
     }
 
