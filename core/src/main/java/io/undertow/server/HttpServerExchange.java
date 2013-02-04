@@ -126,7 +126,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_RESPONSE_SENT = 1 << 10;
     private static final int FLAG_RESPONSE_TERMINATED = 1 << 11;
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
-    private static final int FLAG_CLEANUP = 1 << 13;
     private static final int FLAG_PERSISTENT = 1 << 14;
 
     public HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
@@ -518,7 +517,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * finished.
      */
     public boolean isComplete() {
-        return (state & FLAG_CLEANUP) != 0;
+        return allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED);
     }
 
     /**
