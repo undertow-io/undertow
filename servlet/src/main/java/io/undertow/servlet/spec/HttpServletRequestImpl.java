@@ -85,7 +85,7 @@ import io.undertow.util.LocaleUtils;
 import io.undertow.util.Methods;
 import io.undertow.util.QValueParser;
 import org.xnio.LocalSocketAddress;
-import sun.nio.ch.ChannelInputStream;
+import org.xnio.streams.ChannelInputStream;
 
 /**
  * The http servlet request implementation. This class is not thread safe
