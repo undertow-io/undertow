@@ -15,8 +15,6 @@
  */
 package io.undertow.websockets.impl;
 
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.api.BinaryFrameSender;
@@ -36,24 +34,25 @@ import java.nio.channels.FileChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class DefaultBinaryFrameSender implements BinaryFrameSender {
-    protected final WebSocketChannel channel;
+    protected final WebSocketChannelSession session;
 
-    DefaultBinaryFrameSender(WebSocketChannel channel) {
-        this.channel = channel;
+    DefaultBinaryFrameSender(WebSocketChannelSession session) {
+        this.session = session;
     }
 
     /**
-     * Create a {@link StreamSinkFrameChannel} which will be used to send the payload of the given size.
+     * Create a {@link StreamSinkChannel} which will be used to send the payload of the given size.
      *
      */
-    protected StreamSinkFrameChannel createSink(long payloadSize) throws IOException {
-        return channel.send(WebSocketFrameType.BINARY, payloadSize);
+    protected StreamSinkChannel createSink(long payloadSize) throws IOException {
+        return session.getChannel().send(WebSocketFrameType.BINARY, payloadSize);
     }
 
     @Override
     public void sendBinary(final ByteBuffer payload, final SendCallback callback) {
         try {
-            StreamSinkChannel sink = createSink(payload.remaining());
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session, createSink(payload.remaining()));
+
             StreamSinkChannelUtils.send(sink, payload, callback);
         } catch (IOException e) {
             StreamSinkChannelUtils.safeNotify(callback, e);
@@ -64,7 +63,7 @@ class DefaultBinaryFrameSender implements BinaryFrameSender {
     public void sendBinary(final ByteBuffer[] payload, final SendCallback callback) {
         try {
             final long length = StreamSinkChannelUtils.payloadLength(payload);
-            StreamSinkChannel sink = createSink(length);
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session, createSink(length));
             StreamSinkChannelUtils.send(sink, payload, callback);
         } catch (IOException e) {
             StreamSinkChannelUtils.safeNotify(callback, e);
@@ -77,7 +76,7 @@ class DefaultBinaryFrameSender implements BinaryFrameSender {
             if (length > payloadChannel.size() - offset) {
                 throw WebSocketMessages.MESSAGES.lengthBiggerThenFileChannel();
             }
-            StreamSinkChannel sink = createSink(length);
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session,createSink(length));
             long written = 0;
             while (written < length) {
                 long w = sink.transferFrom(payloadChannel, offset + written, length - written);

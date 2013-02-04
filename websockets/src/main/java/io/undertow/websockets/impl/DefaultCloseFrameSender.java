@@ -19,7 +19,6 @@ import io.undertow.websockets.api.CloseFrameSender;
 import io.undertow.websockets.api.CloseReason;
 import io.undertow.websockets.api.SendCallback;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketUtils;
 import org.xnio.Buffers;
@@ -34,25 +33,25 @@ import java.nio.ByteBuffer;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 final class DefaultCloseFrameSender implements CloseFrameSender {
-    private final WebSocketChannel channel;
+    private final WebSocketChannelSession session;
     private final SendCallback closeCallback = new SendCallback() {
         @Override
         public void onCompletion() {
-            IoUtils.safeClose(channel);
+            IoUtils.safeClose(session.getChannel());
         }
 
         @Override
         public void onError(Throwable cause) {
-            IoUtils.safeClose(channel);
+            IoUtils.safeClose(session.getChannel());
         }
     };
 
-    DefaultCloseFrameSender(WebSocketChannel channel) {
-        this.channel = channel;
+    DefaultCloseFrameSender(WebSocketChannelSession session) {
+        this.session = session;
     }
 
     private StreamSinkFrameChannel createSink(long payloadSize) throws IOException {
-        return channel.send(WebSocketFrameType.CLOSE, payloadSize);
+        return session.getChannel().send(WebSocketFrameType.CLOSE, payloadSize);
     }
 
     @Override
@@ -61,7 +60,7 @@ final class DefaultCloseFrameSender implements CloseFrameSender {
         boolean free = true;
         try {
             ByteBuffer payload = pooled.getResource();
-            StreamSinkChannel sink = createSink(payload.remaining());
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session, createSink(payload.remaining()));
             if (callback == null) {
                 callback = new SendCallbacks(new PooledFreeupSendCallback(pooled), closeCallback);
             } else {
@@ -71,7 +70,7 @@ final class DefaultCloseFrameSender implements CloseFrameSender {
             free = false;
         } catch (IOException e) {
             StreamSinkChannelUtils.safeNotify(callback, e);
-            IoUtils.safeClose(channel);
+            IoUtils.safeClose(session.getChannel());
         } finally {
             if (free) {
                 pooled.free();
@@ -87,7 +86,7 @@ final class DefaultCloseFrameSender implements CloseFrameSender {
             StreamSinkChannel sink = createSink(payload.remaining());
             StreamSinkChannelUtils.send(sink, payload);
         } finally {
-            IoUtils.safeClose(channel);
+            IoUtils.safeClose(session.getChannel());
             pooled.free();
         }
     }
@@ -96,7 +95,7 @@ final class DefaultCloseFrameSender implements CloseFrameSender {
         if (reason == null) {
             return Buffers.EMPTY_POOLED_BYTE_BUFFER;
         }
-        final Pooled<ByteBuffer> pooled = channel.getBufferPool().allocate();
+        final Pooled<ByteBuffer> pooled = session.getChannel().getBufferPool().allocate();
         ByteBuffer buffer = pooled.getResource();
         buffer.putShort((short) reason.getStatusCode());
         String reasonText = reason.getReasonText();

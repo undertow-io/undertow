@@ -64,15 +64,16 @@ public final class WebSocketChannelSession implements WebSocketSession {
     private final PingFrameSender pingFrameSender;
     private final PongFrameSender pongFrameSender;
     private final CloseFrameSender closeFrameSender;
+    private volatile int asyncSendTimeout;
 
     public WebSocketChannelSession(WebSocketChannel channel, String id) {
         this.channel = channel;
         this.id = id;
-        textFrameSender = new DefaultTextFrameSender(channel);
-        binaryFrameSender = new DefaultBinaryFrameSender(channel);
-        pingFrameSender = new DefaultPingFrameSender(channel);
-        pongFrameSender = new DefaultPongFrameSender(channel);
-        closeFrameSender = new DefaultCloseFrameSender(channel);
+        textFrameSender = new DefaultTextFrameSender(this);
+        binaryFrameSender = new DefaultBinaryFrameSender(this);
+        pingFrameSender = new DefaultPingFrameSender(this);
+        pongFrameSender = new DefaultPongFrameSender(this);
+        closeFrameSender = new DefaultCloseFrameSender(this);
     }
 
     @Override
@@ -288,5 +289,15 @@ public final class WebSocketChannelSession implements WebSocketSession {
 
     WebSocketChannel getChannel() {
         return channel;
+    }
+
+    @Override
+    public void setAsyncSendTimeout(int asyncSendTimeout) {
+        this.asyncSendTimeout = asyncSendTimeout;
+    }
+
+    @Override
+    public int getAsyncSendTimeout() {
+        return asyncSendTimeout;
     }
 }

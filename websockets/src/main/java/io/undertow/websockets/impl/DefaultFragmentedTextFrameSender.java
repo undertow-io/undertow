@@ -39,11 +39,9 @@ final class DefaultFragmentedTextFrameSender extends DefaultTextFrameSender impl
     private boolean firstFragment = true;
     private boolean finalFragment;
     private boolean finalFragmentStarted;
-    private final WebSocketChannelSession session;
 
     DefaultFragmentedTextFrameSender(WebSocketChannelSession session) {
-        super(session.getChannel());
-        this.session = session;
+        super(session);
     }
 
     @Override
@@ -58,9 +56,9 @@ final class DefaultFragmentedTextFrameSender extends DefaultTextFrameSender impl
         StreamSinkFrameChannel sink;
         if (firstFragment) {
             firstFragment = false;
-            sink = channel.send(WebSocketFrameType.TEXT, payloadSize);
+            sink = session.getChannel().send(WebSocketFrameType.TEXT, payloadSize);
         } else {
-            sink =  channel.send(WebSocketFrameType.CONTINUATION, payloadSize);
+            sink = session.getChannel().send(WebSocketFrameType.CONTINUATION, payloadSize);
         }
         sink.setFinalFragment(finalFragment);
         if (finalFragment) {
@@ -83,7 +81,7 @@ final class DefaultFragmentedTextFrameSender extends DefaultTextFrameSender impl
     @Override
     public void sendText(final ByteBuffer payload, final SendCallback callback) {
         try {
-            StreamSinkChannel sink = createSink(payload.remaining());
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session, createSink(payload.remaining()));
             while (payload.hasRemaining()) {
                 if (sink.write(payload) == 0) {
                     sink.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
@@ -118,7 +116,7 @@ final class DefaultFragmentedTextFrameSender extends DefaultTextFrameSender impl
         try {
             final long length = StreamSinkChannelUtils.payloadLength(payload);
             long written = 0;
-            StreamSinkChannel sink = createSink(length);
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session, createSink(length));
 
             while (written < length) {
                 long w = sink.write(payload);

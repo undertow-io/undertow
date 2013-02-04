@@ -36,10 +36,8 @@ final class DefaultFragmentedBinaryFrameSender extends DefaultBinaryFrameSender 
     private boolean firstFragment = true;
     private boolean finalFragment;
     private boolean finalFragmentStarted;
-    private final WebSocketChannelSession session;
     public DefaultFragmentedBinaryFrameSender(WebSocketChannelSession session) {
-        super(session.getChannel());
-        this.session = session;
+        super(session);
     }
 
     @Override
@@ -54,9 +52,9 @@ final class DefaultFragmentedBinaryFrameSender extends DefaultBinaryFrameSender 
         StreamSinkFrameChannel sink;
         if (firstFragment) {
             firstFragment = false;
-            sink = channel.send(WebSocketFrameType.BINARY, payloadSize);
+            sink = session.getChannel().send(WebSocketFrameType.BINARY, payloadSize);
         } else {
-            sink =  channel.send(WebSocketFrameType.CONTINUATION, payloadSize);
+            sink =  session.getChannel().send(WebSocketFrameType.CONTINUATION, payloadSize);
         }
         sink.setFinalFragment(finalFragment);
         if (finalFragment) {
