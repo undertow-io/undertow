@@ -39,8 +39,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.streams.ChannelInputStream;
 import org.xnio.streams.ChannelOutputStream;
-import sun.nio.ch.ChannelInputStream;
 
 /**
  * @author Stuart Douglas
