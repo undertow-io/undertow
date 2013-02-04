@@ -44,7 +44,7 @@ import java.nio.ByteBuffer;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class HighLevelWebSocketServer {
+public class HighLevelAutobahnWebSocketServer {
     private HttpOpenListener openListener;
     private XnioWorker worker;
     private AcceptingChannel<? extends ConnectedStreamChannel> server;
@@ -63,7 +63,7 @@ public class HighLevelWebSocketServer {
         }
     };
 
-    public HighLevelWebSocketServer(int port) {
+    public HighLevelAutobahnWebSocketServer(int port) {
         this.port = port;
     }
 
@@ -94,7 +94,7 @@ public class HighLevelWebSocketServer {
 
             setRootHandler(new WebSocketProtocolHandshakeHandler(
                     new WebSocketSessionConnectionCallback(new UuidWebSocketSessionIdGenerator(),
-                            new WebSocketSessionHandlerImpl())));
+                            new WebSocketSessionHandlerImpl(), false)));
             server.resumeAccepts();
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -114,7 +114,7 @@ public class HighLevelWebSocketServer {
     }
 
     public static void main(String[] args) {
-        new HighLevelWebSocketServer(7777).run();
+        new HighLevelAutobahnWebSocketServer(7777).run();
     }
 
     private static final class WebSocketSessionHandlerImpl implements WebSocketSessionHandler {

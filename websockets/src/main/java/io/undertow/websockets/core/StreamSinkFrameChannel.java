@@ -36,7 +36,7 @@ import org.xnio.channels.StreamSourceChannel;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public abstract class StreamSinkFrameChannel implements StreamSinkChannel {
+public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendChannel {
 
     private final WebSocketFrameType type;
     protected final StreamSinkChannel channel;

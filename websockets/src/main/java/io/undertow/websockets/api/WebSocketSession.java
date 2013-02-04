@@ -106,4 +106,34 @@ public interface WebSocketSession extends BinaryFrameSender, TextFrameSender, Pi
      */
     int getIdleTimeout();
 
+    /**
+     * Set the send timeout for this {@link WebSocketSession} when sending a Websocket frame in an async fashion
+     * The session will be closed if the send did not complete in the specified timeout.
+     *
+     * @param asyncSendTimeout   the async send timeout in ms. If the smaller then 1 no timeout is used.
+     */
+    void setAsyncSendTimeout(int asyncSendTimeout);
+
+    /**
+     * Get the send timeout for this {@link WebSocketSession} when sending a Websocket frame in an async fashion
+     * The session will be closed if the send did not complete in the specified timeout.
+     *
+     * @return the async send timeout in ms. If the smaller then 1 no timeout is used.
+     */
+    int getAsyncSendTimeout();
+
+    /**
+     * Set the max frame size in bytes this {@link WebSocketSession} can handle while receive TEXT and BINARY frames.
+     *
+     * @param size  the max size in bytes or &lt;1 if no limit is in place.
+     */
+    void setMaximumFrameSize(long size);
+
+    /**
+     * Get the max frame size in bytes this {@link WebSocketSession} can handle while receive TEXT and BINARY frames.
+     *
+     * @return size  the max size in bytes or &lt;1 if no limit is in place.
+     *
+     */
+    long getMaximumFrameSize();
 }

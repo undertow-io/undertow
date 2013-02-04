@@ -17,8 +17,6 @@ package io.undertow.websockets.impl;
 
 import io.undertow.websockets.api.PingFrameSender;
 import io.undertow.websockets.api.SendCallback;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -28,21 +26,21 @@ import java.nio.ByteBuffer;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class DefaultPingFrameSender implements PingFrameSender {
-    private final WebSocketChannel channel;
+final class DefaultPingFrameSender extends AbstractSender implements PingFrameSender {
 
-    DefaultPingFrameSender(WebSocketChannel channel) {
-        this.channel = channel;
+    DefaultPingFrameSender(WebSocketChannelSession session) {
+        super(session);
     }
 
-    private StreamSinkFrameChannel createSink(long payloadSize) throws IOException {
-        return channel.send(WebSocketFrameType.PING, payloadSize);
+    @Override
+    protected WebSocketFrameType type() {
+        return WebSocketFrameType.PING;
     }
 
     @Override
     public void sendPing(final ByteBuffer payload, final SendCallback callback) {
         try {
-            StreamSinkChannel sink = createSink(payload.remaining());
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session, createSink(payload.remaining()));
             StreamSinkChannelUtils.send(sink, payload, callback);
         } catch (IOException e) {
             StreamSinkChannelUtils.safeNotify(callback, e);
@@ -53,7 +51,7 @@ final class DefaultPingFrameSender implements PingFrameSender {
     public void sendPing(final ByteBuffer[] payload, final SendCallback callback) {
         try {
             final long length = StreamSinkChannelUtils.payloadLength(payload);
-            StreamSinkChannel sink = createSink(length);
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session, createSink(length));
             StreamSinkChannelUtils.send(sink, payload, callback);
         } catch (IOException e) {
             StreamSinkChannelUtils.safeNotify(callback, e);
@@ -62,12 +60,16 @@ final class DefaultPingFrameSender implements PingFrameSender {
 
     @Override
     public void sendPing(ByteBuffer payload) throws IOException {
+        checkBlockingAllowed();
+
         StreamSinkChannel sink = createSink(payload.remaining());
         StreamSinkChannelUtils.send(sink, payload);
     }
 
     @Override
     public void sendPing(ByteBuffer[] payload) throws IOException {
+        checkBlockingAllowed();
+
         long length = StreamSinkChannelUtils.payloadLength(payload);
         StreamSinkChannel sink = createSink(length);
         StreamSinkChannelUtils.send(sink, payload);

@@ -18,7 +18,19 @@ package io.undertow.websockets.api;
 import java.nio.ByteBuffer;
 
 /**
- * {@link FrameHandler} which will allow to get notified once a WebSocket frame parts are received.
+ * {@link FrameHandler} which will allow to get notified once a WebSocket frame part is received.
+ *
+ * This should be used if your want to get notified about fragements of a Frame. When using WebSockets it is valid to
+ * fragment a WebSocket Frame by sent the actual Frame (like TEXT or BINARY) and then keep sending CONTINUATION frames
+ * until it is done. You can check if it is the last fragment of the Frame by check the {@link WebSocketFrameHeader#isLastFragement()}
+ * method.
+ * <p/>
+ *
+ * Be aware that it is not allowed by the spec to start to send i.e. a BINARY frame and start to send a TEXT frame
+ * before the last fragment of the BINARY frame is received. So it is safe to assume that once i.e
+ * {@link #onBinaryFrame(WebSocketSession, WebSocketFrameHeader, ByteBuffer...)} is called no call to
+ * {@link #onTextFrame(WebSocketSession, WebSocketFrameHeader, ByteBuffer...)} will accour until {@link WebSocketFrameHeader#isLastFragement()}
+ * returned {@code true}. PING / PONG / CLOSE frames are allowed in the middle.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */

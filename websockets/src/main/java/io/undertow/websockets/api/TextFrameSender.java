@@ -35,8 +35,6 @@ public interface TextFrameSender {
      * @param callback
      *          The callback that is called when sending is done or {@code null} if no notification
      *          should be done.
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     void sendText(CharSequence payload, SendCallback callback);
 
@@ -49,8 +47,6 @@ public interface TextFrameSender {
      *          The payload must be valid UTF8
      * @throws IOException
      *          If sending failed
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     void sendText(CharSequence payload) throws IOException;
 
@@ -65,8 +61,6 @@ public interface TextFrameSender {
      * @return  writer
      *          A writer that can be used to send a text message. the written content must
      *          be valid UTF8
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     Writer sendText(long payloadSize) throws IOException;
 }

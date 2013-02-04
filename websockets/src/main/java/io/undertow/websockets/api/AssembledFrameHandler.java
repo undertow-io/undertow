@@ -19,6 +19,12 @@ import java.nio.ByteBuffer;
 
 /**
  * {@link FrameHandler} which will allow to get notified once a WebSocket frame was received.
+ *<p/>
+ * Implementations of this interface will only get notified once the <i>full</i> frame was received. This means if
+ * a frame is sent in fragments the caller of the interface will buffer all data until the last fragment was received.
+ * Once this happens the data will get assembled and passed to one of the methods.
+ * <p/>
+ * If you want to get notified on each fragment implement the {@link FragmentedFrameHandler}.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */

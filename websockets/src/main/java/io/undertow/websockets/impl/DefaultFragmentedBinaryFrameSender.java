@@ -15,13 +15,11 @@
  */
 package io.undertow.websockets.impl;
 
+import io.undertow.websockets.core.FragmentedMessageChannel;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.api.FragmentedBinaryFrameSender;
-import org.xnio.ChannelListener;
-import org.xnio.channels.StreamSinkChannel;
+import io.undertow.websockets.core.WebSocketMessages;
 
 import java.io.IOException;
 
@@ -32,41 +30,21 @@ import java.io.IOException;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 final class DefaultFragmentedBinaryFrameSender extends DefaultBinaryFrameSender implements FragmentedBinaryFrameSender {
-
-    private boolean firstFragment = true;
+    private FragmentedMessageChannel channel;
     private boolean finalFragment;
-    private boolean finalFragmentStarted;
-    private final WebSocketChannelSession session;
-    public DefaultFragmentedBinaryFrameSender(WebSocketChannelSession session) {
-        super(session.getChannel());
-        this.session = session;
+    public DefaultFragmentedBinaryFrameSender(WebSocketChannelSession session){
+        super(session);
     }
 
     @Override
     protected StreamSinkFrameChannel createSink(long payloadSize) throws IOException {
-        if (finalFragmentStarted) {
-            throw WebSocketMessages.MESSAGES.fragmentedSenderCompleteAlready();
+        if (session.closeFrameSent) {
+            WebSocketMessages.MESSAGES.closeFrameSentBefore();
         }
-        if (finalFragment) {
-            finalFragmentStarted = true;
+        if (channel == null) {
+            channel = session.getChannel().sendFragmentedBinary();
         }
-
-        StreamSinkFrameChannel sink;
-        if (firstFragment) {
-            firstFragment = false;
-            sink = channel.send(WebSocketFrameType.BINARY, payloadSize);
-        } else {
-            sink =  channel.send(WebSocketFrameType.CONTINUATION, payloadSize);
-        }
-        sink.setFinalFragment(finalFragment);
-        if (finalFragment) {
-            sink.getCloseSetter().set(new ChannelListener<StreamSinkChannel>() {
-                @Override
-                public void handleEvent(StreamSinkChannel channel) {
-                    session.complete(DefaultFragmentedBinaryFrameSender.this);
-                }
-            });
-        }
+        StreamSinkFrameChannel sink = channel.send(payloadSize, finalFragment);
         return sink;
     }
 

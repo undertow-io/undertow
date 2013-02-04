@@ -17,28 +17,31 @@
 package io.undertow.websockets.api;
 
 /**
- * A WebSocket frame header
+ * A WebSocket frame header which holds all the meta-data of a received WebSocket frame.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public interface WebSocketFrameHeader {
+    /**
+     * The type of the WebSocket frame.
+     */
     enum FrameType {
 
         /**
-         * WebSocketFrame contains binary data
+         * WebSocket frame contains binary data.
          */
         BINARY,
 
         /**
-         * WebSocketFrame contains UTF-8 encoded {@link String}
+         * WebSocket frame contains UTF-8 encoded data.
          */
         TEXT,
 
         /**
-         * WebSocketFrame which notify about more data to come
+         * WebSocketFrame which contains either binary data or utf-8 encoded data depending on the the first
+         * WebSocket frame which started the fragemented frame.
          */
         CONTINUATION,
-
     }
 
     /**
@@ -47,7 +50,7 @@ public interface WebSocketFrameHeader {
     FrameType getType();
 
     /**
-     * Return the RSV which is used for extensions. If no extension is used <code>0</code> is returned.
+     * Return the RSV which is used for extensions. If no extension is used {@code 0} is returned.
      */
     int getRsv();
 
