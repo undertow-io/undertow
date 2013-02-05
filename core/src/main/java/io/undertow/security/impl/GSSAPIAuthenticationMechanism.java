@@ -17,6 +17,23 @@
  */
 package io.undertow.security.impl;
 
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.HOST;
+import static io.undertow.util.Headers.NEGOTIATE;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.StatusCodes.CODE_401;
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.GSSAPIServerSubjectFactory;
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
+import io.undertow.security.idm.GSSContextCredential;
+import io.undertow.security.idm.IdentityManager;
+import io.undertow.server.HttpServerConnection;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.ConcreteIoFuture;
+import io.undertow.util.FlexBase64;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
@@ -29,27 +46,14 @@ import java.util.concurrent.Executor;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.GSSAPIServerSubjectFactory;
-import io.undertow.security.idm.Account;
-import io.undertow.security.idm.IdentityManager;
-import io.undertow.server.HttpServerConnection;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.ConcreteIoFuture;
-import io.undertow.util.FlexBase64;
-import io.undertow.util.HeaderMap;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
+import org.ietf.jgss.GSSName;
+import org.ietf.jgss.Oid;
+import org.xnio.FinishedIoFuture;
 import org.xnio.IoFuture;
-
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.HOST;
-import static io.undertow.util.Headers.NEGOTIATE;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.CODE_401;
 
 /**
  * {@link io.undertow.security.api.AuthenticationMechanism} for GSSAPI / SPNEGO based authentication.
@@ -64,6 +68,7 @@ import static io.undertow.util.StatusCodes.CODE_401;
  */
 public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
+    private static final String NEGOTIATION_PLAIN = NEGOTIATE.toString();
     private static final String NEGOTIATE_PREFIX = NEGOTIATE + " ";
 
     private final GSSAPIServerSubjectFactory subjectFactory;
@@ -77,16 +82,22 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     @Override
-    public IoFuture<AuthenticationMechanismResult> authenticate(HttpServerExchange exchange, final IdentityManager identityManager, final Executor handOffExecutor) {
-        ConcreteIoFuture<AuthenticationMechanismResult> result = new ConcreteIoFuture<AuthenticationMechanismResult>();
+    public IoFuture<AuthenticationMechanismOutcome> authenticate(final HttpServerExchange exchange,
+            final SecurityContext securityContext, final Executor handOffExecutor) {
+        ConcreteIoFuture<AuthenticationMechanismOutcome> result = new ConcreteIoFuture<AuthenticationMechanismOutcome>();
         HttpServerConnection connection = exchange.getConnection();
         NegotiationContext negContext = connection.getAttachment(NegotiationContext.ATTACHMENT_KEY);
         if (negContext != null) {
             exchange.putAttachment(NegotiationContext.ATTACHMENT_KEY, negContext);
             if (negContext.isEstablished()) {
-                final Principal principal = negContext.getPrincipal();
-                final Account account = identityManager.lookupAccount(principal.getName());
-                result.setResult(new AuthenticationMechanismResult(principal, account, false));
+                IdentityManager identityManager = securityContext.getIdentityManager();
+                final Account account = identityManager.verify(new GSSContextCredential(negContext.getGssContext()));
+                if (account != null) {
+                    securityContext.authenticationComplete(account, getName(), false);
+                    result.setResult(AuthenticationMechanismOutcome.AUTHENTICATED);
+                } else {
+                    result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
+                }
             }
         }
 
@@ -97,7 +108,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                     String base64Challenge = current.substring(NEGOTIATE_PREFIX.length());
                     try {
                         ByteBuffer challenge = FlexBase64.decode(base64Challenge);
-                        handOffExecutor.execute(new GSSAPIRunnable(result, exchange, challenge, identityManager));
+                        handOffExecutor.execute(new GSSAPIRunnable(result, exchange, challenge, securityContext));
                         // The request has now potentially been dispatched to a different worker thread, the run method
                         // within GSSAPIRunnable is now responsible for ensuring the request continues.
                         return result;
@@ -106,40 +117,34 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
                     // By this point we had a header we should have been able to verify but for some reason
                     // it was not correctly structured.
-                    result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
+                    result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
                     return result;
                 }
             }
         }
 
         // No suitable header was found so authentication was not even attempted.
-        result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_ATTEMPTED));
+        result.setResult(AuthenticationMechanismOutcome.NOT_ATTEMPTED);
         return result;
     }
 
-    public void sendChallenge(HttpServerExchange exchange) {
+    public IoFuture<ChallengeResult> sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext,
+            final Executor handOffExecutor) {
         NegotiationContext negContext = exchange.getAttachment(NegotiationContext.ATTACHMENT_KEY);
 
-        boolean authAdded = false;
+        String header = NEGOTIATION_PLAIN;
 
         if (negContext != null) {
             byte[] responseChallenge = negContext.useResponseToken();
             exchange.putAttachment(NegotiationContext.ATTACHMENT_KEY, null);
             if (responseChallenge != null) {
-                HeaderMap headers = exchange.getResponseHeaders();
-                headers.add(WWW_AUTHENTICATE, NEGOTIATE_PREFIX + FlexBase64.encodeString(responseChallenge, false));
-                authAdded = true;
+                header = NEGOTIATE_PREFIX + FlexBase64.encodeString(responseChallenge, false);
             }
         }
 
-        if (Util.shouldChallenge(exchange)) {
-            if (!authAdded) {
-                exchange.getResponseHeaders().add(WWW_AUTHENTICATE, NEGOTIATE.toString());
-            }
-            // We only set this is actually challenging the client, the previously set header may have been a FYI for the
-            // client.
-            exchange.setResponseCode(CODE_401.getCode());
-        }
+        exchange.getResponseHeaders().add(WWW_AUTHENTICATE, header);
+
+        return new FinishedIoFuture<ChallengeResult>(new ChallengeResult(true, CODE_401));
     }
 
     private String getHostName(final HttpServerExchange exchange) {
@@ -158,30 +163,30 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
     private final class GSSAPIRunnable implements Runnable {
 
-        private final ConcreteIoFuture<AuthenticationMechanismResult> result;
+        private final ConcreteIoFuture<AuthenticationMechanismOutcome> result;
         private final HttpServerExchange exchange;
         private final ByteBuffer challenge;
-        private final IdentityManager identityManager;
+        private final SecurityContext securityContext;
 
-        private GSSAPIRunnable(final ConcreteIoFuture<AuthenticationMechanismResult> result, final HttpServerExchange exchange,
-                               final ByteBuffer challenge, final IdentityManager identityManager) {
+        private GSSAPIRunnable(final ConcreteIoFuture<AuthenticationMechanismOutcome> result, final HttpServerExchange exchange,
+                               final ByteBuffer challenge, final SecurityContext securityContext) {
             this.result = result;
             this.exchange = exchange;
             this.challenge = challenge;
-            this.identityManager = identityManager;
+            this.securityContext = securityContext;
         }
 
         public void run() {
             try {
                 Subject server = subjectFactory.getSubjectForHost(getHostName(exchange));
                 // The AcceptSecurityContext takes over responsibility for setting the result.
-                Subject.doAs(server, new AcceptSecurityContext(result, exchange, challenge, identityManager));
+                Subject.doAs(server, new AcceptSecurityContext(result, exchange, challenge, securityContext));
             } catch (GeneralSecurityException e) {
                 e.printStackTrace();
-                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
+                result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
             } catch (PrivilegedActionException e) {
                 e.printStackTrace();
-                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
+                result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
             }
         }
 
@@ -189,17 +194,17 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
     private class AcceptSecurityContext implements PrivilegedExceptionAction<Void> {
 
-        private final ConcreteIoFuture<AuthenticationMechanismResult> result;
+        private final ConcreteIoFuture<AuthenticationMechanismOutcome> result;
         private final HttpServerExchange exchange;
         private final ByteBuffer challenge;
-        private final IdentityManager identityManager;
+        private final SecurityContext securityContext;
 
-        private AcceptSecurityContext(final ConcreteIoFuture<AuthenticationMechanismResult> result, final HttpServerExchange exchange,
-                                      final ByteBuffer challenge, final IdentityManager identityManager) {
+        private AcceptSecurityContext(final ConcreteIoFuture<AuthenticationMechanismOutcome> result, final HttpServerExchange exchange,
+                                      final ByteBuffer challenge, final SecurityContext securityContext) {
             this.result = result;
             this.exchange = exchange;
             this.challenge = challenge;
-            this.identityManager = identityManager;
+            this.securityContext = securityContext;
         }
 
         public Void run() throws GSSException {
@@ -223,17 +228,26 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             negContext.setResponseToken(respToken);
 
             if (negContext.isEstablished()) {
-                final Principal principal = negContext.getPrincipal();
-                final Account account = identityManager.lookupAccount(principal.getName());
-                result.setResult(new AuthenticationMechanismResult(principal, account, false));
+                IdentityManager identityManager = securityContext.getIdentityManager();
+                final Account account = identityManager.verify(new GSSContextCredential(negContext.getGssContext()));
+                if (account != null) {
+                    securityContext.authenticationComplete(account, getName(), false);
+                    result.setResult(AuthenticationMechanismOutcome.AUTHENTICATED);
+                } else {
+                    result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
+                }
+                if (respToken != null) {
+                    // There will be no further challenge but we do have a token so set it here.
+                    exchange.getResponseHeaders().add(WWW_AUTHENTICATE,
+                            NEGOTIATE_PREFIX + FlexBase64.encodeString(respToken, false));
+                }
             } else {
                 // This isn't a failure but as the context is not established another round trip with the client is needed.
-                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
+                result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
             }
 
             return null;
         }
-
     }
 
     private static class NegotiationContext {

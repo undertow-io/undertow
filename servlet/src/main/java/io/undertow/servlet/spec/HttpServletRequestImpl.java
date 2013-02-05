@@ -18,6 +18,31 @@
 
 package io.undertow.servlet.spec;
 
+import io.undertow.security.api.RoleMappingManager;
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.CookieImpl;
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.MultiPartHandler;
+import io.undertow.servlet.UndertowServletLogger;
+import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.SecurityRoleRef;
+import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletPathMatch;
+import io.undertow.servlet.util.EmptyEnumeration;
+import io.undertow.servlet.util.IteratorEnumeration;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.CanonicalPathUtils;
+import io.undertow.util.DateUtils;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.LocaleUtils;
+import io.undertow.util.Methods;
+import io.undertow.util.QValueParser;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -59,31 +84,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.AuthenticationState;
-import io.undertow.security.api.RoleMappingManager;
-import io.undertow.security.api.SecurityContext;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.CookieImpl;
-import io.undertow.server.handlers.form.FormData;
-import io.undertow.server.handlers.form.FormDataParser;
-import io.undertow.server.handlers.form.MultiPartHandler;
-import io.undertow.servlet.UndertowServletLogger;
-import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.api.SecurityRoleRef;
-import io.undertow.servlet.handlers.ServletAttachments;
-import io.undertow.servlet.handlers.ServletPathMatch;
-import io.undertow.servlet.util.EmptyEnumeration;
-import io.undertow.servlet.util.IteratorEnumeration;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.CanonicalPathUtils;
-import io.undertow.util.DateUtils;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.LocaleUtils;
-import io.undertow.util.Methods;
-import io.undertow.util.QValueParser;
+import org.xnio.IoFuture;
 import org.xnio.LocalSocketAddress;
 import org.xnio.streams.ChannelInputStream;
 
@@ -274,7 +275,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Principal getUserPrincipal() {
         SecurityContext securityContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        return securityContext != null ? securityContext.getAuthenticatedPrincipal() : null;
+        Principal result = null;
+        Account account = null;
+        if (securityContext != null && (account = securityContext.getAuthenticatedAccount()) != null) {
+            result = account.getPrincipal();
+        }
+        return result;
     }
 
     @Override
@@ -335,39 +341,40 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean authenticate(final HttpServletResponse response) throws IOException, ServletException {
-        if(response.isCommitted()) {
+        if (response.isCommitted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
 
         SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         sc.setAuthenticationRequired();
-        SecurityContext.AuthenticationResult result = sc.authenticate();
-        if(result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
-            return true;
-        } else {
-            //TODO: this will set the status code and headers without going through any potential
-            //wrappers, is this a problem?
-
-            //authentication failed, so run the completion tasks to setup the challenges
-            result.getSendChallengeTask().run();
-            //now commit the response
+        // TODO: this will set the status code and headers without going through any potential
+        // wrappers, is this a problem?
+        IoFuture<Boolean> result = sc.authenticate();
+        if (result.get()) {
+            // Not authenticated and response already sent.
             HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
             responseImpl.closeStreamAndWriter();
             return false;
-        }
+        } else {
+            if (sc.isAuthenticated()) {
+                return true;
+            } else {
+                throw UndertowServletMessages.MESSAGES.authenticationFailed();
+            }
 
+        }
     }
 
     @Override
     public void login(final String username, final String password) throws ServletException {
-        if(username == null || password == null) {
+        if (username == null || password == null) {
             throw UndertowServletMessages.MESSAGES.loginFailed();
         }
         SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        if(sc.getAuthenticationState() == AuthenticationState.AUTHENTICATED) {
+        if (sc.isAuthenticated()) {
             throw UndertowServletMessages.MESSAGES.userAlreadyLoggedIn();
         }
-        if(!sc.login(username, password)) {
+        if (!sc.login(username, password)) {
             throw UndertowServletMessages.MESSAGES.loginFailed();
         }
     }

@@ -17,12 +17,9 @@
  */
 package io.undertow.test.security;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
+import static org.junit.Assert.assertEquals;
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.handlers.AuthenticationCallHandler;
 import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
@@ -37,12 +34,17 @@ import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import io.undertow.util.TestHttpClient;
+
+import java.security.Principal;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Base class for the username / password based tests.
@@ -61,10 +63,31 @@ public abstract class UsernamePasswordAuthenticationTestBase {
         identityManager = new IdentityManager() {
 
             @Override
-            public boolean verifyCredential(Account account, Credential credential) {
+            public Account verify(Account account) {
+                // An existing account so for testing assume still valid.
+                return account;
+            }
+
+            @Override
+            public Account verify(String id, Credential credential) {
+                Account account = getAccount(id);
+                if (account != null && verifyCredential(account, credential)) {
+                    return account;
+                }
+
+                return null;
+            }
+
+            @Override
+            public Account verify(Credential credential) {
+                // TODO Auto-generated method stub
+                return null;
+            }
+
+            private boolean verifyCredential(Account account, Credential credential) {
                 if (credential instanceof PasswordCredential) {
                     char[] password = ((PasswordCredential) credential).getPassword();
-                    char[] expectedPassword = users.get(account.getName());
+                    char[] expectedPassword = users.get(account.getPrincipal().getName());
 
                     return Arrays.equals(password, expectedPassword);
                 }
@@ -73,27 +96,30 @@ public abstract class UsernamePasswordAuthenticationTestBase {
 
             @Override
             public char[] getPassword(final Account account) {
-                return users.get(account.getName());
+                return users.get(account.getPrincipal().getName());
             }
 
             @Override
-            public boolean isUserInGroup(final Account account, final String group) {
-                return false;
-            }
-
-            @Override
-            public Account verifyCredential(Credential credential) {
-                return null;
-            }
-
-            @Override
-            public Account lookupAccount(final String id) {
+            public Account getAccount(final String id) {
                 if (users.containsKey(id)) {
                     return new Account() {
 
+                        private Principal principal = new Principal() {
+
+                            @Override
+                            public String getName() {
+                                return id;
+                            }
+                        };
+
                         @Override
-                        public String getName() {
-                            return id;
+                        public Principal getPrincipal() {
+                            return principal;
+                        }
+
+                        @Override
+                        public boolean isUserInGroup(String group) {
+                            return false;
                         }
 
                     };
@@ -112,8 +138,9 @@ public abstract class UsernamePasswordAuthenticationTestBase {
         AuthenticationMechanism authMech = getTestMechanism();
 
         HttpHandler methodsAddHandler = new AuthenticationMechanismsHandler(constraintHandler,
-                Collections.<AuthenticationMechanism>singletonList(authMech));
-        HttpHandler initialHandler = new SecurityInitialHandler(identityManager, methodsAddHandler);
+                Collections.<AuthenticationMechanism> singletonList(authMech));
+        HttpHandler initialHandler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager,
+                methodsAddHandler);
         DefaultServer.setRootHandler(initialHandler);
     }
 

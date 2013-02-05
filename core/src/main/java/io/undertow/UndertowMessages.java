@@ -115,4 +115,11 @@ public interface UndertowMessages {
 
     @Message(id = 29, value = "Channel was closed mid chunk, if you have attempted to write chunked data you cannot shutdown the channel until after it has all been written.")
     IOException chunkedChannelClosedMidChunk();
+
+    @Message(id = 30, value = "User %s successfuly authenticated.")
+    String userAuthenticated(final String userName);
+
+    @Message(id = 31, value = "User %s has logged out.")
+    String userLoggedOut(final String userName);
+
 }

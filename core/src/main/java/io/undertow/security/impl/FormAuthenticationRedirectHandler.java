@@ -7,6 +7,8 @@ import io.undertow.server.handlers.HttpHandlers;
 /**
  * Handler that performs a redirect to the original location after a successful form auth
  *
+ * TODO - We should find a way to closer integrate this with the mechanisms without it needing to be this stand-alone handler.
+ *
  * @author Stuart Douglas
  */
 public class FormAuthenticationRedirectHandler implements HttpHandler {

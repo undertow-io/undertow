@@ -139,4 +139,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10031, value = "Login failed")
     ServletException loginFailed();
+
+    @Message(id = 10032, value = "Authenticationfailed")
+    ServletException authenticationFailed();
 }

@@ -19,8 +19,8 @@
 package io.undertow.server;
 
 /**
- * A handler for an HTTP request.  The request handler must eventually either call another handler or
- * the completion handler.  Failure to do so may result in undefined (undesirable) behavior.
+ * A handler for an HTTP request. The request handler must eventually either call another handler or end the exchange.
+ *
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */

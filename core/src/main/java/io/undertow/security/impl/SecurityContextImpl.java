@@ -17,29 +17,35 @@
  */
 package io.undertow.security.impl;
 
-
-import java.io.IOException;
-import java.security.Principal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.Executor;
-
-import io.undertow.UndertowLogger;
-import io.undertow.security.api.AuthenticatedSessionManager;
+import static io.undertow.UndertowMessages.MESSAGES;
+import static io.undertow.util.StatusCodes.CODE_200;
+import static io.undertow.util.StatusCodes.CODE_403;
 import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.AuthenticationState;
+import io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome;
+import io.undertow.security.api.AuthenticationMechanism.ChallengeResult;
+import io.undertow.security.api.AuthenticationMode;
+import io.undertow.security.api.NotificationHandler;
 import io.undertow.security.api.SecurityContext;
+import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
-import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.util.ConcreteIoFuture;
+import io.undertow.util.StatusCodes;
 import io.undertow.util.WorkerDispatcher;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Executor;
+
 import org.xnio.IoFuture;
+import org.xnio.IoFuture.Notifier;
 
 /**
  * The internal SecurityContext used to hold the state of security for the current exchange.
@@ -51,18 +57,13 @@ public class SecurityContextImpl implements SecurityContext {
 
     private static final RuntimePermission PERMISSION = new RuntimePermission("MODIFY_UNDERTOW_SECURITY_CONTEXT");
 
-    private static final Executor SAME_THREAD_EXECUTOR = new Executor() {
-        @Override
-        public void execute(final Runnable command) {
-            command.run();
-        }
-    };
-
+    private final AuthenticationMode authenticationMode;
+    private boolean authenticationRequired;
+    private AuthenticationState authenticationState = AuthenticationState.NOT_ATTEMPTED;
     private final HttpServerExchange exchange;
     private final List<AuthenticationMechanism> authMechanisms = new ArrayList<AuthenticationMechanism>();
     private final IdentityManager identityManager;
-    private final AuthenticatedSessionManager authenticatedSessionManager;
-
+    private final Set<NotificationHandler> notificationHandler = new HashSet<NotificationHandler>();
 
     // Maybe this will need to be a custom mechanism that doesn't exchange tokens with the client but will then
     // be configured to either associate with the connection, the session or some other arbitrary whatever.
@@ -70,74 +71,124 @@ public class SecurityContextImpl implements SecurityContext {
     // Do we want multiple to be supported or just one?  Maybe extend the AuthenticationMechanism to allow
     // it to be identified and called.
 
-    private AuthenticationState authenticationState = AuthenticationState.NOT_REQUIRED;
-    private Principal authenticatedPrincipal;
     private String mechanismName;
     private Account account;
 
+    // TODO - Why two constructors?  Maybe the first can do.
+
     public SecurityContextImpl(final HttpServerExchange exchange, final IdentityManager identityManager) {
-        this(exchange, identityManager, null);
+        this(exchange, AuthenticationMode.PRO_ACTIVE, identityManager);
     }
 
-    public SecurityContextImpl(final HttpServerExchange exchange, final IdentityManager identityManager, final AuthenticatedSessionManager authenticatedSessionManager) {
+    public SecurityContextImpl(final HttpServerExchange exchange, final AuthenticationMode authenticationMode, final IdentityManager identityManager) {
+        this.authenticationMode = authenticationMode;
         this.identityManager = identityManager;
-        this.authenticatedSessionManager = authenticatedSessionManager;
         this.exchange = exchange;
         if (System.getSecurityManager() != null) {
             System.getSecurityManager().checkPermission(PERMISSION);
         }
     }
 
+    /*
+     * Authentication can be represented as being at one of many states with different transitions depending on desired outcome.
+     *
+     * NOT_ATTEMPTED
+     * ATTEMPTED
+     * AUTHENTICATED
+     * CHALLENGED_SENT
+     */
 
-    @Override
-    public AuthenticationResult authenticate() throws IOException {
-        return new RequestAuthenticator(authMechanisms.iterator(), exchange, SAME_THREAD_EXECUTOR).authenticate().get();
+    public IoFuture<Boolean> authenticate() {
+        ConcreteIoFuture<Boolean> result = new ConcreteIoFuture<Boolean>();
+        // TODO - I don't see a need to force single threaded - if this request is from the servlet APIs then the request will
+        // have already been dispatched.
+        authTransition(result);
+
+        return result;
     }
 
+    private void authTransition(final ConcreteIoFuture<Boolean> result) {
+        if (authTransitionRequired()) {
+            IoFuture<AuthenticationState> transitionResult = null;
+            switch (authenticationState) {
+                case NOT_ATTEMPTED:
+                    transitionResult = attemptAuthentication();
+                    break;
+                case ATTEMPTED:
+                    transitionResult = sendChallenges();
+                    break;
+                default:
+                    throw new IllegalStateException("It should not be possible to reach this.");
+            }
+            transitionResult.addNotifier(new Notifier<AuthenticationState, Object>() {
 
-    @Override
-    public IoFuture<AuthenticationResult> authenticate(final Executor executor) {
-        return new RequestAuthenticator(authMechanisms.iterator(), exchange, executor).authenticate();
-    }
-
-
-    @Override
-    public void authenticate(final HttpHandler nextHandler) {
-        authenticate(new WorkerDispatcherExecutor(exchange))
-                .addNotifier(new IoFuture.Notifier<AuthenticationResult, Object>() {
-                    @Override
-                    public void notify(final IoFuture<? extends AuthenticationResult> ioFuture, final Object o) {
-                        try {
-                            final AuthenticationResult result = ioFuture.get();
-
-                            if (result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
-                                HttpHandlers.executeHandler(nextHandler, exchange);
-                            } else if (getAuthenticationState() == AuthenticationState.REQUIRED || result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_AUTHENTICATED) {
-                                result.getSendChallengeTask().run();
-                                exchange.endExchange();
-                            } else {
-                                HttpHandlers.executeHandler(nextHandler, exchange);
-                            }
-                        } catch (IOException e) {
-                            exchange.endExchange();
-                        }
+                @Override
+                public void notify(IoFuture<? extends AuthenticationState> ioFuture, Object attachment) {
+                    // TODO - Could result contain an Exception?
+                    try {
+                        authenticationState = ioFuture.get();
+                    } catch (IOException e) {
+                        // TODO - Need a failure state I think to transition to.
                     }
-                }, null);
+                    authTransition(result);
+                }
+            }, null);
+
+        } else {
+            // Keep in mind this switch statement is only called after a call to authTransitionRequired.
+            switch (authenticationState) {
+                case NOT_ATTEMPTED: // No constraint was set that mandated authentication so not reason to hold up the request.
+                case ATTEMPTED: // Attempted based on incoming request but no a failure so allow the request to proceed.
+                case AUTHENITCATED: // Authentication was a success - no responses sent.
+                    result.setResult(false);
+                default:
+                    // Remaining option is CHALLENGE_SENT to request processing must end.
+                    result.setResult(true);
+            }
+        }
+    }
+
+    private IoFuture<AuthenticationState> attemptAuthentication() {
+        ConcreteIoFuture<AuthenticationState> response = new ConcreteIoFuture<AuthenticationState>();
+
+        new AuthAttempter(authMechanisms.iterator(), exchange, new WorkerDispatcherExecutor(exchange)).transition(response);
+
+        return response;
+    }
+
+    private IoFuture<AuthenticationState> sendChallenges() {
+        ConcreteIoFuture<AuthenticationState> response = new ConcreteIoFuture<AuthenticationState>();
+
+        new ChallengeSender(authMechanisms.iterator(), exchange, new WorkerDispatcherExecutor(exchange)).transition(response);
+
+        return response;
+    }
+
+    private boolean authTransitionRequired() {
+        switch (authenticationState) {
+            case NOT_ATTEMPTED:
+                // There has been no attempt to authenticate the current request so do so either if required or if we are set to
+                // be pro-active.
+                return authenticationRequired || authenticationMode == AuthenticationMode.PRO_ACTIVE;
+            case ATTEMPTED:
+                // To be ATTEMPTED we know it was not AUTHENTICATED so if it is required we need to transition to send the
+                // challenges.
+                return authenticationRequired;
+            default:
+                // At this point the state would either be AUTHENTICATED or CHALLENGE_SENT - either of which mean no further
+                // transitions applicable for this request.
+                return false;
+        }
     }
 
     @Override
     public void setAuthenticationRequired() {
-        authenticationState = AuthenticationState.REQUIRED;
+        authenticationRequired = true;
     }
 
     @Override
-    public AuthenticationState getAuthenticationState() {
-        return authenticationState;
-    }
-
-    @Override
-    public Principal getAuthenticatedPrincipal() {
-        return authenticatedPrincipal;
+    public boolean isAuthenticated() {
+        return authenticationState == AuthenticationState.AUTHENITCATED;
     }
 
     /**
@@ -149,12 +200,8 @@ public class SecurityContextImpl implements SecurityContext {
     }
 
     @Override
-    public boolean isUserInGroup(String group) {
-        return identityManager.isUserInGroup(account, group);
-    }
-
-    @Override
     public void addAuthenticationMechanism(final AuthenticationMechanism handler) {
+        // TODO - Do we want to change this so we can ensure the mechanisms are not modifiable mid request?
         authMechanisms.add(handler);
     }
 
@@ -164,169 +211,208 @@ public class SecurityContextImpl implements SecurityContext {
     }
 
     @Override
+    public Account getAuthenticatedAccount() {
+        return account;
+    }
+
+    @Override
+    public IdentityManager getIdentityManager() {
+        return identityManager;
+    }
+
+    @Override
     public boolean login(final String username, final String password) {
-        final Account account = identityManager.lookupAccount(username);
+        final Account account = identityManager.verify(username, new PasswordCredential(password.toCharArray()));
         if (account == null) {
             return false;
         }
-        if (!identityManager.verifyCredential(account, new PasswordCredential(password.toCharArray()))) {
-            return false;
-        }
-        this.account = account;
-        this.authenticationState = AuthenticationState.AUTHENTICATED;
-        this.authenticatedPrincipal = new UndertowPrincipal(account);
 
-        if (authenticatedSessionManager != null) {
-            authenticatedSessionManager.userAuthenticated(exchange, authenticatedPrincipal, account);
-        }
+        authenticationComplete(account, "TODO", true);
+        this.authenticationState = AuthenticationState.AUTHENITCATED;
+
         return true;
-
     }
 
     @Override
     public void logout() {
-        if (authenticatedSessionManager != null) {
-            authenticatedSessionManager.userLoggedOut(exchange, authenticatedPrincipal, account);
-        }
+        sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.LOGGED_OUT, account, mechanismName,
+                true, MESSAGES.userLoggedOut(account.getPrincipal().getName())));
+
         this.account = null;
-        this.authenticationState = AuthenticationState.NOT_REQUIRED;
-        this.authenticatedPrincipal = null;
+        this.mechanismName = null;
+        this.authenticationState = AuthenticationState.NOT_ATTEMPTED;
     }
 
-    private class RequestAuthenticator {
+    @Override
+    public void authenticationComplete(Account account, String mechanism, boolean cacheable) {
+        this.account = account;
+        this.mechanismName = mechanism;
+
+        sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.AUTHENTICATED, account, mechanism,
+                cacheable, MESSAGES.userAuthenticated(account.getPrincipal().getName())));
+    }
+
+    private void sendNoticiation(final SecurityNotification notification) {
+        synchronized (notificationHandler) {
+            for (NotificationHandler current : notificationHandler) {
+                current.handleNotification(notification);
+            }
+        }
+    }
+
+    @Override
+    public void registerNotificationHandler(NotificationHandler handler) {
+        synchronized (notificationHandler) {
+            notificationHandler.add(handler);
+        }
+    }
+
+    @Override
+    public void removeNotificationHandler(NotificationHandler handler) {
+        synchronized (notificationHandler) {
+            notificationHandler.remove(handler);
+        }
+    }
+
+    private class AuthAttempter {
 
         private final Iterator<AuthenticationMechanism> mechanismIterator;
         private final HttpServerExchange exchange;
         private final Executor handOffExecutor;
 
-        private RequestAuthenticator(final Iterator<AuthenticationMechanism> handlerIterator, final HttpServerExchange exchange, final Executor handOffExecutor) {
-            this.mechanismIterator = handlerIterator;
+        private AuthAttempter(final Iterator<AuthenticationMechanism> mechanismIterator, final HttpServerExchange exchange,
+                final Executor handOffExecutor) {
+            this.mechanismIterator = mechanismIterator;
             this.exchange = exchange;
             this.handOffExecutor = handOffExecutor;
         }
 
-        IoFuture<AuthenticationResult> authenticate() {
-
-            final ConcreteIoFuture<AuthenticationResult> authResult = new ConcreteIoFuture<AuthenticationResult>();
-            //first look for an existing authenticated session
-            if (authenticatedSessionManager != null) {
-                AuthenticationMechanism.AuthenticationMechanismResult result = authenticatedSessionManager.lookupSession(exchange, identityManager);
-                if (result.getOutcome() == AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED) {
-
-                    SecurityContextImpl.this.authenticatedPrincipal = result.getPrinciple();
-                    SecurityContextImpl.this.mechanismName = "SESSION"; //TODO
-                    SecurityContextImpl.this.account = result.getAccount();
-                    SecurityContextImpl.this.authenticationState = AuthenticationState.AUTHENTICATED;
-
-                    authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED, new Runnable() {
-                        @Override
-                        public void run() {
-
-                        }
-                    }));
-                    return authResult;
-                }
-            }
-            authenticate(authResult);
-            return authResult;
-        }
-
-        private void authenticate(final ConcreteIoFuture<AuthenticationResult> authResult) {
+        private void transition(final ConcreteIoFuture<AuthenticationState> authenticationState) {
             if (mechanismIterator.hasNext()) {
                 final AuthenticationMechanism mechanism = mechanismIterator.next();
-                IoFuture<AuthenticationMechanism.AuthenticationMechanismResult> resultFuture = mechanism.authenticate(exchange, identityManager, handOffExecutor);
-                resultFuture.addNotifier(new IoFuture.Notifier<AuthenticationMechanism.AuthenticationMechanismResult, Object>() {
+                IoFuture<AuthenticationMechanismOutcome> mechanismResult = mechanism.authenticate(exchange,
+                        SecurityContextImpl.this, handOffExecutor);
+                mechanismResult.addNotifier(new Notifier<AuthenticationMechanismOutcome, Object>() {
+
                     @Override
-                    public void notify(final IoFuture<? extends AuthenticationMechanism.AuthenticationMechanismResult> ioFuture,
-                                       final Object attachment) {
+                    public void notify(IoFuture<? extends AuthenticationMechanismOutcome> ioFuture, Object attachment) {
                         try {
-                            if (ioFuture.getStatus() == IoFuture.Status.DONE) {
-                                AuthenticationMechanism.AuthenticationMechanismResult result = ioFuture.get();
-                                switch (result.getOutcome()) {
-                                    case AUTHENTICATED:
-                                        SecurityContextImpl.this.authenticatedPrincipal = result.getPrinciple();
-                                        SecurityContextImpl.this.mechanismName = mechanism.getName();
-                                        SecurityContextImpl.this.account = result.getAccount();
-                                        SecurityContextImpl.this.authenticationState = AuthenticationState.AUTHENTICATED;
-
-                                        if(result.isRequiresSession()) {
-                                            authenticatedSessionManager.userAuthenticated(exchange, result.getPrinciple(), result.getAccount());
-                                        }
-
-                                        Runnable singleComplete = new SingleMechanismCompletionTask(mechanism, exchange);
-                                        authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED, singleComplete));
-                                        break;
-                                    case NOT_ATTEMPTED:
-                                        // That mechanism didn't attempt at all so see if there is another mechanism to try.
-                                        authenticate(authResult);
-                                        break;
-                                    default:
-                                        UndertowLogger.REQUEST_LOGGER.debug("authentication not complete, sending challenges.");
-
-
-                                        // Either authentication failed or the mechanism is in an intermediate state and
-                                        // requires
-                                        // an additional round trip with the client - either way all mechanisms must now
-                                        // complete.
-                                        authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_AUTHENTICATED,
-                                                new AllMechanismCompletionTask(authMechanisms.iterator(), exchange)));
-                                        break;
-                                }
-                            } else if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
-                                UndertowLogger.REQUEST_LOGGER.exceptionWhileAuthenticating(mechanism, ioFuture.getException());
-                                authResult.setException(ioFuture.getException());
-                            } else if (ioFuture.getStatus() == IoFuture.Status.CANCELLED) {
-                                authResult.setException(new IOException());
+                            AuthenticationMechanismOutcome outcome = ioFuture.get();
+                            switch (outcome) {
+                                case AUTHENTICATED:
+                                    // TODO - Should verify that the mechanism did register an authenticated Account.
+                                    authenticationState.setResult(AuthenticationState.AUTHENITCATED);
+                                    break;
+                                case NOT_AUTHENTICATED:
+                                    // A mechanism attempted to authenticate but could not complete, this now means that
+                                    // authentication is required and challenges need to be sent.
+                                    setAuthenticationRequired();
+                                    authenticationState.setResult(AuthenticationState.ATTEMPTED);
+                                    break;
+                                case NOT_ATTEMPTED:
+                                    // Time to try the next mechanism.
+                                    transition(authenticationState);
+                                    break;
                             }
                         } catch (IOException e) {
-                            authResult.setException(e);
+                            // TODO - Something internal failed, probably want to to add a possible error state.
+                            authenticationState.setResult(AuthenticationState.ATTEMPTED);
                         }
+
                     }
                 }, null);
-            } else {
-                authResult.setResult(new AuthenticationResult(AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_ATTEMPTED, new AllMechanismCompletionTask(authMechanisms.iterator(), exchange)));
-            }
 
+            } else {
+                // Reached the end of the mechanisms and no mechanism authenticated for us to reach this point.
+                authenticationState.setResult(AuthenticationState.ATTEMPTED);
+            }
         }
+
     }
 
     /**
-     * A {@link HttpCompletionHandler} that is used when
-     * {@link AuthenticationMechanism#handleComplete(HttpServerExchange, HttpCompletionHandler)} need to be called on each
-     * {@link AuthenticationMechanism} in turn.
+     * Class responsible for sending the authentication challenges.
      */
-    private class AllMechanismCompletionTask implements Runnable {
+    private class ChallengeSender {
 
-        private final Iterator<AuthenticationMechanism> handlerIterator;
+        private final Iterator<AuthenticationMechanism> mechanismIterator;
         private final HttpServerExchange exchange;
+        private final Executor handOffExecutor;
 
-        private AllMechanismCompletionTask(Iterator<AuthenticationMechanism> handlerIterator, HttpServerExchange exchange) {
-            this.handlerIterator = handlerIterator;
+        private boolean atLeastOneChallenge = false;
+        private StatusCodes chosenStatusCode = null;
+
+        private ChallengeSender(final Iterator<AuthenticationMechanism> mechanismIterator, final HttpServerExchange exchange,
+                final Executor handOffExecutor) {
+            this.mechanismIterator = mechanismIterator;
             this.exchange = exchange;
+            this.handOffExecutor = handOffExecutor;
         }
 
-        public void run() {
-            while (handlerIterator.hasNext()) {
-                handlerIterator.next().sendChallenge(exchange);
+        private void transition(final ConcreteIoFuture<AuthenticationState> authenticationState) {
+            if (mechanismIterator.hasNext()) {
+                final AuthenticationMechanism mechanism = mechanismIterator.next();
+                IoFuture<ChallengeResult> challengeResult = mechanism.sendChallenge(exchange, SecurityContextImpl.this,
+                        handOffExecutor);
+                challengeResult.addNotifier(new Notifier<ChallengeResult, Object>() {
+
+                    @Override
+                    public void notify(IoFuture<? extends ChallengeResult> ioFuture, Object attachment) {
+                        try {
+                            ChallengeResult result = ioFuture.get();
+                            if (result.isChallengeSent()) {
+                                atLeastOneChallenge = true;
+                                StatusCodes desiredCode = result.getDesiredResponseCode();
+                                if (chosenStatusCode == null) {
+                                    chosenStatusCode = desiredCode;
+                                } else if (desiredCode != null) {
+                                    if (chosenStatusCode.equals(CODE_200)) {
+                                        // Allows a more specific code to be chosen.
+                                        // TODO - Still need a more complex code resolution strategy if many different codes are
+                                        // returned (Although those mechanisms may just never work together.)
+                                        chosenStatusCode = desiredCode;
+                                    }
+                                }
+                            }
+                        } catch (IOException e) {
+                            // TODO - Something about the exception - only sending a challenge at this point.
+                        }
+
+                        // We always transition so we can reach the end of the list and hit the else.
+                        transition(authenticationState);
+                    }
+                }, null);
+
+            } else {
+                // Iterated all mechanisms, now need to select a suitable status code.
+                if (atLeastOneChallenge) {
+                    if (chosenStatusCode != null) {
+                        exchange.setResponseCode(chosenStatusCode.getCode());
+                    }
+                } else {
+                    // No mechanism generated a challenge so send a 403 as our challenge - i.e. just rejecting the request.
+                    exchange.setResponseCode(CODE_403.getCode());
+                }
+
+                authenticationState.setResult(AuthenticationState.CHALLENGE_SENT);
+
             }
         }
+
     }
 
-    private class SingleMechanismCompletionTask implements Runnable {
+    /**
+     * Representation of the current authentication state of the SecurityContext.
+     */
+    enum AuthenticationState {
+      NOT_ATTEMPTED,
 
-        private final AuthenticationMechanism mechanism;
-        private final HttpServerExchange exchange;
+      ATTEMPTED,
 
-        private SingleMechanismCompletionTask(AuthenticationMechanism mechanism, HttpServerExchange exchange) {
-            this.mechanism = mechanism;
-            this.exchange = exchange;
-        }
+      AUTHENITCATED,
 
-        public void run() {
-            mechanism.sendChallenge(exchange);
-        }
+      CHALLENGE_SENT;
     }
-
 
     private static final class WorkerDispatcherExecutor implements Executor {
 
@@ -341,5 +427,7 @@ public class SecurityContextImpl implements SecurityContext {
             WorkerDispatcher.dispatch(exchange, command);
         }
     }
+
+
 
 }
