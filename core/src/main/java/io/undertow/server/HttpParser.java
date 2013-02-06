@@ -136,7 +136,7 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 UPGRADE_STRING,
                 USER_AGENT_STRING,
                 VIA_STRING,
-                WARNING_STRING,
+                WARNING_STRING
         })
 public abstract class HttpParser {
 
