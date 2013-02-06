@@ -34,16 +34,13 @@ import static io.undertow.util.Headers.ACCEPT_ENCODING_STRING;
 import static io.undertow.util.Headers.ACCEPT_LANGUAGE_STRING;
 import static io.undertow.util.Headers.ACCEPT_RANGES_STRING;
 import static io.undertow.util.Headers.ACCEPT_STRING;
-import static io.undertow.util.Headers.AGE_STRING;
-import static io.undertow.util.Headers.ALLOW_STRING;
 import static io.undertow.util.Headers.AUTHORIZATION_STRING;
 import static io.undertow.util.Headers.CACHE_CONTROL_STRING;
 import static io.undertow.util.Headers.CONNECTION_STRING;
+import static io.undertow.util.Headers.CONTENT_LENGTH_STRING;
+import static io.undertow.util.Headers.CONTENT_TYPE_STRING;
 import static io.undertow.util.Headers.COOKIE_STRING;
-import static io.undertow.util.Headers.DATE_STRING;
-import static io.undertow.util.Headers.ETAG_STRING;
 import static io.undertow.util.Headers.EXPECT_STRING;
-import static io.undertow.util.Headers.EXPIRES_STRING;
 import static io.undertow.util.Headers.FROM_STRING;
 import static io.undertow.util.Headers.HOST_STRING;
 import static io.undertow.util.Headers.IF_MATCH_STRING;
@@ -51,16 +48,13 @@ import static io.undertow.util.Headers.IF_MODIFIED_SINCE_STRING;
 import static io.undertow.util.Headers.IF_NONE_MATCH_STRING;
 import static io.undertow.util.Headers.IF_RANGE_STRING;
 import static io.undertow.util.Headers.IF_UNMODIFIED_SINCE_STRING;
-import static io.undertow.util.Headers.LOCATION_STRING;
 import static io.undertow.util.Headers.MAX_FORWARDS_STRING;
 import static io.undertow.util.Headers.ORIGIN_STRING;
 import static io.undertow.util.Headers.PRAGMA_STRING;
-import static io.undertow.util.Headers.PROXY_AUTHENTICATE_STRING;
 import static io.undertow.util.Headers.PROXY_AUTHORIZATION_STRING;
 import static io.undertow.util.Headers.RANGE_STRING;
 import static io.undertow.util.Headers.REFERER_STRING;
 import static io.undertow.util.Headers.REFRESH_STRING;
-import static io.undertow.util.Headers.RETRY_AFTER_STRING;
 import static io.undertow.util.Headers.SEC_WEB_SOCKET_KEY_STRING;
 import static io.undertow.util.Headers.SEC_WEB_SOCKET_VERSION_STRING;
 import static io.undertow.util.Headers.SERVER_STRING;
@@ -69,10 +63,8 @@ import static io.undertow.util.Headers.TRAILER_STRING;
 import static io.undertow.util.Headers.TRANSFER_ENCODING_STRING;
 import static io.undertow.util.Headers.UPGRADE_STRING;
 import static io.undertow.util.Headers.USER_AGENT_STRING;
-import static io.undertow.util.Headers.VARY_STRING;
 import static io.undertow.util.Headers.VIA_STRING;
 import static io.undertow.util.Headers.WARNING_STRING;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE_STRING;
 import static io.undertow.util.Methods.CONNECT_STRING;
 import static io.undertow.util.Methods.DELETE_STRING;
 import static io.undertow.util.Methods.GET_STRING;
@@ -114,16 +106,13 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 ACCEPT_ENCODING_STRING,
                 ACCEPT_LANGUAGE_STRING,
                 ACCEPT_RANGES_STRING,
-                AGE_STRING,
-                ALLOW_STRING,
                 AUTHORIZATION_STRING,
                 CACHE_CONTROL_STRING,
                 COOKIE_STRING,
                 CONNECTION_STRING,
-                DATE_STRING,
-                ETAG_STRING,
+                CONTENT_LENGTH_STRING,
+                CONTENT_TYPE_STRING,
                 EXPECT_STRING,
-                EXPIRES_STRING,
                 FROM_STRING,
                 HOST_STRING,
                 IF_MATCH_STRING,
@@ -131,16 +120,13 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 IF_NONE_MATCH_STRING,
                 IF_RANGE_STRING,
                 IF_UNMODIFIED_SINCE_STRING,
-                LOCATION_STRING,
                 MAX_FORWARDS_STRING,
                 ORIGIN_STRING,
                 PRAGMA_STRING,
-                PROXY_AUTHENTICATE_STRING,
                 PROXY_AUTHORIZATION_STRING,
                 RANGE_STRING,
                 REFERER_STRING,
                 REFRESH_STRING,
-                RETRY_AFTER_STRING,
                 SEC_WEB_SOCKET_KEY_STRING,
                 SEC_WEB_SOCKET_VERSION_STRING,
                 SERVER_STRING,
@@ -149,10 +135,9 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 TRANSFER_ENCODING_STRING,
                 UPGRADE_STRING,
                 USER_AGENT_STRING,
-                VARY_STRING,
                 VIA_STRING,
                 WARNING_STRING,
-                WWW_AUTHENTICATE_STRING})
+        })
 public abstract class HttpParser {
 
     public static final HttpParser INSTANCE;
