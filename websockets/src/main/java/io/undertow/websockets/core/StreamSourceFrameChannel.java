@@ -32,6 +32,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -222,6 +223,11 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     @Override
     public XnioWorker getWorker() {
         return channel.getWorker();
+    }
+
+    @Override
+    public XnioIoThread getIoThread() {
+        return channel.getIoThread();
     }
 
     @Override

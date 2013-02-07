@@ -21,24 +21,24 @@ package io.undertow.server;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.channels.BrokenStreamSourceChannel;
-import io.undertow.channels.ChunkedStreamSinkChannel;
-import io.undertow.channels.ChunkedStreamSourceChannel;
-import io.undertow.channels.FixedLengthStreamSinkChannel;
-import io.undertow.channels.FixedLengthStreamSourceChannel;
+import io.undertow.conduits.BrokenStreamSourceConduit;
+import io.undertow.conduits.ChunkedStreamSinkConduit;
+import io.undertow.conduits.ChunkedStreamSourceConduit;
+import io.undertow.conduits.ConduitListener;
+import io.undertow.conduits.FinishableStreamSinkConduit;
+import io.undertow.conduits.FixedLengthStreamSinkConduit;
+import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
-import org.xnio.ChannelListener;
-import org.xnio.channels.ChannelFactory;
-import org.xnio.channels.EmptyStreamSourceChannel;
-import org.xnio.channels.PushBackStreamChannel;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.EmptyStreamSourceConduit;
+import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.StreamSourceConduit;
 
 /**
  * Handler responsible for dealing with wrapping the response stream and request stream to deal with persistent
@@ -102,7 +102,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             transferEncoding = new HttpString(requestHeaders.getLast(Headers.TRANSFER_ENCODING));
         }
         if (hasTransferEncoding && !transferEncoding.equals(Headers.IDENTITY)) {
-            exchange.addRequestWrapper(chunkedStreamSourceChannelWrapper());
+            exchange.addRequestWrapper(chunkedStreamSourceConduitWrapper());
         } else if (hasContentLength) {
             final long contentLength;
             try {
@@ -117,11 +117,11 @@ public class HttpTransferEncodingHandler implements HttpHandler {
             if (contentLength == 0L) {
                 log.trace("No content, starting next request");
                 // no content - immediately start the next request, returning an empty stream for this one
-                exchange.addRequestWrapper(emptyStreamSourceChannelWrapper());
+                exchange.addRequestWrapper(emptyStreamSourceConduitWrapper());
                 exchange.terminateRequest();
             } else {
                 // fixed-length content - add a wrapper for a fixed-length stream
-                exchange.addRequestWrapper(fixedLengthStreamSourceChannelWrapper(contentLength));
+                exchange.addRequestWrapper(fixedLengthStreamSourceConduitWrapper(contentLength));
             }
         } else if (hasTransferEncoding) {
             if (transferEncoding.equals(Headers.IDENTITY)) {
@@ -132,7 +132,7 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         } else if (persistentConnection) {
             // no content - immediately start the next request, returning an empty stream for this one
             exchange.terminateRequest();
-            exchange.addRequestWrapper(emptyStreamSourceChannelWrapper());
+            exchange.addRequestWrapper(emptyStreamSourceConduitWrapper());
         }
 
         exchange.setPersistent(persistentConnection);
@@ -142,10 +142,10 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         HttpHandlers.executeHandler(next, exchange);
     }
 
-    private static ChannelWrapper<StreamSinkChannel> responseWrapper(final boolean requestLooksPersistent) {
-        return new ChannelWrapper<StreamSinkChannel>() {
-            public StreamSinkChannel wrap(final ChannelFactory<StreamSinkChannel> channelFactory, final HttpServerExchange exchange) {
-                final StreamSinkChannel channel = channelFactory.create();
+    private static ConduitWrapper<StreamSinkConduit> responseWrapper(final boolean requestLooksPersistent) {
+        return new ConduitWrapper<StreamSinkConduit>() {
+            public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> channelFactory, final HttpServerExchange exchange) {
+                final StreamSinkConduit channel = channelFactory.create();
                 final HeaderMap responseHeaders = exchange.getResponseHeaders();
                 // test to see if we're still persistent
                 boolean stillPersistent = requestLooksPersistent;
@@ -163,45 +163,45 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                     responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
                     transferEncoding = Headers.CHUNKED;
                 }
-                StreamSinkChannel wrappedChannel;
+                StreamSinkConduit wrappedConduit;
                 final int code = exchange.getResponseCode();
                 if (exchange.getRequestMethod().equals(Methods.HEAD) || (100 <= code && code <= 199) || code == 204 || code == 304) {
-                    final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
+                    final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                     if (code == 101 && responseHeaders.contains(Headers.CONTENT_LENGTH)) {
                         // add least for websocket upgrades we can have a content length
                         final long contentLength;
                         try {
                             contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
                             // fixed-length response
-                            wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, true, !stillPersistent, finishListener, null);
+                            wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener, null);
                         } catch (NumberFormatException e) {
                             // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
                             stillPersistent = false;
-                            wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
+                            wrappedConduit = new FinishableStreamSinkConduit(channel, terminateResponseListener(exchange));
                         }
                     } else {
-                        wrappedChannel = new FixedLengthStreamSinkChannel(channel, 0L, true, !stillPersistent, finishListener, null);
+                        wrappedConduit = new FixedLengthStreamSinkConduit(channel, 0L, true, !stillPersistent, finishListener, null);
                     }
                 } else if (!transferEncoding.equals(Headers.IDENTITY)) {
-                    final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    wrappedChannel = new ChunkedStreamSinkChannel(channel, true, !stillPersistent, finishListener);
+                    final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
+                    wrappedConduit = new ChunkedStreamSinkConduit(channel, true, !stillPersistent, finishListener);
                 } else if (responseHeaders.contains(Headers.CONTENT_LENGTH)) {
                     final long contentLength;
                     try {
                         contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
-                        final ChannelListener<StreamSinkChannel> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
+                        final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                         // fixed-length response
-                        wrappedChannel = new FixedLengthStreamSinkChannel(channel, contentLength, true, !stillPersistent, finishListener, null);
+                        wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener, null);
                     } catch (NumberFormatException e) {
                         // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
                         stillPersistent = false;
-                        wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
+                        wrappedConduit = new FinishableStreamSinkConduit(channel, terminateResponseListener(exchange));
                     }
                 } else {
                     log.trace("Cancelling persistence because response is identity with no content length");
                     // make it not persistent - very unfortunate for the next request handler really...
                     stillPersistent = false;
-                    wrappedChannel = new FinishableStreamSinkChannel(channel, terminateResponseListener(exchange));
+                    wrappedConduit = new FinishableStreamSinkConduit(channel, terminateResponseListener(exchange));
                 }
                 if (code != 101) {
                     // only set connection header if it was not an upgrade
@@ -220,45 +220,45 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                         }
                     }
                 }
-                return wrappedChannel;
+                return wrappedConduit;
             }
         };
     }
 
-    private static ChannelWrapper<StreamSourceChannel> chunkedStreamSourceChannelWrapper() {
-        return new ChannelWrapper<StreamSourceChannel>() {
-            public StreamSourceChannel wrap(final ChannelFactory<StreamSourceChannel> channelFactory, final HttpServerExchange exchange) {
-                return new ChunkedStreamSourceChannel((PushBackStreamChannel) channelFactory.create(), true, chunkedDrainListener(exchange), exchange.getConnection().getBufferPool(), false, maxEntitySize(exchange));
+    private static ConduitWrapper<StreamSourceConduit> chunkedStreamSourceConduitWrapper() {
+        return new ConduitWrapper<StreamSourceConduit>() {
+            public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> channelFactory, final HttpServerExchange exchange) {
+                return new ChunkedStreamSourceConduit(channelFactory.create(), exchange, chunkedDrainListener(exchange), maxEntitySize(exchange));
             }
         };
     }
 
-    private static ChannelWrapper<StreamSourceChannel> fixedLengthStreamSourceChannelWrapper(final long contentLength) {
-        return new ChannelWrapper<StreamSourceChannel>() {
-            public StreamSourceChannel wrap(final ChannelFactory<StreamSourceChannel> channelFactory, final HttpServerExchange exchange) {
-                StreamSourceChannel channel = channelFactory.create();
+    private static ConduitWrapper<StreamSourceConduit> fixedLengthStreamSourceConduitWrapper(final long contentLength) {
+        return new ConduitWrapper<StreamSourceConduit>() {
+            public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> channelFactory, final HttpServerExchange exchange) {
+                StreamSourceConduit channel = channelFactory.create();
                 final long max = maxEntitySize(exchange);
                 if(contentLength > max) {
-                    return new BrokenStreamSourceChannel(UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getSourceAddress(), max), channel);
+                    return new BrokenStreamSourceConduit(channel, UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getSourceAddress(), max));
                 }
-                return new FixedLengthStreamSourceChannel(channel, contentLength, true, fixedLengthDrainListener(exchange), null);
+                return new FixedLengthStreamSourceConduit(channel, contentLength, fixedLengthDrainListener(exchange));
             }
         };
     }
 
-    private static ChannelWrapper<StreamSourceChannel> emptyStreamSourceChannelWrapper() {
-        return new ChannelWrapper<StreamSourceChannel>() {
-            public StreamSourceChannel wrap(final ChannelFactory<StreamSourceChannel> channelFactory, final HttpServerExchange exchange) {
-                StreamSourceChannel channel = channelFactory.create();
-                return new EmptyStreamSourceChannel(channel.getWorker(), channel.getReadThread());
+    private static ConduitWrapper<StreamSourceConduit> emptyStreamSourceConduitWrapper() {
+        return new ConduitWrapper<StreamSourceConduit>() {
+            public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> channelFactory, final HttpServerExchange exchange) {
+                StreamSourceConduit channel = channelFactory.create();
+                return new EmptyStreamSourceConduit(channel.getReadThread());
             }
         };
     }
 
-    private static ChannelListener<FixedLengthStreamSourceChannel> fixedLengthDrainListener(final HttpServerExchange exchange) {
-        return new ChannelListener<FixedLengthStreamSourceChannel>() {
-            public void handleEvent(final FixedLengthStreamSourceChannel fixedLengthChannel) {
-                long remaining = fixedLengthChannel.getRemaining();
+    private static ConduitListener<FixedLengthStreamSourceConduit> fixedLengthDrainListener(final HttpServerExchange exchange) {
+        return new ConduitListener<FixedLengthStreamSourceConduit>() {
+            public void handleEvent(final FixedLengthStreamSourceConduit fixedLengthConduit) {
+                long remaining = fixedLengthConduit.getRemaining();
                 if (remaining > 0L) {
                     UndertowLogger.REQUEST_LOGGER.requestWasNotFullyConsumed();
                     exchange.setPersistent(false);
@@ -268,10 +268,10 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         };
     }
 
-    private static ChannelListener<ChunkedStreamSourceChannel> chunkedDrainListener(final HttpServerExchange exchange) {
-        return new ChannelListener<ChunkedStreamSourceChannel>() {
-            public void handleEvent(final ChunkedStreamSourceChannel chunkedStreamSourceChannel) {
-                if(!chunkedStreamSourceChannel.isFinished()) {
+    private static ConduitListener<ChunkedStreamSourceConduit> chunkedDrainListener(final HttpServerExchange exchange) {
+        return new ConduitListener<ChunkedStreamSourceConduit>() {
+            public void handleEvent(final ChunkedStreamSourceConduit chunkedStreamSourceConduit) {
+                if(!chunkedStreamSourceConduit.isFinished()) {
                     UndertowLogger.REQUEST_LOGGER.requestWasNotFullyConsumed();
                     exchange.setPersistent(false);
                 }
@@ -280,9 +280,9 @@ public class HttpTransferEncodingHandler implements HttpHandler {
         };
     }
 
-    private static ChannelListener<StreamSinkChannel> terminateResponseListener(final HttpServerExchange exchange) {
-        return new ChannelListener<StreamSinkChannel>() {
-            public void handleEvent(final StreamSinkChannel channel) {
+    private static ConduitListener<StreamSinkConduit> terminateResponseListener(final HttpServerExchange exchange) {
+        return new ConduitListener<StreamSinkConduit>() {
+            public void handleEvent(final StreamSinkConduit channel) {
                 exchange.terminateResponse();
             }
         };

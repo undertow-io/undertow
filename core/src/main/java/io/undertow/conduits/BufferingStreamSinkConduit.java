@@ -1,23 +1,22 @@
-package io.undertow.channels;
+package io.undertow.conduits;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.server.ChannelWrapper;
+import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.PipeLiningBuffer;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
+import io.undertow.util.ConduitFactory;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
-import org.xnio.channels.ChannelFactory;
-import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.StreamSinkConduit;
 
 /**
  * Buffer for pipelined requests. Basic behaviour is as follows:
@@ -25,7 +24,7 @@ import org.xnio.channels.StreamSourceChannel;
  *
  * @author Stuart Douglas
  */
-public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<BufferingStreamSinkChannel> implements PipeLiningBuffer {
+public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> implements PipeLiningBuffer {
 
     /**
      * If this channel is shutdown
@@ -45,22 +44,9 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
     private final Pool<ByteBuffer> pool;
     private Pooled<ByteBuffer> buffer;
 
-    public BufferingStreamSinkChannel(StreamSinkChannel delegate, final Pool<ByteBuffer> pool) {
-        super(delegate);
+    public BufferingStreamSinkConduit(StreamSinkConduit next, final Pool<ByteBuffer> pool) {
+        super(next);
         this.pool = pool;
-        delegate.getCloseSetter().set(new ChannelListener<Channel>() {
-            @Override
-            public void handleEvent(final Channel channel) {
-                try {
-                ChannelListeners.invokeChannelListener(BufferingStreamSinkChannel.this, closeSetter.get());
-                } finally {
-                    if(buffer != null) {
-                        buffer.free();
-                        buffer = null;
-                    }
-                }
-            }
-        });
     }
 
     /**
@@ -74,12 +60,12 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
         if(!flushBuffer()) {
             return 0;
         }
-        return super.transferFrom(src, position, count);
+        return src.transferTo(position, count, new ConduitWritableByteChannel(this));
     }
 
     @Override
     public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
-        return IoUtils.transfer(source, count, throughBuffer, this);
+        return IoUtils.transfer(source, count, throughBuffer, new ConduitWritableByteChannel(this));
     }
 
     @Override
@@ -130,22 +116,22 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
     @Override
     public boolean flushPipelinedData() throws IOException {
         if (buffer == null) {
-            return delegate.flush();
+            return next.flush();
         } else if (buffer.getResource().position() == 0) {
-            return delegate.flush();
+            return next.flush();
         }
         if(!flushBuffer()) {
             return false;
         }
-        return delegate.flush();
+        return next.flush();
     }
 
     @Override
-    public ChannelWrapper<StreamSinkChannel> getChannelWrapper() {
-        return new ChannelWrapper<StreamSinkChannel>() {
+    public ConduitWrapper<StreamSinkConduit> getChannelWrapper() {
+        return new ConduitWrapper<StreamSinkConduit>() {
             @Override
-            public StreamSinkChannel wrap(ChannelFactory<StreamSinkChannel> channel, HttpServerExchange exchange) {
-                return BufferingStreamSinkChannel.this;
+            public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> channel, HttpServerExchange exchange) {
+                return BufferingStreamSinkConduit.this;
             }
         };
     }
@@ -166,7 +152,7 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
         }
         int res = 0;
         do {
-            res = delegate.write(byteBuffer);
+            res = next.write(byteBuffer);
             if (res == 0) {
                 return false;
             }
@@ -184,7 +170,7 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
                 return;
             }
         }
-        delegate.awaitWritable(time, timeUnit);
+        next.awaitWritable(time, timeUnit);
     }
 
     @Override
@@ -193,7 +179,7 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
             if (buffer.getResource().hasRemaining()) {
                 return;
             }
-            delegate.awaitWritable();
+            next.awaitWritable();
         }
     }
 
@@ -203,24 +189,25 @@ public class BufferingStreamSinkChannel extends DelegatingStreamSinkChannel<Buff
             if (!flushBuffer()) {
                 return false;
             }
-            return delegate.flush();
+            return next.flush();
         }
         return true;
     }
 
     @Override
-    public void shutdownWrites() throws IOException {
+    public void terminateWrites() throws IOException {
         shutdown = true;
-        delegate.shutdownWrites();
+        next.terminateWrites();
     }
 
-    @Override
-    public void close() throws IOException {
-        if(this.buffer != null) {
-            this.buffer.free();
-            this.buffer = null;
+    public void truncateWrites() throws IOException {
+        try {
+            next.truncateWrites();
+        } finally {
+            if (buffer != null) {
+                buffer.free();
+            }
         }
-        super.close();
     }
 }
 

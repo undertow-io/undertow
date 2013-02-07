@@ -35,6 +35,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.Pool;
 import org.xnio.Pooled;
+import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.ConnectedStreamChannel;
@@ -155,6 +156,11 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     @Override
     public XnioWorker getWorker() {
         return channel.getWorker();
+    }
+
+    @Override
+    public XnioIoThread getIoThread() {
+        return channel.getIoThread();
     }
 
     @Override

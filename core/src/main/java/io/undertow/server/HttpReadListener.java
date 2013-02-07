@@ -24,14 +24,15 @@ import java.nio.channels.Channel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
-import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
+import org.xnio.conduits.StreamSinkConduit;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -61,10 +62,11 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
         if(connection.getPipeLiningBuffer() != null) {
             httpServerExchange.addResponseWrapper(connection.getPipeLiningBuffer().getChannelWrapper());
         }
-        httpServerExchange.addResponseWrapper(new ChannelWrapper<StreamSinkChannel>() {
+        httpServerExchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
             @Override
-            public StreamSinkChannel wrap(final ChannelFactory<StreamSinkChannel> channelFactory, HttpServerExchange exchange) {
-                return new HttpResponseChannel(channelFactory.create(), connection.getBufferPool(), exchange);
+            public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+                final StreamSinkConduit channel = factory.create();
+                return  new HttpResponseConduit(channel, connection.getBufferPool(), exchange);
             }
         });
 

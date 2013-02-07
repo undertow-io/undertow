@@ -5,10 +5,11 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.server.ChannelWrapper;
+import io.undertow.server.ConduitWrapper;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -17,11 +18,12 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
-import org.xnio.channels.ChannelFactory;
-import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.EmptyStreamSourceConduit;
+import org.xnio.conduits.StreamSinkChannelWrappingConduit;
+import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.StreamSourceConduit;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -117,7 +119,7 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
-            AjpChannelWrapper channelWrapper = new AjpChannelWrapper(new AjpResponseChannel(responseChannel, connection.getBufferPool(), httpServerExchange));
+            AjpConduitWrapper channelWrapper = new AjpConduitWrapper(new AjpResponseConduit(new StreamSinkChannelWrappingConduit(responseChannel), connection.getBufferPool(), httpServerExchange));
             httpServerExchange.addResponseWrapper(channelWrapper);
             httpServerExchange.addRequestWrapper(channelWrapper.getRequestWrapper());
             try {
@@ -183,24 +185,24 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
         }
     }
 
-    private class AjpChannelWrapper implements ChannelWrapper<StreamSinkChannel> {
+    private class AjpConduitWrapper implements ConduitWrapper<StreamSinkConduit> {
 
-        private final AjpResponseChannel responseChannel;
+        private final AjpResponseConduit responseConduit;
 
-        private AjpChannelWrapper(AjpResponseChannel responseChannel) {
-            this.responseChannel = responseChannel;
+        private AjpConduitWrapper(AjpResponseConduit responseConduit) {
+            this.responseConduit = responseConduit;
         }
 
         @Override
-        public StreamSinkChannel wrap(ChannelFactory<StreamSinkChannel> channel, HttpServerExchange exchange) {
-            return responseChannel;
+        public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> channel, HttpServerExchange exchange) {
+            return responseConduit;
         }
 
-        public ChannelWrapper<StreamSourceChannel> getRequestWrapper() {
-            return new ChannelWrapper<StreamSourceChannel>() {
+        public ConduitWrapper<StreamSourceConduit> getRequestWrapper() {
+            return new ConduitWrapper<StreamSourceConduit>() {
                 @Override
-                public StreamSourceChannel wrap(ChannelFactory<StreamSourceChannel> channelFactory, HttpServerExchange exchange) {
-                    StreamSourceChannel channel = channelFactory.create();
+                public StreamSourceConduit wrap(ConduitFactory<StreamSourceConduit> channelFactory, HttpServerExchange exchange) {
+                    StreamSourceConduit conduit = channelFactory.create();
                     final HeaderMap requestHeaders = exchange.getRequestHeaders();
                     HttpString transferEncoding = Headers.IDENTITY;
                     Long length;
@@ -209,7 +211,7 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
                         transferEncoding = new HttpString(requestHeaders.getLast(Headers.TRANSFER_ENCODING));
                     }
 
-                    if (hasTransferEncoding) {
+                    if (hasTransferEncoding && !transferEncoding.equals(Headers.IDENTITY)) {
                         length = null; //unkown length
                     } else if (exchange.getRequestHeaders().contains(Headers.CONTENT_LENGTH)) {
                         final long contentLength = Long.parseLong(requestHeaders.get(Headers.CONTENT_LENGTH).getFirst());
@@ -217,7 +219,7 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
                             UndertowLogger.REQUEST_LOGGER.trace("No content, starting next request");
                             // no content - immediately start the next request, returning an empty stream for this one
                             exchange.terminateRequest();
-                            return new EmptyStreamSourceChannel(channel.getWorker(), channel.getReadThread());
+                            return new EmptyStreamSourceConduit(conduit.getReadThread());
                         } else {
                             length = contentLength;
                         }
@@ -225,10 +227,9 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
                         UndertowLogger.REQUEST_LOGGER.trace("No content length or transfer coding, starting next request");
                         // no content - immediately start the next request, returning an empty stream for this one
                         exchange.terminateRequest();
-                        return new EmptyStreamSourceChannel(channel.getWorker(), channel.getReadThread());
+                        return new EmptyStreamSourceConduit(conduit.getReadThread());
                     }
-                    String contentLength = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
-                    return new AjpRequestChannel(channel, responseChannel, length);
+                    return new AjpRequestConduit(conduit, responseConduit, length);
                 }
             };
         }

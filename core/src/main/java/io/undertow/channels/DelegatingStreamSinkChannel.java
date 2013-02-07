@@ -9,6 +9,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -116,4 +117,8 @@ public abstract class DelegatingStreamSinkChannel<T extends DelegatingStreamSink
         delegate.suspendWrites();
     }
 
+    @Override
+    public XnioIoThread getIoThread() {
+        return delegate.getIoThread();
+    }
 }

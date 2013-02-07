@@ -18,27 +18,26 @@
 
 package io.undertow.server;
 
-import java.nio.channels.Channel;
-
-import org.xnio.channels.ChannelFactory;
+import io.undertow.util.ConduitFactory;
+import org.xnio.conduits.Conduit;
 
 /**
- * Interface that provides a means of wrapping a {@link java.nio.channels.Channel}.  Every channel wrapper has a chance
- * to replace the channel with a channel which either wraps or replaces the passed in channel.  However it is the responsibility
- * of either the channel wrapper instance or the channel it creates to ensure that the original channel is eventually
+ * Interface that provides a means of wrapping a {@link Conduit}.  Every conduit wrapper has a chance
+ * to replace the conduit with a conduit which either wraps or replaces the passed in conduit.  However it is the responsibility
+ * of either the conduit wrapper instance or the conduit it creates to ensure that the original conduit is eventually
  * cleaned up and shut down properly when the request is terminated.
  *
  * @author Stuart Douglas
  */
-public interface ChannelWrapper<T extends Channel> {
+public interface ConduitWrapper<T extends Conduit> {
 
     /**
-     * Wrap the channel.  The wrapper should not return {@code null}.  If no wrapping is desired, the original
-     * channel should be returned.
+     * Wrap the conduit.  The wrapper should not return {@code null}.  If no wrapping is desired, the original
+     * conduit should be returned.
      *
-     * @param channel the original channel
+     * @param conduit the original conduit
      * @param exchange the in-flight HTTP exchange
-     * @return the replacement channel
+     * @return the replacement conduit
      */
-    T wrap(final ChannelFactory<T> channel, final HttpServerExchange exchange);
+    T wrap(final ConduitFactory<T> conduit, final HttpServerExchange exchange);
 }

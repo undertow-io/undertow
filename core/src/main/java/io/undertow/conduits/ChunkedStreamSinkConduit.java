@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.channels;
+package io.undertow.conduits;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -25,30 +25,22 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowMessages;
-import org.jboss.logging.Logger;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.Option;
-import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.StreamSinkConduit;
 
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
-import static org.xnio.ChannelListeners.invokeChannelListener;
 
 /**
  * Channel that implements HTTP chunked transfer coding.
  *
  * @author Stuart Douglas
  */
-public class ChunkedStreamSinkChannel extends DelegatingStreamSinkChannel<ChunkedStreamSinkChannel> {
+public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
-    private static final Logger log = Logger.getLogger(ChunkedStreamSinkChannel.class);
-
-    private final ChannelListener<? super ChunkedStreamSinkChannel> finishListener;
+    private final ConduitListener<? super ChunkedStreamSinkConduit> finishListener;
     private final int config;
 
     private static final byte[] LAST_CHUNK = "0\r\n\r\n".getBytes();
@@ -67,28 +59,21 @@ public class ChunkedStreamSinkChannel extends DelegatingStreamSinkChannel<Chunke
      * Flag that is set when {@link #shutdownWrites()} or @{link #close()} is called
      */
     private static final int FLAG_WRITES_SHUTDOWN = 1;
-    private static final int FLAG_DELEGATE_SHUTDWON = 1 << 2;
-    private static final int FLAG_WRITING_CHUNK = 1 << 3;
-    private static final int FLAG_WRITTEN_FIRST_CHUNK = 1 << 4;
-
-    /**
-     * Set when the finish listener has been invoked
-     */
-    private static final int FLAG_FINISH = 1 << 4;
+    private static final int FLAG_next_SHUTDWON = 1 << 2;
+    private static final int FLAG_WRITTEN_FIRST_CHUNK = 1 << 3;
 
     /**
      * Construct a new instance.
      *
-     * @param delegate       the channel to wrap
-     * @param configurable   {@code true} to allow configuration of the delegate channel, {@code false} otherwise
+     * @param next       the channel to wrap
+     * @param configurable   {@code true} to allow configuration of the next channel, {@code false} otherwise
      * @param passClose      {@code true} to close the underlying channel when this channel is closed, {@code false} otherwise
      * @param finishListener
      */
-    public ChunkedStreamSinkChannel(final StreamSinkChannel delegate, final boolean configurable, final boolean passClose, final ChannelListener<? super ChunkedStreamSinkChannel> finishListener) {
-        super(delegate);
+    public ChunkedStreamSinkConduit(final StreamSinkConduit next, final boolean configurable, final boolean passClose, final ConduitListener<? super ChunkedStreamSinkConduit> finishListener) {
+        super(next);
         this.finishListener = finishListener;
         config = (configurable ? CONF_FLAG_CONFIGURABLE : 0) | (passClose ? CONF_FLAG_PASS_CLOSE : 0);
-        delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
     }
 
     @Override
@@ -108,7 +93,7 @@ public class ChunkedStreamSinkChannel extends DelegatingStreamSinkChannel<Chunke
 
             int chunkingSize = chunkingBuffer.remaining();
             final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src};
-            long result = delegate.write(buf);
+            long result = next.write(buf, 0, buf.length);
             chunkleft = src.remaining();
             if (result < chunkingSize) {
                 return 0;
@@ -125,7 +110,7 @@ public class ChunkedStreamSinkChannel extends DelegatingStreamSinkChannel<Chunke
                 if (chunkingSize > 0) {
                     final ByteBuffer[] buf = new ByteBuffer[]{chunkingBuffer, src};
                     int origialRemaining = src.remaining();
-                    long result = delegate.write(buf);
+                    long result = next.write(buf, 0, buf.length);
                     int srcWritten = origialRemaining - src.remaining();
                     chunkleft -= srcWritten;
                     if (result < chunkingSize) {
@@ -134,7 +119,7 @@ public class ChunkedStreamSinkChannel extends DelegatingStreamSinkChannel<Chunke
                         return (int) (result - chunkingSize);
                     }
                 } else {
-                    int result = delegate.write(src);
+                    int result = next.write(src);
                     chunkleft -= result;
                     return result;
                 }
@@ -159,7 +144,7 @@ public class ChunkedStreamSinkChannel extends DelegatingStreamSinkChannel<Chunke
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             throw new ClosedChannelException();
         }
-        return src.transferTo(position, count, this);
+        return src.transferTo(position, count, new ConduitWritableByteChannel(this));
     }
 
     @Override
@@ -167,37 +152,37 @@ public class ChunkedStreamSinkChannel extends DelegatingStreamSinkChannel<Chunke
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             throw new ClosedChannelException();
         }
-        return IoUtils.transfer(source, count, throughBuffer, this);
+        return IoUtils.transfer(source, count, throughBuffer, new ConduitWritableByteChannel(this));
     }
 
     @Override
     public boolean flush() throws IOException {
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
-            if (anyAreSet(state, FLAG_DELEGATE_SHUTDWON)) {
-                return delegate.flush();
+            if (anyAreSet(state, FLAG_next_SHUTDWON)) {
+                return next.flush();
             } else {
-                delegate.write(chunkingBuffer);
+                next.write(chunkingBuffer);
                 if (!chunkingBuffer.hasRemaining()) {
                     try {
                         if(anyAreSet(config, CONF_FLAG_PASS_CLOSE)) {
-                            delegate.shutdownWrites();
+                            next.terminateWrites();
                         }
-                        state |= FLAG_DELEGATE_SHUTDWON;
-                        return delegate.flush();
+                        state |= FLAG_next_SHUTDWON;
+                        return next.flush();
                     } finally {
-                        ChannelListeners.invokeChannelListener(this, finishListener);
+                        finishListener.handleEvent(this);
                     }
                 } else {
                     return false;
                 }
             }
         } else {
-            return delegate.flush();
+            return next.flush();
         }
     }
 
     @Override
-    public void shutdownWrites() throws IOException {
+    public void terminateWrites() throws IOException {
         if (this.chunkleft != 0) {
             throw UndertowMessages.MESSAGES.chunkedChannelClosedMidChunk();
         }
@@ -211,25 +196,11 @@ public class ChunkedStreamSinkChannel extends DelegatingStreamSinkChannel<Chunke
     }
 
     @Override
-    public void close() throws IOException {
-        try {
-            if(anyAreSet(config, CONF_FLAG_PASS_CLOSE)) {
-                delegate.close();
-            }
-            if (anyAreClear(state, FLAG_DELEGATE_SHUTDWON)) {
-                throw UndertowMessages.MESSAGES.closeCalledWithDataStillToBeFlushed();
-            }
-        } finally {
-            invokeChannelListener(this, closeSetter.get());
-        }
-    }
-
-    @Override
     public void awaitWritable() throws IOException {
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             throw new ClosedChannelException();
         }
-        delegate.awaitWritable();
+        next.awaitWritable();
     }
 
     @Override
@@ -237,26 +208,6 @@ public class ChunkedStreamSinkChannel extends DelegatingStreamSinkChannel<Chunke
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             throw new ClosedChannelException();
         }
-        delegate.awaitWritable(time, timeUnit);
-    }
-
-    @Override
-    public boolean isOpen() {
-        return allAreClear(state, FLAG_DELEGATE_SHUTDWON) && delegate.isOpen();
-    }
-
-    @Override
-    public boolean supportsOption(final Option<?> option) {
-        return allAreSet(config, CONF_FLAG_CONFIGURABLE) && delegate.supportsOption(option);
-    }
-
-    @Override
-    public <T> T getOption(final Option<T> option) throws IOException {
-        return allAreSet(config, CONF_FLAG_CONFIGURABLE) ? delegate.getOption(option) : null;
-    }
-
-    @Override
-    public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
-        return allAreSet(config, CONF_FLAG_CONFIGURABLE) ? delegate.setOption(option, value) : null;
+        next.awaitWritable(time, timeUnit);
     }
 }

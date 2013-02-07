@@ -17,17 +17,18 @@
  */
 package io.undertow.websockets.core.function;
 
-import org.xnio.ChannelListener;
-import org.xnio.Option;
-import org.xnio.XnioExecutor;
-import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+
+import org.xnio.ChannelListener;
+import org.xnio.Option;
+import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -142,6 +143,11 @@ public class ChannelFunctionStreamSourceChannel implements StreamSourceChannel {
     @Override
     public XnioWorker getWorker() {
         return channel.getWorker();
+    }
+
+    @Override
+    public XnioIoThread getIoThread() {
+        return channel.getIoThread();
     }
 
     @Override

@@ -20,6 +20,7 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -32,10 +33,11 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.io.Sender;
 import io.undertow.util.AbstractAttachable;
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.util.ImmediateChannelFactory;
+import io.undertow.util.ImmediateConduitFactory;
 import io.undertow.util.Protocols;
 import io.undertow.util.SecureHashMap;
 import org.jboss.logging.Logger;
@@ -43,11 +45,18 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
+import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
-import org.xnio.channels.ChannelFactory;
 import org.xnio.channels.Channels;
+import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
+import org.xnio.conduits.StreamSinkChannelWrappingConduit;
+import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.StreamSourceChannelWrappingConduit;
+import org.xnio.conduits.StreamSourceConduit;
 
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreClear;
@@ -75,7 +84,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private Map<String, Deque<String>> queryParameters;
 
     private final StreamSinkChannel underlyingResponseChannel;
-    private final StreamSourceChannel underlyingRequestChannel;
+    private final PushBackStreamChannel underlyingRequestChannel;
     /**
      * The actual response channel. May be null if it has not been created yet.
      */
@@ -119,8 +128,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private String queryString;
 
-    private List<ChannelWrapper<StreamSourceChannel>> requestWrappers = new ArrayList<ChannelWrapper<StreamSourceChannel>>(3);
-    private List<ChannelWrapper<StreamSinkChannel>> responseWrappers = new ArrayList<ChannelWrapper<StreamSinkChannel>>(3);
+    private List<ConduitWrapper<StreamSourceConduit>> requestWrappers = new ArrayList<ConduitWrapper<StreamSourceConduit>>(3);
+    private List<ConduitWrapper<StreamSinkConduit>> responseWrappers = new ArrayList<ConduitWrapper<StreamSinkConduit>>(3);
 
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
     private static final int FLAG_RESPONSE_SENT = 1 << 10;
@@ -128,7 +137,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_PERSISTENT = 1 << 14;
 
-    public HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
+    public HttpServerExchange(final HttpServerConnection connection, final PushBackStreamChannel requestChannel, final StreamSinkChannel responseChannel) {
         this.connection = connection;
         this.underlyingRequestChannel = requestChannel;
         if(connection == null) {
@@ -488,24 +497,24 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the channel for the inbound request, or {@code null} if another party already acquired the channel
      */
     public StreamSourceChannel getRequestChannel() {
-        final List<ChannelWrapper<StreamSourceChannel>> wrappers = this.requestWrappers;
+        final List<ConduitWrapper<StreamSourceConduit>> wrappers = this.requestWrappers;
         this.requestWrappers = null;
         if (wrappers == null) {
             return null;
         }
 
 
-        ChannelFactory<StreamSourceChannel> factory = new ImmediateChannelFactory<StreamSourceChannel>(underlyingRequestChannel);
-        for (final ChannelWrapper<StreamSourceChannel> wrapper : wrappers) {
-            final ChannelFactory oldFactory = factory;
-            factory = new ChannelFactory<StreamSourceChannel>() {
+        ConduitFactory<StreamSourceConduit> factory = new ImmediateConduitFactory<StreamSourceConduit>(new StreamSourceChannelWrappingConduit(underlyingRequestChannel));
+        for (final ConduitWrapper<StreamSourceConduit> wrapper : wrappers) {
+            final ConduitFactory oldFactory = factory;
+            factory = new ConduitFactory<StreamSourceConduit>() {
                 @Override
-                public StreamSourceChannel create() {
+                public StreamSourceConduit create() {
                     return wrapper.wrap(oldFactory, HttpServerExchange.this);
                 }
             };
         }
-        return requestChannel = factory.create();
+        return requestChannel = new ConduitStreamSourceChannel(underlyingRequestChannel, factory.create());
     }
 
     public boolean isRequestChannelAvailable() {
@@ -540,6 +549,15 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * Pushes back the given data. This should only be used by transfer coding handlers that have read past
+     * the end of the request when handling pipelined requests
+     * @param buffer The buffer to push back
+     */
+    public void ungetRequestBytes(final Pooled<ByteBuffer> buffer) {
+        underlyingRequestChannel.unget(buffer);
+    }
+
+    /**
      * Get the response channel. The channel must be closed and fully flushed before the next response can be started.
      * In order to close the channel you must first call {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()},
      * and then call {@link org.xnio.channels.StreamSinkChannel#flush()} until it returns true. Alternativly you can
@@ -561,23 +579,23 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the response channel, or {@code null} if another party already acquired the channel
      */
     public StreamSinkChannel getResponseChannel() {
-        final List<ChannelWrapper<StreamSinkChannel>> wrappers = responseWrappers;
+        final List<ConduitWrapper<StreamSinkConduit>> wrappers = responseWrappers;
         this.responseWrappers = null;
         if (wrappers == null) {
             return null;
         }
 
-        ChannelFactory<StreamSinkChannel> factory = new ImmediateChannelFactory<StreamSinkChannel>(underlyingResponseChannel);
-        for (final ChannelWrapper<StreamSinkChannel> wrapper : wrappers) {
-            final ChannelFactory oldFactory = factory;
-            factory = new ChannelFactory<StreamSinkChannel>() {
+        ConduitFactory<StreamSinkConduit> factory = new ImmediateConduitFactory<StreamSinkConduit>(new StreamSinkChannelWrappingConduit(underlyingResponseChannel));
+        for (final ConduitWrapper<StreamSinkConduit> wrapper : wrappers) {
+            final ConduitFactory oldFactory = factory;
+            factory = new ConduitFactory<StreamSinkConduit>() {
                 @Override
-                public StreamSinkChannel create() {
+                public StreamSinkConduit create() {
                     return wrapper.wrap(oldFactory, HttpServerExchange.this);
                 }
             };
         }
-        final StreamSinkChannel channel = factory.create();
+        final StreamSinkChannel channel = new ConduitStreamSinkChannel(underlyingResponseChannel, factory.create());
         this.responseChannel = channel;
         this.startResponse();
         return channel;
@@ -624,12 +642,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Adds a {@link ChannelWrapper} to the request wrapper chain.
+     * Adds a {@link ConduitWrapper} to the request wrapper chain.
      *
      * @param wrapper the wrapper
      */
-    public void addRequestWrapper(final ChannelWrapper<StreamSourceChannel> wrapper) {
-        List<ChannelWrapper<StreamSourceChannel>> wrappers = requestWrappers;
+    public void addRequestWrapper(final ConduitWrapper<StreamSourceConduit> wrapper) {
+        List<ConduitWrapper<StreamSourceConduit>> wrappers = requestWrappers;
         if (wrappers == null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
@@ -637,12 +655,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Adds a {@link ChannelWrapper} to the response wrapper chain.
+     * Adds a {@link ConduitWrapper} to the response wrapper chain.
      *
      * @param wrapper the wrapper
      */
-    public void addResponseWrapper(final ChannelWrapper<StreamSinkChannel> wrapper) {
-        List<ChannelWrapper<StreamSinkChannel>> wrappers = responseWrappers;
+    public void addResponseWrapper(final ConduitWrapper<StreamSinkConduit> wrapper) {
+        List<ConduitWrapper<StreamSinkConduit>> wrappers = responseWrappers;
         if (wrappers == null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
@@ -670,7 +688,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         this.state = oldVal | FLAG_RESPONSE_TERMINATED;
         if(anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
-            boolean upgrade = getResponseCode() == 101;
             for(ExchangeCompletionListener listener : exchangeCompleteListeners) {
                 listener.exchangeEvent(this);
             }

@@ -29,6 +29,7 @@ import org.xnio.ChannelListener.SimpleSetter;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -410,6 +411,11 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendC
     @Override
     public XnioWorker getWorker() {
         return channel.getWorker();
+    }
+
+    @Override
+    public XnioIoThread getIoThread() {
+        return channel.getIoThread();
     }
 
     /**

@@ -23,9 +23,9 @@ import java.nio.ByteBuffer;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.channels.BufferingStreamSinkChannel;
 import io.undertow.channels.ReadTimeoutStreamSourceChannel;
 import io.undertow.channels.WriteTimeoutStreamSinkChannel;
+import io.undertow.conduits.BufferingStreamSinkConduit;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import org.xnio.Options;
@@ -37,6 +37,7 @@ import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.SslChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -78,7 +79,7 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
         }
         PipeLiningBuffer pipeLiningBuffer = null;
         if(undertowOptions.get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
-            pipeLiningBuffer = new BufferingStreamSinkChannel(writeChannel, bufferPool);
+            pipeLiningBuffer = new BufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(writeChannel), bufferPool);
         }
 
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(readChannel);

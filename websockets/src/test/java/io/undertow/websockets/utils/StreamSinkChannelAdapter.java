@@ -27,20 +27,21 @@ import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- * 
- * 
+ *
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
 public class StreamSinkChannelAdapter implements StreamSinkChannel {
 
-    private final ChannelListener.SimpleSetter<? extends StreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<StreamSinkChannel>(); 
-    private final ChannelListener.SimpleSetter<? extends StreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<StreamSinkChannel>(); 
+    private final ChannelListener.SimpleSetter<? extends StreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<StreamSinkChannel>();
+    private final ChannelListener.SimpleSetter<? extends StreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<StreamSinkChannel>();
 
     private final WritableByteChannel channel;
 
@@ -108,12 +109,12 @@ public class StreamSinkChannelAdapter implements StreamSinkChannel {
 
     @Override
     public void awaitWritable() throws IOException {
-        
+
     }
 
     @Override
     public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
-        
+
     }
 
     @Override
@@ -129,6 +130,11 @@ public class StreamSinkChannelAdapter implements StreamSinkChannel {
     @Override
     public XnioWorker getWorker() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public XnioIoThread getIoThread() {
+        return null;
     }
 
     @Override

@@ -1,8 +1,8 @@
 package io.undertow.server;
 
-import org.xnio.channels.StreamSinkChannel;
-
 import java.io.IOException;
+
+import org.xnio.conduits.StreamSinkConduit;
 
 /**
  * Represents a buffer that is used when processing pipelined requests, that allows the server to
@@ -32,7 +32,7 @@ public interface PipeLiningBuffer {
      *
      * @return The channel wrapper
      */
-    ChannelWrapper<StreamSinkChannel> getChannelWrapper();
+    ConduitWrapper<StreamSinkConduit> getChannelWrapper();
 
     /**
      * This method should be called when the underlying channel

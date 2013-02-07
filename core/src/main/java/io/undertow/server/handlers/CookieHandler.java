@@ -26,15 +26,15 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
-import io.undertow.server.ChannelWrapper;
+import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentList;
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
-import org.xnio.channels.ChannelFactory;
-import org.xnio.channels.StreamSinkChannel;
+import org.xnio.conduits.StreamSinkConduit;
 
 /**
  * @author Stuart Douglas
@@ -59,7 +59,7 @@ public class CookieHandler implements HttpHandler {
         final Map<String, Cookie> cookies = parseCookies(exchange);
         exchange.putAttachment(Cookie.REQUEST_COOKIES, new CopyOnWriteMap<String, Cookie>(cookies));
         exchange.putAttachment(Cookie.RESPONSE_COOKIES, new AttachmentList<Cookie>(Cookie.class));
-        exchange.addResponseWrapper(CookieChannelWrapper.INSTANCE);
+        exchange.addResponseWrapper(CookieConduitWrapper.INSTANCE);
         HttpHandlers.executeHandler(next, exchange);
     }
 
@@ -262,12 +262,12 @@ public class CookieHandler implements HttpHandler {
         this.next = next;
     }
 
-    private static class CookieChannelWrapper implements ChannelWrapper<StreamSinkChannel> {
+    private static class CookieConduitWrapper implements ConduitWrapper<StreamSinkConduit> {
 
-        public static CookieChannelWrapper INSTANCE = new CookieChannelWrapper();
+        public static CookieConduitWrapper INSTANCE = new CookieConduitWrapper();
 
         @Override
-        public StreamSinkChannel wrap(final ChannelFactory<StreamSinkChannel> channel, final HttpServerExchange exchange) {
+        public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> channel, final HttpServerExchange exchange) {
 
             final List<Cookie> cookies = exchange.getAttachmentList(Cookie.RESPONSE_COOKIES);
             if (!cookies.isEmpty()) {

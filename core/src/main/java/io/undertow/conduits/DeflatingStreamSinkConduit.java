@@ -1,4 +1,4 @@
-package io.undertow.channels;
+package io.undertow.conduits;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -8,17 +8,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.Headers;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.Option;
 import org.xnio.Pooled;
-import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
-import org.xnio.channels.ChannelFactory;
-import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.WriteReadyHandler;
 
 import static org.xnio.Bits.anyAreSet;
 
@@ -27,24 +26,18 @@ import static org.xnio.Bits.anyAreSet;
  *
  * @author Stuart Douglas
  */
-public class DeflatingStreamSinkChannel implements StreamSinkChannel {
-
-    private final ChannelListener.SimpleSetter<DeflatingStreamSinkChannel> closeSetter = new ChannelListener.SimpleSetter<DeflatingStreamSinkChannel>();
-    private final ChannelListener.SimpleSetter<DeflatingStreamSinkChannel> writeSetter = new ChannelListener.SimpleSetter<DeflatingStreamSinkChannel>();
+public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     private final Deflater deflater;
-    private final ChannelFactory<StreamSinkChannel> channelFactory;
+    private final ConduitFactory<StreamSinkConduit> conduitFactory;
     private final HttpServerExchange exchange;
 
-    /**
-     * The original content length
-     */
-    private final Long reportedContentLength;
+    private StreamSinkConduit next;
+    private WriteReadyHandler writeReadyHandler;
 
-    private StreamSinkChannel delegate;
 
     /**
-     * The streams buffer. This is freed when the delegate is shutdown
+     * The streams buffer. This is freed when the next is shutdown
      */
     private final Pooled<ByteBuffer> currentBuffer;
     /**
@@ -54,25 +47,18 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
 
     private int state = 0;
 
-
     private static final int SHUTDOWN = 1;
-    private static final int DELEGATE_SHUTDOWN = 1 << 1;
+    private static final int next_SHUTDOWN = 1 << 1;
     private static final int FLUSHING_BUFFER = 1 << 2;
     private static final int WRITES_RESUMED = 1 << 3;
     private static final int CLOSED = 1 << 4;
 
+    public DeflatingStreamSinkConduit(final ConduitFactory<StreamSinkConduit> conduitFactory, final HttpServerExchange exchange) {
 
-    public DeflatingStreamSinkChannel(final ChannelFactory<StreamSinkChannel> channelFactory, final HttpServerExchange exchange) {
         deflater = new Deflater(Deflater.DEFLATED, true);
         this.currentBuffer = exchange.getConnection().getBufferPool().allocate();
         this.exchange = exchange;
-        this.channelFactory = channelFactory;
-        String contentLength = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
-        if (contentLength != null) {
-            reportedContentLength = Long.parseLong(contentLength);
-        } else {
-            reportedContentLength = null;
-        }
+        this.conduitFactory = conduitFactory;
     }
 
     @Override
@@ -112,11 +98,6 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
     }
 
     @Override
-    public long write(final ByteBuffer[] srcs) throws IOException {
-        return write(srcs, 0, srcs.length);
-    }
-
-    @Override
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
         if (anyAreSet(SHUTDOWN | CLOSED, state)) {
             throw new ClosedChannelException();
@@ -124,7 +105,7 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
         if (!performFlushIfRequired()) {
             return 0;
         }
-        return src.transferTo(position, count, this);
+        return src.transferTo(position, count, new ConduitWritableByteChannel(this));
     }
 
 
@@ -136,17 +117,7 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
         if (!performFlushIfRequired()) {
             return 0;
         }
-        return IoUtils.transfer(source, count, throughBuffer, this);
-    }
-
-    @Override
-    public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter() {
-        return writeSetter;
-    }
-
-    @Override
-    public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
-        return closeSetter;
+        return IoUtils.transfer(source, count, throughBuffer, new ConduitWritableByteChannel(this));
     }
 
     @Override
@@ -156,39 +127,39 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
 
     @Override
     public void suspendWrites() {
-        if (delegate == null) {
+        if (next == null) {
             state = state & ~WRITES_RESUMED;
         } else {
-            delegate.suspendWrites();
+            next.suspendWrites();
         }
     }
 
 
     @Override
     public boolean isWriteResumed() {
-        if (delegate == null) {
+        if (next == null) {
             return anyAreSet(WRITES_RESUMED, state);
         } else {
-            return delegate.isWriteResumed();
+            return next.isWriteResumed();
         }
     }
 
     @Override
     public void wakeupWrites() {
-        if (delegate == null) {
+        if (next == null) {
             resumeWrites();
         } else {
-            delegate.wakeupWrites();
+            next.wakeupWrites();
         }
     }
 
     @Override
     public void resumeWrites() {
-        if (delegate == null) {
+        if (next == null) {
             state |= WRITES_RESUMED;
             queueWriteListener();
         } else {
-            delegate.resumeWrites();
+            next.resumeWrites();
         }
     }
 
@@ -196,12 +167,14 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
         exchange.getConnection().getChannel().getWriteThread().execute(new Runnable() {
             @Override
             public void run() {
-                try {
-                    ChannelListeners.invokeChannelListener(DeflatingStreamSinkChannel.this, writeSetter.get());
-                } finally {
-                    //if writes are still resumed queue up another one
-                    if (delegate == null && isWriteResumed()) {
-                        queueWriteListener();
+                if(writeReadyHandler != null) {
+                    try {
+                        writeReadyHandler.writeReady();
+                    } finally {
+                        //if writes are still resumed queue up another one
+                        if (next == null && isWriteResumed()) {
+                            queueWriteListener();
+                        }
                     }
                 }
             }
@@ -210,41 +183,51 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
 
 
     @Override
-    public void shutdownWrites() throws IOException {
+    public void terminateWrites() throws IOException {
         deflater.finish();
         state |= SHUTDOWN;
     }
 
     @Override
+    public boolean isWriteShutdown() {
+        return anyAreSet(state, SHUTDOWN);
+    }
+
+    @Override
     public void awaitWritable() throws IOException {
-        if (delegate == null) {
+        if (next == null) {
             return;
         } else {
-            delegate.awaitWritable();
+            next.awaitWritable();
         }
     }
 
     @Override
     public void awaitWritable(final long time, final TimeUnit timeUnit) throws IOException {
-        if (delegate == null) {
+        if (next == null) {
             return;
         } else {
-            delegate.awaitWritable(time, timeUnit);
+            next.awaitWritable(time, timeUnit);
         }
     }
 
     @Override
-    public XnioExecutor getWriteThread() {
-        return exchange.getWriteThread();
+    public XnioIoThread getWriteThread() {
+        return exchange.getConnection().getIoThread();
+    }
+
+    @Override
+    public void setWriteReadyHandler(final WriteReadyHandler handler) {
+        this.writeReadyHandler = handler;
     }
 
     @Override
     public boolean flush() throws IOException {
-        boolean delegateCreated = false;
+        boolean nextCreated = false;
         try {
             if (anyAreSet(SHUTDOWN, state)) {
-                if (anyAreSet(DELEGATE_SHUTDOWN, state)) {
-                    return delegate.flush();
+                if (anyAreSet(next_SHUTDOWN, state)) {
+                    return next.flush();
                 } else {
                     if (!performFlushIfRequired()) {
                         return false;
@@ -261,16 +244,16 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
                     if (!anyAreSet(FLUSHING_BUFFER, state)) {
                         currentBuffer.getResource().flip();
                         state |= FLUSHING_BUFFER;
-                        if(delegate == null) {
-                            delegateCreated = true;
-                            createDelegate();
+                        if(next == null) {
+                            nextCreated = true;
+                            createnext();
                         }
                     }
                     if (performFlushIfRequired()) {
-                        state |= DELEGATE_SHUTDOWN;
+                        state |= next_SHUTDOWN;
                         currentBuffer.free();
-                        delegate.shutdownWrites();
-                        return delegate.flush();
+                        next.terminateWrites();
+                        return next.flush();
                     } else {
                         return false;
                     }
@@ -279,9 +262,9 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
                 return performFlushIfRequired();
             }
         } finally {
-            if (delegateCreated) {
-                if (anyAreSet(WRITES_RESUMED, state) && !anyAreSet(DELEGATE_SHUTDOWN, state)) {
-                    delegate.resumeWrites();
+            if (nextCreated) {
+                if (anyAreSet(WRITES_RESUMED, state) && !anyAreSet(next_SHUTDOWN, state)) {
+                    next.resumeWrites();
                 }
             }
         }
@@ -305,7 +288,7 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
             long total = 0;
             long res = 0;
             do {
-                res = delegate.write(bufs);
+                res = next.write(bufs, 0, bufs.length);
                 total += res;
                 if (res == 0) {
                     return false;
@@ -319,7 +302,7 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
     }
 
 
-    private void createDelegate() {
+    private void createnext() {
         if (deflater.finished()) {
             //the deflater was fully flushed before we created the channel. This means that what is in the buffer is
             //all there is
@@ -331,9 +314,7 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
         } else {
             exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
         }
-        this.delegate = channelFactory.create();
-        delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
-        delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
+        this.next = conduitFactory.create();
     }
 
     /**
@@ -345,7 +326,7 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
     private void deflateData() throws IOException {
         //we don't need to flush here, as this should have been called already by the time we get to
         //this point
-        boolean delegateCreated = false;
+        boolean nextCreated = false;
         try {
             Pooled<ByteBuffer> pooled = this.currentBuffer;
             final ByteBuffer outputBuffer = pooled.getResource();
@@ -368,9 +349,9 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
                         }
                         outputBuffer.flip();
                         this.state |= FLUSHING_BUFFER;
-                        if (delegate == null) {
-                            delegateCreated = true;
-                            createDelegate();
+                        if (next == null) {
+                            nextCreated = true;
+                            createnext();
                         }
                         if (!performFlushIfRequired()) {
                             return;
@@ -379,41 +360,21 @@ public class DeflatingStreamSinkChannel implements StreamSinkChannel {
                 }
             }
         } finally {
-            if (delegateCreated) {
+            if (nextCreated) {
                 if (anyAreSet(WRITES_RESUMED, state)) {
-                    delegate.resumeWrites();
+                    next.resumeWrites();
                 }
             }
         }
     }
 
-    @Override
-    public boolean isOpen() {
-        return !anyAreSet(SHUTDOWN | CLOSED, state);
-    }
 
     @Override
-    public void close() throws IOException {
-        if (!anyAreSet(DELEGATE_SHUTDOWN, state)) {
+    public void truncateWrites() throws IOException {
+        if (!anyAreSet(next_SHUTDOWN, state)) {
             currentBuffer.free();
         }
         state |= CLOSED;
-        delegate.close();
-    }
-
-    //TODO: not sure about these methods, I think we may need to store any options that are set
-    @Override
-    public boolean supportsOption(final Option<?> option) {
-        return exchange.getConnection().getChannel().supportsOption(option);
-    }
-
-    @Override
-    public <T> T getOption(final Option<T> option) throws IOException {
-        return exchange.getConnection().getChannel().getOption(option);
-    }
-
-    @Override
-    public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
-        return exchange.getConnection().getChannel().setOption(option, value);
+        next.truncateWrites();
     }
 }

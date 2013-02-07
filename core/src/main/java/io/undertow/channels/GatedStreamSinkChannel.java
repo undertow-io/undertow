@@ -18,15 +18,6 @@
 
 package io.undertow.channels;
 
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.Option;
-import org.xnio.XnioExecutor;
-import org.xnio.XnioWorker;
-import org.xnio.channels.ConcurrentStreamChannelAccessException;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
@@ -35,6 +26,16 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.Option;
+import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.channels.ConcurrentStreamChannelAccessException;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
 
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
@@ -174,6 +175,11 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
 
     public XnioWorker getWorker() {
         return delegate.getWorker();
+    }
+
+    @Override
+    public XnioIoThread getIoThread() {
+        return delegate.getIoThread();
     }
 
     public XnioExecutor getWriteThread() {

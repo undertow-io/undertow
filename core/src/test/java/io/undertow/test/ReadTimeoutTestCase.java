@@ -17,6 +17,7 @@ import io.undertow.util.TestHttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.AbstractHttpEntity;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.ChannelExceptionHandler;
@@ -35,6 +36,7 @@ import org.xnio.channels.StreamSourceChannel;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@Ignore
 public class ReadTimeoutTestCase {
 
     private volatile Exception exception;

@@ -32,6 +32,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
+import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.ConnectedStreamChannel;
@@ -101,6 +102,11 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
 
     public XnioWorker getWorker() {
         return channel.getWorker();
+    }
+
+    @Override
+    public XnioIoThread getIoThread() {
+        return channel.getIoThread();
     }
 
     public boolean isOpen() {

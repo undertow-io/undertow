@@ -18,23 +18,6 @@
 
 package io.undertow.ajp;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.StatusCodes;
-import org.jboss.logging.Logger;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.Option;
-import org.xnio.Pool;
-import org.xnio.Pooled;
-import org.xnio.XnioExecutor;
-import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -44,6 +27,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import io.undertow.UndertowLogger;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
+import org.jboss.logging.Logger;
+import org.xnio.IoUtils;
+import org.xnio.Pool;
+import org.xnio.Pooled;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.StreamSinkConduit;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
@@ -56,7 +53,7 @@ import static org.xnio.Bits.anyAreSet;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author Stuart Douglas
  */
-final class AjpResponseChannel implements StreamSinkChannel {
+final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.channel.ajp.response");
 
@@ -64,8 +61,6 @@ final class AjpResponseChannel implements StreamSinkChannel {
 
     private static final Map<HttpString, Integer> HEADER_MAP;
 
-
-    private final StreamSinkChannel delegate;
     private final Pool<ByteBuffer> pool;
 
     /**
@@ -74,7 +69,7 @@ final class AjpResponseChannel implements StreamSinkChannel {
     @SuppressWarnings("unused")
     private volatile int state = FLAG_START;
 
-    private static final AtomicIntegerFieldUpdater<AjpResponseChannel> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(AjpResponseChannel.class, "state");
+    private static final AtomicIntegerFieldUpdater<AjpResponseConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(AjpResponseConduit.class, "state");
 
     /**
      * The current data buffer. This will be released once it has been written out.
@@ -99,11 +94,6 @@ final class AjpResponseChannel implements StreamSinkChannel {
      */
     private volatile ByteBuffer readBodyChunkBuffer;
 
-    private boolean writesResumed = false;
-
-    private final ChannelListener.SimpleSetter<AjpResponseChannel> writeSetter = new ChannelListener.SimpleSetter<AjpResponseChannel>();
-    private final ChannelListener.SimpleSetter<AjpResponseChannel> closeSetter = new ChannelListener.SimpleSetter<AjpResponseChannel>();
-
     private static final int FLAG_START = 1; //indicates that the header has not been generated yet.
     private static final int FLAG_SHUTDOWN = 1 << 2;
     private static final int FLAG_DELEGATE_SHUTDOWN = 1 << 3;
@@ -126,21 +116,11 @@ final class AjpResponseChannel implements StreamSinkChannel {
         HEADER_MAP = Collections.unmodifiableMap(headers);
     }
 
-    AjpResponseChannel(final StreamSinkChannel delegate, final Pool<ByteBuffer> pool, final HttpServerExchange exchange) {
-        this.delegate = delegate;
+    AjpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final HttpServerExchange exchange) {
+        super(next);
         this.pool = pool;
         this.exchange = exchange;
-        delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
-        delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
         state = FLAG_START;
-    }
-
-    public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter() {
-        return writeSetter;
-    }
-
-    public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
-        return closeSetter;
     }
 
     private void putInt(final ByteBuffer buf, int value) {
@@ -218,12 +198,12 @@ final class AjpResponseChannel implements StreamSinkChannel {
             }
         }
 
-        //now delegate writing to the active request channel, so it can send
+        //now next writing to the active request channel, so it can send
         //its messages
         ByteBuffer readBuffer = readBodyChunkBuffer;
         if (readBuffer != null) {
             do {
-                int res = delegate.write(readBuffer);
+                int res = next.write(readBuffer);
                 if (res == 0) {
                     stateUpdater.set(this, newState & ~FLAG_WRITE_ENTERED); //clear the write entered flag
                     return false;
@@ -263,7 +243,7 @@ final class AjpResponseChannel implements StreamSinkChannel {
         }
         long r = 0;
         do {
-            r = delegate.write(this.packetHeaderAndDataBuffer);
+            r = next.write(this.packetHeaderAndDataBuffer, 0, this.packetHeaderAndDataBuffer.length);
             if (r == -1) {
                 throw new ClosedChannelException();
             } else if (r == 0) {
@@ -296,7 +276,7 @@ final class AjpResponseChannel implements StreamSinkChannel {
                 int total = 0;
                 long r = 0;
                 do {
-                    r = delegate.write(buffers);
+                    r = next.write(buffers, 0, buffers.length);
                     total += r;
                     toWrite -= r;
                     if (r == -1) {
@@ -375,11 +355,11 @@ final class AjpResponseChannel implements StreamSinkChannel {
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
-        return src.transferTo(position, count, this);
+        return src.transferTo(position, count, new ConduitWritableByteChannel(this));
     }
 
     public long transferFrom(final StreamSourceChannel source, final long count, final ByteBuffer throughBuffer) throws IOException {
-        return IoUtils.transfer(source, count, throughBuffer, this);
+        return IoUtils.transfer(source, count, throughBuffer, new ConduitWritableByteChannel(this));
     }
 
     public boolean flush() throws IOException {
@@ -389,10 +369,10 @@ final class AjpResponseChannel implements StreamSinkChannel {
         try {
             int state = this.state;
             if (allAreSet(state, FLAG_SHUTDOWN) && allAreClear(state, FLAG_DELEGATE_SHUTDOWN)) {
-                delegate.shutdownWrites();
+                next.terminateWrites();
                 stateUpdater.set(this, state | FLAG_DELEGATE_SHUTDOWN);
             }
-            return delegate.flush();
+            return next.flush();
         } finally {
             exitWrite();
         }
@@ -400,24 +380,24 @@ final class AjpResponseChannel implements StreamSinkChannel {
 
     public void suspendWrites() {
         log.trace("suspend");
-        delegate.suspendWrites();
+        next.suspendWrites();
     }
 
     public void resumeWrites() {
         log.trace("resume");
-        delegate.resumeWrites();
+        next.resumeWrites();
     }
 
     public boolean isWriteResumed() {
-        return delegate.isWriteResumed();
+        return next.isWriteResumed();
     }
 
     public void wakeupWrites() {
         log.trace("wakeup");
-        delegate.wakeupWrites();
+        next.wakeupWrites();
     }
 
-    public void shutdownWrites() throws IOException {
+    public void terminateWrites() throws IOException {
         int oldState = 0, newState = 0;
         do {
             oldState = this.state;
@@ -429,7 +409,7 @@ final class AjpResponseChannel implements StreamSinkChannel {
         if (allAreClear(oldState, FLAG_START) &&
                 readBodyChunkBuffer == null &&
                 packetHeaderAndDataBuffer == null) {
-            delegate.shutdownWrites();
+            next.terminateWrites();
             newState |= FLAG_DELEGATE_SHUTDOWN;
             while (stateUpdater.compareAndSet(this, oldState, newState)) {
                 oldState = state;
@@ -439,42 +419,14 @@ final class AjpResponseChannel implements StreamSinkChannel {
     }
 
     public void awaitWritable() throws IOException {
-        delegate.awaitWritable();
+        next.awaitWritable();
     }
 
     public void awaitWritable(final long time, final TimeUnit timeUnit) throws IOException {
-        delegate.awaitWritable(time, timeUnit);
+        next.awaitWritable(time, timeUnit);
     }
 
-    public boolean isOpen() {
-        return delegate.isOpen();
-    }
-
-    public void close() throws IOException {
-        delegate.close();
-    }
-
-    public XnioWorker getWorker() {
-        return delegate.getWorker();
-    }
-
-    public XnioExecutor getWriteThread() {
-        return delegate.getWriteThread();
-    }
-
-    public boolean supportsOption(final Option<?> option) {
-        return delegate.supportsOption(option);
-    }
-
-    public <T> T getOption(final Option<T> option) throws IOException {
-        return delegate.getOption(option);
-    }
-
-    public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
-        return delegate.setOption(option, value);
-    }
-
-    public boolean doGetRequestBodyChunk(ByteBuffer buffer, final AjpRequestChannel requestChannel) throws IOException {
+    public boolean doGetRequestBodyChunk(ByteBuffer buffer, final AjpRequestConduit requestChannel) throws IOException {
         this.readBodyChunkBuffer = buffer;
         boolean result = processWrite();
         if (result) {
@@ -487,8 +439,8 @@ final class AjpResponseChannel implements StreamSinkChannel {
                 @Override
                 public void run() {
                     try {
-                        while (AjpResponseChannel.this.readBodyChunkBuffer != null) {
-                            delegate.awaitWritable();
+                        while (AjpResponseConduit.this.readBodyChunkBuffer != null) {
+                            next.awaitWritable();
                             boolean result = processWrite();
                             if (result) {
                                 exitWrite();
@@ -499,7 +451,7 @@ final class AjpResponseChannel implements StreamSinkChannel {
                             requestChannel.wakeupReads();
                         }
                         if (isWriteResumed()) {
-                            delegate.wakeupWrites();
+                            next.wakeupWrites();
                         }
                         UndertowLogger.REQUEST_LOGGER.debug("Error writing get request body chunk");
                     }

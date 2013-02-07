@@ -1,14 +1,15 @@
 package io.undertow.ajp;
 
-import io.undertow.channels.DelegatingStreamSourceChannel;
-import org.xnio.IoUtils;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.conduits.AbstractStreamSourceConduit;
+import org.xnio.conduits.ConduitReadableByteChannel;
+import org.xnio.conduits.StreamSourceConduit;
 
 import static org.xnio.Bits.anyAreSet;
 import static org.xnio.Bits.longBitMask;
@@ -18,7 +19,7 @@ import static org.xnio.Bits.longBitMask;
  *
  * @author Stuart Douglas
  */
-public class AjpRequestChannel extends DelegatingStreamSourceChannel<AjpRequestChannel> {
+public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
 
     private static final ByteBuffer READ_BODY_CHUNK;
 
@@ -36,7 +37,7 @@ public class AjpRequestChannel extends DelegatingStreamSourceChannel<AjpRequestC
 
     }
 
-    private final AjpResponseChannel ajpResponseChannel;
+    private final AjpResponseConduit ajpResponseConduit;
 
     /**
      * The size of the incoming request. A size of 0 indicates that the request is using chunked encoding
@@ -79,9 +80,9 @@ public class AjpRequestChannel extends DelegatingStreamSourceChannel<AjpRequestC
      */
     private static final long STATE_MASK = longBitMask(0, 60);
 
-    public AjpRequestChannel(final StreamSourceChannel delegate, AjpResponseChannel ajpResponseChannel, Long size) {
+    public AjpRequestConduit(final StreamSourceConduit delegate, AjpResponseConduit ajpResponseConduit, Long size) {
         super(delegate);
-        this.ajpResponseChannel = ajpResponseChannel;
+        this.ajpResponseConduit = ajpResponseConduit;
         this.size = size;
         if (size == null) {
             state = STATE_SEND_REQUIRED;
@@ -97,17 +98,12 @@ public class AjpRequestChannel extends DelegatingStreamSourceChannel<AjpRequestC
 
     @Override
     public long transferTo(long position, long count, FileChannel target) throws IOException {
-        return target.transferFrom(this, position, count);
+        return target.transferFrom(new ConduitReadableByteChannel(this), position, count);
     }
 
     @Override
     public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        return IoUtils.transfer(this, count, throughBuffer, target);
-    }
-
-    @Override
-    public long read(ByteBuffer[] dsts) throws IOException {
-        return read(dsts, 0, dsts.length);
+        return IoUtils.transfer(new ConduitReadableByteChannel(this), count, throughBuffer, target);
     }
 
     @Override
@@ -135,7 +131,7 @@ public class AjpRequestChannel extends DelegatingStreamSourceChannel<AjpRequestC
             return -1;
         } else if (anyAreSet(state, STATE_SEND_REQUIRED)) {
             state = this.state = (state & STATE_MASK) | STATE_READING;
-            if (!ajpResponseChannel.doGetRequestBodyChunk(READ_BODY_CHUNK.duplicate(), this)) {
+            if (!ajpResponseConduit.doGetRequestBodyChunk(READ_BODY_CHUNK.duplicate(), this)) {
                 return 0;
             }
         }
@@ -157,7 +153,7 @@ public class AjpRequestChannel extends DelegatingStreamSourceChannel<AjpRequestC
         }
         long chunkRemaining;
         if (headerRead != HEADER_LENGTH) {
-            int read = delegate.read(headerBuffer);
+            int read = next.read(headerBuffer);
             if (read == -1) {
                 return read;
             } else if (headerBuffer.hasRemaining()) {
@@ -188,7 +184,7 @@ public class AjpRequestChannel extends DelegatingStreamSourceChannel<AjpRequestC
             if (limit > chunkRemaining) {
                 dst.limit((int) (dst.position() + chunkRemaining));
             }
-            int read = delegate.read(dst);
+            int read = next.read(dst);
             chunkRemaining -= read;
             if(remaining != -1) {
                 remaining -= read;
@@ -211,14 +207,14 @@ public class AjpRequestChannel extends DelegatingStreamSourceChannel<AjpRequestC
     @Override
     public void awaitReadable() throws IOException {
         if (anyAreSet(state, STATE_READING)) {
-            delegate.awaitReadable();
+            next.awaitReadable();
         }
     }
 
     @Override
     public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
         if (anyAreSet(state, STATE_READING)) {
-            delegate.awaitReadable(time, timeUnit);
+            next.awaitReadable(time, timeUnit);
         }
     }
 

@@ -26,21 +26,22 @@ import java.util.concurrent.TimeUnit;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- * 
- * 
+ *
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *
  */
 public class StreamSourceChannelAdapter implements StreamSourceChannel {
     private final ReadableByteChannel channel;
-    private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> readSetter = new ChannelListener.SimpleSetter<StreamSourceChannel>(); 
-    private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> closeSetter = new ChannelListener.SimpleSetter<StreamSourceChannel>(); 
+    private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> readSetter = new ChannelListener.SimpleSetter<StreamSourceChannel>();
+    private final ChannelListener.SimpleSetter<? extends StreamSourceChannel> closeSetter = new ChannelListener.SimpleSetter<StreamSourceChannel>();
 
     public StreamSourceChannelAdapter(ReadableByteChannel channel) {
         this.channel = channel;
@@ -104,7 +105,7 @@ public class StreamSourceChannelAdapter implements StreamSourceChannel {
     @Override
     public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
         throw new UnsupportedOperationException();
-        
+
     }
 
     @Override
@@ -116,6 +117,11 @@ public class StreamSourceChannelAdapter implements StreamSourceChannel {
     public XnioWorker getWorker() {
         throw new UnsupportedOperationException();
 
+    }
+
+    @Override
+    public XnioIoThread getIoThread() {
+        return null;
     }
 
     @Override
@@ -160,7 +166,7 @@ public class StreamSourceChannelAdapter implements StreamSourceChannel {
             }
         }
         return r;
-        
+
     }
 
     @Override
@@ -172,5 +178,5 @@ public class StreamSourceChannelAdapter implements StreamSourceChannel {
     public Setter<? extends StreamSourceChannel> getCloseSetter() {
         return closeSetter;
     }
-    
+
 }
