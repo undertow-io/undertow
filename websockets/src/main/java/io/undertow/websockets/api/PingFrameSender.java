@@ -19,6 +19,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
+ * Allows to send a PING message to the remote peer. The remote peer will then respond with a PONG message which contains
+ * the same payload as the one that was contained in the PING message. This is useful to check if the remote peer
+ * is still alive and can so be used to implement a heartbeat.
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public interface PingFrameSender {

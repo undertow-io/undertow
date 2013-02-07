@@ -127,4 +127,10 @@ public interface WebSocketMessages {
 
     @Message(id = 2031, value = "Only one FragmentedSender can be used at the same time")
     IllegalStateException fragmentedSenderInUse();
+
+    @Message(id = 2032, value = "Close frame was send before")
+    IOException closeFrameSentBefore();
+
+    @Message(id = 2033, value = "Blocking operation was called in IO thread")
+    IllegalStateException blockingOperationInIoThread();
 }

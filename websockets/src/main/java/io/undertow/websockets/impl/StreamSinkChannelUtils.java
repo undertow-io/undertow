@@ -102,6 +102,10 @@ final class StreamSinkChannelUtils {
         }
     }
 
+    /**
+     * Send the payload via the {@link StreamSinkChannel} in a non-blocking fashion and notifies the {@link SendCallback}
+     * once done.
+     */
     public static void send(StreamSinkChannel sink, final ByteBuffer payload, final SendCallback callback) {
         try {
             while (payload.hasRemaining()) {
@@ -133,6 +137,10 @@ final class StreamSinkChannelUtils {
         }
     }
 
+    /**
+     * Send the payload via the {@link StreamSinkChannel} in a non-blocking fashion and notifies the {@link SendCallback}
+     * once done.
+     */
     public static void send(StreamSinkChannel sink, final ByteBuffer[] payload, final SendCallback callback) {
         try {
             final long length = payloadLength(payload);
@@ -178,6 +186,10 @@ final class StreamSinkChannelUtils {
         }
     }
 
+
+    /**
+     * Send the payload via the {@link StreamSinkChannel} in a blocking fashion.
+     */
     public static void send(StreamSinkChannel sink, ByteBuffer payload) throws IOException {
         FlushingBlockingWritableByteChannel channel = new FlushingBlockingWritableByteChannel(sink);
         while(payload.hasRemaining()) {
@@ -186,6 +198,9 @@ final class StreamSinkChannelUtils {
         channel.close();
     }
 
+    /**
+     * Send the payload via the {@link StreamSinkChannel} in a blocking fashion.
+     */
     public static void send(StreamSinkChannel sink, ByteBuffer[] payload) throws IOException {
         long length = payloadLength(payload);
         FlushingBlockingWritableByteChannel channel = new FlushingBlockingWritableByteChannel(sink);
@@ -197,6 +212,19 @@ final class StreamSinkChannelUtils {
             }
         }
         channel.close();
+    }
+
+    /**
+     * Wraps the given {@link StreamSinkChannel} if a timeout needs to be applied for the send operation, otherwise
+     * it just return the given {@link StreamSinkChannel}.
+     *
+     */
+    public static StreamSinkChannel applyAsyncSendTimeout(WebSocketChannelSession session, StreamSinkChannel sink) {
+        int asyncSendtime = session.getAsyncSendTimeout();
+        if (asyncSendtime > 0) {
+            return new AsyncSendTimeoutStreamSinkChannel(session.getChannel(), sink, asyncSendtime);
+        }
+        return sink;
     }
 
     private StreamSinkChannelUtils() {

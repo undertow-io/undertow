@@ -15,13 +15,12 @@
  */
 package io.undertow.websockets.impl;
 
+import io.undertow.websockets.core.FragmentedMessageChannel;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.api.FragmentedTextFrameSender;
 import io.undertow.websockets.api.SendCallback;
-import org.xnio.ChannelListener;
+import io.undertow.websockets.core.WebSocketMessages;
 import org.xnio.channels.BlockingWritableByteChannel;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -36,41 +35,21 @@ import java.nio.ByteBuffer;
  */
 final class DefaultFragmentedTextFrameSender extends DefaultTextFrameSender implements FragmentedTextFrameSender {
 
-    private boolean firstFragment = true;
+    private FragmentedMessageChannel channel;
     private boolean finalFragment;
-    private boolean finalFragmentStarted;
-    private final WebSocketChannelSession session;
-
-    DefaultFragmentedTextFrameSender(WebSocketChannelSession session) {
-        super(session.getChannel());
-        this.session = session;
+    public DefaultFragmentedTextFrameSender(WebSocketChannelSession session){
+        super(session);
     }
 
     @Override
     protected StreamSinkFrameChannel createSink(long payloadSize) throws IOException {
-        if (finalFragmentStarted) {
-            throw WebSocketMessages.MESSAGES.fragmentedSenderCompleteAlready();
+        if (session.closeFrameSent) {
+            WebSocketMessages.MESSAGES.closeFrameSentBefore();
         }
-        if (finalFragment) {
-            finalFragmentStarted = true;
+        if (channel == null) {
+            channel = session.getChannel().sendFragmentedText();
         }
-
-        StreamSinkFrameChannel sink;
-        if (firstFragment) {
-            firstFragment = false;
-            sink = channel.send(WebSocketFrameType.TEXT, payloadSize);
-        } else {
-            sink =  channel.send(WebSocketFrameType.CONTINUATION, payloadSize);
-        }
-        sink.setFinalFragment(finalFragment);
-        if (finalFragment) {
-            sink.getCloseSetter().set(new ChannelListener<StreamSinkChannel>() {
-                @Override
-                public void handleEvent(StreamSinkChannel channel) {
-                    session.complete(DefaultFragmentedTextFrameSender.this);
-                }
-            });
-        }
+        StreamSinkFrameChannel sink = channel.send(payloadSize, finalFragment);
         return sink;
     }
 
@@ -79,35 +58,11 @@ final class DefaultFragmentedTextFrameSender extends DefaultTextFrameSender impl
         finalFragment = true;
     }
 
-
     @Override
     public void sendText(final ByteBuffer payload, final SendCallback callback) {
         try {
-            StreamSinkChannel sink = createSink(payload.remaining());
-            while (payload.hasRemaining()) {
-                if (sink.write(payload) == 0) {
-                    sink.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
-                        @Override
-                        public void handleEvent(StreamSinkChannel sink) {
-                            try {
-                                while (payload.hasRemaining()) {
-                                    if (sink.write(payload) == 0) {
-                                        sink.resumeWrites();
-                                        return;
-                                    }
-                                }
-                                StreamSinkChannelUtils.shutdownAndFlush(sink, callback);
-                            } catch (IOException e) {
-                                StreamSinkChannelUtils.safeNotify(callback, e);
-                            }
-                        }
-                    });
-                    sink.resumeWrites();
-                    return;
-                }
-            }
-            StreamSinkChannelUtils.shutdownAndFlush(sink, callback);
-
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session, createSink(payload.remaining()));
+            StreamSinkChannelUtils.send(sink, payload, callback);
         } catch (IOException e) {
             StreamSinkChannelUtils.safeNotify(callback, e);
         }
@@ -116,51 +71,17 @@ final class DefaultFragmentedTextFrameSender extends DefaultTextFrameSender impl
     @Override
     public void sendText(final ByteBuffer[] payload, final SendCallback callback) {
         try {
-            final long length = StreamSinkChannelUtils.payloadLength(payload);
-            long written = 0;
-            StreamSinkChannel sink = createSink(length);
-
-            while (written < length) {
-                long w = sink.write(payload);
-                if (w == 0) {
-                    final long writtenBytes = written;
-                    sink.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
-                        long written = writtenBytes;
-
-                        @Override
-                        public void handleEvent(StreamSinkChannel sink) {
-                            try {
-                                while (written < length) {
-                                    long w = sink.write(payload);
-                                    if (w == 0) {
-                                        sink.resumeWrites();
-                                        return;
-                                    }
-                                    if (w > 0) {
-                                        written += w;
-                                    }
-                                }
-                                StreamSinkChannelUtils.shutdownAndFlush(sink, callback);
-                            } catch (IOException e) {
-                                StreamSinkChannelUtils.safeNotify(callback, e);
-                            }
-                        }
-                    });
-                    sink.resumeWrites();
-                    return;
-                }
-                if (w > 0) {
-                    written +=w;
-                }
-            }
-            StreamSinkChannelUtils.shutdownAndFlush(sink, callback);
-
+            long length = StreamSinkChannelUtils.payloadLength(payload);
+            StreamSinkChannel sink = StreamSinkChannelUtils.applyAsyncSendTimeout(session, createSink(length));
+            StreamSinkChannelUtils.send(sink, payload, callback);
         } catch (IOException e) {
             StreamSinkChannelUtils.safeNotify(callback, e);
         }
     }
     @Override
     public void sendText(ByteBuffer payload) throws IOException {
+        checkBlockingAllowed();
+
         StreamSinkChannel sink = createSink(payload.remaining());
         BlockingWritableByteChannel channel = new BlockingWritableByteChannel(sink);
         while(payload.hasRemaining()) {
@@ -173,6 +94,8 @@ final class DefaultFragmentedTextFrameSender extends DefaultTextFrameSender impl
 
     @Override
     public void sendText(ByteBuffer[] payload) throws IOException {
+        checkBlockingAllowed();
+
         long length = StreamSinkChannelUtils.payloadLength(payload);
         StreamSinkChannel sink = createSink(length);
         BlockingWritableByteChannel channel = new BlockingWritableByteChannel(sink);

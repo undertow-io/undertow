@@ -19,6 +19,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
+ * Allows to send WebSocket PONG messages. PONG messages can be used to notify the remote peer that connection is still
+ * in use and active. Anyway the prefered way for doing this is to send a PING message.
+ *
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public interface PongFrameSender {

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Queue;
@@ -52,7 +53,7 @@ import static org.xnio.IoUtils.safeClose;
  */
 public abstract class WebSocketChannel implements ConnectedChannel {
 
-    private final Queue<StreamSinkFrameChannel> senders = new ArrayDeque<StreamSinkFrameChannel>();
+    private final Queue<SendChannel> senders = new ArrayDeque<SendChannel>();
     private final IdleTimeoutStreamChannel<ConnectedStreamChannel> channel;
     private final ConnectedStreamChannel connectedChannel;
 
@@ -75,7 +76,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private boolean closeFrameReceived;
     private final Set<String> subProtocols;
     private final boolean extensionsSupported;
-
+    private final Object sendersLock = new Object();
     /**
      * Create a new {@link WebSocketChannel}
      * 8
@@ -130,12 +131,17 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     }
 
     /**
-     * Check if the given {@link StreamSinkChannel} is currently active
+     * Check if the given {@link Channel} is currently active
      */
-    protected final boolean isActive(StreamSinkChannel channel) {
-        synchronized (senders) {
-            return senders.peek() == channel;
+    private boolean isActive(StreamSinkFrameChannel channel) {
+        SendChannel sender = senders.peek();
+        if (sender == channel) {
+            return true;
         }
+        if (sender instanceof FragmentedMessageChannelImpl) {
+            return ((FragmentedMessageChannelImpl) sender).isActive(channel);
+        }
+        return false;
     }
 
     @Override
@@ -367,7 +373,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * @param payloadSize The size of the payload which will be included in the WebSocket Frame. This may be 0 if you want
      *                    to transmit no payload at all.
      */
-    public StreamSinkFrameChannel send(WebSocketFrameType type, long payloadSize) throws IOException {
+    public final StreamSinkFrameChannel send(WebSocketFrameType type, long payloadSize) throws IOException {
         if (payloadSize < 0) {
             throw WebSocketMessages.MESSAGES.negativePayloadLength();
         }
@@ -375,14 +381,57 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             throw WebSocketMessages.MESSAGES.streamIsBroken();
         }
         StreamSinkFrameChannel ch = createStreamSinkChannel(channel, type, payloadSize);
-        synchronized (senders) {
-            senders.add(ch);
+        synchronized (sendersLock) {
+            if (type == WebSocketFrameType.PING || type == WebSocketFrameType.PONG || type == WebSocketFrameType.CLOSE) {
+                // PING / PONG / CLOSE frames can be send while a fragmented message is send, so take special care
+                SendChannel sch = senders.peek();
+                if (sch instanceof FragmentedMessageChannelImpl) {
+                    ((FragmentedMessageChannelImpl) sch).fragmentedSenders.add(ch);
+                } else {
+                    senders.add(ch);
+                }
+            } else {
+                senders.add(ch);
+            }
 
             if (isActive(ch)) {
                 // Channel is first in the queue so mark it as active
                 ch.activate();
             }
             return ch;
+        }
+    }
+
+    /**
+     * Return a {@link FragmentedMessageChannel} which can be used t send a TEXT WebSocket message in fragments.
+     * This means the first fragment will be send as TEXT frame and the following as CONTINUATION frames.
+     *
+     * If this method is called multiple times, subsequent {@link FragmentedMessageChannel}'s will not be writable until all previous frames
+     * were completely written.
+     *
+     */
+    public final FragmentedMessageChannel sendFragmentedText() {
+        FragmentedMessageChannelImpl fragmentedMessageChannel = new FragmentedMessageChannelImpl(WebSocketFrameType.TEXT);
+        synchronized (sendersLock) {
+            senders.add(fragmentedMessageChannel);
+            return fragmentedMessageChannel;
+        }
+    }
+
+
+    /**
+     * Return a {@link FragmentedMessageChannel} which can be used t send a BINARY WebSocket message in fragments.
+     * This means the first fragment will be send as TEXT frame and the following as CONTINUATION frames.
+     *
+     * If this method is called multiple times, subsequent {@link FragmentedMessageChannel}'s will not be writable until all previous frames
+     * were completely written.
+     *
+     */
+    public final FragmentedMessageChannel sendFragmentedBinary() {
+        FragmentedMessageChannelImpl fragmentedMessageChannel = new FragmentedMessageChannelImpl(WebSocketFrameType.BINARY);
+        synchronized (sendersLock) {
+            senders.add(fragmentedMessageChannel);
+            return fragmentedMessageChannel;
         }
     }
 
@@ -422,15 +471,31 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * Mark the given {@link StreamSinkFrameChannel} as complete and so remove the obtained ones. Calling this method will also
      * take care of call {@link StreamSinkFrameChannel#activate()} on the new active {@link StreamSinkFrameChannel}.
      */
-    protected final void complete(StreamSinkFrameChannel channel) {
-        synchronized (senders) {
+    final void complete(StreamSinkFrameChannel channel) {
+        synchronized (sendersLock) {
             boolean active = isActive(channel);
-            senders.remove(channel);
+
+            if (senders.peek() == channel) {
+                senders.remove(channel);
+            } else {
+                FragmentedMessageChannelImpl fragmented = (FragmentedMessageChannelImpl) senders.peek();
+                if (fragmented != null) {
+                    if (fragmented.remove(channel)) {
+                        senders.remove(fragmented);
+                    }
+                }
+            }
+
             if (active) {
-                StreamSinkFrameChannel ch = senders.peek();
+                SendChannel ch = senders.peek();
+
                 // check if there is some sink waiting
                 if (ch != null) {
-                    ch.activate();
+                    if (ch instanceof StreamSinkFrameChannel) {
+                        ((StreamSinkFrameChannel) ch).activate();
+                    } else if (ch instanceof FragmentedMessageChannelImpl) {
+                        ((FragmentedMessageChannelImpl) ch).activate();
+                    }
                 } else {
                     WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on %s in complete method as there is no new sender");
                     channel.suspendWrites();
@@ -455,11 +520,15 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             if (receiver != null && receiver.isReadResumed()) {
                 receiver.queueListener(((ChannelListener.SimpleSetter) receiver.getReadSetter()).get());
             }
-            synchronized (senders) {
-                for (final StreamSinkFrameChannel channel : senders) {
+            synchronized (sendersLock) {
+                for (final SendChannel channel : senders) {
                     //we just activate them all at once
                     //the underlying channel is already closed, so they cannot write anyway
-                    channel.activate();
+                    if (channel instanceof StreamSinkFrameChannel) {
+                        ((StreamSinkFrameChannel) channel).activate();
+                    } else if (channel instanceof FragmentedMessageChannelImpl) {
+                        ((FragmentedMessageChannelImpl) channel).activate();
+                    }
                 }
             }
         }
@@ -497,27 +566,43 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private class WebSocketWriteListener implements ChannelListener<ConnectedStreamChannel> {
         @Override
         public void handleEvent(final ConnectedStreamChannel channel) {
-            StreamSinkFrameChannel ch = null, oldCh;
+            SendChannel ch = null, oldCh;
             for (; ; ) {
                 oldCh = ch;
                 boolean writeResumed = false;
-                synchronized (senders) {
+                final StreamSinkFrameChannel sink;
+                synchronized (sendersLock) {
                     ch = senders.peek();
                     if(ch != null) {
-                        writeResumed = ch.isWriteResumed();
+                        if (ch instanceof FragmentedMessageChannelImpl) {
+                            FragmentedMessageChannelImpl fragmented = (FragmentedMessageChannelImpl) ch;
+                            sink = fragmented.fragmentedSenders.peek();
+                            if (sink != null) {
+                                writeResumed = sink.isWriteResumed();
+                            }
+
+                        } else if (ch instanceof StreamSinkFrameChannel) {
+                            sink = (StreamSinkFrameChannel) ch;
+                            writeResumed = ((StreamSinkFrameChannel) ch).isWriteResumed();
+                        } else {
+                            sink = null;
+                        }
+                    } else {
+                        sink = null;
                     }
                 }
                 if (ch != null && ch != oldCh) {
                     if (!writeResumed) {
                         return;
                     }
-                    final ChannelListener<? super StreamSinkFrameChannel> channelListener = (ChannelListener<? super StreamSinkFrameChannel>) ch.getWriteSetter().get();
-                    WebSocketLogger.REQUEST_LOGGER.debugf("Invoking write listener %s on %s", channelListener, ch);
-                    ChannelListeners.invokeChannelListener(ch, channelListener);
+                    ChannelListener<? super StreamSinkFrameChannel> channelListener = (ChannelListener<? super StreamSinkFrameChannel>) sink.getWriteSetter().get();
+                    WebSocketLogger.REQUEST_LOGGER.debugf("Invoking write listener %s on %s", channelListener, sink);
+                    ChannelListeners.invokeChannelListener(sink, channelListener);
                 } else if (ch == null) {
                     //we have to make sure that another channel has not been added in the mean time
-                    synchronized (senders) {
-                        if (senders.peek() == null) {
+                    synchronized (sendersLock) {
+                        SendChannel sendChannel = senders.peek();
+                        if (sendChannel == null || (sendChannel instanceof FragmentedMessageChannelImpl && ((FragmentedMessageChannelImpl) sendChannel).fragmentedSenders.peek() == null)) {
                             WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on channel %s due to no sender", WebSocketChannel.this);
                             channel.suspendWrites();
                         }
@@ -541,11 +626,15 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             if (receiver != null && receiver.isOpen() && receiver.isReadResumed()) {
                 ChannelListeners.invokeChannelListener(receiver, (ChannelListener<? super StreamSourceFrameChannel>) receiver.getReadSetter().get());
             }
-            synchronized (senders) {
-                for (final StreamSinkFrameChannel channel : senders) {
+            synchronized (sendersLock) {
+                for (final SendChannel channel : senders) {
                     //we just activate them all at once
                     //the underlying channel is already closed, so they cannot write anyway
-                    channel.activate();
+                    if (channel instanceof StreamSinkFrameChannel) {
+                        ((StreamSinkFrameChannel) channel).activate();
+                    } else if (channel instanceof FragmentedMessageChannelImpl) {
+                        ((FragmentedMessageChannelImpl) channel).activate();
+                    }
                 }
             }
             ChannelListeners.invokeChannelListener(WebSocketChannel.this, closeSetter.get());
@@ -596,5 +685,76 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
+    private final class FragmentedMessageChannelImpl implements FragmentedMessageChannel {
+        private final WebSocketFrameType type;
+        private boolean first = true;
+        private boolean finalSent;
 
+        private final Queue<StreamSinkFrameChannel> fragmentedSenders = new ArrayDeque<StreamSinkFrameChannel>();
+        public FragmentedMessageChannelImpl(WebSocketFrameType type) {
+            this.type = type;
+        }
+
+        @Override
+        public  StreamSinkFrameChannel send(long payloadSize, boolean finalFrame) throws IOException {
+            WebSocketFrameType type;
+
+            synchronized(this) {
+                if (finalSent) {
+                    throw WebSocketMessages.MESSAGES.fragmentedSenderCompleteAlready();
+                }
+                if (payloadSize < 0) {
+                    throw WebSocketMessages.MESSAGES.negativePayloadLength();
+                }
+                if (broken.get()) {
+                    throw WebSocketMessages.MESSAGES.streamIsBroken();
+                }
+
+                if (finalFrame) {
+                    finalSent = true;
+                }
+                if (first) {
+                    first = false;
+                    type = this.type;
+                } else {
+                    type = WebSocketFrameType.CONTINUATION;
+                }
+            }
+
+            StreamSinkFrameChannel sink = createStreamSinkChannel(channel, type, payloadSize);
+            sink.setFinalFragment(finalFrame);
+
+            synchronized (sendersLock) {
+                fragmentedSenders.add(sink);
+
+                if (senders.peek() == this && isActive(sink)) {
+                    sink.activate();
+                }
+            }
+            return sink;
+        }
+
+        // Only called within synchronized block
+        boolean isActive(StreamSinkFrameChannel channel) {
+            return fragmentedSenders.peek() == channel;
+        }
+
+        // Only called within synchronized block
+        void activate() {
+            synchronized (sendersLock) {
+                StreamSinkFrameChannel ch = fragmentedSenders.peek();
+
+                if (ch != null) {
+                    ch.activate();
+                }
+            }
+        }
+
+        // Only called within synchronized block
+        boolean remove(StreamSinkFrameChannel channel) {
+            fragmentedSenders.remove(channel);
+            return finalSent && fragmentedSenders.isEmpty();
+
+        }
+    }
 }

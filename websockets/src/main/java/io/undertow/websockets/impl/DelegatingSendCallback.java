@@ -24,10 +24,10 @@ import io.undertow.websockets.api.SendCallback;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class SendCallbacks implements SendCallback {
+final class DelegatingSendCallback implements SendCallback {
     private final SendCallback[] callbacks;
 
-    public SendCallbacks(SendCallback... callbacks) {
+    public DelegatingSendCallback(SendCallback... callbacks) {
         if (callbacks == null || callbacks.length == 0) {
             throw WebSocketMessages.MESSAGES.senderCallbacksEmpty();
         }

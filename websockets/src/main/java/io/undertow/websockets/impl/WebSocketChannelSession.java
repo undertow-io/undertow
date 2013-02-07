@@ -17,12 +17,10 @@ package io.undertow.websockets.impl;
 
 import io.undertow.UndertowOptions;
 import io.undertow.websockets.api.CloseFrameSender;
-import io.undertow.websockets.api.FragmentedSender;
 import io.undertow.websockets.api.PingFrameSender;
 import io.undertow.websockets.api.PongFrameSender;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
-import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.api.BinaryFrameSender;
 import io.undertow.websockets.api.CloseReason;
 import io.undertow.websockets.api.FragmentedTextFrameSender;
@@ -40,6 +38,7 @@ import java.nio.channels.FileChannel;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
@@ -57,22 +56,27 @@ public final class WebSocketChannelSession implements WebSocketSession {
     private static final AtomicReferenceFieldUpdater<WebSocketChannelSession, FrameHandler> FRAME_HANDLER_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(WebSocketChannelSession.class, FrameHandler.class, "frameHandler");
 
-    private FragmentedSender activeSender;
-
     private final TextFrameSender textFrameSender;
     private final BinaryFrameSender binaryFrameSender;
     private final PingFrameSender pingFrameSender;
     private final PongFrameSender pongFrameSender;
     private final CloseFrameSender closeFrameSender;
+    private volatile int asyncSendTimeout;
+    private volatile long maxFrameSize;
+    private final Executor frameHandlerExecutor;
 
-    public WebSocketChannelSession(WebSocketChannel channel, String id) {
+    boolean closeFrameSent;
+    final boolean executeInIoThread;
+    public WebSocketChannelSession(WebSocketChannel channel, String id, boolean executeInIoThread) {
         this.channel = channel;
         this.id = id;
-        textFrameSender = new DefaultTextFrameSender(channel);
-        binaryFrameSender = new DefaultBinaryFrameSender(channel);
-        pingFrameSender = new DefaultPingFrameSender(channel);
-        pongFrameSender = new DefaultPongFrameSender(channel);
-        closeFrameSender = new DefaultCloseFrameSender(channel);
+        this.executeInIoThread = executeInIoThread;
+        textFrameSender = new DefaultTextFrameSender(this);
+        binaryFrameSender = new DefaultBinaryFrameSender(this);
+        pingFrameSender = new DefaultPingFrameSender(this);
+        pongFrameSender = new DefaultPongFrameSender(this);
+        closeFrameSender = new DefaultCloseFrameSender(this);
+        frameHandlerExecutor = new FrameHandlerExecutor(channel.getWorker());
     }
 
     @Override
@@ -135,132 +139,98 @@ public final class WebSocketChannelSession implements WebSocketSession {
         return frameHandler;
     }
 
-    private synchronized <T extends FragmentedSender> T checkFragmentedSender(T sender) {
-        if (activeSender == null) {
-            activeSender = sender;
-            return sender;
-        }
-         if (activeSender == sender) {
-            return sender;
-        }
-        throw WebSocketMessages.MESSAGES.fragmentedSenderInUse();
-    }
-
-    private synchronized void checkSender() {
-        if (activeSender != null) {
-            throw new IllegalStateException();
-        }
-    }
-
     @Override
     public void sendPing(ByteBuffer payload, SendCallback callback) {
-        // no need to check sender as ping and pong frames are allowed between as stated in the rfc
         pingFrameSender.sendPing(payload,callback);
     }
 
     @Override
     public void sendPing(ByteBuffer[] payload, SendCallback callback) {
-        // no need to check sender as ping and pong frames are allowed between as stated in the rfc
         pingFrameSender.sendPing(payload,callback);
     }
 
     @Override
     public void sendPing(ByteBuffer payload) throws IOException {
-        // no need to check sender as ping and pong frames are allowed between as stated in the rfc
         pingFrameSender.sendPing(payload);
     }
 
     @Override
     public void sendPing(ByteBuffer[] payload) throws IOException {
-        // no need to check sender as ping and pong frames are allowed between as stated in the rfc
         pingFrameSender.sendPing(payload);
     }
 
     @Override
     public void sendPong(ByteBuffer payload, SendCallback callback) {
-        // no need to check sender as ping and pong frames are allowed between as stated in the rfc
         pongFrameSender.sendPong(payload, callback);
     }
 
     @Override
     public void sendPong(ByteBuffer[] payload, SendCallback callback) {
-        // no need to check sender as ping and pong frames are allowed between as stated in the rfc
         pongFrameSender.sendPong(payload, callback);
     }
 
     @Override
     public void sendPong(ByteBuffer payload) throws IOException {
-        // no need to check sender as ping and pong frames are allowed between as stated in the rfc
         pongFrameSender.sendPong(payload);
     }
 
     @Override
     public void sendPong(ByteBuffer[] payload) throws IOException {
-        // no need to check sender as ping and pong frames are allowed between as stated in the rfc
         pongFrameSender.sendPong(payload);
     }
 
     @Override
     public FragmentedBinaryFrameSender sendFragmentedBinary() {
-        return checkFragmentedSender(new DefaultFragmentedBinaryFrameSender(this));
+        return new DefaultFragmentedBinaryFrameSender(this);
     }
 
     @Override
     public FragmentedTextFrameSender sendFragmentedText() {
-        return checkFragmentedSender(new DefaultFragmentedTextFrameSender(this));
+        return new DefaultFragmentedTextFrameSender(this);
     }
 
     @Override
     public void sendBinary(final ByteBuffer[] payload, final SendCallback callback) {
-       checkSender();
        binaryFrameSender.sendBinary(payload, callback);
     }
 
     @Override
     public void sendBinary(ByteBuffer payload) throws IOException {
-        checkSender();
         binaryFrameSender.sendBinary(payload);
     }
 
     @Override
     public void sendBinary(ByteBuffer[] payload) throws IOException {
-        checkSender();
         binaryFrameSender.sendBinary(payload);
     }
 
     @Override
     public void sendBinary(ByteBuffer payload, SendCallback callback) {
-        checkSender();
         binaryFrameSender.sendBinary(payload, callback);
     }
 
     @Override
     public void sendBinary(FileChannel payloadChannel, int offset, long length, SendCallback callback) {
-        checkSender();
         binaryFrameSender.sendBinary(payloadChannel, offset, length, callback);
     }
 
     @Override
     public OutputStream sendBinary(long payloadSize) throws IOException {
-        checkSender();
         return binaryFrameSender.sendBinary(payloadSize);
     }
 
     @Override
     public void sendText(CharSequence payload, SendCallback callback) {
-        checkSender();
         textFrameSender.sendText(payload, callback);
     }
 
     @Override
     public void sendText(CharSequence payload) throws IOException {
-        checkSender();
         textFrameSender.sendText(payload);
     }
 
     @Override
     public Writer sendText(long payloadSize) throws IOException {
-        checkSender();
         return textFrameSender.sendText(payloadSize);
     }
 
@@ -279,14 +249,31 @@ public final class WebSocketChannelSession implements WebSocketSession {
         closeFrameSender.sendClose(reason);
     }
 
-    synchronized void complete(FragmentedSender sender) {
-        if (activeSender != sender) {
-            throw WebSocketMessages.MESSAGES.fragmentedSenderInUse();
-        }
-        activeSender = null;
-    }
-
     WebSocketChannel getChannel() {
         return channel;
+    }
+
+    @Override
+    public void setAsyncSendTimeout(int asyncSendTimeout) {
+        this.asyncSendTimeout = asyncSendTimeout;
+    }
+
+    @Override
+    public int getAsyncSendTimeout() {
+        return asyncSendTimeout;
+    }
+
+    @Override
+    public void setMaximumFrameSize(long maxFrameSize) {
+        this.maxFrameSize = maxFrameSize;
+    }
+
+    @Override
+    public long getMaximumFrameSize() {
+        return maxFrameSize;
+    }
+
+    Executor getFrameHandlerExecutor() {
+        return frameHandlerExecutor;
     }
 }

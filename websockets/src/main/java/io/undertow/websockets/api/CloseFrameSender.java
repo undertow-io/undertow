@@ -18,6 +18,9 @@ package io.undertow.websockets.api;
 import java.io.IOException;
 
 /**
+ * Allows to send CLOSE frames to the remote peer. Be aware that once a CLOSE frame was send it is not possible to send
+ * another close frame.
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public interface CloseFrameSender {
@@ -32,8 +35,6 @@ public interface CloseFrameSender {
      * @param callback
      *          The callback that is called when sending is done or {@code null} if no notification
      *          should be done.
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     void sendClose(CloseReason reason, SendCallback callback);
 
@@ -46,8 +47,6 @@ public interface CloseFrameSender {
      *          The reason why the connection should be closed or {@code null} if none should be supplied.
      * @throws IOException
      *          If sending failed
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     void sendClose(CloseReason reason) throws IOException;
 }

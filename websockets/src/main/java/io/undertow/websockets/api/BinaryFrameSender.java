@@ -37,8 +37,6 @@ public interface BinaryFrameSender {
      * @param callback
      *          The callback that is called when sending is done or {@code null} if no notification
      *          should be done.
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     void sendBinary(ByteBuffer payload, SendCallback callback);
 
@@ -52,8 +50,6 @@ public interface BinaryFrameSender {
      * @param callback
      *          The callback that is called when sending is done or {@code null} if no notification
      *          should be done.
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     void sendBinary(ByteBuffer[] payload, SendCallback callback);
 
@@ -71,8 +67,6 @@ public interface BinaryFrameSender {
      * @param callback
      *          The callback that is called when sending is done or {@code null} if no notification
      *          should be done.
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     void sendBinary(FileChannel payloadChannel, int offset, long length, SendCallback callback);
 
@@ -85,8 +79,6 @@ public interface BinaryFrameSender {
      *          The payload
      * @throws IOException
      *          If sending failed
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     void sendBinary(ByteBuffer payload) throws IOException;
 
@@ -99,8 +91,6 @@ public interface BinaryFrameSender {
      *          The payload
      * @throws IOException
      *          If sending failed
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     void sendBinary(ByteBuffer[] payload) throws IOException;
 
@@ -114,8 +104,6 @@ public interface BinaryFrameSender {
      *          The payload size
      * @return stream
      *          A stream that can be used to send a binary message
-     * @throws IllegalStateException
-     *          Is thrown if a {@link FragmentedSender} is still in use.
      */
     OutputStream sendBinary(long payloadSize) throws IOException;
 }
