@@ -27,8 +27,8 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
+import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
@@ -231,43 +231,5 @@ public class WebSocket00ServerTest {
 
     protected WebSocketVersion getVersion() {
         return WebSocketVersion.V00;
-    }
-
-    public final class FrameChecker implements WebSocketTestClient.FrameListener {
-        private final Class<? extends WebSocketFrame> clazz;
-        private final byte[] expectedPayload;
-        private final CountDownLatch latch;
-
-        public FrameChecker(Class<? extends WebSocketFrame> clazz, byte[] expectedPayload, CountDownLatch latch) {
-            this.clazz = clazz;
-            this.expectedPayload = expectedPayload;
-            this.latch = latch;
-        }
-
-
-        @Override
-        public void onFrame(WebSocketFrame frame) {
-            try {
-                Assert.assertTrue(clazz.isInstance(frame));
-
-                ChannelBuffer buf = frame.getBinaryData();
-                byte[] data = new byte[buf.readableBytes()];
-                buf.readBytes(data);
-
-                Assert.assertArrayEquals(expectedPayload, data);
-            } finally {
-                latch.countDown();
-            }
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            try {
-                t.printStackTrace();
-                Assert.fail();
-            } finally {
-                latch.countDown();
-            }
-        }
     }
 }

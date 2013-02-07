@@ -25,6 +25,8 @@ import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.undertow.UndertowLogger;
@@ -76,6 +78,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private final Set<String> subProtocols;
     private final boolean extensionsSupported;
     private final Object sendersLock = new Object();
+
+    // TODO: Maybe init lazy to safe memory when not used by the user ?
+    private final ConcurrentMap<String, Object> attrs = new ConcurrentHashMap<String, Object>();
     /**
      * Create a new {@link WebSocketChannel}
      * 8
@@ -104,6 +109,19 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         pushBackStreamChannel.getReadSetter().set(new WebSocketReadListener());
         connectedStreamChannel.getWriteSetter().set(new WebSocketWriteListener());
         connectedStreamChannel.getCloseSetter().set(new WebSocketCloseListener());
+    }
+
+
+    public final boolean setAttribute(String key, Object value) {
+        if (value == null) {
+            return attrs.remove(key) != null;
+        } else {
+            return attrs.putIfAbsent(key, value) == null;
+        }
+    }
+
+    public final Object getAttribute(String key) {
+        return attrs.get(key);
     }
 
     /**

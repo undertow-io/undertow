@@ -1,5 +1,7 @@
 /*
- * Copyright 2013 JBoss, by Red Hat, Inc
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2013 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.api;
+package io.undertow.websockets.jsr;
 
-import io.undertow.server.HttpServerExchange;
-
+import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 /**
- * Implementations of this interface wil be called on new established WebSocket connections.
- *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public interface WebSocketSessionHandler {
-
-    /**
-     * Is called once a new WebSocketSession is established and so the handshake was completed.
-     */
-    void onSession(WebSocketSession session, HttpServerExchange exchange);
+public class JsrWebSocketServer08Test extends JsrWebSocketServer07Test{
+    @Override
+    protected WebSocketVersion getVersion() {
+        return WebSocketVersion.V08;
+    }
 }

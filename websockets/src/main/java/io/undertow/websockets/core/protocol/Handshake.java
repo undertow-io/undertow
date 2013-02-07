@@ -22,14 +22,12 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketHandshakeException;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
 import org.xnio.ChannelListener;
-import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -111,7 +109,10 @@ public abstract class Handshake {
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(data.length));
         exchange.getResponseHeaders().put(Headers.UPGRADE, "WebSocket");
         exchange.getResponseHeaders().put(Headers.CONNECTION, "Upgrade");
+        upgradeChannel(exchange, data);
+    }
 
+    protected void upgradeChannel( final HttpServerExchange exchange, final byte[] data) {
         if(data.length > 0) {
             writePayload( exchange, exchange.getResponseChannel(), ByteBuffer.wrap(data));
         } else {
@@ -119,7 +120,7 @@ public abstract class Handshake {
         }
     }
 
-    private void writePayload(final HttpServerExchange exchange, StreamSinkChannel channel, final ByteBuffer payload){
+    private static void writePayload(final HttpServerExchange exchange, StreamSinkChannel channel, final ByteBuffer payload){
         while(payload.hasRemaining()) {
             try {
                 int w = channel.write(payload);
@@ -147,10 +148,8 @@ public abstract class Handshake {
     /**
      * Perform the upgrade using no payload
      */
-    protected final IoFuture<WebSocketChannel> performUpgrade(final HttpServerExchange exchange) {
-        final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
+    protected final void performUpgrade(final HttpServerExchange exchange) {
         performUpgrade(exchange, EMPTY);
-        return ioFuture;
     }
 
     /**
@@ -160,23 +159,30 @@ public abstract class Handshake {
      */
     protected final void selectSubprotocol(final HttpServerExchange exchange) throws WebSocketHandshakeException {
         String requestedSubprotocols = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_PROTOCOL);
-        if (requestedSubprotocols == null || subprotocols.isEmpty()) {
+        if (requestedSubprotocols == null) {
             return;
         }
 
         String[] requestedSubprotocolArray = PATTERN.split(requestedSubprotocols);
+        String subProtocol = supportedSubprotols(requestedSubprotocolArray);
+        if (subProtocol == null) {
+            // No match found
+            throw WebSocketMessages.MESSAGES.unsupportedProtocol(requestedSubprotocols, subprotocols);
+        }
+        exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_PROTOCOL, subProtocol);
+
+    }
+
+    protected  String supportedSubprotols(String[] requestedSubprotocolArray) {
         for (String p : requestedSubprotocolArray) {
             String requestedSubprotocol = p.trim();
 
             for (String supportedSubprotocol : subprotocols) {
                 if (requestedSubprotocol.equals(supportedSubprotocol)) {
-                    exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_PROTOCOL, supportedSubprotocol);
-                    return;
+                    return supportedSubprotocol;
                 }
             }
         }
-        // No match found
-        throw WebSocketMessages.MESSAGES.unsupportedProtocol(requestedSubprotocols, subprotocols);
+        return null;
     }
-
 }

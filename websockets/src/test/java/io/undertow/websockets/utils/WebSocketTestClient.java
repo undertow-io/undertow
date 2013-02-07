@@ -87,7 +87,6 @@ public final class WebSocketTestClient {
         });
 
         // Connect
-        System.out.println("WebSocket Client connecting");
         ChannelFuture future =
                 bootstrap.connect(
                         new InetSocketAddress(uri.getHost(), uri.getPort()));
