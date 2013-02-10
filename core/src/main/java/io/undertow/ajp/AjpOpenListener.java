@@ -80,7 +80,7 @@ public class AjpOpenListener implements OpenListener{
 
     public void setUndertowOptions(final OptionMap undertowOptions) {
         if (undertowOptions == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
     }

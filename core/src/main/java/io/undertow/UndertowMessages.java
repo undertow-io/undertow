@@ -68,8 +68,8 @@ public interface UndertowMessages {
             "is installed in the handler chain")
     IllegalStateException sessionManagerNotFound();
 
-    @Message(id = 13, value = "Argument cannot be null")
-    IllegalArgumentException argumentCannotBeNull();
+    @Message(id = 13, value = "Argument %s cannot be null")
+    IllegalArgumentException argumentCannotBeNull(final String argument);
 
     @Message(id = 14, value = "close() called with data still to be flushed. Please call shutdownWrites() and then call flush() until it returns true before calling close()")
     IOException closeCalledWithDataStillToBeFlushed();

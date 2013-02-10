@@ -84,7 +84,7 @@ public abstract class AbstractAttachable implements Attachable {
     @Override
     public <T> T putAttachment(final AttachmentKey<T> key, final T value) {
         if (key == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("key");
         }
         return key.cast(attachments.put(key, key.cast(value)));
     }

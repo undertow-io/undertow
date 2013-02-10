@@ -111,7 +111,7 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
     @Override
     public void setUndertowOptions(final OptionMap undertowOptions) {
         if (undertowOptions == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
     }

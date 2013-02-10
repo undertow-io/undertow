@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
 import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -66,15 +68,8 @@ public class SimpleErrorPageHandler implements HttpHandler {
                 if (codes == null ? exchange.getResponseCode() >= 400 : codes.contains(Integer.valueOf(exchange.getResponseCode()))) {
                     final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getResponseCode() + " - " + StatusCodes.getReason(exchange.getResponseCode()) + "</body></html>";
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + errorPage.length());
-
-                    final StreamSinkChannel response = exchange.getResponseChannel();
-                    StringWriteChannelListener listener = new StringWriteChannelListener(errorPage) {
-                        @Override
-                        protected void writeDone(final StreamSinkChannel channel) {
-                            exchange.endExchange();
-                        }
-                    };
-                    listener.setup(response);
+                    Sender sender = exchange.getResponseSender();
+                    sender.send(errorPage, IoCallback.END_EXCHANGE);
                     return true;
                 }
                 return false;

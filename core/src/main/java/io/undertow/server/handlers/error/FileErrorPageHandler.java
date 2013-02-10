@@ -115,7 +115,7 @@ public class FileErrorPageHandler implements HttpHandler {
 
     public void setFileCache(final FileCache fileCache) {
         if(fileCache == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("fileCache");
         }
         this.fileCache = fileCache;
     }

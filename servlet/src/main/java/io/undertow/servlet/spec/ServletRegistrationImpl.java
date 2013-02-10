@@ -60,7 +60,7 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
     @Override
     public Set<String> setServletSecurity(final ServletSecurityElement constraint) {
         if (constraint == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("constraint");
         }
 
         //this is not super efficient, but it does not really matter

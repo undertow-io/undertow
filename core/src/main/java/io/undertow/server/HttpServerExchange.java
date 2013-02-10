@@ -30,6 +30,7 @@ import java.util.Map;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.io.Sender;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -540,18 +541,23 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the response channel.  The resultant channel's {@link StreamSinkChannel#close()} or
-     * {@link StreamSinkChannel#shutdownWrites()} method must be called at some point after the request is processed to
-     * prevent resource leakage and to allow the next request to proceed.  Closing a fixed-length response before the
-     * corresponding number of bytes has been written will cause the connection to be reset and subsequent requests to
-     * fail; thus it is important to ensure that the proper content length is delivered when one is specified.  The
-     * response channel may not be writable until after the response headers have been sent.
+     * Get the response channel. The channel must be closed and fully flushed before the next response can be started.
+     * In order to close the channel you must first call {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()},
+     * and then call {@link org.xnio.channels.StreamSinkChannel#flush()} until it returns true. Alternativly you can
+     * call {@link #endExchange()}, which will close the channel as part of its cleanup.
+     *
+     * Closing a fixed-length response before the corresponding number of bytes has been written will cause the connection
+     * to be reset and subsequent requests to fail; thus it is important to ensure that the proper content length is
+     * delivered when one is specified.  The response channel may not be writable until after the response headers have
+     * been sent.
      * <p/>
      * If this method is not called then an empty or default response body will be used, depending on the response code set.
      * <p/>
      * The returned channel will begin to write out headers when the first write request is initiated, or when
-     * {@link java.nio.channels.Channel#close()} is called on the channel with no content being written.  Once the channel
-     * is acquired, however, the response code and headers may not be modified.
+     *  {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()} is called on the channel with no content being written.
+     * Once the channel is acquired, however, the response code and headers may not be modified.
+     *
+     * Note that if you call {@link #getResponseSender()} first this method will return null
      *
      * @return the response channel, or {@code null} if another party already acquired the channel
      */
@@ -576,6 +582,21 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.responseChannel = channel;
         this.startResponse();
         return channel;
+    }
+
+    /**
+     * Get the response sender.  This is effectively a wrapper around the response channel, so all the semantics of
+     * {@link #getResponseChannel()} apply.
+     *
+     * @see #getResponseChannel()
+     * @return the response sender, or {@code null} if another party already acquired the channel or the sender
+     */
+    public Sender getResponseSender() {
+        StreamSinkChannel channel = getResponseChannel();
+        if(channel == null) {
+            return null;
+        }
+        return new SenderImpl(channel, this);
     }
 
     /**

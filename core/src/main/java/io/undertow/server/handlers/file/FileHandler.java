@@ -48,7 +48,7 @@ public class FileHandler implements HttpHandler {
 
     public FileHandler(final File base) {
         if (base == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         this.base = base;
     }
@@ -78,7 +78,7 @@ public class FileHandler implements HttpHandler {
 
     public void setBase(final File base) {
         if (base == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         this.base = base;
     }
@@ -89,7 +89,7 @@ public class FileHandler implements HttpHandler {
 
     public void setFileCache(final FileCache fileCache) {
         if (fileCache == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull();
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("fileCache");
         }
         this.fileCache = fileCache;
     }
