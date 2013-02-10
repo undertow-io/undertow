@@ -21,6 +21,9 @@ package io.undertow.test.handlers;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
@@ -38,8 +41,8 @@ import org.junit.runner.RunWith;
 import org.xnio.streams.ChannelOutputStream;
 
 /**
- *
  * Tests that persistent connections work with fixed length responses
+ *
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
@@ -53,27 +56,20 @@ public class FixedLengthResponseTestCase {
 
     @BeforeClass
     public static void setup() {
-        final BlockingHandler blockingHandler = new BlockingHandler();
-        DefaultServer.setRootHandler(blockingHandler);
-        blockingHandler.setRootHandler(new BlockingHttpHandler() {
+        DefaultServer.setRootHandler(new HttpHandler() {
+
             @Override
-            public void handleBlockingRequest(final HttpServerExchange exchange) {
-                try {
-                    if(connection == null) {
-                        connection = exchange.getConnection();
-                    } else if(!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()){
-                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
-                        outputStream.write("Connection not persistent".getBytes());
-                        outputStream.close();
-                        return;
-                    }
-                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
-                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
-                    outputStream.write(message.getBytes());
-                    outputStream.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+            public void handleRequest(final HttpServerExchange exchange) {
+                if (connection == null) {
+                    connection = exchange.getConnection();
+                } else if (!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()) {
+                    Sender sender = exchange.getResponseSender();
+                    sender.send("Connection not persistent", IoCallback.END_EXCHANGE);
+                    return;
                 }
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
+                final Sender sender = exchange.getResponseSender();
+                sender.send(message, IoCallback.END_EXCHANGE);
             }
         });
     }
