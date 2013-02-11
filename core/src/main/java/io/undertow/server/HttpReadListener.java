@@ -113,6 +113,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                                     }
                                 }
                             });
+                        connection.getChannel().resumeWrites();
                     } else if (!channel.isReadResumed()) {
                         channel.getReadSetter().set(this);
                         channel.resumeReads();
