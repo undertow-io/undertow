@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -50,15 +52,23 @@ public class CachingFileCache implements FileCache {
     private final DirectBufferCache cache;
     private final long maxFileSize;
 
-    private static class DereferenceCallback implements BufferTransfer.TransferCompletionCallback {
+    private static class DereferenceCallback implements IoCallback {
         private final DirectBufferCache.CacheEntry cache;
 
         public DereferenceCallback(DirectBufferCache.CacheEntry cache) {
             this.cache = cache;
         }
 
-        public void complete() {
+        @Override
+        public void onComplete(final HttpServerExchange exchange, final Sender sender) {
             cache.dereference();
+            exchange.endExchange();
+        }
+
+        @Override
+        public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+            cache.dereference();
+            exchange.endExchange();
         }
     }
 
@@ -120,7 +130,7 @@ public class CachingFileCache implements FileCache {
 
         // Transfer Inline, or register and continue transfer
         // Pass off the entry dereference call to the listener
-        BufferTransfer.transfer(exchange, exchange.getResponseChannel(), new DereferenceCallback(entry), buffers);
+        exchange.getResponseSender().send(buffers, new DereferenceCallback(entry));
     }
 
     private class FileWriteLoadTask implements Runnable {
@@ -182,16 +192,15 @@ public class CachingFileCache implements FileCache {
             if (length < maxFileSize) {
                 entry = cache.add(path, (int) length);
             }
-            final StreamSinkChannel channel = exchange.getResponseChannel();
 
             if (entry == null || entry.buffers().length == 0 || !entry.claimEnable()) {
-                transfer(channel, fileChannel, length);
+                transfer(exchange.getResponseChannel(), fileChannel, length);
                 return;
             }
 
             if (!entry.reference()) {
                 entry.disable();
-                transfer(channel, fileChannel, length);
+                transfer(exchange.getResponseChannel(), fileChannel, length);
                 return;
             }
 
@@ -213,9 +222,8 @@ public class CachingFileCache implements FileCache {
                 }
             }
 
-            // Now that the cache is loaded, attempt to write or register a lister
-            // Also, pass off entry dereference to the listener
-            BufferTransfer.transfer(exchange, channel, new DereferenceCallback(entry), buffers);
+            // Now that the cache is loaded, write the content
+            exchange.getResponseSender().send(buffers, new DereferenceCallback(entry));
         }
 
         private ByteBuffer[] populateBuffers(FileChannel fileChannel, long length, DirectBufferCache.CacheEntry entry) {

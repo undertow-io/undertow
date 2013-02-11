@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import io.undertow.UndertowMessages;
+import io.undertow.io.IoCallback;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -114,7 +115,7 @@ public class FileHandler implements HttpHandler {
             }
 
             StreamSinkChannel channel = exchange.getResponseChannel();
-            BufferTransfer.transfer(exchange, channel, null, new ByteBuffer[]{buffer});
+            exchange.getResponseSender().send(buffer, IoCallback.END_EXCHANGE);
 
             return true;
         }
