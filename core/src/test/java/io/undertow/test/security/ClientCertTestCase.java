@@ -69,7 +69,7 @@ public class ClientCertTestCase extends AuthenticationTestBase {
 
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(clientSSLContext);
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
         HttpResponse result = client.execute(get);
         assertEquals(200, result.getStatusLine().getStatusCode());
 
