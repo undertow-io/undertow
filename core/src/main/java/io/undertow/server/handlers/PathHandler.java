@@ -34,10 +34,6 @@ import io.undertow.util.CopyOnWriteMap;
  * <p/>
  * /foo/bar
  * <p/>
- * This handler can only match a single part of this request (namely /foo). To match the full path
- * two of these handlers must be chained together.
- * <p/>
- * Note that
  *
  * @author Stuart Douglas
  */

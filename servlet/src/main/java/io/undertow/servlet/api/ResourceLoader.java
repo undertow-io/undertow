@@ -33,7 +33,7 @@ public interface ResourceLoader {
      */
     File getResource(final String resource);
 
-   ResourceLoader EMPTY_RESOURCE_LOADER = new ResourceLoader() {
+    ResourceLoader EMPTY_RESOURCE_LOADER = new ResourceLoader() {
         @Override
         public File getResource(final String resource) {
             return null;

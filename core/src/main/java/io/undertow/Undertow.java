@@ -17,6 +17,7 @@ import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.error.SimpleErrorPageHandler;
 import io.undertow.server.handlers.form.FormEncodedDataHandler;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
@@ -53,11 +54,11 @@ public class Undertow {
     private Xnio xnio;
 
     private Undertow(Builder builder) {
-        this.bufferSize = builder.getBufferSize();
-        this.buffersPerRegion = builder.getBuffersPerRegion();
-        this.ioThreads = builder.getIoThreads();
-        this.workerThreads = builder.getWorkerThreads();
-        this.directBuffers = builder.isDirectBuffers();
+        this.bufferSize = builder.bufferSize;
+        this.buffersPerRegion = builder.buffersPerRegion;
+        this.ioThreads = builder.ioThreads;
+        this.workerThreads = builder.workerThreads;
+        this.directBuffers = builder.directBuffers;
         this.listeners.addAll(builder.listeners);
         this.hosts.addAll(builder.hosts);
     }
@@ -148,6 +149,7 @@ public class Undertow {
         HttpHandler root = virtualHostHandler;
         root = new CookieHandler(root);
         root = new FormEncodedDataHandler(root);
+        root = new SimpleErrorPageHandler(root);
         //TODO: multipart
 
         return root;
@@ -261,17 +263,9 @@ public class Undertow {
             return this;
         }
 
-        public int getBufferSize() {
-            return bufferSize;
-        }
-
         public Builder setBufferSize(final int bufferSize) {
             this.bufferSize = bufferSize;
             return this;
-        }
-
-        public int getBuffersPerRegion() {
-            return buffersPerRegion;
         }
 
         public Builder setBuffersPerRegion(final int buffersPerRegion) {
@@ -279,17 +273,9 @@ public class Undertow {
             return this;
         }
 
-        public int getIoThreads() {
-            return ioThreads;
-        }
-
         public Builder setIoThreads(final int ioThreads) {
             this.ioThreads = ioThreads;
             return this;
-        }
-
-        public int getWorkerThreads() {
-            return workerThreads;
         }
 
         public Builder setWorkerThreads(final int workerThreads) {
@@ -297,17 +283,9 @@ public class Undertow {
             return this;
         }
 
-        public boolean isDirectBuffers() {
-            return directBuffers;
-        }
-
         public Builder setDirectBuffers(final boolean directBuffers) {
             this.directBuffers = directBuffers;
             return this;
-        }
-
-        public VirtualHost getDefaultHost() {
-            return defaultHost;
         }
 
         public VirtualHost addVirtualHost(final String hostName) {
@@ -334,6 +312,7 @@ public class Undertow {
             defaultHost.addHandlerWrapper(wrapper);
             return this;
         }
+
     }
 
 }

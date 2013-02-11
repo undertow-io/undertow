@@ -23,9 +23,13 @@ public class ServletServer {
                     .setClassLoader(ServletServer.class.getClassLoader())
                     .setContextPath("/myapp")
                     .setDeploymentName("test.war")
-                    .addServlet(new ServletInfo("MessageServlet", MessageServlet.class)
-                            .addInitParam("message", "Hello World")
-                            .addMapping("/*"));
+                    .addServlets(
+                            new ServletInfo("MessageServlet", MessageServlet.class)
+                                    .addInitParam("message", "Hello World")
+                                    .addMapping("/*"),
+                            new ServletInfo("MyServlet", MessageServlet.class)
+                                    .addInitParam("message", "MyServlet")
+                                    .addMapping("/myservlet"));
 
             DeploymentManager manager = container.addDeployment(servletBuilder);
             manager.deploy();
