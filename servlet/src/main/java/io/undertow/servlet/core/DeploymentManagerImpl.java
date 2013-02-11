@@ -187,12 +187,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
         HttpHandler current = initialHandler;
 
-        if (loginConfig != null && loginConfig.getAuthMethod().equalsIgnoreCase(FORM_AUTH)) {
-            //this is the handler that does the redirect after a form auth
-            //it has to be at the end of the chain
-            current = new FormAuthenticationRedirectHandler(current);
-        }
-
         current = new AuthenticationCallHandler(current);
         current = new ServletAuthenticationConstraintHandler(current);
         current = new ServletConfidentialityConstraintHandler(deploymentInfo.getConfidentialPortManager(), current);

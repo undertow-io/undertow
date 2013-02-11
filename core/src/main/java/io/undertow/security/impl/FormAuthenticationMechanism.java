@@ -24,6 +24,7 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
+import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
@@ -45,12 +46,6 @@ import org.xnio.IoFuture;
  * @author Stuart Douglas
  */
 public class FormAuthenticationMechanism implements AuthenticationMechanism {
-
-    /**
-     * When an authentication is successful the original URL is stored in the this attachment,
-     * allowing a later handler to do a redirect if desired.
-     */
-    public static final AttachmentKey<String> ORIGINAL_URL_LOCATION = AttachmentKey.create(String.class);
 
     public static final String LOCATION_COOKIE = "FORM_AUTH_ORIGINAL_URL";
 
@@ -132,7 +127,16 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                     if (outcome == AuthenticationMechanismOutcome.AUTHENTICATED) {
                         final Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
                         if (cookies != null && cookies.containsKey(LOCATION_COOKIE)) {
-                            exchange.putAttachment(ORIGINAL_URL_LOCATION, cookies.get(LOCATION_COOKIE).getValue());
+                            final String location = cookies.get(LOCATION_COOKIE).getValue();
+                            exchange.addDefaultResponseListener(new DefaultResponseListener() {
+                                @Override
+                                public boolean handleDefaultResponse(final HttpServerExchange exchange) {
+                                    FormAuthenticationMechanism.sendRedirect(exchange, location);
+                                    exchange.endExchange();
+                                    return true;
+                                }
+                            });
+
                             final CookieImpl cookie = new CookieImpl(LOCATION_COOKIE);
                             cookie.setMaxAge(0);
                             CookieImpl.addResponseCookie(exchange, cookie);
