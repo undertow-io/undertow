@@ -18,6 +18,7 @@
 package io.undertow.security.impl;
 
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.IdentityManager;
@@ -32,6 +33,7 @@ import java.util.concurrent.Executor;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 
+import org.xnio.FinishedIoFuture;
 import org.xnio.IoFuture;
 
 /**
@@ -58,9 +60,9 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         return name;
     }
 
-    public IoFuture<AuthenticationMechanismResult> authenticate(HttpServerExchange exchange, IdentityManager identityManager,
-            Executor handOffExecutor) {
-        ConcreteIoFuture<AuthenticationMechanismResult> result = new ConcreteIoFuture<AuthenticationMechanismResult>();
+    public IoFuture<AuthenticationMechanismOutcome> authenticate(final HttpServerExchange exchange,
+            final SecurityContext securityContext, final Executor handOffExecutor) {
+        ConcreteIoFuture<AuthenticationMechanismOutcome> result = new ConcreteIoFuture<AuthenticationMechanismOutcome>();
 
         SSLSession sslSession = exchange.getConnection().getSslSession();
         if (sslSession != null) {
@@ -68,7 +70,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
                 Certificate[] clientCerts = sslSession.getPeerCertificates();
                 if (clientCerts[0] instanceof X509Certificate) {
                     // Hand off to the executor as now we need an IDM based check.
-                    handOffExecutor.execute(new ClientCertRunnable(identityManager, result, (X509Certificate) clientCerts[0]));
+                    handOffExecutor.execute(new ClientCertRunnable(securityContext, result, (X509Certificate) clientCerts[0]));
                     return result;
                 }
             } catch (SSLPeerUnverifiedException e) {
@@ -77,39 +79,43 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
             }
         }
 
-        // No suitable header has been found in this request,
-        result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_ATTEMPTED));
+        // There was no SSLSession to verify or early verification failed.
+        result.setResult(AuthenticationMechanismOutcome.NOT_ATTEMPTED);
         return result;
     }
 
     private final class ClientCertRunnable implements Runnable {
-        private final IdentityManager idm;
-        private final ConcreteIoFuture<AuthenticationMechanismResult> result;
+        private final SecurityContext securityContext;
+        private final ConcreteIoFuture<AuthenticationMechanismOutcome> result;
         private final X509Certificate certificate;
 
-        private ClientCertRunnable(IdentityManager idm, ConcreteIoFuture<AuthenticationMechanismResult> result,
+        private ClientCertRunnable(SecurityContext securityContext, ConcreteIoFuture<AuthenticationMechanismOutcome> result,
                 X509Certificate certificate) {
             this.result = result;
-            this.idm = idm;
+            this.securityContext = securityContext;
             this.certificate = certificate;
         }
 
         public void run() {
             Credential credential = new X509CertificateCredential(certificate);
 
-            Account account = idm.verifyCredential(credential);
+            IdentityManager idm = securityContext.getIdentityManager();
+            Account account = idm.verify(credential);
             if (account != null) {
-                result.setResult(new AuthenticationMechanismResult(new UndertowPrincipal(account), account, false));
+                securityContext.authenticationComplete(account, getName(), false);
+                result.setResult(AuthenticationMechanismOutcome.AUTHENTICATED);
             } else {
                 // TODO - Double check if we want NOT_AUTHENTICATED - this mechanism we may want to fail silently with
                 // NOT_ATTEMPTED as triggering a challenge will not help this mechanism and may inadvertently affect the others.
-                result.setResult(new AuthenticationMechanismResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED));
+                result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
             }
         }
     }
 
-    public void sendChallenge(HttpServerExchange exchange) {
-        // There is no challenge for this mechanism.
+    @Override
+    public IoFuture<ChallengeResult> sendChallenge(HttpServerExchange exchange, SecurityContext securityContext,
+            Executor handOffExecutor) {
+        return new FinishedIoFuture<AuthenticationMechanism.ChallengeResult>(new ChallengeResult(false));
     }
 
 }

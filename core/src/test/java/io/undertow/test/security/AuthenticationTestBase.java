@@ -17,7 +17,6 @@
  */
 package io.undertow.test.security;
 
-
 import static org.junit.Assert.assertEquals;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
@@ -76,12 +75,6 @@ public abstract class AuthenticationTestBase {
                 return account;
             }
 
-            public boolean verifyCredential(Account account, Credential credential) {
-                if (credential instanceof PasswordCredential) {
-                    char[] password = ((PasswordCredential) credential).getPassword();
-                    char[] expectedPassword = passwordUsers.get(account.getName());
-
-
             @Override
             public Account verify(String id, Credential credential) {
                 Account account = getAccount(id);
@@ -93,43 +86,20 @@ public abstract class AuthenticationTestBase {
             }
 
             @Override
-
             public Account verify(Credential credential) {
-                // TODO Auto-generated method stub
-                return null;
-
-            public char[] getPassword(final Account account) {
-                return passwordUsers.get(account.getName());
-            }
-
-            private boolean verifyCredential(Account account, Credential credential) {
-                if (credential instanceof PasswordCredential) {
-                    char[] password = ((PasswordCredential) credential).getPassword();
-                    char[] expectedPassword = users.get(account.getPrincipal().getName());
-
-                    return Arrays.equals(password, expectedPassword);
-                }
-                return false;
-            }
-
-            @Override
-
-            public char[] getPassword(final Account account) {
-                return users.get(account.getPrincipal().getName());
-            }
-
-            @Override
-            public Account getAccount(final String id) {
-                if (users.containsKey(id)) {
-
-            public Account verifyCredential(Credential credential) {
                 if (credential instanceof X509CertificateCredential) {
                     final Principal p = ((X509CertificateCredential) credential).getCertificate().getSubjectX500Principal();
                     if (certUsers.contains(p.getName())) {
                         return new Account() {
 
-                            public String getName() {
-                                return p.getName();
+                            @Override
+                            public Principal getPrincipal() {
+                                return p;
+                            }
+
+                            @Override
+                            public boolean isUserInGroup(String group) {
+                                return false;
                             }
 
                         };
@@ -140,8 +110,23 @@ public abstract class AuthenticationTestBase {
                 return null;
             }
 
+            private boolean verifyCredential(Account account, Credential credential) {
+                if (credential instanceof PasswordCredential) {
+                    char[] password = ((PasswordCredential) credential).getPassword();
+                    char[] expectedPassword = passwordUsers.get(account.getPrincipal().getName());
+
+                    return Arrays.equals(password, expectedPassword);
+                }
+                return false;
+            }
+
             @Override
-            public Account lookupAccount(final String id) {
+            public char[] getPassword(final Account account) {
+                return passwordUsers.get(account.getPrincipal().getName());
+            }
+
+            @Override
+            public Account getAccount(final String id) {
                 if (passwordUsers.containsKey(id)) {
                     return new Account() {
 
@@ -184,8 +169,6 @@ public abstract class AuthenticationTestBase {
         HttpHandler initialHandler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager,
                 methodsAddHandler);
 
-        HttpHandler initialHandler = new SecurityInitialHandler(identityManager, methodsAddHandler);
-
         DefaultServer.setRootHandler(initialHandler);
     }
 
@@ -210,7 +193,7 @@ public abstract class AuthenticationTestBase {
 
     protected Principal getPrincipal(final HttpServerExchange exchange) {
         SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        return context.getAuthenticatedPrincipal();
+        return context.getAuthenticatedAccount().getPrincipal();
     }
 
     /**
