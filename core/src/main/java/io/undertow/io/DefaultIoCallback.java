@@ -6,7 +6,7 @@ import io.undertow.server.HttpServerExchange;
 import org.xnio.IoUtils;
 
 /**
- * A default callbakc implementation that simply ends the exchange
+ * A default callback implementation that simply ends the exchange
  *
  * @author Stuart Douglas
  */

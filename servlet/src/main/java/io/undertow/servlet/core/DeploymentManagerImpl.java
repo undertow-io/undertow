@@ -44,7 +44,6 @@ import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.FormAuthenticationMechanism;
-import io.undertow.security.impl.FormAuthenticationRedirectHandler;
 import io.undertow.security.impl.RoleMappingManagerImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.AttachmentHandler;

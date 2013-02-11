@@ -9,6 +9,17 @@ import java.util.List;
 import java.util.Map;
 
 import io.undertow.ajp.AjpOpenListener;
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.AuthenticationMode;
+import io.undertow.security.api.GSSAPIServerSubjectFactory;
+import io.undertow.security.handlers.AuthenticationCallHandler;
+import io.undertow.security.handlers.AuthenticationConstraintHandler;
+import io.undertow.security.handlers.AuthenticationMechanismsHandler;
+import io.undertow.security.handlers.SecurityInitialHandler;
+import io.undertow.security.idm.IdentityManager;
+import io.undertow.security.impl.BasicAuthenticationMechanism;
+import io.undertow.security.impl.FormAuthenticationMechanism;
+import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
@@ -34,7 +45,7 @@ import org.xnio.channels.ConnectedStreamChannel;
 
 /**
  * Convenience class used to build an Undertow server.
- *
+ * <p/>
  * TODO: This API is still a work in progress
  *
  * @author Stuart Douglas
@@ -63,8 +74,33 @@ public class Undertow {
         this.hosts.addAll(builder.hosts);
     }
 
+    /**
+     *
+     * @return A builder that can be used to create an Undertow server instance
+     */
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Creates a new Virtual Host, that can then be added to the server configuration.
+     *
+     * @see Builder#addVirtualHost(String)
+     * @param name The host name of the virtual host
+     * @return The virtual host.
+     */
+    public static VirtualHost virtualHost(final String name) {
+        return new VirtualHost(false).addHostName(name);
+    }
+
+    /**
+     * Creates a new security configuration, that can then be added to the server configuration.
+     *
+     * @param identityManager the identity manager to use.
+     * @return The security config.
+     */
+    public static LoginConfig loginConfig(final IdentityManager identityManager) {
+        return new LoginConfig(identityManager);
     }
 
     public synchronized void start() {
@@ -117,7 +153,7 @@ public class Undertow {
     }
 
     public synchronized void stop() {
-        for(AcceptingChannel<? extends ConnectedStreamChannel> channel : channels) {
+        for (AcceptingChannel<? extends ConnectedStreamChannel> channel : channels) {
             IoUtils.safeClose(channel);
         }
         channels = null;
@@ -138,12 +174,14 @@ public class Undertow {
             for (HandlerWrapper<HttpHandler> wrapper : host.wrappers) {
                 handler = wrapper.wrap(handler);
             }
+            handler = addLoginConfig(handler, host.loginConfig);
             if (host.defaultHost) {
                 virtualHostHandler.setDefaultHandler(handler);
             }
             for (String hostName : host.hostNames) {
                 virtualHostHandler.addHost(hostName, handler);
             }
+
         }
 
         HttpHandler root = virtualHostHandler;
@@ -153,6 +191,29 @@ public class Undertow {
         //TODO: multipart
 
         return root;
+    }
+
+    private static HttpHandler addLoginConfig(final HttpHandler toWrap, final LoginConfig config) {
+        if(config == null) {
+            return toWrap;
+        }
+        HttpHandler handler = toWrap;
+        //TODO: we need a way of specifying fine grained login constrains
+        handler = new AuthenticationCallHandler(handler);
+        handler = new AuthenticationConstraintHandler(handler);
+        final List<AuthenticationMechanism> mechanisms = new ArrayList<AuthenticationMechanism>();
+        if(config.basic) {
+            mechanisms.add(new BasicAuthenticationMechanism(config.realmName));
+        }
+        if(config.kerberos) {
+            mechanisms.add(new GSSAPIAuthenticationMechanism(config.subjectFactory));
+        }
+        if(config.form) {
+            mechanisms.add(new FormAuthenticationMechanism("FORM", config.loginPage, config.errorPage));
+        }
+        handler = new AuthenticationMechanismsHandler(handler, mechanisms);
+        handler = new SecurityInitialHandler(config.authenticationMode, config.identityManager, handler);
+        return handler;
     }
 
 
@@ -178,9 +239,12 @@ public class Undertow {
 
         T addPathHandler(final String path, final HttpHandler handler);
 
+
         T setDefaultHandler(final HttpHandler handler);
 
         T addHandlerWrapper(final HandlerWrapper<HttpHandler> wrapper);
+
+        T setLoginConfig(final LoginConfig loginConfig);
 
     }
 
@@ -190,9 +254,10 @@ public class Undertow {
         private final Map<String, HttpHandler> handlers = new HashMap<String, HttpHandler>();
         private final List<HandlerWrapper<HttpHandler>> wrappers = new ArrayList<HandlerWrapper<HttpHandler>>();
         private final boolean defaultHost;
+        private LoginConfig loginConfig;
         private HttpHandler defaultHandler = ResponseCodeHandler.HANDLE_404;
 
-        public VirtualHost(final boolean defaultHost) {
+        VirtualHost(final boolean defaultHost) {
             this.defaultHost = defaultHost;
         }
 
@@ -216,8 +281,74 @@ public class Undertow {
             wrappers.add(wrapper);
             return this;
         }
+
+        @Override
+        public VirtualHost setLoginConfig(final LoginConfig loginConfig) {
+            this.loginConfig = loginConfig;
+            return this;
+        }
     }
 
+    public static class LoginConfig {
+        private final IdentityManager identityManager;
+        private boolean basic;
+        private boolean digest;
+        private boolean kerberos;
+        private boolean form;
+        private String realmName;
+        private String errorPage, loginPage;
+        private GSSAPIServerSubjectFactory subjectFactory;
+        private AuthenticationMode authenticationMode = AuthenticationMode.PRO_ACTIVE;
+
+        public LoginConfig(final IdentityManager identityManager) {
+            this.identityManager = identityManager;
+        }
+
+        public LoginConfig basicAuth(final String realmName) {
+            if (digest) {
+                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("basic", "digest");
+            } else if (form) {
+                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("basic", "form");
+            }
+            basic = true;
+            this.realmName = realmName;
+            return this;
+        }
+
+        public LoginConfig digestAuth(final String realmName) {
+            if (basic) {
+                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("digest", "basic");
+            } else if (form) {
+                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("digest", "form");
+            }
+            digest = true;
+            this.realmName = realmName;
+            return this;
+        }
+
+        public LoginConfig kerberosAuth(GSSAPIServerSubjectFactory subjectFactory) {
+            kerberos = true;
+            this.subjectFactory = subjectFactory;
+            return this;
+        }
+
+        public LoginConfig formAuth(final String loginPage, final String errorPage) {
+            if (digest) {
+                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("form", "digest");
+            } else if (basic) {
+                throw UndertowMessages.MESSAGES.authTypeCannotBeCombined("form", "basic");
+            }
+            this.loginPage = loginPage;
+            this.errorPage = errorPage;
+            form = true;
+            return this;
+        }
+
+        public LoginConfig setAuthenticationMode(final AuthenticationMode authenticationMode) {
+            this.authenticationMode = authenticationMode;
+            return this;
+        }
+    }
 
     public static final class Builder implements Host<Builder> {
 
@@ -288,11 +419,11 @@ public class Undertow {
             return this;
         }
 
-        public VirtualHost addVirtualHost(final String hostName) {
+        public Builder addVirtualHost(final String hostName) {
             VirtualHost host = new VirtualHost(false);
             host.addHostName(hostName);
             hosts.add(host);
-            return host;
+            return this;
         }
 
         @Override
@@ -310,6 +441,12 @@ public class Undertow {
         @Override
         public Builder addHandlerWrapper(final HandlerWrapper<HttpHandler> wrapper) {
             defaultHost.addHandlerWrapper(wrapper);
+            return this;
+        }
+
+        @Override
+        public Builder setLoginConfig(final LoginConfig loginConfig) {
+            defaultHost.setLoginConfig(loginConfig);
             return this;
         }
 

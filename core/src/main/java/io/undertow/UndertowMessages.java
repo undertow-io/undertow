@@ -122,4 +122,6 @@ public interface UndertowMessages {
     @Message(id = 31, value = "User %s has logged out.")
     String userLoggedOut(final String userName);
 
+    @Message(id = 33, value = "Authentication type %s cannot be combined with %s")
+    IllegalStateException authTypeCannotBeCombined(String type, String existing);
 }
