@@ -30,6 +30,7 @@ import java.util.Map;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
 
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.ConstructorInstanceFactory;

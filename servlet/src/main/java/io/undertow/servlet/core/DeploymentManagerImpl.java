@@ -20,7 +20,6 @@ package io.undertow.servlet.core;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -58,7 +57,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.FilterMappingInfo;
-import io.undertow.servlet.api.HandlerWrapper;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.servlet.api.HttpMethodSecurityInfo;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ListenerInfo;

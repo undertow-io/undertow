@@ -62,6 +62,15 @@ public final class HeaderMap implements Iterable<HttpString> {
         }
     }
 
+    public void add(HttpString headerName, long headerValue) {
+        final ArrayDeque<String> value = values.get(headerName);
+        if (value == null) {
+            values.put(headerName, newHeaderValue(Long.toString(headerValue)));
+        } else {
+            value.add(Long.toString(headerValue));
+        }
+    }
+
     private ArrayDeque<String> newHeaderValue(final String value) {
         final ArrayDeque<String> deque = new ArrayDeque<String>();
         deque.add(value);
@@ -106,6 +115,11 @@ public final class HeaderMap implements Iterable<HttpString> {
 
     public void put(HttpString headerName, String headerValue) {
         final ArrayDeque<String> value = newHeaderValue(headerValue);
+        values.put(headerName, value);
+    }
+
+    public void put(HttpString headerName, long headerValue) {
+        final ArrayDeque<String> value = newHeaderValue(Long.toString(headerValue));
         values.put(headerName, value);
     }
 

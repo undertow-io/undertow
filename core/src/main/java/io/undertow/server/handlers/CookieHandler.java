@@ -46,6 +46,13 @@ public class CookieHandler implements HttpHandler {
     public static final String PATH = "$Path";
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
+    public CookieHandler(final HttpHandler next) {
+        this.next = next;
+    }
+
+    public CookieHandler() {
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
 

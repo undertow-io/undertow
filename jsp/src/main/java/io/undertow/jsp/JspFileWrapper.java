@@ -1,7 +1,7 @@
 package io.undertow.jsp;
 
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.servlet.api.HandlerWrapper;
+import io.undertow.server.HandlerWrapper;
 
 /**
  * @author Stuart Douglas

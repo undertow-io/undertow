@@ -96,6 +96,7 @@
         <module>servlet</module>
         <module>jsp</module>
         <module>websockets</module>
+        <module>examples</module>
     </modules>
 
     <build>
@@ -224,6 +225,12 @@
                 <version>${project.version}</version>
                 <type>test-jar</type>
                 <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-websockets</artifactId>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- External Dependencies -->

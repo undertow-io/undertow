@@ -35,6 +35,7 @@ import javax.servlet.DispatcherType;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.security.idm.IdentityManager;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.session.InMemorySessionManager;
@@ -53,7 +54,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile String displayName;
     private volatile String contextPath;
     private volatile ClassLoader classLoader;
-    private volatile ResourceLoader resourceLoader;
+    private volatile ResourceLoader resourceLoader = ResourceLoader.EMPTY_RESOURCE_LOADER;
     private volatile ClassIntrospecter classIntrospecter = DefaultClassIntrospector.INSTANCE;
     private volatile int majorVersion = 3;
     private volatile int minorVersion;

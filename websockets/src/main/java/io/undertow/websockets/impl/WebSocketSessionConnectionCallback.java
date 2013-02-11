@@ -52,6 +52,10 @@ public final class WebSocketSessionConnectionCallback implements WebSocketConnec
     private final WebSocketSessionHandler sessionHandler;
     private final boolean executeInIoThread;
 
+    public WebSocketSessionConnectionCallback(WebSocketSessionHandler sessionHandler) {
+        this(new UuidWebSocketSessionIdGenerator(), sessionHandler, false);
+    }
+
 
     public WebSocketSessionConnectionCallback(WebSocketSessionIdGenerator idGenerator, WebSocketSessionHandler sessionHandler) {
         this(idGenerator, sessionHandler, false);

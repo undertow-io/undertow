@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 /**
  * @author Stuart Douglas
  */
-public class AjpOpenListener implements OpenListener{
+public class AjpOpenListener implements OpenListener {
 
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;

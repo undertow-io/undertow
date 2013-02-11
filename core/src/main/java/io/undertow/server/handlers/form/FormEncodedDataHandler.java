@@ -53,6 +53,13 @@ public class FormEncodedDataHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
+    public FormEncodedDataHandler(final HttpHandler next) {
+        this.next = next;
+    }
+
+    public FormEncodedDataHandler() {
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);

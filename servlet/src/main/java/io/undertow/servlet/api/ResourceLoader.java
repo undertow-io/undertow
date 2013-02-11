@@ -21,7 +21,6 @@ package io.undertow.servlet.api;
 import java.io.File;
 
 /**
- *
  * @author Stuart Douglas
  */
 public interface ResourceLoader {
@@ -29,10 +28,15 @@ public interface ResourceLoader {
     /**
      * Gets the resource at the specified location, as long as it exists.
      *
-     *
      * @param resource The resource to load, relative to the servlet context root
      * @return The file, or null if it does not exist
      */
     File getResource(final String resource);
 
+   ResourceLoader EMPTY_RESOURCE_LOADER = new ResourceLoader() {
+        @Override
+        public File getResource(final String resource) {
+            return null;
+        }
+    };
 }
