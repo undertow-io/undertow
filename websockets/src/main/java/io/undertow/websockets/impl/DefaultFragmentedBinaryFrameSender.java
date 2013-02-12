@@ -17,14 +17,13 @@ package io.undertow.websockets.impl;
 
 import io.undertow.websockets.core.FragmentedMessageChannel;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.api.FragmentedBinaryFrameSender;
 import io.undertow.websockets.core.WebSocketMessages;
 
 import java.io.IOException;
 
 /**
- * Default {@link FragmentedBinaryFrameSender} implementation, which uses a {@link WebSocketChannel} to perform
+ * Default {@link FragmentedBinaryFrameSender} implementation, which uses a {@link io.undertow.websockets.core.WebSocketChannel} to perform
  * writes.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

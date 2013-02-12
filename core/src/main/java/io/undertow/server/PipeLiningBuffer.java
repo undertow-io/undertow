@@ -1,8 +1,6 @@
 package io.undertow.server;
 
-import org.xnio.ChannelListener;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 

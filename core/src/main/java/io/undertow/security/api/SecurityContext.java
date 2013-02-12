@@ -17,13 +17,10 @@
  */
 package io.undertow.security.api;
 
-import org.xnio.IoFuture.Notifier;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
-import io.undertow.server.HttpHandler;
 import io.undertow.util.AttachmentKey;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.xnio.IoFuture;
@@ -164,7 +161,7 @@ public interface SecurityContext {
      *
      * @param account - The authenticated {@link Account}
      * @param mechanismName - The name of the mechanism used to authenticate the account.
-     * @param cachable - Is the authentication cache-able i.e. can it be stored in a session to skip authentication for
+     * @param cacheable - Is the authentication cache-able i.e. can it be stored in a session to skip authentication for
      *        subsequent requests.
      */
     void authenticationComplete(final Account account, final String mechanismName, final boolean cacheable);

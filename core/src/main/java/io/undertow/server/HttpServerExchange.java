@@ -36,7 +36,6 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediateChannelFactory;
-import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.SecureHashMap;
 import org.jboss.logging.Logger;
@@ -186,7 +185,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the HTTP request method.  Normally this is one of the strings listed in {@link Methods}.
+     * Get the HTTP request method.  Normally this is one of the strings listed in {@link io.undertow.util.Methods}.
      *
      * @return the HTTP request method
      */

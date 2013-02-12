@@ -6,7 +6,6 @@
 
 package io.undertow.server.handlers.file;
 
-import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;

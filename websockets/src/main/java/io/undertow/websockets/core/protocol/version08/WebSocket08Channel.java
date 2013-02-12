@@ -20,7 +20,6 @@ package io.undertow.websockets.core.protocol.version08;
 import java.nio.ByteBuffer;
 import java.util.Set;
 
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version07.WebSocket07Channel;
 import org.xnio.Pool;
@@ -28,7 +27,7 @@ import org.xnio.channels.ConnectedStreamChannel;
 
 
 /**
- * {@link WebSocketChannel} which is used for {@link WebSocketVersion#V08}
+ * {@link io.undertow.websockets.core.WebSocketChannel} which is used for {@link WebSocketVersion#V08}
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */

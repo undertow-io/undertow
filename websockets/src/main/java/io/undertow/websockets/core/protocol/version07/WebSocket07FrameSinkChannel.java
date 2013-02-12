@@ -22,13 +22,12 @@ import java.nio.ByteBuffer;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
-import io.undertow.websockets.core.WebSocketVersion;
 import org.xnio.Buffers;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
- * {@link StreamSinkFrameChannel} implementation for writing WebSocket Frames on {@link WebSocketVersion#V08} connections
+ * {@link StreamSinkFrameChannel} implementation for writing WebSocket Frames on {@link io.undertow.websockets.core.WebSocketVersion#V08} connections
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
