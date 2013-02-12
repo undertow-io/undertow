@@ -94,7 +94,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final boolean ajp = Boolean.getBoolean("ajp");
 
     private static KeyStore loadKeyStore(final String name) throws IOException {
-        final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(SERVER_KEY_STORE);
+        final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(name);
         try {
             KeyStore loadedKeystore = KeyStore.getInstance("JKS");
             loadedKeystore.load(stream, STORE_PASSWORD);
