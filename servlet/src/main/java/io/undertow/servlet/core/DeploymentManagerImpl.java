@@ -43,6 +43,7 @@ import io.undertow.security.handlers.AuthenticationMechanismsHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
+import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.security.impl.RoleMappingManagerImpl;
 import io.undertow.server.HttpHandler;
@@ -89,6 +90,7 @@ import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.util.WorkerDispatcher;
 
 import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
+import static javax.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
 import static javax.servlet.http.HttpServletRequest.FORM_AUTH;
 
 /**
@@ -195,11 +197,15 @@ public class DeploymentManagerImpl implements DeploymentManager {
             List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<AuthenticationMechanism>();
             authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism());
 
-            if (loginConfig.getAuthMethod().equalsIgnoreCase(BASIC_AUTH)) {
+            String requestedMechanism = loginConfig.getAuthMethod();
+            if (requestedMechanism.equalsIgnoreCase(BASIC_AUTH)) {
                 // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be comparable using '=='
                 authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH));
-            } else if (loginConfig.getAuthMethod().equalsIgnoreCase(FORM_AUTH)) {
+            } else if (requestedMechanism.equalsIgnoreCase(FORM_AUTH)) {
+                // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be comparable using '=='
                 authenticationMechanisms.add(new FormAuthenticationMechanism(FORM_AUTH, deploymentInfo.getContextPath() + loginConfig.getLoginPage(), deploymentInfo.getContextPath() + loginConfig.getErrorPage()));
+            } else if (requestedMechanism.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
+                authenticationMechanisms.add(new ClientCertAuthenticationMechanism(CLIENT_CERT_AUTH));
             } else {
                 //NYI
             }
