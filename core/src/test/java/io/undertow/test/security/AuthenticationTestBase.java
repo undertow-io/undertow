@@ -61,7 +61,7 @@ public abstract class AuthenticationTestBase {
 
     static {
         final Set<String> certUsers = new HashSet<String>();
-        certUsers.add("");
+        certUsers.add("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB");
 
         final Map<String, char[]> passwordUsers = new HashMap<String, char[]>(2);
         passwordUsers.put("userOne", "passwordOne".toCharArray());
@@ -191,9 +191,17 @@ public abstract class AuthenticationTestBase {
         assertEquals("ResponseHandler", values[0].getValue());
     }
 
-    protected Principal getPrincipal(final HttpServerExchange exchange) {
+    protected static String getAuthenticatedUser(final HttpServerExchange exchange) {
         SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        return context.getAuthenticatedAccount().getPrincipal();
+        if (context != null) {
+            Account account = context.getAuthenticatedAccount();
+            if (account != null) {
+                // An account must always return a Principal otherwise it is not an Account.
+                return account.getPrincipal().getName();
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -204,11 +212,16 @@ public abstract class AuthenticationTestBase {
     protected static class ResponseHandler implements HttpHandler {
 
         static final HttpString PROCESSED_BY = new HttpString("ProcessedBy");
+        static final HttpString AUTHENTICATED_USER = new HttpString("AuthenticatedUser");
 
         @Override
         public void handleRequest(HttpServerExchange exchange) {
             HeaderMap responseHeader = exchange.getResponseHeaders();
             responseHeader.add(PROCESSED_BY, "ResponseHandler");
+            String user = getAuthenticatedUser(exchange);
+            if (user != null) {
+                responseHeader.add(AUTHENTICATED_USER, user);
+            }
 
             exchange.endExchange();
         }
