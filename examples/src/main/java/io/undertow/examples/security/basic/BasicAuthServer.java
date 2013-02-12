@@ -4,7 +4,6 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 import io.undertow.Undertow;
 import io.undertow.io.IoCallback;

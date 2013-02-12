@@ -30,7 +30,6 @@ import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;

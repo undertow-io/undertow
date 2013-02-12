@@ -9,13 +9,11 @@ package io.undertow.server.handlers.file;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.security.PrivilegedAction;
-import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Queue;
 
 import sun.misc.Unsafe;
 
@@ -1002,7 +1000,7 @@ public class FastConcurrentDirectDeque<E>
      * Inserts the specified element at the tail of this deque.
      * As the deque is unbounded, this method will never return {@code false}.
      *
-     * @return {@code true} (as specified by {@link Queue#offer})
+     * @return {@code true} (as specified by {@link java.util.Queue#offer})
      * @throws NullPointerException if the specified element is null
      */
     public boolean offer(E e) {

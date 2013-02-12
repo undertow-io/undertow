@@ -25,7 +25,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.util.HeaderMap;
 import io.undertow.util.StatusCodes;
@@ -38,7 +37,6 @@ import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
-import org.xnio.channels.ConcurrentStreamChannelAccessException;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 

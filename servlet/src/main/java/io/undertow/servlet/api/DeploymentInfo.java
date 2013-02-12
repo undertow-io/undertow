@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.descriptor.JspConfigDescriptor;
@@ -419,7 +418,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     /**
-     * Sets the factory that is used to create the {@link ExecutorService} that is used to run servlet
+     * Sets the factory that is used to create the {@link java.util.concurrent.ExecutorService} that is used to run servlet
      * invocations.
      * <p/>
      * If this is null then the current executor is used, which is generally the XNIO worker pool
@@ -435,7 +434,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     /**
-     * Sets the factory that is used to create the {@link ExecutorService} that is used to run async tasks.
+     * Sets the factory that is used to create the {@link java.util.concurrent.ExecutorService} that is used to run async tasks.
      * <p/>
      * If this is null then {@link #executorFactory} is used, if this is also null then the default is used
      *

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Queue;
@@ -30,7 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.undertow.UndertowLogger;
 import io.undertow.channels.IdleTimeoutStreamChannel;
-import io.undertow.websockets.core.protocol.version00.WebSocket00Channel;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;
@@ -86,7 +84,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      *                   Be aware that it already must be "upgraded".
      * @param bufferPool The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
      * @param version    The {@link WebSocketVersion} of the {@link WebSocketChannel}
-     * @param wsUrl      The url for which the {@link WebSocket00Channel} was created.
+     * @param wsUrl      The url for which the {@link io.undertow.websockets.core.protocol.version00.WebSocket00Channel} was created.
      */
     protected WebSocketChannel(final ConnectedStreamChannel connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, Set<String> subProtocols, boolean extensionsSupported) {
         channel = new IdleTimeoutStreamChannel<ConnectedStreamChannel>(connectedStreamChannel);
@@ -131,7 +129,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     }
 
     /**
-     * Check if the given {@link Channel} is currently active
+     * Check if the given {@link java.nio.channels.Channel} is currently active
      */
     private boolean isActive(StreamSinkFrameChannel channel) {
         SendChannel sender = senders.peek();

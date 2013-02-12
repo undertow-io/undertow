@@ -32,8 +32,6 @@ import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import io.undertow.util.StringWriteChannelListener;
-import org.xnio.channels.StreamSinkChannel;
 
 /**
  * Handler that generates an extremely simple no frills error page

@@ -27,7 +27,6 @@ import java.net.SocketAddress;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
-import io.undertow.util.Methods;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -55,7 +54,7 @@ public abstract class HttpClient implements Closeable {
     /**
      * Send a request, managing connections automatically.
      *
-     * @param method the HTTP method to use (see {@link Methods})
+     * @param method the HTTP method to use (see {@link io.undertow.util.Methods})
      * @param requestUri the URI to connect to
      * @param optionMap the request options
      * @return the future request

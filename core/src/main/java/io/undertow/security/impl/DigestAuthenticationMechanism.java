@@ -29,7 +29,6 @@ import io.undertow.security.api.NonceManager;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
-import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcreteIoFuture;
@@ -53,7 +52,7 @@ import org.xnio.FinishedIoFuture;
 import org.xnio.IoFuture;
 
 /**
- * {@link HttpHandler} to handle HTTP Digest authentication, both according to RFC-2617 and draft update to allow additional
+ * {@link io.undertow.server.HttpHandler} to handle HTTP Digest authentication, both according to RFC-2617 and draft update to allow additional
  * algorithms to be used.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>

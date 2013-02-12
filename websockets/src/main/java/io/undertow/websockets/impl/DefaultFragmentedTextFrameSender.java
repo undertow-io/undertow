@@ -17,7 +17,6 @@ package io.undertow.websockets.impl;
 
 import io.undertow.websockets.core.FragmentedMessageChannel;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.api.FragmentedTextFrameSender;
 import io.undertow.websockets.api.SendCallback;
 import io.undertow.websockets.core.WebSocketMessages;
@@ -28,7 +27,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
- * Default {@link FragmentedTextFrameSender} implementation which use a {@link WebSocketChannel} for the write
+ * Default {@link FragmentedTextFrameSender} implementation which use a {@link io.undertow.websockets.core.WebSocketChannel} for the write
  * operations.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

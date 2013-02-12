@@ -22,9 +22,7 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.SecurityContextImpl;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.session.Session;
 
 /**
  * The security handler responsible for attaching the SecurityContext to the current {@link HttpServerExchange}.
@@ -33,8 +31,8 @@ import io.undertow.server.session.Session;
  * be added to the context, a decision will then be made if authentication is required or optional and the associated mechanisms
  * will be called.
  *
- * In addition to the HTTPExchange authentication state can also be associated with the {@link HttpServerConnection} and with
- * the {@link Session} however this is mechanism specific so it is down to the actual mechanisms to decide if there is state
+ * In addition to the HTTPExchange authentication state can also be associated with the {@link io.undertow.server.HttpServerConnection} and with
+ * the {@link io.undertow.server.session.Session} however this is mechanism specific so it is down to the actual mechanisms to decide if there is state
  * that can be re-used.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>

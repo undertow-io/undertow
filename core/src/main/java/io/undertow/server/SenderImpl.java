@@ -1,7 +1,6 @@
 package io.undertow.server;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.charset.Charset;
@@ -12,7 +11,6 @@ import io.undertow.io.Sender;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
 /**

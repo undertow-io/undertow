@@ -27,7 +27,6 @@ import io.undertow.websockets.api.AssembledFrameHandler;
 import io.undertow.websockets.api.CloseReason;
 import io.undertow.websockets.api.FrameHandler;
 import io.undertow.websockets.api.WebSocketFrameHeader;
-import io.undertow.websockets.api.WebSocketSession;
 import io.undertow.websockets.api.WebSocketSessionHandler;
 import io.undertow.websockets.api.WebSocketSessionIdGenerator;
 import org.xnio.ChannelListener;
@@ -43,7 +42,7 @@ import java.util.List;
 
 /**
  *
- * {@link WebSocketConnectionCallback} which will create a {@link WebSocketSession} and operate on it.
+ * {@link WebSocketConnectionCallback} which will create a {@link io.undertow.websockets.api.WebSocketSession} and operate on it.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */

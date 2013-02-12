@@ -18,8 +18,6 @@
 
 package io.undertow.servlet.handlers;
 
-import io.undertow.util.AttachmentKey;
-
 /**
  * @author Stuart Douglas
  */

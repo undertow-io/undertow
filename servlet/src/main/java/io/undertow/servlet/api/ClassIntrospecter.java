@@ -18,11 +18,6 @@
 
 package io.undertow.servlet.api;
 
-import java.util.EventListener;
-
-import javax.servlet.Filter;
-import javax.servlet.Servlet;
-
 /**
  *
  * Interface that is provided by the container to create a servlet / filter / listener

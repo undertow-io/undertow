@@ -16,8 +16,6 @@ import io.undertow.websockets.api.AbstractAssembledFrameHandler;
 import io.undertow.websockets.api.WebSocketFrameHeader;
 import io.undertow.websockets.api.WebSocketSession;
 import io.undertow.websockets.api.WebSocketSessionHandler;
-import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
-import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
 import org.xnio.IoUtils;
 import org.xnio.streams.ChannelOutputStream;
 

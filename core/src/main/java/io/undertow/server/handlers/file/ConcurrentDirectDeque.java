@@ -1,9 +1,7 @@
 package io.undertow.server.handlers.file;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.AbstractCollection;
-import java.util.Collection;
 import java.util.Deque;
 
 /**
