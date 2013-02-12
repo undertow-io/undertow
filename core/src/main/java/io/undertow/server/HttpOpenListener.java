@@ -20,8 +20,6 @@ package io.undertow.server;
 
 import java.nio.ByteBuffer;
 
-import javax.net.ssl.SSLSession;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -32,6 +30,7 @@ import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Pool;
+import org.xnio.channels.AssembledConnectedSslStreamChannel;
 import org.xnio.channels.AssembledConnectedStreamChannel;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
@@ -83,11 +82,14 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
         }
 
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(readChannel);
-        SSLSession sslSession = null;
+        final AssembledConnectedStreamChannel assembledChannel;
         if (channel instanceof SslChannel) {
-            sslSession = ((SslChannel) channel).getSslSession();
+            assembledChannel = new AssembledConnectedSslStreamChannel((SslChannel) channel, readChannel, writeChannel);
+        } else {
+            assembledChannel = new AssembledConnectedStreamChannel(channel, readChannel, writeChannel);
         }
-        HttpServerConnection connection = new HttpServerConnection(new AssembledConnectedStreamChannel(channel, readChannel, writeChannel), bufferPool, rootHandler, undertowOptions, bufferSize, sslSession, pipeLiningBuffer);
+
+        HttpServerConnection connection = new HttpServerConnection(assembledChannel, bufferPool, rootHandler, undertowOptions, bufferSize, pipeLiningBuffer);
         HttpReadListener readListener = new HttpReadListener(writeChannel, pushBackStreamChannel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);

@@ -10,6 +10,7 @@ import io.undertow.server.OpenListener;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Pool;
+import org.xnio.channels.AssembledConnectedSslStreamChannel;
 import org.xnio.channels.AssembledConnectedStreamChannel;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
@@ -17,7 +18,6 @@ import org.xnio.channels.SslChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
-import javax.net.ssl.SSLSession;
 import java.nio.ByteBuffer;
 
 /**
@@ -56,11 +56,14 @@ public class AjpOpenListener implements OpenListener {
             writeChannel = new WriteTimeoutStreamSinkChannel(writeChannel);
         }
         final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(readChannel);
-        SSLSession sslSession = null;
+        final AssembledConnectedStreamChannel assembledChannel;
         if (channel instanceof SslChannel) {
-            sslSession = ((SslChannel) channel).getSslSession();
+            assembledChannel = new AssembledConnectedSslStreamChannel((SslChannel) channel, readChannel, writeChannel);
+        } else {
+            assembledChannel = new AssembledConnectedStreamChannel(channel, readChannel, writeChannel);
         }
-        HttpServerConnection connection = new HttpServerConnection(new AssembledConnectedStreamChannel(channel, readChannel, writeChannel), bufferPool, rootHandler, undertowOptions, bufferSize, sslSession, null);
+
+        HttpServerConnection connection = new HttpServerConnection(assembledChannel, bufferPool, rootHandler, undertowOptions, bufferSize, null);
         AjpReadListener readListener = new AjpReadListener(writeChannel, pushBackStreamChannel, connection);
         pushBackStreamChannel.getReadSetter().set(readListener);
         readListener.handleEvent(pushBackStreamChannel);
