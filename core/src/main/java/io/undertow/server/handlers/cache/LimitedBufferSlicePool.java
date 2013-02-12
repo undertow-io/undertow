@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.server.handlers.file;
+package io.undertow.server.handlers.cache;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;

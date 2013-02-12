@@ -27,6 +27,8 @@ import java.nio.channels.FileChannel;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.cache.DirectBufferCache;
+import io.undertow.server.handlers.cache.LimitedBufferSlicePool;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
@@ -49,7 +51,7 @@ public class CachingFileCache implements FileCache {
     private static final Logger log = Logger.getLogger("io.undertow.server.handlers.file");
     private static final String JDK7_NO_SUCH_FILE = "java.nio.file.NoSuchFileException";
 
-    private final DirectBufferCache cache;
+    private final DirectBufferCache<String> cache;
     private final long maxFileSize;
 
     private static class DereferenceCallback implements IoCallback {

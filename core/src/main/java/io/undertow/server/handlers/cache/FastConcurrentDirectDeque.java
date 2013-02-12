@@ -4,7 +4,7 @@
  * at http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package io.undertow.server.handlers.file;
+package io.undertow.server.handlers.cache;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;

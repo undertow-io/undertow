@@ -1,4 +1,4 @@
-package io.undertow.server.handlers.file;
+package io.undertow.server.handlers.cache;
 
 import java.lang.reflect.Constructor;
 import java.util.AbstractCollection;
