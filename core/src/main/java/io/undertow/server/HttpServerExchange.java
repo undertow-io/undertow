@@ -47,7 +47,6 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
-import org.xnio.channels.Channels;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -715,41 +714,16 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         final int state = this.state;
-        try {
-            if (anyAreClear(state, FLAG_REQUEST_TERMINATED) && isPersistent()) {
-                if (isRequestChannelAvailable()) {
-                    getRequestChannel();
-                }
-                long res;
-                do {
-                    res = Channels.drain(requestChannel, Long.MAX_VALUE);
-                    if (res == 0) {
-                        requestChannel.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, new ChannelListener<StreamSourceChannel>() {
-                                    @Override
-                                    public void handleEvent(final StreamSourceChannel channel) {
-                                        channel.suspendReads();
-                                        channel.getReadSetter().set(null);
-                                        closeAndFlushResponse();
-                                    }
-                                }, new ChannelExceptionHandler<StreamSourceChannel>() {
-                                    @Override
-                                    public void handleException(final StreamSourceChannel channel, final IOException exception) {
-                                        UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", exception);
-                                        IoUtils.safeClose(connection.getChannel());
-                                    }
-                                }
-                        ));
-                        requestChannel.resumeReads();
-                        return;
-                    }
-                } while (res > 0);
-            }
-            if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
-                closeAndFlushResponse();
-            }
-        } catch (IOException e) {
-            UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", e);
-            IoUtils.safeClose(connection.getChannel());
+        if (anyAreClear(state, FLAG_REQUEST_TERMINATED) && isPersistent()) {
+            //if this happens then the request is broken, we could drain the channel,
+            //but the client sending data that the handler is not actually interested in just
+            //seems like an error condition, so it seems like a more sensible response is just to
+            //forcibly close the read side
+            setPersistent(false);
+            IoUtils.safeClose(underlyingRequestChannel);
+        }
+        if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
+            closeAndFlushResponse();
         }
     }
 
@@ -761,24 +735,24 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             if (responseChannel.isOpen()) {
                 responseChannel.shutdownWrites();
-                if (!responseChannel.flush()) {
-                    responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
-                            new ChannelListener<StreamSinkChannel>() {
-                                @Override
-                                public void handleEvent(final StreamSinkChannel channel) {
-                                    channel.suspendWrites();
-                                    channel.getWriteSetter().set(null);
-                                }
-                            }, new ChannelExceptionHandler<Channel>() {
-                                @Override
-                                public void handleException(final Channel channel, final IOException exception) {
-                                    UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", exception);
-                                    IoUtils.safeClose(connection.getChannel());
-                                }
+            }
+            if (!responseChannel.flush()) {
+                responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
+                        new ChannelListener<StreamSinkChannel>() {
+                            @Override
+                            public void handleEvent(final StreamSinkChannel channel) {
+                                channel.suspendWrites();
+                                channel.getWriteSetter().set(null);
                             }
-                    ));
-                    responseChannel.resumeWrites();
-                }
+                        }, new ChannelExceptionHandler<Channel>() {
+                            @Override
+                            public void handleException(final Channel channel, final IOException exception) {
+                                UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", exception);
+                                IoUtils.safeClose(connection.getChannel());
+                            }
+                        }
+                ));
+                responseChannel.resumeWrites();
             }
         } catch (IOException e) {
             UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", e);

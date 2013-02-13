@@ -22,10 +22,11 @@ public interface PipeLiningBuffer {
      *
      * If this returns false the read thread should suspend reads and resume writes
      *
+     * @param closeAfterFlush If this is true then the buffer should shut down and fully flush the write side after flushing
      * @throws IOException
      * @return <code>true</code> If the flush suceeded, false otherwise
      */
-    boolean flushPipelinedData() throws IOException;
+    boolean flushPipelinedData(final boolean closeAfterFlush) throws IOException;
 
     /**
      * Gets the channel wrapper that implements the buffering

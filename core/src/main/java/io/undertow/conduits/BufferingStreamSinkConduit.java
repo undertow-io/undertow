@@ -114,14 +114,18 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
     }
 
     @Override
-    public boolean flushPipelinedData() throws IOException {
-        if (buffer == null) {
-            return next.flush();
-        } else if (buffer.getResource().position() == 0) {
+    public boolean flushPipelinedData(final boolean closeAfterFlush) throws IOException {
+        if (buffer == null || buffer.getResource().position() == 0) {
+            if(closeAfterFlush) {
+                next.terminateWrites();
+            }
             return next.flush();
         }
         if(!flushBuffer()) {
             return false;
+        }
+        if (closeAfterFlush) {
+            next.terminateWrites();
         }
         return next.flush();
     }
