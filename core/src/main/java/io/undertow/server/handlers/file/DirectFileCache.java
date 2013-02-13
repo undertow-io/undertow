@@ -119,11 +119,10 @@ public class DirectFileCache implements FileCache {
                 exchange.endExchange();
             } catch (IOException ignored) {
                 log.tracef("Failed to serve %s: %s", fileChannel, ignored);
-                IoUtils.safeClose(fileChannel);
                 exchange.endExchange();
+                IoUtils.safeClose(response);
             } finally {
                 IoUtils.safeClose(fileChannel);
-                IoUtils.safeClose(response);
             }
         }
     }

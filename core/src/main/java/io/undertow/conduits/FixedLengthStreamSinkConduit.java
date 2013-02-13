@@ -291,7 +291,9 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
         }
         state = newVal;
         if (callFinish) {
-            finishListener.handleEvent(this);
+            if(finishListener != null) {
+                finishListener.handleEvent(this);
+            }
         }
     }
 
@@ -329,7 +331,9 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
 
     private void exitClose(long oldVal) {
         if (!anyAreSet(oldVal, FLAG_CLOSE_COMPLETE)) {
-            finishListener.handleEvent(this);
+            if(finishListener != null) {
+                finishListener.handleEvent(this);
+            }
         }
     }
 

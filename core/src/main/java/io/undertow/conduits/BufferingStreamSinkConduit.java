@@ -6,6 +6,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.PipeLiningBuffer;
@@ -18,6 +19,9 @@ import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.StreamSinkConduit;
 
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
+
 /**
  * Buffer for pipelined requests. Basic behaviour is as follows:
  * <p/>
@@ -29,17 +33,12 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
     /**
      * If this channel is shutdown
      */
-    private boolean shutdown = false;
+    private static final int SHUTDOWN = 1;
+    private static final int DELEGATE_SHUTDOWN = 1<<1;
+    private static final int UPGRADED = 1<<2;
+    private static final int FLUSHING = 1<<3;
 
-    /**
-     * When this is true then flushes will no longer pass through
-     */
-    private boolean upgraded = false;
-
-    /**
-     * If this is true the buffer is being written out via a direct flush.
-     */
-    private boolean flushing = false;
+    private int state;
 
     private final Pool<ByteBuffer> pool;
     private Pooled<ByteBuffer> buffer;
@@ -54,7 +53,7 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
      */
     @Override
     public long transferFrom(FileChannel src, long position, long count) throws IOException {
-        if(shutdown) {
+        if(anyAreSet(state, SHUTDOWN)) {
             throw new ClosedChannelException();
         }
         if(!flushBuffer()) {
@@ -84,10 +83,10 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
 
     @Override
     public int write(ByteBuffer src) throws IOException {
-        if(shutdown) {
+        if (anyAreSet(state, SHUTDOWN)) {
             throw new ClosedChannelException();
         }
-        if (flushing) {
+        if (anyAreSet(state, FLUSHING)) {
             boolean res = flushBuffer();
             if (!res) {
                 return 0;
@@ -116,10 +115,14 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
     @Override
     public boolean flushPipelinedData(final boolean closeAfterFlush) throws IOException {
         if (buffer == null || buffer.getResource().position() == 0) {
-            if(closeAfterFlush) {
-                next.terminateWrites();
+            try {
+                if(closeAfterFlush) {
+                    next.terminateWrites();
+                }
+                return next.flush();
+            } catch (IOException e) {
+                UndertowLogger.REQUEST_LOGGER.debug("Exception flushing pipelining buffer");
             }
-            return next.flush();
         }
         if(!flushBuffer()) {
             return false;
@@ -142,16 +145,16 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
 
     @Override
     public void upgradeUnderlyingChannel() {
-        upgraded = true;
+        state |= UPGRADED;
     }
 
     private boolean flushBuffer() throws IOException {
         if (buffer == null) {
-            return true;
+            return next.flush();
         }
         final ByteBuffer byteBuffer = buffer.getResource();
-        if (!flushing) {
-            flushing = true;
+        if (!anyAreSet(state, FLUSHING)) {
+            state |= FLUSHING;
             byteBuffer.flip();
         }
         int res = 0;
@@ -161,9 +164,12 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
                 return false;
             }
         } while (byteBuffer.hasRemaining());
+        if(!next.flush()) {
+            return false;
+        }
         buffer.free();
         this.buffer = null;
-        flushing = false;
+        state &= ~FLUSHING;
         return true;
     }
 
@@ -189,9 +195,14 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
 
     @Override
     public boolean flush() throws IOException {
-        if (shutdown || upgraded) {
+        if (anyAreSet(state, SHUTDOWN | UPGRADED)) {
             if (!flushBuffer()) {
                 return false;
+            }
+            if(anyAreSet(state, SHUTDOWN) &&
+                    anyAreClear(state, DELEGATE_SHUTDOWN)) {
+                state |= DELEGATE_SHUTDOWN;
+                next.terminateWrites();
             }
             return next.flush();
         }
@@ -200,8 +211,11 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
 
     @Override
     public void terminateWrites() throws IOException {
-        shutdown = true;
-        next.terminateWrites();
+        state |= SHUTDOWN;
+        if(buffer == null) {
+            state |= DELEGATE_SHUTDOWN;
+            next.terminateWrites();
+        }
     }
 
     public void truncateWrites() throws IOException {

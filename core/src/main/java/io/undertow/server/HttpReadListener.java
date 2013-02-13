@@ -95,7 +95,7 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 //this relies on us always doing an eager read when starting a request,
                 //rather than waiting to be notified of data being available
                 final PipeLiningBuffer pipeLiningBuffer = connection.getPipeLiningBuffer();
-                final boolean closeAfterFlush = res < 0; //the read side is done
+                final boolean closeAfterFlush = res < 0; //the read side is done, so we have to flush the write side
                 if(res <= 0 && pipeLiningBuffer != null) {
                     if (!pipeLiningBuffer.flushPipelinedData(closeAfterFlush)) {
                         channel.suspendReads();
@@ -125,13 +125,15 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                     }
                 }
 
-                if (res == 0 && !channel.isReadResumed()) {
-                    channel.getReadSetter().set(this);
-                    channel.resumeReads();
+                if(res == 0) {
+                    if (!channel.isReadResumed()) {
+                        channel.getReadSetter().set(this);
+                        channel.resumeReads();
+                    }
                     return;
-                }
-                if (res == -1) {
+                } else if (res == -1) {
                     try {
+                        channel.suspendReads();
                         channel.shutdownReads();
                         final StreamSinkChannel responseChannel = this.responseChannel;
                         responseChannel.shutdownWrites();

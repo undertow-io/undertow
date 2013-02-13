@@ -26,7 +26,7 @@ public interface PipeLiningBuffer {
      * @throws IOException
      * @return <code>true</code> If the flush suceeded, false otherwise
      */
-    boolean flushPipelinedData(final boolean closeAfterFlush) throws IOException;
+    boolean flushPipelinedData(boolean closeAfterFlush) throws IOException;
 
     /**
      * Gets the channel wrapper that implements the buffering

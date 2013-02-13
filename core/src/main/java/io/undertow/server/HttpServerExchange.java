@@ -720,7 +720,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             //seems like an error condition, so it seems like a more sensible response is just to
             //forcibly close the read side
             setPersistent(false);
-            IoUtils.safeClose(underlyingRequestChannel);
+            IoUtils.safeShutdownReads(underlyingRequestChannel);
         }
         if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
             closeAndFlushResponse();

@@ -39,7 +39,6 @@ import io.undertow.util.MultipartParser;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.FileAccess;
 import org.xnio.IoFuture;
-import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -179,7 +178,6 @@ public class MultiPartHandler implements HttpHandler {
                     int c = requestChannel.read(buf);
                     buf.flip();
                     if (c == -1) {
-                        IoUtils.safeClose(requestChannel);
                         UndertowLogger.REQUEST_LOGGER.connectionTerminatedReadingMultiPartData();
                         exchange.endExchange();
                         return;
