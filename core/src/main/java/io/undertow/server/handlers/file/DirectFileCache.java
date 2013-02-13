@@ -26,9 +26,7 @@ import java.nio.channels.FileChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
 import io.undertow.util.WorkerDispatcher;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
@@ -36,6 +34,10 @@ import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
+
+import static io.undertow.util.Headers.CONTENT_LENGTH;
+import static io.undertow.util.Methods.GET;
+import static io.undertow.util.Methods.HEAD;
 
 /**
  * A file cache that serves files directly with no caching.
@@ -87,13 +89,14 @@ public class DirectFileCache implements FileCache {
                 exchange.endExchange();
                 return;
             }
-            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(length));
-            if (method.equals(Methods.HEAD)) {
+            if (!method.equals(GET) && !method.equals(HEAD)) {
+                exchange.setResponseCode(500);
                 exchange.endExchange();
                 return;
             }
-            if (!method.equals(Methods.GET)) {
-                exchange.setResponseCode(500);
+
+            exchange.getResponseHeaders().put(CONTENT_LENGTH, Long.toString(length));
+            if (method.equals(HEAD)) {
                 exchange.endExchange();
                 return;
             }
