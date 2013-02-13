@@ -39,8 +39,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.file.DirectFileCache;
-import io.undertow.server.handlers.file.FileCache;
+import io.undertow.server.handlers.file.DirectFileSource;
+import io.undertow.server.handlers.file.FileSource;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -68,7 +68,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
 
 
     private final Deployment deployment;
-    private volatile FileCache fileCache = DirectFileCache.INSTANCE;
+    private volatile FileSource fileSource = DirectFileSource.INSTANCE;
     private final DefaultServletConfig config;
 
     private final List<String> welcomePages;
@@ -149,14 +149,14 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         } else if (resource.isDirectory()) {
             handleWelcomePage(exchange, resource);
         } else {
-            fileCache.serveFile(exchange, resource, false);
+            fileSource.serveFile(exchange, resource, false);
         }
     }
 
     private void handleWelcomePage(final HttpServerExchange exchange, final File resource) {
         File welcomePage = findWelcomeFile(resource);
         if (welcomePage != null) {
-            fileCache.serveFile(exchange, welcomePage, false);
+            fileSource.serveFile(exchange, welcomePage, false);
         } else {
             ServletPathMatch handler = findWelcomeServlet(exchange.getRelativePath().endsWith("/") ? exchange.getRelativePath() : exchange.getRelativePath() + "/");
             if (handler != null && handler.getHandler() != null) {
@@ -274,11 +274,11 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         }
     }
 
-    public FileCache getFileCache() {
-        return fileCache;
+    public FileSource getFileSource() {
+        return fileSource;
     }
 
-    public void setFileCache(final FileCache fileCache) {
-        this.fileCache = fileCache;
+    public void setFileSource(final FileSource fileSource) {
+        this.fileSource = fileSource;
     }
 }

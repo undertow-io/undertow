@@ -29,6 +29,9 @@ import java.util.concurrent.Future;
 
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.cache.CacheHandler;
+import io.undertow.server.handlers.cache.CachedHttpRequest;
+import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.file.FileHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
@@ -54,8 +57,10 @@ public class FileHandlerStressTestCase {
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
             final FileHandler handler = new FileHandler(new File(getClass().getResource("page.html").getFile()).getParentFile());
+
+            final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache<CachedHttpRequest>(1024, 10480), handler);
             final PathHandler path = new PathHandler();
-            path.addPath("/path", handler);
+            path.addPath("/path", cacheHandler);
             final CanonicalPathHandler root = new CanonicalPathHandler();
             root.setNext(path);
             DefaultServer.setRootHandler(root);

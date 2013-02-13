@@ -28,7 +28,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class CachingHandlerTestCase {
+public class CacheHandlerTestCase {
 
 
     private static final AtomicInteger responseCount = new AtomicInteger();

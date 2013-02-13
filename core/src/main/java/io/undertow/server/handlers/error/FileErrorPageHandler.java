@@ -30,8 +30,8 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.server.handlers.file.DirectFileCache;
-import io.undertow.server.handlers.file.FileCache;
+import io.undertow.server.handlers.file.DirectFileSource;
+import io.undertow.server.handlers.file.FileSource;
 
 /**
  * Handler that serves up a file from disk to serve as an error page.
@@ -52,7 +52,7 @@ public class FileErrorPageHandler implements HttpHandler {
 
     private volatile File file;
 
-    private volatile FileCache fileCache = DirectFileCache.INSTANCE;
+    private volatile FileSource fileSource = DirectFileSource.INSTANCE;
 
     public FileErrorPageHandler(final File file, final Integer... responseCodes) {
         this.file = file;
@@ -66,7 +66,7 @@ public class FileErrorPageHandler implements HttpHandler {
             public boolean handleDefaultResponse(final HttpServerExchange exchange) {
                 Set<Integer> codes = responseCodes;
                 if (!exchange.isResponseStarted() && codes.contains(exchange.getResponseCode())) {
-                    fileCache.serveFile(exchange, file, false);
+                    fileSource.serveFile(exchange, file, false);
                     return true;
                 }
                 return false;
@@ -109,14 +109,14 @@ public class FileErrorPageHandler implements HttpHandler {
         this.file = file;
     }
 
-    public FileCache getFileCache() {
-        return fileCache;
+    public FileSource getFileSource() {
+        return fileSource;
     }
 
-    public void setFileCache(final FileCache fileCache) {
-        if(fileCache == null) {
+    public void setFileSource(final FileSource fileSource) {
+        if(fileSource == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("fileCache");
         }
-        this.fileCache = fileCache;
+        this.fileSource = fileSource;
     }
 }

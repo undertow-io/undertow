@@ -27,7 +27,7 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author Stuart Douglas
  */
-public interface FileCache {
+public interface FileSource {
 
     /**
      * Serves a file directly to the client, once the file has been transferred the completion handler is invoked.

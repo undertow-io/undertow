@@ -26,6 +26,7 @@ import java.nio.channels.FileChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.cache.ResponseCache;
 import io.undertow.util.HttpString;
 import io.undertow.util.WorkerDispatcher;
 import org.jboss.logging.Logger;
@@ -44,17 +45,23 @@ import static io.undertow.util.Methods.HEAD;
  *
  * @author Stuart Douglas
  */
-public class DirectFileCache implements FileCache {
+public class DirectFileSource implements FileSource {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.handlers.file");
 
-    public static final FileCache INSTANCE = new DirectFileCache();
+    public static final FileSource INSTANCE = new DirectFileSource();
 
     @Override
     public void serveFile(final HttpServerExchange exchange, final File file, final boolean directoryListingEnabled) {
         // ignore request body
-        IoUtils.safeShutdownReads(exchange.getRequestChannel());
 
+        //try and serve a cached version, and also mark the response as cachable
+        final ResponseCache cache = exchange.getAttachment(ResponseCache.ATTACHMENT_KEY);
+        if(cache != null) {
+            if(cache.tryServeResponse()) {
+                return;
+            }
+        }
         WorkerDispatcher.dispatch(exchange, new FileWriteTask(exchange, file));
     }
 

@@ -44,7 +44,7 @@ import org.xnio.channels.StreamSinkChannel;
 public class FileHandler implements HttpHandler {
 
     private volatile File base;
-    private volatile FileCache fileCache = new CachingFileCache(1024, 10480);
+    private volatile FileSource fileSource = new DirectFileSource();
     private volatile boolean directoryListingEnabled = false;
 
     public FileHandler(final File base) {
@@ -70,7 +70,7 @@ public class FileHandler implements HttpHandler {
             return;
         }
 
-        fileCache.serveFile(exchange, new File(base, path), directoryListingEnabled);
+        fileSource.serveFile(exchange, new File(base, path), directoryListingEnabled);
     }
 
     public File getBase() {
@@ -84,15 +84,15 @@ public class FileHandler implements HttpHandler {
         this.base = base;
     }
 
-    public FileCache getFileCache() {
-        return fileCache;
+    public FileSource getFileSource() {
+        return fileSource;
     }
 
-    public void setFileCache(final FileCache fileCache) {
-        if (fileCache == null) {
+    public void setFileSource(final FileSource fileSource) {
+        if (fileSource == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("fileCache");
         }
-        this.fileCache = fileCache;
+        this.fileSource = fileSource;
     }
 
     private boolean sendRequestedBlobs(HttpServerExchange exchange) {
