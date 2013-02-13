@@ -170,7 +170,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                         state |= FLAG_next_SHUTDWON;
                         return next.flush();
                     } finally {
-                        finishListener.handleEvent(this);
+                        if(finishListener != null) {
+                            finishListener.handleEvent(this);
+                        }
                     }
                 } else {
                     return false;
