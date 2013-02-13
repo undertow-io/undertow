@@ -76,7 +76,7 @@ public class CachingFileCache implements FileCache {
 
     public CachingFileCache(final int sliceSize, final int maxSlices, final long maxFileSize) {
         this.maxFileSize = maxFileSize;
-        this.cache = new DirectBufferCache(sliceSize, sliceSize * maxSlices);
+        this.cache = new DirectBufferCache<>(sliceSize, sliceSize * maxSlices);
     }
 
     public CachingFileCache(final int sliceSize, final int maxSlices) {
@@ -95,7 +95,14 @@ public class CachingFileCache implements FileCache {
             return;
         }
         final DirectBufferCache.CacheEntry entry = cache.get(file.getAbsolutePath());
+
         if (entry == null) {
+            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, file, directoryListingEnabled));
+            return;
+        }
+
+        // It's loading retry later
+        if (!entry.enabled() || !entry.reference()) {
             WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, file, directoryListingEnabled));
             return;
         }
@@ -103,12 +110,6 @@ public class CachingFileCache implements FileCache {
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(entry.size()));
         if (method.equals(Methods.HEAD)) {
             exchange.endExchange();
-            return;
-        }
-
-        // It's loading retry later
-        if (!entry.enabled() || !entry.reference()) {
-            WorkerDispatcher.dispatch(exchange, new FileWriteLoadTask(exchange, file, directoryListingEnabled));
             return;
         }
 
