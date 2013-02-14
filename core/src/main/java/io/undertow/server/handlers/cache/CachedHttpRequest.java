@@ -18,6 +18,7 @@ public class CachedHttpRequest {
     private final String language;
     private final String contentType;
     private final Date lastModified;
+    private final int responseCode;
 
 
     public CachedHttpRequest(final HttpServerExchange exchange) {
@@ -40,6 +41,7 @@ public class CachedHttpRequest {
         } else {
             this.contentEncoding = exchange.getResponseHeaders().getFirst(Headers.CONTENT_ENCODING);
         }
+        this.responseCode = exchange.getResponseCode();
     }
 
     public String getPath() {
@@ -70,6 +72,10 @@ public class CachedHttpRequest {
         return contentLocation;
     }
 
+    public int getResponseCode() {
+        return responseCode;
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) return true;
@@ -77,6 +83,7 @@ public class CachedHttpRequest {
 
         final CachedHttpRequest that = (CachedHttpRequest) o;
 
+        if (responseCode != that.responseCode) return false;
         if (contentEncoding != null ? !contentEncoding.equals(that.contentEncoding) : that.contentEncoding != null)
             return false;
         if (contentLocation != null ? !contentLocation.equals(that.contentLocation) : that.contentLocation != null)
@@ -99,6 +106,7 @@ public class CachedHttpRequest {
         result = 31 * result + (language != null ? language.hashCode() : 0);
         result = 31 * result + (contentType != null ? contentType.hashCode() : 0);
         result = 31 * result + (lastModified != null ? lastModified.hashCode() : 0);
+        result = 31 * result + responseCode;
         return result;
     }
 }

@@ -8,7 +8,9 @@ import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
-import io.undertow.util.Methods;
+
+import static io.undertow.util.Methods.GET;
+import static io.undertow.util.Methods.HEAD;
 
 /**
  * Facade for an underlying buffer cache that contains response information.
@@ -77,6 +79,12 @@ public class ResponseCache {
         final CachedHttpRequest key = new CachedHttpRequest(exchange);
         DirectBufferCache.CacheEntry<CachedHttpRequest> entry = cache.get(key);
 
+        //we only cache get and head requests
+        if (!exchange.getRequestMethod().equals(GET) &&
+                !exchange.getRequestMethod().equals(HEAD)) {
+            return false;
+        }
+
         if (entry == null) {
             this.responseCachable = markCacheable;
             return false;
@@ -89,7 +97,7 @@ public class ResponseCache {
         }
 
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(entry.size()));
-        if (exchange.getRequestMethod().equals(Methods.HEAD)) {
+        if (exchange.getRequestMethod().equals(HEAD)) {
             exchange.endExchange();
             return true;
         }
