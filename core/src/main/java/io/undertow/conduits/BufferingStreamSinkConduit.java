@@ -137,7 +137,7 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
     public ConduitWrapper<StreamSinkConduit> getChannelWrapper() {
         return new ConduitWrapper<StreamSinkConduit>() {
             @Override
-            public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> channel, HttpServerExchange exchange) {
+            public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
                 return BufferingStreamSinkConduit.this;
             }
         };

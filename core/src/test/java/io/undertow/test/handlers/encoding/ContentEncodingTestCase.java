@@ -7,7 +7,7 @@ import java.util.Random;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
-import io.undertow.server.handlers.encoding.DeflateEncoding;
+import io.undertow.server.handlers.encoding.DeflateEncodingProvider;
 import io.undertow.server.handlers.encoding.EncodingHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
@@ -33,7 +33,7 @@ public class ContentEncodingTestCase {
     @BeforeClass
     public static void setup() {
         final EncodingHandler handler = new EncodingHandler();
-        handler.addEncodingHandler("deflate", new DeflateEncoding(), 50);
+        handler.addEncodingHandler("deflate", new DeflateEncodingProvider(), 50);
         handler.setNext(new BlockingHandler(new BlockingHttpHandler() {
             @Override
             public void handleBlockingRequest(final HttpServerExchange exchange) {

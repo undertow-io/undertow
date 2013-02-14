@@ -194,15 +194,15 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
         }
 
         @Override
-        public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> channel, HttpServerExchange exchange) {
+        public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
             return responseConduit;
         }
 
         public ConduitWrapper<StreamSourceConduit> getRequestWrapper() {
             return new ConduitWrapper<StreamSourceConduit>() {
                 @Override
-                public StreamSourceConduit wrap(ConduitFactory<StreamSourceConduit> channelFactory, HttpServerExchange exchange) {
-                    StreamSourceConduit conduit = channelFactory.create();
+                public StreamSourceConduit wrap(ConduitFactory<StreamSourceConduit> factory, HttpServerExchange exchange) {
+                    StreamSourceConduit conduit = factory.create();
                     final HeaderMap requestHeaders = exchange.getRequestHeaders();
                     HttpString transferEncoding = Headers.IDENTITY;
                     Long length;

@@ -38,29 +38,29 @@ public class CacheHandler implements HttpHandler {
         exchange.putAttachment(ResponseCache.ATTACHMENT_KEY, responseCache);
         exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
             @Override
-            public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> conduit, final HttpServerExchange exchange) {
+            public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
                 if(!responseCache.isResponseCachable()) {
-                    return conduit.create();
+                    return factory.create();
                 }
                 String lengthString = exchange.getResponseHeaders().getFirst(CONTENT_LENGTH);
                 if(lengthString == null) {
                     //we don't cache chunked requests
-                    return conduit.create();
+                    return factory.create();
                 }
                 int length = Integer.parseInt(lengthString);
                 final CachedHttpRequest key = new CachedHttpRequest(exchange);
                 final DirectBufferCache.CacheEntry entry = cache.add(key, length);
 
                 if (entry == null || entry.buffers().length == 0 || !entry.claimEnable()) {
-                    return conduit.create();
+                    return factory.create();
                 }
 
                 if (!entry.reference()) {
                     entry.disable();
-                    return conduit.create();
+                    return factory.create();
                 }
 
-                return new ResponseCachingStreamSinkConduit(conduit.create(), entry, length);
+                return new ResponseCachingStreamSinkConduit(factory.create(), entry, length);
             }
         });
         HttpHandlers.executeHandler(next, exchange);

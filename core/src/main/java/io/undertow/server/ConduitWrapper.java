@@ -35,9 +35,9 @@ public interface ConduitWrapper<T extends Conduit> {
      * Wrap the conduit.  The wrapper should not return {@code null}.  If no wrapping is desired, the original
      * conduit should be returned.
      *
-     * @param conduit the original conduit
+     * @param factory the original conduit
      * @param exchange the in-flight HTTP exchange
      * @return the replacement conduit
      */
-    T wrap(final ConduitFactory<T> conduit, final HttpServerExchange exchange);
+    T wrap(final ConduitFactory<T> factory, final HttpServerExchange exchange);
 }

@@ -144,8 +144,8 @@ public class HttpTransferEncodingHandler implements HttpHandler {
 
     private static ConduitWrapper<StreamSinkConduit> responseWrapper(final boolean requestLooksPersistent) {
         return new ConduitWrapper<StreamSinkConduit>() {
-            public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> channelFactory, final HttpServerExchange exchange) {
-                final StreamSinkConduit channel = channelFactory.create();
+            public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
+                final StreamSinkConduit channel = factory.create();
                 final HeaderMap responseHeaders = exchange.getResponseHeaders();
                 // test to see if we're still persistent
                 boolean stillPersistent = requestLooksPersistent;
@@ -227,16 +227,16 @@ public class HttpTransferEncodingHandler implements HttpHandler {
 
     private static ConduitWrapper<StreamSourceConduit> chunkedStreamSourceConduitWrapper() {
         return new ConduitWrapper<StreamSourceConduit>() {
-            public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> channelFactory, final HttpServerExchange exchange) {
-                return new ChunkedStreamSourceConduit(channelFactory.create(), exchange, chunkedDrainListener(exchange), maxEntitySize(exchange));
+            public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
+                return new ChunkedStreamSourceConduit(factory.create(), exchange, chunkedDrainListener(exchange), maxEntitySize(exchange));
             }
         };
     }
 
     private static ConduitWrapper<StreamSourceConduit> fixedLengthStreamSourceConduitWrapper(final long contentLength) {
         return new ConduitWrapper<StreamSourceConduit>() {
-            public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> channelFactory, final HttpServerExchange exchange) {
-                StreamSourceConduit channel = channelFactory.create();
+            public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
+                StreamSourceConduit channel = factory.create();
                 final long max = maxEntitySize(exchange);
                 if(contentLength > max) {
                     return new BrokenStreamSourceConduit(channel, UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getSourceAddress(), max));
@@ -248,8 +248,8 @@ public class HttpTransferEncodingHandler implements HttpHandler {
 
     private static ConduitWrapper<StreamSourceConduit> emptyStreamSourceConduitWrapper() {
         return new ConduitWrapper<StreamSourceConduit>() {
-            public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> channelFactory, final HttpServerExchange exchange) {
-                StreamSourceConduit channel = channelFactory.create();
+            public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
+                StreamSourceConduit channel = factory.create();
                 return new EmptyStreamSourceConduit(channel.getReadThread());
             }
         };

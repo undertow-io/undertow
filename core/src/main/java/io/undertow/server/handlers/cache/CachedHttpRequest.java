@@ -3,6 +3,7 @@ package io.undertow.server.handlers.cache;
 import java.util.Date;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.encoding.ContentEncoding;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 
@@ -22,7 +23,6 @@ public class CachedHttpRequest {
     public CachedHttpRequest(final HttpServerExchange exchange) {
         this.path = exchange.getRequestPath();
         this.etag = exchange.getResponseHeaders().getFirst(Headers.ETAG);
-        this.contentEncoding = exchange.getResponseHeaders().getFirst(Headers.CONTENT_ENCODING);
         this.contentLocation = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LOCATION);
         this.language = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LANGUAGE);
         this.contentType = exchange.getResponseHeaders().getFirst(Headers.CONTENT_TYPE);
@@ -31,6 +31,14 @@ public class CachedHttpRequest {
             this.lastModified = null;
         } else {
             this.lastModified = DateUtils.parseDate(lmString);
+        }
+        //the content encoding can be decided dynamically, based on the current state of the request
+        //as the decision to compress generally dependends on size and mime type
+        final ContentEncoding encoding = exchange.getAttachment(ContentEncoding.CONENT_ENCODING);
+        if(encoding != null) {
+            this.contentEncoding = encoding.getCurrentContentEncoding();
+        } else {
+            this.contentEncoding = exchange.getResponseHeaders().getFirst(Headers.CONTENT_ENCODING);
         }
     }
 

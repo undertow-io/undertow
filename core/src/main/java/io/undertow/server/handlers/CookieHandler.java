@@ -267,7 +267,7 @@ public class CookieHandler implements HttpHandler {
         public static CookieConduitWrapper INSTANCE = new CookieConduitWrapper();
 
         @Override
-        public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> channel, final HttpServerExchange exchange) {
+        public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
 
             final List<Cookie> cookies = exchange.getAttachmentList(Cookie.RESPONSE_COOKIES);
             if (!cookies.isEmpty()) {
@@ -279,7 +279,7 @@ public class CookieHandler implements HttpHandler {
                     exchange.getResponseHeaders().add(Headers.SET_COOKIE, builder.toString());
                 }
             }
-            return channel.create();
+            return factory.create();
         }
     }
 }
