@@ -58,7 +58,12 @@ public class EncodingHandler implements HttpHandler {
 
     private static final String IDENTITY = "identity";
 
-    private volatile Predicate<HttpServerExchange> shouldEncode = new TruePredicate<>();
+    public EncodingHandler(final HttpHandler next) {
+        this.next = next;
+    }
+
+    public EncodingHandler() {
+    }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {

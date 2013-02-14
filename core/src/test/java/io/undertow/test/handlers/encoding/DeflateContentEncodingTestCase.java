@@ -1,12 +1,12 @@
 package io.undertow.test.handlers.encoding;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Random;
 
+import io.undertow.io.IoCallback;
+import io.undertow.predicate.MaxContentSizePredicate;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.blocking.BlockingHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.encoding.DeflateEncodingProvider;
 import io.undertow.server.handlers.encoding.EncodingHandler;
 import io.undertow.test.utils.DefaultServer;
@@ -20,33 +20,27 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.streams.ChannelOutputStream;
 
 /**
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class ContentEncodingTestCase {
+public class DeflateContentEncodingTestCase {
 
     private static volatile String message;
 
     @BeforeClass
     public static void setup() {
         final EncodingHandler handler = new EncodingHandler();
-        handler.addEncodingHandler("deflate", new DeflateEncodingProvider(), 50);
-        handler.setNext(new BlockingHandler(new BlockingHttpHandler() {
+        //we don't compress messages 5 bytes or smaller
+        handler.addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, new MaxContentSizePredicate(5));
+        handler.setNext(new HttpHandler() {
             @Override
-            public void handleBlockingRequest(final HttpServerExchange exchange) {
-                try {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
-                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
-                    outputStream.write(message.getBytes());
-                    outputStream.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+            public void handleRequest(final HttpServerExchange exchange) {
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
+                exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
             }
-        }));
+        });
 
         DefaultServer.setRootHandler(handler);
     }
@@ -59,6 +53,30 @@ public class ContentEncodingTestCase {
     @Test
     public void testDeflateEncoding() throws IOException {
         runTest("Hello World");
+    }
+
+
+    /**
+     * This message should not be compressed as it is too small
+     *
+     * @throws IOException
+     */
+    @Test
+    public void testSmallMessagePredicateDoesNotCompress() throws IOException {
+        ContentEncodingHttpClient client = new ContentEncodingHttpClient();
+        try {
+            message = "Hi";
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            get.setHeader(Headers.ACCEPT_ENCODING_STRING, "deflate");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
+            Assert.assertEquals(0, header.length);
+            final String body = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("Hi", body);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
     @Test
