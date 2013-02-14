@@ -6,7 +6,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.UndertowLogger;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.PipeLiningBuffer;
@@ -113,22 +112,12 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
     }
 
     @Override
-    public boolean flushPipelinedData(final boolean closeAfterFlush) throws IOException {
+    public boolean flushPipelinedData() throws IOException {
         if (buffer == null || buffer.getResource().position() == 0) {
-            try {
-                if(closeAfterFlush) {
-                    next.terminateWrites();
-                }
-                return next.flush();
-            } catch (IOException e) {
-                UndertowLogger.REQUEST_LOGGER.debug("Exception flushing pipelining buffer");
-            }
+            return next.flush();
         }
         if(!flushBuffer()) {
             return false;
-        }
-        if (closeAfterFlush) {
-            next.terminateWrites();
         }
         return next.flush();
     }

@@ -95,24 +95,19 @@ final class HttpReadListener implements ChannelListener<PushBackStreamChannel> {
                 //this relies on us always doing an eager read when starting a request,
                 //rather than waiting to be notified of data being available
                 final PipeLiningBuffer pipeLiningBuffer = connection.getPipeLiningBuffer();
-                final boolean closeAfterFlush = res < 0; //the read side is done, so we have to flush the write side
-                if(res <= 0 && pipeLiningBuffer != null) {
-                    if (!pipeLiningBuffer.flushPipelinedData(closeAfterFlush)) {
+                if(res == 0 && pipeLiningBuffer != null) {
+                    if (!pipeLiningBuffer.flushPipelinedData()) {
                         channel.suspendReads();
                         connection.getChannel().getWriteSetter().set(new ChannelListener<Channel>() {
                             @Override
                             public void handleEvent(Channel c) {
                                 try {
-                                    if (pipeLiningBuffer.flushPipelinedData(closeAfterFlush)) {
-                                        if(closeAfterFlush) {
-                                            IoUtils.safeClose(connection.getChannel());
-                                        } else {
-                                            connection.getChannel().getWriteSetter().set(null);
-                                            connection.getChannel().suspendWrites();
+                                    if (pipeLiningBuffer.flushPipelinedData()) {
+                                        connection.getChannel().getWriteSetter().set(null);
+                                        connection.getChannel().suspendWrites();
 
-                                            channel.getReadSetter().set(this);
-                                            channel.resumeReads();
-                                        }
+                                        channel.getReadSetter().set(this);
+                                        channel.resumeReads();
                                     }
                                 } catch (IOException e) {
                                     UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
