@@ -96,6 +96,7 @@
     <modules>
         <module>parser-generator</module>
         <module>core</module>
+        <module>proxy</module>
         <module>servlet</module>
         <module>examples</module>
         <module>websockets-jsr</module>
@@ -240,6 +241,18 @@
                 <version>${project.version}</version>
                 <type>test-jar</type>
                 <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-proxy</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-websockets-jsr</artifactId>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- External Dependencies -->

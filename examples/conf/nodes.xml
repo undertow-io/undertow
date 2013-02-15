@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes>
+       <node>
+                <hostname>localhost</hostname>
+                <port>8080</port>
+        </node>
+</nodes> 
