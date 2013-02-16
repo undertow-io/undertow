@@ -10,6 +10,7 @@ import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.PipeLiningBuffer;
 import io.undertow.util.ConduitFactory;
+import org.xnio.Buffers;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -68,16 +69,36 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
 
     @Override
     public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        long count = 0;
-        for (int i = offset; i < length; ++i) {
-            int ret = write(srcs[i]);
-            count += ret;
-            if (ret == 0) {
-                return count;
+        if (anyAreSet(state, SHUTDOWN)) {
+            throw new ClosedChannelException();
+        }
+        if (anyAreSet(state, FLUSHING)) {
+            boolean res = flushBuffer();
+            if (!res) {
+                return 0;
             }
         }
-        return count;
+        Pooled<ByteBuffer> pooled = this.buffer;
+        if (pooled == null) {
+            this.buffer = pooled = pool.allocate();
+        }
+        final ByteBuffer buffer = pooled.getResource();
 
+        int total = 0;
+        for (int i = offset; i < offset + length; ++i) {
+            total += srcs[i].remaining();
+        }
+
+        if (buffer.remaining() > total) {
+            int put = total;
+            Buffers.copy(buffer, srcs, offset, length);
+            return put;
+        } else {
+            int put = buffer.remaining();
+            Buffers.copy(put, buffer, srcs, offset, length);
+            flushBuffer();
+            return put;
+        }
     }
 
     @Override
