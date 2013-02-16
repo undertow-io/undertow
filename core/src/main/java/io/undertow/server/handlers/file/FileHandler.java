@@ -32,7 +32,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import org.xnio.channels.Channels;
-import org.xnio.channels.StreamSinkChannel;
 
 /**
  *
@@ -70,7 +69,8 @@ public class FileHandler implements HttpHandler {
             return;
         }
 
-        fileSource.serveFile(exchange, new File(base, path), directoryListingEnabled);
+        final File file = new File(base, path);
+        fileSource.serveFile(exchange, file, directoryListingEnabled);
     }
 
     public File getBase() {
@@ -113,8 +113,6 @@ public class FileHandler implements HttpHandler {
                 exchange.endExchange();
                 return true;
             }
-
-            StreamSinkChannel channel = exchange.getResponseChannel();
             exchange.getResponseSender().send(buffer, IoCallback.END_EXCHANGE);
 
             return true;

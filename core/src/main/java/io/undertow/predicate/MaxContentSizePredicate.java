@@ -17,7 +17,6 @@ public class MaxContentSizePredicate implements Predicate<HttpServerExchange> {
         this.maxSize = maxSize;
     }
 
-
     @Override
     public boolean resolve(final HttpServerExchange value) {
         final String length = value.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);

@@ -62,21 +62,33 @@ public class DirectFileSource implements FileSource {
                 return;
             }
         }
-        WorkerDispatcher.dispatch(exchange, new FileWriteTask(exchange, file));
+        WorkerDispatcher.dispatch(exchange, new FileWriteTask(exchange, file, directoryListingEnabled));
     }
 
     private static class FileWriteTask implements Runnable {
 
         private final HttpServerExchange exchange;
         private final File file;
+        private final boolean directoryListingEnabled;
 
-        private FileWriteTask(final HttpServerExchange exchange,  final File file) {
+        private FileWriteTask(final HttpServerExchange exchange, final File file, final boolean directoryListingEnabled) {
             this.exchange = exchange;
             this.file = file;
+            this.directoryListingEnabled = directoryListingEnabled;
         }
 
         @Override
         public void run() {
+
+            if(file.isDirectory()) {
+                if (directoryListingEnabled) {
+                    FileHandler.renderDirectoryListing(exchange, file);
+                } else {
+                    exchange.setResponseCode(404);
+                    exchange.endExchange();
+                }
+                return;
+            }
 
             final HttpString method = exchange.getRequestMethod();
             final FileChannel fileChannel;

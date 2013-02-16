@@ -5,6 +5,12 @@ package io.undertow.predicate;
  */
 public class FalsePredicate<T> implements Predicate<T> {
 
+    public static FalsePredicate INSTANCE = new FalsePredicate();
+
+    public static <T> FalsePredicate<T> instance() {
+        return INSTANCE;
+    }
+
     @Override
     public boolean resolve(final T value) {
         return false;
