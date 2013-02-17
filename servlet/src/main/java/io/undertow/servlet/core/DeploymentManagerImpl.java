@@ -46,6 +46,7 @@ import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.security.impl.RoleMappingManagerImpl;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.AttachmentHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
@@ -57,7 +58,6 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.FilterMappingInfo;
-import io.undertow.server.HandlerWrapper;
 import io.undertow.servlet.api.HttpMethodSecurityInfo;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ListenerInfo;
@@ -87,6 +87,7 @@ import io.undertow.servlet.handlers.security.ServletSecurityRoleHandler;
 import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
+import io.undertow.util.MimeMappings;
 import io.undertow.util.WorkerDispatcher;
 
 import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
@@ -275,7 +276,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private void initializeMimeMappings(final DeploymentImpl deployment, final DeploymentInfo deploymentInfo) {
-        final Map<String, String> mappings = new HashMap<String, String>(MimeMapping.DEFAULT_MIME_MAPPINGS);
+        final Map<String, String> mappings = new HashMap<String, String>(MimeMappings.DEFAULT_MIME_MAPPINGS);
         for (MimeMapping mapping : deploymentInfo.getMimeMappings()) {
             mappings.put(mapping.getExtension(), mapping.getMimeType());
         }

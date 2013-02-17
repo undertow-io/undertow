@@ -31,6 +31,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.MimeMappings;
 import org.xnio.channels.Channels;
 
 /**
@@ -45,6 +46,7 @@ public class FileHandler implements HttpHandler {
     private volatile File base;
     private volatile FileSource fileSource = new DirectFileSource();
     private volatile boolean directoryListingEnabled = false;
+    private volatile MimeMappings mimeMappings = MimeMappings.DEFAULT;
 
     public FileHandler(final File base) {
         if (base == null) {
@@ -70,6 +72,20 @@ public class FileHandler implements HttpHandler {
         }
 
         final File file = new File(base, path);
+        if(mimeMappings != null) {
+            final String fileName = file.getName();
+            int index = fileName.lastIndexOf('.');
+            if(index != -1 && index != fileName.length() - 1) {
+                final String mime = mimeMappings.getMimeType(fileName.substring(index +1));
+                if(mime != null) {
+                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, mime);
+                } else {
+                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/octet-stream");
+                }
+            } else {
+                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/octet-stream");
+            }
+        }
         fileSource.serveFile(exchange, file, directoryListingEnabled);
     }
 
@@ -237,5 +253,13 @@ public class FileHandler implements HttpHandler {
 
     public void setDirectoryListingEnabled(final boolean directoryListingEnabled) {
         this.directoryListingEnabled = directoryListingEnabled;
+    }
+
+    public MimeMappings getMimeMappings() {
+        return mimeMappings;
+    }
+
+    public void setMimeMappings(final MimeMappings mimeMappings) {
+        this.mimeMappings = mimeMappings;
     }
 }

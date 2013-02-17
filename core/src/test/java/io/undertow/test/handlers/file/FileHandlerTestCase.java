@@ -26,6 +26,7 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.file.FileHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import io.undertow.util.TestHttpClient;
@@ -56,6 +57,8 @@ public class FileHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
+            Header[] headers = result.getHeaders("Content-Type");
+            Assert.assertEquals("text/html", headers[0].getValue());
             Assert.assertTrue(response, response.contains("A web page"));
 
         } finally {
