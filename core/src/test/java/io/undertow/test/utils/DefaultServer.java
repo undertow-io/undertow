@@ -18,9 +18,6 @@
 
 package io.undertow.test.utils;
 
-import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
-import static org.xnio.SslClientAuthMode.REQUESTED;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Inet4Address;
@@ -64,6 +61,9 @@ import org.xnio.channels.AcceptingChannel;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
+
+import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
+import static org.xnio.SslClientAuthMode.REQUESTED;
 
 /**
  * A class that starts a server before the test suite. By swapping out the root handler
@@ -184,8 +184,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             xnio = Xnio.getInstance("nio", DefaultServer.class.getClassLoader());
             try {
                 worker = xnio.createWorker(OptionMap.builder()
-                        .set(Options.WORKER_WRITE_THREADS, 4)
-                        .set(Options.WORKER_READ_THREADS, 4)
+                        .set(Options.WORKER_IO_THREADS, 8)
                         .set(Options.CONNECTION_HIGH_WATER, 1000000)
                         .set(Options.CONNECTION_LOW_WATER, 1000000)
                         .set(Options.WORKER_TASK_CORE_THREADS, 30)
@@ -195,7 +194,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         .getMap());
 
                 serverOptions = OptionMap.builder()
-                        .set(Options.WORKER_ACCEPT_THREADS, 4)
                         .set(Options.TCP_NODELAY, true)
                         .set(Options.REUSE_ADDRESSES, true)
                         .getMap();
