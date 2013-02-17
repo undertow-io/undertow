@@ -28,6 +28,9 @@ import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.cache.CacheHandler;
+import io.undertow.server.handlers.cache.CachedHttpRequest;
+import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.error.SimpleErrorPageHandler;
 import io.undertow.server.handlers.form.FormEncodedDataHandler;
 import org.xnio.BufferAllocator;
@@ -56,6 +59,7 @@ public class Undertow {
     private final int buffersPerRegion;
     private final int ioThreads;
     private final int workerThreads;
+    private final int cacheSize;
     private final boolean directBuffers;
     private final List<ListenerConfig> listeners = new ArrayList<ListenerConfig>();
     private final List<VirtualHost> hosts = new ArrayList<VirtualHost>();
@@ -69,6 +73,7 @@ public class Undertow {
         this.buffersPerRegion = builder.buffersPerRegion;
         this.ioThreads = builder.ioThreads;
         this.workerThreads = builder.workerThreads;
+        this.cacheSize = builder.cacheSize;
         this.directBuffers = builder.directBuffers;
         this.listeners.addAll(builder.listeners);
         this.hosts.addAll(builder.hosts);
@@ -189,6 +194,10 @@ public class Undertow {
         root = new FormEncodedDataHandler(root);
         root = new SimpleErrorPageHandler(root);
         //TODO: multipart
+
+        if(cacheSize > 0) {
+            root = new CacheHandler(new DirectBufferCache<CachedHttpRequest>(1024, cacheSize * 1024 * 1024), root);
+        }
 
         return root;
     }
@@ -357,6 +366,7 @@ public class Undertow {
         private int ioThreads;
         private int workerThreads;
         private boolean directBuffers;
+        private int cacheSize;
         private final List<ListenerConfig> listeners = new ArrayList<ListenerConfig>();
         private final List<VirtualHost> hosts = new ArrayList<VirtualHost>();
         private final VirtualHost defaultHost = new VirtualHost(true);
@@ -383,10 +393,21 @@ public class Undertow {
                 buffersPerRegion = 20;
             }
             hosts.add(defaultHost);
+
         }
 
         public Undertow build() {
             return new Undertow(this);
+        }
+
+        /**
+         * Enables caching for files, and other cachable responses.
+         *
+         * @param cacheSize The size of the cache, in megabytes.
+         */
+        public Builder enableCache(final int cacheSize) {
+            this.cacheSize = cacheSize;
+            return this;
         }
 
         public Builder addListener(int port, String host) {
