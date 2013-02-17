@@ -578,10 +578,10 @@ public class ParserGenerator {
         tokenDone(c, returnCompleteCode, stateMachine);
 
 
-        invokeState(className, file, c, ends.get(initial).get(), initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
+        invokeState(className, file, c, ends.get(initial).get(), initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine, caseInsensitive);
         for (final State s : allStates) {
             if (s.stateno >= 0) {
-                invokeState(className, file, c, ends.get(s).get(), s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
+                invokeState(className, file, c, ends.get(s).get(), s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine, caseInsensitive);
             }
         }
 
@@ -610,7 +610,7 @@ public class ParserGenerator {
         c.gotoInstruction(returnCode);
     }
 
-    private static void invokeState(final String className, final ClassFile file, final CodeAttribute c, BranchEnd methodState, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine) {
+    private static void invokeState(final String className, final ClassFile file, final CodeAttribute c, BranchEnd methodState, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine, boolean caseInsensitive) {
         c.branchEnd(methodState);
         currentState.mark(c);
 
@@ -645,6 +645,9 @@ public class ParserGenerator {
             c.iinc(BYTES_REMAINING_VAR, -1);
         }
 
+        if (caseInsensitive) {
+            c.invokestatic(Character.class.getName(), "toLowerCase", "(C)C");
+        }
         c.dup();
         final Set<AtomicReference<BranchEnd>> tokenEnds = new HashSet<AtomicReference<BranchEnd>>();
         final Map<State, AtomicReference<BranchEnd>> ends = new IdentityHashMap<State, AtomicReference<BranchEnd>>();
