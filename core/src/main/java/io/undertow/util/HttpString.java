@@ -39,6 +39,11 @@ import static java.util.Arrays.copyOfRange;
 public final class HttpString implements Comparable<HttpString>, Serializable {
     private final byte[] bytes;
     private final transient int hashCode;
+    /**
+     * And integer that is only set for well known header to make
+     * comparison fast
+     */
+    private final int orderInt;
     private transient String string;
 
     private static final Field hashCodeField;
@@ -94,6 +99,11 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      * @param string the source string
      */
     public HttpString(final String string) {
+        this(string, 0);
+    }
+
+    HttpString(final String string, int orderInt) {
+        this.orderInt = orderInt;
         final int len = string.length();
         final byte[] bytes = new byte[len];
         for (int i = 0; i < len; i++) {
@@ -112,6 +122,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
         this.bytes = bytes;
         this.hashCode = calcHashCode(bytes);
         this.string = string;
+        this.orderInt = 0;
     }
 
     /**
@@ -226,6 +237,9 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      * @return -1, 0, or 1
      */
     public int compareTo(final HttpString other) {
+        if(orderInt != 0 && other.orderInt != 0) {
+            return orderInt - other.orderInt;
+        }
         final int len = Math.min(bytes.length, other.bytes.length);
         int res;
         for (int i = 0; i < len; i++) {

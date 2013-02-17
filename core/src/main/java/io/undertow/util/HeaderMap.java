@@ -24,6 +24,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * This implementation sucks and is incomplete.  It's just here to illustrate.
@@ -32,7 +33,7 @@ import java.util.Map;
  */
 public final class HeaderMap implements Iterable<HttpString> {
 
-    private final Map<HttpString, ArrayDeque<String>> values = new SecureHashMap<HttpString, ArrayDeque<String>>();
+    private final Map<HttpString, ArrayDeque<String>> values = new TreeMap<>();
 
     public Iterator<HttpString> iterator() {
         return values.keySet().iterator();

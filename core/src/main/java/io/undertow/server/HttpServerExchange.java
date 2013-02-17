@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -471,7 +472,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public void addQueryParam(final String name, final String param) {
         if(queryParameters == null) {
-            queryParameters = new SecureHashMap<String, Deque<String>>();
+            queryParameters = new TreeMap<>();
         }
         Deque<String> list = queryParameters.get(name);
         if (list == null) {
