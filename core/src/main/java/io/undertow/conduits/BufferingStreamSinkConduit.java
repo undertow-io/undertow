@@ -48,16 +48,10 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
         this.pool = pool;
     }
 
-    /**
-     * We do not buffer file transfers
-     */
     @Override
     public long transferFrom(FileChannel src, long position, long count) throws IOException {
         if(anyAreSet(state, SHUTDOWN)) {
             throw new ClosedChannelException();
-        }
-        if(!flushBuffer()) {
-            return 0;
         }
         return src.transferTo(position, count, new ConduitWritableByteChannel(this));
     }
