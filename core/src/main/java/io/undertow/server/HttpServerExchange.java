@@ -40,7 +40,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediateConduitFactory;
 import io.undertow.util.Protocols;
-import io.undertow.util.SecureHashMap;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -48,7 +47,6 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
-import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
@@ -84,7 +82,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private Map<String, Deque<String>> queryParameters;
 
     private final StreamSinkChannel underlyingResponseChannel;
-    private final PushBackStreamChannel underlyingRequestChannel;
+    private final StreamSourceChannel underlyingRequestChannel;
     /**
      * The actual response channel. May be null if it has not been created yet.
      */
@@ -137,7 +135,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_PERSISTENT = 1 << 14;
 
-    public HttpServerExchange(final HttpServerConnection connection, final PushBackStreamChannel requestChannel, final StreamSinkChannel responseChannel) {
+    public HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
         this.connection = connection;
         this.underlyingRequestChannel = requestChannel;
         if(connection == null) {
@@ -551,10 +549,50 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Pushes back the given data. This should only be used by transfer coding handlers that have read past
      * the end of the request when handling pipelined requests
-     * @param buffer The buffer to push back
+     * @param unget The buffer to push back
      */
-    public void ungetRequestBytes(final Pooled<ByteBuffer> buffer) {
-        underlyingRequestChannel.unget(buffer);
+    public void ungetRequestBytes(final Pooled<ByteBuffer> unget) {
+        if(connection.getExtraBytes() == null) {
+            connection.setExtraBytes(unget);
+        } else {
+            Pooled<ByteBuffer> eb = connection.getExtraBytes();
+            ByteBuffer buf = eb.getResource();
+            final ByteBuffer ugBuffer = unget.getResource();
+
+            if(ugBuffer.limit() - ugBuffer.remaining() > buf.remaining()) {
+                //stuff the existing data after the data we are ungetting
+                ugBuffer.compact();
+                ugBuffer.put(buf);
+                ugBuffer.flip();
+                eb.free();
+                connection.setExtraBytes(unget);
+            } else {
+                //TODO: this is horrible, but should not happen often
+                final byte[] data = new byte[ugBuffer.remaining() + buf.remaining()];
+                int first = ugBuffer.remaining();
+                ugBuffer.get(data);
+                buf.get(data, first, buf.remaining());
+                eb.free();
+                unget.free();
+                final ByteBuffer newBuffer = ByteBuffer.wrap(data);
+                connection.setExtraBytes(new Pooled<ByteBuffer>() {
+                    @Override
+                    public void discard() {
+
+                    }
+
+                    @Override
+                    public void free() {
+
+                    }
+
+                    @Override
+                    public ByteBuffer getResource() throws IllegalStateException {
+                        return newBuffer;
+                    }
+                });
+            }
+        }
     }
 
     /**

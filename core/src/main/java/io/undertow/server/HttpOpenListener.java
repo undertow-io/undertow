@@ -33,7 +33,6 @@ import org.xnio.Pool;
 import org.xnio.channels.AssembledConnectedSslStreamChannel;
 import org.xnio.channels.AssembledConnectedStreamChannel;
 import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.SslChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -82,7 +81,6 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
             pipeLiningBuffer = new BufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(writeChannel), bufferPool);
         }
 
-        final PushBackStreamChannel pushBackStreamChannel = new PushBackStreamChannel(readChannel);
         final AssembledConnectedStreamChannel assembledChannel;
         if (channel instanceof SslChannel) {
             assembledChannel = new AssembledConnectedSslStreamChannel((SslChannel) channel, readChannel, writeChannel);
@@ -91,9 +89,9 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
         }
 
         HttpServerConnection connection = new HttpServerConnection(assembledChannel, bufferPool, rootHandler, undertowOptions, bufferSize, pipeLiningBuffer);
-        HttpReadListener readListener = new HttpReadListener(writeChannel, pushBackStreamChannel, connection);
-        pushBackStreamChannel.getReadSetter().set(readListener);
-        readListener.handleEvent(pushBackStreamChannel);
+        HttpReadListener readListener = new HttpReadListener(writeChannel, readChannel, connection);
+        readChannel.getReadSetter().set(readListener);
+        readListener.handleEvent(readChannel);
     }
 
     @Override

@@ -32,6 +32,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
+import org.xnio.Pooled;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
@@ -52,6 +53,11 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     private final OptionMap undertowOptions;
     private final int bufferSize;
     private final PipeLiningBuffer pipeLiningBuffer;
+    /**
+     * Any extra bytes that were read from the channel. This could be data for this requests, or the next response.
+     *
+     */
+    private Pooled<ByteBuffer> extraBytes;
 
     @SuppressWarnings("unused")
     private volatile int runningRequestCount = 1;
@@ -200,5 +206,13 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
 
     public PipeLiningBuffer getPipeLiningBuffer() {
         return pipeLiningBuffer;
+    }
+
+    public Pooled<ByteBuffer> getExtraBytes() {
+        return extraBytes;
+    }
+
+    public void setExtraBytes(final Pooled<ByteBuffer> extraBytes) {
+        this.extraBytes = extraBytes;
     }
 }

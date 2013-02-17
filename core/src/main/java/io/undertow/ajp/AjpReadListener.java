@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerConnection;
@@ -18,8 +19,8 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
-import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.EmptyStreamSourceConduit;
 import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 import org.xnio.conduits.StreamSinkConduit;
@@ -31,7 +32,7 @@ import static org.xnio.IoUtils.safeClose;
  * @author Stuart Douglas
  */
 
-final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
+final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
     private final StreamSinkChannel responseChannel;
 
@@ -42,7 +43,7 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
     private volatile int read = 0;
     private final int maxRequestSize;
 
-    AjpReadListener(final StreamSinkChannel responseChannel, final PushBackStreamChannel requestChannel, final HttpServerConnection connection) {
+    AjpReadListener(final StreamSinkChannel responseChannel, final StreamSourceChannel requestChannel, final HttpServerConnection connection) {
         this.responseChannel = responseChannel;
         this.connection = connection;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
@@ -51,23 +52,29 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
         httpServerExchange.addExchangeCompleteListener(new StartNextRequestAction(requestChannel, responseChannel));
     }
 
-    public void handleEvent(final PushBackStreamChannel channel) {
-        final Pooled<ByteBuffer> pooled = connection.getBufferPool().allocate();
+    public void handleEvent(final StreamSourceChannel channel) {
+        Pooled<ByteBuffer> existing = connection.getExtraBytes();
+
+        final Pooled<ByteBuffer> pooled = existing == null ? connection.getBufferPool().allocate() : existing;
         final ByteBuffer buffer = pooled.getResource();
         boolean free = true;
 
         try {
             int res;
             do {
-                buffer.clear();
-                try {
-                    res = channel.read(buffer);
-                } catch (IOException e) {
-                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                        UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
+                if (existing == null) {
+                    buffer.clear();
+                    try {
+                        res = channel.read(buffer);
+                    } catch (IOException e) {
+                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                            UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
+                        }
+                        safeClose(channel);
+                        return;
                     }
-                    safeClose(channel);
-                    return;
+                } else {
+                    res = buffer.remaining();
                 }
                 if (res == 0) {
                     if (!channel.isReadResumed()) {
@@ -97,13 +104,18 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
                     return;
                 }
                 //TODO: we need to handle parse errors
-                buffer.flip();
+                if (existing != null) {
+                    existing = null;
+                    connection.setExtraBytes(null);
+                } else {
+                    buffer.flip();
+                }
                 int begin = buffer.remaining();
                 AjpParser.INSTANCE.parse(buffer, state, httpServerExchange);
                 read += (begin - buffer.remaining());
                 if (buffer.hasRemaining()) {
                     free = false;
-                    channel.unget(pooled);
+                    connection.setExtraBytes(pooled);
                 }
                 if (read > maxRequestSize) {
                     UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
@@ -122,6 +134,7 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
             AjpConduitWrapper channelWrapper = new AjpConduitWrapper(new AjpResponseConduit(new StreamSinkChannelWrappingConduit(responseChannel), connection.getBufferPool(), httpServerExchange));
             httpServerExchange.addResponseWrapper(channelWrapper);
             httpServerExchange.addRequestWrapper(channelWrapper.getRequestWrapper());
+
             try {
                 httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
                 state = null;
@@ -147,11 +160,11 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
      */
     private static class StartNextRequestAction implements ExchangeCompletionListener {
 
-        private PushBackStreamChannel requestChannel;
+        private StreamSourceChannel requestChannel;
         private StreamSinkChannel responseChannel;
 
 
-        public StartNextRequestAction(final PushBackStreamChannel requestChannel, final StreamSinkChannel responseChannel) {
+        public StartNextRequestAction(final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
             this.requestChannel = requestChannel;
             this.responseChannel = responseChannel;
         }
@@ -159,7 +172,7 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
         @Override
         public void exchangeEvent(final HttpServerExchange exchange) {
 
-            final PushBackStreamChannel channel = this.requestChannel;
+            final StreamSourceChannel channel = this.requestChannel;
             final AjpReadListener listener = new AjpReadListener(responseChannel, channel, exchange.getConnection());
             if (channel.isReadResumed()) {
                 channel.suspendReads();
@@ -171,9 +184,9 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
 
         private static class DoNextRequestRead implements Runnable {
             private final AjpReadListener listener;
-            private final PushBackStreamChannel channel;
+            private final StreamSourceChannel channel;
 
-            public DoNextRequestRead(AjpReadListener listener, PushBackStreamChannel channel) {
+            public DoNextRequestRead(AjpReadListener listener, StreamSourceChannel channel) {
                 this.listener = listener;
                 this.channel = channel;
             }
@@ -203,6 +216,8 @@ final class AjpReadListener implements ChannelListener<PushBackStreamChannel> {
                 @Override
                 public StreamSourceConduit wrap(ConduitFactory<StreamSourceConduit> factory, HttpServerExchange exchange) {
                     StreamSourceConduit conduit = factory.create();
+                    conduit = new ReadDataStreamSourceConduit(conduit, exchange.getConnection());
+
                     final HeaderMap requestHeaders = exchange.getRequestHeaders();
                     HttpString transferEncoding = Headers.IDENTITY;
                     Long length;
