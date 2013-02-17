@@ -262,27 +262,11 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     charIndex = 0;
                     if (! valueIterator.hasNext()) {
                         if (! buffer.hasRemaining()) {
-                            buffer.flip();
-                            do {
-                                res = next.write(buffer);
-                                if (res == 0) {
-                                    log.trace("Continuation");
-                                    return STATE_HDR_EOL_CR;
-                                }
-                            } while (buffer.hasRemaining());
-                            buffer.clear();
+                            if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_CR;
                         }
                         buffer.put((byte) 13); // CR
                         if (! buffer.hasRemaining()) {
-                            buffer.flip();
-                            do {
-                                res = next.write(buffer);
-                                if (res == 0) {
-                                    log.trace("Continuation");
-                                    return STATE_HDR_EOL_LF;
-                                }
-                            } while (buffer.hasRemaining());
-                            buffer.clear();
+                            if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_LF;
                         }
                         buffer.put((byte) 10); // LF
                         if (nameIterator.hasNext()) {
@@ -292,27 +276,11 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                             break;
                         } else {
                             if (! buffer.hasRemaining()) {
-                                buffer.flip();
-                                do {
-                                    res = next.write(buffer);
-                                    if (res == 0) {
-                                        log.trace("Continuation");
-                                        return STATE_HDR_FINAL_CR;
-                                    }
-                                } while (buffer.hasRemaining());
-                                buffer.clear();
+                                if (flushHeaderBuffer(buffer)) return STATE_HDR_FINAL_CR;
                             }
                             buffer.put((byte) 13); // CR
                             if (! buffer.hasRemaining()) {
-                                buffer.flip();
-                                do {
-                                    res = next.write(buffer);
-                                    if (res == 0) {
-                                        log.trace("Continuation");
-                                        return STATE_HDR_FINAL_LF;
-                                    }
-                                } while (buffer.hasRemaining());
-                                buffer.clear();
+                                if (flushHeaderBuffer(buffer)) return STATE_HDR_FINAL_LF;
                             }
                             buffer.put((byte) 10); // LF
                             this.nameIterator = null;
@@ -350,29 +318,13 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 // Clean-up states
                 case STATE_HDR_EOL_CR: {
                     if (! buffer.hasRemaining()) {
-                        buffer.flip();
-                        do {
-                            res = next.write(buffer);
-                            if (res == 0) {
-                                log.trace("Continuation");
-                                return STATE_HDR_EOL_CR;
-                            }
-                        } while (buffer.hasRemaining());
-                        buffer.clear();
+                        if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_CR;
                     }
                     buffer.put((byte) 13); // CR
                 }
                 case STATE_HDR_EOL_LF: {
                     if (! buffer.hasRemaining()) {
-                        buffer.flip();
-                        do {
-                            res = next.write(buffer);
-                            if (res == 0) {
-                                log.trace("Continuation");
-                                return STATE_HDR_EOL_LF;
-                            }
-                        } while (buffer.hasRemaining());
-                        buffer.clear();
+                        if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_LF;
                     }
                     buffer.put((byte) 10); // LF
                     if(valueIterator.hasNext()) {
@@ -388,30 +340,14 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 }
                 case STATE_HDR_FINAL_CR: {
                     if (! buffer.hasRemaining()) {
-                        buffer.flip();
-                        do {
-                            res = next.write(buffer);
-                            if (res == 0) {
-                                log.trace("Continuation");
-                                return STATE_HDR_FINAL_CR;
-                            }
-                        } while (buffer.hasRemaining());
-                        buffer.clear();
+                        if (flushHeaderBuffer(buffer)) return STATE_HDR_FINAL_CR;
                     }
                     buffer.put((byte) 13); // CR
                     // fall thru
                 }
                 case STATE_HDR_FINAL_LF: {
                     if (! buffer.hasRemaining()) {
-                        buffer.flip();
-                        do {
-                            res = next.write(buffer);
-                            if (res == 0) {
-                                log.trace("Continuation");
-                                return STATE_HDR_FINAL_LF;
-                            }
-                        } while (buffer.hasRemaining());
-                        buffer.clear();
+                        if (flushHeaderBuffer(buffer)) return STATE_HDR_FINAL_LF;
                     }
                     buffer.put((byte) 10); // LF
                     this.nameIterator = null;
@@ -450,6 +386,20 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 }
             }
         }
+    }
+
+    private boolean flushHeaderBuffer(ByteBuffer buffer) throws IOException {
+        int res;
+        buffer.flip();
+        do {
+            res = next.write(buffer);
+            if (res == 0) {
+                log.trace("Continuation");
+                return true;
+            }
+        } while (buffer.hasRemaining());
+        buffer.clear();
+        return false;
     }
 
     public int write(final ByteBuffer src) throws IOException {
