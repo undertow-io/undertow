@@ -103,9 +103,9 @@ public class ParserGenerator {
         sctor.getCodeAttribute().invokestatic(existingClassName, "httpStrings", "()" + DescriptorUtils.makeDescriptor(Map.class));
         sctor.getCodeAttribute().astore(CONSTRUCTOR_HTTP_STRING_MAP_VAR);
 
-        createStateMachine(httpVerbs, className, file, sctor, fieldCounter, HANDLE_HTTP_VERB, new VerbStateMachine(), false);
-        createStateMachine(httpVersions, className, file, sctor, fieldCounter, HANDLE_HTTP_VERSION, new VersionStateMachine(), false);
-        createStateMachine(standardHeaders, className, file, sctor, fieldCounter, HANDLE_HEADER, new HeaderStateMachine(), true);
+        createStateMachine(httpVerbs, className, file, sctor, fieldCounter, HANDLE_HTTP_VERB, new VerbStateMachine());
+        createStateMachine(httpVersions, className, file, sctor, fieldCounter, HANDLE_HTTP_VERSION, new VersionStateMachine());
+        createStateMachine(standardHeaders, className, file, sctor, fieldCounter, HANDLE_HEADER, new HeaderStateMachine());
 
         final ClassMethod handle = file.addMethod(Modifier.PUBLIC, "handle", "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR);
         createHandleBody(className, handle);
@@ -211,22 +211,12 @@ public class ParserGenerator {
 
     }
 
-    private static void createStateMachine(final String[] originalItems, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter, final String methodName, final CustomStateMachine stateMachine, final boolean caseInsensitive) {
-
-        final String[] modifiedItems;
-        if (caseInsensitive) {
-            modifiedItems = new String[originalItems.length];
-            for (int i = 0; i < modifiedItems.length; ++i) {
-                modifiedItems[i] = originalItems[i].toLowerCase();
-            }
-        } else {
-            modifiedItems = originalItems;
-        }
+    private static void createStateMachine(final String[] originalItems, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter, final String methodName, final CustomStateMachine stateMachine) {
 
         //list of all states except the initial
         final List<State> allStates = new ArrayList<State>();
         final State initial = new State((byte) 0, "");
-        for (String value : modifiedItems) {
+        for (String value : originalItems) {
             addStates(initial, value, allStates);
         }
         //we want initial to be number 0
@@ -240,7 +230,7 @@ public class ParserGenerator {
         final int noStates = stateCounter.get();
 
         final ClassMethod handle = file.addMethod(Modifier.PRIVATE, methodName, "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR);
-        writeStateMachine(className, file, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, caseInsensitive, sctor);
+        writeStateMachine(className, file, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, sctor);
     }
 
     private static void createStateField(final State state, final ClassFile file, final CodeAttribute sc) {
@@ -316,7 +306,7 @@ public class ParserGenerator {
         state.httpStringFieldName = "HTTP_STRING_" + fieldCounter.incrementAndGet();
     }
 
-    private static void writeStateMachine(final String className, final ClassFile file, final CodeAttribute c, final State initial, final List<State> allStates, int noStates, final CustomStateMachine stateMachine, final boolean caseInsensitive, final ClassMethod sctor) {
+    private static void writeStateMachine(final String className, final ClassFile file, final CodeAttribute c, final State initial, final List<State> allStates, int noStates, final CustomStateMachine stateMachine, final ClassMethod sctor) {
 
         final List<State> states = new ArrayList<State>();
         states.add(initial);
@@ -417,9 +407,6 @@ public class ParserGenerator {
         //load 3 copies of the current byte into the stack
         c.aload(BYTE_BUFFER_VAR);
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
-        if (caseInsensitive) {
-            c.invokestatic(Character.class.getName(), "toLowerCase", "(C)C");
-        }
         c.dup();
         c.dup();
         c.iinc(BYTES_REMAINING_VAR, -1);
@@ -578,10 +565,10 @@ public class ParserGenerator {
         tokenDone(c, returnCompleteCode, stateMachine);
 
 
-        invokeState(className, file, c, ends.get(initial).get(), initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine, caseInsensitive);
+        invokeState(className, file, c, ends.get(initial).get(), initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
         for (final State s : allStates) {
             if (s.stateno >= 0) {
-                invokeState(className, file, c, ends.get(s).get(), s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine, caseInsensitive);
+                invokeState(className, file, c, ends.get(s).get(), s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
             }
         }
 
@@ -610,7 +597,7 @@ public class ParserGenerator {
         c.gotoInstruction(returnCode);
     }
 
-    private static void invokeState(final String className, final ClassFile file, final CodeAttribute c, BranchEnd methodState, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine, boolean caseInsensitive) {
+    private static void invokeState(final String className, final ClassFile file, final CodeAttribute c, BranchEnd methodState, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine) {
         c.branchEnd(methodState);
         currentState.mark(c);
 
@@ -645,9 +632,6 @@ public class ParserGenerator {
             c.iinc(BYTES_REMAINING_VAR, -1);
         }
 
-        if (caseInsensitive) {
-            c.invokestatic(Character.class.getName(), "toLowerCase", "(C)C");
-        }
         c.dup();
         final Set<AtomicReference<BranchEnd>> tokenEnds = new HashSet<AtomicReference<BranchEnd>>();
         final Map<State, AtomicReference<BranchEnd>> ends = new IdentityHashMap<State, AtomicReference<BranchEnd>>();

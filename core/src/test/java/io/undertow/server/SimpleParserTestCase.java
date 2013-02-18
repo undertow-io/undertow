@@ -20,6 +20,7 @@ package io.undertow.server;
 
 import java.nio.ByteBuffer;
 
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
@@ -126,6 +127,9 @@ public class SimpleParserTestCase {
                     found = true;
                     break;
                 }
+            }
+            if(header.equals(Headers.HOST)) {
+                Assert.assertSame(Headers.HOST, header);
             }
             Assert.assertTrue("Could not found header " + header, found);
         }
