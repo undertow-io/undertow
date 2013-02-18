@@ -171,7 +171,28 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 }
                 case STATE_HDR_NAME: {
                     log.tracef("Processing header '%s'", headerName);
-                    headerName.appendTo(buffer);
+                    length = headerName.length();
+                    while (charIndex < length) {
+                        if (buffer.hasRemaining()) {
+                            buffer.put(headerName.byteAt(charIndex++));
+                        } else {
+                            log.trace("Buffer flush");
+                            buffer.flip();
+                            do {
+                                res = next.write(buffer);
+                                if (res == 0) {
+                                    this.string = string;
+                                    this.headerName = headerName;
+                                    this.charIndex = charIndex;
+                                    this.valueIterator = valueIterator;
+                                    this.nameIterator = nameIterator;
+                                    log.trace("Continuation");
+                                    return STATE_HDR_NAME;
+                                }
+                            } while (buffer.hasRemaining());
+                            buffer.clear();
+                        }
+                    }
                     // fall thru
                 }
                 case STATE_HDR_D: {
