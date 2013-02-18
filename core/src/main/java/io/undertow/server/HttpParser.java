@@ -155,8 +155,55 @@ public abstract class HttpParser {
     /**
      * This method is implemented by a generated subclass
      */
-    public abstract int handle(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpServerExchange builder);
+    public int handle(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpServerExchange builder) {
+        if (currentState.state == ParseState.VERB) {
+            noBytes = handleHttpVerb(buffer, noBytes, currentState, builder);
+            if (noBytes == 0) {
+                return 0;
+            }
+        }
+        if (currentState.state == ParseState.PATH) {
+            noBytes = handlePath(buffer, noBytes, currentState, builder);
+            if (noBytes == 0) {
+                return 0;
+            }
+        }
 
+        if (currentState.state == ParseState.VERSION) {
+            noBytes = handleHttpVersion(buffer, noBytes, currentState, builder);
+            if (noBytes == 0) {
+                return 0;
+            }
+        }
+        if (currentState.state == ParseState.AFTER_VERSION) {
+            noBytes = handleAfterVersion(buffer, noBytes, currentState, builder);
+            if (noBytes == 0) {
+                return 0;
+            }
+        }
+        while (currentState.state != ParseState.PARSE_COMPLETE) {
+            if (currentState.state == ParseState.HEADER) {
+                noBytes = handleHeader(buffer, noBytes, currentState, builder);
+                if (noBytes == 0) {
+                    return 0;
+                }
+            }
+            if (currentState.state == ParseState.HEADER_VALUE) {
+                noBytes = handleHeaderValue(buffer, noBytes, currentState, builder);
+                if (noBytes == 0) {
+                    return 0;
+                }
+            }
+        }
+        return noBytes;
+    }
+
+
+    abstract int handleHttpVerb(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpServerExchange builder);
+
+    abstract int handleHttpVersion(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpServerExchange builder);
+
+    abstract int handleHeader(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpServerExchange builder);
 
     /**
      * The parse states for parsing the path.
@@ -175,7 +222,7 @@ public abstract class HttpParser {
      * @param buffer    The buffer
      * @param remaining The number of bytes remaining
      * @param state     The current state
-     * @param exchange   The exchange builder
+     * @param exchange  The exchange builder
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")

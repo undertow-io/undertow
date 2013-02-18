@@ -80,7 +80,7 @@ public class ParserGenerator {
     private static final int STATE_STRING_BUILDER_VAR = 8;
     private static final int STATE_CURRENT_BYTES_VAR = 9;
 
-    public static final String HANDLE_HTTP_VERB = "handleHttpVerbs";
+    public static final String HANDLE_HTTP_VERB = "handleHttpVerb";
     public static final String HANDLE_PATH = "handlePath";
     public static final String HANDLE_HTTP_VERSION = "handleHttpVersion";
     public static final String HANDLE_AFTER_VERSION = "handleAfterVersion";
@@ -107,108 +107,8 @@ public class ParserGenerator {
         createStateMachine(httpVersions, className, file, sctor, fieldCounter, HANDLE_HTTP_VERSION, new VersionStateMachine());
         createStateMachine(standardHeaders, className, file, sctor, fieldCounter, HANDLE_HEADER, new HeaderStateMachine());
 
-        final ClassMethod handle = file.addMethod(Modifier.PUBLIC, "handle", "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR);
-        createHandleBody(className, handle);
-
-
         sctor.getCodeAttribute().returnInstruction();
         return file.toBytecode();
-    }
-
-    private static void createHandleBody(final String className, final ClassMethod handle) {
-        final CodeAttribute c = handle.getCodeAttribute();
-        c.aload(PARSE_STATE_VAR);
-        c.getfield(PARSE_STATE_CLASS, "state", "I");
-        final Set<BranchEnd> returnSet = new HashSet<BranchEnd>();
-        final TableSwitchBuilder builder = new TableSwitchBuilder(0, 5);
-        final AtomicReference<BranchEnd> method = builder.add();
-        final AtomicReference<BranchEnd> path = builder.add();
-        final AtomicReference<BranchEnd> http = builder.add();
-        final AtomicReference<BranchEnd> afterVersion = builder.add();
-        final AtomicReference<BranchEnd> header = builder.add();
-        final AtomicReference<BranchEnd> headerValue = builder.add();
-        c.tableswitch(builder);
-        c.branchEnd(method.get());
-        c.aload(0);
-        c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HTTP_VERB, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
-        c.dup();
-        c.istore(BYTES_REMAINING_VAR);
-        returnSet.add(c.ifeq());
-        //we just fall through to the path
-        //we rely on the individual parsing methods to update the state as appropriate
-
-
-        c.branchEnd(path.get());
-        c.aload(0);
-        c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_PATH, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
-        c.dup();
-        c.istore(BYTES_REMAINING_VAR);
-        returnSet.add(c.ifeq());
-
-
-        c.branchEnd(http.get());
-        c.aload(0);
-        c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HTTP_VERSION, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
-        c.dup();
-        c.istore(BYTES_REMAINING_VAR);
-        returnSet.add(c.ifeq());
-
-        c.branchEnd(afterVersion.get());
-        c.aload(0);
-        c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_AFTER_VERSION, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
-        c.dup();
-        c.istore(BYTES_REMAINING_VAR);
-        returnSet.add(c.ifeq());
-
-        //there may not have been any headers
-        c.aload(PARSE_STATE_VAR);
-        c.getfield(PARSE_STATE_CLASS, "state", "I");
-        c.iconst(PARSE_COMPLETE);
-        returnSet.add(c.ifIcmpeq());
-
-        c.branchEnd(header.get());
-        CodeLocation headerStart = c.mark();
-        c.aload(0);
-        c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HEADER, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
-        c.dup();
-        c.istore(BYTES_REMAINING_VAR);
-        returnSet.add(c.ifeq());
-
-        //it is possible that the header did not have a value
-        c.aload(PARSE_STATE_VAR);
-        c.getfield(PARSE_STATE_CLASS, "state", "I");
-        c.iconst(PARSE_COMPLETE);
-        returnSet.add(c.ifIcmpeq());
-
-        c.branchEnd(headerValue.get());
-        c.aload(0);
-        c.loadMethodParameters();
-        c.invokespecial(className, HANDLE_HEADER_VALUE, "I", new String[]{DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR});
-        c.dup();
-        c.istore(BYTES_REMAINING_VAR);
-        returnSet.add(c.ifeq());
-
-        c.aload(PARSE_STATE_VAR);
-        c.getfield(PARSE_STATE_CLASS, "state", "I");
-        c.iconst(PARSE_COMPLETE);
-        returnSet.add(c.ifIcmpeq());
-
-        c.gotoInstruction(headerStart);
-
-        //all we need to do is return
-        for (final BranchEnd b : returnSet) {
-            c.branchEnd(b);
-        }
-        c.iload(BYTES_REMAINING_VAR);
-        c.returnInstruction();
-
-        stateNotFound(c, builder);
-
     }
 
     private static void createStateMachine(final String[] originalItems, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter, final String methodName, final CustomStateMachine stateMachine) {
@@ -229,7 +129,7 @@ public class ParserGenerator {
 
         final int noStates = stateCounter.get();
 
-        final ClassMethod handle = file.addMethod(Modifier.PRIVATE, methodName, "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR);
+        final ClassMethod handle = file.addMethod(Modifier.PROTECTED, methodName, "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", PARSE_STATE_DESCRIPTOR, HTTP_EXCHANGE_DESCRIPTOR);
         writeStateMachine(className, file, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, sctor);
     }
 
