@@ -26,7 +26,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -77,7 +76,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final HeaderMap requestHeaders = new HeaderMap();
     private final HeaderMap responseHeaders = new HeaderMap();
 
-    private Deque<ExchangeCompletionListener> exchangeCompleteListeners = new ArrayDeque<ExchangeCompletionListener>(1);
+    private List<ExchangeCompletionListener> exchangeCompleteListeners = new ArrayList<>(2);
     private Deque<DefaultResponseListener> defaultResponseListeners = new ArrayDeque<DefaultResponseListener>(1);
 
     private Map<String, Deque<String>> queryParameters;
@@ -388,7 +387,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     public void upgradeChannel(final ExchangeCompletionListener upgradeCompleteListener){
         setResponseCode(101);
         int oldVal = state;
-        exchangeCompleteListeners.push(upgradeCompleteListener);
+        exchangeCompleteListeners.add(0, upgradeCompleteListener);
     }
 
     /**
@@ -405,11 +404,11 @@ public final class HttpServerExchange extends AbstractAttachable {
         final HeaderMap headers = getResponseHeaders();
         headers.add(Headers.UPGRADE, productName);
         headers.add(Headers.CONNECTION, Headers.UPGRADE_STRING);
-        exchangeCompleteListeners.add(upgradeCompleteListener);
+        exchangeCompleteListeners.add(0, upgradeCompleteListener);
     }
 
     public void addExchangeCompleteListener(final ExchangeCompletionListener listener){
-        exchangeCompleteListeners.push(listener);
+        exchangeCompleteListeners.add(listener);
     }
 
     public void addDefaultResponseListener(final DefaultResponseListener listener){
@@ -541,10 +540,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     private void invokeExchangeCompleteListeners() {
-        final Iterator<ExchangeCompletionListener> iterator = exchangeCompleteListeners.iterator();
-        if(iterator.hasNext()) {
-            ExchangeCompletionListener next = iterator.next();
-            next.exchangeEvent(this, new ExchangeCompleteNextListener(iterator, this));
+        if(!exchangeCompleteListeners.isEmpty()) {
+            int i = exchangeCompleteListeners.size() - 1;
+            ExchangeCompletionListener next = exchangeCompleteListeners.get(i);
+            next.exchangeEvent(this, new ExchangeCompleteNextListener(exchangeCompleteListeners, this, i));
         }
     }
 
@@ -839,18 +838,20 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {
-        private final Iterator<ExchangeCompletionListener> iterator;
+        private final List<ExchangeCompletionListener> list;
         private final HttpServerExchange exchange;
+        private int i;
 
-        public ExchangeCompleteNextListener(final Iterator<ExchangeCompletionListener> iterator, final HttpServerExchange exchange) {
-            this.iterator = iterator;
+        public ExchangeCompleteNextListener(final List<ExchangeCompletionListener> list, final HttpServerExchange exchange, int i) {
+            this.list = list;
             this.exchange = exchange;
+            this.i = i;
         }
 
         @Override
         public void proceed() {
-            if(iterator.hasNext()) {
-                final ExchangeCompletionListener next = iterator.next();
+            if(--i >=0) {
+                final ExchangeCompletionListener next = list.get(i);
                 next.exchangeEvent(exchange, this);
             }
         }
