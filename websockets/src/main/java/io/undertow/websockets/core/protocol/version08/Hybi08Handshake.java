@@ -40,7 +40,7 @@ public class Hybi08Handshake extends Hybi07Handshake {
     }
 
     @Override
-    protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
+    public WebSocketChannel createChannel(final HttpServerExchange exchange) {
         return new WebSocket08Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange), subprotocols, allowExtensions);
     }
 }

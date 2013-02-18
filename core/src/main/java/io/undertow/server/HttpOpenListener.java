@@ -22,10 +22,8 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
 import io.undertow.channels.ReadTimeoutStreamSourceChannel;
 import io.undertow.channels.WriteTimeoutStreamSinkChannel;
-import io.undertow.conduits.BufferingStreamSinkConduit;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import org.xnio.Options;
@@ -36,7 +34,6 @@ import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.SslChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -76,10 +73,6 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
         if (channel.supportsOption(Options.WRITE_TIMEOUT)) {
             writeChannel = new WriteTimeoutStreamSinkChannel(writeChannel);
         }
-        PipeLiningBuffer pipeLiningBuffer = null;
-        if(undertowOptions.get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
-            pipeLiningBuffer = new BufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(writeChannel), bufferPool);
-        }
 
         final AssembledConnectedStreamChannel assembledChannel;
         if (channel instanceof SslChannel) {
@@ -88,7 +81,7 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
             assembledChannel = new AssembledConnectedStreamChannel(channel, readChannel, writeChannel);
         }
 
-        HttpServerConnection connection = new HttpServerConnection(assembledChannel, bufferPool, rootHandler, undertowOptions, bufferSize, pipeLiningBuffer);
+        HttpServerConnection connection = new HttpServerConnection(assembledChannel, bufferPool, rootHandler, undertowOptions, bufferSize);
         HttpReadListener readListener = new HttpReadListener(writeChannel, readChannel, connection);
         readChannel.getReadSetter().set(readListener);
         readListener.handleEvent(readChannel);

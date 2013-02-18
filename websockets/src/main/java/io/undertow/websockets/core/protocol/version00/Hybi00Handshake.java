@@ -26,14 +26,11 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.Handshake;
 import org.xnio.ChannelListener;
-import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -52,7 +49,7 @@ public class Hybi00Handshake extends Handshake {
     }
 
     @Override
-    public IoFuture<WebSocketChannel> handshake(final HttpServerExchange exchange) {
+    public void handshake(final HttpServerExchange exchange) {
         String origin = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_ORIGIN);
         if (origin != null) {
             exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_ORIGIN, origin);
@@ -72,7 +69,6 @@ public class Hybi00Handshake extends Handshake {
         final ByteBuffer buffer = ByteBuffer.wrap(key3);
 
         final StreamSourceChannel channel = exchange.getRequestChannel();
-        final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
         int r, read = 0;
         do {
             try {
@@ -80,13 +76,14 @@ public class Hybi00Handshake extends Handshake {
                 read += r;
 
                 if (r == -1) {
-                    ioFuture.setException(WebSocketMessages.MESSAGES.channelClosed());
-                    channel.shutdownReads();
-                    return ioFuture;
+                    IoUtils.safeClose(exchange.getConnection());
+                    exchange.endExchange();
+                    return;
                 }
             } catch (IOException e) {
-                ioFuture.setException(e);
-                return ioFuture;
+                IoUtils.safeClose(exchange.getConnection());
+                exchange.endExchange();
+                return;
             }
         } while (r > 0 && read < 8);
 
@@ -101,20 +98,20 @@ public class Hybi00Handshake extends Handshake {
                             r = channel.read(buffer);
                             read += r;
                             if (r == -1) {
-                                ioFuture.setException(WebSocketMessages.MESSAGES.channelClosed());
-                                IoUtils.safeClose(channel);
+                                IoUtils.safeClose(exchange.getConnection());
+                                exchange.endExchange();
                                 return;
                             }
                         } catch (IOException e) {
-                            ioFuture.setException(e);
-                            IoUtils.safeClose(channel);
+                            IoUtils.safeClose(exchange.getConnection());
+                            exchange.endExchange();
                             return;
                         }
                     } while (r > 0 && read != 8);
                     if (read == 8) {
                         channel.suspendReads();
                         final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
-                        performUpgrade(ioFuture, exchange, solution);
+                        performUpgrade(exchange, solution);
                     }
 
                 }
@@ -122,9 +119,8 @@ public class Hybi00Handshake extends Handshake {
         } else {
             channel.suspendReads();
             final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
-            performUpgrade(ioFuture, exchange, solution);
+            performUpgrade(exchange, solution);
         }
-        return ioFuture;
     }
 
     @Override
@@ -134,7 +130,7 @@ public class Hybi00Handshake extends Handshake {
     }
 
     @Override
-    protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
+    public WebSocketChannel createChannel(final HttpServerExchange exchange) {
         return new WebSocket00Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange), subprotocols);
     }
 

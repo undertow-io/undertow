@@ -23,6 +23,7 @@ import java.nio.channels.Channel;
 import java.util.Deque;
 
 import io.undertow.UndertowLogger;
+import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
@@ -94,26 +95,32 @@ public final class ChannelUpgradeHandler implements HttpHandler {
             for (String string : upgradeStrings) {
                 final ChannelListener<? super ConnectedStreamChannel> listener = handlers.get(string);
                 if (listener != null) {
-                    try {
-                        exchange.upgradeChannel(string);
-                        exchange.getRequestChannel().shutdownReads();
-                        final StreamSinkChannel sinkChannel = exchange.getResponseChannel();
-                        sinkChannel.shutdownWrites();
-                        if (!sinkChannel.flush()) {
-                            sinkChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(new ChannelListener<Channel>() {
-                                public void handleEvent(final Channel channel) {
+                    exchange.upgradeChannel(string, new ExchangeCompletionListener() {
+                        @Override
+                        public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+
+                            try {
+                                exchange.getRequestChannel().shutdownReads();
+                                final StreamSinkChannel sinkChannel = exchange.getResponseChannel();
+                                sinkChannel.shutdownWrites();
+                                if (!sinkChannel.flush()) {
+                                    sinkChannel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(new ChannelListener<Channel>() {
+                                        public void handleEvent(final Channel channel) {
+                                            ChannelListeners.invokeChannelListener(exchange.getConnection().getChannel(), listener);
+                                        }
+                                    }, null));
+                                    sinkChannel.resumeWrites();
+                                } else {
                                     ChannelListeners.invokeChannelListener(exchange.getConnection().getChannel(), listener);
                                 }
-                            }, null));
-                            sinkChannel.resumeWrites();
-                        } else {
-                            ChannelListeners.invokeChannelListener(exchange.getConnection().getChannel(), listener);
+                                return;
+                            } catch (IOException e) {
+                                exchange.endExchange();
+                                UndertowLogger.REQUEST_LOGGER.debug("Exception handling request", e);
+                            }
                         }
-                        return;
-                    } catch (IOException e) {
-                        exchange.endExchange();
-                        UndertowLogger.REQUEST_LOGGER.debug("Exception handling request", e);
-                    }
+                    });
+                    exchange.endExchange();
                 }
             }
         }

@@ -54,12 +54,16 @@ public final class RequestLimitingHandler implements HttpHandler {
     private final ExchangeCompletionListener COMPLETION_LISTENER = new ExchangeCompletionListener() {
 
         @Override
-        public void exchangeEvent(final HttpServerExchange exchange) {
-            final QueuedRequest task = queue.poll();
-            if (task != null) {
-                WorkerDispatcher.dispatch(exchange, task);
-            } else {
-                decrementRequests();
+        public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+            try {
+                final QueuedRequest task = queue.poll();
+                if (task != null) {
+                    WorkerDispatcher.dispatch(exchange, task);
+                } else {
+                    decrementRequests();
+                }
+            } finally {
+                nextListener.proceed();
             }
         }
     };

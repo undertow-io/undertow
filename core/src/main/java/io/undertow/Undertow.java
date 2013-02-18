@@ -23,7 +23,6 @@ import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
-import io.undertow.server.HttpTransferEncodingHandler;
 import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
@@ -143,7 +142,7 @@ public class Undertow {
                     channels.add(server);
                 } else if (listener.type == ListenerType.HTTP) {
                     HttpOpenListener openListener = new HttpOpenListener(buffers, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), bufferSize);
-                    openListener.setRootHandler(new HttpTransferEncodingHandler(rootHandler));
+                    openListener.setRootHandler(rootHandler);
                     ChannelListener<AcceptingChannel<ConnectedStreamChannel>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
                     AcceptingChannel<? extends ConnectedStreamChannel> server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, serverOptions);
                     server.resumeAccepts();

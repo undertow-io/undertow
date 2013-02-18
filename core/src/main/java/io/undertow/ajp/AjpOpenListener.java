@@ -61,7 +61,7 @@ public class AjpOpenListener implements OpenListener {
             assembledChannel = new AssembledConnectedStreamChannel(channel, readChannel, writeChannel);
         }
 
-        HttpServerConnection connection = new HttpServerConnection(assembledChannel, bufferPool, rootHandler, undertowOptions, bufferSize, null);
+        HttpServerConnection connection = new HttpServerConnection(assembledChannel, bufferPool, rootHandler, undertowOptions, bufferSize);
         AjpReadListener readListener = new AjpReadListener(writeChannel, readChannel, connection);
         readChannel.getReadSetter().set(readListener);
         readListener.handleEvent(readChannel);

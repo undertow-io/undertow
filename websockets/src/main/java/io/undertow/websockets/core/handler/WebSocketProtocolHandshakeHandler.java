@@ -19,12 +19,12 @@
 package io.undertow.websockets.core.handler;
 
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
 import io.undertow.UndertowLogger;
+import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Methods;
@@ -34,8 +34,6 @@ import io.undertow.websockets.core.protocol.version00.Hybi00Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
-import org.xnio.IoFuture;
-import org.xnio.IoUtils;
 
 /**
  * {@link HttpHandler} which will process the {@link HttpServerExchange} and do the actual handshake/upgrade
@@ -51,8 +49,8 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     /**
      * Create a new {@link WebSocketProtocolHandshakeHandler}
      *
-     * @param callback      The {@link WebSocketConnectionCallback} which will be executed once the handshake was
-     *                      established
+     * @param callback The {@link WebSocketConnectionCallback} which will be executed once the handshake was
+     *                 established
      */
     public WebSocketProtocolHandshakeHandler(final WebSocketConnectionCallback callback) {
         this.callback = callback;
@@ -68,9 +66,9 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     /**
      * Create a new {@link WebSocketProtocolHandshakeHandler}
      *
-     * @param handshakes    The supported handshake methods
-     * @param callback      The {@link WebSocketConnectionCallback} which will be executed once the handshake was
-     *                      established
+     * @param handshakes The supported handshake methods
+     * @param callback   The {@link WebSocketConnectionCallback} which will be executed once the handshake was
+     *                   established
      */
     public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final WebSocketConnectionCallback callback) {
         this.callback = callback;
@@ -100,20 +98,16 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
             return;
         }
 
-        IoFuture<WebSocketChannel> future = handshaker.handshake(exchange);
-        future.addNotifier(new IoFuture.Notifier<WebSocketChannel, Object>() {
-                @Override
-                public void notify(final IoFuture<? extends WebSocketChannel> ioFuture, final Object attachment) {
-                    try {
-                        callback.onConnect(exchange, ioFuture.get());
-                    } catch (IOException e) {
-                        // close connection on exception
-                        IoUtils.safeClose(exchange.getConnection());
-                    } finally {
-                        exchange.endExchange();
-                    }
-                }
-            }, null);
+        final Handshake finalHandshake = handshaker;
+
+        exchange.upgradeChannel(new ExchangeCompletionListener() {
+            @Override
+            public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+                WebSocketChannel channel = finalHandshake.createChannel(exchange);
+                callback.onConnect(exchange, channel);
+            }
+        });
+        handshaker.handshake(exchange);
 
     }
 }

@@ -2,18 +2,24 @@ package io.undertow.conduits;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.ConduitWrapper;
+import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.PipeLiningBuffer;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConduitFactory;
 import org.xnio.Buffers;
+import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
+import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
@@ -23,34 +29,77 @@ import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
 /**
- * Buffer for pipelined requests. Basic behaviour is as follows:
+ * A buffer that is used when processing pipelined requests, that allows the server to
+ * buffer multiple responses into a single write() call.
  * <p/>
+ * This can improve performance when pipelining requests.
  *
  * @author Stuart Douglas
  */
-public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> implements PipeLiningBuffer {
+public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
+
+    public static final AttachmentKey<PipelingBufferingStreamSinkConduit> ATTACHMENT_KEY = AttachmentKey.create(PipelingBufferingStreamSinkConduit.class);
 
     /**
      * If this channel is shutdown
      */
     private static final int SHUTDOWN = 1;
-    private static final int DELEGATE_SHUTDOWN = 1<<1;
-    private static final int UPGRADED = 1<<2;
-    private static final int FLUSHING = 1<<3;
+    private static final int DELEGATE_SHUTDOWN = 1 << 1;
+    private static final int FLUSHING = 1 << 3;
 
     private int state;
 
     private final Pool<ByteBuffer> pool;
     private Pooled<ByteBuffer> buffer;
 
-    public BufferingStreamSinkConduit(StreamSinkConduit next, final Pool<ByteBuffer> pool) {
+    private final ExchangeCompletionListener completionListener = new ExchangeCompletionListener() {
+        @Override
+        public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+            //if we ever fail to read then we flush the pipeline buffer
+            //this relies on us always doing an eager read when starting a request,
+            //rather than waiting to be notified of data being available
+            final HttpServerConnection connection = exchange.getConnection();
+            if (connection.getExtraBytes() == null || exchange.isUpgrade()) {
+                try {
+                    if (!flushPipelinedData()) {
+                        final ConnectedStreamChannel channel = connection.getChannel();
+                        channel.getWriteSetter().set(new ChannelListener<Channel>() {
+                            @Override
+                            public void handleEvent(Channel c) {
+                                try {
+                                    if (flushPipelinedData()) {
+                                        channel.getWriteSetter().set(null);
+                                        channel.suspendWrites();
+                                        nextListener.proceed();
+                                    }
+                                } catch (IOException e) {
+                                    UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+                                    IoUtils.safeClose(channel);
+                                }
+                            }
+                        });
+                        connection.getChannel().resumeWrites();
+                        return;
+                    } else {
+                        nextListener.proceed();
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            } else {
+                nextListener.proceed();
+            }
+        }
+    };
+
+    public PipelingBufferingStreamSinkConduit(StreamSinkConduit next, final Pool<ByteBuffer> pool) {
         super(next);
         this.pool = pool;
     }
 
     @Override
     public long transferFrom(FileChannel src, long position, long count) throws IOException {
-        if(anyAreSet(state, SHUTDOWN)) {
+        if (anyAreSet(state, SHUTDOWN)) {
             throw new ClosedChannelException();
         }
         return src.transferTo(position, count, new ConduitWritableByteChannel(this));
@@ -107,7 +156,7 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
             }
         }
         Pooled<ByteBuffer> pooled = this.buffer;
-        if(pooled == null) {
+        if (pooled == null) {
             this.buffer = pooled = pool.allocate();
         }
         final ByteBuffer buffer = pooled.getResource();
@@ -126,30 +175,40 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
         }
     }
 
-    @Override
+    /**
+     * Flushes the cached data.
+     * <p/>
+     * This should be called when a read thread fails to read any more request data, to make sure that any
+     * buffered data is flushed after the last pipelined request.
+     * <p/>
+     * If this returns false the read thread should suspend reads and resume writes
+     *
+     * @return <code>true</code> If the flush suceeded, false otherwise
+     * @throws IOException
+     */
     public boolean flushPipelinedData() throws IOException {
         if (buffer == null || buffer.getResource().position() == 0) {
             return next.flush();
         }
-        if(!flushBuffer()) {
+        if (!flushBuffer()) {
             return false;
         }
         return next.flush();
     }
 
-    @Override
+    /**
+     * Gets the channel wrapper that implements the buffering
+     *
+     * @return The channel wrapper
+     */
     public ConduitWrapper<StreamSinkConduit> getChannelWrapper() {
         return new ConduitWrapper<StreamSinkConduit>() {
             @Override
             public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
-                return BufferingStreamSinkConduit.this;
+                exchange.addExchangeCompleteListener(completionListener);
+                return PipelingBufferingStreamSinkConduit.this;
             }
         };
-    }
-
-    @Override
-    public void upgradeUnderlyingChannel() {
-        state |= UPGRADED;
     }
 
     private boolean flushBuffer() throws IOException {
@@ -168,7 +227,7 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
                 return false;
             }
         } while (byteBuffer.hasRemaining());
-        if(!next.flush()) {
+        if (!next.flush()) {
             return false;
         }
         buffer.free();
@@ -199,11 +258,11 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
 
     @Override
     public boolean flush() throws IOException {
-        if (anyAreSet(state, SHUTDOWN | UPGRADED)) {
+        if (anyAreSet(state, SHUTDOWN)) {
             if (!flushBuffer()) {
                 return false;
             }
-            if(anyAreSet(state, SHUTDOWN) &&
+            if (anyAreSet(state, SHUTDOWN) &&
                     anyAreClear(state, DELEGATE_SHUTDOWN)) {
                 state |= DELEGATE_SHUTDOWN;
                 next.terminateWrites();
@@ -216,7 +275,7 @@ public class BufferingStreamSinkConduit extends AbstractStreamSinkConduit<Stream
     @Override
     public void terminateWrites() throws IOException {
         state |= SHUTDOWN;
-        if(buffer == null) {
+        if (buffer == null) {
             state |= DELEGATE_SHUTDOWN;
             next.terminateWrites();
         }

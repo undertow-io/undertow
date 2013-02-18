@@ -26,6 +26,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -76,7 +77,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final HeaderMap requestHeaders = new HeaderMap();
     private final HeaderMap responseHeaders = new HeaderMap();
 
-    private List<ExchangeCompletionListener> exchangeCompleteListeners = new ArrayList<ExchangeCompletionListener>(1);
+    private Deque<ExchangeCompletionListener> exchangeCompleteListeners = new ArrayDeque<ExchangeCompletionListener>(1);
     private Deque<DefaultResponseListener> defaultResponseListeners = new ArrayDeque<DefaultResponseListener>(1);
 
     private Map<String, Deque<String>> queryParameters;
@@ -384,12 +385,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
      *                               read
      */
-    public void upgradeChannel(){
+    public void upgradeChannel(final ExchangeCompletionListener upgradeCompleteListener){
         setResponseCode(101);
         int oldVal = state;
-        if(connection.getPipeLiningBuffer() != null) {
-            connection.getPipeLiningBuffer().upgradeUnderlyingChannel();
-        }
+        exchangeCompleteListeners.push(upgradeCompleteListener);
     }
 
     /**
@@ -401,18 +400,16 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
      *                               read
      */
-    public void upgradeChannel(String productName) {
+    public void upgradeChannel(String productName, final ExchangeCompletionListener upgradeCompleteListener) {
         setResponseCode(101);
         final HeaderMap headers = getResponseHeaders();
         headers.add(Headers.UPGRADE, productName);
         headers.add(Headers.CONNECTION, Headers.UPGRADE_STRING);
-        if(connection.getPipeLiningBuffer() != null) {
-            connection.getPipeLiningBuffer().upgradeUnderlyingChannel();
-        }
+        exchangeCompleteListeners.add(upgradeCompleteListener);
     }
 
     public void addExchangeCompleteListener(final ExchangeCompletionListener listener){
-        exchangeCompleteListeners.add(listener);
+        exchangeCompleteListeners.push(listener);
     }
 
     public void addDefaultResponseListener(final DefaultResponseListener listener){
@@ -539,10 +536,15 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         this.state = oldVal | FLAG_REQUEST_TERMINATED;
         if(anyAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
-            boolean upgrade = getResponseCode() == 101;
-            for(ExchangeCompletionListener listener : exchangeCompleteListeners) {
-                listener.exchangeEvent(this);
-            }
+            invokeExchangeCompleteListeners();
+        }
+    }
+
+    private void invokeExchangeCompleteListeners() {
+        final Iterator<ExchangeCompletionListener> iterator = exchangeCompleteListeners.iterator();
+        if(iterator.hasNext()) {
+            ExchangeCompletionListener next = iterator.next();
+            next.exchangeEvent(this, new ExchangeCompleteNextListener(iterator, this));
         }
     }
 
@@ -726,9 +728,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         this.state = oldVal | FLAG_RESPONSE_TERMINATED;
         if(anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
-            for(ExchangeCompletionListener listener : exchangeCompleteListeners) {
-                listener.exchangeEvent(this);
-            }
+            invokeExchangeCompleteListeners();
         }
     }
 
@@ -836,5 +836,23 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public XnioExecutor getReadThread() {
         return underlyingRequestChannel.getReadThread();
+    }
+
+    private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {
+        private final Iterator<ExchangeCompletionListener> iterator;
+        private final HttpServerExchange exchange;
+
+        public ExchangeCompleteNextListener(final Iterator<ExchangeCompletionListener> iterator, final HttpServerExchange exchange) {
+            this.iterator = iterator;
+            this.exchange = exchange;
+        }
+
+        @Override
+        public void proceed() {
+            if(iterator.hasNext()) {
+                final ExchangeCompletionListener next = iterator.next();
+                next.exchangeEvent(exchange, this);
+            }
+        }
     }
 }

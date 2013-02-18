@@ -17,21 +17,18 @@
 package io.undertow.websockets.core.protocol.version07;
 
 
-import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.Set;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketHandshakeException;
 import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.Handshake;
-import org.xnio.IoFuture;
+import org.xnio.IoUtils;
 
 /**
  * The handshaking protocol implementation for Hybi-07.
@@ -65,7 +62,7 @@ public class Hybi07Handshake extends Handshake {
     }
 
     @Override
-    public IoFuture<WebSocketChannel> handshake(final HttpServerExchange exchange) {
+    public void handshake(final HttpServerExchange exchange) {
         String origin = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_ORIGIN);
         if (origin != null) {
             exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_ORIGIN, origin);
@@ -80,11 +77,11 @@ public class Hybi07Handshake extends Handshake {
         try {
             final String solution = solve(key);
             exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_ACCEPT, solution);
-            return performUpgrade(exchange);
+            performUpgrade(exchange);
         } catch (NoSuchAlgorithmException e) {
-            final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
-            ioFuture.setException(new IOException(new WebSocketHandshakeException(e)));
-            return ioFuture;
+            IoUtils.safeClose(exchange.getConnection());
+            exchange.endExchange();
+            return;
         }
 
     }
@@ -98,7 +95,7 @@ public class Hybi07Handshake extends Handshake {
     }
 
     @Override
-    protected WebSocketChannel createChannel(final HttpServerExchange exchange) {
+    public WebSocketChannel createChannel(final HttpServerExchange exchange) {
         return new WebSocket07Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange), subprotocols, allowExtensions);
     }
 }

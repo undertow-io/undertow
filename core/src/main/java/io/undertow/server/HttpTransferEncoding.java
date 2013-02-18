@@ -28,8 +28,9 @@ import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.FinishableStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
+import io.undertow.conduits.PipelingBufferingStreamSinkConduit;
+import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.handlers.HttpHandlers;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -37,50 +38,43 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
 import org.xnio.conduits.EmptyStreamSourceConduit;
+import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
 /**
- * Handler responsible for dealing with wrapping the response stream and request stream to deal with persistent
- * connections and transfer encodings.
- * <p/>
- * This should generally be the first handler in any handler chain, as without it persistent connections will not work.
- * <p/>
- * Installing this handler after any other handler that wraps the channel will generally result in broken behaviour,
- * as chunked encoding must be the last transformation applied.
+ * Class that is  responsible for HTTP transfer encooding, this could be part of the {@link HttpReadListener},
+ * but is seperated out for clarity
  *
  * @author Stuart Douglas
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @see http://tools.ietf.org/html/rfc2616#section-4.4
  */
-public class HttpTransferEncodingHandler implements HttpHandler {
+public class HttpTransferEncoding {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.handler.transfer-encoding");
 
-    private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
-
     /**
      * Construct a new instance.
      */
-    public HttpTransferEncodingHandler() {
+    private HttpTransferEncoding() {
     }
 
-    /**
-     * Construct a new instance.
-     *
-     * @param next the next HTTP handler
-     */
-    public HttpTransferEncodingHandler(final HttpHandler next) {
-        this.next = next;
-    }
-
-    @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public static void handleRequest(final HttpServerExchange exchange, final HttpHandler next) {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         boolean persistentConnection;
         final boolean hasConnectionHeader = requestHeaders.contains(Headers.CONNECTION);
         final boolean hasTransferEncoding = requestHeaders.contains(Headers.TRANSFER_ENCODING);
         final boolean hasContentLength = requestHeaders.contains(Headers.CONTENT_LENGTH);
+
+        final HttpServerConnection connection = exchange.getConnection();
+        //if we are already using the pipelineing buffer add it to the exchange
+        PipelingBufferingStreamSinkConduit pipeliningBuffer = connection.getAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY);
+        if(pipeliningBuffer != null) {
+            exchange.addResponseWrapper(pipeliningBuffer.getChannelWrapper());
+        }
+
+        exchange.addRequestWrapper(ReadDataStreamSourceConduit.WRAPPER);
         if (exchange.isHttp11()) {
             persistentConnection = !(hasConnectionHeader && new HttpString(requestHeaders.getFirst(Headers.CONNECTION)).equals(Headers.CLOSE));
         } else if (exchange.isHttp10()) {
@@ -130,6 +124,16 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 persistentConnection = false;
             }
         } else if (persistentConnection) {
+            //we have no content and a persistent request. This may mean we need to use the pipelining buffer to improve
+            //performance
+            if(connection.getExtraBytes() != null
+                    && pipeliningBuffer == null
+                    && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
+                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(connection.getChannel()), connection.getBufferPool());
+                connection.putAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
+                exchange.addResponseWrapper(pipeliningBuffer.getChannelWrapper());
+            }
+
             // no content - immediately start the next request, returning an empty stream for this one
             exchange.terminateRequest();
             exchange.addRequestWrapper(emptyStreamSourceConduitWrapper());
@@ -137,8 +141,10 @@ public class HttpTransferEncodingHandler implements HttpHandler {
 
         exchange.setPersistent(persistentConnection);
 
+        exchange.addResponseWrapper(HttpResponseConduit.WRAPPER);
         //now the response wrapper, to add in the appropriate connection control headers
         exchange.addResponseWrapper(responseWrapper(persistentConnection));
+
         HttpHandlers.executeHandler(next, exchange);
     }
 
@@ -286,25 +292,6 @@ public class HttpTransferEncodingHandler implements HttpHandler {
                 exchange.terminateResponse();
             }
         };
-    }
-
-    /**
-     * Get the next HTTP handler.
-     *
-     * @return the next HTTP handler
-     */
-    public HttpHandler getNext() {
-        return next;
-    }
-
-    /**
-     * Set the next http handler.
-     *
-     * @param next the next http handler
-     */
-    public void setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
-        this.next = next;
     }
 
     private static long maxEntitySize(final HttpServerExchange exchange) {

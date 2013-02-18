@@ -170,7 +170,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
         }
 
         @Override
-        public void exchangeEvent(final HttpServerExchange exchange) {
+        public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
 
             final StreamSourceChannel channel = this.requestChannel;
             final AjpReadListener listener = new AjpReadListener(responseChannel, channel, exchange.getConnection());
@@ -180,6 +180,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             WorkerDispatcher.dispatchNextRequest(channel, new DoNextRequestRead(listener, channel));
             responseChannel = null;
             this.requestChannel = null;
+            nextListener.proceed();
         }
 
         private static class DoNextRequestRead implements Runnable {

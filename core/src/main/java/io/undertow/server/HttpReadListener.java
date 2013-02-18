@@ -20,12 +20,9 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.conduits.ReadDataStreamSourceConduit;
-import io.undertow.util.ConduitFactory;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -33,7 +30,6 @@ import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.StreamSinkConduit;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -60,18 +56,6 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         httpServerExchange = new HttpServerExchange(connection, requestChannel, this.responseChannel);
         httpServerExchange.addExchangeCompleteListener(new StartNextRequestAction(requestChannel, responseChannel));
-        if (connection.getPipeLiningBuffer() != null) {
-            httpServerExchange.addResponseWrapper(connection.getPipeLiningBuffer().getChannelWrapper());
-        }
-        httpServerExchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
-            @Override
-            public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
-                final StreamSinkConduit channel = factory.create();
-                return new HttpResponseConduit(channel, connection.getBufferPool(), exchange);
-            }
-        });
-        httpServerExchange.addRequestWrapper(ReadDataStreamSourceConduit.WRAPPER);
-
     }
 
     public void handleEvent(final StreamSourceChannel channel) {
@@ -98,35 +82,6 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
                     }
                 } else {
                     res = buffer.remaining();
-                }
-
-                //if we ever fail to read then we flush the pipeline buffer
-                //this relies on us always doing an eager read when starting a request,
-                //rather than waiting to be notified of data being available
-                final PipeLiningBuffer pipeLiningBuffer = connection.getPipeLiningBuffer();
-                if (res == 0 && pipeLiningBuffer != null) {
-                    if (!pipeLiningBuffer.flushPipelinedData()) {
-                        channel.suspendReads();
-                        connection.getChannel().getWriteSetter().set(new ChannelListener<Channel>() {
-                            @Override
-                            public void handleEvent(Channel c) {
-                                try {
-                                    if (pipeLiningBuffer.flushPipelinedData()) {
-                                        connection.getChannel().getWriteSetter().set(null);
-                                        connection.getChannel().suspendWrites();
-
-                                        channel.getReadSetter().set(this);
-                                        channel.resumeReads();
-                                    }
-                                } catch (IOException e) {
-                                    UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
-                                    IoUtils.safeClose(connection.getChannel());
-                                }
-                            }
-                        });
-                        connection.getChannel().resumeWrites();
-                        return;
-                    }
                 }
 
                 if (res == 0) {
@@ -157,7 +112,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
                     return;
                 }
                 //TODO: we need to handle parse errors
-                if(existing != null) {
+                if (existing != null) {
                     existing = null;
                     connection.setExtraBytes(null);
                 } else {
@@ -188,7 +143,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
                 httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
                 state = null;
                 this.httpServerExchange = null;
-                connection.getRootHandler().handleRequest(httpServerExchange);
+                this.httpServerExchange = null;HttpTransferEncoding.handleRequest(httpServerExchange, connection.getRootHandler());
 
             } catch (Throwable t) {
                 //TODO: we should attempt to return a 500 status code in this situation
@@ -203,6 +158,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
             if (free) pooled.free();
         }
     }
+
 
     /**
      * Action that starts the next request
@@ -219,7 +175,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
         }
 
         @Override
-        public void exchangeEvent(final HttpServerExchange exchange) {
+        public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
             if (exchange.isPersistent() && !exchange.isUpgrade()) {
                 final StreamSourceChannel channel = this.requestChannel;
                 final HttpReadListener listener = new HttpReadListener(responseChannel, channel, exchange.getConnection());
@@ -230,6 +186,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
                 responseChannel = null;
                 this.requestChannel = null;
             }
+            nextListener.proceed();
         }
 
         private static class DoNextRequestRead implements Runnable {

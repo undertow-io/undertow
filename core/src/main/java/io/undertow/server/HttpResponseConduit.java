@@ -24,6 +24,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Iterator;
 
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
@@ -71,6 +72,14 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
     private static final int MASK_STATE         = 0x0000000F;
     private static final int FLAG_SHUTDOWN      = 0x00000010;
+
+    public static final ConduitWrapper<StreamSinkConduit> WRAPPER = new ConduitWrapper<StreamSinkConduit>() {
+        @Override
+        public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+            final StreamSinkConduit channel = factory.create();
+            return new HttpResponseConduit(channel, exchange.getConnection().getBufferPool(), exchange);
+        }
+    };
 
     HttpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final HttpServerExchange exchange) {
         super(next);
@@ -124,11 +133,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     log.trace("Starting response");
                     // we assume that our buffer has enough space for the initial response line plus one more CR+LF
                     assert buffer.remaining() >= 0x100;
-                    string = exchange.getProtocol().toString();
-                    length = string.length();
-                    for (charIndex = 0; charIndex < length; charIndex ++) {
-                        buffer.put((byte) string.charAt(charIndex));
-                    }
+                    exchange.getProtocol().appendTo(buffer);
                     buffer.put((byte) ' ');
                     int code = exchange.getResponseCode();
                     assert 999 >= code && code >= 100;
@@ -166,28 +171,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 }
                 case STATE_HDR_NAME: {
                     log.tracef("Processing header '%s'", headerName);
-                    length = headerName.length();
-                    while (charIndex < length) {
-                        if (buffer.hasRemaining()) {
-                            buffer.put(headerName.byteAt(charIndex++));
-                        } else {
-                            log.trace("Buffer flush");
-                            buffer.flip();
-                            do {
-                                res = next.write(buffer);
-                                if (res == 0) {
-                                    this.string = string;
-                                    this.headerName = headerName;
-                                    this.charIndex = charIndex;
-                                    this.valueIterator = valueIterator;
-                                    this.nameIterator = nameIterator;
-                                    log.trace("Continuation");
-                                    return STATE_HDR_NAME;
-                                }
-                            } while (buffer.hasRemaining());
-                            buffer.clear();
-                        }
-                    }
+                    headerName.appendTo(buffer);
                     // fall thru
                 }
                 case STATE_HDR_D: {

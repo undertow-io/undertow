@@ -17,7 +17,8 @@ package io.undertow.websockets.impl;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
-import io.undertow.server.HttpTransferEncodingHandler;
+import io.undertow.server.HttpTransferEncoding;
+import io.undertow.server.HttpTransferEncoding;
 import io.undertow.websockets.api.AbstractFragmentedFrameHandler;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.api.FragmentedBinaryFrameSender;
@@ -108,9 +109,7 @@ public class HighLevelAutobahnWebSocketServer {
      * @param rootHandler The handler to use
      */
     private void setRootHandler(HttpHandler rootHandler) {
-        final HttpTransferEncodingHandler ph = new HttpTransferEncodingHandler();
-        ph.setNext(rootHandler);
-        openListener.setRootHandler(ph);
+        openListener.setRootHandler(rootHandler);
     }
 
     public static void main(String[] args) {

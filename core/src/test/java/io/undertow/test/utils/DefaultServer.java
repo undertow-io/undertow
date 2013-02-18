@@ -39,7 +39,8 @@ import io.undertow.UndertowOptions;
 import io.undertow.ajp.AjpOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
-import io.undertow.server.HttpTransferEncodingHandler;
+import io.undertow.server.HttpTransferEncoding;
+import io.undertow.server.HttpTransferEncoding;
 import io.undertow.server.OpenListener;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
@@ -240,9 +241,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         if(ajp) {
             openListener.setRootHandler(rootHandler);
         } else {
-            final HttpTransferEncodingHandler ph = new HttpTransferEncodingHandler();
-            ph.setNext(rootHandler);
-            openListener.setRootHandler(ph);
+            openListener.setRootHandler(rootHandler);
         }
     }
 

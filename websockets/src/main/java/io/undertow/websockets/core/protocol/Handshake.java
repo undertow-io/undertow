@@ -28,10 +28,9 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketHandshakeException;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
-import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.IoFuture;
+import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
@@ -93,7 +92,7 @@ public abstract class Handshake {
      *
      * @param exchange The {@link HttpServerExchange} for which the handshake and upgrade should occur.
      */
-    public abstract IoFuture<WebSocketChannel> handshake(HttpServerExchange exchange);
+    public abstract void handshake(HttpServerExchange exchange);
 
     /**
      * Return {@code true} if this implementation can be used to issue a handshake.
@@ -103,31 +102,24 @@ public abstract class Handshake {
     /**
      * Create the {@link WebSocketChannel} from the {@link HttpServerExchange}
      */
-    protected abstract WebSocketChannel createChannel(HttpServerExchange exchange);
+    public abstract WebSocketChannel createChannel(HttpServerExchange exchange);
 
     /**
      * convenience method to perform the upgrade
      */
-    protected final void performUpgrade(final ConcreteIoFuture<WebSocketChannel> ioFuture, final HttpServerExchange exchange, final byte[] data) {
+    protected final void performUpgrade(final HttpServerExchange exchange, final byte[] data) {
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(data.length));
         exchange.getResponseHeaders().put(Headers.UPGRADE, "WebSocket");
         exchange.getResponseHeaders().put(Headers.CONNECTION, "Upgrade");
 
-        exchange.upgradeChannel();
-        final StreamSinkChannel channel = exchange.getResponseChannel();
-
         if(data.length > 0) {
-            writePayload(ioFuture, exchange, channel, ByteBuffer.wrap(data));
+            writePayload( exchange, exchange.getResponseChannel(), ByteBuffer.wrap(data));
         } else {
-            try {
-                flushAndCreateChannel(ioFuture, exchange, channel);
-            } catch (WebSocketHandshakeException e) {
-                ioFuture.setException(new IOException(e));
-            }
+            exchange.endExchange();
         }
     }
 
-    private void writePayload(final ConcreteIoFuture<WebSocketChannel> ioFuture,   final HttpServerExchange exchange, StreamSinkChannel channel, final ByteBuffer payload){
+    private void writePayload(final HttpServerExchange exchange, StreamSinkChannel channel, final ByteBuffer payload){
         while(payload.hasRemaining()) {
             try {
                 int w = channel.write(payload);
@@ -135,7 +127,7 @@ public abstract class Handshake {
                     channel.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
                         @Override
                         public void handleEvent(StreamSinkChannel channel) {
-                            writePayload(ioFuture, exchange, channel, payload);
+                            writePayload(exchange, channel, payload);
                         }
                     });
                     channel.resumeWrites();
@@ -144,15 +136,11 @@ public abstract class Handshake {
                 }
 
             } catch (IOException e) {
-                ioFuture.setException(e);
+                IoUtils.safeClose(exchange.getConnection());
                 return;
             }
         }
-        try {
-            flushAndCreateChannel(ioFuture, exchange, channel);
-        } catch (WebSocketHandshakeException e) {
-            ioFuture.setException(new IOException(e));
-        }
+        exchange.endExchange();
 
     }
 
@@ -161,35 +149,8 @@ public abstract class Handshake {
      */
     protected final IoFuture<WebSocketChannel> performUpgrade(final HttpServerExchange exchange) {
         final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<WebSocketChannel>();
-        performUpgrade(ioFuture, exchange, EMPTY);
+        performUpgrade(exchange, EMPTY);
         return ioFuture;
-    }
-
-    private void flushAndCreateChannel(final ConcreteIoFuture<WebSocketChannel> ioFuture, final HttpServerExchange exchange, final StreamSinkChannel channel) throws WebSocketHandshakeException {
-        try {
-            channel.shutdownWrites();
-            if (!channel.flush()) {
-                final ChannelListener<StreamSinkChannel> listener = ChannelListeners
-                        .flushingChannelListener(
-                                new ChannelListener<StreamSinkChannel>() {
-                                    @Override
-                                    public void handleEvent(final StreamSinkChannel channel) {
-                                        ioFuture.setResult(createChannel(exchange));
-                                    }
-                                }, new ChannelExceptionHandler<StreamSinkChannel>() {
-                                    @Override
-                                    public void handleException(final StreamSinkChannel channel, final IOException exception) {
-                                        ioFuture.setException(exception);
-                                    }
-                                }
-                        );
-                channel.getWriteSetter().set(listener);
-            } else {
-                ioFuture.setResult(createChannel(exchange));
-            }
-        } catch (IOException e) {
-            throw new WebSocketHandshakeException(e);
-        }
     }
 
     /**

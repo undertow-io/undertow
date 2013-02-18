@@ -18,7 +18,8 @@ package io.undertow.websockets.core.protocol.server;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpTransferEncodingHandler;
+import io.undertow.server.HttpTransferEncoding;
+import io.undertow.server.HttpTransferEncoding;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketUtils;
@@ -152,9 +153,7 @@ public class AutobahnWebSocketServer {
      * @param rootHandler The handler to use
      */
     private void setRootHandler(HttpHandler rootHandler) {
-        final HttpTransferEncodingHandler ph = new HttpTransferEncodingHandler();
-        ph.setNext(rootHandler);
-        openListener.setRootHandler(ph);
+        openListener.setRootHandler(rootHandler);
     }
 
     public static void main(String[] args) {
