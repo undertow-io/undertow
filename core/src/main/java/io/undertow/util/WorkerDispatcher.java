@@ -18,6 +18,8 @@
 
 package io.undertow.util;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
@@ -31,7 +33,7 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public class WorkerDispatcher {
 
-    private static final ThreadLocal<Executor> executingInWorker = new ThreadLocal<Executor>();
+    private static final ThreadLocal<DispatchData> executingInWorker = new ThreadLocal<DispatchData>();
 
     public static final AttachmentKey<Executor> EXECUTOR_ATTACHMENT_KEY = AttachmentKey.create(Executor.class);
 
@@ -40,45 +42,22 @@ public class WorkerDispatcher {
         if (executor == null) {
             executor = exchange.getConnection().getWorker();
         }
-        final Executor executing = executingInWorker.get();
-        if (executing == executor) {
+        final DispatchData dd = executingInWorker.get();
+        if (dd != null && dd.executor == executor) {
             runnable.run();
         } else {
-            final Executor e = executor;
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        executingInWorker.set(e);
-                        runnable.run();
-                    } catch (Exception e) {
-                        UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
-                    } finally {
-                        executingInWorker.remove();
-                    }
-                }
-            });
+            executor.execute(new DispatchedRunnable(executor, runnable));
         }
     }
 
     /**
      * Forces a task dispatch with the specified executor
+     *
      * @param executor The executor to use
      * @param runnable The runnable
      */
     public static void dispatch(final Executor executor, final Runnable runnable) {
-        final Executor e = executor;
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    executingInWorker.set(e);
-                    runnable.run();
-                } finally {
-                    executingInWorker.remove();
-                }
-            }
-        });
+        executor.execute(new DispatchedRunnable(executor, runnable));
     }
 
     /**
@@ -89,25 +68,59 @@ public class WorkerDispatcher {
      * @param runnable The task to run
      */
     public static void dispatchNextRequest(final StreamSourceChannel channel, final Runnable runnable) {
-        final Executor executing = executingInWorker.get();
-        if (executing == null) {
+        final DispatchData dd = executingInWorker.get();
+        if (dd == null) {
             channel.getReadThread().execute(runnable);
         } else {
-            executing.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        executingInWorker.set(executing);
-                        runnable.run();
-                    } finally {
-                        executingInWorker.remove();
-                    }
-                }
-            });
+            dd.tasks.add(runnable);
         }
     }
 
     private WorkerDispatcher() {
 
+    }
+
+    private static final class DispatchData {
+        final Executor executor;
+        final Deque<Runnable> tasks = new ArrayDeque<>();
+
+        private DispatchData(Executor executor) {
+            this.executor = executor;
+        }
+    }
+
+    private static class DispatchedRunnable implements Runnable {
+        private final Executor executor;
+        private final Runnable runnable;
+
+        public DispatchedRunnable(Executor executor, Runnable runnable) {
+            this.executor = executor;
+            this.runnable = runnable;
+        }
+
+        @Override
+        public void run() {
+            final DispatchData data = new DispatchData(executor);
+            try {
+                executingInWorker.set(data);
+                runnable.run();
+            } catch (Exception e) {
+                UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+            } finally {
+                Runnable next = data.tasks.poll();
+                try {
+                while (next != null) {
+                    try {
+                        next.run();
+                    } catch (Exception e) {
+                        UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+                    }
+                    next = data.tasks.poll();
+                }
+                } finally {
+                    executingInWorker.remove();
+                }
+            }
+        }
     }
 }
