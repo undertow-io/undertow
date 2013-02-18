@@ -33,7 +33,7 @@ import io.undertow.util.FlexBase64;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.Deque;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 import org.xnio.FinishedIoFuture;
@@ -77,7 +77,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
             Executor handOffExecutor) {
         ConcreteIoFuture<AuthenticationMechanismOutcome> result = new ConcreteIoFuture<AuthenticationMechanismOutcome>();
 
-        Deque<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
+        List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
         if (authHeaders != null) {
             for (String current : authHeaders) {
                 if (current.startsWith(BASIC_PREFIX)) {

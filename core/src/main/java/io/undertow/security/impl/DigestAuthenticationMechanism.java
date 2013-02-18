@@ -40,7 +40,6 @@ import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -121,7 +120,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     public IoFuture<AuthenticationMechanismOutcome> authenticate(final HttpServerExchange exchange,
             final SecurityContext securityContext, final Executor handOffExecutor) {
         ConcreteIoFuture<AuthenticationMechanismOutcome> result = new ConcreteIoFuture<AuthenticationMechanismOutcome>();
-        Deque<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
+        List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
         if (authHeaders != null) {
             for (String current : authHeaders) {
                 if (current.startsWith(DIGEST_PREFIX)) {

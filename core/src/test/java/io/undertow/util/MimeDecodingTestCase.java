@@ -48,7 +48,7 @@ public class MimeDecodingTestCase {
         Assert.assertEquals("Here is some text.", handler.parts.get(0).data.toString());
         Assert.assertEquals("Here is some more text.", handler.parts.get(1).data.toString());
 
-        Assert.assertEquals("text/plain", handler.parts.get(0).map.get(Headers.CONTENT_TYPE).getFirst());
+        Assert.assertEquals("text/plain", handler.parts.get(0).map.getFirst(Headers.CONTENT_TYPE));
     }
 
     @Test
@@ -64,7 +64,7 @@ public class MimeDecodingTestCase {
         Assert.assertEquals("Here is some text.", handler.parts.get(0).data.toString());
         Assert.assertEquals("Here is some more text.", handler.parts.get(1).data.toString());
 
-        Assert.assertEquals("text/plain", handler.parts.get(0).map.get(Headers.CONTENT_TYPE).getFirst());
+        Assert.assertEquals("text/plain", handler.parts.get(0).map.getFirst(Headers.CONTENT_TYPE));
     }
 
     @Test
@@ -80,7 +80,7 @@ public class MimeDecodingTestCase {
         Assert.assertEquals("This is some base64 text.", handler.parts.get(0).data.toString());
         Assert.assertEquals("This is some more base64 text.", handler.parts.get(1).data.toString());
 
-        Assert.assertEquals("text/plain", handler.parts.get(0).map.get(Headers.CONTENT_TYPE).getFirst());
+        Assert.assertEquals("text/plain", handler.parts.get(0).map.getFirst(Headers.CONTENT_TYPE));
     }
 
     @Test
@@ -96,7 +96,7 @@ public class MimeDecodingTestCase {
         Assert.assertEquals("This is some base64 text.", handler.parts.get(0).data.toString());
         Assert.assertEquals("This is some more base64 text.", handler.parts.get(1).data.toString());
 
-        Assert.assertEquals("text/plain", handler.parts.get(0).map.get(Headers.CONTENT_TYPE).getFirst());
+        Assert.assertEquals("text/plain", handler.parts.get(0).map.getFirst(Headers.CONTENT_TYPE));
     }
 
     @Test
@@ -111,7 +111,7 @@ public class MimeDecodingTestCase {
         Assert.assertEquals(1, handler.parts.size());
         Assert.assertEquals("time=money.", handler.parts.get(0).data.toString());
 
-        Assert.assertEquals("text/plain", handler.parts.get(0).map.get(Headers.CONTENT_TYPE).getFirst());
+        Assert.assertEquals("text/plain", handler.parts.get(0).map.getFirst(Headers.CONTENT_TYPE));
     }
 
     private static class TestPartHandler implements MultipartParser.PartHandler {

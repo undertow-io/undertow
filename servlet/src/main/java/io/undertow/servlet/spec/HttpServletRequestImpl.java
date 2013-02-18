@@ -194,7 +194,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Enumeration<String> getHeaders(final String name) {
-        Deque<String> headers = exchange.getRequestHeaders().get(new HttpString(name));
+        List<String> headers = exchange.getRequestHeaders().get(new HttpString(name));
         if (headers == null) {
             return EmptyEnumeration.instance();
         }
@@ -690,7 +690,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Enumeration<Locale> getLocales() {
-        final Deque<String> acceptLanguage = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
+        final List<String> acceptLanguage = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
         if (acceptLanguage == null || acceptLanguage.isEmpty()) {
             return new IteratorEnumeration<Locale>(Collections.singleton(Locale.getDefault()).iterator());
         }

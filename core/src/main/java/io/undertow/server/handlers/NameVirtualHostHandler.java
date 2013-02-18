@@ -18,7 +18,6 @@
 
 package io.undertow.server.handlers;
 
-import java.util.Deque;
 import java.util.Map;
 
 import io.undertow.server.HttpHandler;
@@ -40,9 +39,9 @@ public class NameVirtualHostHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
-        final Deque<String> host = exchange.getRequestHeaders().get(Headers.HOST);
+        final String host = exchange.getRequestHeaders().getFirst(Headers.HOST);
         if(host != null) {
-            final HttpHandler handler = hosts.get(host.getFirst());
+            final HttpHandler handler = hosts.get(host);
             if(handler != null) {
                 HttpHandlers.executeHandler(handler, exchange);
                 return;

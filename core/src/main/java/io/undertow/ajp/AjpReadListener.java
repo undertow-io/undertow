@@ -230,7 +230,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                     if (hasTransferEncoding && !transferEncoding.equals(Headers.IDENTITY)) {
                         length = null; //unkown length
                     } else if (exchange.getRequestHeaders().contains(Headers.CONTENT_LENGTH)) {
-                        final long contentLength = Long.parseLong(requestHeaders.get(Headers.CONTENT_LENGTH).getFirst());
+                        final long contentLength = Long.parseLong(requestHeaders.getFirst(Headers.CONTENT_LENGTH));
                         if (contentLength == 0L) {
                             UndertowLogger.REQUEST_LOGGER.trace("No content, starting next request");
                             // no content - immediately start the next request, returning an empty stream for this one

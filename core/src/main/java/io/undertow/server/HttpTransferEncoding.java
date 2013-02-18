@@ -100,7 +100,7 @@ public class HttpTransferEncoding {
         } else if (hasContentLength) {
             final long contentLength;
             try {
-                contentLength = Long.parseLong(requestHeaders.get(Headers.CONTENT_LENGTH).getFirst());
+                contentLength = Long.parseLong(requestHeaders.getFirst(Headers.CONTENT_LENGTH));
             } catch (NumberFormatException e) {
                 log.trace("Invalid request due to unparsable content length");
                 // content length is bad; invalid request
@@ -177,7 +177,7 @@ public class HttpTransferEncoding {
                         // add least for websocket upgrades we can have a content length
                         final long contentLength;
                         try {
-                            contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
+                            contentLength = Long.parseLong(responseHeaders.getFirst(Headers.CONTENT_LENGTH));
                             // fixed-length response
                             wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener, null);
                         } catch (NumberFormatException e) {
@@ -194,7 +194,7 @@ public class HttpTransferEncoding {
                 } else if (responseHeaders.contains(Headers.CONTENT_LENGTH)) {
                     final long contentLength;
                     try {
-                        contentLength = Long.parseLong(responseHeaders.get(Headers.CONTENT_LENGTH).getFirst());
+                        contentLength = Long.parseLong(responseHeaders.getFirst(Headers.CONTENT_LENGTH));
                         final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                         // fixed-length response
                         wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener, null);

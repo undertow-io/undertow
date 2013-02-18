@@ -20,7 +20,6 @@ package io.undertow.server.handlers;
 
 import java.util.Collections;
 import java.util.Date;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -64,7 +63,7 @@ public class CookieHandler implements HttpHandler {
     }
 
     private static Map<String, Cookie> parseCookies(final HttpServerExchange exchange) {
-        Deque<String> cookies = exchange.getRequestHeaders().get(Headers.COOKIE);
+        List<String> cookies = exchange.getRequestHeaders().get(Headers.COOKIE);
 
         if (cookies == null) {
             return Collections.emptyMap();

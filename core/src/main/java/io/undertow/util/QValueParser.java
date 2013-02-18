@@ -20,7 +20,6 @@ package io.undertow.util;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
 
 /**
@@ -45,7 +44,7 @@ public class QValueParser {
      * @param headers The headers
      * @return The q value results
      */
-    public static List<List<QValueResult>> parse(Deque<String> headers) {
+    public static List<List<QValueResult>> parse(List<String> headers) {
         final List<QValueResult> found = new ArrayList<QValueResult>();
         QValueResult current = null;
         for (final String header : headers) {

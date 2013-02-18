@@ -21,8 +21,8 @@ package io.undertow.server.handlers;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import io.undertow.UndertowLogger;
@@ -46,7 +46,7 @@ public class OriginHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
-        final Deque<String> origin = exchange.getRequestHeaders().get(Headers.ORIGIN);
+        final List<String> origin = exchange.getRequestHeaders().get(Headers.ORIGIN);
         if (origin == null) {
             if (requireOriginHeader) {
                 //TODO: Is 403 (Forbidden) the best response code

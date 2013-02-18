@@ -20,7 +20,6 @@ package io.undertow.server.handlers.encoding;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
@@ -67,7 +66,7 @@ public class EncodingHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
-        final Deque<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
+        final List<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
         HttpHandler nextHandler = this.next;
         if (res == null || res.isEmpty()) {
             if (nextHandler != null) {

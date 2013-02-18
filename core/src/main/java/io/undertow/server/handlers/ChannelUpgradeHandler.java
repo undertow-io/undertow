@@ -20,7 +20,7 @@ package io.undertow.server.handlers;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
-import java.util.Deque;
+import java.util.List;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.ExchangeCompletionListener;
@@ -90,7 +90,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
     }
 
     public void handleRequest(final HttpServerExchange exchange) {
-        final Deque<String> upgradeStrings = exchange.getRequestHeaders().get(Headers.UPGRADE);
+        final List<String> upgradeStrings = exchange.getRequestHeaders().get(Headers.UPGRADE);
         if (upgradeStrings != null && exchange.getRequestMethod().equals(Methods.GET)) {
             for (String string : upgradeStrings) {
                 final ChannelListener<? super ConnectedStreamChannel> listener = handlers.get(string);

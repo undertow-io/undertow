@@ -18,9 +18,10 @@
 
 package io.undertow.util;
 
-import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Deque;
+import java.util.Collections;
+import java.util.List;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -33,74 +34,75 @@ import java.util.TreeMap;
  */
 public final class HeaderMap implements Iterable<HttpString> {
 
-    private final Map<HttpString, ArrayDeque<String>> values = new TreeMap<>();
+    private final Map<HttpString, Object> values = new TreeMap<>();
 
     public Iterator<HttpString> iterator() {
         return values.keySet().iterator();
     }
 
     public String getFirst(HttpString headerName) {
-        final Deque<String> deque = values.get(headerName);
-        return deque == null ? null : deque.peekFirst();
+        Object value = values.get(headerName);
+        if(value instanceof List) {
+            return ((List<String>) value).get(0);
+        } else {
+            return (String)value;
+        }
     }
 
     public String getLast(HttpString headerName) {
-        final Deque<String> deque = values.get(headerName);
-        return deque == null ? null : deque.peekLast();
+        Object value = values.get(headerName);
+        if(value instanceof List) {
+            List<String> list = (List<String>) value;
+            return list.get(list.size()-1);
+        } else {
+            return (String)value;
+        }
     }
 
-    public Deque<String> get(HttpString headerName) {
-        return values.get(headerName);
+    public List<String> get(HttpString headerName) {
+        Object value = values.get(headerName);
+        if(value == null) {
+            return null;
+        } else if(value instanceof List) {
+            return (List<String>)value;
+        } else {
+            return Collections.<String>singletonList((String)value);
+        }
     }
 
     public void add(HttpString headerName, String headerValue) {
-        final ArrayDeque<String> value = values.get(headerName);
+        final Object value = values.get(headerName);
         if (value == null) {
-            values.put(headerName, newHeaderValue(headerValue));
+            values.put(headerName, headerValue);
         } else {
-            value.add(headerValue);
+            if(value instanceof List) {
+                ((List) value).add(headerValue);
+            } else {
+                final ArrayList<String> list = new ArrayList<String>(1);
+                list.add((String) value);
+                list.add(headerValue);
+                values.put(headerName, list);
+            }
         }
     }
 
     public void add(HttpString headerName, long headerValue) {
-        final ArrayDeque<String> value = values.get(headerName);
-        if (value == null) {
-            values.put(headerName, newHeaderValue(Long.toString(headerValue)));
-        } else {
-            value.add(Long.toString(headerValue));
-        }
+        add(headerName, Long.toString(headerValue));
     }
 
-    private ArrayDeque<String> newHeaderValue(final String value) {
-        final ArrayDeque<String> deque = new ArrayDeque<String>(1);
-        deque.add(value);
-        return deque;
-    }
-
-    private ArrayDeque<String> newHeaderValue(final Collection<String> values) {
-        final ArrayDeque<String> deque = new ArrayDeque<String>(values.size());
-        deque.addAll(values);
-        return deque;
-    }
 
     public void addAll(HttpString headerName, Collection<String> headerValues) {
-        final ArrayDeque<String> value = values.get(headerName);
+        final Object value = values.get(headerName);
         if (value == null) {
-            values.put(headerName, newHeaderValue(headerValues));
+            values.put(headerName, new ArrayList<>(headerValues));
         } else {
-            value.addAll(headerValues);
-        }
-    }
-
-    public void addAll(HeaderMap other) {
-        for (Map.Entry<HttpString, ArrayDeque<String>> entry : other.values.entrySet()) {
-            final HttpString key = entry.getKey();
-            final ArrayDeque<String> value = entry.getValue();
-            final ArrayDeque<String> target = values.get(key);
-            if (target == null) {
-                values.put(key, newHeaderValue(value));
+            if(value instanceof List) {
+                ((List) value).addAll(headerValues);
             } else {
-                target.addAll(value);
+                final ArrayList<String> list = new ArrayList<String>(1);
+                list.add((String) value);
+                list.addAll(headerValues);
+                values.put(headerName, list);
             }
         }
     }
@@ -114,22 +116,25 @@ public final class HeaderMap implements Iterable<HttpString> {
     }
 
     public void put(HttpString headerName, String headerValue) {
-        final ArrayDeque<String> value = newHeaderValue(headerValue);
-        values.put(headerName, value);
+        values.put(headerName, headerValue);
     }
 
     public void put(HttpString headerName, long headerValue) {
-        final ArrayDeque<String> value = newHeaderValue(Long.toString(headerValue));
-        values.put(headerName, value);
+        values.put(headerName, Long.toString(headerValue));
     }
 
     public void putAll(HttpString headerName, Collection<String> headerValues) {
-        final ArrayDeque<String> deque = newHeaderValue(headerValues);
-        values.put(headerName, deque);
+        final ArrayList<String> list = new ArrayList<>(headerValues);
+        values.put(headerName, list);
     }
 
     public Collection<String> remove(HttpString headerName) {
-        return values.remove(headerName);
+        Object value = values.remove(headerName);
+        if(value instanceof List) {
+            return (Collection<String>) value;
+        } else {
+            return Collections.singletonList((String)value);
+        }
     }
 
     /**
@@ -140,8 +145,8 @@ public final class HeaderMap implements Iterable<HttpString> {
     }
 
     public boolean contains(HttpString headerName) {
-        final ArrayDeque<String> value = values.get(headerName);
-        return value != null && ! value.isEmpty();
+        final Object value = values.get(headerName);
+        return value != null;
     }
 
     @Override

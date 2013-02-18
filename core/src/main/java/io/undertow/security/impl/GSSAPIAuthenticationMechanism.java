@@ -40,7 +40,7 @@ import java.security.GeneralSecurityException;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.util.Deque;
+import java.util.List;
 import java.util.concurrent.Executor;
 
 import javax.security.auth.Subject;
@@ -99,7 +99,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             }
         }
 
-        Deque<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
+        List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
         if (authHeaders != null) {
             for (String current : authHeaders) {
                 if (current.startsWith(NEGOTIATE_PREFIX)) {
@@ -146,13 +146,11 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     private String getHostName(final HttpServerExchange exchange) {
-        final Deque<String> host = exchange.getRequestHeaders().get(HOST);
-        if (host != null) {
-            String hostName = host.getFirst();
+        String hostName = exchange.getRequestHeaders().getFirst(HOST);
+        if (hostName != null) {
             if (hostName.contains(":")) {
                 hostName = hostName.substring(0, hostName.indexOf(":"));
             }
-
             return hostName;
         }
 
