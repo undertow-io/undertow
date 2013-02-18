@@ -72,13 +72,13 @@ public final class HeaderMap implements Iterable<HttpString> {
     }
 
     private ArrayDeque<String> newHeaderValue(final String value) {
-        final ArrayDeque<String> deque = new ArrayDeque<String>();
+        final ArrayDeque<String> deque = new ArrayDeque<String>(1);
         deque.add(value);
         return deque;
     }
 
     private ArrayDeque<String> newHeaderValue(final Collection<String> values) {
-        final ArrayDeque<String> deque = new ArrayDeque<String>();
+        final ArrayDeque<String> deque = new ArrayDeque<String>(values.size());
         deque.addAll(values);
         return deque;
     }
