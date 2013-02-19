@@ -46,10 +46,18 @@ public class UndertowOptions {
     public static final long DEFAULT_MAX_ENTITY_SIZE = 10 * 1024 * 1024;
 
     /**
-
      * If we should buffer pipelined requests. Defaults to false.
      */
     public static Option<Boolean> BUFFER_PIPELINED_DATA = Option.simple(UndertowOptions.class, "BUFFER_PIPELINED_DATA", Boolean.class);
+
+    /**
+     * If we should immediately dispatch to a worker thread, rather than starting the request in an IO thread, defaults
+     * to true
+     *
+     * If you are using Undertow async IO features or using multiple thread pools then setting this to false may give
+     * you a speed boost by removing an unnecessary Executor dispatch
+     */
+    public static Option<Boolean> IMMEDIATE_DISPATCH_TO_WORKER = Option.simple(UndertowOptions.class, "IMMEDIATE_DISPATCH_TO_WORKER", Boolean.class);
 
     /*
      * The idle timeout in milliseconds after which the channel will be closed.
