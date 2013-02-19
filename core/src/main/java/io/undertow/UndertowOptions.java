@@ -46,11 +46,6 @@ public class UndertowOptions {
     public static final long DEFAULT_MAX_ENTITY_SIZE = 10 * 1024 * 1024;
 
     /**
-     * The maximum number of pipelined requests that the server will process at once. Defaults to 1
-     */
-    public static Option<Integer> MAX_REQUESTS_PER_CONNECTION = Option.simple(UndertowOptions.class, "MAX_REQUESTS_PER_CONNECTION", Integer.class);
-
-    /**
 
      * If we should buffer pipelined requests. Defaults to false.
      */

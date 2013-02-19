@@ -21,11 +21,9 @@ package io.undertow.server;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.net.ssl.SSLSession;
 
-import io.undertow.UndertowOptions;
 import io.undertow.util.AbstractAttachable;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -49,7 +47,6 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     private final ChannelListener.Setter<HttpServerConnection> closeSetter;
     private final Pool<ByteBuffer> bufferPool;
     private final HttpHandler rootHandler;
-    private final int maxConcurrentRequests;
     private final OptionMap undertowOptions;
     private final int bufferSize;
     /**
@@ -58,18 +55,12 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
      */
     private Pooled<ByteBuffer> extraBytes;
 
-    @SuppressWarnings("unused")
-    private volatile int runningRequestCount = 1;
-
-    private static final AtomicIntegerFieldUpdater<HttpServerConnection> runningRequestCountUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpServerConnection.class, "runningRequestCount");
-
     public HttpServerConnection(ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         this.channel = channel;
         this.bufferPool = bufferPool;
         this.rootHandler = rootHandler;
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
-        this.maxConcurrentRequests = undertowOptions.get(UndertowOptions.MAX_REQUESTS_PER_CONNECTION, 1);
         closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
     }
 
@@ -147,39 +138,6 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
 
     public <A extends SocketAddress> A getLocalAddress(final Class<A> type) {
         return channel.getLocalAddress(type);
-    }
-
-    /**
-     * Attempts to increment the number of running requests. If this would result in more
-     * requests running than that specified in {@link #maxConcurrentRequests} then it is not
-     * incremented and returns false;
-     * @return true if the request is allowed to start, false otherwise
-     */
-    public boolean startRequest() {
-        int running;
-        do {
-            running = runningRequestCountUpdater.get(this);
-            if (running == maxConcurrentRequests) {
-                return false;
-            }
-        } while (!runningRequestCountUpdater.compareAndSet(this, running, running + 1));
-        return true;
-    }
-
-    /**
-     * Decrements the running request count, and returns the new value
-     *
-     * @return The new running request count
-     */
-    public void requestFinished() {
-        runningRequestCountUpdater.decrementAndGet(this);
-    }
-
-    /**
-     * @return The maximum number of concurrent requests that can be active at any given time on this connection
-     */
-    public int getMaxConcurrentRequests() {
-        return maxConcurrentRequests;
     }
 
     public OptionMap getUndertowOptions() {
