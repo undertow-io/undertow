@@ -179,10 +179,16 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
             if (exchange.isPersistent() && !exchange.isUpgrade()) {
                 final StreamSourceChannel channel = this.requestChannel;
                 final HttpReadListener listener = new HttpReadListener(responseChannel, channel, exchange.getConnection());
-                if (channel.isReadResumed()) {
-                    channel.suspendReads();
+                if(exchange.getConnection().getExtraBytes() == null) {
+                    //if we are not pipelining we just register a listener
+                    channel.getReadSetter().set(listener);
+                    channel.resumeReads();
+                } else {
+                    if (channel.isReadResumed()) {
+                        channel.suspendReads();
+                    }
+                    WorkerDispatcher.dispatchNextRequest(channel, new DoNextRequestRead(listener, channel));
                 }
-                WorkerDispatcher.dispatchNextRequest(channel, new DoNextRequestRead(listener, channel));
                 responseChannel = null;
                 this.requestChannel = null;
             }
