@@ -58,23 +58,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
         httpServerExchange.addExchangeCompleteListener(new StartNextRequestAction(requestChannel, responseChannel));
     }
 
-    @Override
     public void handleEvent(final StreamSourceChannel channel) {
-        final boolean dispatch = connection.getUndertowOptions().get(UndertowOptions.IMMEDIATE_DISPATCH_TO_WORKER, true);
-        if(dispatch) {
-            channel.suspendReads();
-            WorkerDispatcher.dispatch(connection.getWorker(), new Runnable() {
-                @Override
-                public void run() {
-                    doRead(channel);
-                }
-            });
-        } else {
-            doRead(channel);
-        }
-    }
-
-    public void doRead(final StreamSourceChannel channel) {
 
         Pooled<ByteBuffer> existing = connection.getExtraBytes();
 
@@ -159,8 +143,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
                 httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
                 state = null;
                 this.httpServerExchange = null;
-                this.httpServerExchange = null;
-                HttpTransferEncoding.handleRequest(httpServerExchange, connection.getRootHandler());
+                this.httpServerExchange = null;HttpTransferEncoding.handleRequest(httpServerExchange, connection.getRootHandler());
 
             } catch (Throwable t) {
                 //TODO: we should attempt to return a 500 status code in this situation
@@ -218,7 +201,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
 
             @Override
             public void run() {
-                listener.doRead(channel);
+                listener.handleEvent(channel);
             }
         }
     }
