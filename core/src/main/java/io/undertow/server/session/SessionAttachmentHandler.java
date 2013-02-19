@@ -18,16 +18,12 @@
 
 package io.undertow.server.session;
 
-import java.io.IOException;
-
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import org.xnio.IoFuture;
 
 /**
  * Handler that attaches the session to the request.
@@ -73,31 +69,11 @@ public class SessionAttachmentHandler implements HttpHandler {
             throw UndertowMessages.MESSAGES.sessionManagerMustNotBeNull();
         }
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
-
-        final IoFuture<Session> session = sessionManager.getSession(exchange, sessionConfig);
+        sessionManager.getSession(exchange, sessionConfig);
         final UpdateLastAccessTimeListener handler = new UpdateLastAccessTimeListener(sessionConfig);
-        session.addNotifier(new IoFuture.Notifier<Session, Session>() {
-            @Override
-            public void notify(final IoFuture<? extends Session> ioFuture, final Session attachment) {
-                try {
-                    if (ioFuture.getStatus() == IoFuture.Status.DONE) {
-                        final Session session = ioFuture.get();
-                        exchange.addExchangeCompleteListener(handler);
-                        HttpHandlers.executeHandler(next, exchange);
-                    } else if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
-                        //we failed to get the session
-                        UndertowLogger.REQUEST_LOGGER.getSessionFailed(ioFuture.getException());
-                        HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange);
-                    } else {
-                        UndertowLogger.REQUEST_LOGGER.unexpectedStatusGettingSession(ioFuture.getStatus());
-                        HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange);
-                    }
-                } catch (IOException e) {
-                    UndertowLogger.REQUEST_LOGGER.getSessionFailed(e);
-                    HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_500, exchange);
-                }
-            }
-        }, null);
+        exchange.addExchangeCompleteListener(handler);
+        HttpHandlers.executeHandler(next, exchange);
+
     }
 
 

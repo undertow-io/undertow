@@ -61,20 +61,17 @@ public class SSLSessionTestCase {
                     .setNext(new HttpHandler() {
                         @Override
                         public void handleRequest(final HttpServerExchange exchange) {
-                            try {
-                                Session session = sessionConfig.getAttachedSession(exchange);
-                                if (session == null) {
-                                    final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
-                                    session = manager.createSession(exchange, sessionConfig).get();
-                                    session.setAttribute(COUNT, 0);
-                                }
-                                Integer count = (Integer) session.getAttribute(COUNT).get();
-                                exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());
-                                session.setAttribute(COUNT, ++count);
-                                HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_200, exchange);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
+                            Session session = sessionConfig.getAttachedSession(exchange);
+                            if (session == null) {
+                                final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
+                                session = manager.createSession(exchange, sessionConfig);
+                                session.setAttribute(COUNT, 0);
                             }
+                            Integer count = (Integer) session.getAttribute(COUNT);
+                            exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());
+                            session.setAttribute(COUNT, ++count);
+                            HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_200, exchange);
+
                         }
                     });
             DefaultServer.startSSLServer();

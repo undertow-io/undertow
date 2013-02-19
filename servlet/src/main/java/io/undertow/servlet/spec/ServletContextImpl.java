@@ -22,7 +22,6 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -482,23 +481,19 @@ public class ServletContextImpl implements ServletContext {
         final SessionCookieConfigImpl c = getSessionCookieConfig();
         HttpSessionImpl httpSession = exchange.getAttachment(sessionAttachmentKey);
         if (httpSession == null) {
-            try {
-                final SessionManager sessionManager = deploymentInfo.getSessionManager();
-                Session session = c.getAttachedSession(exchange);
-                if(session == null) {
-                    session = sessionManager.getSession(exchange, c).get();
-                }
-                if(session != null) {
-                    httpSession = new HttpSessionImpl(session, this, getDeployment().getApplicationListeners(), exchange, false);
-                    exchange.putAttachment(sessionAttachmentKey, httpSession);
-                } else if(create) {
-                    final Session newSession = sessionManager.createSession(exchange, c).get();
-                    httpSession = new HttpSessionImpl(newSession, this, getDeployment().getApplicationListeners(), exchange, true);
-                    exchange.putAttachment(sessionAttachmentKey, httpSession);
-                    getDeployment().getApplicationListeners().sessionCreated(httpSession);
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            final SessionManager sessionManager = deploymentInfo.getSessionManager();
+            Session session = c.getAttachedSession(exchange);
+            if (session == null) {
+                session = sessionManager.getSession(exchange, c);
+            }
+            if (session != null) {
+                httpSession = new HttpSessionImpl(session, this, getDeployment().getApplicationListeners(), exchange, false);
+                exchange.putAttachment(sessionAttachmentKey, httpSession);
+            } else if (create) {
+                final Session newSession = sessionManager.createSession(exchange, c);
+                httpSession = new HttpSessionImpl(newSession, this, getDeployment().getApplicationListeners(), exchange, true);
+                exchange.putAttachment(sessionAttachmentKey, httpSession);
+                getDeployment().getApplicationListeners().sessionCreated(httpSession);
             }
         }
         return httpSession;
@@ -506,7 +501,7 @@ public class ServletContextImpl implements ServletContext {
 
     public void updateSessionAccessTime(final HttpServerExchange exchange) {
         HttpSessionImpl httpSession = getSession(exchange, false);
-        if(httpSession != null) {
+        if (httpSession != null) {
             httpSession.getSession().updateLastAccessedTime();
         }
     }

@@ -18,7 +18,6 @@
 
 package io.undertow.servlet.spec;
 
-import java.io.IOException;
 import java.util.Enumeration;
 import java.util.Set;
 
@@ -91,11 +90,7 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public Object getAttribute(final String name) {
-        try {
-            return session.getAttribute(name).get();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return session.getAttribute(name);
     }
 
     @Override
@@ -105,47 +100,35 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public Enumeration<String> getAttributeNames() {
-        try {
-            return new IteratorEnumeration<String>(session.getAttributeNames().get().iterator());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return new IteratorEnumeration<String>(session.getAttributeNames().iterator());
     }
 
     @Override
     public String[] getValueNames() {
-        try {
-            Set<String> names = session.getAttributeNames().get();
-            String[] ret = new String[names.size()];
-            int i = 0;
-            for(String name : names) {
-                ret[i++] = name;
-            }
-            return ret;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        Set<String> names = session.getAttributeNames();
+        String[] ret = new String[names.size()];
+        int i = 0;
+        for (String name : names) {
+            ret[i++] = name;
         }
+        return ret;
     }
 
     @Override
     public void setAttribute(final String name, final Object value) {
-        try {
-            Object old = session.setAttribute(name, value).get();
-            if(value == null && old != null) {
-                applicationListeners.httpSessionAttributeRemoved(this, name, old);
-            } else if(old == null) {
-                applicationListeners.httpSessionAttributeAdded(this, name, value);
-            } else {
-                if(old instanceof HttpSessionBindingListener) {
-                    ((HttpSessionBindingListener)old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
-                }
-                applicationListeners.httpSessionAttributeReplaced(this, name, old);
+        Object old = session.setAttribute(name, value);
+        if (value == null && old != null) {
+            applicationListeners.httpSessionAttributeRemoved(this, name, old);
+        } else if (old == null) {
+            applicationListeners.httpSessionAttributeAdded(this, name, value);
+        } else {
+            if (old instanceof HttpSessionBindingListener) {
+                ((HttpSessionBindingListener) old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
             }
-            if(value instanceof HttpSessionBindingListener) {
-                ((HttpSessionBindingListener)value).valueBound(new HttpSessionBindingEvent(this, name, value));
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            applicationListeners.httpSessionAttributeReplaced(this, name, old);
+        }
+        if (value instanceof HttpSessionBindingListener) {
+            ((HttpSessionBindingListener) value).valueBound(new HttpSessionBindingEvent(this, name, value));
         }
     }
 
@@ -156,14 +139,10 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public void removeAttribute(final String name) {
-        try {
-            Object old = session.removeAttribute(name).get();
-            applicationListeners.httpSessionAttributeRemoved(this, name, old);
-            if(old instanceof HttpSessionBindingListener) {
-                ((HttpSessionBindingListener)old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        Object old = session.removeAttribute(name);
+        applicationListeners.httpSessionAttributeRemoved(this, name, old);
+        if (old instanceof HttpSessionBindingListener) {
+            ((HttpSessionBindingListener) old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
         }
     }
 
@@ -181,7 +160,7 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public boolean isNew() {
-        if(invalid) {
+        if (invalid) {
             throw UndertowServletMessages.MESSAGES.sessionIsInvalid();
         }
         return newSession;

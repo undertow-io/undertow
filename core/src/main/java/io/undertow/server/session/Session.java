@@ -21,7 +21,6 @@ package io.undertow.server.session;
 import java.util.Set;
 
 import io.undertow.server.HttpServerExchange;
-import org.xnio.IoFuture;
 
 /**
  * Represents a HTTP session.
@@ -123,7 +122,7 @@ public interface Session {
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
      */
-    IoFuture<Object> getAttribute(String name);
+    Object getAttribute(String name);
 
     /**
      * Returns an <code>Set</code> of <code>String</code> objects
@@ -136,7 +135,7 @@ public interface Session {
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
      */
-    IoFuture<Set<String>> getAttributeNames();
+    Set<String> getAttributeNames();
 
     /**
      * Binds an object to this session, using the name specified.
@@ -154,7 +153,7 @@ public interface Session {
      * @return An IOFuture containing the previous value
      * @throws IllegalStateException if this method is called on an invalidated session
      */
-    IoFuture<Object> setAttribute(final String name, Object value);
+    Object setAttribute(final String name, Object value);
 
     /**
      * Removes the object bound with the specified name from
@@ -165,7 +164,7 @@ public interface Session {
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
      */
-    IoFuture<Object> removeAttribute(final String name);
+    Object removeAttribute(final String name);
 
     /**
      * Invalidates this session then unbinds any objects bound
@@ -174,7 +173,7 @@ public interface Session {
      * @throws IllegalStateException if this method is called on an
      *                               already invalidated session
      */
-    IoFuture<Void> invalidate(final HttpServerExchange exchange);
+    void invalidate(final HttpServerExchange exchange);
 
     /**
      * @return The session manager that is associated with this session

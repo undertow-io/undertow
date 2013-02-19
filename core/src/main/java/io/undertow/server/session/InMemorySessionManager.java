@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.SecureHashMap;
-import org.xnio.FinishedIoFuture;
-import org.xnio.IoFuture;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
 
@@ -54,7 +52,7 @@ public class InMemorySessionManager implements SessionManager {
     private volatile int defaultSessionTimeout = 30 * 60;
 
     @Override
-    public IoFuture<Session> createSession(final HttpServerExchange serverExchange, final SessionConfig config) {
+    public Session createSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         if (config == null) {
             throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
         }
@@ -76,21 +74,21 @@ public class InMemorySessionManager implements SessionManager {
         config.attachSession(serverExchange, session);
         im.lastAccessed = System.currentTimeMillis();
         session.bumpTimeout();
-        return new FinishedIoFuture<Session>(session);
+        return session;
     }
 
     @Override
-    public IoFuture<Session> getSession(final HttpServerExchange serverExchange, final SessionConfig config) {
+    public Session getSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         String sessionId = config.findSessionId(serverExchange);
         if (sessionId == null) {
-            return new FinishedIoFuture<Session>(null);
+            return null;
         }
         final InMemorySession sess = sessions.get(sessionId);
         if (sess == null) {
-            return new FinishedIoFuture<Session>(null);
+            return null;
         } else {
             config.attachSession(serverExchange, sess.session);
-            return new FinishedIoFuture<Session>(sess.session);
+            return sess.session;
         }
     }
 
@@ -204,27 +202,27 @@ public class InMemorySessionManager implements SessionManager {
         }
 
         @Override
-        public IoFuture<Object> getAttribute(final String name) {
+        public Object getAttribute(final String name) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             bumpTimeout();
-            return new FinishedIoFuture<Object>(sess.attributes.get(name));
+            return sess.attributes.get(name);
         }
 
         @Override
-        public IoFuture<Set<String>> getAttributeNames() {
+        public Set<String> getAttributeNames() {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             bumpTimeout();
-            return new FinishedIoFuture<Set<String>>(sess.attributes.keySet());
+            return sess.attributes.keySet();
         }
 
         @Override
-        public IoFuture<Object> setAttribute(final String name, final Object value) {
+        public Object setAttribute(final String name, final Object value) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
@@ -238,11 +236,11 @@ public class InMemorySessionManager implements SessionManager {
                 }
             }
             bumpTimeout();
-            return new FinishedIoFuture<Object>(existing);
+            return existing;
         }
 
         @Override
-        public IoFuture<Object> removeAttribute(final String name) {
+        public Object removeAttribute(final String name) {
             final InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
@@ -252,11 +250,11 @@ public class InMemorySessionManager implements SessionManager {
                 listener.attributeRemoved(sess.session, name);
             }
             bumpTimeout();
-            return new FinishedIoFuture<Object>(existing);
+            return existing;
         }
 
         @Override
-        public IoFuture<Void> invalidate(final HttpServerExchange exchange) {
+        public void invalidate(final HttpServerExchange exchange) {
             final InMemorySession sess = sessions.remove(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
@@ -267,7 +265,6 @@ public class InMemorySessionManager implements SessionManager {
             if (exchange != null) {
                 sessionCookieConfig.clearSession(exchange, this);
             }
-            return new FinishedIoFuture<Void>(null);
         }
 
         @Override

@@ -18,9 +18,8 @@
 
 package io.undertow.server.session;
 
-import io.undertow.util.AttachmentKey;
-import org.xnio.IoFuture;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
 
 /**
  * Interface that manages sessions.
@@ -57,14 +56,14 @@ public interface SessionManager {
      *
      * @return The created session
      */
-    IoFuture<Session> createSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
+    Session createSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
 
     /**
      *
      * @param sessionId The session id
      * @return An IoFuture that can be used to retrieve the session, or an IoFuture that will return null if not found
      */
-    IoFuture<Session> getSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
+    Session getSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
 
     /**
      * Registers a session listener for the session manager
