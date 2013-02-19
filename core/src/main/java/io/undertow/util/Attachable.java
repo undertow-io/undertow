@@ -26,11 +26,6 @@ import java.util.List;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface Attachable {
-    Object getAttachment(String name);
-
-    Object putAttachment(String name, Object value);
-
-    Object removeAttachment(String name);
 
     /**
      * Get an attachment value.  If no attachment exists for this key, {@code null} is returned.

@@ -19,7 +19,7 @@
 package io.undertow.util;
 
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,25 +31,8 @@ import io.undertow.UndertowMessages;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public abstract class AbstractAttachable implements Attachable {
-    private final Map<Object, Object> attachments = new HashMap<Object, Object>(32);
 
-    @Override
-    public Object getAttachment(String name) {
-        return attachments.get(name);
-    }
-
-    @Override
-    public Object putAttachment(String name, Object value) {
-        if (name == null) {
-            throw new IllegalArgumentException("name is null");
-        }
-        return attachments.put(name, value);
-    }
-
-    @Override
-    public Object removeAttachment(String name) {
-        return attachments.remove(name);
-    }
+    private final Map<AttachmentKey<?>, Object> attachments = new IdentityHashMap<>(32);
 
     /**
      * {@inheritDoc}
@@ -105,7 +88,7 @@ public abstract class AbstractAttachable implements Attachable {
     @Override
     public <T> void addToAttachmentList(final AttachmentKey<AttachmentList<T>> key, final T value) {
         if (key != null) {
-            final Map<Object, Object> attachments = this.attachments;
+            final Map<AttachmentKey<?>, Object> attachments = this.attachments;
             final AttachmentList<T> list = key.cast(attachments.get(key));
             if (list == null) {
                 final AttachmentList<T> newList = new AttachmentList<T>(((ListAttachmentKey<T>) key).getValueClass());
