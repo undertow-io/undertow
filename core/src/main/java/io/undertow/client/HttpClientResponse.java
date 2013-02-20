@@ -24,22 +24,82 @@ package io.undertow.client;
 
 import java.io.IOException;
 
+import io.undertow.util.HttpString;
 import org.xnio.channels.StreamSourceChannel;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
 
 /**
+ * A http response.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author Emanuel Muckenhuber
  */
-public abstract class HttpClientResponse extends AbstractAttachable {
-    private final HeaderMap responseHeaders = new HeaderMap();
+public final class HttpClientResponse extends AbstractAttachable {
 
-    public final HeaderMap getResponseHeaders() {
-        return responseHeaders;
+    private final HttpString protocol;
+    private final String reason;
+    private final int responseCode;
+    private final HeaderMap headers;
+    private final long contentLength;
+
+    private final StreamSourceChannel sourceChannel;
+
+    protected HttpClientResponse(final PendingHttpRequest responseBuilder, final long contentLength, final StreamSourceChannel sourceChannel) {
+        this.protocol = responseBuilder.getProtocol();
+        this.reason = responseBuilder.getReasonPhrase();
+        this.responseCode = responseBuilder.getStatusCode();
+        this.headers = responseBuilder.getResponseHeaders();
+        this.headers.lock();
+
+        this.contentLength = contentLength;
+        this.sourceChannel = sourceChannel;
     }
 
-    public abstract int getResponseCode() throws IOException;
-    public abstract long getContentLength() throws IOException;
-    public abstract StreamSourceChannel readReplyBody() throws IOException;
+    /**
+     * Get the http response code.
+     *
+     * @return the response code
+     */
+    public int getResponseCode() {
+        return responseCode;
+    }
+
+    /**
+     * Get the content length. A content-length of <code>-1</code> declares
+     * a unknown content-length.
+     *
+     * @return the content length
+     */
+    public long getContentLength() {
+        return contentLength;
+    }
+
+    /**
+     * Get the response headers.
+     *
+     * @return the response headers
+     */
+    public HeaderMap getResponseHeaders() {
+        return headers;
+    }
+
+    /**
+     * Read the reply body.
+     *
+     * @return the response channel
+     * @throws IOException
+     */
+    public StreamSourceChannel readReplyBody() throws IOException {
+        return sourceChannel;
+    }
+
+    @Override
+    public String toString() {
+        return "HttpClientResponse{" +
+                protocol + " " + responseCode + " " + reason +
+                ", headers=" + headers +
+                '}';
+    }
 
 }

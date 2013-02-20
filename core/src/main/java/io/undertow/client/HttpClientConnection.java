@@ -23,10 +23,13 @@
 package io.undertow.client;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
+import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
 import io.undertow.util.AbstractAttachable;
 
@@ -50,8 +53,13 @@ public abstract class HttpClientConnection extends AbstractAttachable implements
      * @param method the HTTP request method to use
      * @param target the target URI to access
      * @return the new request, or {@code null} if no more requests can be made on this connection
+     * @throws IOException
      */
-    public abstract HttpClientRequest sendRequest(final String method, final URI target);
+    public abstract HttpClientRequest sendRequest(final String method, final URI target) throws IOException;
 
-    public abstract IoFuture<ConnectedStreamChannel> upgradeToWebSocket(final String service, final OptionMap optionMap);
+    public abstract IoFuture<ConnectedStreamChannel> upgradeToWebSocket(final String service, final OptionMap optionMap) throws IOException;
+
+    abstract OptionMap getOptions();
+    abstract Pool<ByteBuffer> getBufferPool();
+
 }
