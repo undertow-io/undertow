@@ -18,29 +18,29 @@
 
 package io.undertow.test.handlers.blocking;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
+import io.undertow.io.UndertowOutputStream;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
-import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.streams.ChannelInputStream;
 import org.xnio.streams.ChannelOutputStream;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * @author Stuart Douglas
@@ -60,13 +60,12 @@ public class SimpleBlockingServerTestCase {
                 try {
                     if (exchange.getRequestMethod().equals(Methods.POST)) {
                         //for a post we just echo back what was sent
-                        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH));
                         //we need to fully buffer it, as otherwise the send buffer fills up, and the client will still be blocked
                         //on writing and will never read
                         byte[] buffer = new byte[1024];
                         final ByteArrayOutputStream b = new ByteArrayOutputStream();
                         int r = 0;
-                        final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
+                        final OutputStream outputStream = new UndertowOutputStream(exchange);
                         final InputStream inputStream = new ChannelInputStream(exchange.getRequestChannel());
                         while ((r = inputStream.read(buffer)) > 0) {
                             b.write(buffer, 0 , r);
@@ -75,7 +74,6 @@ public class SimpleBlockingServerTestCase {
                         outputStream.close();
                     } else {
                         final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
-                        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
                         outputStream.write(message.getBytes());
                         outputStream.close();
                     }

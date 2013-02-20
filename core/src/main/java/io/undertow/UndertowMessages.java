@@ -18,13 +18,13 @@
 
 package io.undertow;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
+
+import java.io.IOException;
+import java.net.SocketAddress;
 
 /**
  * @author Stuart Douglas
@@ -124,4 +124,7 @@ public interface UndertowMessages {
 
     @Message(id = 33, value = "Authentication type %s cannot be combined with %s")
     IllegalStateException authTypeCannotBeCombined(String type, String existing);
+
+    @Message(id = 34, value = "Stream is closed")
+    IOException streamIsClosed();
 }
