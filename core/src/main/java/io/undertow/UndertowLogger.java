@@ -18,18 +18,16 @@
 
 package io.undertow;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.SocketAddress;
-
-import io.undertow.security.api.AuthenticationMechanism;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
-import org.xnio.IoFuture;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.SocketAddress;
 
 /**
  * log messages start at 5000
@@ -47,82 +45,40 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5001, value = "An exception occurred processing the request")
     void exceptionProcessingRequest(@Cause Throwable cause);
 
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5002, value = "An exception occurred getting the session")
-    void getSessionFailed(@Cause IOException exception);
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5003, value = "Unexpected state in session callback %s")
-    void unexpectedStatusGettingSession(IoFuture.Status status);
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5004, value = "Could not send session cookie as response has already started")
-    void couldNotSendSessionCookieAsResponseAlreadyStarted();
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5005, value = "Could not invalidate session cookie as response has already started")
-    void couldNotInvalidateSessionCookieAsResponseAlreadyStarted();
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5007, value = "Configured error page %s was not found")
-    void errorPageDoesNotExist(File file);
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5008, value = "Exception reading error page %s")
-    void errorLoadingErrorPage(@Cause final IOException e, final File file);
-
     @LogMessage(level = Logger.Level.INFO)
-    @Message(id = 5009, value = "Exception reading file %s: %s")
+    @Message(id = 5002, value = "Exception reading file %s: %s")
     void exceptionReadingFile(final File file, final IOException e);
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5010, value = "IOException writing to channel")
-    void ioExceptionWritingToChannel(@Cause IOException e);
-
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5011, value = "IOException writing to channel")
-    void ioExceptionClosingChannel(@Cause IOException e);
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5012, value = "File was requested outside the handlers base directory. Installing a canonical path " +
-            "handler in front of the file handler will prevent this")
-    void fileHandlerWithoutCanonicalPathHandler();
-
-    @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5013, value = "IOException reading from channel")
+    @Message(id = 5003, value = "IOException reading from channel")
     void ioExceptionReadingFromChannel(@Cause IOException e);
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5014, value = "Connection terminated parsing multipart data")
+    @Message(id = 5004, value = "Connection terminated parsing multipart data")
     void connectionTerminatedReadingMultiPartData();
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5015, value = "Cannot remove uploaded file %s")
+    @Message(id = 5005, value = "Cannot remove uploaded file %s")
     void cannotRemoveUploadedFile(File file);
 
     @LogMessage(level = Logger.Level.ERROR)
-    @Message(id = 5016, value = "Connection from %s terminated as request header was larger than %s")
+    @Message(id = 5006, value = "Connection from %s terminated as request header was larger than %s")
     void requestHeaderWasTooLarge(SocketAddress address, int size);
 
     @LogMessage(level = Logger.Level.DEBUG)
-    @Message(id = 5017, value = "Request was not fully consumed")
+    @Message(id = 5007, value = "Request was not fully consumed")
     void requestWasNotFullyConsumed();
 
     @LogMessage(level = Logger.Level.DEBUG)
-    @Message(id = 5018, value = "Exception occurred during authentication using handler %s")
-    void exceptionWhileAuthenticating(final AuthenticationMechanism handler, @Cause IOException exception);
-
-    @LogMessage(level = Logger.Level.DEBUG)
-    @Message(id = 5019, value = "An invalid token '%s' with value '%s' has been received.")
+    @Message(id = 5008, value = "An invalid token '%s' with value '%s' has been received.")
     void invalidTokenReceived(final String tokenName, final String tokenValue);
 
     @LogMessage(level = Logger.Level.DEBUG)
-    @Message(id = 5020, value = "A mandatory token %s is missing from the request.")
+    @Message(id = 5009, value = "A mandatory token %s is missing from the request.")
     void missingAuthorizationToken(final String tokenName);
 
     @LogMessage(level = Logger.Level.DEBUG)
-    @Message(id = 5021, value = "Verification of authentication tokens for user '%s' has failed using mechanism '%s'.")
+    @Message(id = 5010, value = "Verification of authentication tokens for user '%s' has failed using mechanism '%s'.")
     void authenticationFailed(final String userName, final String mechanism);
 
 }
