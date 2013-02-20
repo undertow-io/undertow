@@ -24,6 +24,8 @@ package io.undertow.client;
 
 import java.io.Closeable;
 import java.net.SocketAddress;
+import java.net.URI;
+
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
@@ -38,6 +40,11 @@ public abstract class HttpClient implements Closeable {
         this.worker = worker;
     }
 
+    /**
+     * Get the xnio worker.
+     *
+     * return the worker
+     */
     public XnioWorker getWorker() {
         return worker;
     }
@@ -52,6 +59,18 @@ public abstract class HttpClient implements Closeable {
     public abstract IoFuture<HttpClientConnection> connect(final SocketAddress destination, final OptionMap optionMap);
 
     /**
+     * Connect to a remote HTTP server.
+     *
+     * @param destination the destination
+     * @param optionMap the connection options
+     * @param completionHandler the operation result handler
+     */
+    public void connect(final SocketAddress destination, final OptionMap optionMap, final HttpClientCallback<HttpClientConnection> completionHandler) {
+        final IoFuture<HttpClientConnection> connectionIoFuture = connect(destination, optionMap);
+        HttpClientUtils.addCallback(connectionIoFuture, completionHandler);
+    }
+
+    /**
      * Send a request, managing connections automatically.
      *
      * @param method the HTTP method to use (see {@link io.undertow.util.Methods})
@@ -59,5 +78,17 @@ public abstract class HttpClient implements Closeable {
      * @param optionMap the request options
      * @return the future request
      */
-    public abstract IoFuture<HttpClientRequest> sendRequest(final String method, final String requestUri, final OptionMap optionMap);
+    public abstract IoFuture<HttpClientRequest> sendRequest(final String method, final URI requestUri, final OptionMap optionMap);
+
+    /**
+     * Create a new {@link HttpClient} instance.
+     *
+     * @param worker the xnio worker
+     * @param options the client options
+     * @return the http client
+     */
+    public static HttpClient create(final XnioWorker worker, final OptionMap options) {
+        return new HttpClientImpl(worker, options);
+    }
+
 }

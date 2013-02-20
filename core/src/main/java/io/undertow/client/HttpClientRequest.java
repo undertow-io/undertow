@@ -23,16 +23,23 @@
 package io.undertow.client;
 
 import java.io.IOException;
+import java.net.URI;
 
 import org.xnio.IoFuture;
 import org.xnio.channels.StreamSinkChannel;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
 
+import static io.undertow.client.HttpClientUtils.addCallback;
+
 /**
+ * A http request.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author Emanuel Muckenhuber
  */
 public abstract class HttpClientRequest extends AbstractAttachable {
+
     private final HttpClientConnection connection;
     private final HeaderMap requestHeaders = new HeaderMap();
 
@@ -40,15 +47,98 @@ public abstract class HttpClientRequest extends AbstractAttachable {
         this.connection = connection;
     }
 
+    /**
+     * Get the request method.
+     *
+     * @return the request method
+     */
+    public abstract String getMethod();
+
+    /**
+     * Get the request URI.
+     *
+     * @return the request uri
+     */
+    public abstract URI getTarget();
+
+    /**
+     * Get the http protocol.
+     *
+     * @return the http protocol
+     */
+    public abstract String getProtocol();
+
+    /**
+     * Get the associated http connection.
+     *
+     * @return the http connection
+     */
     public HttpClientConnection getConnection() {
         return connection;
     }
 
+    /**
+     * Get the http request headers.
+     *
+     * @return the request headers
+     */
     public final HeaderMap getRequestHeaders() {
         return requestHeaders;
     }
 
+    /**
+     * Write a http request without request body.
+     *
+     * @return the future http response
+     * @throws IOException
+     */
+    public IoFuture<HttpClientResponse> writeRequest() throws IOException {
+        writeRequestBody(0);
+        return getResponse();
+    }
+
+    /**
+     * Write a http request with a given content-length. A content-length of <code>-1</code> can be used to declare a
+     * unknown content-length and will result in a chunked transfer.
+     *
+     * @param contentLength the content length
+     * @return the request channel
+     * @throws IOException
+     */
     public abstract StreamSinkChannel writeRequestBody(long contentLength) throws IOException;
 
+    /**
+     * Get the future response.
+     *
+     * @return the response future
+     */
     public abstract IoFuture<HttpClientResponse> getResponse();
+
+    /**
+     * Write a http request without request body.
+     *
+     * @param responseCallback the response completion handler
+     * @throws IOException
+     */
+    public void writeRequest(final HttpClientCallback<HttpClientResponse> responseCallback) throws IOException {
+        final IoFuture<HttpClientResponse> response = writeRequest();
+        addCallback(response, responseCallback);
+    }
+
+    /**
+     * Write a http request with a given content-length. A content-length of <code>-1</code> can be used to declare a
+     * unknown content-length and will result in a chunked transfer.
+     *
+     * @param contentLength the content length
+     * @param responseCallback the response completion handler
+     * @return the request channel
+     * @throws IOException
+     */
+    public StreamSinkChannel writeRequestBody(long contentLength, final HttpClientCallback<HttpClientResponse> responseCallback) throws IOException {
+        final StreamSinkChannel channel = writeRequestBody(contentLength);
+        final IoFuture<HttpClientResponse> response = getResponse();
+        addCallback(response, responseCallback);
+        return channel;
+    }
+
 }
