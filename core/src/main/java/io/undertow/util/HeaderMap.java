@@ -18,14 +18,15 @@
 
 package io.undertow.util;
 
+import java.util.AbstractCollection;
+import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.NoSuchElementException;
 
 /**
  * This implementation sucks and is incomplete.  It's just here to illustrate.
@@ -34,106 +35,483 @@ import java.util.TreeMap;
  */
 public final class HeaderMap implements Iterable<HttpString> {
 
-    private final Map<HttpString, Object> values = new TreeMap<>();
+    private Object[] table;
+    private int size;
 
-    public Iterator<HttpString> iterator() {
-        return values.keySet().iterator();
+    public HeaderMap() {
+        clear();
+    }
+
+    public int size() {
+        return size;
+    }
+
+    public boolean isEmpty() {
+        return size == 0;
+    }
+
+    private Entry getEntry(final HttpString headerName) {
+        if (headerName == null) {
+            return null;
+        }
+        final int hc = headerName.hashCode();
+        final int idx = hc & (table.length - 1);
+        final Object o = table[idx];
+        if (o == null) {
+            return null;
+        }
+        Entry entry;
+        if (o instanceof Entry) {
+            entry = (Entry) o;
+            if (! headerName.equals(entry.key)) {
+                return null;
+            }
+            return entry;
+        } else {
+            final Entry[] row = (Entry[]) o;
+            for (int i = 0; i < row.length; i++) {
+                entry = row[i];
+                if (entry != null && headerName.equals(entry.key)) { return entry; }
+            }
+            return null;
+        }
+    }
+
+    private Entry removeEntry(final HttpString headerName) {
+        if (headerName == null) {
+            return null;
+        }
+        final int hc = headerName.hashCode();
+        final int idx = hc & (table.length - 1);
+        final Object o = table[idx];
+        if (o == null) {
+            return null;
+        }
+        Entry entry;
+        if (o instanceof Entry) {
+            entry = (Entry) o;
+            if (! headerName.equals(entry.key)) {
+                return null;
+            }
+            table[idx] = null;
+            size --;
+            return entry;
+        } else {
+            final Entry[] row = (Entry[]) o;
+            for (int i = 0; i < row.length; i++) {
+                entry = row[i];
+                if (entry != null && headerName.equals(entry.key)) {
+                    row[i] = null;
+                    size --;
+                    return entry;
+                }
+            }
+            return null;
+        }
+    }
+
+    private void resize() {
+        final int oldLen = table.length;
+        if (oldLen == 0x40000000) {
+            return;
+        }
+        Object[] newTable = Arrays.copyOf(table, oldLen << 1);
+        table = newTable;
+        for (int i = 0; i < oldLen; i ++) {
+            if (newTable[i] == null) {
+                continue;
+            }
+            if (newTable[i] instanceof Entry) {
+                Entry e = (Entry) newTable[i];
+                if ((e.key.hashCode() & oldLen) != 0) {
+                    newTable[i] = null;
+                    newTable[i + oldLen] = e;
+                }
+                continue;
+            }
+            Entry[] oldRow = (Entry[]) newTable[i];
+            Entry[] newRow = oldRow.clone();
+            int rowLen = oldRow.length;
+            newTable[i + oldLen] = newRow;
+            for (int j = 0; j < rowLen; j ++) {
+                if ((oldRow[j].key.hashCode() & oldLen) != 0) {
+                    oldRow[j] = null;
+                } else {
+                    newRow[j] = null;
+                }
+            }
+        }
+    }
+
+    private Entry getOrCreateEntry(final HttpString headerName) {
+        if (headerName == null) {
+            return null;
+        }
+        final int hc = headerName.hashCode();
+        final int idx = hc & (table.length - 1);
+        final Object o = table[idx];
+        Entry entry;
+        if (o == null) {
+            if (size >= table.length >> 1) {
+                resize();
+                return getOrCreateEntry(headerName);
+            }
+            entry = new Entry(headerName);
+            table[idx] = entry;
+            size++;
+            return entry;
+        }
+        if (o instanceof Entry) {
+            entry = (Entry) o;
+            if (! headerName.equals(entry.key)) {
+                if (size >= table.length >> 1) {
+                    resize();
+                    return getOrCreateEntry(headerName);
+                }
+                size++;
+                final Entry[] row = { entry, new Entry(headerName), null, null };
+                table[idx] = row;
+                return row[1];
+            }
+            return entry;
+        } else {
+            final Entry[] row = (Entry[]) o;
+            int empty = -1;
+            for (int i = 0; i < row.length; i++) {
+                entry = row[i];
+                if (entry == null) {
+                    empty = i;
+                } else {
+                    if (headerName.equals(entry.key)) { return entry; }
+                }
+            }
+            if (size >= table.length >> 1) {
+                resize();
+                return getOrCreateEntry(headerName);
+            }
+            size++;
+            entry = new Entry(headerName);
+            if (empty != -1) {
+                row[empty] = entry;
+            } else {
+                final Entry[] newRow = Arrays.copyOf(row, row.length + 3);
+                newRow[row.length] = entry;
+                table[idx] = newRow;
+            }
+            return entry;
+        }
     }
 
     public String getFirst(HttpString headerName) {
-        Object value = values.get(headerName);
-        if(value instanceof List) {
-            return ((List<String>) value).get(0);
-        } else {
-            return (String)value;
+        Entry entry = getEntry(headerName);
+        if (entry == null) return null;
+        final Object v = entry.value;
+        if (v instanceof String) {
+            return (String) v;
         }
+        final String[] list = (String[]) v;
+        String s;
+        for (int i = 0; i < list.length; i++) {
+            s = list[i];
+            if (s != null) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    public String get(HttpString headerName, int index) throws IndexOutOfBoundsException {
+        if (headerName == null) {
+            return null;
+        }
+        final Entry entry = getEntry(headerName);
+        if (entry == null) {
+            return null;
+        }
+        final Object v = entry.value;
+        if (v instanceof String) {
+            if (index == 0) {
+                return (String) v;
+            }
+            throw new IndexOutOfBoundsException();
+        }
+        final String[] list = (String[]) v;
+        String s;
+        for (int i = 0; i < list.length; i++) {
+            s = list[i];
+            if (s != null) {
+                if (index-- == 0) {
+                    return s;
+                }
+            }
+        }
+        throw new IndexOutOfBoundsException();
     }
 
     public String getLast(HttpString headerName) {
-        Object value = values.get(headerName);
-        if(value instanceof List) {
-            List<String> list = (List<String>) value;
-            return list.get(list.size()-1);
-        } else {
-            return (String)value;
+        if (headerName == null) {
+            return null;
         }
+        Entry entry = getEntry(headerName);
+        if (entry == null) return null;
+        final Object v = entry.value;
+        if (v instanceof String) {
+            return (String) v;
+        }
+        final String[] list = (String[]) v;
+        String s;
+        for (int i = list.length - 1; i >= 0; i--) {
+            s = list[i];
+            if (s != null) {
+                return s;
+            }
+        }
+        return null;
     }
 
-    public List<String> get(HttpString headerName) {
-        Object value = values.get(headerName);
-        if(value == null) {
-            return null;
-        } else if(value instanceof List) {
-            return (List<String>)value;
-        } else {
-            return Collections.<String>singletonList((String)value);
+    public int count(HttpString headerName) {
+        if (headerName == null) {
+            return 0;
         }
+        final Entry entry = getEntry(headerName);
+        if (entry == null) {
+            return 0;
+        }
+        final Object v = entry.value;
+        if (v instanceof String) {
+            return 1;
+        }
+        final String[] list = (String[]) v;
+        String s;
+        int cnt = 0;
+        for (int i = 0; i < list.length; i++) {
+            s = list[i];
+            if (s != null) {
+                cnt++;
+            }
+        }
+        return cnt;
+    }
+
+    public List<String> get(final HttpString headerName) {
+        if (headerName == null) {
+            return Collections.emptyList();
+        }
+        return new AbstractList<String>() {
+            public String get(int index) {
+                return HeaderMap.this.get(headerName, index);
+            }
+
+            public int size() {
+                return count(headerName);
+            }
+
+            public void clear() {
+                remove(headerName);
+            }
+
+            public boolean add(final String s) {
+                HeaderMap.this.add(headerName, s);
+                return true;
+            }
+        };
     }
 
     public void add(HttpString headerName, String headerValue) {
-        final Object value = values.get(headerName);
-        if (value == null) {
-            values.put(headerName, headerValue);
-        } else {
-            if(value instanceof List) {
-                ((List) value).add(headerValue);
+        addLast(headerName, headerValue);
+    }
+
+    public void addFirst(final HttpString headerName, final String headerValue) {
+        if (headerName == null) {
+            throw new IllegalArgumentException("headerName is null");
+        }
+        if (headerValue == null) {
+            return;
+        }
+        final Entry entry = getOrCreateEntry(headerName);
+        final Object v = entry.value;
+        if (v == null) {
+            entry.value = headerValue;
+            return;
+        }
+        if (v instanceof String) {
+            entry.value = new String[] { headerValue, (String) v, null, null };
+            return;
+        }
+        final String[] list = (String[]) v;
+        String s;
+        int empty = -1;
+        for (int i = 0; i < list.length; i++) {
+            s = list[i];
+            if (s == null) {
+                empty = i;
             } else {
-                final ArrayList<String> list = new ArrayList<String>(1);
-                list.add((String) value);
-                list.add(headerValue);
-                values.put(headerName, list);
+                if (empty != -1) {
+                    list[empty] = headerValue;
+                    return;
+                }
+                break;
             }
         }
+        if (empty != -1) {
+            list[empty] = headerValue;
+            return;
+        }
+        final String[] newList = new String[list.length + 3];
+        System.arraycopy(list, 0, newList, 3, list.length);
+        newList[2] = headerValue;
+    }
+
+    public void addLast(final HttpString headerName, final String headerValue) {
+        if (headerName == null) {
+            throw new IllegalArgumentException("headerName is null");
+        }
+        if (headerValue == null) {
+            return;
+        }
+        final Entry entry = getOrCreateEntry(headerName);
+        final Object v = entry.value;
+        if (v == null) {
+            entry.value = headerValue;
+            return;
+        }
+        if (v instanceof String) {
+            entry.value = new String[] { (String) v, headerValue, null, null };
+            return;
+        }
+        final String[] list = (String[]) v;
+        String s;
+        int empty = -1;
+        for (int i = list.length - 1; i >= 0; i--) {
+            s = list[i];
+            if (s == null) {
+                empty = i;
+            } else {
+                if (empty != -1) {
+                    list[empty] = headerValue;
+                    return;
+                }
+                break;
+            }
+        }
+        if (empty != -1) {
+            list[empty] = headerValue;
+            return;
+        }
+        final String[] newList = Arrays.copyOf(list, list.length + 3);
+        newList[list.length] = headerValue;
     }
 
     public void add(HttpString headerName, long headerValue) {
-        add(headerName, Long.toString(headerValue));
+        addLast(headerName, Long.toString(headerValue));
     }
 
-
     public void addAll(HttpString headerName, Collection<String> headerValues) {
-        final Object value = values.get(headerName);
-        if (value == null) {
-            values.put(headerName, new ArrayList<>(headerValues));
-        } else {
-            if(value instanceof List) {
-                ((List) value).addAll(headerValues);
-            } else {
-                final ArrayList<String> list = new ArrayList<String>(1);
-                list.add((String) value);
-                list.addAll(headerValues);
-                values.put(headerName, list);
+        if (headerName == null) {
+            throw new IllegalArgumentException("headerName is null");
+        }
+        if (headerValues == null || headerValues.isEmpty()) {
+            return;
+        }
+        final int valuesSize = headerValues.size();
+        if (valuesSize == 1) {
+            addLast(headerName, headerValues.iterator().next());
+            return;
+        }
+        final Entry entry = getOrCreateEntry(headerName);
+        final Object v = entry.value;
+        if (v == null) {
+            entry.value = headerValues.toArray(new String[valuesSize]);
+            return;
+        }
+        if (v instanceof String) {
+            final String[] newList = new String[valuesSize + 4];
+            newList[0] = (String) v;
+            int i = 1;
+            for (String value : headerValues) {
+                newList[i++] = value;
             }
+            entry.value = newList;
+            return;
+        }
+        final String[] list = (String[]) v;
+        String s;
+        int empty = -1;
+        for (int i = list.length - 1; i >= 0; i--) {
+            s = list[i];
+            if (s == null) {
+                empty = i;
+            } else {
+                if (empty != -1) {
+                    final String[] newList = Arrays.copyOfRange(list, 0, empty + valuesSize);
+                    for (String value : headerValues) {
+                        newList[empty++] = value;
+                    }
+                    entry.value = newList;
+                    return;
+                }
+                break;
+            }
+        }
+        if (empty != -1) {
+            entry.value = headerValues.toArray(new String[valuesSize]);
+        } else {
+            final String[] newList = Arrays.copyOfRange(list, 0, list.length + valuesSize);
+            int i = list.length;
+            for (String value : headerValues) {
+                newList[i++] = value;
+            }
+            entry.value = newList;
         }
     }
 
     public void clear() {
-        values.clear();
+        table = new Object[16];
+        size = 0;
     }
 
     public Collection<HttpString> getHeaderNames() {
-        return new HashSet<HttpString>(values.keySet());
+        return new AbstractCollection<HttpString>() {
+            public Iterator<HttpString> iterator() {
+                return HeaderMap.this.iterator();
+            }
+
+            public int size() {
+                return size;
+            }
+        };
     }
 
     public void put(HttpString headerName, String headerValue) {
-        values.put(headerName, headerValue);
+        final Entry entry = getOrCreateEntry(headerName);
+        entry.value = headerValue;
     }
 
     public void put(HttpString headerName, long headerValue) {
-        values.put(headerName, Long.toString(headerValue));
+        put(headerName, Long.toString(headerValue));
     }
 
     public void putAll(HttpString headerName, Collection<String> headerValues) {
-        final ArrayList<String> list = new ArrayList<>(headerValues);
-        values.put(headerName, list);
+        final Entry entry = getOrCreateEntry(headerName);
+        entry.value = headerValues.toArray(new String[headerValues.size()]);
     }
 
     public Collection<String> remove(HttpString headerName) {
-        Object value = values.remove(headerName);
-        if(value instanceof List) {
-            return (Collection<String>) value;
+        final Entry entry = removeEntry(headerName);
+        final Object value = entry.value;
+        if (value == null) {
+            return Collections.emptyList();
+        } else if (value instanceof String) {
+            return Collections.singletonList((String) value);
         } else {
-            return Collections.singletonList((String)value);
+            final String[] list = (String[]) value;
+            final ArrayList<String> arrayList = new ArrayList<>(list.length);
+            for (String s : list) {
+                if (s != null) {
+                    arrayList.add(s);
+                }
+            }
+            return arrayList;
         }
     }
 
@@ -145,8 +523,21 @@ public final class HeaderMap implements Iterable<HttpString> {
     }
 
     public boolean contains(HttpString headerName) {
-        final Object value = values.get(headerName);
-        return value != null;
+        final Entry entry = getEntry(headerName);
+        if (entry == null) {
+            return false;
+        }
+        final Object v = entry.value;
+        if (v instanceof String) {
+            return true;
+        }
+        final String[] list = (String[]) v;
+        for (int i = 0; i < list.length; i++) {
+            if (list[i] != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -161,8 +552,77 @@ public final class HeaderMap implements Iterable<HttpString> {
 
     @Override
     public String toString() {
-        return "HeaderMap{" +
-                "values=" + values +
-                '}';
+        // todo...
+        return "HeaderMap";
+    }
+
+    public Iterator<HttpString> iterator() {
+        return new Iterator<HttpString>() {
+            final Object[] table = HeaderMap.this.table;
+            boolean consumed;
+            int ri, ci;
+
+            private Entry _next() {
+                for (;;) {
+                    if (ri >= table.length) {
+                        return null;
+                    }
+                    final Object o = table[ri];
+                    if (o == null) {
+                        ri++;
+                        ci = 0;
+                        consumed = false;
+                        continue;
+                    }
+                    if (o instanceof Entry) {
+                        if (ci > 0 || consumed) {
+                            ri++;
+                            ci = 0;
+                            consumed = false;
+                            continue;
+                        }
+                        return (Entry) o;
+                    }
+                    final Entry[] row = (Entry[]) o;
+                    final int len = row.length;
+                    if (ci >= len || consumed) {
+                        ri ++;
+                        ci = 0;
+                        consumed = false;
+                        continue;
+                    }
+                    final Entry entry = row[ci++];
+                    if (entry == null) {
+                        continue;
+                    }
+                    return entry;
+                }
+            }
+
+            public boolean hasNext() {
+                return _next() != null;
+            }
+
+            public HttpString next() {
+                final Entry next = _next();
+                if (next == null) {
+                    throw new NoSuchElementException();
+                }
+                consumed = true;
+                return next.key;
+            }
+
+            public void remove() {
+            }
+        };
+    }
+
+    static class Entry {
+        final HttpString key;
+        Object value;
+
+        Entry(final HttpString key) {
+            this.key = key;
+        }
     }
 }
