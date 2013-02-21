@@ -17,13 +17,11 @@
  */
 package io.undertow.security.api;
 
+import java.util.List;
+
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.util.AttachmentKey;
-
-import java.util.List;
-
-import org.xnio.IoFuture;
 
 /**
  * The security context.
@@ -57,13 +55,9 @@ public interface SecurityContext {
      * If the result indicates that a response has been sent to the client then no further attempts should be made to modify the
      * response. The caller of this method is responsible for ending the exchange.
      *
-     * When this method is called depending on the authentication mechanisms and the current thread making the call the request
-     * could occur in the same thread or be dispatched to a different thread, unless the caller is required to block it should
-     * register a {@link IoFuture.Notifier} to handle the response.
-     *
-     * return {@link IoFuture<Boolean>} to indicate if a response has been sent to the calling client.
+     * return <code>false</code> to indicate that authentication failed and the response has been send to the calling client
      */
-    IoFuture<Boolean> authenticate();
+    boolean authenticate();
 
     /*
      * API for Direct Control of Authentication

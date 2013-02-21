@@ -17,11 +17,6 @@
  */
 package io.undertow.security.handlers;
 
-import java.io.IOException;
-
-import org.xnio.IoFuture;
-import org.xnio.IoFuture.Notifier;
-
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -49,26 +44,12 @@ public class AuthenticationCallHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        IoFuture<Boolean> result = context.authenticate();
-        result.addNotifier(new Notifier<Boolean, Object>() {
-
-            @Override
-            public void notify(IoFuture<? extends Boolean> ioFuture, Object attachment) {
-                try {
-                    if (ioFuture.get()) {
-                        // Response has already been send - end the exchange.
-                        exchange.endExchange();
-                    } else {
-                        HttpHandlers.executeHandler(next, exchange);
-                    }
-                } catch (IOException e) {
-                    // Response has already been send - end the exchange.
-                    // TODO - Error reporting.
-                    exchange.endExchange();
-                }
-            }
-        }, null);
-
+        boolean challengeSent = !context.authenticate();
+        if(challengeSent) {
+            exchange.endExchange();
+        } else {
+            HttpHandlers.executeHandler(next, exchange);
+        }
     }
 
 }

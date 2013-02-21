@@ -18,31 +18,6 @@
 
 package io.undertow.servlet.spec;
 
-import io.undertow.security.api.RoleMappingManager;
-import io.undertow.security.api.SecurityContext;
-import io.undertow.security.idm.Account;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.CookieImpl;
-import io.undertow.server.handlers.form.FormData;
-import io.undertow.server.handlers.form.FormDataParser;
-import io.undertow.server.handlers.form.MultiPartHandler;
-import io.undertow.servlet.UndertowServletLogger;
-import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.api.SecurityRoleRef;
-import io.undertow.servlet.handlers.ServletAttachments;
-import io.undertow.servlet.handlers.ServletPathMatch;
-import io.undertow.servlet.util.EmptyEnumeration;
-import io.undertow.servlet.util.IteratorEnumeration;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.CanonicalPathUtils;
-import io.undertow.util.DateUtils;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.LocaleUtils;
-import io.undertow.util.Methods;
-import io.undertow.util.QValueParser;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -84,7 +59,30 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
 
-import org.xnio.IoFuture;
+import io.undertow.security.api.RoleMappingManager;
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.CookieImpl;
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.MultiPartHandler;
+import io.undertow.servlet.UndertowServletLogger;
+import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.SecurityRoleRef;
+import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletPathMatch;
+import io.undertow.servlet.util.EmptyEnumeration;
+import io.undertow.servlet.util.IteratorEnumeration;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.CanonicalPathUtils;
+import io.undertow.util.DateUtils;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.LocaleUtils;
+import io.undertow.util.Methods;
+import io.undertow.util.QValueParser;
 import org.xnio.LocalSocketAddress;
 import org.xnio.streams.ChannelInputStream;
 
@@ -349,19 +347,17 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         sc.setAuthenticationRequired();
         // TODO: this will set the status code and headers without going through any potential
         // wrappers, is this a problem?
-        IoFuture<Boolean> result = sc.authenticate();
-        if (result.get()) {
-            // Not authenticated and response already sent.
-            HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
-            responseImpl.closeStreamAndWriter();
-            return false;
-        } else {
+        if (sc.authenticate()) {
             if (sc.isAuthenticated()) {
                 return true;
             } else {
                 throw UndertowServletMessages.MESSAGES.authenticationFailed();
             }
-
+        } else {
+            // Not authenticated and response already sent.
+            HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
+            responseImpl.closeStreamAndWriter();
+            return false;
         }
     }
 

@@ -23,11 +23,6 @@ import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConcreteIoFuture;
-
-import java.util.concurrent.Executor;
-
-import org.xnio.IoFuture;
 
 /**
  * An {@link AuthenticationMechanism} which uses any cached {@link AuthenticationSession}s.
@@ -45,68 +40,41 @@ public class CachedAuthenticatedSessionMechanism implements AuthenticationMechan
     }
 
     @Override
-    public IoFuture<AuthenticationMechanismOutcome> authenticate(HttpServerExchange exchange, SecurityContext securityContext,
-            Executor handOffExecutor) {
-        ConcreteIoFuture<AuthenticationMechanismOutcome> result = new ConcreteIoFuture<AuthenticationMechanismOutcome>();
+    public AuthenticationMechanismOutcome authenticate(HttpServerExchange exchange, SecurityContext securityContext) {
 
         AuthenticatedSessionManager sessionManager = exchange.getAttachment(AuthenticatedSessionManager.ATTACHMENT_KEY);
         if (sessionManager != null) {
-            handOffExecutor.execute(new CachedAuthenticationRunnable(result, exchange, securityContext, sessionManager));
+            return runCached(exchange, securityContext, sessionManager);
         } else {
-            result.setResult(AuthenticationMechanismOutcome.NOT_ATTEMPTED);
+            return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
         }
-
-        return result;
     }
 
-    private static class CachedAuthenticationRunnable implements Runnable {
-
-        private final ConcreteIoFuture<AuthenticationMechanismOutcome> result;
-        private final HttpServerExchange exchange;
-        private final SecurityContext securityContext;
-        private final AuthenticatedSessionManager sessionManager;
-
-        private CachedAuthenticationRunnable(final ConcreteIoFuture<AuthenticationMechanismOutcome> result,
-                final HttpServerExchange exchange, final SecurityContext securityContext,
-                final AuthenticatedSessionManager sessionManager) {
-            this.result = result;
-            this.exchange = exchange;
-            this.securityContext = securityContext;
-            this.sessionManager = sessionManager;
-        }
-
-        @Override
-        public void run() {
-            AuthenticatedSession authSession = sessionManager.lookupSession(exchange);
-            if (authSession != null) {
-                Account account = securityContext.getIdentityManager().verify(authSession.getAccount());
-                if (account != null) {
-                    // This is based on a previously cached account so re-use the mechanism and allow to be cached again.
-                    securityContext.authenticationComplete(account, authSession.getMechanism(), true);
-                    result.setResult(AuthenticationMechanismOutcome.AUTHENTICATED);
-                } else {
-                    // We know we had a previously authenticated account but for some reason the IdentityManager is no longer
-                    // accepting it, safer to mark as a failed authentication.
-                    result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
-                }
+    public AuthenticationMechanismOutcome runCached(final HttpServerExchange exchange, final SecurityContext securityContext, final AuthenticatedSessionManager sessionManager) {
+        AuthenticatedSession authSession = sessionManager.lookupSession(exchange);
+        if (authSession != null) {
+            Account account = securityContext.getIdentityManager().verify(authSession.getAccount());
+            if (account != null) {
+                // This is based on a previously cached account so re-use the mechanism and allow to be cached again.
+                securityContext.authenticationComplete(account, authSession.getMechanism(), true);
+                return AuthenticationMechanismOutcome.AUTHENTICATED;
             } else {
-                // It is possible an AuthenticatedSessionManager could have been available even if there was no chance of it
-                // loading a session.
-                result.setResult(AuthenticationMechanismOutcome.NOT_ATTEMPTED);
+                // We know we had a previously authenticated account but for some reason the IdentityManager is no longer
+                // accepting it, safer to mark as a failed authentication.
+                return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
             }
-
+        } else {
+            // It is possible an AuthenticatedSessionManager could have been available even if there was no chance of it
+            // loading a session.
+            return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
         }
 
     }
 
     @Override
-    public IoFuture<ChallengeResult> sendChallenge(HttpServerExchange exchange, SecurityContext securityContext,
-            Executor handOffExecutor) {
+    public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
         // This mechanism can only use what is already available and can not send a challenge of it's own.
-        ConcreteIoFuture<ChallengeResult> result = new ConcreteIoFuture<ChallengeResult>();
-        result.setResult(new ChallengeResult(false));
-
-        return result;
+        return new ChallengeResult(false);
     }
 
 }

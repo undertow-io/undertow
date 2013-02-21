@@ -21,10 +21,6 @@ package io.undertow.security.api;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StatusCodes;
 
-import java.util.concurrent.Executor;
-
-import org.xnio.IoFuture;
-
 /**
  * The interface to be implemented by a single authentication mechanism.
  * <p/>
@@ -71,13 +67,13 @@ public interface AuthenticationMechanism {
     /**
      * Perform authentication of the request. Any potentially blocking work should be performed in the handoff executor provided
      *
+     *
+     *
      * @param exchange The exchange
-     * @param identityManager The identity manager
-     * @param handOffExecutor The executor to use for potentially blocking tasks
      * @return
      */
-    IoFuture<AuthenticationMechanismOutcome> authenticate(final HttpServerExchange exchange,
-            final SecurityContext securityContext, final Executor handOffExecutor);
+    AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
+                                                final SecurityContext securityContext);
 
     /**
      * Send an authentication challenge to the remote client.
@@ -86,13 +82,13 @@ public interface AuthenticationMechanism {
      * not set the response code, instead that should be indicated in the {@link ChallengeResult} and the most appropriate
      * overall response code will be selected.
      *
+     *
+     *
      * @param exchange The exchange
      * @param securityContext The security context
-     * @param handOffExecutor The executor to use for potentially blocking tasks.
      * @return A {@link ChallengeResult} indicating if a challenge was sent and the desired response code.
      */
-    IoFuture<ChallengeResult> sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext,
-            final Executor handOffExecutor);
+    ChallengeResult sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext);
 
     /**
      * The AuthenticationOutcome is used by an AuthenticationMechanism to indicate the outcome of the call to authenticate, the

@@ -17,7 +17,9 @@
  */
 package io.undertow.security.impl;
 
-import static io.undertow.util.StatusCodes.CODE_307;
+import java.io.IOException;
+import java.util.Map;
+
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityContext;
@@ -34,12 +36,7 @@ import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.Executor;
-
-import org.xnio.FinishedIoFuture;
-import org.xnio.IoFuture;
+import static io.undertow.util.StatusCodes.CODE_307;
 
 /**
  * @author Stuart Douglas
@@ -68,100 +65,81 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     @Override
-    public IoFuture<AuthenticationMechanismOutcome> authenticate(final HttpServerExchange exchange,
-            final SecurityContext securityContext, final Executor handOffExecutor) {
+    public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
+                                                       final SecurityContext securityContext) {
         if (exchange.getRequestURI().endsWith(postLocation) && exchange.getRequestMethod().equals(Methods.POST)) {
             ConcreteIoFuture<AuthenticationMechanismOutcome> result = new ConcreteIoFuture<AuthenticationMechanismOutcome>();
-            handOffExecutor.execute(new FormAuthRunnable(exchange, securityContext, result));
-            return result;
+            return runFormAuth(exchange, securityContext);
         } else {
-            return new FinishedIoFuture<AuthenticationMechanismOutcome>(AuthenticationMechanismOutcome.NOT_ATTEMPTED);
+            return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
         }
     }
 
-
-    private class FormAuthRunnable implements Runnable {
-        final HttpServerExchange exchange;
-        final SecurityContext securityContext;
-        final ConcreteIoFuture<AuthenticationMechanismOutcome> result;
-
-        private FormAuthRunnable(final HttpServerExchange exchange, final SecurityContext securityContext, final ConcreteIoFuture<AuthenticationMechanismOutcome> result) {
-            this.exchange = exchange;
-            this.securityContext = securityContext;
-            this.result = result;
+    public AuthenticationMechanismOutcome runFormAuth(final HttpServerExchange exchange, final SecurityContext securityContext) {
+        final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+        if (parser == null) {
+            UndertowLogger.REQUEST_LOGGER.debug("Could not authenticate as no form parser is present");
+            // TODO - May need a better error signaling mechanism here to prevent repeated attempts.
+            return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 
-
-        @Override
-        public void run() {
-            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-            if (parser == null) {
-                UndertowLogger.REQUEST_LOGGER.debug("Could not authenticate as no form parser is present");
-                // TODO - May need a better error signaling mechanism here to prevent repeated attempts.
-                result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
-                return;
+        try {
+            final FormData data = parser.parse().get();
+            final FormData.FormValue jUsername = data.getFirst("j_username");
+            final FormData.FormValue jPassword = data.getFirst("j_password");
+            if (jUsername == null || jPassword == null) {
+                UndertowLogger.REQUEST_LOGGER.debug("Could not authenticate as username or password was not present in the posted result");
+                return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
             }
-
+            final String userName = jUsername.getValue();
+            final String password = jPassword.getValue();
+            AuthenticationMechanismOutcome outcome = null;
+            PasswordCredential credential = new PasswordCredential(password.toCharArray());
             try {
-                final FormData data = parser.parse().get();
-                final FormData.FormValue jUsername = data.getFirst("j_username");
-                final FormData.FormValue jPassword = data.getFirst("j_password");
-                if (jUsername == null || jPassword == null) {
-                    UndertowLogger.REQUEST_LOGGER.debug("Could not authenticate as username or password was not present in the posted result");
-                    result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
-                    return;
+                IdentityManager identityManager = securityContext.getIdentityManager();
+                Account account = identityManager.verify(userName, credential);
+                if (account != null) {
+                    securityContext.authenticationComplete(account, name, true);
+                    outcome = AuthenticationMechanismOutcome.AUTHENTICATED;
                 }
-                final String userName = jUsername.getValue();
-                final String password = jPassword.getValue();
-                AuthenticationMechanismOutcome outcome = null;
-                PasswordCredential credential = new PasswordCredential(password.toCharArray());
-                try {
-                    IdentityManager identityManager = securityContext.getIdentityManager();
-                    Account account = identityManager.verify(userName, credential);
-                    if (account != null) {
-                        securityContext.authenticationComplete(account, name, true);
-                        outcome = AuthenticationMechanismOutcome.AUTHENTICATED;
-                    }
-                } finally {
-                    if (outcome == AuthenticationMechanismOutcome.AUTHENTICATED) {
-                        final Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
-                        if (cookies != null && cookies.containsKey(LOCATION_COOKIE)) {
-                            final String location = cookies.get(LOCATION_COOKIE).getValue();
-                            exchange.addDefaultResponseListener(new DefaultResponseListener() {
-                                @Override
-                                public boolean handleDefaultResponse(final HttpServerExchange exchange) {
-                                    FormAuthenticationMechanism.sendRedirect(exchange, location);
-                                    exchange.endExchange();
-                                    return true;
-                                }
-                            });
+            } finally {
+                if (outcome == AuthenticationMechanismOutcome.AUTHENTICATED) {
+                    final Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
+                    if (cookies != null && cookies.containsKey(LOCATION_COOKIE)) {
+                        final String location = cookies.get(LOCATION_COOKIE).getValue();
+                        exchange.addDefaultResponseListener(new DefaultResponseListener() {
+                            @Override
+                            public boolean handleDefaultResponse(final HttpServerExchange exchange) {
+                                FormAuthenticationMechanism.sendRedirect(exchange, location);
+                                exchange.endExchange();
+                                return true;
+                            }
+                        });
 
-                            final CookieImpl cookie = new CookieImpl(LOCATION_COOKIE);
-                            cookie.setMaxAge(0);
-                            CookieImpl.addResponseCookie(exchange, cookie);
-                        }
+                        final CookieImpl cookie = new CookieImpl(LOCATION_COOKIE);
+                        cookie.setMaxAge(0);
+                        CookieImpl.addResponseCookie(exchange, cookie);
                     }
-                    this.result.setResult(outcome != null ? outcome : AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
                 }
-            } catch (IOException e) {
-                result.setException(e);
+                return outcome != null ? outcome : AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
             }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    public IoFuture<ChallengeResult> sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext,
-            final Executor handOffExecutor) {
+    public ChallengeResult sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext) {
         if (exchange.getRequestURI().endsWith(postLocation) && exchange.getRequestMethod().equals(Methods.POST)) {
             // This method would no longer be called if authentication had already occurred.
             sendRedirect(exchange, errorPage);
-            return new FinishedIoFuture<ChallengeResult>(new ChallengeResult(true, CODE_307));
+            return new ChallengeResult(true, CODE_307);
         } else {
             // we need to store the URL
             CookieImpl.addResponseCookie(exchange, new CookieImpl(LOCATION_COOKIE, exchange.getRequestURI()));
             // TODO - Rather than redirecting, in order to make this mechanism compatible with the other mechanisms we need to
             // return the actual error page not a redirect.
             sendRedirect(exchange, loginPage);
-            return new FinishedIoFuture<ChallengeResult>(new ChallengeResult(true, CODE_307));
+            return new ChallengeResult(true, CODE_307);
         }
     }
 

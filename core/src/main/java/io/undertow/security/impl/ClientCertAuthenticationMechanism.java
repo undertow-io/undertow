@@ -17,6 +17,12 @@
  */
 package io.undertow.security.impl;
 
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
@@ -24,17 +30,6 @@ import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.X509CertificateCredential;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConcreteIoFuture;
-
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
-import java.util.concurrent.Executor;
-
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLSession;
-
-import org.xnio.FinishedIoFuture;
-import org.xnio.IoFuture;
 
 /**
  * The Client Cert based authentication mechanism.
@@ -60,9 +55,8 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         return name;
     }
 
-    public IoFuture<AuthenticationMechanismOutcome> authenticate(final HttpServerExchange exchange,
-            final SecurityContext securityContext, final Executor handOffExecutor) {
-        ConcreteIoFuture<AuthenticationMechanismOutcome> result = new ConcreteIoFuture<AuthenticationMechanismOutcome>();
+    public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
+                                                       final SecurityContext securityContext) {
 
         SSLSession sslSession = exchange.getConnection().getSslSession();
         if (sslSession != null) {
@@ -70,8 +64,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
                 Certificate[] clientCerts = sslSession.getPeerCertificates();
                 if (clientCerts[0] instanceof X509Certificate) {
                     // Hand off to the executor as now we need an IDM based check.
-                    handOffExecutor.execute(new ClientCertRunnable(securityContext, result, (X509Certificate) clientCerts[0]));
-                    return result;
+                    return runClientCert(securityContext,  (X509Certificate) clientCerts[0]);
                 }
             } catch (SSLPeerUnverifiedException e) {
                 // No action - this mechanism can not attempt authentication without peer certificates so allow it to drop out
@@ -80,42 +73,27 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         }
 
         // There was no SSLSession to verify or early verification failed.
-        result.setResult(AuthenticationMechanismOutcome.NOT_ATTEMPTED);
-        return result;
+        return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
     }
 
-    private final class ClientCertRunnable implements Runnable {
-        private final SecurityContext securityContext;
-        private final ConcreteIoFuture<AuthenticationMechanismOutcome> result;
-        private final X509Certificate certificate;
+    public AuthenticationMechanismOutcome runClientCert(final SecurityContext securityContext, final X509Certificate certificate) {
+        Credential credential = new X509CertificateCredential(certificate);
 
-        private ClientCertRunnable(SecurityContext securityContext, ConcreteIoFuture<AuthenticationMechanismOutcome> result,
-                X509Certificate certificate) {
-            this.result = result;
-            this.securityContext = securityContext;
-            this.certificate = certificate;
-        }
-
-        public void run() {
-            Credential credential = new X509CertificateCredential(certificate);
-
-            IdentityManager idm = securityContext.getIdentityManager();
-            Account account = idm.verify(credential);
-            if (account != null) {
-                securityContext.authenticationComplete(account, getName(), false);
-                result.setResult(AuthenticationMechanismOutcome.AUTHENTICATED);
-            } else {
-                // TODO - Double check if we want NOT_AUTHENTICATED - this mechanism we may want to fail silently with
-                // NOT_ATTEMPTED as triggering a challenge will not help this mechanism and may inadvertently affect the others.
-                result.setResult(AuthenticationMechanismOutcome.NOT_AUTHENTICATED);
-            }
+        IdentityManager idm = securityContext.getIdentityManager();
+        Account account = idm.verify(credential);
+        if (account != null) {
+            securityContext.authenticationComplete(account, getName(), false);
+            return AuthenticationMechanismOutcome.AUTHENTICATED;
+        } else {
+            // TODO - Double check if we want NOT_AUTHENTICATED - this mechanism we may want to fail silently with
+            // NOT_ATTEMPTED as triggering a challenge will not help this mechanism and may inadvertently affect the others.
+            return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
     }
 
     @Override
-    public IoFuture<ChallengeResult> sendChallenge(HttpServerExchange exchange, SecurityContext securityContext,
-            Executor handOffExecutor) {
-        return new FinishedIoFuture<AuthenticationMechanism.ChallengeResult>(new ChallengeResult(false));
+    public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
+        return new ChallengeResult(false);
     }
 
 }
