@@ -95,6 +95,7 @@
         <module>jsp</module>
         <module>websockets</module>
         <module>examples</module>
+        <module>websockets-jsr</module>
     </modules>
 
     <build>
@@ -230,6 +231,13 @@
                 <artifactId>undertow-websockets</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-websockets</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+                <scope>test</scope>
+            </dependency>
 
             <!-- External Dependencies -->
             <dependency>
@@ -325,6 +333,12 @@
                 <groupId>org.jboss.xnio</groupId>
                 <artifactId>xnio-nio</artifactId>
                 <version>${version.xnio}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>javax.websocket</groupId>
+                <artifactId>javax.websocket-api</artifactId>
+                <version>1.0-b12</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

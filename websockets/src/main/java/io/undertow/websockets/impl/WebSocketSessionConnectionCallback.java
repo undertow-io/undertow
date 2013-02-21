@@ -27,6 +27,7 @@ import io.undertow.websockets.api.AssembledFrameHandler;
 import io.undertow.websockets.api.CloseReason;
 import io.undertow.websockets.api.FrameHandler;
 import io.undertow.websockets.api.WebSocketFrameHeader;
+import io.undertow.websockets.api.WebSocketSession;
 import io.undertow.websockets.api.WebSocketSessionHandler;
 import io.undertow.websockets.api.WebSocketSessionIdGenerator;
 import org.xnio.ChannelListener;
@@ -46,7 +47,7 @@ import java.util.List;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public final class WebSocketSessionConnectionCallback implements WebSocketConnectionCallback {
+public class WebSocketSessionConnectionCallback implements WebSocketConnectionCallback {
     private final WebSocketSessionIdGenerator idGenerator;
     private final WebSocketSessionHandler sessionHandler;
     private final boolean executeInIoThread;
@@ -69,11 +70,10 @@ public final class WebSocketSessionConnectionCallback implements WebSocketConnec
     @Override
     public void onConnect(HttpServerExchange exchange, WebSocketChannel channel) {
         final WebSocketChannelSession session = new WebSocketChannelSession(channel, idGenerator.nextId(), executeInIoThread);
-        sessionHandler.onSession(session);
+        sessionHandler.onSession(session, exchange);
 
         channel.getReceiveSetter().set(new FrameHandlerDelegateListener(session));
         channel.resumeReceives();
-
     }
 
     private static void handleError(final WebSocketChannelSession session, final Throwable cause) {
@@ -91,6 +91,16 @@ public final class WebSocketSessionConnectionCallback implements WebSocketConnec
         }
     }
 
+    private static long maxMessageSize(WebSocketSession session, WebSocketFrameType type) {
+        switch (type) {
+            case BINARY:
+                return session.getMaximumBinaryFrameSize();
+            case TEXT:
+                return session.getMaximumTextFrameSize();
+            default:
+                return 0;
+        }
+    }
     private final class FrameHandlerDelegateListener implements ChannelListener<WebSocketChannel> {
         private final WebSocketChannelSession session;
         private final EchoFrameHandlerListener defaultListener;
@@ -114,9 +124,9 @@ public final class WebSocketSessionConnectionCallback implements WebSocketConnec
                     return;
                 }
 
-                long maxSize = session.getMaximumFrameSize();
-                if (maxSize > 0 && (frame.getType() == WebSocketFrameType.BINARY || frame.getType() == WebSocketFrameType.TEXT)
-                        && frame.getPayloadSize() > maxSize) {
+                long maxSize = maxMessageSize(session, frame.getType());
+
+                if (maxSize > 0 && frame.getPayloadSize() > maxSize) {
                     if (executeInIoThread) {
                         session.sendClose(new CloseReason(CloseReason.MSG_TOO_BIG, null), null);
                     } else {
@@ -551,7 +561,7 @@ public final class WebSocketSessionConnectionCallback implements WebSocketConnec
         private final Pool<ByteBuffer> pool;
         private ArrayList<Pooled<ByteBuffer>> pooledList;
         private Pooled<ByteBuffer> pooled;
-        private final WebSocketFrameHeader header;
+        private WebSocketFrameHeader header;
         private final AssembledFrameHandler handler;
         private long size;
         private long maxSize;
@@ -560,9 +570,8 @@ public final class WebSocketSessionConnectionCallback implements WebSocketConnec
             super(session, handler, delegateListener);
             this.handler = handler;
             pool = session.getChannel().getBufferPool();
-            header = new DefaultWebSocketFrameHeader(source.getType(), source.getRsv(), true);
             pooled = pool.allocate();
-            maxSize = session.getMaximumFrameSize();
+            maxSize = maxMessageSize(session, source.getType());
         }
 
         @Override
@@ -575,6 +584,7 @@ public final class WebSocketSessionConnectionCallback implements WebSocketConnec
                     boolean free = true;
 
                     if (!frameInProgress) {
+                        header = new DefaultWebSocketFrameHeader(streamSourceFrameChannel.getType(), streamSourceFrameChannel.getRsv(), true);
                         frameInProgress = true;
                         size += streamSourceFrameChannel.getPayloadSize();
 

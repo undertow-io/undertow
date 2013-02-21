@@ -29,6 +29,7 @@ import io.undertow.websockets.api.FragmentedBinaryFrameSender;
 import io.undertow.websockets.api.SendCallback;
 import io.undertow.websockets.api.TextFrameSender;
 import io.undertow.websockets.api.WebSocketSession;
+import org.xnio.Pool;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -36,8 +37,6 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -49,8 +48,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 public final class WebSocketChannelSession implements WebSocketSession {
     private final WebSocketChannel channel;
     private final String id;
-    // TODO: Maybe init lazy to safe memory when not used by the user ?
-    private final ConcurrentMap<String, Object> attrs = new ConcurrentHashMap<String, Object>();
+
     @SuppressWarnings("unused")
     private volatile FrameHandler frameHandler;
     private static final AtomicReferenceFieldUpdater<WebSocketChannelSession, FrameHandler> FRAME_HANDLER_UPDATER =
@@ -62,9 +60,9 @@ public final class WebSocketChannelSession implements WebSocketSession {
     private final PongFrameSender pongFrameSender;
     private final CloseFrameSender closeFrameSender;
     private volatile int asyncSendTimeout;
-    private volatile long maxFrameSize;
+    private volatile long maxTextFrameSize;
+    private volatile long maxBinaryFrameSize;
     private final Executor frameHandlerExecutor;
-
     boolean closeFrameSent;
     final boolean executeInIoThread;
     public WebSocketChannelSession(WebSocketChannel channel, String id, boolean executeInIoThread) {
@@ -77,6 +75,7 @@ public final class WebSocketChannelSession implements WebSocketSession {
         pongFrameSender = new DefaultPongFrameSender(this);
         closeFrameSender = new DefaultCloseFrameSender(this);
         frameHandlerExecutor = new FrameHandlerExecutor(channel.getWorker());
+
     }
 
     @Override
@@ -107,26 +106,17 @@ public final class WebSocketChannelSession implements WebSocketSession {
 
     @Override
     public boolean setAttribute(String key, Object value) {
-        if (value == null) {
-            return attrs.remove(key) != null;
-        } else {
-            return attrs.putIfAbsent(key, value) == null;
-        }
+        return channel.setAttribute(key, value);
     }
 
     @Override
     public Object getAttribute(String key) {
-        return attrs.get(key);
+        return channel.getAttribute(key);
     }
 
     @Override
     public boolean isSecure() {
         return channel.isSecure();
-    }
-
-    @Override
-    public String getPath() {
-        return null;
     }
 
     @Override
@@ -249,7 +239,7 @@ public final class WebSocketChannelSession implements WebSocketSession {
         closeFrameSender.sendClose(reason);
     }
 
-    WebSocketChannel getChannel() {
+    public WebSocketChannel getChannel() {
         return channel;
     }
 
@@ -264,16 +254,40 @@ public final class WebSocketChannelSession implements WebSocketSession {
     }
 
     @Override
-    public void setMaximumFrameSize(long maxFrameSize) {
-        this.maxFrameSize = maxFrameSize;
+    public void setMaximumTextFrameSize(long size) {
+        maxTextFrameSize = size;
     }
 
     @Override
-    public long getMaximumFrameSize() {
-        return maxFrameSize;
+    public long getMaximumTextFrameSize() {
+        return maxTextFrameSize;
+    }
+
+    @Override
+    public void setMaximumBinaryFrameSize(long size) {
+        maxBinaryFrameSize = size;
+    }
+
+    @Override
+    public long getMaximumBinaryFrameSize() {
+        return maxBinaryFrameSize;
+    }
+
+    @Override
+    public boolean isOpen() {
+        return channel.isOpen();
+    }
+
+    @Override
+    public String getProtocolVersion() {
+        return channel.getVersion().toHttpHeaderValue();
     }
 
     Executor getFrameHandlerExecutor() {
         return frameHandlerExecutor;
+    }
+
+    public Pool<ByteBuffer> getBufferPool() {
+        return channel.getBufferPool();
     }
 }

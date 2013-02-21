@@ -17,8 +17,7 @@ package io.undertow.websockets.impl;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
-import io.undertow.server.HttpTransferEncoding;
-import io.undertow.server.HttpTransferEncoding;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.websockets.api.AbstractFragmentedFrameHandler;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.api.FragmentedBinaryFrameSender;
@@ -118,7 +117,7 @@ public class HighLevelAutobahnWebSocketServer {
 
     private static final class WebSocketSessionHandlerImpl implements WebSocketSessionHandler {
         @Override
-        public void onSession(WebSocketSession session) {
+        public void onSession(WebSocketSession session, HttpServerExchange exchange) {
             session.setFrameHandler(new AbstractFragmentedFrameHandler() {
                 private FragmentedBinaryFrameSender binaryFrameSender;
                 private FragmentedTextFrameSender textFrameSender;

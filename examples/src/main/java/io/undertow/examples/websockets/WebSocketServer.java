@@ -29,7 +29,7 @@ public class WebSocketServer {
                 .addListener(8080, "localhost")
                 .addPathHandler("/myapp", Websockets.handler(new WebSocketSessionHandler() {
                     @Override
-                    public void onSession(final WebSocketSession session) {
+                    public void onSession(final WebSocketSession session, HttpServerExchange exchange) {
                         session.setFrameHandler(new AbstractAssembledFrameHandler() {
                             @Override
                             public void onTextFrame(final WebSocketSession session, final WebSocketFrameHeader header, final CharSequence payload) {

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright 2013 JBoss, by Red Hat, Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +48,6 @@ public interface WebSocketSession extends BinaryFrameSender, TextFrameSender, Pi
      */
     FragmentedTextFrameSender sendFragmentedText();
 
-
     /**
      * Set a attribute on the session. When the value is {@code null} it will remove the attribute with the key.
      */
@@ -63,11 +62,6 @@ public interface WebSocketSession extends BinaryFrameSender, TextFrameSender, Pi
      * Return {@code true} if this is a secure websocket connection
      */
     boolean isSecure();
-
-    /**
-     * Return the path for which the session was established
-     */
-    String getPath();
 
     /**
      * Set the {@link FrameHandler} which is used for all frames. If non is set all frames will
@@ -123,17 +117,42 @@ public interface WebSocketSession extends BinaryFrameSender, TextFrameSender, Pi
     int getAsyncSendTimeout();
 
     /**
-     * Set the max frame size in bytes this {@link WebSocketSession} can handle while receive TEXT and BINARY frames.
+     * Set the max frame size in bytes this {@link WebSocketSession} can handle while receive TEXT frames.
      *
      * @param size  the max size in bytes or &lt;1 if no limit is in place.
      */
-    void setMaximumFrameSize(long size);
+    void setMaximumTextFrameSize(long size);
 
     /**
-     * Get the max frame size in bytes this {@link WebSocketSession} can handle while receive TEXT and BINARY frames.
+     * Get the max frame size in bytes this {@link WebSocketSession} can handle while receive TEXT frames.
      *
      * @return size  the max size in bytes or &lt;1 if no limit is in place.
      *
      */
-    long getMaximumFrameSize();
+    long getMaximumTextFrameSize();
+
+    /**
+     * Set the max frame size in bytes this {@link WebSocketSession} can handle while receive BINARY frames.
+     *
+     * @param size  the max size in bytes or &lt;1 if no limit is in place.
+     */
+    void setMaximumBinaryFrameSize(long size);
+
+    /**
+     * Get the max frame size in bytes this {@link WebSocketSession} can handle while receive BINARY frames.
+     *
+     * @return size  the max size in bytes or &lt;1 if no limit is in place.
+     *
+     */
+    long getMaximumBinaryFrameSize();
+
+    /**
+     * Return {@code true} if the session is open and connected
+     */
+    boolean isOpen();
+
+    /**
+     * Return the version of the user WebSocket protocol.
+     */
+    String getProtocolVersion();
 }
