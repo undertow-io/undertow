@@ -96,7 +96,7 @@ public class HttpTransferEncoding {
             transferEncoding = new HttpString(requestHeaders.getLast(Headers.TRANSFER_ENCODING));
         }
         if (hasTransferEncoding && !transferEncoding.equals(Headers.IDENTITY)) {
-            exchange.addRequestWrapper(chunkedStreamSourceConduitWrapper());
+            exchange.addRequestWrapper(CHUNKED_STREAM_SOURCE_CONDUIT_WRAPPER);
         } else if (hasContentLength) {
             final long contentLength;
             try {
@@ -111,7 +111,7 @@ public class HttpTransferEncoding {
             if (contentLength == 0L) {
                 log.trace("No content, starting next request");
                 // no content - immediately start the next request, returning an empty stream for this one
-                exchange.addRequestWrapper(emptyStreamSourceConduitWrapper());
+                exchange.addRequestWrapper(EMPTY_STREAM_SOURCE_CONDUIT_WRAPPER);
                 exchange.terminateRequest();
             } else {
                 // fixed-length content - add a wrapper for a fixed-length stream
@@ -136,7 +136,7 @@ public class HttpTransferEncoding {
 
             // no content - immediately start the next request, returning an empty stream for this one
             exchange.terminateRequest();
-            exchange.addRequestWrapper(emptyStreamSourceConduitWrapper());
+            exchange.addRequestWrapper(EMPTY_STREAM_SOURCE_CONDUIT_WRAPPER);
         }
 
         exchange.setPersistent(persistentConnection);
@@ -231,13 +231,11 @@ public class HttpTransferEncoding {
         };
     }
 
-    private static ConduitWrapper<StreamSourceConduit> chunkedStreamSourceConduitWrapper() {
-        return new ConduitWrapper<StreamSourceConduit>() {
+    private static final ConduitWrapper<StreamSourceConduit> CHUNKED_STREAM_SOURCE_CONDUIT_WRAPPER = new ConduitWrapper<StreamSourceConduit>() {
             public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
                 return new ChunkedStreamSourceConduit(factory.create(), exchange, chunkedDrainListener(exchange), maxEntitySize(exchange));
             }
         };
-    }
 
     private static ConduitWrapper<StreamSourceConduit> fixedLengthStreamSourceConduitWrapper(final long contentLength) {
         return new ConduitWrapper<StreamSourceConduit>() {
@@ -252,14 +250,12 @@ public class HttpTransferEncoding {
         };
     }
 
-    private static ConduitWrapper<StreamSourceConduit> emptyStreamSourceConduitWrapper() {
-        return new ConduitWrapper<StreamSourceConduit>() {
+    private static final ConduitWrapper<StreamSourceConduit> EMPTY_STREAM_SOURCE_CONDUIT_WRAPPER = new ConduitWrapper<StreamSourceConduit>() {
             public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
                 StreamSourceConduit channel = factory.create();
                 return new EmptyStreamSourceConduit(channel.getReadThread());
             }
         };
-    }
 
     private static ConduitListener<FixedLengthStreamSourceConduit> fixedLengthDrainListener(final HttpServerExchange exchange) {
         return new ConduitListener<FixedLengthStreamSourceConduit>() {
