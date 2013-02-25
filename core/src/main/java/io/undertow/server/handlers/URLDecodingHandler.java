@@ -21,6 +21,8 @@ public class URLDecodingHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
+    private String charset = "UTF-8";
+
     public URLDecodingHandler() {
     }
 
@@ -32,13 +34,13 @@ public class URLDecodingHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) {
 
         try {
-            exchange.setRelativePath(URLDecoder.decode(exchange.getRelativePath(), "UTF-8"));
-            exchange.setCanonicalPath(URLDecoder.decode(exchange.getRequestPath(), "UTF-8"));
+            exchange.setRelativePath(URLDecoder.decode(exchange.getRelativePath(),charset));
+            exchange.setCanonicalPath(URLDecoder.decode(exchange.getRequestPath(), charset));
             for (Map.Entry<String, Deque<String>> entry : exchange.getQueryParameters().entrySet()) {
                 final Deque<String> value = entry.getValue();
                 final Deque<String> newValue = new ArrayDeque<>(value.size());
                 for (String v : value) {
-                    newValue.push(URLDecoder.decode(v, "UTF-8"));
+                    newValue.push(URLDecoder.decode(v, charset));
                 }
                 entry.setValue(newValue);
             }
@@ -57,5 +59,14 @@ public class URLDecodingHandler implements HttpHandler {
     public void setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+    }
+
+    public String getCharset() {
+        return charset;
+    }
+
+    public URLDecodingHandler setCharset(final String charset) {
+        this.charset = charset;
+        return this;
     }
 }

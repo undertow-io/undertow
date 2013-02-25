@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.security.Principal;
@@ -452,6 +453,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         try {
             characterEncoding = Charset.forName(env);
+
+            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+            if(parser != null) {
+                parser.setCharacterEncoding(env);
+            }
         } catch (UnsupportedCharsetException e) {
             throw new UnsupportedEncodingException();
         }
@@ -506,7 +512,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             }
             return null;
         }
-        return params.getFirst();
+        try {
+            //TODO: we need a better way to handle decoding the request paramters
+            //TODO: what charset should we be using to decode these parameters?
+            return URLDecoder.decode(params.getFirst(), characterEncoding == null ? "ISO-8859-1" : characterEncoding.name());
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -535,7 +547,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         final List<String> ret = new ArrayList<String>();
         Deque<String> params = queryParameters.get(name);
         if (params != null) {
-            ret.addAll(params);
+            for(String param : params) {
+                try {
+                    ret.add(URLDecoder.decode(param, characterEncoding == null ? "ISO-8859-1" : characterEncoding.name()));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
         if (exchange.getRequestMethod().equals(Methods.POST)) {
             readStarted = true;
@@ -632,7 +650,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             }
             Charset charSet = DEFAULT_CHARSET;
             if (characterEncoding != null) {
-                charSet = DEFAULT_CHARSET;
+                charSet = characterEncoding;
             } else {
                 String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
                 if (contentType != null) {

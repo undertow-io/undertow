@@ -53,18 +53,20 @@ public class MultiPartHandler implements HttpHandler {
 
     public static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
-    private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
+    private HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
-    private volatile Executor executor;
+    private Executor executor;
 
-    private volatile File tempFileLocation = new File(System.getProperty("java.io.tmpdir"));
+    private File tempFileLocation = new File(System.getProperty("java.io.tmpdir"));
+
+    private String defaultEncoding = "UTF-8";
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (mimeType != null && mimeType.startsWith(MULTIPART_FORM_DATA)) {
             String boundary = Headers.extractTokenFromHeader(mimeType, "boundary");
-            final MultiPartUploadHandler multiPartUploadHandler = new MultiPartUploadHandler(exchange, boundary);
+            final MultiPartUploadHandler multiPartUploadHandler = new MultiPartUploadHandler(exchange, boundary, defaultEncoding);
             exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, multiPartUploadHandler);
             HttpHandlers.executeHandler(next, exchange);
         } else {
@@ -98,6 +100,14 @@ public class MultiPartHandler implements HttpHandler {
         this.tempFileLocation = tempFileLocation;
     }
 
+    public String getDefaultEncoding() {
+        return defaultEncoding;
+    }
+
+    public void setDefaultEncoding(final String defaultEncoding) {
+        this.defaultEncoding = defaultEncoding;
+    }
+
     private final class MultiPartUploadHandler implements FormDataParser, Runnable, MultipartParser.PartHandler {
 
         private final HttpServerExchange exchange;
@@ -105,6 +115,7 @@ public class MultiPartHandler implements HttpHandler {
         private final String boundary;
         private final List<File> createdFiles = new ArrayList<File>();
         private volatile ConcreteIoFuture<FormData> ioFuture;
+        private String defaultEncoding;
 
         //0=form data
         int currentType = 0;
@@ -116,9 +127,10 @@ public class MultiPartHandler implements HttpHandler {
         private HeaderMap headers;
 
 
-        private MultiPartUploadHandler(final HttpServerExchange exchange, final String boundary) {
+        private MultiPartUploadHandler(final HttpServerExchange exchange, final String boundary, final String defaultEncoding) {
             this.exchange = exchange;
             this.boundary = boundary;
+            this.defaultEncoding = defaultEncoding;
         }
 
 
@@ -248,25 +260,19 @@ public class MultiPartHandler implements HttpHandler {
                     throw new RuntimeException(e);
                 }
             } else {
-                String contentType = "UTF-8";
-                String header = headers.getFirst(Headers.CONTENT_TYPE);
-                if(header != null) {
-                    int index = header.indexOf("charset=");
-                    if(index != -1) {
-                        int end = index + 8;
-                        while (end < header.length()) {
-                            char c = header.charAt(end);
-                            if(c == ';' || c == ' ') {
-                                break;
-                            }
-                            ++end;
-                        }
-                        contentType = header.substring(index + 8, end);
-                    }
-                }
+
 
                 try {
-                    data.add(currentName, new String(contentBytes.toByteArray(), contentType), headers);
+                    String charset = defaultEncoding;
+                    String contentType = headers.getFirst(Headers.CONTENT_TYPE);
+                    if(contentType != null) {
+                        String cs = Headers.extractTokenFromHeader(contentType, "charset");
+                        if(cs != null) {
+                            charset = cs;
+                        }
+                    }
+
+                    data.add(currentName, new String(contentBytes.toByteArray(),charset), headers);
                 } catch (UnsupportedEncodingException e) {
                     ioFuture.setException(e);
                     throw new RuntimeException(e);
@@ -296,6 +302,11 @@ public class MultiPartHandler implements HttpHandler {
                 }
             });
 
+        }
+
+        @Override
+        public void setCharacterEncoding(final String encoding) {
+            this.defaultEncoding = encoding;
         }
     }
 

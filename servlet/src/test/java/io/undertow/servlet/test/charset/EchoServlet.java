@@ -16,6 +16,7 @@ public class EchoServlet extends HttpServlet {
     @Override
     protected void service(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         String charset = req.getParameter("charset");
+        req.setCharacterEncoding(charset);
         resp.setCharacterEncoding(charset);
         PrintWriter writer = resp.getWriter();
         String message = req.getParameter("message");

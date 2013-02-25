@@ -53,6 +53,8 @@ public class FormEncodedDataHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
+    private String defaultEncoding = "UTF-8";
+
     public FormEncodedDataHandler(final HttpHandler next) {
         this.next = next;
     }
@@ -63,8 +65,18 @@ public class FormEncodedDataHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
-        if (mimeType != null && mimeType.equals(APPLICATION_X_WWW_FORM_URLENCODED)) {
-            exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, new FormEncodedDataParser(exchange));
+        if (mimeType != null && mimeType.startsWith(APPLICATION_X_WWW_FORM_URLENCODED)) {
+
+            String charset = defaultEncoding;
+            String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+            if (contentType != null) {
+                String cs = Headers.extractTokenFromHeader(contentType, "charset");
+                if (cs != null) {
+                    charset = cs;
+                }
+            }
+
+            exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, new FormEncodedDataParser(charset, exchange));
         }
         HttpHandlers.executeHandler(next, exchange);
     }
@@ -78,6 +90,14 @@ public class FormEncodedDataHandler implements HttpHandler {
         this.next = next;
     }
 
+    public String getDefaultEncoding() {
+        return defaultEncoding;
+    }
+
+    public void setDefaultEncoding(final String defaultEncoding) {
+        this.defaultEncoding = defaultEncoding;
+    }
+
     private static final class FormEncodedDataParser implements ChannelListener<StreamSourceChannel>, FormDataParser {
 
         private final HttpServerExchange exchange;
@@ -85,6 +105,7 @@ public class FormEncodedDataHandler implements HttpHandler {
         private final StringBuilder builder = new StringBuilder();
         private String name = null;
         private volatile ConcreteIoFuture<FormData> ioFuture;
+        private String charset;
 
         //0= parsing name
         //1=parsing name, decode required
@@ -93,8 +114,9 @@ public class FormEncodedDataHandler implements HttpHandler {
         //4=finished
         private int state = 0;
 
-        private FormEncodedDataParser(final HttpServerExchange exchange) {
+        private FormEncodedDataParser(final String charset, final HttpServerExchange exchange) {
             this.exchange = exchange;
+            this.charset = charset;
         }
 
         @Override
@@ -125,7 +147,7 @@ public class FormEncodedDataHandler implements HttpHandler {
                                 }
                                 case 1: {
                                     if (n == '=') {
-                                        name = URLDecoder.decode(builder.toString(), "UTF-8");
+                                        name = URLDecoder.decode(builder.toString(), charset);
                                         builder.setLength(0);
                                         state = 2;
                                     } else {
@@ -148,7 +170,7 @@ public class FormEncodedDataHandler implements HttpHandler {
                                 }
                                 case 3: {
                                     if (n == '&') {
-                                        data.add(name, URLDecoder.decode(builder.toString(), "UTF-8"));
+                                        data.add(name, URLDecoder.decode(builder.toString(), charset));
                                         builder.setLength(0);
                                         state = 0;
                                     } else {
@@ -164,7 +186,7 @@ public class FormEncodedDataHandler implements HttpHandler {
                     if (state == 2) {
                         data.add(name, builder.toString());
                     } else if (state == 3) {
-                        data.add(name, URLDecoder.decode(builder.toString(), "UTF-8"));
+                        data.add(name, URLDecoder.decode(builder.toString(), charset));
                     }
                     state = 4;
                     ioFuture.setResult(data);
@@ -237,6 +259,11 @@ public class FormEncodedDataHandler implements HttpHandler {
         @Override
         public void close() throws IOException {
 
+        }
+
+        @Override
+        public void setCharacterEncoding(final String encoding) {
+            this.charset = encoding;
         }
     }
 

@@ -60,4 +60,10 @@ public interface FormDataParser extends Closeable {
      */
     void close() throws IOException;
 
+    /**
+     * Sets the character encoding that will be used by this parser. If the request is already processed this will have
+     * no effect
+     * @param encoding The encoding
+     */
+    void setCharacterEncoding(String encoding);
 }

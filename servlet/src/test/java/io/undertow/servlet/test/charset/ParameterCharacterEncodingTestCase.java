@@ -1,7 +1,15 @@
 package io.undertow.servlet.test.charset;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.ServletException;
+
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.URLDecodingHandler;
+import io.undertow.server.handlers.form.FormEncodedDataHandler;
 import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -13,18 +21,14 @@ import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
-
-import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.charset.Charset;
-
-import javax.servlet.ServletException;
-
 import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.StringBody;
+import org.apache.http.message.BasicNameValuePair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,13 +65,13 @@ public class ParameterCharacterEncodingTestCase {
 
         MultiPartHandler multiPartHandler = new MultiPartHandler();
         multiPartHandler.setNext(pathHandler);
-        final URLDecodingHandler decoder = new URLDecodingHandler(multiPartHandler);
+        FormEncodedDataHandler formEncodedDataHandler = new FormEncodedDataHandler(multiPartHandler);
 
-        DefaultServer.setRootHandler(decoder);
+        DefaultServer.setRootHandler(formEncodedDataHandler);
     }
 
     @Test
-    public void testCharacterEncoding() throws IOException {
+    public void tstUrlCharacterEncoding() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
             String message = "abcčšž";
@@ -77,6 +81,18 @@ public class ParameterCharacterEncodingTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(message, response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
+    @Test
+    public void testMultipartCharacterEncoding() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            String message = "abcčšž";
+            String charset = "UTF-8";
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/servletContext");
 
@@ -84,9 +100,31 @@ public class ParameterCharacterEncodingTestCase {
             multipart.addPart("charset", new StringBody(charset, Charset.forName(charset)));
             multipart.addPart("message", new StringBody(message, Charset.forName(charset)));
             post.setEntity(multipart);
-            result = client.execute(post);
+            HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(message, response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testFormDataCharacterEncoding() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            String message = "abcčšž";
+            String charset = "UTF-8";
+
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/servletContext");
+            final List<NameValuePair> values = new ArrayList<>();
+            values.add(new BasicNameValuePair("charset", charset));
+            values.add(new BasicNameValuePair("message", message));
+            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
+            post.setEntity(data);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(message, response);
         } finally {
             client.getConnectionManager().shutdown();
