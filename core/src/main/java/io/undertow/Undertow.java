@@ -27,6 +27,7 @@ import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.URLDecodingHandler;
 import io.undertow.server.handlers.cache.CacheHandler;
 import io.undertow.server.handlers.cache.CachedHttpRequest;
 import io.undertow.server.handlers.cache.DirectBufferCache;
@@ -192,6 +193,7 @@ public class Undertow {
         root = new CookieHandler(root);
         root = new FormEncodedDataHandler(root);
         root = new SimpleErrorPageHandler(root);
+        root = new URLDecodingHandler(root);
         //TODO: multipart
 
         if(cacheSize > 0) {

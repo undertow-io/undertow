@@ -18,8 +18,10 @@
 
 package io.undertow.server.handlers.form;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -106,7 +108,7 @@ public class MultiPartHandler implements HttpHandler {
 
         //0=form data
         int currentType = 0;
-        private final StringBuilder builder = new StringBuilder();
+        private final ByteArrayOutputStream contentBytes = new ByteArrayOutputStream();
         private String currentName;
         private String fileName;
         private File file;
@@ -220,9 +222,8 @@ public class MultiPartHandler implements HttpHandler {
         @Override
         public void data(final ByteBuffer buffer) {
             if (file == null) {
-                builder.ensureCapacity(builder.length() + buffer.remaining());
                 while (buffer.hasRemaining()) {
-                    builder.append((char) buffer.get());
+                    contentBytes.write(buffer.get());
                 }
             } else {
                 try {
@@ -247,8 +248,30 @@ public class MultiPartHandler implements HttpHandler {
                     throw new RuntimeException(e);
                 }
             } else {
-                data.add(currentName, builder.toString(), headers);
-                builder.setLength(0);
+                String contentType = "UTF-8";
+                String header = headers.getFirst(Headers.CONTENT_TYPE);
+                if(header != null) {
+                    int index = header.indexOf("charset=");
+                    if(index != -1) {
+                        int end = index + 8;
+                        while (end < header.length()) {
+                            char c = header.charAt(end);
+                            if(c == ';' || c == ' ') {
+                                break;
+                            }
+                            ++end;
+                        }
+                        contentType = header.substring(index + 8, end);
+                    }
+                }
+
+                try {
+                    data.add(currentName, new String(contentBytes.toByteArray(), contentType), headers);
+                } catch (UnsupportedEncodingException e) {
+                    ioFuture.setException(e);
+                    throw new RuntimeException(e);
+                }
+                contentBytes.reset();
             }
         }
 

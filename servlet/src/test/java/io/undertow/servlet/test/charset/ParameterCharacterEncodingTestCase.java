@@ -1,6 +1,7 @@
 package io.undertow.servlet.test.charset;
 
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.URLDecodingHandler;
 import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -33,7 +34,7 @@ import org.junit.runner.RunWith;
  * @author Matej Lazar
  */
 @RunWith(DefaultServer.class)
-public class EchoTestCase {
+public class ParameterCharacterEncodingTestCase {
 
 
     @BeforeClass
@@ -60,8 +61,9 @@ public class EchoTestCase {
 
         MultiPartHandler multiPartHandler = new MultiPartHandler();
         multiPartHandler.setNext(pathHandler);
+        final URLDecodingHandler decoder = new URLDecodingHandler(multiPartHandler);
 
-        DefaultServer.setRootHandler(multiPartHandler);
+        DefaultServer.setRootHandler(decoder);
     }
 
     @Test
@@ -74,13 +76,10 @@ public class EchoTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            //TODO is it ok that response must be decoded
-            String decoded = URLDecoder.decode(response, "UTF8");;
-            Assert.assertEquals(message, decoded);
+            Assert.assertEquals(message, response);
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/servletContext");
 
-            post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/servletContext");
             MultipartEntity multipart = new MultipartEntity();
             multipart.addPart("charset", new StringBody(charset, Charset.forName(charset)));
             multipart.addPart("message", new StringBody(message, Charset.forName(charset)));

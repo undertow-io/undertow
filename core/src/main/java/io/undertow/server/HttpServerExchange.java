@@ -24,7 +24,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +39,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediateConduitFactory;
 import io.undertow.util.Protocols;
+import io.undertow.util.SecureHashMap;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -452,16 +452,15 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Returns a immutable map of very parameters.
+     * Returns a mutable map of very parameters.
      *
      * @return The query parameters
      */
     public Map<String, Deque<String>> getQueryParameters() {
         if(queryParameters == null) {
-            return Collections.emptyMap();
-        } else {
-            return Collections.unmodifiableMap(queryParameters);
+            queryParameters = new SecureHashMap<>(0);
         }
+        return queryParameters;
     }
 
     public void addQueryParam(final String name, final String param) {
