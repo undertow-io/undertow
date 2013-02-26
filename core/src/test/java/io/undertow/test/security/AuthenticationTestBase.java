@@ -153,6 +153,11 @@ public abstract class AuthenticationTestBase {
                 return null;
             }
 
+            @Override
+            public byte[] getHash(Account account) {
+                return null;
+            }
+
         };
     }
 

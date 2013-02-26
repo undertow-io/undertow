@@ -33,7 +33,6 @@ import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HexConverter;
@@ -83,18 +82,20 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     private final String realmName; // TODO - Will offer choice once backing store API/SPI is in.
     private final byte[] realmBytes;
     private final NonceManager nonceManager;
+    private final boolean plainTextPasswords; // TODO - May move hash validation to the IDM so this does not need to be known in advance.
 
     // Where do session keys fit? Do we just hang onto a session key or keep visiting the user store to check if the password
     // has changed?
     // Maybe even support registration of a session so it can be invalidated?
 
     public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
-                                         final String realmName, final NonceManager nonceManager) {
+                                         final String realmName, final NonceManager nonceManager, final boolean plainTextPasswords) {
         this.supportedAlgorithms = supportedAlgorithms;
         this.supportedQops = supportedQops;
         this.realmName = realmName;
         this.realmBytes = realmName.getBytes(UTF_8);
         this.nonceManager = nonceManager;
+        this.plainTextPasswords = plainTextPasswords;
 
         if (supportedQops.size() > 0) {
             StringBuilder sb = new StringBuilder();
@@ -116,7 +117,6 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
                                                        final SecurityContext securityContext) {
-        ConcreteIoFuture<AuthenticationMechanismOutcome> result = new ConcreteIoFuture<AuthenticationMechanismOutcome>();
         List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
         if (authHeaders != null) {
             for (String current : authHeaders) {
@@ -324,19 +324,25 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         return (nonceManager.validateNonce(suppliedNonce, nonceCount, exchange));
     }
 
-    private byte[] createHA1(final byte[] userName, final Account account, final MessageDigest digest, final SecurityContext securityContext) throws AuthenticationException {
-        byte[] password = new String(securityContext.getIdentityManager().getPassword(account)).getBytes(UTF_8);
+    private byte[] createHA1(final byte[] userName, final Account account, final MessageDigest digest,
+            final SecurityContext securityContext) throws AuthenticationException {
+        if (plainTextPasswords) {
+            byte[] password = new String(securityContext.getIdentityManager().getPassword(account)).getBytes(UTF_8);
 
-        try {
-            digest.update(userName);
-            digest.update(COLON);
-            digest.update(realmBytes);
-            digest.update(COLON);
-            digest.update(password);
+            try {
+                digest.update(userName);
+                digest.update(COLON);
+                digest.update(realmBytes);
+                digest.update(COLON);
+                digest.update(password);
 
-            return HexConverter.convertToHexBytes(digest.digest());
-        } finally {
-            digest.reset();
+                return HexConverter.convertToHexBytes(digest.digest());
+            } finally {
+                digest.reset();
+            }
+        } else {
+            byte[] preHashed = securityContext.getIdentityManager().getHash(account);
+            return HexConverter.convertToHexBytes(preHashed);
         }
     }
 

@@ -88,6 +88,11 @@ public class ServletIdentityManager implements IdentityManager {
         return null;
     }
 
+    @Override
+    public byte[] getHash(Account account) {
+        return null;
+    }
+
     private static class UserAccount implements Account {
         // In no way whatsoever should a class like this be considered a good idea for a real IdentityManager implementation,
         // this is for testing only.

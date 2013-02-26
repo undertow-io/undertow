@@ -17,9 +17,7 @@
  */
 package io.undertow.security.impl;
 
-import java.io.IOException;
-import java.util.Map;
-
+import static io.undertow.util.StatusCodes.CODE_307;
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityContext;
@@ -32,11 +30,11 @@ import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 
-import static io.undertow.util.StatusCodes.CODE_307;
+import java.io.IOException;
+import java.util.Map;
 
 /**
  * @author Stuart Douglas
@@ -68,7 +66,6 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
                                                        final SecurityContext securityContext) {
         if (exchange.getRequestURI().endsWith(postLocation) && exchange.getRequestMethod().equals(Methods.POST)) {
-            ConcreteIoFuture<AuthenticationMechanismOutcome> result = new ConcreteIoFuture<AuthenticationMechanismOutcome>();
             return runFormAuth(exchange, securityContext);
         } else {
             return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
