@@ -64,6 +64,12 @@ class MapIdentityManager implements IdentityManager {
     }
 
     @Override
+    public byte[] getHash(Account account) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
     public Account getAccount(final String id) {
         if (users.containsKey(id)) {
             return new Account() {

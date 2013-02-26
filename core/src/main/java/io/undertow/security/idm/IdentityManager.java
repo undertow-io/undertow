@@ -79,4 +79,11 @@ public interface IdentityManager {
      */
     char[] getPassword(final Account account);
 
+    /**
+     * Return the pre-prepared hash for the account.
+     * @param account - The account the hash is required for.
+     * @return The pre-prepared MD5 hash.
+     */
+    byte[] getHash(final Account account);
+
 }

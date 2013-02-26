@@ -38,9 +38,9 @@ public class AuthenticationMechanismsHandler implements HttpHandler {
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
     private final List<AuthenticationMechanism> authenticationMechanisms;
 
-    public AuthenticationMechanismsHandler(final HttpHandler next, final List<AuthenticationMechanism> authenticationHandlers) {
+    public AuthenticationMechanismsHandler(final HttpHandler next, final List<AuthenticationMechanism> authenticationMechanisms) {
         this.next = next;
-        this.authenticationMechanisms = authenticationHandlers;
+        this.authenticationMechanisms = authenticationMechanisms;
     }
 
     public AuthenticationMechanismsHandler(final List<AuthenticationMechanism> authenticationHandlers) {

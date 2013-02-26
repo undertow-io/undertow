@@ -65,7 +65,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     @Override
     protected AuthenticationMechanism getTestMechanism() {
         return new DigestAuthenticationMechanism(Collections.singletonList(DigestAlgorithm.MD5),
-                Collections.singletonList(DigestQop.AUTH), REALM_NAME, new SimpleNonceManager());
+                Collections.singletonList(DigestQop.AUTH), REALM_NAME, new SimpleNonceManager(), true);
     }
 
     private String createNonce() {

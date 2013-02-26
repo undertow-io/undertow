@@ -63,7 +63,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
     protected AuthenticationMechanism getTestMechanism() {
         List<DigestQop> qopList = Collections.emptyList();
         return new DigestAuthenticationMechanism(Collections.singletonList(DigestAlgorithm.MD5), qopList, REALM_NAME,
-                new SimpleNonceManager());
+                new SimpleNonceManager(), true);
     }
 
     /**
