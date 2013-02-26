@@ -185,7 +185,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<SendResult> sendResult = new AtomicReference<SendResult>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch latch = new CountDownLatch(2);
 
         DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
             @Override
@@ -205,6 +205,7 @@ public class JsrWebSocketServer07Test {
                                     @Override
                                     public void setResult(SendResult result) {
                                         sendResult.set(result);
+                                        latch.countDown();
                                         if (result.getException() != null) {
                                             latch.countDown();
                                         }
@@ -234,7 +235,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<SendResult> sendResult = new AtomicReference<SendResult>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch latch = new CountDownLatch(2);
 
         DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
             @Override
@@ -251,6 +252,7 @@ public class JsrWebSocketServer07Test {
                                     @Override
                                     public void setResult(SendResult result) {
                                         sendResult.set(result);
+                                        latch.countDown();
                                         if (result.getException() != null) {
                                             latch.countDown();
                                         }
@@ -280,7 +282,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Future<SendResult>> sendResult = new AtomicReference<Future<SendResult>>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch latch = new CountDownLatch(2);
 
         DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
             @Override
@@ -297,6 +299,8 @@ public class JsrWebSocketServer07Test {
                                 buf.put(message);
                                 buf.flip();
                                 sendResult.set(session.getRemote().sendBytesByFuture(buf));
+                                latch.countDown();
+
                             }
                         });
                     }
@@ -321,7 +325,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Future<SendResult>> sendResult = new AtomicReference<Future<SendResult>>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch latch = new CountDownLatch(2);
 
         DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
             @Override
@@ -335,6 +339,7 @@ public class JsrWebSocketServer07Test {
                             @Override
                             public void onMessage(String message) {
                                 sendResult.set(session.getRemote().sendStringByFuture(message));
+                                latch.countDown();
                             }
                         });
                     }
