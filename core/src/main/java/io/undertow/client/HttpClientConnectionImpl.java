@@ -20,6 +20,7 @@ package io.undertow.client;
 
 import io.undertow.UndertowLogger;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -76,8 +77,8 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         this.bufferPool = client.getBufferPool();
         //
         queuingStrategy = HttpRequestQueue.create(this, options);
-        pipelining = queuingStrategy.supportsPipelining(); // TODO wait for the first response to determine this
         closeSetter = ChannelListeners.<ConnectedChannel>getDelegatingSetter(underlyingChannel.getCloseSetter(), this);
+        pipelining = queuingStrategy.supportsPipelining(); // TODO wait for the first response to determine this
 
         getCloseSetter().set(new ChannelListener<ConnectedChannel>() {
             @Override
@@ -157,12 +158,8 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
     }
 
     @Override
-    public HttpClientRequest sendRequest(String method, URI target) {
-        return sendRequest(method, target, pipelining);
-    }
-
-    protected HttpClientRequest sendRequest(final String method, final URI target, final boolean pipelining) {
-        return new HttpClientRequestImpl(this, underlyingChannel, method, target, pipelining);
+    public HttpClientRequest sendRequest(HttpString method, URI target) {
+        return internalCreateRequest(method, target, pipelining);
     }
 
     @Override
@@ -170,7 +167,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         final FutureResult<ConnectedStreamChannel> result = new FutureResult<ConnectedStreamChannel>();
         try {
             // Upgrade the connection
-            final HttpClientRequest request = sendRequest(Methods.GET_STRING, new URI("/"), false); // disable pipelining for connection upgrades
+            final HttpClientRequest request = internalCreateRequest(Methods.GET, new URI("/"), false); // disable pipelining for connection upgrades
             request.getRequestHeaders().add(Headers.CONNECTION, Headers.UPGRADE_STRING);
             request.getRequestHeaders().add(Headers.UPGRADE, service);
 
@@ -191,7 +188,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
                 public void handleDone(HttpClientResponse response, Object attachment) {
                     if(response.getResponseCode() == 101) {
                         // final AssembledConnectedStreamChannel channel = new AssembledConnectedStreamChannel(sourceChannel, underlyingChannel);
-                        result.setResult(null); // TODO assemble channel
+                        result.setResult(null); // TODO assemble channel and mark
                     } else {
                         result.setException(new IOException());
                     }
@@ -203,6 +200,18 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
             result.setException(new IOException(e));
         }
         return result.getIoFuture();
+    }
+
+    /**
+     * Create a http client request.
+     *
+     * @param method the http method
+     * @param target the target uri
+     * @param pipelining whether to potentially allow pipelining
+     * @return a new request instance
+     */
+    protected HttpClientRequest internalCreateRequest(final HttpString method, final URI target, final boolean pipelining) {
+        return new HttpClientRequestImpl(this, underlyingChannel, method, target, pipelining);
     }
 
     @Override
@@ -229,7 +238,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         do {
             oldState = state;
             if(anyAreSet(oldState, CLOSE_REQ | CLOSED)) {
-                throw new IOException();
+                throw new IOException("closed");
             }
             newState = oldState + 1;
         } while (!stateUpdater.compareAndSet(this, oldState, newState));
@@ -293,7 +302,8 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         }
     }
 
-    void sendRequest(final PendingHttpRequest request, boolean fromCallback) {
+    // Internal callback once a request is can start sending it's data
+    void doSendRequest(final PendingHttpRequest request, boolean fromCallback) {
         int currentState = state;
         if(anyAreSet(currentState, CLOSE_REQ | CLOSED)) {
             request.setCancelled();
@@ -301,20 +311,21 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
             return;
         }
         UndertowLogger.CLIENT_LOGGER.tracef("start sending request %s", request);
-        if(! fromCallback) {
-            request.sendRequest();
-        } else {
+        if(fromCallback) { // Don't call startRequest in a read thread
             underlyingChannel.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
                 @Override
                 public void handleEvent(StreamSinkChannel channel) {
-                    request.sendRequest();
+                    request.startSendingRequest();
                 }
             });
             underlyingChannel.resumeWrites();
+        } else {
+            request.startSendingRequest();
         }
     }
 
-    void readResponse(PendingHttpRequest request) {
+    // Internal callback to start reading the response for a request
+    void doReadResponse(PendingHttpRequest request) {
         assert readListener.activeRequest == null;
         UndertowLogger.CLIENT_LOGGER.tracef("start reading response for %s", request);
         readListener.activeRequest = request;

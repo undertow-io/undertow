@@ -61,12 +61,12 @@ class HttpClientRequestImpl extends HttpClientRequest {
 
     private final boolean pipeline;
     private final OptionMap options;
-    private final GatedStreamSinkChannel underlyingChannel;
+    private final StreamSinkChannel underlyingChannel;
     private final HttpClientConnectionImpl connection;
     private final FutureResult<HttpClientResponse> responseFuture = new FutureResult<HttpClientResponse>();
 
-    private StreamSinkChannel requestChannel;
-    private boolean hasContent;
+    private volatile StreamSinkChannel conduitChannel;
+    private volatile GatedStreamSinkChannel requestChannel;
 
     private static final Set<HttpString> idempotentMethods = new HashSet<>();
     static {
@@ -78,17 +78,18 @@ class HttpClientRequestImpl extends HttpClientRequest {
         idempotentMethods.add(Methods.TRACE);
     }
 
-    HttpClientRequestImpl(final HttpClientConnectionImpl connection, final StreamSinkChannel underlyingChannel, final String method, final URI target, final boolean pipeline) {
+    HttpClientRequestImpl(final HttpClientConnectionImpl connection, final StreamSinkChannel underlyingChannel,
+                          final HttpString method, final URI target, final boolean pipeline) {
         super(connection);
         this.options = connection.getOptions();
 
-        this.method = new HttpString(method);
+        this.method = method;
         this.target = target;
         this.connection = connection;
-        this.underlyingChannel = new GatedStreamSinkChannel(underlyingChannel, this, false, false);
+        this.underlyingChannel = underlyingChannel;
         this.protocol = options.get(HttpClientOptions.PROTOCOL, Protocols.HTTP_1_1);
         this.http11 = Protocols.HTTP_1_1.equals(protocol);
-        this.pipeline = pipeline;
+        this.pipeline = http11 && pipeline;
     }
 
     @Override
@@ -121,6 +122,9 @@ class HttpClientRequestImpl extends HttpClientRequest {
 
     @Override
     public StreamSinkChannel writeRequestBody(long contentLength) throws IOException {
+        if(requestChannel != null) {
+            throw new IOException("request not reusable");
+        }
         // Prepare the header
         final HeaderMap headers = getRequestHeaders();
         boolean keepAlive;
@@ -180,14 +184,23 @@ class HttpClientRequestImpl extends HttpClientRequest {
                 headers.put(Headers.HOST, "");
             }
         }
+        boolean expectContinue = false;
+        if(http11 && hasContent && headers.contains(Headers.EXPECT)) {
+            for(final String s : headers.get(Headers.EXPECT)) {
+                if(s.toLowerCase().equals("100-continue")) {
+                    expectContinue = true;
+                    break;
+                }
+            }
+        }
         // Create the request and channel
         final boolean pipelineNext = pipeline && idempotentMethods.contains(method);
-        final PendingHttpRequest request = new PendingHttpRequest(this, connection, keepAlive, pipelineNext, responseFuture);
+        final PendingHttpRequest request = new PendingHttpRequest(this, connection, keepAlive, hasContent, expectContinue, pipelineNext, responseFuture);
         StreamSinkConduit conduit = new StreamSinkChannelWrappingConduit(underlyingChannel);
         conduit = new HttpRequestConduit(conduit, connection.getBufferPool(), this);
         if(! hasContent) {
             headers.put(Headers.CONTENT_LENGTH, 0L);
-            conduit = new FixedLengthStreamSinkConduit(conduit, 0L, false, ! keepAlive, completedListener(request), null);
+            conduit = new FixedLengthStreamSinkConduit(conduit, 0L, false, ! keepAlive, completedListener(request));
         } else {
             if (! Headers.IDENTITY.equals(contentEncoding)) {
                 headers.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
@@ -197,56 +210,85 @@ class HttpClientRequestImpl extends HttpClientRequest {
                     conduit = new FinishableStreamSinkConduit(conduit, completedListener(request));
                 } else {
                     headers.put(Headers.CONTENT_LENGTH, contentLength);
-                    conduit = new FixedLengthStreamSinkConduit(conduit, contentLength, false, ! keepAlive, completedListener(request), null);
+                    conduit = new FixedLengthStreamSinkConduit(conduit, contentLength, false, ! keepAlive, completedListener(request));
                 }
             }
         }
         headers.lock();
-        this.requestChannel = new ConduitStreamSinkChannel(underlyingChannel, conduit);
-        this.hasContent = hasContent;
+        conduitChannel = new ConduitStreamSinkChannel(underlyingChannel, conduit);
+        requestChannel = new GatedStreamSinkChannel(conduitChannel, this, false, false);
         // Enqueue the request for sending
         connection.enqueueRequest(request);
         return requestChannel;
     }
 
-    public boolean startSending(PendingHttpRequest pendingHttpRequest) {
-        underlyingChannel.openGate(this);
-        if(! hasContent) {
-            // Flush directly if it has no content
-            try {
-                if (!requestChannel.flush()) {
-                    requestChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
-                            new ChannelListener<StreamSinkChannel>() {
-                                @Override
-                                public void handleEvent(final StreamSinkChannel channel) {
-                                    channel.suspendWrites();
-                                    channel.getWriteSetter().set(null);
-                                }
-                            }, new ChannelExceptionHandler<Channel>() {
-                                @Override
-                                public void handleException(final Channel channel, final IOException exception) {
-                                    UndertowLogger.CLIENT_LOGGER.debug("Exception ending request", exception);
-                                    IoUtils.safeClose(connection.getChannel());
+    /**
+     * Flush the headers and register for receiving the response. This will happen for empty messages or requests
+     * waiting for a continue response.
+     *
+     * @param request the pending request
+     * @param openGate whether the response gate is being opened or not
+     */
+    protected void flushHeaders(final PendingHttpRequest request, final boolean openGate) {
+        try {
+            if (!conduitChannel.flush()) {
+                // Only set the write setter if nothing else is writing for now
+                conduitChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
+                        new ChannelListener<StreamSinkChannel>() {
+                            @Override
+                            public void handleEvent(final StreamSinkChannel channel) {
+                                channel.suspendWrites();
+                                channel.getWriteSetter().set(null);
+                                if(!openGate) {
+                                    request.requestSent();
                                 }
                             }
-                    ));
-                    requestChannel.resumeWrites();
-                } else {
-                    return true;
-                }
-            } catch(IOException e) {
-                UndertowLogger.CLIENT_LOGGER.debug("Exception sending request", e);
-                IoUtils.safeClose(connection.getChannel());
+                        }, new ChannelExceptionHandler<Channel>() {
+                            @Override
+                            public void handleException(final Channel channel, final IOException exception) {
+                                UndertowLogger.CLIENT_LOGGER.debug("Exception ending request", exception);
+                                IoUtils.safeClose(connection.getChannel());
+                            }
+                        }
+                ));
+                conduitChannel.resumeWrites();
+            } else {
+                request.requestSent();
             }
+            if(!openGate) {
+                // TODO client SHOULD NOT wait for an indefinite period before sending the request body.
+            }
+        } catch(IOException e) {
+            UndertowLogger.CLIENT_LOGGER.debug("Exception sending request", e);
+            IoUtils.safeClose(connection.getChannel());
         }
-        return false;
     }
 
+    /**
+     * Open the response channel to be written.
+     */
+    protected void openGate() {
+        requestChannel.openGate(this);
+    }
+
+    /**
+     * Create a channel finish listener, moving the request from a sending into a receiving state.
+     *
+     * @param request the pending request
+     * @return the finish listener
+     */
     private ConduitListener<? super StreamSinkConduit> completedListener(final PendingHttpRequest request) {
         return new ConduitListener<StreamSinkConduit>() {
             @Override
-            public void handleEvent(StreamSinkConduit channel) {
-                request.requestSent();
+            public void handleEvent(final StreamSinkConduit channel) {
+                try {
+                    request.requestSent();
+                } finally {
+                    if(! requestChannel.isGateOpen()) {
+                        IoUtils.safeClose(requestChannel);
+                    }
+                }
+
             }
         };
     }
@@ -255,4 +297,5 @@ class HttpClientRequestImpl extends HttpClientRequest {
     public String toString() {
         return "HttpClientRequestImpl{" + method + " " + target + " " + protocol + '}';
     }
+
 }

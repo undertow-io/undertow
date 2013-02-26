@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 
+import io.undertow.util.HttpString;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -55,8 +56,28 @@ public abstract class HttpClientConnection extends AbstractAttachable implements
      * @return the new request, or {@code null} if no more requests can be made on this connection
      * @throws IOException
      */
-    public abstract HttpClientRequest sendRequest(final String method, final URI target) throws IOException;
+    public HttpClientRequest sendRequest(final String method, final URI target) throws IOException {
+        return sendRequest(new HttpString(method), target);
+    }
 
+    /**
+     * Initiate an HTTP request on this connection.
+     *
+     * @param method the HTTP request method to use
+     * @param target the target URI to access
+     * @return the new request, or{@code null} if no more request can be made on this connection
+     * @throws IOException
+     */
+    public abstract HttpClientRequest sendRequest(final HttpString method, final URI target) throws IOException;
+
+    /**
+     * Upgrade this HTTP connection to a raw socket.
+     *
+     * @param service the service to upgrade to
+     * @param optionMap the channel options
+     * @return the future channel
+     * @throws IOException
+     */
     public abstract IoFuture<ConnectedStreamChannel> upgradeToWebSocket(final String service, final OptionMap optionMap) throws IOException;
 
     abstract OptionMap getOptions();

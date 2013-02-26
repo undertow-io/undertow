@@ -287,7 +287,7 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
             callFinish = true;
         }
         state = newVal;
-        if (callFinish) {
+        if (callFinish && (newVal & MASK_COUNT) == 0L) {
             if(finishListener != null) {
                 finishListener.handleEvent(this);
             }
