@@ -263,7 +263,7 @@ public class CookieHandler implements HttpHandler {
 
     private static class CookieConduitWrapper implements ConduitWrapper<StreamSinkConduit> {
 
-        public static CookieConduitWrapper INSTANCE = new CookieConduitWrapper();
+        public static final CookieConduitWrapper INSTANCE = new CookieConduitWrapper();
 
         @Override
         public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {

@@ -518,7 +518,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
     private static class DigestContext {
 
-        static AttachmentKey<DigestContext> ATTACHMENT_KEY = AttachmentKey.create(DigestContext.class);
+        static final AttachmentKey<DigestContext> ATTACHMENT_KEY = AttachmentKey.create(DigestContext.class);
 
         private String nonce;
         private DigestQop qop;

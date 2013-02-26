@@ -179,14 +179,14 @@ public class HttpTransferEncoding {
                         try {
                             contentLength = Long.parseLong(responseHeaders.getFirst(Headers.CONTENT_LENGTH));
                             // fixed-length response
-                            wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener, null);
+                            wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener);
                         } catch (NumberFormatException e) {
                             // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
                             stillPersistent = false;
                             wrappedConduit = new FinishableStreamSinkConduit(channel, terminateResponseListener(exchange));
                         }
                     } else {
-                        wrappedConduit = new FixedLengthStreamSinkConduit(channel, 0L, true, !stillPersistent, finishListener, null);
+                        wrappedConduit = new FixedLengthStreamSinkConduit(channel, 0L, true, !stillPersistent, finishListener);
                     }
                 } else if (!transferEncoding.equals(Headers.IDENTITY)) {
                     final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
@@ -197,7 +197,7 @@ public class HttpTransferEncoding {
                         contentLength = Long.parseLong(responseHeaders.getFirst(Headers.CONTENT_LENGTH));
                         final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                         // fixed-length response
-                        wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener, null);
+                        wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener);
                     } catch (NumberFormatException e) {
                         // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
                         stillPersistent = false;

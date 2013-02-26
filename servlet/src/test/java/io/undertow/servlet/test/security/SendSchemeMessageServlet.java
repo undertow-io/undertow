@@ -35,7 +35,7 @@ public class SendSchemeMessageServlet extends HttpServlet {
 
     private static final long serialVersionUID = -4804724108087346230L;
 
-    private static Charset UTF_8 = Charset.forName("UTF-8");
+    private static final Charset UTF_8 = Charset.forName("UTF-8");
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {

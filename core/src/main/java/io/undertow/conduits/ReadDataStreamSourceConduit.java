@@ -24,7 +24,7 @@ public class ReadDataStreamSourceConduit extends AbstractStreamSourceConduit<Str
 
     private final HttpServerConnection connection;
 
-    public static ConduitWrapper<StreamSourceConduit> WRAPPER = new ConduitWrapper<StreamSourceConduit>() {
+    public static final ConduitWrapper<StreamSourceConduit> WRAPPER = new ConduitWrapper<StreamSourceConduit>() {
         @Override
         public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
             return new ReadDataStreamSourceConduit(factory.create(), exchange.getConnection());

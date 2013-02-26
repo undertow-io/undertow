@@ -175,6 +175,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         } finally {
             handle.tearDown();
         }
+        state = State.DEPLOYED;
     }
 
     /**
@@ -490,7 +491,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private ApplicationListeners createListeners() {
         final List<ManagedListener> managedListeners = new ArrayList<ManagedListener>();
         for (final ListenerInfo listener : deployment.getDeploymentInfo().getListeners()) {
-            managedListeners.add(new ManagedListener(listener, deployment.getServletContext()));
+            managedListeners.add(new ManagedListener(listener));
         }
         return new ApplicationListeners(managedListeners, deployment.getServletContext());
     }
@@ -573,6 +574,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
 
             }
+            state = State.STARTED;
             return root;
         } finally {
             handle.tearDown();
@@ -608,6 +610,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             executor = null;
             asyncExecutor = null;
         }
+        state = State.DEPLOYED;
     }
 
     @Override
@@ -620,6 +623,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         } finally {
             handle.tearDown();
         }
+        state = State.UNDEPLOYED;
     }
 
     @Override

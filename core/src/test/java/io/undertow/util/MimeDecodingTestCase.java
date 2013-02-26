@@ -33,7 +33,7 @@ import org.xnio.ByteBufferSlicePool;
  */
 public class MimeDecodingTestCase {
 
-    ByteBufferSlicePool bufferPool = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 512, 512 * 6);
+    final ByteBufferSlicePool bufferPool = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 512, 512 * 6);
 
     @Test
     public void testSimpleMimeDecodingWithPreamble() throws MultipartParser.MalformedMessageException {
@@ -116,7 +116,7 @@ public class MimeDecodingTestCase {
 
     private static class TestPartHandler implements MultipartParser.PartHandler {
 
-        private List<Part> parts = new ArrayList<Part>();
+        private final List<Part> parts = new ArrayList<Part>();
         private Part current;
 
 

@@ -19,12 +19,10 @@ import java.util.Locale;
 public class ServletPrintWriter {
 
     private final ServletOutputStreamImpl outputStream;
-    private final Integer contentLength;
     private final CharsetEncoder charsetEncoder;
     private boolean error = false;
 
-    public ServletPrintWriter(final ServletOutputStreamImpl outputStream, final String charset, final Integer contentLength) throws UnsupportedEncodingException {
-        this.contentLength = contentLength;
+    public ServletPrintWriter(final ServletOutputStreamImpl outputStream, final String charset) throws UnsupportedEncodingException {
         this.outputStream = outputStream;
         this.charsetEncoder = Charset.forName(charset).newEncoder();
     }

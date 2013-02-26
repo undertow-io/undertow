@@ -777,7 +777,7 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
 
     final class RowIterator extends TableIterator {
         private final Table<K, V> table;
-        Item<K, V>[] row;
+        final Item<K, V>[] row;
 
         private int idx;
         private Item<K, V> next;

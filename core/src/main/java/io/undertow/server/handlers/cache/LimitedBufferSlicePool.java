@@ -38,7 +38,7 @@ import org.xnio.BufferAllocator;
  */
 public final class LimitedBufferSlicePool {
 
-    private static AtomicIntegerFieldUpdater regionUpdater = AtomicIntegerFieldUpdater.newUpdater(LimitedBufferSlicePool.class, "regionsUsed");
+    private static final AtomicIntegerFieldUpdater regionUpdater = AtomicIntegerFieldUpdater.newUpdater(LimitedBufferSlicePool.class, "regionsUsed");
     private static final Class<?> queueClass;
     private final Queue<Slice> sliceQueue;
     private final BufferAllocator<ByteBuffer> allocator;

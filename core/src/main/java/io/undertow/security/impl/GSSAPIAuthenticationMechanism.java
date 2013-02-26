@@ -220,7 +220,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
     private static class NegotiationContext {
 
-        static AttachmentKey<NegotiationContext> ATTACHMENT_KEY = AttachmentKey.create(NegotiationContext.class);
+        static final AttachmentKey<NegotiationContext> ATTACHMENT_KEY = AttachmentKey.create(NegotiationContext.class);
 
         private GSSContext gssContext;
         private byte[] responseToken;

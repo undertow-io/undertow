@@ -371,7 +371,7 @@ public class AjpParser {
             state.stringLength = -1;
             return new StringHolder(null, true);
         }
-        StringBuilder builder = builder = state.currentString;
+        StringBuilder builder = state.currentString;
 
         if (builder == null) {
             builder = new StringBuilder();

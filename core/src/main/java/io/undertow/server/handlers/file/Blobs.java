@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
  * @author Jason T. Greene
  */
 public class Blobs {
-      public static String FILE_JS="function growit() {\n" +
+      public static final String FILE_JS="function growit() {\n" +
               "    var table = document.getElementById(\"thetable\");\n" +
               "\n" +
               "    var i = table.rows.length - 1;\n" +
@@ -60,7 +60,7 @@ public class Blobs {
               "        document.documentElement.style.overflowY=\"auto\";\n" +
               "    }\n" +
               "}";
-      public static String FILE_CSS =
+      public static final String FILE_CSS =
               "body {\n" +
               "    font-family: \"Lucida Grande\", \"Lucida Sans Unicode\", \"Trebuchet MS\", Helvetica, Arial, Verdana, sans-serif;\n" +
               "    margin: 5px;\n" +
@@ -164,8 +164,8 @@ public class Blobs {
               "    background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXZwQWcAAAAQAAAAEABcxq3DAAABM0lEQVQ4y5WSTW6DMBCF3xvzc4wuOEIO0kVAuUB7vJ4g3KBdoHSRROomEpusUaoAcaYLfmKoqVRLIxnJ7/M3YwJVBcknACv8b+1U9SvoP1bXa/3WNDVIAQmQBLsNOEsGQYAwDNcARgDqusbl+wIRA2NkBEyqP0s+kCOAQhhjICJdkaDIJDwEvQAhH+G+SHagWTsi4jHoAWYIOxYDZDjnb8Fn4Akvz6AHcAbx3Tp5ETwI3RwckyVtv4Fr4VEe9qq6bDB5tlnYWou2bWGtRRRF6jdwAm5Za1FVFc7nM0QERVG8A9hPDRaGpapomgZlWSJJEuR5ftpsNq8ADr9amC+SuN/vuN1uIIntdnvKsuwZwKf2wxgBxpjpX+dA4jjW4/H4kabpixt2AbvAmDX+XnsAB509ww+A8mAar+XXgQAAAABJRU5ErkJggg==') left center no-repeat;\n" +
               "}";
 
-    public static ByteBuffer FILE_CSS_BUFFER;
-    public static ByteBuffer FILE_JS_BUFFER;
+    public static final ByteBuffer FILE_CSS_BUFFER;
+    public static final ByteBuffer FILE_JS_BUFFER;
 
     static {
         try {

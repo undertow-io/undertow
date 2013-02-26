@@ -27,7 +27,7 @@
         socket = new WebSocket("ws://localhost:8080/myapp");
         socket.onmessage = function(event) {
             alert("Received data from websocket: " + event.data);
-        }
+        };
         socket.onopen = function(event) {
             alert("Web Socket opened!");
         };

@@ -130,7 +130,7 @@ public abstract class AuthenticationTestBase {
                 if (passwordUsers.containsKey(id)) {
                     return new Account() {
 
-                        private Principal principal = new Principal() {
+                        private final Principal principal = new Principal() {
 
                             @Override
                             public String getName() {

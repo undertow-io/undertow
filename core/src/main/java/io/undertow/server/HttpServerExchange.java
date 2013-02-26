@@ -76,8 +76,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final HeaderMap requestHeaders = new HeaderMap();
     private final HeaderMap responseHeaders = new HeaderMap();
 
-    private List<ExchangeCompletionListener> exchangeCompleteListeners = new ArrayList<>(2);
-    private Deque<DefaultResponseListener> defaultResponseListeners = new ArrayDeque<DefaultResponseListener>(1);
+    private final List<ExchangeCompletionListener> exchangeCompleteListeners = new ArrayList<>(2);
+    private final Deque<DefaultResponseListener> defaultResponseListeners = new ArrayDeque<DefaultResponseListener>(1);
 
     private Map<String, Deque<String>> queryParameters;
 

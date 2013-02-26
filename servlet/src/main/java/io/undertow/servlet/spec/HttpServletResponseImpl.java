@@ -287,7 +287,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             }
             responseState = ResponseState.WRITER;
             createOutputStream();
-            final ServletPrintWriter servletPrintWriter = new ServletPrintWriter(servletOutputStream, getCharacterEncoding(), contentLength);
+            final ServletPrintWriter servletPrintWriter = new ServletPrintWriter(servletOutputStream, getCharacterEncoding());
             writer = ServletPrintWriterDelegate.newInstance(servletPrintWriter);
         }
         return writer;

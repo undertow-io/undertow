@@ -68,7 +68,7 @@ class MapIdentityManager implements IdentityManager {
         if (users.containsKey(id)) {
             return new Account() {
 
-                private Principal principal = new Principal() {
+                private final Principal principal = new Principal() {
 
                     @Override
                     public String getName() {

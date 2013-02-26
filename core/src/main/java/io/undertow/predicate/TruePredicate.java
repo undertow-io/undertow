@@ -5,7 +5,7 @@ package io.undertow.predicate;
  */
 public class TruePredicate<T> implements Predicate<T> {
 
-    public static TruePredicate INSTANCE = new TruePredicate();
+    public static final TruePredicate INSTANCE = new TruePredicate();
 
     public static <T> TruePredicate<T> instance() {
         return INSTANCE;

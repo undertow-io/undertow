@@ -564,7 +564,7 @@ public class WebSocketSessionConnectionCallback implements WebSocketConnectionCa
         private WebSocketFrameHeader header;
         private final AssembledFrameHandler handler;
         private long size;
-        private long maxSize;
+        private final long maxSize;
         private boolean frameInProgress;
         AssembleFrameChannelListener(WebSocketChannelSession session, AssembledFrameHandler handler, FrameHandlerDelegateListener delegateListener, StreamSourceFrameChannel source) {
             super(session, handler, delegateListener);

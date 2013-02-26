@@ -42,7 +42,7 @@ import static io.undertow.util.StatusCodes.CODE_401;
  */
 public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
-    private static Charset UTF_8 = Charset.forName("UTF-8");
+    private static final Charset UTF_8 = Charset.forName("UTF-8");
 
     private final String name;
     private final String challenge;

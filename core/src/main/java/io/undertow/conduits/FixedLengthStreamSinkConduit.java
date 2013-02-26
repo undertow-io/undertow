@@ -43,7 +43,6 @@ import static org.xnio.Bits.longBitMask;
  */
 public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
     private final int config;
-    private final Object guard;
 
     private final ConduitListener<? super FixedLengthStreamSinkConduit> finishListener;
 
@@ -65,16 +64,14 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
      * @param configurable   {@code true} if this instance should pass configuration to the next
      * @param propagateClose {@code true} if this instance should pass close to the next
      * @param finishListener the listener to call when the channel is closed or the length is reached
-     * @param guard          the guard object to use
      */
-    public FixedLengthStreamSinkConduit(final StreamSinkConduit next, final long contentLength, final boolean configurable, final boolean propagateClose, final ConduitListener<? super FixedLengthStreamSinkConduit> finishListener, final Object guard) {
+    public FixedLengthStreamSinkConduit(final StreamSinkConduit next, final long contentLength, final boolean configurable, final boolean propagateClose, final ConduitListener<? super FixedLengthStreamSinkConduit> finishListener) {
         super(next);
         if (contentLength < 0L) {
             throw new IllegalArgumentException("Content length must be greater than or equal to zero");
         } else if (contentLength > MASK_COUNT) {
             throw new IllegalArgumentException("Content length is too long");
         }
-        this.guard = guard;
         this.finishListener = finishListener;
         config = (configurable ? CONF_FLAG_CONFIGURABLE : 0) | (propagateClose ? CONF_FLAG_PASS_CLOSE : 0);
         this.state = contentLength;

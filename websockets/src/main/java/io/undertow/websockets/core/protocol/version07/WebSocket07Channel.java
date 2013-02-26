@@ -63,7 +63,7 @@ public class WebSocket07Channel extends WebSocketChannel {
     }
 
     private int fragmentedFramesCount;
-    private ByteBuffer lengthBuffer = ByteBuffer.allocate(8);
+    private final ByteBuffer lengthBuffer = ByteBuffer.allocate(8);
 
     private UTF8Checker checker;
 

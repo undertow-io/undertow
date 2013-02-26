@@ -26,7 +26,7 @@ public class HttpContinue {
 
     public static final String CONTINUE = "100-continue";
 
-    private static ByteBuffer BUFFER = ByteBuffer.wrap("HTTP/1.1 100 Continue\r\nConnection: keep-alive\r\n\r\n".getBytes());
+    private static final ByteBuffer BUFFER = ByteBuffer.wrap("HTTP/1.1 100 Continue\r\nConnection: keep-alive\r\n\r\n".getBytes());
 
     /**
      * Returns true if this exchange requires the server to send a 100 (Continue) response.

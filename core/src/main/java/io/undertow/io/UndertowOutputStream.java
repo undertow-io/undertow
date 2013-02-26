@@ -49,7 +49,7 @@ public class UndertowOutputStream extends OutputStream {
     private boolean writeStarted;
     private StreamSinkChannel channel;
     private int written;
-    private Integer contentLength;
+    private final Integer contentLength;
 
     /**
      * Construct a new instance.  No write timeout is configured.
