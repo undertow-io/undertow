@@ -66,7 +66,7 @@ public final class HeaderMap implements Iterable<HttpString> {
         } else if(value instanceof List) {
             return (List<String>)value;
         } else {
-            return Collections.<String>singletonList((String)value);
+            return Collections.singletonList((String) value);
         }
     }
 

@@ -248,7 +248,7 @@ public class SimpleNonceManager implements SessionNonceManager {
             // The nonce will also have it's nonce count checked.
             return validateNonceWithCount(new Nonce(nonce), nonceCount, executor);
 
-        } else if (forwardMapping.containsKey(nonce)) {
+        } else if (forwardMapping.containsKey(new NonceHolder(nonce))) {
             // We could have let this drop through as the next validation would fail anyway but
             // why waste the time if we already know a replacement nonce has been issued.
             return false;
