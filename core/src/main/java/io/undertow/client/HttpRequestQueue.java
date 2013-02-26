@@ -86,7 +86,7 @@ s     */
      * @param fromCallback from a callback
      */
     protected void sendRequest(PendingHttpRequest request, boolean fromCallback) {
-        connection.sendRequest(request, fromCallback);
+        connection.doSendRequest(request, fromCallback);
     }
 
     /**
@@ -95,7 +95,7 @@ s     */
      * @param request the request
      */
     protected void readResponse(PendingHttpRequest request) {
-        connection.readResponse(request);
+        connection.doReadResponse(request);
     }
 
     static class SingleActiveStrategy extends HttpRequestQueue {
@@ -148,6 +148,7 @@ s     */
 
         @Override
         void addNewRequest(final PendingHttpRequest request) {
+            // TODO replace all these operations with proper thread safe ones
             sendQueue.add(request);
             if(sendQueue.peek() == request) {
                 sendRequest(request, false);
@@ -162,7 +163,7 @@ s     */
             if(responseQueue.peek() == active) {
                 readResponse(active);
             }
-            // Only pipeline for idempotent request
+            // Only pipeline for idempotent requests
             if(request.allowPipeline()) {
                 final PendingHttpRequest send = sendQueue.peek();
                 if(send != null) {

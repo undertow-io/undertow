@@ -22,12 +22,14 @@ import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.HttpContinueHandler;
 import io.undertow.server.handlers.blocking.BlockingHandler;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.StringWriteChannelListener;
 import junit.framework.Assert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -39,6 +41,7 @@ import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.streams.ChannelInputStream;
 import org.xnio.streams.ChannelOutputStream;
@@ -151,7 +154,7 @@ public class HttpClientTestCase {
         try {
             final HttpClientConnection connection = client.connect(ADDRESS, OptionMap.EMPTY).get();
             try {
-                final HttpClientRequest request = connection.sendRequest(Methods.GET.toString(), new URI("/1324"));
+                final HttpClientRequest request = connection.sendRequest(Methods.GET, new URI("/1324"));
                 request.getRequestHeaders().add(Headers.CONNECTION, Headers.CLOSE.toString());
                 final HttpClientResponse response = request.writeRequest().get();
                 final StreamSourceChannel channel = response.readReplyBody();
@@ -162,10 +165,104 @@ public class HttpClientTestCase {
                     IoUtils.safeClose(channel);
                 }
                 try {
-                    request.writeRequest();
+                    connection.sendRequest(Methods.GET, new URI("/1324")).writeRequest();
                     Assert.fail();
                 } catch (IOException e) {
                     // OK
+                }
+            } finally {
+                IoUtils.safeClose(connection);
+            }
+        } finally {
+            IoUtils.safeClose(client);
+        }
+    }
+
+    @Test
+    public void testSimpleHttpContinue() throws Exception {
+        //
+        final HttpContinueHandler handler = new HttpContinueHandler();
+        DefaultServer.setRootHandler(handler);
+        final HttpClient client = createClient();
+        try {
+            final HttpClientConnection connection = client.connect(ADDRESS, OptionMap.EMPTY).get();
+            try {
+                final HttpClientRequest request = connection.sendRequest(Methods.POST_STRING, new URI("/"));
+                request.getRequestHeaders().add(Headers.EXPECT, "100-continue");
+                final StreamSinkChannel channel = request.writeRequestBody(message.length());
+
+                final StringWriteChannelListener listener = new StringWriteChannelListener(message);
+                listener.setup(channel);
+
+                final HttpClientResponse response = request.getResponse().get();
+                Assert.assertEquals(404, response.getResponseCode());
+
+            } finally {
+                IoUtils.safeClose(connection);
+            }
+        } finally {
+            IoUtils.safeClose(client);
+        }
+    }
+
+    @Test
+    public void testRejectHttpContinue() throws Exception {
+        //
+        final HttpContinueHandler handler = new HttpContinueHandler() {
+            @Override
+            protected boolean acceptRequest(HttpServerExchange exchange) {
+                return false;
+            }
+        };
+        DefaultServer.setRootHandler(handler);
+        final HttpClient client = createClient();
+        try {
+            final HttpClientConnection connection = client.connect(ADDRESS, OptionMap.EMPTY).get();
+            try {
+                final HttpClientRequest request = connection.sendRequest(Methods.POST_STRING, new URI("/"));
+                request.getRequestHeaders().add(Headers.EXPECT, "100-continue");
+                final StreamSinkChannel channel = request.writeRequestBody(message.length());
+
+                final StringWriteChannelListener listener = new StringWriteChannelListener(message);
+                listener.setup(channel);
+
+                final HttpClientResponse response = request.getResponse().get();
+                Assert.assertEquals(417, response.getResponseCode());
+                Assert.assertTrue(listener.hasRemaining());
+
+            } finally {
+                IoUtils.safeClose(connection);
+            }
+        } finally {
+            IoUtils.safeClose(client);
+        }
+    }
+
+    @Test
+    public void testHttpPipeline() throws Exception {
+        // TODO this test doesn't really do much, since the server is not pipelining anyway
+        final OptionMap options = OptionMap.create(HttpClientOptions.HTTP_PIPELINING, true);
+        //
+        DefaultServer.setRootHandler(SIMPLE_MESSAGE_HANDLER);
+        final HttpClient client = createClient();
+        try {
+            final HttpClientConnection connection = client.connect(ADDRESS, options).get();
+            try {
+                final List<IoFuture<HttpClientResponse>> responses = new ArrayList<IoFuture<HttpClientResponse>>();
+                for(int i = 0; i < 10; i++) {
+                    final HttpClientRequest request = connection.sendRequest(Methods.GET, new URI("/"));
+                    responses.add(request.writeRequest());
+                }
+                Assert.assertEquals(10, responses.size());
+                for(final IoFuture<HttpClientResponse> future : responses) {
+                    HttpClientResponse response = future.get();
+                    final StreamSourceChannel channel = response.readReplyBody();
+                    try {
+                        final InputStream is = new ChannelInputStream(channel);
+                        Assert.assertEquals(message, HttpClientUtils.readResponse(is));
+                    } finally {
+                        IoUtils.safeClose(channel);
+                    }
                 }
             } finally {
                 IoUtils.safeClose(connection);

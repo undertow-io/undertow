@@ -37,11 +37,11 @@ import io.undertow.util.HeaderMap;
  */
 public final class HttpClientResponse extends AbstractAttachable {
 
-    private final HttpString protocol;
     private final String reason;
     private final int responseCode;
     private final HeaderMap headers;
     private final long contentLength;
+    private final HttpString protocol;
 
     private final StreamSourceChannel sourceChannel;
 

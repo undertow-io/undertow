@@ -22,6 +22,7 @@ import org.xnio.conduits.StreamSourceConduit;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreSet;
 
@@ -40,7 +41,6 @@ public final class PendingHttpRequest {
     private final HeaderMap responseHeaders = new HeaderMap();
 
     private final boolean pipeline;
-    private final boolean keepAlive;
     private final HttpClientRequestImpl request;
     private final HttpClientConnectionImpl connection;
     private final Result<HttpClientResponse> result;
@@ -48,18 +48,34 @@ public final class PendingHttpRequest {
     private volatile int state = INITIAL;
     private static final AtomicIntegerFieldUpdater<PendingHttpRequest> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(PendingHttpRequest.class, "state");
 
+    // State
     private static final int INITIAL = 1 << 0;
-    private static final int SENDING_REQUEST = 1 << 1;
-    private static final int RECEIVING = 1 << 2;
-    private static final int COMPLETED = 1 << 3;
+    private static final int SENDING_REQUEST = 1 << 2;
+    private static final int RECEIVING = 1 << 3;
+    private static final int COMPLETED = 1 << 4;
+
+    // Request properties
+    private static final int OPEN_GATE = 1 << 29;
+    private static final int FLUSH_HEADERS = 1 << 30;
+    private static final int SHUTDOWN_WRITES= 1 << 31;
 
     PendingHttpRequest(final HttpClientRequestImpl request, final HttpClientConnectionImpl connection,
-                       final boolean keepAlive, final boolean pipeline, final Result<HttpClientResponse> result) {
-        this.keepAlive = keepAlive;
+                       final boolean keepAlive, boolean hasContent, boolean expectContinue,
+                       final boolean pipeline, final Result<HttpClientResponse> result) {
+
         this.request = request;
         this.connection = connection;
         this.pipeline = pipeline;
         this.result = result;
+        if(! keepAlive) {
+            state = state | SHUTDOWN_WRITES;
+        }
+        if(! hasContent || expectContinue) {
+            state = state | FLUSH_HEADERS;
+        }
+        if(! expectContinue) {
+            state = state | OPEN_GATE;
+        }
     }
 
     public ResponseParseState getParseState() {
@@ -124,9 +140,9 @@ public final class PendingHttpRequest {
     }
 
     /**
-     * Start writing the response.
+     * Allow writing the request.
      */
-    protected void sendRequest() {
+    protected void startSendingRequest() {
         int oldVal, newVal;
         do {
             oldVal = state;
@@ -135,13 +151,18 @@ public final class PendingHttpRequest {
             }
             newVal = oldVal | SENDING_REQUEST;
         } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
-        // Start the response
-        request.startSending(this);
+        final boolean openGate = allAreSet(newVal, OPEN_GATE);
+        if(openGate) {
+            // Start the response
+            request.openGate();
+        }
+        if(allAreSet(newVal, FLUSH_HEADERS)) {
+            request.flushHeaders(this, openGate);
+        }
         // For empty streams the callbacks are getting called before
         if(allAreSet(newVal, SENDING_REQUEST | RECEIVING)) {
             // Prevent subsequent requests if the connection should be closed
-            boolean shutdownWrites = ! keepAlive;
-            if(shutdownWrites) {
+            if(allAreSet(newVal, SHUTDOWN_WRITES)) {
                 try {
                     connection.requestConnectionClose();
                 } catch (IOException e) {
@@ -154,7 +175,7 @@ public final class PendingHttpRequest {
     }
 
     /**
-     * Notification after the request was sent.
+     * Notification after the request was fully sent.
      */
     protected void requestSent() {
         int oldVal, newVal;
@@ -167,8 +188,7 @@ public final class PendingHttpRequest {
         } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
         // If the gate is open and we are done writing
         if(allAreSet(newVal, SENDING_REQUEST | RECEIVING)) {
-            boolean shutdownWrites = ! keepAlive;
-            if(shutdownWrites) {
+            if(allAreSet(newVal, SHUTDOWN_WRITES)) {
                 try {
                     connection.requestConnectionClose();
                 } catch (IOException e) {
@@ -212,8 +232,22 @@ public final class PendingHttpRequest {
      * @param channel the response channel
      */
     void handleResponseComplete(final HttpClientConnectionImpl connection, PushBackStreamChannel channel) {
-        assert parseState.isComplete();
+        assert parseState.isComplete(); // The header needs to be fully parsed
+        assert allAreClear(state, COMPLETED); // The request cannot not completed yet
         UndertowLogger.CLIENT_LOGGER.tracef("reading response headers complete for %s", this);
+
+        // Handle http continue
+        if(statusCode == 100) {
+            // open request gate
+            request.openGate();
+            // Clear the parse state
+            parseState.state = ResponseParseState.VERSION;
+            parseState.stringBuilder = null;
+            parseState.pos = 0;
+            // Now go on and process the actual response
+            connection.doReadResponse(this);
+            return;
+        }
 
         final HeaderMap headers = getResponseHeaders();
         final boolean http11 = Protocols.HTTP_1_1.equals(getProtocol());
@@ -235,7 +269,7 @@ public final class PendingHttpRequest {
 
             noContent = true;
         }
-        if(Methods.HEAD_STRING.equals(request.getMethod())) {
+        if(! noContent && Methods.HEAD_STRING.equals(request.getMethod())) {
             noContent = true;
         }
         // Process the content length and transfer encodings
@@ -277,10 +311,22 @@ public final class PendingHttpRequest {
         }
     }
 
+    /**
+     * Whether to allow pipelining of the next request or not.
+     *
+     * @return
+     */
     boolean allowPipeline() {
         return pipeline;
     }
 
+    /**
+     * The request finish listener, which will put the response into a completed state after the complete response
+     * was consumed.
+     *
+     * @param closeConnection whether to close the connection or not
+     * @return the completion listener
+     */
     ConduitListener<StreamSourceConduit> getFinishListener(final boolean closeConnection) {
         return new ConduitListener<StreamSourceConduit>() {
             @Override
