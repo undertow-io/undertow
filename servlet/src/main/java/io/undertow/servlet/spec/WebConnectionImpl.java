@@ -23,12 +23,12 @@ public class WebConnectionImpl implements WebConnection {
 
     @Override
     public ServletInputStream getInputStream() throws IOException {
-        return null;
+        return inputStream;
     }
 
     @Override
     public ServletOutputStream getOutputStream() throws IOException {
-        return null;
+        return outputStream;
     }
 
     @Override

@@ -109,6 +109,8 @@ public class UpgradeServletInputStream extends ServletInputStream {
                 return;
             }
             try {
+                state |= FLAG_READY;
+                channel.suspendReads();
                 listener.onDataAvailable();
             } catch (IOException e) {
                 IoUtils.safeClose(channel);
