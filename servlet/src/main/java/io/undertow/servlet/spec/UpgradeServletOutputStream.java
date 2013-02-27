@@ -25,21 +25,21 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
 
     private final StreamSinkChannel channel;
 
-    private WriteListener listener;
+    private volatile WriteListener listener;
 
     /**
      * If this stream is ready for a write
      */
-    private int FLAG_READY = 1;
-    private int FLAG_CLOSED = 1 << 1;
-    private int FLAG_DELEGATE_SHUTDOWN = 1 << 2;
+    private static final int FLAG_READY = 1;
+    private static final int FLAG_CLOSED = 1 << 1;
+    private static final int FLAG_DELEGATE_SHUTDOWN = 1 << 2;
 
-    private int state;
+    private volatile int state;
 
     /**
      * The buffer that is in the process of being written out
      */
-    private ByteBuffer buffer;
+    private volatile ByteBuffer buffer;
 
     protected UpgradeServletOutputStream(final StreamSinkChannel channel) {
         this.channel = channel;

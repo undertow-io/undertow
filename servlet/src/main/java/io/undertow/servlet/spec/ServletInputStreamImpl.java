@@ -27,14 +27,14 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     private final StreamSourceChannel channel;
 
-    private ReadListener listener;
+    private volatile ReadListener listener;
 
     /**
      * If this stream is ready for a read
      */
-    private int FLAG_READY = 1;
-    private int FLAG_CLOSED = 1 << 1;
-    private int FLAG_FINISHED = 1 << 2;
+    private static final int FLAG_READY = 1;
+    private static final int FLAG_CLOSED = 1 << 1;
+    private static final int FLAG_FINISHED = 1 << 2;
 
     private int state;
 
