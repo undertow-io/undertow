@@ -55,6 +55,7 @@ class HttpClientImpl extends HttpClient {
 
     private final OptionMap options;
     private final Pool<ByteBuffer> bufferPool;
+    // TODO sconnection management
     private final Set<HttpClientConnection> connections = Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<HttpClientConnection, Boolean>()));
 
     HttpClientImpl(final XnioWorker worker, final OptionMap options) {
@@ -183,6 +184,5 @@ class HttpClientImpl extends HttpClient {
             connections.add(connection);
         }
     }
-
 
 }

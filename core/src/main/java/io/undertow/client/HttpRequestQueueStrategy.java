@@ -133,7 +133,7 @@ s     */
     }
 
     /**
-     * Try to pipeline request as soon as the request was written.
+     * Try to pipeline a new request as soon as the old request was written.
      */
     static class PipelineStrategy extends HttpRequestQueueStrategy {
 
