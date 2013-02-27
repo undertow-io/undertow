@@ -142,4 +142,13 @@ public interface UndertowServletMessages {
 
     @Message(id = 10032, value = "Authenticationfailed")
     ServletException authenticationFailed();
+
+    @Message(id = 10033, value = "No session")
+    IllegalStateException noSession();
+
+    @Message(id = 10034, value = "Stream not in async mode")
+    IllegalStateException streamNotInAsyncMode();
+
+    @Message(id = 10035, value = "Stream in async mode was not ready for IO operation")
+    IllegalStateException streamNotReady();
 }

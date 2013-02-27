@@ -186,4 +186,11 @@ public interface Session {
      * @param sessionId The session id
      */
     void updateLastAccessedTime();
+
+    /**
+     * Generate a new session id for this session, and return the new id.
+     *
+     * @return The new session ID
+     */
+    String changeSessionId();
 }

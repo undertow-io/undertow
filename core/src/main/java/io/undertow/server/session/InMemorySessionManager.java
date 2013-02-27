@@ -42,7 +42,7 @@ public class InMemorySessionManager implements SessionManager {
 
     private volatile SessionIdGenerator sessionIdGenerator = new SecureRandomSessionIdGenerator();
 
-    private final ConcurrentMap<String, InMemorySession> sessions = new SecureHashMap<String, InMemorySession>();
+    private final ConcurrentMap<String, InMemorySession> sessions = new SecureHashMap<>();
 
     private volatile List<SessionListener> listeners = Collections.emptyList();
 
@@ -117,7 +117,7 @@ public class InMemorySessionManager implements SessionManager {
      */
     private class SessionImpl implements Session {
 
-        private final String sessionId;
+        private String sessionId;
         private final SessionConfig sessionCookieConfig;
 
         final XnioExecutor executor;
@@ -278,6 +278,17 @@ public class InMemorySessionManager implements SessionManager {
             if(sess != null) {
                 sess.lastAccessed = System.currentTimeMillis();
             }
+        }
+
+        @Override
+        public String changeSessionId() {
+            final String oldId = sessionId;
+            final InMemorySession sess = sessions.get(oldId);
+            String newId = sessionIdGenerator.createSessionId();
+            this.sessionId = newId;
+            sessions.put(newId, sess);
+            sessions.remove(oldId);
+            return newId;
         }
 
     }

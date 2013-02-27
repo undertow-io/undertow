@@ -59,7 +59,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private ResponseState responseState = ResponseState.NONE;
     private PrintWriter writer;
     private Integer bufferSize;
-    private Integer contentLength;
+    private Long contentLength;
     private boolean insideInclude = false;
     private boolean charsetSet = false;
     private String contentType;
@@ -317,6 +317,15 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentLength(final int len) {
+        if (insideInclude || exchange.isResponseStarted()) {
+            return;
+        }
+        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
+        this.contentLength = (long)len;
+    }
+
+    @Override
+    public void setContentLengthLong(final long len) {
         if (insideInclude || exchange.isResponseStarted()) {
             return;
         }

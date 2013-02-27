@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.Headers;
@@ -44,14 +45,14 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     private boolean writeStarted;
     private StreamSinkChannel channel;
     private int written;
-    private final Integer contentLength;
+    private final Long contentLength;
 
     /**
      * Construct a new instance.  No write timeout is configured.
      *
      * @param channelFactory the channel to wrap
      */
-    public ServletOutputStreamImpl(Integer contentLength, final HttpServletResponseImpl servletResponse) {
+    public ServletOutputStreamImpl(Long contentLength, final HttpServletResponseImpl servletResponse) {
         this.servletResponse = servletResponse;
         this.contentLength = contentLength;
     }
@@ -61,7 +62,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      *
      * @param channelFactory the channel to wrap
      */
-    public ServletOutputStreamImpl(Integer contentLength, final HttpServletResponseImpl servletResponse, int bufferSize) {
+    public ServletOutputStreamImpl(Long contentLength, final HttpServletResponseImpl servletResponse, int bufferSize) {
         this.servletResponse = servletResponse;
         this.bufferSize = bufferSize;
         this.contentLength = contentLength;
@@ -327,5 +328,15 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
     public boolean isClosed() {
         return closed;
+    }
+
+    @Override
+    public boolean isReady() {
+        return false;
+    }
+
+    @Override
+    public void setWriteListener(final WriteListener writeListener) {
+
     }
 }

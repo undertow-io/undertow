@@ -58,6 +58,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
 import io.undertow.security.api.RoleMappingManager;
@@ -70,7 +71,10 @@ import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.SecurityRoleRef;
+import io.undertow.servlet.core.ServletUpgradeListener;
 import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.util.EmptyEnumeration;
@@ -288,6 +292,15 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
+    public String changeSessionId() {
+        HttpSessionImpl session = servletContext.getSession(exchange, false);
+        if(session == null) {
+            throw UndertowServletMessages.MESSAGES.noSession();
+        }
+        return session.getSession().changeSessionId();
+    }
+
+    @Override
     public String getRequestURI() {
         return exchange.getRequestPath();
     }
@@ -315,6 +328,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public HttpSession getSession() {
         return getSession(true);
     }
+
 
     @Override
     public boolean isRequestedSessionIdValid() {
@@ -403,6 +417,18 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         return null;
     }
 
+    @Override
+    public <T extends HttpUpgradeHandler> T upgrade(final Class<T> handlerClass) throws IOException {
+        try {
+            InstanceFactory<T> factory = servletContext.getDeployment().getDeploymentInfo().getClassIntrospecter().createInstanceFactory(handlerClass);
+            final InstanceHandle<T> instance = factory.createInstance();
+            exchange.upgradeChannel(new ServletUpgradeListener<T>(instance));
+            return instance.getInstance();
+        } catch (InstantiationException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private void loadParts() throws IOException, ServletException {
         readStarted = true;
         if (parts == null) {
@@ -470,6 +496,15 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             return -1;
         }
         return Integer.parseInt(contentLength);
+    }
+
+    @Override
+    public long getContentLengthLong() {
+        final String contentLength = getHeader(Headers.CONTENT_LENGTH);
+        if (contentLength == null || contentLength.isEmpty()) {
+            return -1;
+        }
+        return Long.parseLong(contentLength);
     }
 
     @Override
@@ -829,6 +864,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public DispatcherType getDispatcherType() {
         return exchange.getAttachment(DISPATCHER_TYPE_ATTACHMENT_KEY);
     }
+
 
     public Map<String, Deque<String>> getQueryParameters() {
         return queryParameters;

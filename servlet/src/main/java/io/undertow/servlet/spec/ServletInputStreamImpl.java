@@ -21,6 +21,7 @@ package io.undertow.servlet.spec;
 import java.io.IOException;
 import java.io.InputStream;
 
+import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 
 /**
@@ -37,5 +38,20 @@ public class ServletInputStreamImpl extends ServletInputStream {
     @Override
     public int read() throws IOException {
         return delegate.read();
+    }
+
+    @Override
+    public boolean isFinished() {
+        return false;
+    }
+
+    @Override
+    public boolean isReady() {
+        return false;
+    }
+
+    @Override
+    public void setReadListener(final ReadListener readListener) {
+
     }
 }
