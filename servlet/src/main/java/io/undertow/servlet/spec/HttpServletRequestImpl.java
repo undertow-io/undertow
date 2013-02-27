@@ -18,7 +18,6 @@
 
 package io.undertow.servlet.spec;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -261,14 +260,14 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public boolean isUserInRole(final String role) {
         final RoleMappingManager roleMappings = exchange.getAttachment(ServletAttachments.SERVLET_ROLE_MAPPINGS);
-        if(roleMappings == null) {
+        if (roleMappings == null) {
             return false;
         }
         SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         final ServletPathMatch servlet = exchange.getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
         //TODO: a more efficient imple
         for (SecurityRoleRef ref : servlet.getHandler().getManagedServlet().getServletInfo().getSecurityRoleRefs()) {
-            if(ref.getRole().equals(role)) {
+            if (ref.getRole().equals(role)) {
                 return roleMappings.isUserInRole(ref.getLinkedRole(), sc);
             }
         }
@@ -294,7 +293,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public String changeSessionId() {
         HttpSessionImpl session = servletContext.getSession(exchange, false);
-        if(session == null) {
+        if (session == null) {
             throw UndertowServletMessages.MESSAGES.noSession();
         }
         return session.getSession().changeSessionId();
@@ -481,7 +480,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             characterEncoding = Charset.forName(env);
 
             final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-            if(parser != null) {
+            if (parser != null) {
                 parser.setCharacterEncoding(env);
             }
         } catch (UnsupportedCharsetException e) {
@@ -518,7 +517,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (reader != null) {
                 throw UndertowServletMessages.MESSAGES.getReaderAlreadyCalled();
             }
-            servletInputStream = new ServletInputStreamImpl(new BufferedInputStream(new ChannelInputStream(exchange.getRequestChannel())));
+            servletInputStream = new ServletInputStreamImpl(exchange.getRequestChannel());
         }
         readStarted = true;
         return servletInputStream;
@@ -582,7 +581,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         final List<String> ret = new ArrayList<String>();
         Deque<String> params = queryParameters.get(name);
         if (params != null) {
-            for(String param : params) {
+            for (String param : params) {
                 try {
                     ret.add(URLDecoder.decode(param, characterEncoding == null ? "ISO-8859-1" : characterEncoding.name()));
                 } catch (UnsupportedEncodingException e) {
