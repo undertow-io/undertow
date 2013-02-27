@@ -26,7 +26,9 @@ import java.nio.channels.FileChannel;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.IoUtils;
+import org.xnio.Pool;
 import org.xnio.Pooled;
+import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitReadableByteChannel;
@@ -44,8 +46,7 @@ import static org.xnio.Bits.longBitMask;
  */
 public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
 
-    private final HttpServerExchange exchange;
-
+    private final BufferWrapper bufferWrapper;
     private final ConduitListener<? super ChunkedStreamSourceConduit> finishListener;
 
     private long state;
@@ -62,9 +63,37 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     private static final long FLAG_READING_NEWLINE = 1L << 57L;
     private static final long MASK_COUNT = longBitMask(0, 56);
 
+    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamChannel channel, final Pool<ByteBuffer> pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final long maxLength) {
+        this(next, new BufferWrapper() {
+            @Override
+            public Pooled<ByteBuffer> allocate() {
+                return pool.allocate();
+            }
+
+            @Override
+            public void pushBack(Pooled<ByteBuffer> pooled) {
+                channel.unget(pooled);
+            }
+        }, finishListener, maxLength);
+    }
+
     public ChunkedStreamSourceConduit(final StreamSourceConduit next, final HttpServerExchange exchange, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final long maxLength) {
+        this(next, new BufferWrapper() {
+            @Override
+            public Pooled<ByteBuffer> allocate() {
+                return exchange.getConnection().getBufferPool().allocate();
+            }
+
+            @Override
+            public void pushBack(Pooled<ByteBuffer> pooled) {
+                exchange.getConnection().setExtraBytes(pooled);
+            }
+        }, finishListener, maxLength);
+    }
+
+    protected ChunkedStreamSourceConduit(final StreamSourceConduit next, final BufferWrapper bufferWrapper, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final long maxLength) {
         super(next);
-        this.exchange = exchange;
+        this.bufferWrapper = bufferWrapper;
         this.finishListener = finishListener;
         this.remainingAllowed = maxLength;
         this.maxSize = maxLength;
@@ -121,7 +150,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         }
 
         long chunkRemaining = oldVal & MASK_COUNT;
-        Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
+        Pooled<ByteBuffer> pooled = bufferWrapper.allocate();
         ByteBuffer buf = pooled.getResource();
         int r = next.read(buf);
         buf.flip();
@@ -281,7 +310,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             newVal = (newVal & ~MASK_COUNT) | chunkRemaining;
             state = newVal;
             if (buf.hasRemaining()) {
-                exchange.ungetRequestBytes(pooled);
+                bufferWrapper.pushBack(pooled);
             }
             if (allAreClear(oldVal, FLAG_FINISHED) && allAreSet(newVal, FLAG_FINISHED)) {
                 callFinish();
@@ -297,4 +326,12 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     private void callFinish() {
         finishListener.handleEvent(this);
     }
+
+    interface BufferWrapper {
+
+        Pooled<ByteBuffer> allocate();
+        void pushBack(Pooled<ByteBuffer> pooled);
+
+    }
+
 }
