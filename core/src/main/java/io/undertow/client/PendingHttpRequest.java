@@ -286,8 +286,7 @@ public final class PendingHttpRequest {
             }
 
             if (! transferEncoding.equals(Headers.IDENTITY.toString())) {
-                // TODO something without HttpServerExchange
-                conduit = new ChunkedStreamSourceConduit(conduit, null, getFinishListener(closeConnection), maxEntitySize(connection.getOptions()));
+                conduit = new ChunkedStreamSourceConduit(conduit, channel, connection.getBufferPool(), getFinishListener(closeConnection), maxEntitySize(connection.getOptions()));
             } else if (headers.contains(Headers.CONTENT_LENGTH)) {
                 contentLength = Long.parseLong(headers.getFirst(Headers.CONTENT_LENGTH));
                 if(contentLength == 0L) {
