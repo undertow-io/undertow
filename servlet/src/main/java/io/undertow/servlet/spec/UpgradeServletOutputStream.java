@@ -133,6 +133,9 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
 
     @Override
     public void setWriteListener(final WriteListener writeListener) {
+        if(writeListener == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("writeListener");
+        }
         listener = writeListener;
         channel.getWriteSetter().set(new WriteChannelListener());
         channel.resumeWrites();
