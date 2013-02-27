@@ -123,10 +123,13 @@ class HttpClientRequestImpl extends HttpClientRequest {
     @Override
     public StreamSinkChannel writeRequestBody(long contentLength) throws IOException {
         if(requestChannel != null) {
-            throw new IOException("request not reusable");
+            throw UndertowClientMessages.MESSAGES.requestAlreadyWritten();
         }
         // Prepare the header
         final HeaderMap headers = getRequestHeaders();
+        // Check that we defined the hostname
+        resolveHost(headers);
+        // Process connection and transfer encodings
         boolean keepAlive;
         if (http11) {
             if(headers.contains(Headers.CONNECTION)) {
@@ -140,7 +143,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
             keepAlive = false;
         }
 
-        HttpString contentEncoding = Headers.IDENTITY;
+        HttpString transferEncoding = Headers.IDENTITY;
         boolean hasContent = true;
         if (contentLength == -1L) {
             // unknown content-length
@@ -149,12 +152,12 @@ class HttpClientRequestImpl extends HttpClientRequest {
             } else if (! http11) {
                 keepAlive = false;
             } else {
-                contentEncoding = Headers.CHUNKED;
+                transferEncoding = Headers.CHUNKED;
             }
         } else if (contentLength == 0L) {
             hasContent = false;
         } else if (contentLength <= 0L) {
-            throw new IllegalArgumentException("invalid content-length");
+            throw UndertowClientMessages.MESSAGES.illegalContentLength(contentLength);
         }
         if(hasContent) {
             if(Methods.HEAD.equals(method)) {
@@ -166,24 +169,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
         } else {
             headers.put(Headers.CONNECTION, Headers.CLOSE.toString());
         }
-        if(! headers.contains(Headers.HOST)) {
-            String host = null;
-            if(target.isAbsolute()) {
-                host = target.getHost();
-            }
-            if(host == null) {
-                try {
-                    host = connection.getPeerAddress(InetSocketAddress.class).getHostString();
-                } catch (Exception ignore)  {
-                    //
-                }
-            }
-            if(host != null) {
-                headers.put(Headers.HOST, host);
-            } else if(http11) {
-                headers.put(Headers.HOST, "");
-            }
-        }
+        // Check for 100-continue expectations
         boolean expectContinue = false;
         if(http11 && hasContent && headers.contains(Headers.EXPECT)) {
             for(final String s : headers.get(Headers.EXPECT)) {
@@ -193,16 +179,17 @@ class HttpClientRequestImpl extends HttpClientRequest {
                 }
             }
         }
-        // Create the request and channel
+        // Create the pending request
         final boolean pipelineNext = pipeline && idempotentMethods.contains(method);
         final PendingHttpRequest request = new PendingHttpRequest(this, connection, keepAlive, hasContent, expectContinue, pipelineNext, responseFuture);
+        // Create the channel and wrappers
         StreamSinkConduit conduit = new StreamSinkChannelWrappingConduit(underlyingChannel);
         conduit = new HttpRequestConduit(conduit, connection.getBufferPool(), this);
         if(! hasContent) {
             headers.put(Headers.CONTENT_LENGTH, 0L);
             conduit = new FixedLengthStreamSinkConduit(conduit, 0L, false, ! keepAlive, completedListener(request));
         } else {
-            if (! Headers.IDENTITY.equals(contentEncoding)) {
+            if (! Headers.IDENTITY.equals(transferEncoding)) {
                 headers.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
                 conduit = new ChunkedStreamSinkConduit(conduit, false, ! keepAlive, completedListener(request));
             } else {
@@ -248,6 +235,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
                             public void handleException(final Channel channel, final IOException exception) {
                                 UndertowLogger.CLIENT_LOGGER.debug("Exception ending request", exception);
                                 IoUtils.safeClose(connection.getChannel());
+                                request.setFailed(exception);
                             }
                         }
                 ));
@@ -261,6 +249,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
         } catch(IOException e) {
             UndertowLogger.CLIENT_LOGGER.debug("Exception sending request", e);
             IoUtils.safeClose(connection.getChannel());
+            request.setFailed(e);
         }
     }
 
@@ -291,6 +280,32 @@ class HttpClientRequestImpl extends HttpClientRequest {
 
             }
         };
+    }
+
+    /**
+     * In case the host was not specified in the request headers try to resolve it.
+     *
+     * @param headers the request headers
+     */
+    protected void resolveHost(final HeaderMap headers) {
+        if(! headers.contains(Headers.HOST)) {
+            String host = null;
+            if(target.isAbsolute()) {
+                host = target.getHost();
+            }
+            if(host == null) {
+                try {
+                    host = connection.getPeerAddress(InetSocketAddress.class).getHostString();
+                } catch (Exception ignore)  {
+                    //
+                }
+            }
+            if(host != null) {
+                headers.put(Headers.HOST, host);
+            } else if(http11) {
+                headers.put(Headers.HOST, "");
+            }
+        }
     }
 
     @Override

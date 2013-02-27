@@ -42,7 +42,6 @@ public final class HttpClientResponse extends AbstractAttachable {
     private final HeaderMap headers;
     private final long contentLength;
     private final HttpString protocol;
-
     private final StreamSourceChannel sourceChannel;
 
     protected HttpClientResponse(final PendingHttpRequest responseBuilder, final long contentLength, final StreamSourceChannel sourceChannel) {
@@ -92,6 +91,15 @@ public final class HttpClientResponse extends AbstractAttachable {
      */
     public StreamSourceChannel readReplyBody() throws IOException {
         return sourceChannel;
+    }
+
+    /**
+     * Get the http reason phrase.
+     *
+     * @return the reason phrase
+     */
+    public String getReasonPhrase() {
+        return reason;
     }
 
     @Override
