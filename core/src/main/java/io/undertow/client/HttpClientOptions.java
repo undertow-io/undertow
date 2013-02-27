@@ -22,7 +22,7 @@ import io.undertow.util.HttpString;
 import org.xnio.Option;
 
 /**
- * Http client options.
+ * HTTP client options.
  *
  * @author Emanuel Muckenhuber
  */

@@ -83,7 +83,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         //
         queuingStrategy = HttpRequestQueueStrategy.create(this, options);
         closeSetter = ChannelListeners.<ConnectedChannel>getDelegatingSetter(underlyingChannel.getCloseSetter(), this);
-        pipelining = queuingStrategy.supportsPipelining(); // TODO wait for the first response to determine this
+        pipelining = queuingStrategy.supportsPipelining(); // TODO "wait" for the first response to determine this
 
         getCloseSetter().set(new ChannelListener<ConnectedChannel>() {
             @Override

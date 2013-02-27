@@ -29,5 +29,4 @@ public interface UndertowClientMessages {
     @Message(id = 1030, value = "invalid content length %d")
     IllegalArgumentException illegalContentLength(long length);
 
-
 }

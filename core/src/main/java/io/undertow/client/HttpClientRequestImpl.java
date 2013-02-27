@@ -187,17 +187,17 @@ class HttpClientRequestImpl extends HttpClientRequest {
         conduit = new HttpRequestConduit(conduit, connection.getBufferPool(), this);
         if(! hasContent) {
             headers.put(Headers.CONTENT_LENGTH, 0L);
-            conduit = new FixedLengthStreamSinkConduit(conduit, 0L, false, ! keepAlive, completedListener(request));
+            conduit = new FixedLengthStreamSinkConduit(conduit, 0L, false, ! keepAlive, sendCompletedListener(request));
         } else {
             if (! Headers.IDENTITY.equals(transferEncoding)) {
                 headers.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
-                conduit = new ChunkedStreamSinkConduit(conduit, false, ! keepAlive, completedListener(request));
+                conduit = new ChunkedStreamSinkConduit(conduit, false, ! keepAlive, sendCompletedListener(request));
             } else {
                 if(contentLength == -1L) {
-                    conduit = new FinishableStreamSinkConduit(conduit, completedListener(request));
+                    conduit = new FinishableStreamSinkConduit(conduit, sendCompletedListener(request));
                 } else {
                     headers.put(Headers.CONTENT_LENGTH, contentLength);
-                    conduit = new FixedLengthStreamSinkConduit(conduit, contentLength, false, ! keepAlive, completedListener(request));
+                    conduit = new FixedLengthStreamSinkConduit(conduit, contentLength, false, ! keepAlive, sendCompletedListener(request));
                 }
             }
         }
@@ -266,7 +266,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
      * @param request the pending request
      * @return the finish listener
      */
-    private ConduitListener<? super StreamSinkConduit> completedListener(final PendingHttpRequest request) {
+    private ConduitListener<? super StreamSinkConduit> sendCompletedListener(final PendingHttpRequest request) {
         return new ConduitListener<StreamSinkConduit>() {
             @Override
             public void handleEvent(final StreamSinkConduit channel) {
