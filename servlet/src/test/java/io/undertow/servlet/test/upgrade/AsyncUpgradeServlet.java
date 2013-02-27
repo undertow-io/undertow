@@ -48,8 +48,11 @@ public class AsyncUpgradeServlet extends HttpServlet {
         public void init(final WebConnection wc) {
             Listener listener = new Listener(wc);
             try {
-                wc.getInputStream().setReadListener(listener);
+                //we have to set the write listener before the read listener
+                //otherwise the output stream could be written to before it is
+                //in async mode
                 wc.getOutputStream().setWriteListener(listener);
+                wc.getInputStream().setReadListener(listener);
             } catch (IOException e) {
                 e.printStackTrace();
             }
