@@ -21,13 +21,13 @@ package io.undertow.client;
 import io.undertow.util.Protocols;
 import org.xnio.OptionMap;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.AbstractCollection;
+import java.util.Deque;
 
 /**
  * @author Emanuel Muckenhuber
  */
-abstract class HttpRequestQueue {
+abstract class HttpRequestQueueStrategy {
 
     /**
      * Create the queueing strategy.
@@ -36,7 +36,7 @@ abstract class HttpRequestQueue {
      * @param options the connection options
      * @return the queueing strategy
      */
-    static HttpRequestQueue create(HttpClientConnectionImpl connection, OptionMap options) {
+    static HttpRequestQueueStrategy create(HttpClientConnectionImpl connection, OptionMap options) {
         final boolean http11 = Protocols.HTTP_1_1.equals(options.get(HttpClientOptions.PROTOCOL, Protocols.HTTP_1_1));
         final boolean pipeline = options.get(HttpClientOptions.HTTP_PIPELINING, false);
         if(http11 && pipeline) {
@@ -47,7 +47,7 @@ abstract class HttpRequestQueue {
     }
 
     private final HttpClientConnectionImpl connection;
-    protected HttpRequestQueue(final HttpClientConnectionImpl connection) {
+    protected HttpRequestQueueStrategy(final HttpClientConnectionImpl connection) {
         this.connection = connection;
     }
 
@@ -98,17 +98,16 @@ s     */
         connection.doReadResponse(request);
     }
 
-    static class SingleActiveStrategy extends HttpRequestQueue {
+    static class SingleActiveStrategy extends HttpRequestQueueStrategy {
 
-        private final Queue<PendingHttpRequest> requestQueue = new ConcurrentLinkedQueue<PendingHttpRequest>();
+        private final HttpRequestQueue<PendingHttpRequest> requestQueue = new HttpRequestQueueImpl<PendingHttpRequest>();
         SingleActiveStrategy(final HttpClientConnectionImpl connection) {
             super(connection);
         }
 
         @Override
         void addNewRequest(final PendingHttpRequest request) {
-            requestQueue.add(request);
-            if(requestQueue.peek() == request) {
+            if(requestQueue.addAndCheckFirst(request)) {
                 sendRequest(request, false);
             }
         }
@@ -121,9 +120,7 @@ s     */
 
         @Override
         void requestCompleted(final PendingHttpRequest request) {
-            final PendingHttpRequest completed = requestQueue.poll();
-            assert completed == request;
-            final PendingHttpRequest send = requestQueue.peek();
+            final PendingHttpRequest send = requestQueue.removeAndPeekNext();
             if(send != null) {
                 sendRequest(send, true);
             }
@@ -138,45 +135,36 @@ s     */
     /**
      * Try to pipeline request as soon as the request was written.
      */
-    static class PipelineStrategy extends HttpRequestQueue {
+    static class PipelineStrategy extends HttpRequestQueueStrategy {
 
-        private final Queue<PendingHttpRequest> sendQueue = new ConcurrentLinkedQueue<PendingHttpRequest>();
-        private final Queue<PendingHttpRequest> responseQueue = new ConcurrentLinkedQueue<PendingHttpRequest>();
+        private final HttpRequestQueue<PendingHttpRequest> sendQueue = new HttpRequestQueueImpl<PendingHttpRequest>();
+        private final HttpRequestQueue<PendingHttpRequest> responseQueue = new HttpRequestQueueImpl<PendingHttpRequest>();
         PipelineStrategy(final HttpClientConnectionImpl connection) {
             super(connection);
         }
 
         @Override
         void addNewRequest(final PendingHttpRequest request) {
-            // TODO replace all these operations with proper thread safe ones
-            sendQueue.add(request);
-            if(sendQueue.peek() == request) {
+            if(sendQueue.addAndCheckFirst(request)) {
                 sendRequest(request, false);
             }
         }
 
         @Override
         void requestSent(final PendingHttpRequest request) {
-            final PendingHttpRequest active = sendQueue.poll();
-            assert active == request;
-            responseQueue.add(active);
-            if(responseQueue.peek() == active) {
-                readResponse(active);
+            final PendingHttpRequest send = sendQueue.removeAndPeekNext();
+            if(responseQueue.addAndCheckFirst(request)) {
+                readResponse(request);
             }
             // Only pipeline for idempotent requests
-            if(request.allowPipeline()) {
-                final PendingHttpRequest send = sendQueue.peek();
-                if(send != null) {
-                    sendRequest(send, true);
-                }
+            if(send != null && request.allowPipeline()) {
+                sendRequest(send, true);
             }
         }
 
         @Override
         void requestCompleted(final PendingHttpRequest request) {
-            final PendingHttpRequest completed = responseQueue.poll();
-            assert completed == request;
-            final PendingHttpRequest read = responseQueue.peek();
+            final PendingHttpRequest read = responseQueue.removeAndPeekNext();
             if(read != null) {
                 readResponse(read);
             }
@@ -192,6 +180,25 @@ s     */
         boolean supportsPipelining() {
             return true;
         }
+    }
+
+    abstract static class HttpRequestQueue<E> extends AbstractCollection<E> implements Deque<E>, java.io.Serializable {
+
+        /**
+         * Add last and check if the element is the head of the queue.
+         *
+         * @param element the element to add
+         * @return {@code true} if the element is the current head of the queue
+         */
+        abstract boolean addAndCheckFirst(E element);
+
+        /**
+         * Remove the first entry in the queue and retrieve the next one in the queue
+         *
+         * @return the next one in the queue, {@code null} if there is no element queued
+         */
+        abstract E removeAndPeekNext();
+
     }
 
 }

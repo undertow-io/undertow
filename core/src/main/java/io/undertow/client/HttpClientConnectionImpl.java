@@ -58,10 +58,11 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
     private final PushBackStreamChannel readChannel;
 
     private final Pool<ByteBuffer> bufferPool;
-    private final HttpRequestQueue queuingStrategy;
+    private final HttpRequestQueueStrategy queuingStrategy;
     private final ClientReadListener readListener = new ClientReadListener();
     private final ChannelListener.Setter<ConnectedChannel> closeSetter;
 
+    private static final int UPGRADED = 1 << 29;
     private static final int CLOSE_REQ = 1 << 30;
     private static final int CLOSED = 1 << 31;
 
@@ -76,7 +77,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         this.readChannel = readChannel;
         this.bufferPool = client.getBufferPool();
         //
-        queuingStrategy = HttpRequestQueue.create(this, options);
+        queuingStrategy = HttpRequestQueueStrategy.create(this, options);
         closeSetter = ChannelListeners.<ConnectedChannel>getDelegatingSetter(underlyingChannel.getCloseSetter(), this);
         pipelining = queuingStrategy.supportsPipelining(); // TODO wait for the first response to determine this
 
@@ -168,6 +169,9 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         try {
             // Upgrade the connection
             final HttpClientRequest request = internalCreateRequest(Methods.GET, new URI("/"), false); // disable pipelining for connection upgrades
+            if(request == null) {
+                return null;
+            }
             request.getRequestHeaders().add(Headers.CONNECTION, Headers.UPGRADE_STRING);
             request.getRequestHeaders().add(Headers.UPGRADE, service);
 
@@ -211,6 +215,9 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
      * @return a new request instance
      */
     protected HttpClientRequest internalCreateRequest(final HttpString method, final URI target, final boolean pipelining) {
+        if(allAreSet(state, UPGRADED | CLOSE_REQ | CLOSE_REQ)) {
+            return null;
+        }
         return new HttpClientRequestImpl(this, underlyingChannel, method, target, pipelining);
     }
 
