@@ -6,7 +6,7 @@ import org.junit.Test;
 /**
  * @author Matej Lazar
  */
-public class HttpStringTest {
+public class HttpStringTestCase {
 
     @Test
     public void testOrderShorterFirst() {
