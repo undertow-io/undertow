@@ -55,7 +55,7 @@ public class CacheHandlerTestCase {
     public void testBasicPathBasedCaching() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             //it takes 5 hits to make an entry actually get cached
             for (int i = 1; i <= 5; ++i) {
                 HttpResponse result = client.execute(get);
@@ -75,7 +75,7 @@ public class CacheHandlerTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Response 5", HttpClientUtils.readResponse(result));
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path2");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path2");
 
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());

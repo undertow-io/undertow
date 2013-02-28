@@ -115,29 +115,29 @@ public class SecurityConstraintUrlMappingTestCase {
 
     @Test
     public void testExactMatch() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/role1", "user2:password2", "user1:password1");
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/role1", "user2:password2", "user1:password1");
     }
 
     @Test
     public void testPatternMatch() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/secured/role2/aa", "user1:password1", "user2:password2");
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/role2/aa", "user1:password1", "user2:password2");
     }
 
     @Test
     public void testExtensionMatch() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/public/a.html", "user1:password1", "user2:password2");
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/public/a.html", "user1:password1", "user2:password2");
     }
 
     @Test
     public void testAggregatedRoles() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/secured/1/2/aa", "user1:password1", "user3:password3");
-        runSimpleUrlTest(DefaultServer.getDefaultServerAddress() + "/servletContext/secured/1/2/aa", "user2:password2", "user3:password3");
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user1:password1", "user3:password3");
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user2:password2", "user3:password3");
     }
 
     @Test
     public void testHttpMethod() throws IOException {
         TestHttpClient client = new TestHttpClient();
-        final String url = DefaultServer.getDefaultServerAddress() + "/servletContext/public/postSecured/a";
+        final String url = DefaultServer.getDefaultServerURL() + "/servletContext/public/postSecured/a";
         try {
             HttpGet initialGet = new HttpGet(url);
             initialGet.addHeader("ExpectedMechanism", "None");

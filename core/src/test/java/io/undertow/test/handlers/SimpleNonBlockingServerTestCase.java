@@ -49,7 +49,7 @@ public class SimpleNonBlockingServerTestCase {
     public void sendHttpRequest() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders("MyHeader");
@@ -63,7 +63,7 @@ public class SimpleNonBlockingServerTestCase {
     public void sendHttp11RequestWithClose() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.addHeader("Connection", "close");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
@@ -78,7 +78,7 @@ public class SimpleNonBlockingServerTestCase {
     public void sendHttpOneZeroRequest() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.getParams().setParameter(CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_0);
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());

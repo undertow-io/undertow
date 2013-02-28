@@ -92,51 +92,51 @@ public class ServletPathMappingTestCase {
     public void testSimpleHttpServlet() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/aa");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("/aa", response);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/a/c");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/a/c");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("/a/*", response);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/aa/b");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("/aa/*", response);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/a/b/c/d");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/a/b/c/d");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("/a/b/*", response);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/a/b");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/a/b");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("/a/b/*", response);
 
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/defaultStuff");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/defaultStuff");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("/", response);
 
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("contextRoot", response);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/bob.jsp");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/bob.jsp");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);

@@ -62,7 +62,7 @@ public class SimpleConfidentialRedirectTestCase {
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Header[] header = result.getHeaders("scheme");

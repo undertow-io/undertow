@@ -19,15 +19,12 @@
 package io.undertow.test.handlers;
 
 import java.io.IOException;
-import java.io.OutputStream;
 
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.blocking.BlockingHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
@@ -38,7 +35,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.streams.ChannelOutputStream;
 
 /**
  * Tests that persistent connections work with fixed length responses
@@ -76,7 +72,7 @@ public class FixedLengthResponseTestCase {
 
     @Test
     public void sendHttpRequest() throws IOException {
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
         try {
             generateMessage(1);

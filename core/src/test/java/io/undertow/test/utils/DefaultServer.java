@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -153,8 +154,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     /**
      * @return The base URL that can be used to make connections to this server
      */
-    public static String getDefaultServerAddress() {
+    public static String getDefaultServerURL() {
         return "http://" + getHostAddress(DEFAULT) + ":" + getHostPort(DEFAULT);
+    }
+
+    public static SocketAddress getDefaultServerAddress() {
+        return new InetSocketAddress(DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default"));
     }
 
     public static String getDefaultServerSSLAddress() {

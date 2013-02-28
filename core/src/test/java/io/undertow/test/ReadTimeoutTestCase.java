@@ -81,7 +81,7 @@ public class ReadTimeoutTestCase {
 
         final TestHttpClient client = new TestHttpClient();
         try {
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress());
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL());
             post.setEntity(new AbstractHttpEntity() {
 
                 @Override

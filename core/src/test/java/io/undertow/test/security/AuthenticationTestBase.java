@@ -187,7 +187,7 @@ public abstract class AuthenticationTestBase {
         DefaultServer.setRootHandler(new ResponseHandler());
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(200, result.getStatusLine().getStatusCode());
 

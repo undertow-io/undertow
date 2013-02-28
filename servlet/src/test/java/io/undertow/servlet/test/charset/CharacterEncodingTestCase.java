@@ -68,13 +68,13 @@ public class CharacterEncodingTestCase {
     public void testCharacterEncoding() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext?charset=UTF-16BE");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=UTF-16BE");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             byte[] response = HttpClientUtils.readRawResponse(result);
             Assert.assertArrayEquals(UTF16, response);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext?charset=UTF-8");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=UTF-8");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readRawResponse(result);

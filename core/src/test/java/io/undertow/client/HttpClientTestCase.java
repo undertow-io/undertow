@@ -67,7 +67,7 @@ public class HttpClientTestCase {
 
     private static final OptionMap DEFAULT_OPTIONS;
     private static final HttpHandler SIMPLE_MESSAGE_HANDLER;
-    private static final SocketAddress ADDRESS = new InetSocketAddress(DefaultServer.getHostPort("default"));
+    private static final SocketAddress ADDRESS = DefaultServer.getDefaultServerAddress();
     static {
         final OptionMap.Builder builder = OptionMap.builder()
                 .set(Options.WORKER_IO_THREADS, 8)

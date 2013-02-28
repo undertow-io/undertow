@@ -94,7 +94,7 @@ public class FixedLengthRequestTestCase {
     @Test
     public void testFixedLengthRequest() throws IOException {
         connection = null;
-        HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
+        HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
         try {
             generateMessage(1);
@@ -120,7 +120,7 @@ public class FixedLengthRequestTestCase {
     public void testMaxRequestSizeFixedLengthRequest() throws IOException {
         connection = null;
         OptionMap existing = DefaultServer.getUndertowOptions();
-        HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
+        HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
         post.setHeader(HttpHeaders.CONNECTION, "close");
         TestHttpClient client = new TestHttpClient();
         try {

@@ -86,7 +86,7 @@ public class WriteTimeoutTestCase {
 
         final TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
             try {
                 HttpResponse result = client.execute(get);
                 InputStream content = result.getEntity().getContent();

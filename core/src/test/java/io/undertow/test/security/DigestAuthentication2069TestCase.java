@@ -105,7 +105,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -122,7 +122,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         String response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
         sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"userOne\"").append(",");
@@ -147,7 +147,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
         sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
         sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"userOne\"").append(",");
@@ -176,7 +176,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -192,7 +192,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         String response = createResponse("badUser", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
         sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"badUser\"").append(",");
@@ -214,7 +214,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -230,7 +230,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         String response = createResponse("userOne", REALM_NAME, "badPassword", "GET", "/", nonce);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
         sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"userOne\"").append(",");
@@ -253,7 +253,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -269,7 +269,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         String response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
         sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"userOne\"").append(",");
@@ -294,7 +294,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
         sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
         sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"userOne\"").append(",");
@@ -321,7 +321,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -337,7 +337,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         String response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
         sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"userOne\"").append(",");
@@ -354,7 +354,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         assertEquals("ResponseHandler", values[0].getValue());
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
@@ -373,7 +373,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
         sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
         sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"userOne\"").append(",");

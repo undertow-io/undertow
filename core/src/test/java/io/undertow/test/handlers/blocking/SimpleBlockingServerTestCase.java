@@ -89,7 +89,7 @@ public class SimpleBlockingServerTestCase {
         message = "My HTTP Request!";
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
@@ -108,7 +108,7 @@ public class SimpleBlockingServerTestCase {
         message = messageBuilder.toString();
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
@@ -126,7 +126,7 @@ public class SimpleBlockingServerTestCase {
         }
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.setEntity(new StringEntity(messageBuilder.toString()));
             HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());

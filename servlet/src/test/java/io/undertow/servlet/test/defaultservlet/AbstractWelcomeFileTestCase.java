@@ -20,7 +20,7 @@ public class AbstractWelcomeFileTestCase {
     public void testWelcomeFileRedirect() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
@@ -35,7 +35,7 @@ public class AbstractWelcomeFileTestCase {
     public void testWelcomeServletRedirect() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/path?a=b");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path?a=b");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);

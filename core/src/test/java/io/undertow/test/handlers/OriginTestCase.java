@@ -58,26 +58,26 @@ public class OriginTestCase {
             DefaultServer.setRootHandler(handler);
             handler.setNext(ResponseCodeHandler.HANDLE_200);
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
             //no origin header, we dny by default
             Assert.assertEquals(403, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
             get.setHeader(Headers.ORIGIN_STRING, "http://mysite.com:80");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
             get.setHeader(Headers.ORIGIN_STRING, "bogus");
             result = client.execute(get);
@@ -85,7 +85,7 @@ public class OriginTestCase {
             HttpClientUtils.readResponse(result);
 
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
             get.setHeader(Headers.ORIGIN_STRING, "bogus");
             result = client.execute(get);

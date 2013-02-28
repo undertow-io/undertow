@@ -45,7 +45,7 @@ public class FileErrorPageHandlerTestCase {
             final FileErrorPageHandler handler = new FileErrorPageHandler(new File(getClass().getResource("errorpage.html").getFile()), 404);
             DefaultServer.setRootHandler(handler);
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(404, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);

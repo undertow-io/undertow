@@ -120,7 +120,7 @@ public class ConfidentialityConstraintUrlMappingTestCase {
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
 
-        final String url = DefaultServer.getDefaultServerAddress() + "/servletContext" + path;
+        final String url = DefaultServer.getDefaultServerURL() + "/servletContext" + path;
         try {
             HttpGet get = new HttpGet(url);
             HttpResponse result = client.execute(get);

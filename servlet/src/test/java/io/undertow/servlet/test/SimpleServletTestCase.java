@@ -78,7 +78,7 @@ public class SimpleServletTestCase {
     public void testSimpleHttpServlet() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/aa");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);

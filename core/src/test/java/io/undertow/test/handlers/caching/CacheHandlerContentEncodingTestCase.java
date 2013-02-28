@@ -72,7 +72,7 @@ public class CacheHandlerContentEncodingTestCase {
     public void testCachingWithContentEncoding() throws IOException {
         ContentEncodingHttpClient client = new ContentEncodingHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             //it takes 5 hits to make an entry actually get cached
             for (int i = 1; i <= 5; ++i) {
                 HttpResponse result = client.execute(get);
@@ -100,7 +100,7 @@ public class CacheHandlerContentEncodingTestCase {
             header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
             Assert.assertEquals(0, header.length);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path2");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path2");
 
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
@@ -108,7 +108,7 @@ public class CacheHandlerContentEncodingTestCase {
             header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
             Assert.assertEquals(0, header.length);
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader("ActuallyDeflate", "true");
             //it takes 5 hits to make an entry actually get cached
             for (int i = 1; i <= 5; ++i) {

@@ -53,7 +53,7 @@ public class FileHandlerTestCase {
             root.setNext(path);
             DefaultServer.setRootHandler(root);
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path/page.html");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);

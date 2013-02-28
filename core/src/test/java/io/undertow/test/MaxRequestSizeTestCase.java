@@ -83,7 +83,7 @@ public class MaxRequestSizeTestCase {
         OptionMap existing = DefaultServer.getUndertowOptions();
         try {
             final TestHttpClient client = new TestHttpClient();
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
             HttpResponse result = client.execute(post);
@@ -116,7 +116,7 @@ public class MaxRequestSizeTestCase {
         OptionMap existing = DefaultServer.getUndertowOptions();
         try {
             final TestHttpClient client = new TestHttpClient();
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
             HttpResponse result = client.execute(post);
@@ -126,7 +126,7 @@ public class MaxRequestSizeTestCase {
             OptionMap maxSize = OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) A_MESSAGE.length() - 1);
             DefaultServer.setUndertowOptions(maxSize);
 
-            post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             result = client.execute(post);
             Assert.assertEquals(500, result.getStatusLine().getStatusCode());
@@ -134,7 +134,7 @@ public class MaxRequestSizeTestCase {
 
             maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
             DefaultServer.setUndertowOptions(maxSize);
-            post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
             result = client.execute(post);

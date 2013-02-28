@@ -8,7 +8,6 @@ import java.util.List;
 import javax.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.URLDecodingHandler;
 import io.undertow.server.handlers.form.FormEncodedDataHandler;
 import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -76,7 +75,7 @@ public class ParameterCharacterEncodingTestCase {
         try {
             String message = "abcčšž";
             String charset = "UTF-8";
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext?charset=" + charset + "&message=" + message);
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=" + charset + "&message=" + message);
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
@@ -94,7 +93,7 @@ public class ParameterCharacterEncodingTestCase {
             String message = "abcčšž";
             String charset = "UTF-8";
 
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/servletContext");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext");
 
             MultipartEntity multipart = new MultipartEntity();
             multipart.addPart("charset", new StringBody(charset, Charset.forName(charset)));
@@ -116,7 +115,7 @@ public class ParameterCharacterEncodingTestCase {
             String message = "abcčšž";
             String charset = "UTF-8";
 
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/servletContext");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext");
             final List<NameValuePair> values = new ArrayList<>();
             values.add(new BasicNameValuePair("charset", charset));
             values.add(new BasicNameValuePair("message", message));

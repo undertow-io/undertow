@@ -91,7 +91,7 @@ public class HttpContinueTestCase {
         TestHttpClient client = new TestHttpClient();
         client.setParams(httpParams);
         try {
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.addHeader("Expect", "100-continue");
             post.setEntity(new StringEntity(message));
 
@@ -112,7 +112,7 @@ public class HttpContinueTestCase {
         TestHttpClient client = new TestHttpClient();
         client.setParams(httpParams);
         try {
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.addHeader("Expect", "100-continue");
             post.setEntity(new StringEntity(message));
 

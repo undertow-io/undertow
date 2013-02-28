@@ -93,10 +93,10 @@ public class CrossContextServletSessionTestCase {
     public void testCrossContextSessionInvocation() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerAddress() + "/1/servlet");
-            HttpGet forward1 = new HttpGet(DefaultServer.getDefaultServerAddress() + "/1/forward?context=/2&path=/servlet");
-            HttpGet direct2 = new HttpGet(DefaultServer.getDefaultServerAddress() + "/2/servlet");
-            HttpGet forward2 = new HttpGet(DefaultServer.getDefaultServerAddress() + "/2/forward?context=/1&path=/servlet");
+            HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/servlet");
+            HttpGet forward1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/forward?context=/2&path=/servlet");
+            HttpGet direct2 = new HttpGet(DefaultServer.getDefaultServerURL() + "/2/servlet");
+            HttpGet forward2 = new HttpGet(DefaultServer.getDefaultServerURL() + "/2/forward?context=/1&path=/servlet");
             HttpResponse result = client.execute(direct1);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);

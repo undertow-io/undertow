@@ -123,7 +123,7 @@ public class ServletOutputStreamTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             ServletOutputStreamTestCase.message = message;
-            String uri = DefaultServer.getDefaultServerAddress() + "/servletContext/" + url + "?reps=" + reps + "&";
+            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + url + "?reps=" + reps + "&";
             if (flush) {
                 uri = uri + "flush=true&";
             }

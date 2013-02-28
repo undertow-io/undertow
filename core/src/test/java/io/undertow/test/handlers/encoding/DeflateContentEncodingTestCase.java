@@ -66,7 +66,7 @@ public class DeflateContentEncodingTestCase {
         ContentEncodingHttpClient client = new ContentEncodingHttpClient();
         try {
             message = "Hi";
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "deflate");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
@@ -108,7 +108,7 @@ public class DeflateContentEncodingTestCase {
         ContentEncodingHttpClient client = new ContentEncodingHttpClient();
         try {
             message = theMessage;
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "deflate");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());

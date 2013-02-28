@@ -65,13 +65,13 @@ public class PathTestCase {
 
             DefaultServer.setRootHandler(handler);
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(404, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/");
             result = client.execute(get);
             Assert.assertEquals(404, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
@@ -97,7 +97,7 @@ public class PathTestCase {
         runPathTest(client, path, expectedMatch, expectedRemaining, Collections.<String, String>emptyMap());
     }
     private void runPathTest(TestHttpClient client, String path, String expectedMatch, String expectedRemaining, Map<String, String> queryParams) throws IOException {
-        HttpResponse result;HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + path);
+        HttpResponse result;HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
         result = client.execute(get);
         Assert.assertEquals(200, result.getStatusLine().getStatusCode());
         Header[] header = result.getHeaders(MATCHED);

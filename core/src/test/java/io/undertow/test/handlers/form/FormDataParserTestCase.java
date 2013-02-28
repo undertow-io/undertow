@@ -135,7 +135,7 @@ public class FormDataParserTestCase {
 
             final List<NameValuePair> data = new ArrayList<NameValuePair>();
             data.addAll(Arrays.asList(pairs));
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.setHeader(Headers.CONTENT_TYPE_STRING, FormEncodedDataHandler.APPLICATION_X_WWW_FORM_URLENCODED);
             post.setEntity(new UrlEncodedFormEntity(data));
             HttpResponse result = client.execute(post);

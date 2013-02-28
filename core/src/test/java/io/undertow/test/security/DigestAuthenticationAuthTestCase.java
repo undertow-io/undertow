@@ -184,7 +184,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -205,7 +205,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         // Send 5 requests with an incrementing nonce count on each call.
         for (int i = 0; i < 5; i++) {
             client = new TestHttpClient();
-            get = new HttpGet(DefaultServer.getDefaultServerAddress());
+            get = new HttpGet(DefaultServer.getDefaultServerURL());
 
             int thisNonceCount = nonceCount++;
             String authorization = createAuthorizationLine("userOne", "passwordOne", "GET", "/", nonce, thisNonceCount,
@@ -241,7 +241,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -261,7 +261,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         assertNotNull(opaque);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
 
         int thisNonceCount = nonceCount++;
         String authorization = createAuthorizationLine("noUser", "passwordOne", "GET", "/", nonce, thisNonceCount, clientNonce,
@@ -280,7 +280,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -300,7 +300,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         assertNotNull(opaque);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
 
         int thisNonceCount = nonceCount++;
         String authorization = createAuthorizationLine("userOne", "badPassword", "GET", "/", nonce, thisNonceCount,
@@ -319,7 +319,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -339,7 +339,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         assertNotNull(opaque);
 
         client = new TestHttpClient();
-        get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        get = new HttpGet(DefaultServer.getDefaultServerURL());
 
         int thisNonceCount = nonceCount++;
         String authorization = createAuthorizationLine("userOne", "badPassword", "GET", "/", nonce, thisNonceCount,
@@ -360,7 +360,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         setAuthenticationChain();
 
         TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress());
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
@@ -381,7 +381,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         // Send 5 requests with an incrementing nonce count on each call.
         for (int i = 0; i < 2; i++) {
             client = new TestHttpClient();
-            get = new HttpGet(DefaultServer.getDefaultServerAddress());
+            get = new HttpGet(DefaultServer.getDefaultServerURL());
 
             int thisNonceCount = nonceCount; // Note - No increment
             String authorization = createAuthorizationLine("userOne", "passwordOne", "GET", "/", nonce, thisNonceCount,

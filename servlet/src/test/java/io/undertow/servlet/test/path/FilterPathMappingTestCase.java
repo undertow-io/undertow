@@ -158,7 +158,7 @@ public class FilterPathMappingTestCase {
         final HttpGet get;
         final HttpResponse result;
         final String response;
-        get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/" + path);
+        get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + path);
         result = client.execute(get);
         Assert.assertEquals(200, result.getStatusLine().getStatusCode());
         requireHeaders(result, headers);

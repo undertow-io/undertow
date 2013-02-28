@@ -76,7 +76,7 @@ public class ChunkedResponseTransferCodingTestCase {
 
     @Test
     public void sendHttpRequest() throws IOException {
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
         try {
             generateMessage(1);

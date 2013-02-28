@@ -45,7 +45,7 @@ public class SimpleErrorPageHandlerTestCase {
             final SimpleErrorPageHandler handler = new SimpleErrorPageHandler();
             DefaultServer.setRootHandler(handler);
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(404, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);

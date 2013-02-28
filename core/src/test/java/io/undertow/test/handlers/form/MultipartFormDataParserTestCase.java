@@ -86,7 +86,7 @@ public class MultipartFormDataParserTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
 
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerAddress() + "/path");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             //post.setHeader(Headers.CONTENT_TYPE, MultiPartHandler.MULTIPART_FORM_DATA);
             MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 

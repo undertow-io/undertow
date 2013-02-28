@@ -95,7 +95,7 @@ public class DispatcherIncludeTestCase {
     public void testPathBasedInclude() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/dispatch");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             get.setHeader("include", "/include");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
@@ -110,7 +110,7 @@ public class DispatcherIncludeTestCase {
     public void testNameBasedInclude() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/servletContext/dispatch");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             get.setHeader("include", "include");
             get.setHeader("name", "true");
             HttpResponse result = client.execute(get);

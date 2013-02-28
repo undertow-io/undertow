@@ -81,7 +81,7 @@ public class ServletLoginTestCase {
     @Test
     public void testHttpMethod() throws IOException {
         TestHttpClient client = new TestHttpClient();
-        final String url = DefaultServer.getDefaultServerAddress() + "/servletContext/login";
+        final String url = DefaultServer.getDefaultServerURL() + "/servletContext/login";
         try {
             HttpGet get = new HttpGet(url);
             get.addHeader("username", "bob");

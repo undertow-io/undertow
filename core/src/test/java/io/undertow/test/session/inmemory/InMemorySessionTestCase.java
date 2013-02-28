@@ -78,21 +78,21 @@ public class InMemorySessionTestCase {
             cookieHandler.setNext(handler);
             DefaultServer.setRootHandler(cookieHandler);
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             Header[] header = result.getHeaders(COUNT);
             Assert.assertEquals("0", header[0].getValue());
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             header = result.getHeaders(COUNT);
             Assert.assertEquals("1", header[0].getValue());
 
-            get = new HttpGet(DefaultServer.getDefaultServerAddress() + "/notamatchingpath");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
