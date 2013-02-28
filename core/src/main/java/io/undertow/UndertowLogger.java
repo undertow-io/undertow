@@ -18,6 +18,7 @@
 
 package io.undertow;
 
+import io.undertow.client.HttpClient;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
@@ -38,7 +39,7 @@ import java.net.SocketAddress;
 public interface UndertowLogger extends BasicLogger {
 
     UndertowLogger ROOT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName());
-
+    UndertowLogger CLIENT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, HttpClient.class.getPackage().getName());
     UndertowLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request");
 
     @LogMessage(level = Logger.Level.ERROR)

@@ -83,6 +83,10 @@ public class StringWriteChannelListener implements ChannelListener<StreamSinkCha
         }
     }
 
+    public boolean hasRemaining() {
+        return buffer.hasRemaining();
+    }
+
     protected void writeDone(final StreamSinkChannel channel) {
         try {
             channel.shutdownWrites();
