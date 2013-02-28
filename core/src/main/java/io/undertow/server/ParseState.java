@@ -105,4 +105,8 @@ class ParseState {
     public boolean isComplete() {
         return state == PARSE_COMPLETE;
     }
+
+    public final void parseComplete(){
+        state = PARSE_COMPLETE;
+    }
 }

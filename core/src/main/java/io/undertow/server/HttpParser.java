@@ -79,7 +79,7 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
 
 /**
  * The basic HTTP parser. The actual parser is a sub class of this class that is generated as part of
- * the build process by the {@link io.undertow.annotationprocessor.ParserGenerator} annotation processor.
+ * the build process by the {@link io.undertow.annotationprocessor.AbstractParserGenerator} annotation processor.
  * <p/>
  * The actual processor is a state machine, that means that for common header, method, protocol values
  * it will return an interned string, rather than creating a new string for each one.
