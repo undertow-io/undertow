@@ -368,6 +368,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                 }
                 StreamSinkChannel channel = this.channel;
                 channel.shutdownWrites();
+                state |= FLAG_DELEGATE_SHUTDOWN;
                 Channels.flushBlocking(channel);
             } finally {
                 if (pooledBuffer != null) {
@@ -413,6 +414,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             }
         }
         channel.shutdownWrites();
+        state |= FLAG_DELEGATE_SHUTDOWN;
         if (!channel.flush()) {
             resumeWrites();
         }
@@ -549,7 +551,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             try {
                 listener.onError(e);
             } finally {
-                IoUtils.safeClose(channel);
+                IoUtils.safeClose(underlyingConnectionChannel);
             }
         }
     }

@@ -81,7 +81,6 @@ public class ServletOutputStreamTestCase {
 
     @Test
     public void testBlockingServletOutputStream() {
-
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
         for (int i = 0; i < 10; ++i) {
             try {
@@ -101,7 +100,6 @@ public class ServletOutputStreamTestCase {
 
     @Test
     public void testAsyncServletOutputStream() {
-
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
         for (int i = 0; i < 10; ++i) {
             try {
