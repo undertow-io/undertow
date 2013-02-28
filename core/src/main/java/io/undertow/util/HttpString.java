@@ -18,6 +18,11 @@
 
 package io.undertow.util;
 
+import static java.lang.Integer.rotateLeft;
+import static java.lang.Integer.signum;
+import static java.lang.System.arraycopy;
+import static java.util.Arrays.copyOfRange;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
@@ -25,11 +30,6 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Random;
-
-import static java.lang.Integer.rotateLeft;
-import static java.lang.Integer.signum;
-import static java.lang.System.arraycopy;
-import static java.util.Arrays.copyOfRange;
 
 /**
  * An HTTP case-insensitive Latin-1 string.
@@ -238,7 +238,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      */
     public int compareTo(final HttpString other) {
         if(orderInt != 0 && other.orderInt != 0) {
-            return orderInt - other.orderInt;
+            return signum(orderInt - other.orderInt);
         }
         final int len = Math.min(bytes.length, other.bytes.length);
         int res;
@@ -247,7 +247,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
             if (res != 0) return res;
         }
         // shorter strings sort higher
-        return signum(other.bytes.length - bytes.length);
+        return signum(bytes.length - other.bytes.length);
     }
 
     /**
@@ -255,6 +255,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      *
      * @return the hash code
      */
+    @Override
     public int hashCode() {
         return hashCode;
     }
@@ -265,6 +266,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      * @param other the other object
      * @return {@code true} if they are equal, {@code false} otherwise
      */
+    @Override
     public boolean equals(final Object other) {
         return other == this || other instanceof HttpString && equals((HttpString) other);
     }
@@ -357,6 +359,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      *
      * @return the string
      */
+    @Override
     @SuppressWarnings("deprecation")
     public String toString() {
         if (string == null) {
