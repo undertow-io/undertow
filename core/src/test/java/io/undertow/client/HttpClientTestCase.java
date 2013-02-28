@@ -23,8 +23,6 @@ import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpContinueHandler;
-import io.undertow.server.handlers.blocking.BlockingHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
@@ -44,17 +42,13 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.streams.ChannelInputStream;
-import org.xnio.streams.ChannelOutputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Emanuel Muckenhuber
@@ -124,7 +118,7 @@ public class HttpClientTestCase {
             try {
                 final List<IoFuture<HttpClientResponse>> responses = new ArrayList<IoFuture<HttpClientResponse>>();
                 for(int i = 0; i < 10; i++) {
-                    final HttpClientRequest request = connection.sendRequest(Methods.GET.toString(), new URI("/"));
+                    final HttpClientRequest request = connection.createRequest(Methods.GET.toString(), new URI("/"));
                     responses.add(request.writeRequest());
                 }
                 Assert.assertEquals(10, responses.size());
@@ -154,7 +148,7 @@ public class HttpClientTestCase {
         try {
             final HttpClientConnection connection = client.connect(ADDRESS, OptionMap.EMPTY).get();
             try {
-                final HttpClientRequest request = connection.sendRequest(Methods.GET, new URI("/1324"));
+                final HttpClientRequest request = connection.createRequest(Methods.GET, new URI("/1324"));
                 request.getRequestHeaders().add(Headers.CONNECTION, Headers.CLOSE.toString());
                 final HttpClientResponse response = request.writeRequest().get();
                 final StreamSourceChannel channel = response.readReplyBody();
@@ -165,7 +159,7 @@ public class HttpClientTestCase {
                     IoUtils.safeClose(channel);
                 }
                 try {
-                    connection.sendRequest(Methods.GET, new URI("/1324")).writeRequest();
+                    connection.createRequest(Methods.GET, new URI("/1324")).writeRequest();
                     Assert.fail();
                 } catch (IOException e) {
                     // OK
@@ -187,7 +181,7 @@ public class HttpClientTestCase {
         try {
             final HttpClientConnection connection = client.connect(ADDRESS, OptionMap.EMPTY).get();
             try {
-                final HttpClientRequest request = connection.sendRequest(Methods.POST_STRING, new URI("/"));
+                final HttpClientRequest request = connection.createRequest(Methods.POST_STRING, new URI("/"));
                 request.getRequestHeaders().add(Headers.EXPECT, "100-continue");
                 final StreamSinkChannel channel = request.writeRequestBody(message.length());
 
@@ -219,7 +213,7 @@ public class HttpClientTestCase {
         try {
             final HttpClientConnection connection = client.connect(ADDRESS, OptionMap.EMPTY).get();
             try {
-                final HttpClientRequest request = connection.sendRequest(Methods.POST_STRING, new URI("/"));
+                final HttpClientRequest request = connection.createRequest(Methods.POST_STRING, new URI("/"));
                 request.getRequestHeaders().add(Headers.EXPECT, "100-continue");
                 final StreamSinkChannel channel = request.writeRequestBody(message.length());
 
@@ -250,7 +244,7 @@ public class HttpClientTestCase {
             try {
                 final List<IoFuture<HttpClientResponse>> responses = new ArrayList<IoFuture<HttpClientResponse>>();
                 for(int i = 0; i < 10; i++) {
-                    final HttpClientRequest request = connection.sendRequest(Methods.GET, new URI("/"));
+                    final HttpClientRequest request = connection.createRequest(Methods.GET, new URI("/"));
                     responses.add(request.writeRequest());
                 }
                 Assert.assertEquals(10, responses.size());

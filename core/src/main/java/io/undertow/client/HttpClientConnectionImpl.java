@@ -163,7 +163,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
     }
 
     @Override
-    public HttpClientRequest sendRequest(HttpString method, URI target) {
+    public HttpClientRequest createRequest(HttpString method, URI target) {
         return internalCreateRequest(method, target, pipelining);
     }
 

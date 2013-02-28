@@ -56,8 +56,8 @@ public abstract class HttpClientConnection extends AbstractAttachable implements
      * @return the new request, or {@code null} if no more requests can be made on this connection
      * @throws IOException
      */
-    public HttpClientRequest sendRequest(final String method, final URI target) throws IOException {
-        return sendRequest(new HttpString(method), target);
+    public HttpClientRequest createRequest(final String method, final URI target) throws IOException {
+        return createRequest(new HttpString(method), target);
     }
 
     /**
@@ -68,7 +68,7 @@ public abstract class HttpClientConnection extends AbstractAttachable implements
      * @return the new request, or{@code null} if no more request can be made on this connection
      * @throws IOException
      */
-    public abstract HttpClientRequest sendRequest(final HttpString method, final URI target) throws IOException;
+    public abstract HttpClientRequest createRequest(final HttpString method, final URI target) throws IOException;
 
     /**
      * Upgrade this HTTP connection to a raw socket.

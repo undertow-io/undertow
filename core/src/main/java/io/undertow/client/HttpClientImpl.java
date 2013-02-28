@@ -124,7 +124,7 @@ class HttpClientImpl extends HttpClient {
             @Override
             public void handleDone(HttpClientConnection data, IoFuture<HttpClientRequest> attachment) {
                 try {
-                    final HttpClientRequest request = data.sendRequest(method, requestUri);
+                    final HttpClientRequest request = data.createRequest(method, requestUri);
                     result.setResult(request);
                 } catch (IOException e) {
                     result.setException(e);
