@@ -26,26 +26,66 @@ import javax.servlet.WriteListener;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.Headers;
+import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.Channels;
+import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
+
 /**
+ * This stream essentially has two modes. When it is being used in standard blocking mode then
+ * it will buffer in the pooled buffer. If the stream is closed before the buffer is full it will
+ * set a content-length header if one has not been explicitly set.
+ * <p/>
+ * If a content-length header was present when the stream was created then it will automatically
+ * close and flush itself once the appropriate amount of data has been written.
+ * <p/>
+ * Once the listener has been set it goes into async mode, and writes become non blocking. Most methods
+ * have two different code paths, based on if the listener has been set or not
+ * <p/>
+ * Once the write listener has been set operations must only be invoked on this stream from the write
+ * listener callback. Attempting to invoke from a different thread will result in an IllegalStateException.
+ *
  * @author Stuart Douglas
  */
 public class ServletOutputStreamImpl extends ServletOutputStream {
 
     private final HttpServletResponseImpl servletResponse;
-    private boolean closed;
-    private ByteBuffer buffer;
     private Pooled<ByteBuffer> pooledBuffer;
+    private ByteBuffer buffer;
     private Integer bufferSize;
-    private boolean writeStarted;
     private StreamSinkChannel channel;
-    private int written;
+    private long written;
+    private int state;
     private final Long contentLength;
+
+    private WriteListener listener;
+    private WriteChannelListener internalListener;
+
+    /**
+     * buffers that are queued up to be written via async writes. This will include
+     * {@link #buffer} as the first element, and maybe a user supplied buffer that
+     * did not fit
+     */
+    private ByteBuffer[] buffersToWrite;
+
+    private static final int FLAG_CLOSED = 1;
+    private static final int FLAG_WRITE_STARTED = 1 << 1;
+    private static final int FLAG_READY = 1 << 2;
+    private static final int FLAG_DELEGATE_SHUTDOWN = 1 << 3;
+    private static final int FLAG_IN_CALLBACK = 1 << 4;
+
+    /**
+     * we use the underlying connection channel for write listeners
+     * so we don't force the actual response channel to be created
+     */
+    private final ConnectedStreamChannel underlyingConnectionChannel;
 
     /**
      * Construct a new instance.  No write timeout is configured.
@@ -55,6 +95,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     public ServletOutputStreamImpl(Long contentLength, final HttpServletResponseImpl servletResponse) {
         this.servletResponse = servletResponse;
         this.contentLength = contentLength;
+        underlyingConnectionChannel = servletResponse.getExchange().getConnection().getChannel();
     }
 
     /**
@@ -66,6 +107,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         this.servletResponse = servletResponse;
         this.bufferSize = bufferSize;
         this.contentLength = contentLength;
+        underlyingConnectionChannel = servletResponse.getExchange().getConnection().getChannel();
     }
 
     /**
@@ -86,30 +128,83 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      * {@inheritDoc}
      */
     public void write(final byte[] b, final int off, final int len) throws IOException {
-        if (len < 1) {
-            return;
-        }
-        if (closed) {
+        if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
-        int written = 0;
-        ByteBuffer buffer = buffer();
-        while (written < len) {
-            if (buffer.remaining() >= (len - written)) {
-                buffer.put(b, off + written, len - written);
-                if (buffer.remaining() == 0) {
-                    writeBuffer();
-                }
-                updateWritten(len);
+
+        if (listener == null) {
+            if (len < 1) {
                 return;
-            } else {
-                int remaining = buffer.remaining();
-                buffer.put(b, off + written, remaining);
-                writeBuffer();
-                written += remaining;
+            }
+            int written = 0;
+            ByteBuffer buffer = buffer();
+            while (written < len) {
+                if (buffer.remaining() >= (len - written)) {
+                    buffer.put(b, off + written, len - written);
+                    if (buffer.remaining() == 0) {
+                        writeBufferBlocking();
+                    }
+                    updateWritten(len);
+                    return;
+                } else {
+                    int remaining = buffer.remaining();
+                    buffer.put(b, off + written, remaining);
+                    writeBufferBlocking();
+                    written += remaining;
+                }
+            }
+            updateWritten(len);
+        } else {
+            if (anyAreClear(state, FLAG_READY)) {
+                throw UndertowServletMessages.MESSAGES.streamNotReady();
+            }
+            if (anyAreClear(state, FLAG_IN_CALLBACK)) {
+                throw UndertowServletMessages.MESSAGES.writeCanOnlyBeMadeFromListenerCallback();
+            }
+            if (len < 1) {
+                return;
+            }
+            //even though we are in async mode we are still buffering
+            try {
+                ByteBuffer buffer = buffer();
+                if (buffer.remaining() > len) {
+                    buffer.put(b, off, len);
+                } else {
+                    buffer.flip();
+                    final ByteBuffer userBuffer = ByteBuffer.wrap(b, off, len);
+                    final ByteBuffer[] bufs = new ByteBuffer[]{buffer, userBuffer};
+                    long toWrite = Buffers.remaining(bufs);
+                    long res;
+                    long written = 0;
+                    if (channel == null) {
+                        channel = servletResponse.getExchange().getResponseChannel();
+                    }
+                    state |= FLAG_WRITE_STARTED;
+                    do {
+                        res = channel.write(bufs);
+                        written += res;
+                        if (res == 0) {
+                            //write it out with a listener
+                            if (userBuffer != null) {
+                                //but we need to copy any extra data
+                                final ByteBuffer copy = ByteBuffer.allocate(userBuffer.remaining());
+                                copy.put(userBuffer);
+                                copy.flip();
+
+                                this.buffersToWrite = new ByteBuffer[]{buffer, copy};
+                            } else {
+                                buffersToWrite = bufs;
+                            }
+                            state = state & ~FLAG_READY;
+                            return;
+                        }
+                    } while (written < toWrite);
+                    buffer.clear();
+                }
+            } finally {
+                updateWrittenAsync(len);
             }
         }
-        updateWritten(len);
     }
 
     void updateWritten(final int len) throws IOException {
@@ -120,14 +215,74 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         }
     }
 
+    void updateWrittenAsync(final int len) throws IOException {
+        this.written += len;
+        if (contentLength != null && this.written >= contentLength) {
+            state |= FLAG_CLOSED;
+            if (flushBufferAsync()) {
+                channel.shutdownWrites();
+                state |= FLAG_DELEGATE_SHUTDOWN;
+                if (!channel.flush()) {
+                    resumeWrites();
+                }
+            }
+        }
+    }
+
+    private void resumeWrites() {
+        if (anyAreSet(state, FLAG_IN_CALLBACK)) {
+            //writes will be resumed at the end of the callback
+            return;
+        }
+        underlyingConnectionChannel.getWriteSetter().set(internalListener);
+        underlyingConnectionChannel.resumeWrites();
+    }
+
+    private boolean flushBufferAsync() throws IOException {
+
+        ByteBuffer[] bufs = buffersToWrite;
+        if (bufs == null) {
+            ByteBuffer buffer = buffer();
+            buffer.flip();
+            bufs = new ByteBuffer[]{buffer};
+        }
+        long toWrite = Buffers.remaining(bufs);
+        if (toWrite == 0) {
+            //we clear the buffer, so it can be written to again
+            buffer.clear();
+            return true;
+        }
+        state |= FLAG_WRITE_STARTED;
+        if (channel == null) {
+            channel = servletResponse.getExchange().getResponseChannel();
+        }
+        long res;
+        long written = 0;
+        do {
+            res = channel.write(bufs);
+            written += res;
+            if (res == 0) {
+                //write it out with a listener
+                state = state & ~FLAG_READY;
+                buffersToWrite = bufs;
+                return false;
+            }
+        } while (written < toWrite);
+        buffer.clear();
+        return true;
+    }
+
+
     /**
      * Returns the underlying buffer. If this has not been created yet then
      * it is created.
-     *
+     * <p/>
      * Callers that use this method must call {@link #updateWritten(int)} to update the written
      * amount.
-     *
+     * <p/>
      * This allows the buffer to be filled directly, which can be more efficient.
+     * <p/>
+     * This method is basically a hack that should only be used by the print writer
      *
      * @return The underlying buffer
      */
@@ -139,155 +294,127 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      * {@inheritDoc}
      */
     public void flush() throws IOException {
-        if (closed) {
-            throw UndertowServletMessages.MESSAGES.streamIsClosed();
+        if (listener == null) {
+            if (anyAreSet(state, FLAG_CLOSED)) {
+                throw UndertowServletMessages.MESSAGES.streamIsClosed();
+            }
+            if (buffer != null && buffer.position() != 0) {
+                writeBufferBlocking();
+            }
+            if (channel == null) {
+                channel = servletResponse.getExchange().getResponseChannel();
+            }
+            Channels.flushBlocking(channel);
+        } else {
+            if (anyAreClear(state, FLAG_READY)) {
+                return;
+            }
+            if (channel == null) {
+                channel = servletResponse.getExchange().getResponseChannel();
+            }
+            if (buffer == null || buffer.position() == 0) {
+                //nothing to flush, we just flush the underlying stream
+                //it does not matter if this succeeds or not
+                channel.flush();
+                return;
+            }
+            //we have some data in the buffer, we can just write it out
+            //if the write fails we just compact, rather than changing the ready state
+            state |= FLAG_WRITE_STARTED;
+            buffer.flip();
+            long res;
+            do {
+                res = channel.write(buffer);
+                written += res;
+            } while (buffer.hasRemaining() && res != 0);
+            if (!buffer.hasRemaining()) {
+                channel.flush();
+            }
+            buffer.compact();
         }
-        if (buffer != null && buffer.position() != 0) {
-            writeBuffer();
-        }
-        if (channel == null) {
-            channel = servletResponse.getExchange().getResponseChannel();
-        }
-        Channels.flushBlocking(channel);
     }
 
-    private void writeBuffer() throws IOException {
+    private void writeBufferBlocking() throws IOException {
         buffer.flip();
         if (channel == null) {
             channel = servletResponse.getExchange().getResponseChannel();
         }
         Channels.writeBlocking(channel, buffer);
         buffer.clear();
-        writeStarted = true;
+        state |= FLAG_WRITE_STARTED;
     }
 
     /**
      * {@inheritDoc}
      */
     public void close() throws IOException {
-        if (closed) return;
-        try {
-            closed = true;
-            if (!writeStarted && channel == null) {
+        if (listener == null) {
+            if (anyAreSet(state, FLAG_CLOSED)) return;
+            state |= FLAG_CLOSED;
+            state &= ~FLAG_READY;
+            if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
                 if (buffer == null) {
                     servletResponse.setHeader(Headers.CONTENT_LENGTH, "0");
                 } else {
                     servletResponse.setHeader(Headers.CONTENT_LENGTH, "" + buffer.position());
                 }
             }
-            if (buffer != null) {
-                writeBuffer();
+            try {
+                if (buffer != null) {
+                    writeBufferBlocking();
+                }
+                if (channel == null) {
+                    channel = servletResponse.getExchange().getResponseChannel();
+                }
+                StreamSinkChannel channel = this.channel;
+                channel.shutdownWrites();
+                Channels.flushBlocking(channel);
+            } finally {
+                if (pooledBuffer != null) {
+                    pooledBuffer.free();
+                    buffer = null;
+                } else {
+                    buffer = null;
+                }
             }
-            if (channel == null) {
-                channel = servletResponse.getExchange().getResponseChannel();
-            }
-            StreamSinkChannel channel = this.channel;
-            channel.shutdownWrites();
-            Channels.flushBlocking(channel);
-        } finally {
-            if (pooledBuffer != null) {
-                pooledBuffer.free();
-                buffer = null;
-            } else {
-                buffer = null;
-            }
+        } else {
+            closeAsync();
         }
     }
 
     /**
-     * Closes the stream, and writes the data, possibly using an async background writes.
+     * Closes the channel, and flushes any data out using async IO
      * <p/>
-     * Once everything is written out the completion handle will be called. If the stream is
-     * already closed then the completion handler is invoked immediately.
+     * This is used in two situations, if an output stream is not closed when a
+     * request is done, and when performing a close on a stream that is in async
+     * mode
      *
-     * @param handler
      * @throws IOException
      */
     public void closeAsync() throws IOException {
-        if (closed) {
-            servletResponse.getExchange().endExchange();
-            return;
-        }
-        closed = true;
-        if (!writeStarted && channel == null) {
+        if (anyAreSet(state, FLAG_CLOSED)) return;
+
+        state |= FLAG_CLOSED;
+        state &= ~FLAG_READY;
+        if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
             if (buffer == null) {
                 servletResponse.setHeader(Headers.CONTENT_LENGTH, "0");
             } else {
                 servletResponse.setHeader(Headers.CONTENT_LENGTH, "" + buffer.position());
             }
         }
-
         if (channel == null) {
             channel = servletResponse.getExchange().getResponseChannel();
         }
         if (buffer != null) {
-            buffer.flip();
-            try {
-                int res = 0;
-                do {
-                    res = channel.write(buffer);
-                    if (!buffer.hasRemaining()) {
-                        if (pooledBuffer != null) {
-                            pooledBuffer.free();
-                        }
-                        servletResponse.getExchange().endExchange();
-                        return;
-                    }
-                } while (res > 0);
-
-                if (res == 0) {
-                    channel.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
-                        public void handleEvent(final StreamSinkChannel channel) {
-                            int result;
-                            boolean ok = false;
-                            do {
-                                try {
-                                    result = channel.write(buffer);
-                                    ok = true;
-                                } catch (IOException e) {
-                                    channel.suspendWrites();
-                                    IoUtils.safeClose(channel);
-                                    servletResponse.getExchange().endExchange();
-                                    return;
-                                } finally {
-                                    if (!ok) {
-                                        if (pooledBuffer != null) {
-                                            pooledBuffer.free();
-                                        }
-                                    }
-                                }
-                                if (result == 0) {
-                                    return;
-                                }
-                                if (result == -1) {
-                                    channel.suspendWrites();
-                                    IoUtils.safeClose(channel);
-                                    servletResponse.getExchange().endExchange();
-                                }
-                            } while (buffer.hasRemaining());
-                            if (pooledBuffer != null) {
-                                pooledBuffer.free();
-                            }
-                            servletResponse.getExchange().endExchange();
-                        }
-
-                    });
-                    channel.resumeWrites();
-                } else if (res == -1) {
-                    IoUtils.safeClose(channel);
-                    servletResponse.getExchange().endExchange();
-                } else {
-                    buffer = null;
-                    pooledBuffer = null;
-                }
-            } catch (IOException e) {
-                IoUtils.safeClose(channel);
-                servletResponse.getExchange().endExchange();
+            if (!flushBufferAsync()) {
+                resumeWrites();
+                return;
             }
-        } else {
-            servletResponse.getExchange().endExchange();
-            buffer = null;
-            pooledBuffer = null;
+        }
+        channel.shutdownWrites();
+        if (!channel.flush()) {
+            resumeWrites();
         }
     }
 
@@ -308,7 +435,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     }
 
     public void resetBuffer() {
-        if (!writeStarted) {
+        if (allAreClear(state, FLAG_WRITE_STARTED)) {
             if (pooledBuffer != null) {
                 pooledBuffer.free();
                 pooledBuffer = null;
@@ -327,16 +454,104 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     }
 
     public boolean isClosed() {
-        return closed;
+        return anyAreSet(state, FLAG_CLOSED);
     }
 
     @Override
     public boolean isReady() {
-        return false;
+        if (listener == null) {
+            //TODO: is this the correct behaviour?
+            throw UndertowServletMessages.MESSAGES.streamNotInAsyncMode();
+        }
+        return anyAreSet(state, FLAG_READY);
     }
 
     @Override
     public void setWriteListener(final WriteListener writeListener) {
-
+        if (writeListener == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("writeListener");
+        }
+        if (listener != null) {
+            throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
+        }
+        listener = writeListener;
+        //we register the write listener on the underlying connection
+        //so we don't have to force the creation of the response channel
+        //under normal circumstances this will break write listener delegation
+        this.internalListener = new WriteChannelListener();
+        underlyingConnectionChannel.getWriteSetter().set(internalListener);
+        underlyingConnectionChannel.resumeWrites();
     }
+
+    private class WriteChannelListener implements ChannelListener<StreamSinkChannel> {
+
+        @Override
+        public void handleEvent(final StreamSinkChannel theConnectionChannel) {
+            //flush the channel if it is closed
+            if (anyAreSet(state, FLAG_DELEGATE_SHUTDOWN)) {
+                try {
+                    //either it will work, and the channel is closed
+                    //or it won't, and we continue with writes resumed
+                    channel.flush();
+                    return;
+                } catch (IOException e) {
+                    handleError(channel, e);
+                }
+            }
+            //if there is data still to write
+            if (buffersToWrite != null) {
+                long toWrite = Buffers.remaining(buffersToWrite);
+                long written = 0;
+                long res;
+                do {
+                    try {
+                        res = channel.write(buffersToWrite);
+                        written += res;
+                        if (res == 0) {
+                            return;
+                        }
+                    } catch (IOException e) {
+                        handleError(channel, e);
+                    }
+                } while (written < toWrite);
+                buffersToWrite = null;
+            }
+            if (anyAreSet(state, FLAG_CLOSED)) {
+                try {
+                    channel.shutdownWrites();
+                    state |= FLAG_DELEGATE_SHUTDOWN;
+                    channel.flush(); //if this does not succeed we are already resumed anyway
+                } catch (IOException e) {
+                    handleError(channel, e);
+                }
+            } else {
+                state |= FLAG_READY;
+                theConnectionChannel.suspendWrites();
+                theConnectionChannel.getWorker().submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            state |= FLAG_IN_CALLBACK;
+                            listener.onWritePossible();
+                            theConnectionChannel.getWriteSetter().set(WriteChannelListener.this);
+                            theConnectionChannel.resumeWrites();
+                        } catch (Throwable e) {
+                            IoUtils.safeClose(channel);
+                        } finally {
+                            state &= ~FLAG_IN_CALLBACK;
+                        }
+                    }
+                });
+            }
+        }
+
+        private void handleError(final StreamSinkChannel channel, final IOException e) {
+            try {
+                listener.onError(e);
+            } finally {
+                IoUtils.safeClose(channel);
+            }
+        }
+    }
+
 }

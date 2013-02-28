@@ -59,7 +59,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
      * Flag that is set when {@link #shutdownWrites()} or @{link #close()} is called
      */
     private static final int FLAG_WRITES_SHUTDOWN = 1;
-    private static final int FLAG_next_SHUTDWON = 1 << 2;
+    private static final int FLAG_NEXT_SHUTDWON = 1 << 2;
     private static final int FLAG_WRITTEN_FIRST_CHUNK = 1 << 3;
 
     /**
@@ -158,7 +158,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     @Override
     public boolean flush() throws IOException {
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
-            if (anyAreSet(state, FLAG_next_SHUTDWON)) {
+            if (anyAreSet(state, FLAG_NEXT_SHUTDWON)) {
                 return next.flush();
             } else {
                 next.write(chunkingBuffer);
@@ -167,7 +167,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                         if(anyAreSet(config, CONF_FLAG_PASS_CLOSE)) {
                             next.terminateWrites();
                         }
-                        state |= FLAG_next_SHUTDWON;
+                        state |= FLAG_NEXT_SHUTDWON;
                         return next.flush();
                     } finally {
                         if(finishListener != null) {

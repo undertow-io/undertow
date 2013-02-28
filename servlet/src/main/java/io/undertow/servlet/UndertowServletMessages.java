@@ -151,4 +151,10 @@ public interface UndertowServletMessages {
 
     @Message(id = 10035, value = "Stream in async mode was not ready for IO operation")
     IllegalStateException streamNotReady();
+
+    @Message(id = 10036, value = "Listener has already been set")
+    IllegalStateException listenerAlreadySet();
+
+    @Message(id = 10037, value = "When stream is in async mode a write can only be made from the listener callback")
+    IllegalStateException writeCanOnlyBeMadeFromListenerCallback();
 }

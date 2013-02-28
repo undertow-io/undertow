@@ -66,7 +66,11 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
             do {
                 res = channel.write(buffer);
                 if (res == 0) {
-                    this.buffer = buffer;
+
+                    ByteBuffer copy = ByteBuffer.allocate(buffer.remaining());
+                    copy.put(buffer);
+                    copy.flip();
+                    this.buffer = copy;
                     state = state & ~FLAG_READY;
                     channel.resumeWrites();
                     return;
@@ -133,8 +137,11 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
 
     @Override
     public void setWriteListener(final WriteListener writeListener) {
-        if(writeListener == null) {
+        if (writeListener == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("writeListener");
+        }
+        if(listener != null) {
+            throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
         }
         listener = writeListener;
         channel.getWriteSetter().set(new WriteChannelListener());
