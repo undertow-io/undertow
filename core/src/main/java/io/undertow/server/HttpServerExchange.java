@@ -47,6 +47,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
+import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
@@ -138,7 +139,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     public HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
         this.connection = connection;
         this.underlyingRequestChannel = requestChannel;
-        if(connection == null) {
+        if (connection == null) {
             //just for unit tests
             this.underlyingResponseChannel = null;
         } else {
@@ -369,7 +370,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     public void setPersistent(final boolean persistent) {
-        if(persistent) {
+        if (persistent) {
             this.state = this.state | FLAG_PERSISTENT;
         } else {
             this.state = this.state & ~FLAG_PERSISTENT;
@@ -384,7 +385,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
      *                               read
      */
-    public void upgradeChannel(final ExchangeCompletionListener upgradeCompleteListener){
+    public void upgradeChannel(final ExchangeCompletionListener upgradeCompleteListener) {
         setResponseCode(101);
         int oldVal = state;
         exchangeCompleteListeners.add(0, upgradeCompleteListener);
@@ -407,11 +408,11 @@ public final class HttpServerExchange extends AbstractAttachable {
         exchangeCompleteListeners.add(0, upgradeCompleteListener);
     }
 
-    public void addExchangeCompleteListener(final ExchangeCompletionListener listener){
+    public void addExchangeCompleteListener(final ExchangeCompletionListener listener) {
         exchangeCompleteListeners.add(listener);
     }
 
-    public void addDefaultResponseListener(final DefaultResponseListener listener){
+    public void addDefaultResponseListener(final DefaultResponseListener listener) {
         defaultResponseListeners.add(listener);
     }
 
@@ -457,14 +458,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The query parameters
      */
     public Map<String, Deque<String>> getQueryParameters() {
-        if(queryParameters == null) {
+        if (queryParameters == null) {
             queryParameters = new SecureHashMap<>(0);
         }
         return queryParameters;
     }
 
     public void addQueryParam(final String name, final String param) {
-        if(queryParameters == null) {
+        if (queryParameters == null) {
             queryParameters = new TreeMap<>();
         }
         Deque<String> list = queryParameters.get(name);
@@ -533,13 +534,13 @@ public final class HttpServerExchange extends AbstractAttachable {
             return;
         }
         this.state = oldVal | FLAG_REQUEST_TERMINATED;
-        if(anyAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
+        if (anyAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
             invokeExchangeCompleteListeners();
         }
     }
 
     private void invokeExchangeCompleteListeners() {
-        if(!exchangeCompleteListeners.isEmpty()) {
+        if (!exchangeCompleteListeners.isEmpty()) {
             int i = exchangeCompleteListeners.size() - 1;
             ExchangeCompletionListener next = exchangeCompleteListeners.get(i);
             next.exchangeEvent(this, new ExchangeCompleteNextListener(exchangeCompleteListeners, this, i));
@@ -549,17 +550,18 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Pushes back the given data. This should only be used by transfer coding handlers that have read past
      * the end of the request when handling pipelined requests
+     *
      * @param unget The buffer to push back
      */
     public void ungetRequestBytes(final Pooled<ByteBuffer> unget) {
-        if(connection.getExtraBytes() == null) {
+        if (connection.getExtraBytes() == null) {
             connection.setExtraBytes(unget);
         } else {
             Pooled<ByteBuffer> eb = connection.getExtraBytes();
             ByteBuffer buf = eb.getResource();
             final ByteBuffer ugBuffer = unget.getResource();
 
-            if(ugBuffer.limit() - ugBuffer.remaining() > buf.remaining()) {
+            if (ugBuffer.limit() - ugBuffer.remaining() > buf.remaining()) {
                 //stuff the existing data after the data we are ungetting
                 ugBuffer.compact();
                 ugBuffer.put(buf);
@@ -600,7 +602,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * In order to close the channel you must first call {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()},
      * and then call {@link org.xnio.channels.StreamSinkChannel#flush()} until it returns true. Alternativly you can
      * call {@link #endExchange()}, which will close the channel as part of its cleanup.
-     *
+     * <p/>
      * Closing a fixed-length response before the corresponding number of bytes has been written will cause the connection
      * to be reset and subsequent requests to fail; thus it is important to ensure that the proper content length is
      * delivered when one is specified.  The response channel may not be writable until after the response headers have
@@ -609,9 +611,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      * If this method is not called then an empty or default response body will be used, depending on the response code set.
      * <p/>
      * The returned channel will begin to write out headers when the first write request is initiated, or when
-     *  {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()} is called on the channel with no content being written.
+     * {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()} is called on the channel with no content being written.
      * Once the channel is acquired, however, the response code and headers may not be modified.
-     *
+     * <p/>
      * Note that if you call {@link #getResponseSender()} first this method will return null
      *
      * @return the response channel, or {@code null} if another party already acquired the channel
@@ -643,12 +645,12 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Get the response sender.  This is effectively a wrapper around the response channel, so all the semantics of
      * {@link #getResponseChannel()} apply.
      *
-     * @see #getResponseChannel()
      * @return the response sender, or {@code null} if another party already acquired the channel or the sender
+     * @see #getResponseChannel()
      */
     public Sender getResponseSender() {
         StreamSinkChannel channel = getResponseChannel();
-        if(channel == null) {
+        if (channel == null) {
             return null;
         }
         return new SenderImpl(channel, this);
@@ -725,7 +727,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             return;
         }
         this.state = oldVal | FLAG_RESPONSE_TERMINATED;
-        if(anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
+        if (anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
             invokeExchangeCompleteListeners();
         }
     }
@@ -751,13 +753,58 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         final int state = this.state;
-        if (anyAreClear(state, FLAG_REQUEST_TERMINATED) && isPersistent()) {
-            //if this happens then the request is broken, we could drain the channel,
-            //but the client sending data that the handler is not actually interested in just
-            //seems like an error condition, so it seems like a more sensible response is just to
-            //forcibly close the read side
-            setPersistent(false);
-            IoUtils.safeShutdownReads(underlyingRequestChannel);
+        //417 means that we are rejecting the request
+        //so the client should not actually send any data
+        //TODO: how
+        if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
+            //not really sure what the best thing to do here is
+            //for now we are just going to drain the channel
+            if (requestChannel == null) {
+                getRequestChannel();
+            }
+            int totalRead = 0;
+            for (; ; ) {
+                try {
+                    long read = Channels.drain(requestChannel, Long.MAX_VALUE);
+                    totalRead += read;
+                    if (read == 0) {
+                        //if the response code is 417 this is a rejected continuation request.
+                        //however there is a chance the client could have sent the data anyway
+                        //so we attempt to drain, and if we have not drained anything then we
+                        //assume the server has not sent any data
+
+                        if(getResponseCode() != 417 || totalRead > 0) {
+                            requestChannel.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE,
+                                    new ChannelListener<StreamSourceChannel>() {
+                                        @Override
+                                        public void handleEvent(final StreamSourceChannel channel) {
+                                            if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
+                                                closeAndFlushResponse();
+                                            }
+                                        }
+                                    }, new ChannelExceptionHandler<StreamSourceChannel>() {
+                                        @Override
+                                        public void handleException(final StreamSourceChannel channel, final IOException e) {
+                                            UndertowLogger.REQUEST_LOGGER.debug("Exception draining request stream", e);
+                                            IoUtils.safeClose(connection.getChannel());
+                                        }
+                                    }
+                            ));
+                            requestChannel.resumeReads();
+                            return;
+                        } else {
+                            break;
+                        }
+                    } else if (read == -1) {
+                        break;
+                    }
+                } catch (IOException e) {
+                    UndertowLogger.REQUEST_LOGGER.debug("Exception draining request stream", e);
+                    IoUtils.safeClose(connection.getChannel());
+                }
+
+            }
+
         }
         if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
             closeAndFlushResponse();
@@ -849,7 +896,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void proceed() {
-            if(--i >=0) {
+            if (--i >= 0) {
                 final ExchangeCompletionListener next = list.get(i);
                 next.exchangeEvent(exchange, this);
             }

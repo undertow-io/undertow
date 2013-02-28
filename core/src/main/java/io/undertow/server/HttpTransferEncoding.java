@@ -137,6 +137,11 @@ public class HttpTransferEncoding {
             // no content - immediately start the next request, returning an empty stream for this one
             exchange.terminateRequest();
             exchange.addRequestWrapper(EMPTY_STREAM_SOURCE_CONDUIT_WRAPPER);
+        } else if(exchange.isHttp11()) {
+            //this is a http 1.1 non-persistent connection
+            //we still know there is no content
+            exchange.terminateRequest();
+            exchange.addRequestWrapper(EMPTY_STREAM_SOURCE_CONDUIT_WRAPPER);
         }
 
         exchange.setPersistent(persistentConnection);

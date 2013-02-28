@@ -73,6 +73,7 @@ public class SimpleNonBlockingServerTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
     @Test
     public void sendHttpOneZeroRequest() throws IOException {
         TestHttpClient client = new TestHttpClient();
