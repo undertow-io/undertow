@@ -15,8 +15,8 @@
  */
 package io.undertow.websockets.api;
 
-import io.undertow.server.HttpServerExchange;
 
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 /**
  * Implementations of this interface wil be called on new established WebSocket connections.
@@ -28,5 +28,5 @@ public interface WebSocketSessionHandler {
     /**
      * Is called once a new WebSocketSession is established and so the handshake was completed.
      */
-    void onSession(WebSocketSession session, HttpServerExchange exchange);
+    void onSession(WebSocketSession session, WebSocketHttpExchange exchange);
 }

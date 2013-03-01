@@ -17,53 +17,43 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-
-import javax.websocket.HandshakeResponse;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.websocket.HandshakeResponse;
+
+import io.undertow.websockets.spi.WebSocketHttpExchange;
+
 /**
- * {@link HandshakeResponse} which wraps a {@link HttpServerExchange} to act on it.
+ * {@link HandshakeResponse} which wraps a {@link io.undertow.websockets.spi.WebSocketHttpExchange} to act on it.
  * Once the processing of it is done {@link #update()} must be called to persist any changes
  * made.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 final class ExchangeHandshakeResponse implements HandshakeResponse {
-    private final HttpServerExchange exchange;
+    private final WebSocketHttpExchange exchange;
     private Map<String, List<String>> headers;
 
-    public ExchangeHandshakeResponse(final HttpServerExchange exchange) {
+    public ExchangeHandshakeResponse(final WebSocketHttpExchange exchange) {
         this.exchange = exchange;
     }
 
     @Override
     public Map<String, List<String>> getHeaders() {
         if (headers == null) {
-            headers = new HashMap<String, List<String>>();
-            HeaderMap responseHeaders = exchange.getResponseHeaders();
-            for (HttpString name: responseHeaders.getHeaderNames()) {
-                headers.put(name.toString(), new LinkedList<String>(responseHeaders.get(name)));
-            }
+            headers = new HashMap<>(exchange.getResponseHeaders());
         }
         return headers;
     }
 
     /**
-     * Persist all changes and update the wrapped {@link HttpServerExchange}.
+     * Persist all changes and update the wrapped {@link io.undertow.websockets.spi.WebSocketHttpExchange}.
      */
     void update() {
         if (headers != null) {
-            HeaderMap map = exchange.getRequestHeaders();
-            map.clear();
-            for (Map.Entry<String, List<String>> header: headers.entrySet()) {
-                map.addAll(HttpString.tryFromString(header.getKey()), header.getValue());
-            }
+            exchange.setResponseHeaders(headers);
         }
     }
 }

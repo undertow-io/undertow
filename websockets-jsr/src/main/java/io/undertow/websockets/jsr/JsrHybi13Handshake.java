@@ -17,13 +17,17 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
-
-import javax.websocket.server.ServerEndpointConfiguration;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
+
+import javax.websocket.server.ServerEndpointConfiguration;
+
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
+import org.xnio.Pool;
+import org.xnio.channels.ConnectedStreamChannel;
 
 /**
  * {@link Hybi13Handshake} sub-class which takes care of match against the {@link ServerEndpointConfiguration} and
@@ -40,20 +44,20 @@ final class JsrHybi13Handshake extends Hybi13Handshake {
     }
 
     @Override
-    protected void upgradeChannel(final HttpServerExchange exchange, byte[] data) {
+    protected void upgradeChannel(final WebSocketHttpExchange exchange, byte[] data) {
         HandshakeUtil.prepareUpgrade(config, exchange);
         super.upgradeChannel(exchange, data);
     }
 
     @Override
-    public WebSocketChannel createChannel(HttpServerExchange exchange) {
-        WebSocketChannel channel =  super.createChannel(exchange);
+    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final ConnectedStreamChannel c, final Pool<ByteBuffer> buffers) {
+        WebSocketChannel channel = super.createChannel(exchange, c, buffers);
         HandshakeUtil.setConfig(channel, config);
         return channel;
     }
 
     @Override
-    public boolean matches(HttpServerExchange exchange) {
+    public boolean matches(WebSocketHttpExchange exchange) {
         return super.matches(exchange) && HandshakeUtil.matches(config, exchange);
     }
 

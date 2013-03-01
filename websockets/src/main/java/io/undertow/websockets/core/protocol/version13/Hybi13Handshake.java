@@ -16,16 +16,19 @@
 
 package io.undertow.websockets.core.protocol.version13;
 
+import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.Set;
 
-import io.undertow.server.HttpServerExchange;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import org.xnio.IoUtils;
+import org.xnio.Pool;
+import org.xnio.channels.ConnectedStreamChannel;
 
 /**
  * The handshaking protocol implementation for Hybi-13.
@@ -43,31 +46,31 @@ public class Hybi13Handshake extends Hybi07Handshake {
     }
 
     @Override
-    public void handshake(final HttpServerExchange exchange) {
-        String origin = exchange.getRequestHeaders().getFirst(Headers.ORIGIN);
+    protected void handshakeInternal(final WebSocketHttpExchange exchange) {
+        String origin = exchange.getRequestHeader(Headers.ORIGIN_STRING);
         if (origin != null) {
-            exchange.getResponseHeaders().put(Headers.ORIGIN, origin);
+            exchange.setResponseHeader(Headers.ORIGIN_STRING, origin);
         }
-        String protocol = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_PROTOCOL);
+        String protocol = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING);
         if (protocol != null) {
-            exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_PROTOCOL, protocol);
+            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING, protocol);
         }
-        exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_LOCATION, getWebSocketLocation(exchange));
+        exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_LOCATION_STRING, getWebSocketLocation(exchange));
 
-        final String key = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_KEY);
+        final String key = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY_STRING);
         try {
             final String solution = solve(key);
-            exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_ACCEPT, solution);
+            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_ACCEPT_STRING, solution);
             performUpgrade(exchange);
         } catch (NoSuchAlgorithmException e) {
-            IoUtils.safeClose(exchange.getConnection());
+            IoUtils.safeClose(exchange);
             exchange.endExchange();
             return;
         }
     }
 
     @Override
-    public WebSocketChannel createChannel(final HttpServerExchange exchange) {
-        return new WebSocket13Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange), subprotocols, allowExtensions);
+    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final ConnectedStreamChannel channel, final Pool<ByteBuffer> pool) {
+        return new WebSocket13Channel(channel, pool, getWebSocketLocation(exchange), subprotocols, allowExtensions);
     }
 }

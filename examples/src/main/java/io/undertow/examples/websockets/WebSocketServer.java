@@ -7,6 +7,7 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import io.undertow.Undertow;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -29,7 +30,7 @@ public class WebSocketServer {
                 .addListener(8080, "localhost")
                 .addPathHandler("/myapp", Websockets.handler(new WebSocketSessionHandler() {
                     @Override
-                    public void onSession(final WebSocketSession session, HttpServerExchange exchange) {
+                    public void onSession(final WebSocketSession session, WebSocketHttpExchange exchange) {
                         session.setFrameHandler(new AbstractAssembledFrameHandler() {
                             @Override
                             public void onTextFrame(final WebSocketSession session, final WebSocketFrameHeader header, final CharSequence payload) {

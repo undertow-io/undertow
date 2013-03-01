@@ -17,12 +17,13 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.websockets.core.WebSocketChannel;
+import java.net.URI;
 
 import javax.websocket.server.ServerEndpointConfiguration;
-import java.net.URI;
+
+import io.undertow.util.Headers;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 /**
  * Internal util class for handshaking
@@ -36,21 +37,20 @@ final class HandshakeUtil {
     }
 
     /**
-     * Returns {@code true} if the Handshake should be used for the {@link HttpServerExchange}.
+     * Returns {@code true} if the Handshake should be used for the {@link io.undertow.websockets.spi.WebSocketHttpExchange}.
      */
-    public static boolean matches(ServerEndpointConfiguration config, HttpServerExchange exchange) {
-        return config.checkOrigin(exchange.getRequestHeaders().getFirst(Headers.ORIGIN))
+    public static boolean matches(ServerEndpointConfiguration config, WebSocketHttpExchange exchange) {
+        return config.checkOrigin(exchange.getRequestHeader(Headers.ORIGIN_STRING))
                 && config.matchesURI(URI.create(exchange.getRequestURI()));
     }
 
     /**
      * Prepare for upgrade
      */
-    public static void prepareUpgrade(final ServerEndpointConfiguration config, final HttpServerExchange exchange) {
+    public static void prepareUpgrade(final ServerEndpointConfiguration config, final WebSocketHttpExchange exchange) {
         ExchangeHandshakeRequest request = new ExchangeHandshakeRequest(exchange);
         ExchangeHandshakeResponse response = new ExchangeHandshakeResponse(exchange);
         config.modifyHandshake(request, response);
-        request.update();
         response.update();
     }
 

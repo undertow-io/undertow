@@ -17,7 +17,6 @@
  */
 package io.undertow.websockets.core.protocol.version00;
 
-import io.undertow.server.HttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
@@ -27,6 +26,7 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -64,7 +64,7 @@ public class WebSocket00ServerTest {
         final AtomicBoolean connected = new AtomicBoolean(false);
         DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
-            public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
+            public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
                 channel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
                     @Override
@@ -74,7 +74,7 @@ public class WebSocket00ServerTest {
                             if (ws == null) {
                                 return;
                             }
-                            new StringReadChannelListener(exchange.getConnection().getBufferPool()) {
+                            new StringReadChannelListener(exchange.getBufferPool()) {
                                 @Override
                                 protected void stringDone(final String string) {
                                     try {
@@ -132,7 +132,7 @@ public class WebSocket00ServerTest {
         final AtomicBoolean connected = new AtomicBoolean(false);
         DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
-            public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
+            public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
                 channel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
                     @Override
@@ -186,7 +186,7 @@ public class WebSocket00ServerTest {
         final AtomicBoolean connected = new AtomicBoolean(false);
         DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
-            public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
+            public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
                 connected.set(true);
                 channel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
                     @Override

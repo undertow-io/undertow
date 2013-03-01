@@ -17,17 +17,18 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.websockets.api.WebSocketSession;
-import io.undertow.websockets.api.WebSocketSessionHandler;
-import io.undertow.websockets.impl.WebSocketChannelSession;
-import org.xnio.IoUtils;
-
-import javax.websocket.Endpoint;
-import javax.websocket.server.ServerEndpointConfiguration;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+
+import javax.websocket.Endpoint;
+import javax.websocket.server.ServerEndpointConfiguration;
+
+import io.undertow.websockets.api.WebSocketSession;
+import io.undertow.websockets.api.WebSocketSessionHandler;
+import io.undertow.websockets.impl.WebSocketChannelSession;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
+import org.xnio.IoUtils;
 
 /**
  * {@link WebSocketSessionHandler} implementation which will setuo the {@link UndertowSession} and notify
@@ -50,7 +51,7 @@ final class EndpointSessionHandler implements WebSocketSessionHandler {
     }
 
     @Override
-    public void onSession(WebSocketSession s, HttpServerExchange exchange) {
+    public void onSession(WebSocketSession s, WebSocketHttpExchange exchange) {
         WebSocketChannelSession channelSession = (WebSocketChannelSession) s;
         ServerEndpointConfiguration config = HandshakeUtil.getConfig(channelSession.getChannel());
 

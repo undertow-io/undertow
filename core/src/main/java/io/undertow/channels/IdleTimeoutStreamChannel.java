@@ -61,7 +61,7 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
                     ChannelListeners.invokeChannelListener((C) IdleTimeoutStreamChannel.this, writeSetter.get());
                 }
                 if (channel.isReadResumed()) {
-                    ChannelListeners.invokeChannelListener((C)IdleTimeoutStreamChannel.this, readSetter.get());
+                    ChannelListeners.invokeChannelListener((C) IdleTimeoutStreamChannel.this, readSetter.get());
                 }
             } finally {
                 IoUtils.safeClose(channel);
@@ -82,9 +82,9 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
         if (idleTimeout > 0) {
             if (ret == 0 && key == null) {
                 XnioExecutor.Key k = channel.getWriteThread().executeAfter(timeoutCommand, idleTimeout, TimeUnit.MILLISECONDS);
-                if (!KEY_UPDATER.compareAndSet(this, null, k)){
+                if (!KEY_UPDATER.compareAndSet(this, null, k)) {
                     k.remove();
-                }  else {
+                } else {
                     handle = k;
                 }
             } else if (ret > 0 && key != null) {
@@ -231,7 +231,7 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
 
             if (idleTimeout > 0) {
                 XnioExecutor.Key k = getWriteThread().executeAfter(timeoutCommand, idleTimeout, TimeUnit.MILLISECONDS);
-                if (!KEY_UPDATER.compareAndSet(this, null, k)){
+                if (!KEY_UPDATER.compareAndSet(this, null, k)) {
                     k.remove();
                 } else {
                     handle = k;

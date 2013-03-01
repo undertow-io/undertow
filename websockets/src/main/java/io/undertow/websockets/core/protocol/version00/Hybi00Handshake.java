@@ -25,14 +25,13 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.Handshake;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.channels.StreamSourceChannel;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
+import org.xnio.Pool;
+import org.xnio.channels.ConnectedStreamChannel;
 
 /**
  * @author Mike Brock
@@ -49,89 +48,50 @@ public class Hybi00Handshake extends Handshake {
     }
 
     @Override
-    public void handshake(final HttpServerExchange exchange) {
-        String origin = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_ORIGIN);
+    protected void handshakeInternal(final WebSocketHttpExchange exchange) {
+
+        String origin = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_ORIGIN_STRING);
         if (origin != null) {
-            exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_ORIGIN, origin);
+            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_ORIGIN_STRING, origin);
         }
 
-        exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_LOCATION, getWebSocketLocation(exchange));
+        exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_LOCATION_STRING, getWebSocketLocation(exchange));
 
-        String protocol = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_PROTOCOL);
+        String protocol = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING);
         if (protocol != null) {
-            exchange.getResponseHeaders().put(Headers.SEC_WEB_SOCKET_PROTOCOL, protocol);
+            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING, protocol);
         }
 
         // Calculate the answer of the challenge.
-        final String key1 = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_KEY1);
-        final String key2 = exchange.getRequestHeaders().getFirst(Headers.SEC_WEB_SOCKET_KEY2);
-        final byte[] key3 = new byte[8];
-        final ByteBuffer buffer = ByteBuffer.wrap(key3);
+        final String key1 = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY1_STRING);
+        final String key2 = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY2_STRING);
 
-        final StreamSourceChannel channel = exchange.getRequestChannel();
-        int r, read = 0;
-        do {
-            try {
-                r = channel.read(buffer);
-                read += r;
+        exchange.readRequestData(new WebSocketHttpExchange.ReadCallback() {
+            @Override
+            public void onRead(final WebSocketHttpExchange exchange, final byte[] data) {
+                byte[] key3 = data;
 
-                if (r == -1) {
-                    IoUtils.safeClose(exchange.getConnection());
-                    exchange.endExchange();
-                    return;
-                }
-            } catch (IOException e) {
-                IoUtils.safeClose(exchange.getConnection());
-                exchange.endExchange();
-                return;
+                final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
+                performUpgrade(exchange, solution);
             }
-        } while (r > 0 && read < 8);
 
-        if (read != 8) {
-            final int soFar = read;
-            channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
-                @Override
-                public void handleEvent(final StreamSourceChannel channel) {
-                    int r, read = soFar;
-                    do {
-                        try {
-                            r = channel.read(buffer);
-                            read += r;
-                            if (r == -1) {
-                                IoUtils.safeClose(exchange.getConnection());
-                                exchange.endExchange();
-                                return;
-                            }
-                        } catch (IOException e) {
-                            IoUtils.safeClose(exchange.getConnection());
-                            exchange.endExchange();
-                            return;
-                        }
-                    } while (r > 0 && read != 8);
-                    if (read == 8) {
-                        channel.suspendReads();
-                        final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
-                        performUpgrade(exchange, solution);
-                    }
+            @Override
+            public void error(final WebSocketHttpExchange exchange, final IOException exception) {
+                exchange.close();
+            }
+        });
 
-                }
-            });
-        } else {
-            channel.suspendReads();
-            final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
-            performUpgrade(exchange, solution);
-        }
     }
 
     @Override
-    public boolean matches(final HttpServerExchange exchange) {
-        return exchange.getRequestHeaders().contains(Headers.SEC_WEB_SOCKET_KEY1) &&
-                exchange.getRequestHeaders().contains(Headers.SEC_WEB_SOCKET_KEY2);
+    public boolean matches(final WebSocketHttpExchange exchange) {
+        return exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY1_STRING) != null &&
+                exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY2_STRING) != null;
     }
 
     @Override
-    public WebSocketChannel createChannel(final HttpServerExchange exchange) {
-        return new WebSocket00Channel(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool(), getWebSocketLocation(exchange), subprotocols);
+    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final ConnectedStreamChannel channel, final Pool<ByteBuffer> pool) {
+        return new WebSocket00Channel(channel, pool, getWebSocketLocation(exchange), subprotocols);
     }
 
     protected static byte[] solve(final String hashAlgorithm, String encodedKey1, String encodedKey2, byte[] key3) {

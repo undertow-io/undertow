@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import io.undertow.UndertowLogger;
 import io.undertow.channels.IdleTimeoutStreamChannel;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
@@ -81,16 +80,16 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     // TODO: Maybe init lazy to safe memory when not used by the user ?
     private final ConcurrentMap<String, Object> attrs = new ConcurrentHashMap<String, Object>();
+
     /**
      * Create a new {@link WebSocketChannel}
      * 8
      *
-     * @param connectedStreamChannel
-     *                   The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
-     *                   Be aware that it already must be "upgraded".
-     * @param bufferPool The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
-     * @param version    The {@link WebSocketVersion} of the {@link WebSocketChannel}
-     * @param wsUrl      The url for which the {@link io.undertow.websockets.core.protocol.version00.WebSocket00Channel} was created.
+     * @param connectedStreamChannel The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
+     *                               Be aware that it already must be "upgraded".
+     * @param bufferPool             The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
+     * @param version                The {@link WebSocketVersion} of the {@link WebSocketChannel}
+     * @param wsUrl                  The url for which the {@link io.undertow.websockets.core.protocol.version00.WebSocket00Channel} was created.
      */
     protected WebSocketChannel(final ConnectedStreamChannel connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, Set<String> subProtocols, boolean extensionsSupported) {
         channel = new IdleTimeoutStreamChannel<ConnectedStreamChannel>(connectedStreamChannel);
@@ -294,8 +293,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 try {
                     res = pushBackStreamChannel.read(buffer);
                 } catch (IOException e) {
-                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                        UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
+                    if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        WebSocketLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
                     }
                     safeClose(pushBackStreamChannel);
                     throw e;
@@ -308,8 +307,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                         pushBackStreamChannel.shutdownReads();
 
                     } catch (IOException e) {
-                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                            UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
+                        if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                            WebSocketLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
                         }
                         // nothing we can do here.. close
                         safeClose(pushBackStreamChannel);
@@ -322,8 +321,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                     partialFrame.handle(buffer, pushBackStreamChannel);
                 } catch (WebSocketException e) {
                     //the data was corrupt
-                    if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                        UndertowLogger.REQUEST_LOGGER.debugf(e, "receive failed due to Exception");
+                    if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        WebSocketLogger.REQUEST_LOGGER.debugf(e, "receive failed due to Exception");
                     }
                     // nothing we can do here.. close
                     safeClose(pushBackStreamChannel);
@@ -427,10 +426,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     /**
      * Return a {@link FragmentedMessageChannel} which can be used t send a TEXT WebSocket message in fragments.
      * This means the first fragment will be send as TEXT frame and the following as CONTINUATION frames.
-     *
+     * <p/>
      * If this method is called multiple times, subsequent {@link FragmentedMessageChannel}'s will not be writable until all previous frames
      * were completely written.
-     *
      */
     public final FragmentedMessageChannel sendFragmentedText() {
         FragmentedMessageChannelImpl fragmentedMessageChannel = new FragmentedMessageChannelImpl(WebSocketFrameType.TEXT);
@@ -444,10 +442,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     /**
      * Return a {@link FragmentedMessageChannel} which can be used t send a BINARY WebSocket message in fragments.
      * This means the first fragment will be send as TEXT frame and the following as CONTINUATION frames.
-     *
+     * <p/>
      * If this method is called multiple times, subsequent {@link FragmentedMessageChannel}'s will not be writable until all previous frames
      * were completely written.
-     *
      */
     public final FragmentedMessageChannel sendFragmentedBinary() {
         FragmentedMessageChannelImpl fragmentedMessageChannel = new FragmentedMessageChannelImpl(WebSocketFrameType.BINARY);
@@ -595,7 +592,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 final StreamSinkFrameChannel sink;
                 synchronized (sendersLock) {
                     ch = senders.peek();
-                    if(ch != null) {
+                    if (ch != null) {
                         if (ch instanceof FragmentedMessageChannelImpl) {
                             FragmentedMessageChannelImpl fragmented = (FragmentedMessageChannelImpl) ch;
                             sink = fragmented.fragmentedSenders.peek();
@@ -675,7 +672,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
         /**
          * Handles the data, any remaining data will be pushed back
-         *
          */
         void handle(ByteBuffer data, PushBackStreamChannel channel) throws WebSocketException;
 
@@ -687,7 +683,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     public class StreamSourceChannelControl {
 
-        private StreamSourceChannelControl() {}
+        private StreamSourceChannelControl() {
+        }
 
         /**
          * Called once the frame was read for the given {@link StreamSourceFrameChannel}.
@@ -713,15 +710,16 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         private boolean finalSent;
 
         private final Queue<StreamSinkFrameChannel> fragmentedSenders = new ArrayDeque<StreamSinkFrameChannel>();
+
         public FragmentedMessageChannelImpl(WebSocketFrameType type) {
             this.type = type;
         }
 
         @Override
-        public  StreamSinkFrameChannel send(long payloadSize, boolean finalFrame) throws IOException {
+        public StreamSinkFrameChannel send(long payloadSize, boolean finalFrame) throws IOException {
             WebSocketFrameType type;
 
-            synchronized(this) {
+            synchronized (this) {
                 if (finalSent) {
                     throw WebSocketMessages.MESSAGES.fragmentedSenderCompleteAlready();
                 }

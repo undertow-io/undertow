@@ -17,14 +17,12 @@ package io.undertow.websockets.core.protocol.server;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpTransferEncoding;
-import io.undertow.server.HttpTransferEncoding;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
@@ -119,7 +117,7 @@ public class AutobahnWebSocketServer {
 
             setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
                 @Override
-                public void onConnect(final HttpServerExchange exchange, final WebSocketChannel channel) {
+                public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
                     channel.getReceiveSetter().set(new Receiver());
                     channel.resumeReceives();
                 }

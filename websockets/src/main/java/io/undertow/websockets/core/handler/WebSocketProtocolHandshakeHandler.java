@@ -24,16 +24,15 @@ import java.util.HashSet;
 import java.util.Set;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Methods;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.core.protocol.version00.Hybi00Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
+import io.undertow.websockets.spi.AsyncHttpServerExchangeWebSocket;
 
 /**
  * {@link HttpHandler} which will process the {@link HttpServerExchange} and do the actual handshake/upgrade
@@ -83,9 +82,10 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
             exchange.endExchange();
             return;
         }
+        final AsyncHttpServerExchangeWebSocket facade = new AsyncHttpServerExchangeWebSocket(exchange);
         Handshake handshaker = null;
         for (Handshake method : handshakes) {
-            if (method.matches(exchange)) {
+            if (method.matches(facade)) {
                 handshaker = method;
                 break;
             }
@@ -98,16 +98,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
             return;
         }
 
-        final Handshake finalHandshake = handshaker;
-
-        exchange.upgradeChannel(new ExchangeCompletionListener() {
-            @Override
-            public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-                WebSocketChannel channel = finalHandshake.createChannel(exchange);
-                callback.onConnect(exchange, channel);
-            }
-        });
-        handshaker.handshake(exchange);
+        handshaker.handshake(facade, callback);
 
     }
 }

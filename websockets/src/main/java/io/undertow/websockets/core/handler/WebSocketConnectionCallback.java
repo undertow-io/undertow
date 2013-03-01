@@ -16,7 +16,7 @@
 
 package io.undertow.websockets.core.handler;
 
-import io.undertow.server.HttpServerExchange;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.core.WebSocketChannel;
 
 /**
@@ -30,6 +30,6 @@ public interface WebSocketConnectionCallback {
      * Is called once the WebSocket connection is established, which means the handshake was successful.
      *
      */
-    void onConnect(HttpServerExchange exchange, WebSocketChannel channel);
+    void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel);
 
 }

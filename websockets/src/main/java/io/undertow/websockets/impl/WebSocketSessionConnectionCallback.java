@@ -15,7 +15,7 @@
  */
 package io.undertow.websockets.impl;
 
-import io.undertow.server.HttpServerExchange;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.api.FragmentedFrameHandler;
 import io.undertow.websockets.api.SendCallback;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
@@ -68,7 +68,7 @@ public class WebSocketSessionConnectionCallback implements WebSocketConnectionCa
     }
 
     @Override
-    public void onConnect(HttpServerExchange exchange, WebSocketChannel channel) {
+    public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
         final WebSocketChannelSession session = new WebSocketChannelSession(channel, idGenerator.nextId(), executeInIoThread);
         sessionHandler.onSession(session, exchange);
 
