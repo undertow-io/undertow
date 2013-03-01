@@ -285,15 +285,17 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                 bufs[1] = additionalBuffer;
                 totalLength += bufs[1].remaining();
             }
-            long total = 0;
-            long res = 0;
-            do {
-                res = next.write(bufs, 0, bufs.length);
-                total += res;
-                if (res == 0) {
-                    return false;
-                }
-            } while (total < totalLength);
+            if(totalLength > 0) {
+                long total = 0;
+                long res = 0;
+                do {
+                    res = next.write(bufs, 0, bufs.length);
+                    total += res;
+                    if (res == 0) {
+                        return false;
+                    }
+                } while (total < totalLength);
+            }
             additionalBuffer = null;
             currentBuffer.getResource().clear();
             state = state & ~FLUSHING_BUFFER;

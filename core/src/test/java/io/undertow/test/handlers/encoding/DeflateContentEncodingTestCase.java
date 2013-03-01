@@ -91,6 +91,7 @@ public class DeflateContentEncodingTestCase {
     @Test
     public void testDeflateEncodingRandomSizeResponse() throws IOException {
         int seed = new Random().nextInt();
+        System.out.println("Using seed " + seed);
         try {
             final Random random = new Random(seed);
             int size = random.nextInt(691963);
