@@ -23,6 +23,7 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.SecurityContextImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.HttpHandlers;
 
 /**
  * The security handler responsible for attaching the SecurityContext to the current {@link HttpServerExchange}.
@@ -56,7 +57,7 @@ public class SecurityInitialHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) {
         SecurityContext newContext = new SecurityContextImpl(exchange, authenticationMode, identityManager);
         exchange.putAttachment(SecurityContext.ATTACHMENT_KEY, newContext);
-        next.handleRequest(exchange);
+        HttpHandlers.executeHandler(next, exchange);
     }
 
 

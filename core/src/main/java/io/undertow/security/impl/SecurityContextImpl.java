@@ -131,9 +131,7 @@ public class SecurityContextImpl implements SecurityContext {
     }
 
     private AuthenticationState sendChallenges() {
-
         return new ChallengeSender(authMechanisms.iterator(), exchange).transition();
-
     }
 
     private boolean authTransitionRequired() {

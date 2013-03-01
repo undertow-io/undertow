@@ -804,7 +804,6 @@ public final class HttpServerExchange extends AbstractAttachable {
                 }
 
             }
-
         }
         if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
             closeAndFlushResponse();

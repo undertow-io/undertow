@@ -41,7 +41,6 @@ public class CachedAuthenticatedSessionMechanism implements AuthenticationMechan
 
     @Override
     public AuthenticationMechanismOutcome authenticate(HttpServerExchange exchange, SecurityContext securityContext) {
-
         AuthenticatedSessionManager sessionManager = exchange.getAttachment(AuthenticatedSessionManager.ATTACHMENT_KEY);
         if (sessionManager != null) {
             return runCached(exchange, securityContext, sessionManager);
