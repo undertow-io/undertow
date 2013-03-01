@@ -8,6 +8,9 @@ import java.nio.ByteBuffer;
 
 import io.undertow.io.UndertowOutputStream;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConcreteIoFuture;
+import org.xnio.FinishedIoFuture;
+import org.xnio.IoFuture;
 import org.xnio.streams.ChannelInputStream;
 
 /**
@@ -25,32 +28,33 @@ public class BlockingHttpServerExchangeWebSocket extends AsyncHttpServerExchange
     }
 
     @Override
-    public void sendData(final ByteBuffer data, final WriteCallback callback) {
-        while (data.hasRemaining()) {
-            try {
+    public IoFuture<Void> sendData(final ByteBuffer data) {
+        try {
+            while (data.hasRemaining()) {
                 out.write(data.get());
-            } catch (IOException e) {
-                callback.error(this, e);
-                return;
             }
+            return new FinishedIoFuture<Void>(null);
+        } catch (IOException e) {
+            final ConcreteIoFuture<Void> ioFuture = new ConcreteIoFuture<>();
+            ioFuture.setException(e);
+            return ioFuture;
         }
-        callback.onWrite(this);
     }
 
     @Override
-    public void readRequestData(final ReadCallback callback) {
+    public IoFuture<byte[]> readRequestData() {
         final ByteArrayOutputStream data = new ByteArrayOutputStream();
-        byte[] buf = new byte[1024];
-        int r;
-
         try {
+            byte[] buf = new byte[1024];
+            int r;
             while ((r = in.read(buf)) != -1) {
                 data.write(buf, 0, r);
             }
+            return new FinishedIoFuture<byte[]>(data.toByteArray());
         } catch (IOException e) {
-            callback.error(this, e);
-            return;
+            final ConcreteIoFuture<byte[]> ioFuture = new ConcreteIoFuture<>();
+            ioFuture.setException(e);
+            return ioFuture;
         }
-        callback.onRead(this, data.toByteArray());
     }
 }

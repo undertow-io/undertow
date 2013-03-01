@@ -17,11 +17,6 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.websockets.impl.UuidWebSocketSessionIdGenerator;
-import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
-
 import javax.websocket.ClientEndpointConfiguration;
 import javax.websocket.DeploymentException;
 import javax.websocket.Endpoint;
@@ -34,23 +29,19 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * {@link WebSocketContainer} implementation which allows to deploy endpoints for a server. This instance
- * should be added as {@link HttpHandler}.
+ * {@link WebSocketContainer} implementation which allows to deploy endpoints for a server.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public final class ServerWebSocketContainer implements WebSocketContainer, HttpHandler {
+public abstract class ServerWebSocketContainer implements WebSocketContainer {
     private volatile long defaultAsyncSendTimeout;
     private volatile long maxSessionIdleTimeout;
     private volatile int defaultMaxBinaryMessageBufferSize;
     private volatile int defaultMaxTextMessageBufferSize;
-    private final HttpHandler handler;
     private final EndpointFactory factory;
 
     public ServerWebSocketContainer(EndpointFactory factory, ServerEndpointConfiguration... configs) {
         this.factory = factory;
-        handler = new JsrWebSocketProtocolHandshakeHandler(new WebSocketSessionConnectionCallback(new UuidWebSocketSessionIdGenerator(),
-                new EndpointSessionHandler(this), false), configs);
     }
 
     EndpointFactory getEndpointFactory () {
@@ -112,8 +103,4 @@ public final class ServerWebSocketContainer implements WebSocketContainer, HttpH
         return Collections.emptySet();
     }
 
-    @Override
-    public void handleRequest(HttpServerExchange exchange) {
-        handler.handleRequest(exchange);
-    }
 }

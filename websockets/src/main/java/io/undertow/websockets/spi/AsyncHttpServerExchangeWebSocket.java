@@ -13,9 +13,12 @@ import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import org.xnio.ChannelListener;
+import org.xnio.FinishedIoFuture;
+import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -92,26 +95,28 @@ public class AsyncHttpServerExchangeWebSocket implements WebSocketHttpExchange {
     }
 
     @Override
-    public void sendData(final ByteBuffer data, final WriteCallback callback) {
+    public IoFuture<Void> sendData(final ByteBuffer data) {
         if (sender == null) {
             this.sender = exchange.getResponseSender();
         }
+        final ConcreteIoFuture<Void> future = new ConcreteIoFuture<>();
         sender.send(data, new IoCallback() {
             @Override
             public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-                callback.onWrite(AsyncHttpServerExchangeWebSocket.this);
+                future.setResult(null);
             }
 
             @Override
             public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
-                callback.error(AsyncHttpServerExchangeWebSocket.this, exception);
+                future.setException(exception);
 
             }
         });
+        return future;
     }
 
     @Override
-    public void readRequestData(final ReadCallback callback) {
+    public IoFuture<byte[]> readRequestData() {
         final ByteArrayOutputStream data = new ByteArrayOutputStream();
         final Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
         final ByteBuffer buffer = pooled.getResource();
@@ -121,10 +126,10 @@ public class AsyncHttpServerExchangeWebSocket implements WebSocketHttpExchange {
             try {
                 res = channel.read(buffer);
                 if (res == -1) {
-                    callback.onRead(this, data.toByteArray());
-                    return;
+                    return new FinishedIoFuture<byte[]>(data.toByteArray());
                 } else if (res == 0) {
                     //callback
+                    final ConcreteIoFuture<byte[]> future = new ConcreteIoFuture<>();
                     channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
                         @Override
                         public void handleEvent(final StreamSourceChannel channel) {
@@ -132,7 +137,7 @@ public class AsyncHttpServerExchangeWebSocket implements WebSocketHttpExchange {
                             try {
                                 res = channel.read(buffer);
                                 if (res == -1) {
-                                    callback.onRead(AsyncHttpServerExchangeWebSocket.this, data.toByteArray());
+                                    future.setResult(data.toByteArray());
                                     channel.suspendReads();
                                     return;
                                 } else if (res == 0) {
@@ -146,12 +151,12 @@ public class AsyncHttpServerExchangeWebSocket implements WebSocketHttpExchange {
                                 }
 
                             } catch (IOException e) {
-                                callback.error(AsyncHttpServerExchangeWebSocket.this, e);
+                                future.setException(e);
                             }
                         }
                     });
                     channel.resumeReads();
-                    return;
+                    return future;
                 } else {
                     buffer.flip();
                     while (buffer.hasRemaining()) {
@@ -161,7 +166,9 @@ public class AsyncHttpServerExchangeWebSocket implements WebSocketHttpExchange {
                 }
 
             } catch (IOException e) {
-                callback.error(this, e);
+                final ConcreteIoFuture<byte[]> future = new ConcreteIoFuture<>();
+                future.setException(e);
+                return future;
             }
         }
 

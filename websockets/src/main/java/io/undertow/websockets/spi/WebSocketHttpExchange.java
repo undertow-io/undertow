@@ -1,11 +1,11 @@
 package io.undertow.websockets.spi;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
+import org.xnio.IoFuture;
 import org.xnio.Pool;
 
 
@@ -84,24 +84,17 @@ public interface WebSocketHttpExchange extends Closeable {
     void upgradeChannel(final UpgradeCallback upgradeCallback);
 
     /**
-     * Send some data, ending the exchange on completion.
-     *
-     * Depending on the nature of the exchange the data may be written out with either
-     * blocking or async IO, and the exchange may end immediately or once the call stack returns.
-     *
-     * Either way, the exchange should not be modified after this method is invoked
+     * Send some data
      *
      * @param data The data
-     * @param callback The callback
      */
-    void sendData(final ByteBuffer data, final WriteCallback callback);
+    IoFuture<Void> sendData(final ByteBuffer data);
 
     /**
      * Gets the body of the request.
      *
-     * @param callback The callback that is invoked when the body is fully read
      */
-    void readRequestData(final ReadCallback callback);
+    IoFuture<byte[]> readRequestData();
 
     /**
      * End the exchange normally. If this is a blocking exchange this may be a noop, and the exchange
@@ -133,18 +126,4 @@ public interface WebSocketHttpExchange extends Closeable {
      * @return The query string
      */
     String getQueryString();
-
-    interface ReadCallback {
-
-        void onRead(final WebSocketHttpExchange exchange, final byte[] data);
-
-        void error(final WebSocketHttpExchange exchange, IOException exception);
-    }
-
-    interface WriteCallback {
-
-        void onWrite(final WebSocketHttpExchange exchange);
-
-        void error(final WebSocketHttpExchange exchange, IOException exception);
-    }
 }

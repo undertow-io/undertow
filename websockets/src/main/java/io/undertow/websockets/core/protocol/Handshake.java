@@ -16,7 +16,6 @@
 
 package io.undertow.websockets.core.protocol;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -29,6 +28,7 @@ import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.spi.UpgradeCallback;
+import org.xnio.IoFuture;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
 
@@ -136,18 +136,16 @@ public abstract class Handshake {
     }
 
     private static void writePayload(final WebSocketHttpExchange exchange, final ByteBuffer payload) {
-        exchange.sendData(payload, new WebSocketHttpExchange.WriteCallback() {
+        exchange.sendData(payload).addNotifier(new IoFuture.Notifier<Void, Object>() {
             @Override
-            public void onWrite(final WebSocketHttpExchange exchange) {
-                exchange.endExchange();
+            public void notify(final IoFuture<? extends Void> ioFuture, final Object attachment) {
+                if(ioFuture.getStatus() == IoFuture.Status.DONE) {
+                    exchange.endExchange();
+                } else {
+                    exchange.close();
+                }
             }
-
-            @Override
-            public void error(final WebSocketHttpExchange exchange, final IOException exception) {
-                exchange.close();
-            }
-        });
-
+        }, null);
     }
 
     /**

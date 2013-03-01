@@ -30,6 +30,7 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
+import org.xnio.IoFuture;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
 
@@ -66,21 +67,19 @@ public class Hybi00Handshake extends Handshake {
         final String key1 = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY1_STRING);
         final String key2 = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY2_STRING);
 
-        exchange.readRequestData(new WebSocketHttpExchange.ReadCallback() {
+        exchange.readRequestData().addNotifier(new IoFuture.Notifier<byte[], Object>() {
             @Override
-            public void onRead(final WebSocketHttpExchange exchange, final byte[] data) {
-                byte[] key3 = data;
+            public void notify(final IoFuture ioFuture, final Object attachment) {
+                try {
+                    byte[] key3 = (byte[]) ioFuture.get();
 
-                final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
-                performUpgrade(exchange, solution);
+                    final byte[] solution = solve(getHashAlgorithm(), key1, key2, key3);
+                    performUpgrade(exchange, solution);
+                } catch (IOException e) {
+                    exchange.close();
+                }
             }
-
-            @Override
-            public void error(final WebSocketHttpExchange exchange, final IOException exception) {
-                exchange.close();
-            }
-        });
-
+        }, null);
     }
 
     @Override

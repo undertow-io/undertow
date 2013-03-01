@@ -64,7 +64,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -107,7 +107,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -147,7 +147,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -187,7 +187,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -237,7 +237,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -284,7 +284,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -327,7 +327,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -366,7 +366,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -409,7 +409,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -452,7 +452,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -486,7 +486,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -521,7 +521,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
@@ -566,7 +566,7 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
 
-        DefaultServer.setRootHandler(new ServerWebSocketContainer(new EndpointFactory() {
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
             @Override
             public Endpoint createEndpoint(Class<?> clazz) {
                 Assert.assertEquals(clazz, MyEndpoint.class);
