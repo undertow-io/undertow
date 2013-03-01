@@ -80,6 +80,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     private final List<DigestQop> supportedQops;
     private final String qopString;
     private final String realmName; // TODO - Will offer choice once backing store API/SPI is in.
+    private final String domain;
     private final byte[] realmBytes;
     private final NonceManager nonceManager;
     private final boolean plainTextPasswords; // TODO - May move hash validation to the IDM so this does not need to be known in advance.
@@ -89,10 +90,11 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     // Maybe even support registration of a session so it can be invalidated?
 
     public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
-                                         final String realmName, final NonceManager nonceManager, final boolean plainTextPasswords) {
+            final String realmName, final String domain, final NonceManager nonceManager, final boolean plainTextPasswords) {
         this.supportedAlgorithms = supportedAlgorithms;
         this.supportedQops = supportedQops;
         this.realmName = realmName;
+        this.domain = domain;
         this.realmBytes = realmName.getBytes(UTF_8);
         this.nonceManager = nonceManager;
         this.plainTextPasswords = plainTextPasswords;
@@ -112,7 +114,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
 
     public String getName() {
-        return null;
+        return "DIGEST";
     }
 
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
@@ -419,7 +421,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
         StringBuilder rb = new StringBuilder(DIGEST_PREFIX);
         rb.append(Headers.REALM.toString()).append("=\"").append(realmName).append("\",");
-        rb.append(Headers.DOMAIN.toString()).append("=\"/\","); // TODO - This will need to be generated
+        rb.append(Headers.DOMAIN.toString()).append("=\"").append(domain).append("\",");
         // based on security constraints.
         rb.append(Headers.NONCE.toString()).append("=\"").append(nonceManager.nextNonce(null, exchange)).append("\",");
         // Not currently using OPAQUE as it offers no integrity, used for session data leaves it vulnerable to

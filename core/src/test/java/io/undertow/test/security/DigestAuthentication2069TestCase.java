@@ -62,7 +62,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
     @Override
     protected AuthenticationMechanism getTestMechanism() {
         List<DigestQop> qopList = Collections.emptyList();
-        return new DigestAuthenticationMechanism(Collections.singletonList(DigestAlgorithm.MD5), qopList, REALM_NAME,
+        return new DigestAuthenticationMechanism(Collections.singletonList(DigestAlgorithm.MD5), qopList, REALM_NAME, "/",
                 new SimpleNonceManager(), true);
     }
 

@@ -270,8 +270,7 @@ public class SimpleNonceManager implements SessionNonceManager {
 
         if (nonceCount < 0) {
             // Allow a single use but reject all further uses.
-            addInvalidNonce(value, executor);
-            return true;
+            return addInvalidNonce(value, executor);
         } else {
             return validateNonceWithCount(value, nonceCount, executor);
         }
@@ -321,7 +320,7 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     }
 
-    private void addInvalidNonce(final Nonce nonce, final XnioExecutor executor) {
+    private boolean addInvalidNonce(final Nonce nonce, final XnioExecutor executor) {
         long now = System.currentTimeMillis();
         long invalidBefore = now - firstUseTimeOut;
 
@@ -329,9 +328,14 @@ public class SimpleNonceManager implements SessionNonceManager {
         if (timeTillInvalid > 0) {
             if (invalidNonces.add(nonce.nonce)) {
                 executor.executeAfter(new InvalidNonceCleaner(nonce.nonce), timeTillInvalid, TimeUnit.MILLISECONDS);
+                return true;
             } else {
-                throw new IllegalStateException("Nonce re-used");
+                return false;
             }
+        } else {
+            // So close to expiring any record of this nonce being used could have been cleared so
+            // don't take a chance and just say no.
+            return false;
         }
     }
 

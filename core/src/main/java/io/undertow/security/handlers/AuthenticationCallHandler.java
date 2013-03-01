@@ -44,11 +44,10 @@ public class AuthenticationCallHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        boolean challengeSent = !context.authenticate();
-        if(challengeSent) {
-            exchange.endExchange();
-        } else {
+        if (context.authenticate()) {
             HttpHandlers.executeHandler(next, exchange);
+        } else {
+            exchange.endExchange();
         }
     }
 

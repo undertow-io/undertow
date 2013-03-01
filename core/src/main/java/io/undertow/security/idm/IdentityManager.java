@@ -40,6 +40,8 @@ public interface IdentityManager {
      */
     Account verify(final Account account);
 
+    // TODO Realm / Partitioning information could be specified.
+
     /**
      * Verify a supplied {@link Credential} against a requested ID.
      *

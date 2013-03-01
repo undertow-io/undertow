@@ -85,9 +85,8 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
             securityContext.authenticationComplete(account, getName(), false);
             return AuthenticationMechanismOutcome.AUTHENTICATED;
         } else {
-            // TODO - Double check if we want NOT_AUTHENTICATED - this mechanism we may want to fail silently with
-            // NOT_ATTEMPTED as triggering a challenge will not help this mechanism and may inadvertently affect the others.
-            return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
+            // Return NOT_ATTEMPTED to give other mechanisms a chance.
+            return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
         }
     }
 
