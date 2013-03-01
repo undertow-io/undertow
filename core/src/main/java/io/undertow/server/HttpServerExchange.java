@@ -635,7 +635,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 }
             };
         }
-        final StreamSinkChannel channel = new ConduitStreamSinkChannel(underlyingResponseChannel, factory.create());
+        final ConduitStreamSinkChannel channel = new ConduitStreamSinkChannel(underlyingResponseChannel, factory.create());
         this.responseChannel = channel;
         this.startResponse();
         return channel;
