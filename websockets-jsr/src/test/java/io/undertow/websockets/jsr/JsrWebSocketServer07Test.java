@@ -17,6 +17,31 @@
  */
 package io.undertow.websockets.jsr;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.websocket.CloseReason;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfiguration;
+import javax.websocket.Extension;
+import javax.websocket.MessageHandler;
+import javax.websocket.SendHandler;
+import javax.websocket.SendResult;
+import javax.websocket.Session;
+import javax.websocket.server.DefaultServerConfiguration;
+
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
@@ -29,27 +54,6 @@ import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
-
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfiguration;
-import javax.websocket.Extension;
-import javax.websocket.MessageHandler;
-import javax.websocket.SendHandler;
-import javax.websocket.SendResult;
-import javax.websocket.Session;
-import javax.websocket.server.DefaultServerConfiguration;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -64,11 +68,10 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
 
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -88,9 +91,12 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
+
             }
-        }, new TestServerConfiguration()));
+
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -106,12 +112,10 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -128,9 +132,10 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -146,12 +151,10 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -168,9 +171,10 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -186,12 +190,10 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<SendResult> sendResult = new AtomicReference<SendResult>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -214,9 +216,10 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -236,12 +239,10 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<SendResult> sendResult = new AtomicReference<SendResult>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -261,9 +262,10 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -283,12 +285,10 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Future<SendResult>> sendResult = new AtomicReference<Future<SendResult>>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -304,9 +304,10 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -326,12 +327,10 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Future<SendResult>> sendResult = new AtomicReference<Future<SendResult>>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -343,9 +342,11 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -365,12 +366,10 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -390,9 +389,10 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -408,12 +408,10 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -423,7 +421,8 @@ public class JsrWebSocketServer07Test {
                                 try {
                                     Writer writer = session.getRemote().getSendWriter();
                                     writer.write(message);
-                                    writer.flush();;
+                                    writer.flush();
+                                    ;
                                     writer.flush();
                                 } catch (IOException e) {
                                     e.printStackTrace();
@@ -433,9 +432,10 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -451,19 +451,18 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -485,12 +484,10 @@ public class JsrWebSocketServer07Test {
 
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -500,9 +497,10 @@ public class JsrWebSocketServer07Test {
                     public void onClose(Session session, CloseReason closeReason) {
                         reason.set(closeReason);
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -520,12 +518,10 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -547,9 +543,10 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -565,12 +562,10 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
-
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new EndpointFactory() {
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -588,9 +583,10 @@ public class JsrWebSocketServer07Test {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration()));
+        };
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -599,6 +595,7 @@ public class JsrWebSocketServer07Test {
         Assert.assertNull(cause.get());
         client.destroy();
     }
+
     protected WebSocketVersion getVersion() {
         return WebSocketVersion.V07;
     }
@@ -610,10 +607,12 @@ public class JsrWebSocketServer07Test {
         }
     }
 
+
     private static final class TestServerConfiguration extends DefaultServerConfiguration {
         TestServerConfiguration() {
             super(MyEndpoint.class, "/");
         }
+
         @Override
         public String getNegotiatedSubprotocol(List<String> requestedSubprotocols) {
             return null;

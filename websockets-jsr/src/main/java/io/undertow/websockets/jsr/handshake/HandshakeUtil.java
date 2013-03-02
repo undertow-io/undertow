@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.handshake;
 
 import java.net.URI;
 
@@ -23,6 +23,7 @@ import javax.websocket.server.ServerEndpointConfiguration;
 
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 /**
@@ -30,7 +31,7 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class HandshakeUtil {
+public final class HandshakeUtil {
     private static final String CONFIG_KEY = "ServerEndpointConfiguration";
 
     private HandshakeUtil() {
@@ -57,14 +58,14 @@ final class HandshakeUtil {
     /**
      * Set the {@link ServerEndpointConfiguration} which is used to create the {@link WebSocketChannel}.
      */
-    public static void setConfig(WebSocketChannel channel, ServerEndpointConfiguration config) {
+    public static void setConfig(WebSocketChannel channel, ConfiguredServerEndpoint config) {
         channel.setAttribute(CONFIG_KEY, config);
     }
 
     /**
      * Returns the {@link ServerEndpointConfiguration} which was used while create the {@link WebSocketChannel}.
      */
-    public static ServerEndpointConfiguration getConfig(WebSocketChannel channel) {
-        return (ServerEndpointConfiguration) channel.getAttribute(CONFIG_KEY);
+    public static ConfiguredServerEndpoint getConfig(WebSocketChannel channel) {
+        return (ConfiguredServerEndpoint) channel.getAttribute(CONFIG_KEY);
     }
 }

@@ -18,16 +18,22 @@
 
 package io.undertow.websockets.jsr;
 
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Set;
+
+import javax.websocket.Decoder;
+import javax.websocket.DeploymentException;
+
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
-import javax.websocket.DeploymentException;
-import java.io.IOException;
-
 
 /**
  * start at 3000
+ *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 @MessageBundle(projectCode = "UT")
@@ -47,18 +53,33 @@ public interface JsrWebSocketMessages {
     @Message(id = 3004, value = "Client not supported")
     DeploymentException clientNotSupported();
 
-    @Message(id = 3005, value="MessageHandler for type %s already registered")
+    @Message(id = 3005, value = "MessageHandler for type %s already registered")
     IllegalStateException handlerAlreadyRegistered(AbstractFrameHandler.FrameType frameType);
 
-    @Message(id = 3006, value="Unable to detect FrameType for clazz %s")
+    @Message(id = 3006, value = "Unable to detect FrameType for clazz %s")
     IllegalStateException unsupportedFrameType(Class<?> clazz);
 
-    @Message(id = 3007, value="Unable to instance Endpoint for %s")
-    IllegalStateException unableToInstanceEndpoint(Class<?> clazz);
-
-    @Message(id = 3008, value="Unable to detect MessageHandler type for %s")
+    @Message(id = 3007, value = "Unable to detect MessageHandler type for %s")
     IllegalStateException unkownHandlerType(Class<?> clazz);
 
-    @Message(id = 3009, value="Unable to detect Encoder type for %s")
-    IllegalStateException unkownEncoderType(Class<?> clazz);
+    @Message(id = 3008, value = "Unable to detect Encoder type for %s")
+    IllegalStateException unknownEncoderType(Class<?> clazz);
+
+    @Message(id = 3009, value = "More than one %s parameter for %s")
+    IllegalArgumentException moreThanOneParameterOfType(Class<?> type, Method method);
+
+    @Message(id = 3010, value = "No parameter of type %s found in method %s")
+    IllegalArgumentException parameterNotFound(Class<?> type, Method method);
+
+    @Message(id = 3011, value = "More than one method is annotated with %s")
+    DeploymentException moreThanOneAnnotation(Class<?> clazz);
+
+    @Message(id = 3012, value = "Method %s has invalid parameters %s")
+    DeploymentException invalidParamers(Method method, Set<Integer> allParams);
+
+    @Message(id = 3014, value = "Could not determine decoder type for %s")
+    IllegalArgumentException couldNotDetermineDecoderTypeFor(Class<?> decoderClass);
+
+    @Message(id = 3015, value = "No decoder accepted message %s")
+    String noDecoderAcceptedMessage(List<? extends Decoder> decoders);
 }

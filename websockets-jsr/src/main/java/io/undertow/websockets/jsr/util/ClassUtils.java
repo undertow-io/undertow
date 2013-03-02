@@ -15,18 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.util;
 
+import javax.websocket.Decoder;
 import javax.websocket.Encoder;
 import javax.websocket.MessageHandler;
 import java.lang.reflect.Method;
 
+import io.undertow.websockets.jsr.JsrWebSocketMessages;
+
 /**
- * TODO: Maybe use javassist for bytecode generation to replace reflection and get better performance.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class ClassUtils {
+public final class ClassUtils {
     private ClassUtils() {}
 
     /**
@@ -52,6 +54,19 @@ final class ClassUtils {
                 return m.getParameterTypes()[0];
             }
         }
-        throw JsrWebSocketMessages.MESSAGES.unkownEncoderType(clazz);
+        throw JsrWebSocketMessages.MESSAGES.unknownEncoderType(clazz);
+    }
+
+    /**
+     * Returns the Object type for which the {@link Encoder} can be used.
+     */
+    public static Class<?> getDecoderType(Class<? extends Decoder> clazz) {
+        Method[] methods = clazz.getDeclaredMethods();
+        for (Method m: methods) {
+            if ("decode".equals(m.getName())) {
+                return m.getReturnType();
+            }
+        }
+        throw JsrWebSocketMessages.MESSAGES.couldNotDetermineDecoderTypeFor(clazz);
     }
 }

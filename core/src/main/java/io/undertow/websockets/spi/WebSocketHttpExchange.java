@@ -119,6 +119,10 @@ public interface WebSocketHttpExchange extends Closeable {
      */
     String getRequestURI();
 
+    /**
+     *
+     * @return The buffer pool
+     */
     Pool<ByteBuffer> getBufferPool();
 
     /**
@@ -126,4 +130,10 @@ public interface WebSocketHttpExchange extends Closeable {
      * @return The query string
      */
     String getQueryString();
+
+    /**
+     * Gets the session, if any
+     * @return The session object, or null
+     */
+    Object getSession();
 }

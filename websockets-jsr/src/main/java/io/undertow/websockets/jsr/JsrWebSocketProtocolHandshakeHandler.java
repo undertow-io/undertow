@@ -17,13 +17,15 @@
  */
 package io.undertow.websockets.jsr;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.core.protocol.Handshake;
-
-import javax.websocket.server.ServerEndpointConfiguration;
-import java.util.HashSet;
-import java.util.Set;
+import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
+import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
+import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
 
 /**
  * {@link WebSocketProtocolHandshakeHandler} implementation which takes care to add the right {@link Handshake} instances
@@ -33,13 +35,13 @@ import java.util.Set;
  */
 final class JsrWebSocketProtocolHandshakeHandler extends WebSocketProtocolHandshakeHandler {
 
-    public JsrWebSocketProtocolHandshakeHandler(WebSocketConnectionCallback callback, ServerEndpointConfiguration... configs) {
+    public JsrWebSocketProtocolHandshakeHandler(WebSocketConnectionCallback callback, ConfiguredServerEndpoint... configs) {
         super(handshakes(configs), callback);
     }
 
-    private static Set<Handshake> handshakes(ServerEndpointConfiguration... configs) {
+    private static Set<Handshake> handshakes(ConfiguredServerEndpoint... configs) {
         Set<Handshake> handshakes = new HashSet<Handshake>();
-        for (ServerEndpointConfiguration config: configs) {
+        for (ConfiguredServerEndpoint config : configs) {
             handshakes.add(new JsrHybi07Handshake(config));
             handshakes.add(new JsrHybi08Handshake(config));
             handshakes.add(new JsrHybi13Handshake(config));

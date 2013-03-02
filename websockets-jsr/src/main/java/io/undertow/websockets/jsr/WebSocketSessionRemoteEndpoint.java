@@ -18,6 +18,7 @@ package io.undertow.websockets.jsr;
 import io.undertow.websockets.api.FragmentedBinaryFrameSender;
 import io.undertow.websockets.api.FragmentedTextFrameSender;
 import io.undertow.websockets.impl.WebSocketChannelSession;
+import io.undertow.websockets.jsr.util.ClassUtils;
 
 import javax.websocket.EncodeException;
 import javax.websocket.Encoder;

@@ -3,7 +3,6 @@ package io.undertow.websockets.jsr;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -26,6 +25,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
@@ -47,11 +47,11 @@ public class JsrWebSocketServletTest {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(1);
-        final ServletWebSocketContainer webSocketContainer = new ServletWebSocketContainer(new EndpointFactory() {
+
+        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
-            public Endpoint createEndpoint(Class<?> clazz) {
-                Assert.assertEquals(clazz, MyEndpoint.class);
-                return new Endpoint() {
+            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
+                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
                     @Override
                     public void onOpen(final Session session, EndpointConfiguration config) {
                         connected.set(true);
@@ -71,9 +71,11 @@ public class JsrWebSocketServletTest {
                             }
                         });
                     }
-                };
+                });
             }
-        }, new TestServerConfiguration());
+        };
+
+        final ServletWebSocketContainer webSocketContainer = new ServletWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory));
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
 

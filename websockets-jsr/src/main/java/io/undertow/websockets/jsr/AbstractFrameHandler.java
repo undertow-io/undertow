@@ -20,6 +20,7 @@ package io.undertow.websockets.jsr;
 import io.undertow.websockets.api.CloseReason;
 import io.undertow.websockets.api.FrameHandler;
 import io.undertow.websockets.api.WebSocketSession;
+import io.undertow.websockets.jsr.util.ClassUtils;
 import org.xnio.Buffers;
 
 import javax.websocket.Endpoint;

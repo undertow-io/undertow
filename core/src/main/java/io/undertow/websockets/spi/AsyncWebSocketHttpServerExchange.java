@@ -208,4 +208,9 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
     public String getQueryString() {
         return getQueryString();
     }
+
+    @Override
+    public Object getSession() {
+        return null;
+    }
 }

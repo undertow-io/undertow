@@ -15,8 +15,15 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.api.WebSocketSession;
-import io.undertow.websockets.impl.WebSocketChannelSession;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.channels.Channel;
+import java.security.Principal;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
@@ -26,15 +33,11 @@ import javax.websocket.MessageHandler;
 import javax.websocket.RemoteEndpoint;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
-import java.io.IOException;
-import java.net.URI;
-import java.security.Principal;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.websockets.api.WebSocketSession;
+import io.undertow.websockets.impl.WebSocketChannelSession;
+import org.xnio.ChannelListener;
 
 /**
  * {@link Session} implementation which makes use of the high-level WebSocket API of undertow under the hood.
@@ -42,8 +45,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 final class UndertowSession implements Session {
-    // TODO: Think about some more performant datastructure
-    private static final Set<Session> sessions = Collections.synchronizedSet(new HashSet<Session>());
 
     private final WebSocketSession session;
     private final WebSocketContainer container;
@@ -53,9 +54,9 @@ final class UndertowSession implements Session {
     private final Map<String, List<String>> requestParameterMap;
     private final URI requestUri;
     private final Map<String, String> pathParameters;
-    private final Endpoint endpoint;
+    private final InstanceHandle<Endpoint> endpoint;
 
-    public UndertowSession(WebSocketChannelSession session, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, Endpoint endpoint, EndpointConfiguration config) {
+    public UndertowSession(WebSocketChannelSession session, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfiguration config) {
         this.session = session;
         container = handler.getContainer();
         this.user = user;
@@ -63,9 +64,14 @@ final class UndertowSession implements Session {
         this.requestParameterMap = Collections.unmodifiableMap(requestParameterMap);
         this.pathParameters = Collections.unmodifiableMap(pathParameters);
         remote = new WebSocketSessionRemoteEndpoint(session, config);
-        session.setFrameHandler(new BasicFrameHandler(this, endpoint));
+        session.setFrameHandler(new BasicFrameHandler(this, endpoint.getInstance()));
         this.endpoint = endpoint;
-        sessions.add(this);
+        session.getChannel().getCloseSetter().set(new ChannelListener<Channel>() {
+            @Override
+            public void handleEvent(final Channel channel) {
+                close0();
+            }
+        });
     }
 
     @Override
@@ -76,13 +82,13 @@ final class UndertowSession implements Session {
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public synchronized void addMessageHandler(MessageHandler messageHandler) throws IllegalStateException {
-        AbstractFrameHandler handler = (AbstractFrameHandler<?> ) session.getFrameHandler();
+        AbstractFrameHandler handler = (AbstractFrameHandler<?>) session.getFrameHandler();
         if (messageHandler instanceof MessageHandler.Basic) {
             if (handler instanceof BasicFrameHandler) {
                 handler.addHandler(messageHandler);
             } else {
                 if (handler.getHandlers().isEmpty()) {
-                    handler = new BasicFrameHandler(this, endpoint);
+                    handler = new BasicFrameHandler(this, endpoint.getInstance());
                     handler.addHandler(messageHandler);
                     session.setFrameHandler(handler);
                 } else {
@@ -90,12 +96,12 @@ final class UndertowSession implements Session {
                     switchToMixed(handler, messageHandler);
                 }
             }
-        } else  if (messageHandler instanceof MessageHandler.Async) {
+        } else if (messageHandler instanceof MessageHandler.Async) {
             if (handler instanceof AsyncFrameHandler) {
                 handler.addHandler(messageHandler);
             } else {
                 if (handler.getHandlers().isEmpty()) {
-                    handler = new AsyncFrameHandler(this, endpoint);
+                    handler = new AsyncFrameHandler(this, endpoint.getInstance());
                     handler.addHandler(messageHandler);
                     session.setFrameHandler(handler);
                 } else {
@@ -109,8 +115,8 @@ final class UndertowSession implements Session {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void switchToMixed(AbstractFrameHandler handler, MessageHandler messageHandler) {
         Set<MessageHandler> handlers = handler.getHandlers();
-        handler = new MixedFrameHandler(this, endpoint);
-        for (MessageHandler h: handlers) {
+        handler = new MixedFrameHandler(this, endpoint.getInstance());
+        for (MessageHandler h : handlers) {
             handler.addHandler(h);
         }
         handler.addHandler(messageHandler);
@@ -120,7 +126,7 @@ final class UndertowSession implements Session {
     @SuppressWarnings("rawtypes")
     @Override
     public synchronized Set<MessageHandler> getMessageHandlers() {
-        return ((AbstractFrameHandler)session.getFrameHandler()).getHandlers();
+        return ((AbstractFrameHandler) session.getFrameHandler()).getHandlers();
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -132,7 +138,7 @@ final class UndertowSession implements Session {
             Set<MessageHandler> handlers = handler.getHandlers();
             boolean basic = false;
             boolean async = false;
-            for (MessageHandler h: handlers) {
+            for (MessageHandler h : handlers) {
                 if (h instanceof MessageHandler.Async) {
                     async = true;
                 } else if (h instanceof MessageHandler.Basic) {
@@ -145,11 +151,11 @@ final class UndertowSession implements Session {
             // This means we not have the case of mixed Async and Basic handlers so we can switch back to the
             // most optimized implementation
             if (basic) {
-                handler = new BasicFrameHandler(this, endpoint);
+                handler = new BasicFrameHandler(this, endpoint.getInstance());
             } else if (async) {
-                handler = new AsyncFrameHandler(this, endpoint);
+                handler = new AsyncFrameHandler(this, endpoint.getInstance());
             }
-            for (MessageHandler h: handlers) {
+            for (MessageHandler h : handlers) {
                 handler.addHandler(h);
             }
             session.setFrameHandler(handler);
@@ -262,7 +268,7 @@ final class UndertowSession implements Session {
 
     @Override
     public Set<Session> getOpenSessions() {
-        return new HashSet<Session>(sessions);
+        return Collections.emptySet();
     }
 
     @Override
@@ -271,6 +277,6 @@ final class UndertowSession implements Session {
     }
 
     void close0() {
-        sessions.remove(this);
+        endpoint.release();
     }
 }

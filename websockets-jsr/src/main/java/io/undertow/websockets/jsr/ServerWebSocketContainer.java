@@ -23,10 +23,10 @@ import javax.websocket.Endpoint;
 import javax.websocket.Extension;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
-import javax.websocket.server.ServerEndpointConfiguration;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Set;
+
 
 /**
  * {@link WebSocketContainer} implementation which allows to deploy endpoints for a server.
@@ -38,15 +38,6 @@ public abstract class ServerWebSocketContainer implements WebSocketContainer {
     private volatile long maxSessionIdleTimeout;
     private volatile int defaultMaxBinaryMessageBufferSize;
     private volatile int defaultMaxTextMessageBufferSize;
-    private final EndpointFactory factory;
-
-    public ServerWebSocketContainer(EndpointFactory factory, ServerEndpointConfiguration... configs) {
-        this.factory = factory;
-    }
-
-    EndpointFactory getEndpointFactory () {
-        return factory;
-    }
 
     @Override
     public long getDefaultAsyncSendTimeout() {

@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.undertow.websockets.jsr.util.ClassUtils;
 import org.junit.Assert;
 import org.junit.Test;
 

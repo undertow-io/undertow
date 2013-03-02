@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.handshake;
 
 import java.util.HashMap;
 import java.util.List;
@@ -32,7 +32,7 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class ExchangeHandshakeResponse implements HandshakeResponse {
+public final class ExchangeHandshakeResponse implements HandshakeResponse {
     private final WebSocketHttpExchange exchange;
     private Map<String, List<String>> headers;
 

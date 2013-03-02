@@ -15,37 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.handshake;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 
-import javax.websocket.server.ServerEndpointConfiguration;
-
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
+import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
+import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
 
 /**
- * {@link Hybi13Handshake} sub-class which takes care of match against the {@link ServerEndpointConfiguration} and
+ * {@link Hybi08Handshake} sub-class which takes care of match against the {@link javax.websocket.server.ServerEndpointConfiguration} and
  * stored the config in the attributes for later usage.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class JsrHybi13Handshake extends Hybi13Handshake {
-    private final ServerEndpointConfiguration config;
+public final class JsrHybi08Handshake extends Hybi08Handshake {
+    private final ConfiguredServerEndpoint config;
 
-    public JsrHybi13Handshake(ServerEndpointConfiguration config) {
+    public JsrHybi08Handshake(ConfiguredServerEndpoint config) {
         super(Collections.<String>emptySet(), false);
         this.config = config;
     }
 
     @Override
     protected void upgradeChannel(final WebSocketHttpExchange exchange, byte[] data) {
-        HandshakeUtil.prepareUpgrade(config, exchange);
+        HandshakeUtil.prepareUpgrade(config.getEndpointConfiguration(), exchange);
         super.upgradeChannel(exchange, data);
     }
 
@@ -58,11 +57,11 @@ final class JsrHybi13Handshake extends Hybi13Handshake {
 
     @Override
     public boolean matches(WebSocketHttpExchange exchange) {
-        return super.matches(exchange) && HandshakeUtil.matches(config, exchange);
+        return super.matches(exchange) && HandshakeUtil.matches(config.getEndpointConfiguration(), exchange);
     }
 
     @Override
     protected String supportedSubprotols(String[] requestedSubprotocolArray) {
-        return config.getNegotiatedSubprotocol(Arrays.asList(requestedSubprotocolArray));
+        return config.getEndpointConfiguration().getNegotiatedSubprotocol(Arrays.asList(requestedSubprotocolArray));
     }
 }
