@@ -37,6 +37,16 @@ public class WorkerDispatcher {
 
     public static final AttachmentKey<Executor> EXECUTOR_ATTACHMENT_KEY = AttachmentKey.create(Executor.class);
 
+    /**
+     * Dispatches the request. By default this will be dispatched to the Xnio Worker.This can be changed by
+     * attaching an executor to the exchange using {@link #EXECUTOR_ATTACHMENT_KEY}.
+     *
+     * If the request is already running in the selected executor then no dispatch takes place and the
+     * Runnable is simply run in the current thread
+     *
+     * @param exchange The exchange
+     * @param runnable The task to run
+     */
     public static void dispatch(final HttpServerExchange exchange, final Runnable runnable) {
         Executor executor = exchange.getAttachment(EXECUTOR_ATTACHMENT_KEY);
         if (executor == null) {
@@ -48,6 +58,23 @@ public class WorkerDispatcher {
         } else {
             executor.execute(new DispatchedRunnable(executor, runnable));
         }
+    }
+    /**
+     * Dispatches the request. By default this will be dispatched to the Xnio Worker.This can be changed by
+     * attaching an executor to the exchange using {@link #EXECUTOR_ATTACHMENT_KEY}.
+     *
+     * This method will always dispatch, even if the request is already running in the executor.
+     *
+     * @param exchange The exchange
+     * @param runnable The task to run
+     */
+    public static void forceDispatch(final HttpServerExchange exchange, final Runnable runnable) {
+        Executor executor = exchange.getAttachment(EXECUTOR_ATTACHMENT_KEY);
+        if (executor == null) {
+            executor = exchange.getConnection().getWorker();
+        }
+        final DispatchData dd = executingInWorker.get();
+        executor.execute(new DispatchedRunnable(executor, runnable));
     }
 
     /**
@@ -109,14 +136,14 @@ public class WorkerDispatcher {
             } finally {
                 Runnable next = data.tasks.poll();
                 try {
-                while (next != null) {
-                    try {
-                        next.run();
-                    } catch (Exception e) {
-                        UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+                    while (next != null) {
+                        try {
+                            next.run();
+                        } catch (Exception e) {
+                            UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+                        }
+                        next = data.tasks.poll();
                     }
-                    next = data.tasks.poll();
-                }
                 } finally {
                     executingInWorker.remove();
                 }

@@ -113,7 +113,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     private Cookie[] cookies;
     private List<Part> parts = null;
-    private AsyncContextImpl asyncContext = null;
+    private volatile AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
     private Charset characterEncoding;
     private boolean readStarted;

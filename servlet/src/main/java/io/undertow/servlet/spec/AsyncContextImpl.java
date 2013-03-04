@@ -67,6 +67,7 @@ public class AsyncContextImpl implements AsyncContext {
 
     private volatile XnioExecutor.Key timeoutKey;
 
+    private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<>();
     private Runnable dispatchAction;
     private boolean dispatched;
     private boolean initialRequestDone;
@@ -317,10 +318,12 @@ public class AsyncContextImpl implements AsyncContext {
         if (dispatchAction != null) {
             dispatchAction.run();
         } else {
+            processAsyncTask();
             updateTimeout();
         }
         initiatingThread = null;
     }
+
 
     private synchronized void doDispatch(final Runnable runnable) {
         if (dispatched) {
@@ -348,6 +351,52 @@ public class AsyncContextImpl implements AsyncContext {
                     HttpServletRequestImpl.getRequestImpl(servletRequest).onAsyncTimeout();
                     completeInternal();
                 }
+            }
+        }
+    }
+
+    private synchronized void processAsyncTask() {
+        if(dispatched) {
+            return;
+        }
+        final Runnable task = asyncTaskQueue.poll();
+        if (task != null) {
+            WorkerDispatcher.forceDispatch(exchange, new TaskDispatchRunnable(task));
+        }
+    }
+
+    /**
+     * Adds a task to be run to the async context. These tasks are run one at a time,
+     * after the initial request is finished. If the request is ever completed or dispatched
+     * then the queued tasks will not be run.
+     *
+     * This method is intended to be used to queue read and write tasks for async streams,
+     * to make sure that multiple threads do not end up working on the same exchange at once
+     *
+     * @param runnable The runnable
+     */
+    public synchronized void addAsyncTask(final Runnable runnable) {
+        boolean empty = asyncTaskQueue.isEmpty();
+        asyncTaskQueue.add(runnable);
+        if(empty) {
+            processAsyncTask();
+        }
+    }
+
+    private class TaskDispatchRunnable implements Runnable {
+
+        private final Runnable task;
+
+        private TaskDispatchRunnable(final Runnable task) {
+            this.task = task;
+        }
+
+        @Override
+        public void run() {
+            try {
+                task.run();
+            } finally {
+                processAsyncTask();
             }
         }
     }

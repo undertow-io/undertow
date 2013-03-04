@@ -64,6 +64,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     private long written;
     private int state;
     private final Long contentLength;
+    private AsyncContextImpl asyncContext;
 
     private WriteListener listener;
     private WriteChannelListener internalListener;
@@ -476,6 +477,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         if (listener != null) {
             throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
         }
+        final HttpServletRequestImpl servletRequest = HttpServletRequestImpl.getRequestImpl(this.servletResponse.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
+        if(!servletRequest.isAsyncStarted()) {
+            throw UndertowServletMessages.MESSAGES.asyncNotStarted();
+        }
+        asyncContext = servletRequest.getAsyncContext();
         listener = writeListener;
         //we register the write listener on the underlying connection
         //so we don't have to force the creation of the response channel
@@ -529,7 +535,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             } else {
                 state |= FLAG_READY;
                 theConnectionChannel.suspendWrites();
-                theConnectionChannel.getWorker().submit(new Runnable() {
+                asyncContext.addAsyncTask(new Runnable() {
                     @Override
                     public void run() {
                         try {

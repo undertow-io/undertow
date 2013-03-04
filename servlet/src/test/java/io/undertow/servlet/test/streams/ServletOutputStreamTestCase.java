@@ -99,7 +99,6 @@ public class ServletOutputStreamTestCase {
         }
     }
 
-    @Ignore("This is broken at the moment")
     @Test
     public void testAsyncServletOutputStream() {
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
