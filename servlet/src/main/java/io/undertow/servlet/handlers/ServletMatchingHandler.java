@@ -50,8 +50,9 @@ public class ServletMatchingHandler implements HttpHandler {
         return paths;
     }
 
-    public void setPaths(final ServletPathMatches paths) {
+    public ServletMatchingHandler setPaths(final ServletPathMatches paths) {
         this.paths = paths;
+        return this;
     }
 
 }

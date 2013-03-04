@@ -127,30 +127,35 @@ public class EncodingHandler implements HttpHandler {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public EncodingHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 
-    public synchronized void addEncodingHandler(final String encoding, final ContentEncodingProvider encoder, int priority) {
+    public synchronized EncodingHandler addEncodingHandler(final String encoding, final ContentEncodingProvider encoder, int priority) {
         addEncodingHandler(encoding, encoder, priority, TruePredicate.<HttpServerExchange>instance());
+        return this;
     }
 
-    public synchronized void addEncodingHandler(final String encoding, final ContentEncodingProvider encoder, int priority, final Predicate<HttpServerExchange> enabledPredicate) {
+    public synchronized EncodingHandler addEncodingHandler(final String encoding, final ContentEncodingProvider encoder, int priority, final Predicate<HttpServerExchange> enabledPredicate) {
         this.encodingMap.put(encoding, new EncodingMapping(encoding, encoder, priority, enabledPredicate));
+        return this;
     }
 
-    public synchronized void removeEncodingHandler(final String encoding) {
+    public synchronized EncodingHandler removeEncodingHandler(final String encoding) {
         encodingMap.remove(encoding);
+        return this;
     }
 
     public HttpHandler getNoEncodingHandler() {
         return noEncodingHandler;
     }
 
-    public void setNoEncodingHandler(HttpHandler noEncodingHandler) {
+    public EncodingHandler setNoEncodingHandler(HttpHandler noEncodingHandler) {
         HttpHandlers.handlerNotNull(noEncodingHandler);
         this.noEncodingHandler = noEncodingHandler;
+        return this;
     }
 
 

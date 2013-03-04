@@ -80,43 +80,48 @@ public class FileErrorPageHandler implements HttpHandler {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public FileErrorPageHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 
     public Set<Integer> getResponseCodes() {
         return Collections.unmodifiableSet(responseCodes);
     }
 
-    public void setResponseCodes(final Set<Integer> responseCodes) {
+    public FileErrorPageHandler setResponseCodes(final Set<Integer> responseCodes) {
         if (responseCodes == null) {
             this.responseCodes = Collections.emptySet();
         } else {
             this.responseCodes = new HashSet<Integer>(responseCodes);
         }
+        return this;
     }
 
-    public void setResponseCodes(final Integer... responseCodes) {
+    public FileErrorPageHandler setResponseCodes(final Integer... responseCodes) {
         this.responseCodes = new HashSet<Integer>(Arrays.asList(responseCodes));
+        return this;
     }
 
     public File getFile() {
         return file;
     }
 
-    public void setFile(final File file) {
+    public FileErrorPageHandler setFile(final File file) {
         this.file = file;
+        return this;
     }
 
     public FileSource getFileSource() {
         return fileSource;
     }
 
-    public void setFileSource(final FileSource fileSource) {
+    public FileErrorPageHandler setFileSource(final FileSource fileSource) {
         if(fileSource == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("fileCache");
         }
         this.fileSource = fileSource;
+        return this;
     }
 }

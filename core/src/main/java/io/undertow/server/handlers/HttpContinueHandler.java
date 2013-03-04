@@ -64,8 +64,9 @@ public class HttpContinueHandler implements HttpHandler {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public HttpContinueHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 }

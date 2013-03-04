@@ -84,63 +84,71 @@ public class OriginHandler implements HttpHandler {
         HttpHandlers.executeHandler(next, exchange);
     }
 
-    public synchronized void addAllowedOrigin(final String origin) {
+    public synchronized OriginHandler addAllowedOrigin(final String origin) {
         final Set<String> allowedOrigins = new HashSet<String>(this.allowedOrigins);
         allowedOrigins.add(origin);
         this.allowedOrigins = Collections.unmodifiableSet(allowedOrigins);
+        return this;
     }
 
-    public synchronized void addAllowedOrigins(final Collection<String> origins) {
+    public synchronized OriginHandler addAllowedOrigins(final Collection<String> origins) {
         final Set<String> allowedOrigins = new HashSet<String>(this.allowedOrigins);
         allowedOrigins.addAll(origins);
         this.allowedOrigins = Collections.unmodifiableSet(allowedOrigins);
+        return this;
     }
 
-    public synchronized void addAllowedOrigins(final String... origins) {
+    public synchronized OriginHandler addAllowedOrigins(final String... origins) {
         final Set<String> allowedOrigins = new HashSet<String>(this.allowedOrigins);
         allowedOrigins.addAll(Arrays.asList(origins));
         this.allowedOrigins = Collections.unmodifiableSet(allowedOrigins);
+        return this;
     }
 
     public synchronized Set<String> getAllowedOrigins() {
         return allowedOrigins;
     }
 
-    public synchronized void clearAllowedOrigins() {
+    public synchronized OriginHandler clearAllowedOrigins() {
         this.allowedOrigins = Collections.emptySet();
+        return this;
     }
 
     public boolean isRequireAllOrigins() {
         return requireAllOrigins;
     }
 
-    public void setRequireAllOrigins(final boolean requireAllOrigins) {
+    public OriginHandler setRequireAllOrigins(final boolean requireAllOrigins) {
         this.requireAllOrigins = requireAllOrigins;
+        return this;
     }
 
     public boolean isRequireOriginHeader() {
         return requireOriginHeader;
     }
 
-    public void setRequireOriginHeader(final boolean requireOriginHeader) {
+    public OriginHandler setRequireOriginHeader(final boolean requireOriginHeader) {
         this.requireOriginHeader = requireOriginHeader;
+        return this;
     }
 
     public HttpHandler getNext() {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public OriginHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 
     public HttpHandler getOriginFailedHandler() {
         return originFailedHandler;
     }
 
-    public void setOriginFailedHandler(HttpHandler originFailedHandler) {
+    public OriginHandler setOriginFailedHandler(HttpHandler originFailedHandler) {
         HttpHandlers.handlerNotNull(originFailedHandler);
         this.originFailedHandler = originFailedHandler;
+        return this;
     }
 }

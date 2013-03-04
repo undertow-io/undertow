@@ -56,9 +56,10 @@ public class URLDecodingHandler implements HttpHandler {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public URLDecodingHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 
     public String getCharset() {

@@ -178,12 +178,12 @@ public final class RequestLimitingHandler implements HttpHandler {
     /**
      * Set the next handler.  The value must not be {@code null}.
      *
+     *
      * @param nextHandler the next handler
-     * @return the old next handler
      */
-    public HttpHandler setNextHandler(final HttpHandler nextHandler) {
+    public RequestLimitingHandler setNextHandler(final HttpHandler nextHandler) {
         HttpHandlers.handlerNotNull(nextHandler);
-        return nextHandlerUpdater.getAndSet(this, nextHandler);
+        return this;
     }
 
     private final class QueuedRequest implements Runnable {

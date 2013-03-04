@@ -80,9 +80,10 @@ public class PathHandler implements HttpHandler {
         return defaultHandler;
     }
 
-    public void setDefaultHandler(HttpHandler defaultHandler) {
+    public PathHandler setDefaultHandler(HttpHandler defaultHandler) {
         HttpHandlers.handlerNotNull(defaultHandler);
         this.defaultHandler = defaultHandler;
+        return this;
     }
 
     /**
@@ -92,7 +93,7 @@ public class PathHandler implements HttpHandler {
      * @param path    The path
      * @param handler The handler
      */
-    public synchronized void addPath(final String path, final HttpHandler handler) {
+    public synchronized PathHandler addPath(final String path, final HttpHandler handler) {
         if(path.length() > maxPathLength) {
             maxPathLength = path.length();
         }
@@ -105,9 +106,10 @@ public class PathHandler implements HttpHandler {
         } else {
             paths.put(path, handler);
         }
+        return this;
     }
 
-    public synchronized void removePath(final String path) {
+    public synchronized PathHandler removePath(final String path) {
         if (path == null || path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
@@ -123,10 +125,12 @@ public class PathHandler implements HttpHandler {
             }
         }
         this.maxPathLength = max;
+        return this;
     }
 
-    public synchronized void clearPaths() {
+    public synchronized PathHandler clearPaths() {
         paths.clear();
+        return this;
     }
 
     public Map<String, HttpHandler> getPaths() {

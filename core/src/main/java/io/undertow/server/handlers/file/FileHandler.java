@@ -93,22 +93,24 @@ public class FileHandler implements HttpHandler {
         return base;
     }
 
-    public void setBase(final File base) {
+    public FileHandler setBase(final File base) {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         this.base = base;
+        return this;
     }
 
     public FileSource getFileSource() {
         return fileSource;
     }
 
-    public void setFileSource(final FileSource fileSource) {
+    public FileHandler setFileSource(final FileSource fileSource) {
         if (fileSource == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("fileCache");
         }
         this.fileSource = fileSource;
+        return this;
     }
 
     private boolean sendRequestedBlobs(HttpServerExchange exchange) {
@@ -251,15 +253,17 @@ public class FileHandler implements HttpHandler {
         return directoryListingEnabled;
     }
 
-    public void setDirectoryListingEnabled(final boolean directoryListingEnabled) {
+    public FileHandler setDirectoryListingEnabled(final boolean directoryListingEnabled) {
         this.directoryListingEnabled = directoryListingEnabled;
+        return this;
     }
 
     public MimeMappings getMimeMappings() {
         return mimeMappings;
     }
 
-    public void setMimeMappings(final MimeMappings mimeMappings) {
+    public FileHandler setMimeMappings(final MimeMappings mimeMappings) {
         this.mimeMappings = mimeMappings;
+        return this;
     }
 }

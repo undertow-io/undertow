@@ -80,20 +80,23 @@ public class SimpleErrorPageHandler implements HttpHandler {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public SimpleErrorPageHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 
     public Set<Integer> getResponseCodes() {
         return Collections.unmodifiableSet(responseCodes);
     }
 
-    public void setResponseCodes(final Set<Integer> responseCodes) {
+    public SimpleErrorPageHandler setResponseCodes(final Set<Integer> responseCodes) {
         this.responseCodes = new HashSet<Integer>(responseCodes);
+        return this;
     }
 
-    public void setResponseCodes(final Integer... responseCodes) {
+    public SimpleErrorPageHandler setResponseCodes(final Integer... responseCodes) {
         this.responseCodes = new HashSet<Integer>(Arrays.asList(responseCodes));
+        return this;
     }
 }

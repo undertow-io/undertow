@@ -256,9 +256,10 @@ public class CookieHandler implements HttpHandler {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public CookieHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 
     private static class CookieConduitWrapper implements ConduitWrapper<StreamSinkConduit> {

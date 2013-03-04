@@ -62,9 +62,10 @@ public class AuthenticationMechanismsHandler implements HttpHandler {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public AuthenticationMechanismsHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 
 }

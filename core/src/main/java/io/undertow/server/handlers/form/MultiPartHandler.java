@@ -79,33 +79,37 @@ public class MultiPartHandler implements HttpHandler {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public MultiPartHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 
     public Executor getExecutor() {
         return executor;
     }
 
-    public void setExecutor(final Executor executor) {
+    public MultiPartHandler setExecutor(final Executor executor) {
         this.executor = executor;
+        return this;
     }
 
     public File getTempFileLocation() {
         return tempFileLocation;
     }
 
-    public void setTempFileLocation(File tempFileLocation) {
+    public MultiPartHandler setTempFileLocation(File tempFileLocation) {
         this.tempFileLocation = tempFileLocation;
+        return this;
     }
 
     public String getDefaultEncoding() {
         return defaultEncoding;
     }
 
-    public void setDefaultEncoding(final String defaultEncoding) {
+    public MultiPartHandler setDefaultEncoding(final String defaultEncoding) {
         this.defaultEncoding = defaultEncoding;
+        return this;
     }
 
     private final class MultiPartUploadHandler implements FormDataParser, Runnable, MultipartParser.PartHandler {

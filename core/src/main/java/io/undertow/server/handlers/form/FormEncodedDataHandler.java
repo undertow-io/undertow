@@ -85,17 +85,19 @@ public class FormEncodedDataHandler implements HttpHandler {
         return next;
     }
 
-    public void setNext(final HttpHandler next) {
+    public FormEncodedDataHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
+        return this;
     }
 
     public String getDefaultEncoding() {
         return defaultEncoding;
     }
 
-    public void setDefaultEncoding(final String defaultEncoding) {
+    public FormEncodedDataHandler setDefaultEncoding(final String defaultEncoding) {
         this.defaultEncoding = defaultEncoding;
+        return this;
     }
 
     private static final class FormEncodedDataParser implements ChannelListener<StreamSourceChannel>, FormDataParser {

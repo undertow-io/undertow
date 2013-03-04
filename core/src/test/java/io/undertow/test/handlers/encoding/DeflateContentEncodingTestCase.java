@@ -31,16 +31,15 @@ public class DeflateContentEncodingTestCase {
 
     @BeforeClass
     public static void setup() {
-        final EncodingHandler handler = new EncodingHandler();
-        //we don't compress messages 5 bytes or smaller
-        handler.addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, new MaxContentSizePredicate(5));
-        handler.setNext(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
-                exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
-            }
-        });
+        final EncodingHandler handler = new EncodingHandler()
+                .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, new MaxContentSizePredicate(5))
+                .setNext(new HttpHandler() {
+                    @Override
+                    public void handleRequest(final HttpServerExchange exchange) {
+                        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
+                        exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
+                    }
+                });
 
         DefaultServer.setRootHandler(handler);
     }

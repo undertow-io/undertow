@@ -58,17 +58,20 @@ public class NameVirtualHostHandler implements HttpHandler {
         return hosts;
     }
 
-    public void setDefaultHandler(final HttpHandler defaultHandler) {
+    public NameVirtualHostHandler setDefaultHandler(final HttpHandler defaultHandler) {
         HttpHandlers.handlerNotNull(defaultHandler);
         this.defaultHandler = defaultHandler;
+        return this;
     }
 
-    public synchronized void addHost(final String host, final HttpHandler handler) {
+    public synchronized NameVirtualHostHandler addHost(final String host, final HttpHandler handler) {
         HttpHandlers.handlerNotNull(handler);
         hosts.put(host, handler);
+        return this;
     }
 
-    public synchronized void removeHost(final String host) {
+    public synchronized NameVirtualHostHandler removeHost(final String host) {
         hosts.remove(host);
+        return this;
     }
 }

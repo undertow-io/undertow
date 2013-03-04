@@ -84,9 +84,10 @@ public final class ChannelUpgradeHandler implements HttpHandler {
      *
      * @param nonUpgradeHandler the non-upgrade delegate handler
      */
-    public void setNonUpgradeHandler(final HttpHandler nonUpgradeHandler) {
+    public ChannelUpgradeHandler setNonUpgradeHandler(final HttpHandler nonUpgradeHandler) {
         HttpHandlers.handlerNotNull(nonUpgradeHandler);
         this.nonUpgradeHandler = nonUpgradeHandler;
+        return this;
     }
 
     public void handleRequest(final HttpServerExchange exchange) {

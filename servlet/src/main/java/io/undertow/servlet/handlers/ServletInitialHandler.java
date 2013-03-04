@@ -197,9 +197,10 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         return handler;
     }
 
-    public void setRootHandler(final BlockingHttpHandler rootHandler) {
+    public ServletInitialHandler setRootHandler(final BlockingHttpHandler rootHandler) {
         HttpHandlers.handlerNotNull(rootHandler);
         this.handler = rootHandler;
+        return this;
     }
 
     public BlockingHttpHandler getNext() {
