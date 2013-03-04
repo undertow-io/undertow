@@ -42,7 +42,7 @@ public class HttpClientUtils {
         byte[] data = new byte[100];
         int read;
         while ((read = stream.read(data)) != -1) {
-            builder.append(new String(data,0,read));
+            builder.append(new String(data,0,read,"UTF-8"));
         }
         return builder.toString();
     }
