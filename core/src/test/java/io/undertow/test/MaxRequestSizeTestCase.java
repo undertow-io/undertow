@@ -59,8 +59,8 @@ public class MaxRequestSizeTestCase {
             @Override
             public void handleBlockingRequest(final HttpServerExchange exchange) {
                 try {
-                    final OutputStream outputStream = new ChannelOutputStream(exchange.getResponseChannel());
-                    final InputStream inputSream = new ChannelInputStream(exchange.getRequestChannel());
+                    final OutputStream outputStream = exchange.getOutputStream();
+                    final InputStream inputSream = exchange.getInputStream();
                     String m = HttpClientUtils.readResponse(inputSream);
                     Assert.assertEquals(A_MESSAGE, m);
                     inputSream.close();

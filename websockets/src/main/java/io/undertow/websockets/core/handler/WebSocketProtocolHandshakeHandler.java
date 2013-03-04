@@ -32,7 +32,7 @@ import io.undertow.websockets.core.protocol.version00.Hybi00Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
-import io.undertow.websockets.spi.AsyncHttpServerExchangeWebSocket;
+import io.undertow.websockets.spi.AsyncWebSocketHttpServerExchange;
 
 /**
  * {@link HttpHandler} which will process the {@link HttpServerExchange} and do the actual handshake/upgrade
@@ -82,7 +82,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
             exchange.endExchange();
             return;
         }
-        final AsyncHttpServerExchangeWebSocket facade = new AsyncHttpServerExchangeWebSocket(exchange);
+        final AsyncWebSocketHttpServerExchange facade = new AsyncWebSocketHttpServerExchange(exchange);
         Handshake handshaker = null;
         for (Handshake method : handshakes) {
             if (method.matches(facade)) {

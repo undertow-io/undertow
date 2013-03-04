@@ -127,4 +127,7 @@ public interface UndertowMessages {
 
     @Message(id = 34, value = "Stream is closed")
     IOException streamIsClosed();
+
+    @Message(id = 35, value = "Cannot get stream as startBlocking has not been invoked")
+    IllegalStateException startBlockingHasNotBeenCalled();
 }

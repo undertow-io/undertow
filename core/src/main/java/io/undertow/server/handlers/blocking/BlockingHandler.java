@@ -51,6 +51,7 @@ public final class BlockingHandler implements HttpHandler {
             @Override
             public void run() {
                 try {
+                    exchange.startBlocking();
                     final BlockingHttpHandler handler = BlockingHandler.this.handler;
                     if (handler != null) {
                         handler.handleBlockingRequest(exchange);

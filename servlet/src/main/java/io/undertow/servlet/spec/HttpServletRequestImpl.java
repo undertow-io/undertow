@@ -88,7 +88,6 @@ import io.undertow.util.LocaleUtils;
 import io.undertow.util.Methods;
 import io.undertow.util.QValueParser;
 import org.xnio.LocalSocketAddress;
-import org.xnio.streams.ChannelInputStream;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -699,7 +698,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 }
             }
 
-            reader = new BufferedReader(new InputStreamReader(new ChannelInputStream(exchange.getRequestChannel()), charSet));
+            reader = new BufferedReader(new InputStreamReader(exchange.getInputStream(), charSet));
         }
         readStarted = true;
         return reader;

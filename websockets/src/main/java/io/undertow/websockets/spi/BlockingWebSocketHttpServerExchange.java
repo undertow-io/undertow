@@ -6,25 +6,23 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import io.undertow.io.UndertowOutputStream;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConcreteIoFuture;
 import org.xnio.FinishedIoFuture;
 import org.xnio.IoFuture;
-import org.xnio.streams.ChannelInputStream;
 
 /**
  * @author Stuart Douglas
  */
-public class BlockingHttpServerExchangeWebSocket extends AsyncHttpServerExchangeWebSocket {
+public class BlockingWebSocketHttpServerExchange extends AsyncWebSocketHttpServerExchange {
 
     private final OutputStream out;
     private final InputStream in;
 
-    public BlockingHttpServerExchangeWebSocket(final HttpServerExchange exchange) {
+    public BlockingWebSocketHttpServerExchange(final HttpServerExchange exchange) {
         super(exchange);
-        out = new UndertowOutputStream(exchange);
-        in = new ChannelInputStream(exchange.getRequestChannel());
+        out = exchange.getOutputStream();
+        in = exchange.getInputStream();
     }
 
     @Override

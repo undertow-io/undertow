@@ -27,12 +27,12 @@ import org.xnio.channels.StreamSourceChannel;
 /**
  * @author Stuart Douglas
  */
-public class AsyncHttpServerExchangeWebSocket implements WebSocketHttpExchange {
+public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     private final HttpServerExchange exchange;
     private Sender sender;
 
-    public AsyncHttpServerExchangeWebSocket(final HttpServerExchange exchange) {
+    public AsyncWebSocketHttpServerExchange(final HttpServerExchange exchange) {
         this.exchange = exchange;
     }
 

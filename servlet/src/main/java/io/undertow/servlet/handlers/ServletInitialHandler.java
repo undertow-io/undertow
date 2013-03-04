@@ -31,6 +31,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ManagedServlet;
+import io.undertow.servlet.core.ServletBlockingHttpExchange;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
@@ -92,6 +93,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
             @Override
             public void run() {
                 try {
+                    exchange.startBlocking(new ServletBlockingHttpExchange(exchange));
                     final BlockingHttpHandler handler = ServletInitialHandler.this;
                     handler.handleBlockingRequest(exchange);
                 } catch (Throwable t) {

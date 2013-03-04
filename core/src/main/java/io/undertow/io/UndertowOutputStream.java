@@ -18,6 +18,10 @@
 
 package io.undertow.io;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -27,13 +31,12 @@ import org.xnio.Pooled;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
 
 /**
  * Buffering output stream that wraps a channel.
- *
+ * <p/>
  * This stream delays channel creation, so if a response will fit in the buffer it is not nessesary to
  * set the content length header.
  *
@@ -42,14 +45,16 @@ import java.nio.ByteBuffer;
 public class UndertowOutputStream extends OutputStream {
 
     private final HttpServerExchange exchange;
-    private boolean closed;
     private ByteBuffer buffer;
     private Pooled<ByteBuffer> pooledBuffer;
     private Integer bufferSize;
-    private boolean writeStarted;
     private StreamSinkChannel channel;
+    private int state;
     private int written;
     private final Integer contentLength;
+
+    private static final int FLAG_CLOSED = 1;
+    private static final int FLAG_WRITE_STARTED = 1 << 1;
 
     /**
      * Construct a new instance.  No write timeout is configured.
@@ -59,7 +64,7 @@ public class UndertowOutputStream extends OutputStream {
     public UndertowOutputStream(HttpServerExchange exchange) {
         this.exchange = exchange;
         final String cl = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
-        if(cl != null) {
+        if (cl != null) {
             contentLength = Integer.parseInt(cl);
         } else {
             contentLength = null;
@@ -88,7 +93,7 @@ public class UndertowOutputStream extends OutputStream {
         if (len < 1) {
             return;
         }
-        if (closed) {
+        if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
         int written = 0;
@@ -122,10 +127,10 @@ public class UndertowOutputStream extends OutputStream {
     /**
      * Returns the underlying buffer. If this has not been created yet then
      * it is created.
-     *
+     * <p/>
      * Callers that use this method must call {@link #updateWritten(int)} to update the written
      * amount.
-     *
+     * <p/>
      * This allows the buffer to be filled directly, which can be more efficient.
      *
      * @return The underlying buffer
@@ -138,7 +143,7 @@ public class UndertowOutputStream extends OutputStream {
      * {@inheritDoc}
      */
     public void flush() throws IOException {
-        if (closed) {
+        if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
         if (buffer != null && buffer.position() != 0) {
@@ -157,17 +162,17 @@ public class UndertowOutputStream extends OutputStream {
         }
         Channels.writeBlocking(channel, buffer);
         buffer.clear();
-        writeStarted = true;
+        state |= FLAG_WRITE_STARTED;
     }
 
     /**
      * {@inheritDoc}
      */
     public void close() throws IOException {
-        if (closed) return;
+        if (anyAreSet(state, FLAG_CLOSED)) return;
         try {
-            closed = true;
-            if (!writeStarted && channel == null) {
+            state |= FLAG_CLOSED;
+            if (anyAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
                 if (buffer == null) {
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                 } else {
@@ -203,12 +208,12 @@ public class UndertowOutputStream extends OutputStream {
      * @throws java.io.IOException
      */
     public void closeAsync() throws IOException {
-        if (closed) {
+        if (anyAreSet(state, FLAG_CLOSED)) {
             exchange.endExchange();
             return;
         }
-        closed = true;
-        if (!writeStarted && channel == null) {
+        state |= FLAG_CLOSED;
+        if (anyAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
             if (buffer == null) {
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
             } else {
@@ -307,7 +312,7 @@ public class UndertowOutputStream extends OutputStream {
     }
 
     public void resetBuffer() {
-        if (!writeStarted) {
+        if (anyAreClear(state, FLAG_WRITE_STARTED)) {
             if (pooledBuffer != null) {
                 pooledBuffer.free();
                 pooledBuffer = null;
@@ -326,6 +331,6 @@ public class UndertowOutputStream extends OutputStream {
     }
 
     public boolean isClosed() {
-        return closed;
+        return anyAreSet(state, FLAG_CLOSED);
     }
 }

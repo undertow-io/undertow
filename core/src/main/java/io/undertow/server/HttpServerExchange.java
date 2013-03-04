@@ -19,6 +19,8 @@
 package io.undertow.server;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
@@ -32,6 +34,8 @@ import java.util.TreeMap;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.io.Sender;
+import io.undertow.io.UndertowInputStream;
+import io.undertow.io.UndertowOutputStream;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
@@ -92,6 +96,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      * The actual request channel. May be null if it has not been created yet.
      */
     private StreamSourceChannel requestChannel;
+
+    private BlockingHttpExchange blockingHttpExchange;
 
     private HttpString protocol;
 
@@ -708,6 +714,65 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * Calling this method puts the exchange in blocking mode, and creates a
+     * {@link BlockingHttpExchange} object to store the streams.
+     * <p/>
+     * When an exchange is in blocking mode the input stream methods become
+     * available, other than that there is presently no major difference
+     * between blocking an non-blocking modes.
+     *
+     * @return The existing blocking exchange, if any
+     */
+    public BlockingHttpExchange startBlocking() {
+        final BlockingHttpExchange old = this.blockingHttpExchange;
+        blockingHttpExchange = new DefaultBlockingHttpExchange(this);
+        return old;
+    }
+
+    /**
+     * Calling this method puts the exchange in blocking mode, using the given
+     * blocking exchange as the source of the streams.
+     * <p/>
+     * When an exchange is in blocking mode the input stream methods become
+     * available, other than that there is presently no major difference
+     * between blocking an non-blocking modes.
+     *
+     * Note that this method may be called multiple times with different
+     * exchange objects, to allow handlers to modify the streams
+     * that are being used.
+     *
+     * @return The existing blocking exchange, if any
+     */
+    public BlockingHttpExchange startBlocking(final BlockingHttpExchange httpExchange) {
+        final BlockingHttpExchange old = this.blockingHttpExchange;
+        blockingHttpExchange = httpExchange;
+        return old;
+    }
+
+
+    /**
+     * @return The input stream
+     * @throws IllegalStateException if {@link #startBlocking()} has not been called
+     */
+    public InputStream getInputStream() {
+        if (blockingHttpExchange == null) {
+            throw UndertowMessages.MESSAGES.startBlockingHasNotBeenCalled();
+        }
+        return blockingHttpExchange.getInputStream();
+    }
+
+    /**
+     * @return The output stream
+     * @throws IllegalStateException if {@link #startBlocking()} has not been called
+     */
+    public OutputStream getOutputStream() {
+        if (blockingHttpExchange == null) {
+            throw UndertowMessages.MESSAGES.startBlockingHasNotBeenCalled();
+        }
+        return blockingHttpExchange.getOutputStream();
+    }
+
+    /**
      * Get the response code.
      *
      * @return the response code
@@ -773,7 +838,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                         //so we attempt to drain, and if we have not drained anything then we
                         //assume the server has not sent any data
 
-                        if(getResponseCode() != 417 || totalRead > 0) {
+                        if (getResponseCode() != 417 || totalRead > 0) {
                             requestChannel.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE,
                                     new ChannelListener<StreamSourceChannel>() {
                                         @Override
@@ -901,4 +966,30 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
     }
+
+    private static class DefaultBlockingHttpExchange implements BlockingHttpExchange {
+
+        private InputStream inputStream;
+        private OutputStream outputStream;
+        private final HttpServerExchange exchange;
+
+        DefaultBlockingHttpExchange(final HttpServerExchange exchange) {
+            this.exchange = exchange;
+        }
+
+        public InputStream getInputStream() {
+            if (inputStream == null) {
+                inputStream = new UndertowInputStream(exchange);
+            }
+            return inputStream;
+        }
+
+        public OutputStream getOutputStream() {
+            if (outputStream == null) {
+                outputStream = new UndertowOutputStream(exchange);
+            }
+            return outputStream;
+        }
+    }
+
 }
