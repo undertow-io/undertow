@@ -509,6 +509,10 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         return requestImpl;
     }
 
+    public ServletContextImpl getServletContext() {
+        return servletContext;
+    }
+
     public static enum ResponseState {
         NONE,
         STREAM,

@@ -7,6 +7,8 @@ import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.core.CompositeThreadSetupAction;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
@@ -16,15 +18,14 @@ import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
 /**
- *
  * Servlet input stream implementation. This stream is non-buffered, and is used for both
  * HTTP requests and for upgraded streams.
- *
  *
  * @author Stuart Douglas
  */
 public class ServletInputStreamImpl extends ServletInputStream {
 
+    private final HttpServletRequestImpl request;
     private final StreamSourceChannel channel;
 
     private volatile ReadListener listener;
@@ -35,13 +36,16 @@ public class ServletInputStreamImpl extends ServletInputStream {
     private static final int FLAG_READY = 1;
     private static final int FLAG_CLOSED = 1 << 1;
     private static final int FLAG_FINISHED = 1 << 2;
+    private static final int FLAG_ON_DATA_READ_CALLED = 1 << 3;
 
     private int state;
+    private AsyncContextImpl asyncContext;
 
-    protected ServletInputStreamImpl(final StreamSourceChannel channel) {
-        super();
-        this.channel = channel;
+    public ServletInputStreamImpl(final HttpServletRequestImpl request) {
+        this.request = request;
+        this.channel = request.getExchange().getRequestChannel();
     }
+
 
     @Override
     public boolean isFinished() {
@@ -50,11 +54,22 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     @Override
     public boolean isReady() {
-        return anyAreSet(state, FLAG_READY);
+        return anyAreSet(state, FLAG_READY) && !isFinished();
     }
 
     @Override
     public void setReadListener(final ReadListener readListener) {
+        if (readListener == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("readListener");
+        }
+        if (listener != null) {
+            throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
+        }
+        if (!request.isAsyncStarted()) {
+            throw UndertowServletMessages.MESSAGES.asyncNotStarted();
+        }
+
+        asyncContext = request.getAsyncContext();
         listener = readListener;
         channel.getReadSetter().set(new UpgradeServletChannelListener());
         channel.resumeReads();
@@ -76,6 +91,9 @@ public class ServletInputStreamImpl extends ServletInputStream {
     public int read(final byte[] b, final int off, final int len) throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
+        }
+        if (anyAreSet(state, FLAG_FINISHED)) {
+            return -1;
         }
         ByteBuffer buffer = ByteBuffer.wrap(b, off, len);
         if (listener == null) {
@@ -111,20 +129,53 @@ public class ServletInputStreamImpl extends ServletInputStream {
             if (anyAreSet(state, FLAG_FINISHED)) {
                 return;
             }
-            try {
-                state |= FLAG_READY;
-                channel.suspendReads();
-                listener.onDataAvailable();
-            } catch (IOException e) {
-                IoUtils.safeClose(channel);
-            }
-            if (anyAreSet(state, FLAG_FINISHED)) {
-                try {
-                    listener.onAllDataRead();
-                } catch (IOException e) {
-                    IoUtils.safeClose(channel);
+            state |= FLAG_READY;
+            channel.suspendReads();
+            asyncContext.addAsyncTask(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
+                        ThreadSetupAction.Handle handle = action.setup(request.getExchange());
+                        try {
+                            listener.onDataAvailable();
+                        } finally {
+                            handle.tearDown();
+                        }
+
+                    } catch (Exception e) {
+                        CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
+                        ThreadSetupAction.Handle handle = action.setup(request.getExchange());
+                        try {
+                            listener.onError(e);
+                        } finally {
+                            handle.tearDown();
+                        }
+                        IoUtils.safeClose(channel);
+                    }
+                    if (anyAreSet(state, FLAG_FINISHED)) {
+                        if (anyAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
+                            try {
+                                state |= FLAG_ON_DATA_READ_CALLED;
+                                channel.shutdownReads();
+                                CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
+                                ThreadSetupAction.Handle handle = action.setup(request.getExchange());
+                                try {
+                                    listener.onAllDataRead();
+                                } finally {
+                                    handle.tearDown();
+                                }
+                            } catch (IOException e) {
+                                listener.onError(e);
+                                IoUtils.safeClose(channel);
+                            }
+                        }
+                    } else if (!isReady()) {
+                        channel.resumeReads();
+                    }
                 }
-            }
+            });
+
         }
     }
 }

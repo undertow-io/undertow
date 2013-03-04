@@ -516,7 +516,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (reader != null) {
                 throw UndertowServletMessages.MESSAGES.getReaderAlreadyCalled();
             }
-            servletInputStream = new ServletInputStreamImpl(exchange.getRequestChannel());
+            servletInputStream = new ServletInputStreamImpl(this);
         }
         readStarted = true;
         return servletInputStream;

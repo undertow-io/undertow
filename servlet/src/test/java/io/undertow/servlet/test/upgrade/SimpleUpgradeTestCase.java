@@ -100,6 +100,8 @@ public class SimpleUpgradeTestCase {
             out.write("Echo Messages2\r\n\r\n".getBytes());
             Assert.assertEquals("Echo Messages2\r\n\r\n", readBytes(in));
 
+            out.write("exit\r\n\r\n".getBytes());
+
         } finally {
             client.getConnectionManager().shutdown();
         }

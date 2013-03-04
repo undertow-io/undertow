@@ -47,7 +47,7 @@ public class UpgradeServlet extends HttpServlet {
             try {
                 String message = "";
                 do {
-                    //an incredibly proxy implementation of an echo server, that uses /r/n/r/n to delineate messages
+                    //an incredibly poxy implementation of an echo server, that uses /r/n/r/n to delineate messages
                     final StringBuilder builder = new StringBuilder();
                     byte[] data = new byte[100];
                     int read;

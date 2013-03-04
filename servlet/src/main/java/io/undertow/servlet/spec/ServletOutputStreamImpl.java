@@ -25,6 +25,8 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.util.Headers;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
@@ -51,7 +53,9 @@ import static org.xnio.Bits.anyAreSet;
  * <p/>
  * Once the write listener has been set operations must only be invoked on this stream from the write
  * listener callback. Attempting to invoke from a different thread will result in an IllegalStateException.
- *
+ *<p/>
+ * Async listener tasks are queued in the {@link AsyncContextImpl}. At most one lister can be active at
+ * one time, which simplifies the thread safety requirements.
  * @author Stuart Douglas
  */
 public class ServletOutputStreamImpl extends ServletOutputStream {
@@ -68,6 +72,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
     private WriteListener listener;
     private WriteChannelListener internalListener;
+
 
     /**
      * buffers that are queued up to be written via async writes. This will include
@@ -87,6 +92,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      * so we don't force the actual response channel to be created
      */
     private final ConnectedStreamChannel underlyingConnectionChannel;
+    private CompositeThreadSetupAction threadSetupAction;
 
     /**
      * Construct a new instance.  No write timeout is configured.
@@ -96,7 +102,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     public ServletOutputStreamImpl(Long contentLength, final HttpServletResponseImpl servletResponse) {
         this.servletResponse = servletResponse;
         this.contentLength = contentLength;
-        underlyingConnectionChannel = servletResponse.getExchange().getConnection().getChannel();
+        this.underlyingConnectionChannel = servletResponse.getExchange().getConnection().getChannel();
+        this.threadSetupAction = servletResponse.getServletContext().getDeployment().getThreadSetupAction();
     }
 
     /**
@@ -158,9 +165,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         } else {
             if (anyAreClear(state, FLAG_READY)) {
                 throw UndertowServletMessages.MESSAGES.streamNotReady();
-            }
-            if (anyAreClear(state, FLAG_IN_CALLBACK)) {
-                throw UndertowServletMessages.MESSAGES.writeCanOnlyBeMadeFromListenerCallback();
             }
             if (len < 1) {
                 return;
@@ -478,7 +482,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
         }
         final HttpServletRequestImpl servletRequest = HttpServletRequestImpl.getRequestImpl(this.servletResponse.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
-        if(!servletRequest.isAsyncStarted()) {
+        if (!servletRequest.isAsyncStarted()) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }
         asyncContext = servletRequest.getAsyncContext();
@@ -495,67 +499,89 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
         @Override
         public void handleEvent(final StreamSinkChannel theConnectionChannel) {
-            //flush the channel if it is closed
-            if (anyAreSet(state, FLAG_DELEGATE_SHUTDOWN)) {
-                try {
-                    //either it will work, and the channel is closed
-                    //or it won't, and we continue with writes resumed
-                    channel.flush();
-                    return;
-                } catch (IOException e) {
-                    handleError(channel, e);
-                }
-            }
-            //if there is data still to write
-            if (buffersToWrite != null) {
-                long toWrite = Buffers.remaining(buffersToWrite);
-                long written = 0;
-                long res;
-                do {
-                    try {
-                        res = channel.write(buffersToWrite);
-                        written += res;
-                        if (res == 0) {
+            theConnectionChannel.suspendWrites();
+            //we run this whole thing as a async task, to avoid threading issues
+            asyncContext.addAsyncTask(new Runnable() {
+                @Override
+                public void run() {
+                    //flush the channel if it is closed
+                    if (anyAreSet(state, FLAG_DELEGATE_SHUTDOWN)) {
+                        try {
+                            //either it will work, and the channel is closed
+                            //or it won't, and we continue with writes resumed
+                            if(!channel.flush()) {
+                                theConnectionChannel.resumeWrites();
+                            }
                             return;
+                        } catch (IOException e) {
+                            handleError(e);
                         }
-                    } catch (IOException e) {
-                        handleError(channel, e);
                     }
-                } while (written < toWrite);
-                buffersToWrite = null;
-            }
-            if (anyAreSet(state, FLAG_CLOSED)) {
-                try {
-                    channel.shutdownWrites();
-                    state |= FLAG_DELEGATE_SHUTDOWN;
-                    channel.flush(); //if this does not succeed we are already resumed anyway
-                } catch (IOException e) {
-                    handleError(channel, e);
-                }
-            } else {
-                state |= FLAG_READY;
-                theConnectionChannel.suspendWrites();
-                asyncContext.addAsyncTask(new Runnable() {
-                    @Override
-                    public void run() {
+                    //if there is data still to write
+                    if (buffersToWrite != null) {
+                        long toWrite = Buffers.remaining(buffersToWrite);
+                        long written = 0;
+                        long res;
+                        do {
+                            try {
+                                res = channel.write(buffersToWrite);
+                                written += res;
+                                if (res == 0) {
+                                    theConnectionChannel.resumeWrites();
+                                    return;
+                                }
+                            } catch (IOException e) {
+                                handleError(e);
+                            }
+                        } while (written < toWrite);
+                        buffersToWrite = null;
+                    }
+                    if (anyAreSet(state, FLAG_CLOSED)) {
+                        try {
+                            channel.shutdownWrites();
+                            state |= FLAG_DELEGATE_SHUTDOWN;
+                            if(!channel.flush()) {
+                                theConnectionChannel.resumeWrites();
+                            }
+                        } catch (IOException e) {
+                            handleError(e);
+                        }
+                    } else {
+                        state |= FLAG_READY;
                         try {
                             state |= FLAG_IN_CALLBACK;
-                            listener.onWritePossible();
+
+                            ThreadSetupAction.Handle handle = threadSetupAction.setup(servletResponse.getExchange());
+                            try {
+                                listener.onWritePossible();
+                            } finally {
+                                handle.tearDown();
+                            }
                             theConnectionChannel.getWriteSetter().set(WriteChannelListener.this);
-                            theConnectionChannel.resumeWrites();
+                            if (!isReady()) {
+                                //if the stream is still ready then we do not resume writes
+                                //this is per spec, we only call the listener once for each time
+                                //isReady returns true
+                                theConnectionChannel.resumeWrites();
+                            }
                         } catch (Throwable e) {
                             IoUtils.safeClose(channel);
                         } finally {
                             state &= ~FLAG_IN_CALLBACK;
                         }
                     }
-                });
-            }
+                }
+            });
         }
 
-        private void handleError(final StreamSinkChannel channel, final IOException e) {
+        private void handleError(final IOException e) {
             try {
-                listener.onError(e);
+                ThreadSetupAction.Handle handle = threadSetupAction.setup(servletResponse.getExchange());
+                try {
+                    listener.onError(e);
+                } finally {
+                    handle.tearDown();
+                }
             } finally {
                 IoUtils.safeClose(underlyingConnectionChannel);
             }

@@ -62,6 +62,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private static final int FLAG_NEXT_SHUTDWON = 1 << 2;
     private static final int FLAG_WRITTEN_FIRST_CHUNK = 1 << 3;
 
+    int written = 0;
     /**
      * Construct a new instance.
      *
@@ -86,6 +87,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             if(anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK)) {
                 chunkingBuffer.put(CRLF);
             }
+            written += src.remaining();
             chunkingBuffer.put(Integer.toHexString(src.remaining()).getBytes());
             chunkingBuffer.put(CRLF);
             chunkingBuffer.flip();

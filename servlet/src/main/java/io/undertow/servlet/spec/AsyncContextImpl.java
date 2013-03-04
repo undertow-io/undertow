@@ -67,11 +67,13 @@ public class AsyncContextImpl implements AsyncContext {
 
     private volatile XnioExecutor.Key timeoutKey;
 
-    private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<>();
     private Runnable dispatchAction;
     private boolean dispatched;
     private boolean initialRequestDone;
     private Thread initiatingThread;
+
+    private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<>();
+    private boolean processingAsyncTask;
 
     public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse) {
         this.exchange = exchange;
@@ -356,19 +358,23 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     private synchronized void processAsyncTask() {
-        if(dispatched) {
+        if(!initialRequestDone) {
             return;
         }
         final Runnable task = asyncTaskQueue.poll();
         if (task != null) {
+            processingAsyncTask  = true;
             WorkerDispatcher.forceDispatch(exchange, new TaskDispatchRunnable(task));
+        } else {
+            processingAsyncTask = false;
         }
     }
 
     /**
      * Adds a task to be run to the async context. These tasks are run one at a time,
-     * after the initial request is finished. If the request is ever completed or dispatched
-     * then the queued tasks will not be run.
+     * after the initial request is finished. If the request is dispatched before the initial
+     * request is complete then these tasks will not be run
+     *
      *
      * This method is intended to be used to queue read and write tasks for async streams,
      * to make sure that multiple threads do not end up working on the same exchange at once
@@ -376,9 +382,8 @@ public class AsyncContextImpl implements AsyncContext {
      * @param runnable The runnable
      */
     public synchronized void addAsyncTask(final Runnable runnable) {
-        boolean empty = asyncTaskQueue.isEmpty();
         asyncTaskQueue.add(runnable);
-        if(empty) {
+        if(!processingAsyncTask) {
             processAsyncTask();
         }
     }

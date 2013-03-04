@@ -14,11 +14,11 @@ import org.xnio.channels.ConnectedStreamChannel;
 public class WebConnectionImpl implements WebConnection {
 
     private final UpgradeServletOutputStream outputStream;
-    private final ServletInputStreamImpl inputStream;
+    private final UpgradeServletInputStream inputStream;
 
     public WebConnectionImpl(final ConnectedStreamChannel channel) {
         this.outputStream = new UpgradeServletOutputStream(channel);
-        this.inputStream = new ServletInputStreamImpl(channel);
+        this.inputStream = new UpgradeServletInputStream(channel);
     }
 
     @Override
