@@ -24,7 +24,7 @@ import java.io.IOException;
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
-import io.undertow.server.handlers.resource.file.FileResourceManager;
+import io.undertow.server.handlers.resource.FileResourceManager;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;

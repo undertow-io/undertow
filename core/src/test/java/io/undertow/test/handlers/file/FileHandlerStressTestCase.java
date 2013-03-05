@@ -33,7 +33,7 @@ import io.undertow.server.handlers.cache.CacheHandler;
 import io.undertow.server.handlers.cache.CachedHttpRequest;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.ResourceHandler;
-import io.undertow.server.handlers.resource.file.FileResourceManager;
+import io.undertow.server.handlers.resource.FileResourceManager;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;

@@ -1,5 +1,7 @@
 package io.undertow.server.handlers.resource;
 
+import java.io.IOException;
+
 /**
  *
  * Representation of a resource manager. A resource manager knows how to obtain
@@ -17,6 +19,6 @@ public interface ResourceManager {
      * @param path The path
      * @return The resource representing the path, or null if no resource was found.
      */
-    Resource getResource(final String path);
+    Resource getResource(final String path) throws IOException;
 
 }

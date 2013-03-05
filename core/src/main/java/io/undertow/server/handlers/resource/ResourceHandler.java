@@ -1,5 +1,6 @@
 package io.undertow.server.handlers.resource;
 
+import java.io.IOException;
 import java.util.Date;
 
 import io.undertow.predicate.Predicate;
@@ -52,7 +53,7 @@ public class ResourceHandler implements HttpHandler {
 
     private void serveResource(final HttpServerExchange exchange, final boolean sendContent) {
 
-        if(DirectoryUtils.sendRequestedBlobs(exchange)) {
+        if (DirectoryUtils.sendRequestedBlobs(exchange)) {
             return;
         }
 
@@ -73,7 +74,14 @@ public class ResourceHandler implements HttpHandler {
         WorkerDispatcher.dispatch(exchange, new Runnable() {
             @Override
             public void run() {
-                Resource resource = resourceManager.getResource(exchange.getRelativePath());
+                Resource resource = null;
+                try {
+                    resource = resourceManager.getResource(exchange.getRelativePath());
+                } catch (IOException e) {
+                    exchange.setResponseCode(500);
+                    exchange.endExchange();
+                    return;
+                }
                 if (resource == null) {
                     exchange.setResponseCode(404);
                     exchange.endExchange();
@@ -117,7 +125,7 @@ public class ResourceHandler implements HttpHandler {
                 if (contentLength != null) {
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, contentLength.toString());
                 }
-                if(!sendContent) {
+                if (!sendContent) {
                     exchange.endExchange();
                 } else {
                     resource.serve(exchange);

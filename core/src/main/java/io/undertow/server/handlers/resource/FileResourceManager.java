@@ -16,13 +16,12 @@
  * limitations under the License.
  */
 
-package io.undertow.server.handlers.resource.file;
+package io.undertow.server.handlers.resource;
 
 import java.io.File;
 
 import io.undertow.UndertowMessages;
-import io.undertow.server.handlers.resource.Resource;
-import io.undertow.server.handlers.resource.ResourceManager;
+
 /**
  * Serves files from the file system.
  */

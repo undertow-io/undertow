@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.server.handlers.resource.file;
+package io.undertow.server.handlers.resource;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -29,7 +29,6 @@ import java.util.List;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.resource.Resource;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
 import org.jboss.logging.Logger;
