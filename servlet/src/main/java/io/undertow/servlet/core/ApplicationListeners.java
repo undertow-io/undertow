@@ -36,6 +36,7 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionAttributeListener;
 import javax.servlet.http.HttpSessionBindingEvent;
 import javax.servlet.http.HttpSessionEvent;
+import javax.servlet.http.HttpSessionIdListener;
 import javax.servlet.http.HttpSessionListener;
 
 import io.undertow.servlet.UndertowServletLogger;
@@ -58,6 +59,7 @@ public class ApplicationListeners implements Lifecycle {
     private final List<ManagedListener> servletRequestAttributeListeners;
     private final List<ManagedListener> httpSessionListeners;
     private final List<ManagedListener> httpSessionAttributeListeners;
+    private final List<ManagedListener> httpSessionIdListeners;
     private volatile boolean started = false;
 
     public ApplicationListeners(final List<ManagedListener> allListeners, final ServletContext servletContext) {
@@ -68,6 +70,7 @@ public class ApplicationListeners implements Lifecycle {
         servletRequestAttributeListeners = new CopyOnWriteArrayList<ManagedListener>();
         httpSessionListeners = new CopyOnWriteArrayList<ManagedListener>();
         httpSessionAttributeListeners = new CopyOnWriteArrayList<ManagedListener>();
+        httpSessionIdListeners = new CopyOnWriteArrayList<ManagedListener>();
         this.allListeners = new CopyOnWriteArrayList<ManagedListener>();
         for (final ManagedListener listener : allListeners) {
             addListener(listener);
@@ -92,6 +95,9 @@ public class ApplicationListeners implements Lifecycle {
         }
         if (HttpSessionAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
             httpSessionAttributeListeners.add(listener);
+        }
+        if(HttpSessionIdListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+            httpSessionIdListeners.add(listener);
         }
         this.allListeners.add(listener);
     }
@@ -226,7 +232,12 @@ public class ApplicationListeners implements Lifecycle {
             this.<HttpSessionAttributeListener>get(listener).attributeReplaced(sre);
         }
     }
-
+    public void httpSessionIdChanged(final HttpSession session, final String oldSessionId) {
+            final HttpSessionEvent sre = new HttpSessionEvent(session);
+            for (final ManagedListener listener : httpSessionIdListeners) {
+                this.<HttpSessionIdListener>get(listener).sessionIdChanged(sre, oldSessionId);
+            }
+        }
 
     private <T> T get(final ManagedListener listener) {
         return (T) listener.instance();

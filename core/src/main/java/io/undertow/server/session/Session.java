@@ -192,5 +192,5 @@ public interface Session {
      *
      * @return The new session ID
      */
-    String changeSessionId();
+    String changeSessionId(final HttpServerExchange exchange, final SessionConfig config);
 }

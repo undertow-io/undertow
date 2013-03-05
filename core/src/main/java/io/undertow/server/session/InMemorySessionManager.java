@@ -281,13 +281,14 @@ public class InMemorySessionManager implements SessionManager {
         }
 
         @Override
-        public String changeSessionId() {
+        public String changeSessionId(final HttpServerExchange exchange, final SessionConfig config) {
             final String oldId = sessionId;
             final InMemorySession sess = sessions.get(oldId);
             String newId = sessionIdGenerator.createSessionId();
             this.sessionId = newId;
             sessions.put(newId, sess);
             sessions.remove(oldId);
+            config.attachSession(exchange, this);
             return newId;
         }
 

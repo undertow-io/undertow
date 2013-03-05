@@ -295,7 +295,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (session == null) {
             throw UndertowServletMessages.MESSAGES.noSession();
         }
-        return session.getSession().changeSessionId();
+        String oldId = session.getId();
+        String newId = session.getSession().changeSessionId(exchange, servletContext.getSessionCookieConfig());
+        servletContext.getDeployment().getApplicationListeners().httpSessionIdChanged(session, oldId);
+        return newId;
     }
 
     @Override
