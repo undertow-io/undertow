@@ -6,7 +6,6 @@ import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.RedirectHandler;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
-import io.undertow.websockets.Websockets;
 import io.undertow.websockets.api.AbstractAssembledFrameHandler;
 import io.undertow.websockets.api.WebSocketFrameHeader;
 import io.undertow.websockets.api.WebSocketSession;
@@ -21,7 +20,7 @@ public class WebSocketServer {
     public static void main(final String[] args) {
         Undertow server = Undertow.builder()
                 .addListener(8080, "localhost")
-                .addPathHandler("/myapp", Websockets.handler(new WebSocketSessionHandler() {
+                .addWebSocketHandler("/myapp", new WebSocketSessionHandler() {
                     @Override
                     public void onSession(final WebSocketSession session, WebSocketHttpExchange exchange) {
                         session.setFrameHandler(new AbstractAssembledFrameHandler() {
@@ -31,7 +30,7 @@ public class WebSocketServer {
                             }
                         });
                     }
-                }))
+                })
                 .setDefaultHandler(
                         //we use a predicate handler here. If the path is index.html we serve the page
                         //otherwise we redirect to index.html

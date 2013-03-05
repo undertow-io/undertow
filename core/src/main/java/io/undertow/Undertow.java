@@ -32,6 +32,9 @@ import io.undertow.server.handlers.cache.CachedHttpRequest;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.error.SimpleErrorPageHandler;
 import io.undertow.server.handlers.form.FormEncodedDataHandler;
+import io.undertow.websockets.api.WebSocketSessionHandler;
+import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
+import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
@@ -79,7 +82,6 @@ public class Undertow {
     }
 
     /**
-     *
      * @return A builder that can be used to create an Undertow server instance
      */
     public static Builder builder() {
@@ -89,9 +91,9 @@ public class Undertow {
     /**
      * Creates a new Virtual Host, that can then be added to the server configuration.
      *
-     * @see Builder#addVirtualHost(String)
      * @param name The host name of the virtual host
      * @return The virtual host.
+     * @see Builder#addVirtualHost(String)
      */
     public static VirtualHost virtualHost(final String name) {
         return new VirtualHost(false).addHostName(name);
@@ -194,7 +196,7 @@ public class Undertow {
         root = new SimpleErrorPageHandler(root);
         //TODO: multipart
 
-        if(cacheSize > 0) {
+        if (cacheSize > 0) {
             root = new CacheHandler(new DirectBufferCache<CachedHttpRequest>(1024, cacheSize * 1024 * 1024), root);
         }
 
@@ -202,7 +204,7 @@ public class Undertow {
     }
 
     private static HttpHandler addLoginConfig(final HttpHandler toWrap, final LoginConfig config) {
-        if(config == null) {
+        if (config == null) {
             return toWrap;
         }
         HttpHandler handler = toWrap;
@@ -210,13 +212,13 @@ public class Undertow {
         handler = new AuthenticationCallHandler(handler);
         handler = new AuthenticationConstraintHandler(handler);
         final List<AuthenticationMechanism> mechanisms = new ArrayList<AuthenticationMechanism>();
-        if(config.basic) {
+        if (config.basic) {
             mechanisms.add(new BasicAuthenticationMechanism(config.realmName));
         }
-        if(config.kerberos) {
+        if (config.kerberos) {
             mechanisms.add(new GSSAPIAuthenticationMechanism(config.subjectFactory));
         }
-        if(config.form) {
+        if (config.form) {
             mechanisms.add(new FormAuthenticationMechanism("FORM", config.loginPage, config.errorPage));
         }
         handler = new AuthenticationMechanismsHandler(handler, mechanisms);
@@ -247,6 +249,7 @@ public class Undertow {
 
         T addPathHandler(final String path, final HttpHandler handler);
 
+        T addWebSocketHandler(final String path, WebSocketSessionHandler handler);
 
         T setDefaultHandler(final HttpHandler handler);
 
@@ -277,6 +280,12 @@ public class Undertow {
 
         public VirtualHost addPathHandler(final String path, final HttpHandler handler) {
             handlers.put(path, handler);
+            return this;
+        }
+
+        @Override
+        public VirtualHost addWebSocketHandler(final String path, final WebSocketSessionHandler handler) {
+            handlers.put(path, new WebSocketProtocolHandshakeHandler(new WebSocketSessionConnectionCallback(handler)));
             return this;
         }
 
@@ -449,6 +458,12 @@ public class Undertow {
         @Override
         public Builder addPathHandler(final String path, final HttpHandler handler) {
             defaultHost.addPathHandler(path, handler);
+            return this;
+        }
+
+        @Override
+        public Builder addWebSocketHandler(final String path, final WebSocketSessionHandler handler) {
+            defaultHost.addWebSocketHandler(path, handler);
             return this;
         }
 
