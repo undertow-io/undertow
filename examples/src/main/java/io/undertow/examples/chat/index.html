@@ -1,0 +1,70 @@
+<html>
+<head><title>Char</title></head>
+<body style="background-color: ">
+<script>
+    var socket;
+    if (window.WebSocket) {
+        socket = new WebSocket("ws://localhost:8080/myapp");
+        socket.onmessage = function (event) {
+            var chat = document.getElementById('chat');
+            chat.innerText = chat.innerText + event.data + "\n";
+        };
+    } else {
+        alert("Your browser does not support Websockets. (Use Chrome)");
+    }
+
+    function send(message) {
+        if (!window.WebSocket) {
+            return false;
+        }
+        if (socket.readyState == WebSocket.OPEN) {
+            socket.send(message);
+        } else {
+            alert("The socket is not open.");
+        }
+        return false;
+    }
+</script>
+<style>
+    body {
+        background: #c5deea; /* Old browsers */
+        background: -moz-linear-gradient(top, #c5deea 0%, #066dab 100%); /* FF3.6+ */
+        background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #c5deea), color-stop(100%, #066dab)); /* Chrome,Safari4+ */
+        background: -webkit-linear-gradient(top, #c5deea 0%, #066dab 100%); /* Chrome10+,Safari5.1+ */
+        background: -o-linear-gradient(top, #c5deea 0%, #066dab 100%); /* Opera 11.10+ */
+        background: -ms-linear-gradient(top, #c5deea 0%, #066dab 100%); /* IE10+ */
+        background: linear-gradient(to bottom, #c5deea 0%, #066dab 100%); /* W3C */
+        filter: progid:DXImageTransform.Microsoft.gradient(startColorstr = '#c5deea', endColorstr = '#066dab', GradientType = 0); /* IE6-9 */
+        height: 90%;
+    }
+
+    .center {
+        margin-left: auto;
+        margin-right: auto;
+        width: 70%;
+    }
+
+    .chatform {
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 0px;
+        width: 70%;
+    }
+
+</style>
+<div class="page">
+    <div class="center" style="background: white;">
+        <div id="chat" style="height:100%;width: 100%; overflow: scroll;">
+
+
+        </div>
+
+        <form onsubmit="return false;" class="chatform">
+            <input type="text" name="message"
+                   onkeypress="if(event.keyCode==13) { send(this.form.message.value); this.value='' } "
+                   style="width:100%"/>
+        </form>
+    </div>
+</div>
+</body>
+</html>
