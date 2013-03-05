@@ -28,7 +28,7 @@
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-parent</artifactId>
-    <version>1.0.0.Alpha1</version>
+    <version>1.0.0.Alpha2-SNAPSHOT</version>
 
     <name>Undertow</name>
     <description>Undertow</description>
@@ -69,11 +69,11 @@
         <version.easymock>3.1</version.easymock>
         <version.netty>3.6.2.Final</version.netty>
         <version.xnio>3.1.0.Beta9</version.xnio>
-        <version.io.undertow.jastow>1.0.0.Alpha1</version.io.undertow.jastow>
+        <version.io.undertow.jastow>1.0.0.Alpha2-SNAPSHOT</version.io.undertow.jastow>
         <version.org.jboss.logging>3.1.2.GA</version.org.jboss.logging>
         <version.org.jboss.logmanager>1.4.0.Final</version.org.jboss.logmanager>
         <version.org.jboss.logging.processor>1.1.0.Final</version.org.jboss.logging.processor>
-        <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Alpha1</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
+        <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Alpha2-SNAPSHOT</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.1.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.web.jasper-jdt>7.0.3.Final</version.org.jboss.web.jasper-jdt>
 
