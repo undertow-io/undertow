@@ -25,12 +25,14 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.util.ConcreteIoFuture;
+import io.undertow.websockets.api.WebSocketSessionHandler;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.core.protocol.version00.Hybi00Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
+import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
 import io.undertow.websockets.spi.UpgradeCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.FinishedIoFuture;
@@ -43,7 +45,7 @@ import org.xnio.Pool;
  */
 public class WebSocketServlet extends HttpServlet {
 
-    public static final String CALLBACK = "io.undertow.callback";
+    public static final String SESSION_HANDLER = "io.undertow.handler";
 
     private final List<Handshake> handshakes;
 
@@ -62,21 +64,27 @@ public class WebSocketServlet extends HttpServlet {
     @Override
     public void init(final ServletConfig config) throws ServletException {
         super.init(config);
-        final String callbackClassName = config.getInitParameter(CALLBACK);
-        if (callbackClassName != null) {
-            try {
-                final Class<?> clazz = Class.forName(callbackClassName, true, Thread.currentThread().getContextClassLoader());
-                this.callback = (WebSocketConnectionCallback) clazz.newInstance();
-                //TODO: set properties based on init params
-            } catch (ClassNotFoundException e) {
-                throw new ServletException(e);
-            } catch (InstantiationException e) {
-                throw new ServletException(e);
-            } catch (IllegalAccessException e) {
-                throw new ServletException(e);
+        try {
+            final String sessionHandler = config.getInitParameter(SESSION_HANDLER);
+            if (sessionHandler != null) {
+                final Class<?> clazz = Class.forName(sessionHandler, true, Thread.currentThread().getContextClassLoader());
+                final Object handler = clazz.newInstance();
+                if (handler instanceof WebSocketSessionHandler) {
+                    this.callback = new WebSocketSessionConnectionCallback((WebSocketSessionHandler) handler);
+                } else {
+                    this.callback = (WebSocketConnectionCallback) handler;
+                }
             }
+            //TODO: set properties based on init params
+
+        } catch (ClassNotFoundException e) {
+            throw new ServletException(e);
+        } catch (InstantiationException e) {
+            throw new ServletException(e);
+        } catch (IllegalAccessException e) {
+            throw new ServletException(e);
         }
-        if (this.callback == null) {
+        if (callback == null) {
             throw UndertowServletMessages.MESSAGES.noWebSocketHandler();
         }
     }
