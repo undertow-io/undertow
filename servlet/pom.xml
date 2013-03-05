@@ -59,6 +59,12 @@
         <!-- Test dependencies -->
 
         <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.undertow</groupId>
             <artifactId>undertow-core</artifactId>
             <type>test-jar</type>
