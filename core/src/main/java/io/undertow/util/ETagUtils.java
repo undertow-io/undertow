@@ -1,0 +1,241 @@
+package io.undertow.util;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import io.undertow.server.HttpServerExchange;
+
+/**
+ * @author Stuart Douglas
+ */
+public class ETagUtils {
+
+    private static final char COMMA = ',';
+    private static final char QUOTE = '"';
+    private static final char W = 'W';
+    private static final char SLASH = '/';
+
+
+    /**
+     * Handles the if-match header. returns true if the request should proceed, false otherwise
+     *
+     * @param exchange the exchange
+     * @param etags    The etags
+     * @return
+     */
+    public static boolean handleIfMatch(final HttpServerExchange exchange, final ETag etag, boolean allowWeak) {
+        return handleIfMatch(exchange, Collections.singletonList(etag), allowWeak);
+    }
+
+    /**
+     * Handles the if-match header. returns true if the request should proceed, false otherwise
+     *
+     * @param exchange the exchange
+     * @param etags    The etags
+     * @return
+     */
+    public static boolean handleIfMatch(final HttpServerExchange exchange, final List<ETag> etags, boolean allowWeak) {
+        final String ifMatch = exchange.getRequestHeaders().getFirst(Headers.IF_MATCH);
+        if (ifMatch == null) {
+            return true;
+        }
+        List<ETag> parts = parseETagList(ifMatch);
+        for (ETag part : parts) {
+            if (part.getTag().equals("*")) {
+                return true; //todo: how to tell if there is a current entity for the request
+            }
+            if (part.isWeak() && !allowWeak) {
+                continue;
+            }
+            for (ETag tag : etags) {
+                if (tag.isWeak() && !allowWeak) {
+                    continue;
+                }
+                if (tag.getTag().equals(part.getTag())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Handles the if-none-match header. returns true if the request should proceed, false otherwise
+     *
+     * @param exchange the exchange
+     * @param etags    The etags
+     * @return
+     */
+    public static boolean handleIfNoneMatch(final HttpServerExchange exchange, final ETag etag, boolean allowWeak) {
+        return handleIfNoneMatch(exchange, Collections.singletonList(etag), allowWeak);
+    }
+
+    /**
+     * Handles the if-none-match header. returns true if the request should proceed, false otherwise
+     *
+     * @param exchange the exchange
+     * @param etags    The etags
+     * @return
+     */
+    public static boolean handleIfNoneMatch(final HttpServerExchange exchange, final List<ETag> etags, boolean allowWeak) {
+        final String ifMatch = exchange.getRequestHeaders().getFirst(Headers.IF_NONE_MATCH);
+        if (ifMatch == null) {
+            return true;
+        }
+        List<ETag> parts = parseETagList(ifMatch);
+        for (ETag part : parts) {
+            if (part.getTag().equals("*")) {
+                return false;
+            }
+            if (part.isWeak() && !allowWeak) {
+                continue;
+            }
+            for (ETag tag : etags) {
+                if (tag.isWeak() && !allowWeak) {
+                    continue;
+                }
+                if (tag.getTag().equals(part.getTag())) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public static List<ETag> parseETagList(final String header) {
+        char[] headerChars = header.toCharArray();
+
+        // The LinkedHashMap is used so that the parameter order can also be retained.
+        List<ETag> response = new ArrayList<>();
+
+        SearchingFor searchingFor = SearchingFor.START_OF_VALUE;
+        String currentToken = null;
+        int valueStart = 0;
+        boolean weak = false;
+        boolean malformed = false;
+
+        for (int i = 0; i < headerChars.length; i++) {
+            switch (searchingFor) {
+                case START_OF_VALUE:
+                    if (headerChars[i] != COMMA && Character.isWhitespace(headerChars[i]) == false) {
+                        if (headerChars[i] == QUOTE) {
+                            valueStart = i + 1;
+                            searchingFor = SearchingFor.LAST_QUOTE;
+                            weak = false;
+                            malformed = false;
+                        } else if (headerChars[i] == W) {
+                            searchingFor = SearchingFor.WEAK_SLASH;
+                        }
+                    }
+                    break;
+                case WEAK_SLASH:
+                    if (headerChars[i] == QUOTE) {
+                        valueStart = i + 1;
+                        searchingFor = SearchingFor.LAST_QUOTE;
+                        weak = true;
+                        malformed = false;
+                    } else if (headerChars[i] != SLASH) {
+                        malformed = true;
+                        searchingFor = SearchingFor.END_OF_VALUE;
+                    }
+                    break;
+                case LAST_QUOTE:
+                    if (headerChars[i] == QUOTE) {
+                        String value = String.valueOf(headerChars, valueStart, i - valueStart);
+                        response.add(new ETag(weak, value.trim()));
+                        searchingFor = SearchingFor.START_OF_VALUE;
+                    }
+                    break;
+                case END_OF_VALUE:
+                    if (headerChars[i] == COMMA || Character.isWhitespace(headerChars[i])) {
+                        if (!malformed) {
+                            String value = String.valueOf(headerChars, valueStart, i - valueStart);
+                            response.add(new ETag(weak, value.trim()));
+                            searchingFor = SearchingFor.START_OF_VALUE;
+                        }
+                    }
+                    break;
+            }
+        }
+
+        if (searchingFor == SearchingFor.END_OF_VALUE || searchingFor == SearchingFor.LAST_QUOTE) {
+            if (!malformed) {
+                // Special case where we reached the end of the array containing the header values.
+                String value = String.valueOf(headerChars, valueStart, headerChars.length - valueStart);
+                response.add(new ETag(weak, value.trim()));
+            }
+        }
+
+        return response;
+    }
+
+    /**
+     * @param exchange The exchange
+     * @return The ETag for the exchange, or null if the etag is not set
+     */
+    public static ETag getETag(final HttpServerExchange exchange) {
+        final String tag = exchange.getResponseHeaders().getFirst(Headers.ETAG);
+        if (tag == null) {
+            return null;
+        }
+        char[] headerChars = tag.toCharArray();
+        SearchingFor searchingFor = SearchingFor.START_OF_VALUE;
+        int valueStart = 0;
+        boolean weak = false;
+        boolean malformed = false;
+        for (int i = 0; i < headerChars.length; i++) {
+            switch (searchingFor) {
+                case START_OF_VALUE:
+                    if (headerChars[i] != COMMA && Character.isWhitespace(headerChars[i]) == false) {
+                        if (headerChars[i] == QUOTE) {
+                            valueStart = i + 1;
+                            searchingFor = SearchingFor.LAST_QUOTE;
+                            weak = false;
+                            malformed = false;
+                        } else if (headerChars[i] == W) {
+                            searchingFor = SearchingFor.WEAK_SLASH;
+                        }
+                    }
+                    break;
+                case WEAK_SLASH:
+                    if (headerChars[i] == QUOTE) {
+                        valueStart = i + 1;
+                        searchingFor = SearchingFor.LAST_QUOTE;
+                        weak = true;
+                        malformed = false;
+                    } else if (headerChars[i] != SLASH) {
+                        return null; //malformed
+                    }
+                    break;
+                case LAST_QUOTE:
+                    if (headerChars[i] == QUOTE) {
+                        String value = String.valueOf(headerChars, valueStart, i - valueStart);
+                        return new ETag(weak, value.trim());
+                    }
+                    break;
+                case END_OF_VALUE:
+                    if (headerChars[i] == COMMA || Character.isWhitespace(headerChars[i])) {
+                        if (!malformed) {
+                            String value = String.valueOf(headerChars, valueStart, i - valueStart);
+                            return new ETag(weak, value.trim());
+                        }
+                    }
+                    break;
+            }
+        }
+        if (searchingFor == SearchingFor.END_OF_VALUE || searchingFor == SearchingFor.LAST_QUOTE) {
+            if (!malformed) {
+                // Special case where we reached the end of the array containing the header values.
+                String value = String.valueOf(headerChars, valueStart, headerChars.length - valueStart);
+                return new ETag(weak, value.trim());
+            }
+        }
+
+        return null;
+    }
+
+    enum SearchingFor {
+        START_OF_VALUE, LAST_QUOTE, END_OF_VALUE, WEAK_SLASH;
+    }
+}

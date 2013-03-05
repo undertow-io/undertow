@@ -5,6 +5,8 @@ import java.util.Date;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.encoding.ContentEncoding;
 import io.undertow.util.DateUtils;
+import io.undertow.util.ETag;
+import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 
 /**
@@ -12,7 +14,7 @@ import io.undertow.util.Headers;
  */
 public class CachedHttpRequest {
     private final String path;
-    private final String etag;
+    private final ETag etag;
     private final String contentEncoding;
     private final String contentLocation;
     private final String language;
@@ -23,7 +25,7 @@ public class CachedHttpRequest {
 
     public CachedHttpRequest(final HttpServerExchange exchange) {
         this.path = exchange.getRequestPath();
-        this.etag = exchange.getResponseHeaders().getFirst(Headers.ETAG);
+        this.etag = ETagUtils.getETag(exchange);
         this.contentLocation = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LOCATION);
         this.language = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LANGUAGE);
         this.contentType = exchange.getResponseHeaders().getFirst(Headers.CONTENT_TYPE);
@@ -48,7 +50,7 @@ public class CachedHttpRequest {
         return path;
     }
 
-    public String getEtag() {
+    public ETag getEtag() {
         return etag;
     }
 

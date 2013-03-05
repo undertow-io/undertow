@@ -24,6 +24,8 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import io.undertow.server.HttpServerExchange;
+
 /**
  * Utility for parsing and generating dates
  *
@@ -105,5 +107,49 @@ public class DateUtils {
         return null;
     }
 
+    /**
+     * Handles the if-modified-since header. returns true if the request should proceed, false otherwise
+     *
+     * @param exchange     the exchange
+     * @param lastModified The last modified date
+     * @return
+     */
+    public static boolean handleIfModifiedSince(final HttpServerExchange exchange, final Date lastModified) {
+        if (lastModified == null) {
+            return true;
+        }
+        String modifiedSince = exchange.getRequestHeaders().getFirst(Headers.IF_MODIFIED_SINCE);
+        if (modifiedSince == null) {
+            return true;
+        }
+        Date modDate = parseDate(modifiedSince);
+        if (modDate == null) {
+            return true;
+        }
+        return lastModified.after(modDate);
+    }
+    /**
+     * Handles the if-unmodified-since header. returns true if the request should proceed, false otherwise
+     *
+     * @param exchange     the exchange
+     * @param lastModified The last modified date
+     * @return
+     */
+    public static boolean handleIfUnmodifiedSince(final HttpServerExchange exchange, final Date lastModified) {
+        if (lastModified == null) {
+            return true;
+        }
+        String modifiedSince = exchange.getRequestHeaders().getFirst(Headers.IF_MODIFIED_SINCE);
+        if (modifiedSince == null) {
+            return true;
+        }
+        Date modDate = parseDate(modifiedSince);
+        if (modDate == null) {
+            return true;
+        }
+        return lastModified.before(modDate);
+    }
+    private DateUtils() {
 
+    }
 }

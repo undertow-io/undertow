@@ -7,7 +7,11 @@ import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.DateUtils;
+import io.undertow.util.ETag;
+import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 
 import static io.undertow.util.Methods.GET;
 import static io.undertow.util.Methods.HEAD;
@@ -96,6 +100,51 @@ public class ResponseCache {
             return false;
         }
 
+        CachedHttpRequest existingKey = entry.key();
+        //if any of the header matches fail we just return
+        //we don't can the request, as it is possible the underlying handler
+        //may have additional etags
+        final ETag etag = existingKey.getEtag();
+        if (!ETagUtils.handleIfMatch(exchange, etag, false)) {
+            return false;
+        }
+        //we do send a 304 if the if-none-match header matches
+        if (!ETagUtils.handleIfNoneMatch(exchange, etag, true)) {
+            exchange.setResponseCode(304);
+            exchange.endExchange();
+            return true;
+        }
+        //the server may have a more up to date representation
+        if (!DateUtils.handleIfUnmodifiedSince(exchange, existingKey.getLastModified())) {
+            return false;
+        }
+        if (!DateUtils.handleIfModifiedSince(exchange, existingKey.getLastModified())) {
+            exchange.setResponseCode(304);
+            exchange.endExchange();
+            return true;
+        }
+
+        //we are going to proceed. Set the appropriate headers
+        if(existingKey.getContentType() != null) {
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, existingKey.getContentType());
+        }
+        if(existingKey.getContentEncoding() != null && !Headers.IDENTITY.equals(HttpString.tryFromString(existingKey.getContentEncoding()))) {
+            exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, existingKey.getContentEncoding());
+        }
+        if(existingKey.getLastModified() != null) {
+            exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, DateUtils.toDateString(existingKey.getLastModified()));
+        }
+        if(existingKey.getContentLocation() != null) {
+            exchange.getResponseHeaders().put(Headers.CONTENT_LOCATION, existingKey.getContentLocation());
+        }
+        if(existingKey.getLanguage() != null) {
+            exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, existingKey.getLanguage());
+        }
+        if(etag != null) {
+            exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, (etag.isWeak() ? "w/\"" :"\"") + etag.getTag() + "\"");
+        }
+
+        //TODO: support if-range
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(entry.size()));
         if (exchange.getRequestMethod().equals(HEAD)) {
             exchange.endExchange();
