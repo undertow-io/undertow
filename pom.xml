@@ -93,7 +93,6 @@
         <module>core</module>
         <module>servlet</module>
         <module>jsp</module>
-        <module>websockets</module>
         <module>examples</module>
         <module>websockets-jsr</module>
     </modules>
