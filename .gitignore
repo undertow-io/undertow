@@ -9,4 +9,4 @@ local-test
 out
 lib
 bin
-
+dependency-reduced-pom.xml
