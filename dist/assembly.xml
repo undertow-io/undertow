@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly xmlns="urn:maven:assembly:1.1.0-SNAPSHOT">
+    <id>distro</id>
+    <formats>
+        <format>zip</format>
+        <format>tar.gz</format>
+    </formats>
+
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <dependencySets>
+        <dependencySet>
+            <includes>
+                <include>io.undertow:undertow-core</include>
+                <include>io.undertow:undertow-servlet</include>
+                <include>io.undertow:undertow-examples</include>
+            </includes>
+            <outputDirectory>/</outputDirectory>
+        </dependencySet>
+        <dependencySet>
+            <includes>
+                <include>org.jboss.xnio:xnio-api</include>
+                <include>org.jboss.xnio:xnio-nio</include>
+                <include>org.jboss.logging:jboss-logging</include>
+                <include>org.jboss.spec.javax.servlet:jboss-servlet-api_3.1_spec</include>
+            </includes>
+            <outputDirectory>lib</outputDirectory>
+        </dependencySet>
+    </dependencySets>
+
+    <files>
+        <file>
+            <source>../README.md</source>
+            <outputDirectory>/</outputDirectory>
+            <filtered>true</filtered>
+        </file>
+        <file>
+            <source>../LICENSE.txt</source>
+            <outputDirectory>/</outputDirectory>
+        </file>
+    </files>
+</assembly>
