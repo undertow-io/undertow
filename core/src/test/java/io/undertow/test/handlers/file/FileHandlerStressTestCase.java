@@ -32,7 +32,8 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.cache.CacheHandler;
 import io.undertow.server.handlers.cache.CachedHttpRequest;
 import io.undertow.server.handlers.cache.DirectBufferCache;
-import io.undertow.server.handlers.file.FileHandler;
+import io.undertow.server.handlers.resource.ResourceHandler;
+import io.undertow.server.handlers.resource.file.FileResourceManager;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
@@ -56,7 +57,8 @@ public class FileHandlerStressTestCase {
     public void simpleFileStressTest() throws IOException, ExecutionException, InterruptedException {
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
-            final FileHandler handler = new FileHandler(new File(getClass().getResource("page.html").getFile()).getParentFile());
+            final ResourceHandler handler = new ResourceHandler()
+                    .setResourceManager(new FileResourceManager(new File(getClass().getResource("page.html").getFile()).getParentFile()));
 
             final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache<CachedHttpRequest>(1024, 10480), handler);
             final PathHandler path = new PathHandler();

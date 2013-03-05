@@ -19,19 +19,29 @@
 package io.undertow.server.handlers.error;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.channels.Channel;
+import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import io.undertow.UndertowMessages;
+import io.undertow.UndertowLogger;
 import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.server.handlers.file.DirectFileSource;
-import io.undertow.server.handlers.file.FileSource;
+import io.undertow.util.Headers;
+import io.undertow.util.WorkerDispatcher;
+import org.jboss.logging.Logger;
+import org.xnio.ChannelListener;
+import org.xnio.FileAccess;
+import org.xnio.IoUtils;
+import org.xnio.channels.Channels;
+import org.xnio.channels.StreamSinkChannel;
 
 /**
  * Handler that serves up a file from disk to serve as an error page.
@@ -43,6 +53,7 @@ import io.undertow.server.handlers.file.FileSource;
  */
 public class FileErrorPageHandler implements HttpHandler {
 
+    private static final Logger log = Logger.getLogger("io.undertow.server.error.file");
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
     /**
@@ -51,8 +62,6 @@ public class FileErrorPageHandler implements HttpHandler {
     private volatile Set<Integer> responseCodes;
 
     private volatile File file;
-
-    private volatile FileSource fileSource = DirectFileSource.INSTANCE;
 
     public FileErrorPageHandler(final File file, final Integer... responseCodes) {
         this.file = file;
@@ -66,7 +75,7 @@ public class FileErrorPageHandler implements HttpHandler {
             public boolean handleDefaultResponse(final HttpServerExchange exchange) {
                 Set<Integer> codes = responseCodes;
                 if (!exchange.isResponseStarted() && codes.contains(exchange.getResponseCode())) {
-                    fileSource.serveFile(exchange, file, false);
+                    serveFile(exchange);
                     return true;
                 }
                 return false;
@@ -74,6 +83,53 @@ public class FileErrorPageHandler implements HttpHandler {
         });
 
         HttpHandlers.executeHandler(next, exchange);
+    }
+
+    private void serveFile(final HttpServerExchange exchange) {
+        WorkerDispatcher.dispatch(exchange, new Runnable() {
+            @Override
+            public void run() {
+                final FileChannel fileChannel;
+                try {
+                    try {
+                        fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
+                    } catch (FileNotFoundException e) {
+                        //TODO: how to handle this
+                        exchange.endExchange();
+                        return;
+                    }
+                } catch (IOException e) {
+                    UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file, e);
+                    exchange.endExchange();
+                    return;
+                }
+
+                final StreamSinkChannel response = exchange.getResponseChannel();
+                response.getCloseSetter().set(new ChannelListener<Channel>() {
+                    public void handleEvent(final Channel channel) {
+                        IoUtils.safeClose(fileChannel);
+                    }
+                });
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, file.length());
+
+                try {
+                    log.tracef("Serving file %s (blocking)", fileChannel);
+                    Channels.transferBlocking(response, fileChannel, 0, file.length());
+                    log.tracef("Finished serving %s, shutting down (blocking)", fileChannel);
+                    response.shutdownWrites();
+                    log.tracef("Finished serving %s, flushing (blocking)", fileChannel);
+                    Channels.flushBlocking(response);
+                    log.tracef("Finished serving %s (complete)", fileChannel);
+                    exchange.endExchange();
+                } catch (IOException ignored) {
+                    log.tracef("Failed to serve %s: %s", fileChannel, ignored);
+                    exchange.endExchange();
+                    IoUtils.safeClose(response);
+                } finally {
+                    IoUtils.safeClose(fileChannel);
+                }
+            }
+        });
     }
 
     public HttpHandler getNext() {
@@ -110,18 +166,6 @@ public class FileErrorPageHandler implements HttpHandler {
 
     public FileErrorPageHandler setFile(final File file) {
         this.file = file;
-        return this;
-    }
-
-    public FileSource getFileSource() {
-        return fileSource;
-    }
-
-    public FileErrorPageHandler setFileSource(final FileSource fileSource) {
-        if(fileSource == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull("fileCache");
-        }
-        this.fileSource = fileSource;
         return this;
     }
 }

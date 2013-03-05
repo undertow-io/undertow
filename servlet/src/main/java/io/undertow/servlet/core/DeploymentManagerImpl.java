@@ -380,7 +380,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             lifecycles.add(managedDefaultServlet);
             pathMatches.add("/*");
             defaultServlet = new ServletHandler(managedDefaultServlet);
-            defaultHandler = new ServletInitialHandler(new RequestListenerHandler(listeners, defaultServlet), defaultInstance, threadSetupAction, servletContext, managedDefaultServlet);
+            defaultHandler = new ServletInitialHandler(new RequestListenerHandler(listeners, defaultServlet), threadSetupAction, servletContext, managedDefaultServlet);
         }
 
         final ServletPathMatches.Builder builder = ServletPathMatches.builder();

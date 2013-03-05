@@ -23,13 +23,14 @@ import java.io.IOException;
 
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.file.FileHandler;
+import io.undertow.server.handlers.resource.ResourceHandler;
+import io.undertow.server.handlers.resource.file.FileResourceManager;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,13 +46,11 @@ public class FileHandlerTestCase {
     public void testFileIsServed() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            final FileHandler handler = new FileHandler(new File(getClass().getResource("page.html").getFile()).getParentFile());
-            handler.setDirectoryListingEnabled(true);
-            final PathHandler path = new PathHandler();
-            path.addPath("/path", handler);
-            final CanonicalPathHandler root = new CanonicalPathHandler();
-            root.setNext(path);
-            DefaultServer.setRootHandler(root);
+            DefaultServer.setRootHandler(new CanonicalPathHandler()
+                    .setNext(new PathHandler()
+                            .addPath("/path", new ResourceHandler()
+                                    .setResourceManager(new FileResourceManager(new File(getClass().getResource("page.html").getFile()).getParentFile()))
+                                    .setDirectoryListingEnabled(true))));
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
             HttpResponse result = client.execute(get);

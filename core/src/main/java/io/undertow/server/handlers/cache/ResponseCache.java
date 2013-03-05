@@ -141,7 +141,7 @@ public class ResponseCache {
             exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, existingKey.getLanguage());
         }
         if(etag != null) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, (etag.isWeak() ? "w/\"" :"\"") + etag.getTag() + "\"");
+            exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, etag.toString());
         }
 
         //TODO: support if-range

@@ -37,10 +37,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.file.DirectFileSource;
-import io.undertow.server.handlers.file.FileSource;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -64,11 +61,10 @@ import org.xnio.IoUtils;
  *
  * @author Stuart Douglas
  */
-public class DefaultServlet extends HttpServlet implements HttpHandler {
+public class DefaultServlet extends HttpServlet {
 
 
     private final Deployment deployment;
-    private volatile FileSource fileSource = DirectFileSource.INSTANCE;
     private final DefaultServletConfig config;
 
     private final List<String> welcomePages;
@@ -134,7 +130,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
             IoUtils.safeClose(in);
         }
     }
-
+/*
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
         if (!isAllowed(exchange.getRelativePath())) {
@@ -169,7 +165,7 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
                 exchange.endExchange();
             }
         }
-    }
+    }*/
 
     private void handleWelcomePage(final HttpServletRequest req, final HttpServletResponse resp, final File resource) throws IOException, ServletException {
         File welcomePage = findWelcomeFile(resource);
@@ -274,11 +270,4 @@ public class DefaultServlet extends HttpServlet implements HttpHandler {
         }
     }
 
-    public FileSource getFileSource() {
-        return fileSource;
-    }
-
-    public void setFileSource(final FileSource fileSource) {
-        this.fileSource = fileSource;
-    }
 }
