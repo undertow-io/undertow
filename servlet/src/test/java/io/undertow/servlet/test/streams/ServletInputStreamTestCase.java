@@ -38,6 +38,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -96,6 +97,7 @@ public class ServletInputStreamTestCase {
     }
 
     @Test
+    @Ignore("This test hangs occasionally")
     public void testAsyncServletInputStream() {
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
         for (int i = 0; i < 10; ++i) {
