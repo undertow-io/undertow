@@ -3,6 +3,7 @@ package io.undertow.examples.servlet;
 import javax.servlet.ServletException;
 
 import io.undertow.Undertow;
+import io.undertow.examples.UndertowExample;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
@@ -11,6 +12,7 @@ import io.undertow.servlet.api.ServletInfo;
 /**
  * @author Stuart Douglas
  */
+@UndertowExample("Servlet")
 public class ServletServer {
 
 

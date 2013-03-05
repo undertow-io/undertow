@@ -1,6 +1,7 @@
 package io.undertow.examples.websockets;
 
 import io.undertow.Undertow;
+import io.undertow.examples.UndertowExample;
 import io.undertow.predicate.PathMatchPredicate;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.RedirectHandler;
@@ -15,6 +16,7 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 /**
  * @author Stuart Douglas
  */
+@UndertowExample("Web Sockets")
 public class WebSocketServer {
 
     public static void main(final String[] args) {

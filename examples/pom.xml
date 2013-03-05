@@ -70,7 +70,7 @@
     </dependencies>
 
     <build>
-
+        <finalName>undertow-examples</finalName>
         <resources>
             <resource>
                 <directory>src/main/java</directory>
@@ -82,23 +82,37 @@
 
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>io.undertow.examples.Runner</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.2.1</version>
                 <configuration>
                     <executable>java</executable>
                     <arguments>
-                        <!--
-                        <argument>-Xdebug</argument>
-                        <argument>-Xnoagent</argument>
-                        <argument>-Djava.compiler=NONE</argument>
-                        <argument>-Xrunjdwp:transport=dt_socket,address=5005,server=y,suspend=n</argument>
-                        -->
-                        <argument>-Djava.util.logging.manager=org.jboss.logmanager.LogManager</argument>
-                        <argument>-Dtest.level=${test.level}</argument>
-                        <argument>-classpath</argument>
-                        <classpath/>
-                        <argument>${example}</argument>
+                        <argument>-jar</argument>
+                        <argument>target/${project.build.finalName}.jar</argument>
                     </arguments>
                 </configuration>
             </plugin>

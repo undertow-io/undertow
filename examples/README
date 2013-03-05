@@ -1,0 +1,13 @@
+Undertow Examples
+
+These provide some simple examples of how to run an embedded Undertow server.
+
+To run the examples simply run
+
+java -jar target/undertow-examples.jar
+
+or alternatively:
+
+mvn exec:exec
+
+And select the example you wish to run from the menu

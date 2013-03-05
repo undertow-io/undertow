@@ -34,7 +34,11 @@ public class ClassPathResourceManager implements ResourceManager {
 
     @Override
     public Resource getResource(final String path) throws IOException {
-        final String realPath = prefix + path;
+        String modPath = path;
+        if(modPath.startsWith("/")) {
+            modPath = path.substring(1);
+        }
+        final String realPath = prefix + modPath;
         final URL resource = classLoader.getResource(realPath);
         if(resource == null) {
             return null;
