@@ -3,7 +3,7 @@ package io.undertow.predicate;
 /**
  * @author Stuart Douglas
  */
-public class FalsePredicate<T> implements Predicate<T> {
+class FalsePredicate<T> implements Predicate<T> {
 
     public static final FalsePredicate INSTANCE = new FalsePredicate();
 

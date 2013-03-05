@@ -5,12 +5,12 @@ import io.undertow.server.HttpServerExchange;
 /**
  * @author Stuart Douglas
  */
-class PathMatchPredicate implements Predicate<HttpServerExchange> {
+class PrefixMatchPredicate implements Predicate<HttpServerExchange> {
 
     private final String slashPath;
     private final String path;
 
-    public PathMatchPredicate(final String path) {
+    public PrefixMatchPredicate(final String path) {
         if (path.startsWith("/")) {
             this.slashPath = path;
             this.path = path.substring(1);
@@ -24,9 +24,9 @@ class PathMatchPredicate implements Predicate<HttpServerExchange> {
     public boolean resolve(final HttpServerExchange value) {
         final String relativePath = value.getRelativePath();
         if (relativePath.startsWith("/")) {
-            return relativePath.equals(slashPath);
+            return relativePath.startsWith(slashPath);
         } else {
-            return relativePath.equals(path);
+            return relativePath.startsWith(path);
         }
     }
 }

@@ -20,6 +20,7 @@ package io.undertow.server.handlers.cache;
 
 import static io.undertow.server.handlers.cache.LimitedBufferSlicePool.PooledByteBuffer;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -49,8 +50,11 @@ public class DirectBufferCache<K> {
     private final int sliceSize;
 
     public DirectBufferCache(int sliceSize, int max) {
+        this(sliceSize, max, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR);
+    }
+    public DirectBufferCache(int sliceSize, int max, final BufferAllocator<ByteBuffer> bufferAllocator) {
         this.sliceSize = sliceSize;
-        this.pool = new LimitedBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, sliceSize, max, 1);
+        this.pool = new LimitedBufferSlicePool(bufferAllocator, sliceSize, max, 1);
         this.cache = new SecureHashMap<K, CacheEntry<K>>(16);
         this.accessQueue = ConcurrentDirectDeque.newInstance();
     }

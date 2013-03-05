@@ -20,7 +20,7 @@ package io.undertow.test.handlers.encoding;
 
 import java.io.IOException;
 
-import io.undertow.predicate.FalsePredicate;
+import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.encoding.ContentEncodingProvider;
@@ -193,7 +193,7 @@ public class EncodingSelectionTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             final EncodingHandler handler = new EncodingHandler();
-            handler.addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 100, new FalsePredicate<HttpServerExchange>());
+            handler.addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 100, Predicates.<HttpServerExchange>falsePredicate());
             handler.addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 50);
             handler.setNext(ResponseCodeHandler.HANDLE_200);
             DefaultServer.setRootHandler(handler);

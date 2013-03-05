@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.Random;
 
 import io.undertow.io.IoCallback;
-import io.undertow.predicate.MaxContentSizePredicate;
+import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.encoding.DeflateEncodingProvider;
@@ -32,7 +32,7 @@ public class DeflateContentEncodingTestCase {
     @BeforeClass
     public static void setup() {
         final EncodingHandler handler = new EncodingHandler()
-                .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, new MaxContentSizePredicate(5))
+                .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, Predicates.maxContentSize(5))
                 .setNext(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) {

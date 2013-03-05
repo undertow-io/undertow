@@ -3,7 +3,7 @@ package io.undertow.predicate;
 /**
  * @author Stuart Douglas
  */
-public class TruePredicate<T> implements Predicate<T> {
+class TruePredicate<T> implements Predicate<T> {
 
     public static final TruePredicate INSTANCE = new TruePredicate();
 

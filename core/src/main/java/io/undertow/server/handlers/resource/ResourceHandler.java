@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.Date;
 
 import io.undertow.predicate.Predicate;
-import io.undertow.predicate.TruePredicate;
+import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.ResponseCache;
@@ -31,12 +31,32 @@ public class ResourceHandler implements HttpHandler {
      */
     private volatile MimeMappings mimeMappings = MimeMappings.DEFAULT;
 
-    private volatile Predicate<HttpServerExchange> cachable = TruePredicate.instance();
+    private volatile Predicate<HttpServerExchange> cachable = Predicates.truePredicate();
 
-    private volatile Predicate<HttpServerExchange> allowed = TruePredicate.instance();
+    private volatile Predicate<HttpServerExchange> allowed = Predicates.truePredicate();
 
     private volatile ResourceManager resourceManager;
 
+    /**
+     * If this is set this will be the maximum time the client will cache the resource.
+     *
+     * Note: Do not set this for private resources, as it will cause a Cache-Control: public
+     * to be sent.
+     *
+     * TODO: make this more flexible
+     *
+     * This will only be used if the {@link #cachable} predicate returns true
+     */
+    private volatile Integer cacheTime;
+
+    /**
+     * we do not calculate a new expiry date every request. Instead calculate it once
+     * and cache it until it is in the past.
+     *
+     * TODO: do we need this policy to be plugable
+     */
+    private volatile long lastExpiryDate;
+    private volatile String lastExpiryHeader;
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
@@ -60,14 +80,29 @@ public class ResourceHandler implements HttpHandler {
         if (!allowed.resolve(exchange)) {
             exchange.setResponseCode(403);
             exchange.endExchange();
+            return;
         }
 
         ResponseCache cache = exchange.getAttachment(ResponseCache.ATTACHMENT_KEY);
-        if (cache != null && cachable.resolve(exchange)) {
+        final boolean cachable = this.cachable.resolve(exchange);
+
+        //we set caching headers before we try and serve from the cache
+        if(cachable && cacheTime != null) {
+            exchange.getResponseHeaders().put(Headers.CACHE_CONTROL, "public, max-age=" + cacheTime);
+            if(System.currentTimeMillis() > lastExpiryDate ) {
+                long date = System.currentTimeMillis();
+                lastExpiryHeader = DateUtils.toDateString(new Date(date));
+                lastExpiryDate = date;
+            }
+            exchange.getResponseHeaders().put(Headers.EXPIRES, lastExpiryHeader);
+        }
+
+        if (cache != null && cachable) {
             if (cache.tryServeResponse()) {
                 return;
             }
         }
+
 
         //we now dispatch to a worker thread
         //as resource manager methods are potentially blocking
@@ -178,6 +213,15 @@ public class ResourceHandler implements HttpHandler {
 
     public ResourceHandler setResourceManager(final ResourceManager resourceManager) {
         this.resourceManager = resourceManager;
+        return this;
+    }
+
+    public Integer getCacheTime() {
+        return cacheTime;
+    }
+
+    public ResourceHandler setCacheTime(final Integer cacheTime) {
+        this.cacheTime = cacheTime;
         return this;
     }
 }

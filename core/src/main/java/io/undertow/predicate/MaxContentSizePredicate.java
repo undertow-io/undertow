@@ -9,7 +9,7 @@ import io.undertow.util.Headers;
  *
  * @author Stuart Douglas
  */
-public class MaxContentSizePredicate implements Predicate<HttpServerExchange> {
+class MaxContentSizePredicate implements Predicate<HttpServerExchange> {
 
     private final long maxSize;
 

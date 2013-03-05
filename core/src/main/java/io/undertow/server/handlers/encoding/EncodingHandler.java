@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.undertow.predicate.Predicate;
-import io.undertow.predicate.TruePredicate;
+import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpHandlers;
@@ -88,7 +88,7 @@ public class EncodingHandler implements HttpHandler {
                 EncodingMapping encoding;
                 if (value.getValue().equals("*")) {
                     includesIdentity = true;
-                    encoding = new EncodingMapping(IDENTITY, ContentEncodingProvider.IDENTITY, 0, TruePredicate.<HttpServerExchange>instance());
+                    encoding = new EncodingMapping(IDENTITY, ContentEncodingProvider.IDENTITY, 0, Predicates.<HttpServerExchange>truePredicate());
                 } else {
                     encoding = encodingMap.get(value.getValue());
                 }
@@ -134,7 +134,7 @@ public class EncodingHandler implements HttpHandler {
     }
 
     public synchronized EncodingHandler addEncodingHandler(final String encoding, final ContentEncodingProvider encoder, int priority) {
-        addEncodingHandler(encoding, encoder, priority, TruePredicate.<HttpServerExchange>instance());
+        addEncodingHandler(encoding, encoder, priority, Predicates.<HttpServerExchange>truePredicate());
         return this;
     }
 

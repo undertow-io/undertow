@@ -3,7 +3,7 @@ package io.undertow.predicate;
 /**
  * @author Stuart Douglas
  */
-public class NotPredicate<T> implements Predicate<T>{
+class NotPredicate<T> implements Predicate<T>{
 
     private final Predicate<T> predicate;
 

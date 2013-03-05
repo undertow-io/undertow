@@ -3,7 +3,7 @@ package io.undertow.predicate;
 /**
  * @author Stuart Douglas
  */
-public class OrPredicate<T> implements Predicate<T> {
+class OrPredicate<T> implements Predicate<T> {
 
     private final Predicate<T>[] predicates;
 

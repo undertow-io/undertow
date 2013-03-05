@@ -2,7 +2,7 @@ package io.undertow.examples.websockets;
 
 import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
-import io.undertow.predicate.PathMatchPredicate;
+import io.undertow.predicate.Predicates;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.RedirectHandler;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
@@ -37,7 +37,7 @@ public class WebSocketServer {
                         //we use a predicate handler here. If the path is index.html we serve the page
                         //otherwise we redirect to index.html
                         new PredicateHandler(
-                                new PathMatchPredicate("/index.html"),
+                                Predicates.path("/index.html"),
                                 new ResourceHandler()
                                         .setResourceManager(new ClassPathResourceManager(WebSocketServer.class.getClassLoader(), WebSocketServer.class.getPackage())),
                                 new RedirectHandler("http://localhost:8080/index.html")))
