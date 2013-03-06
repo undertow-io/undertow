@@ -28,29 +28,38 @@ public class CanonicalPathUtils {
 
 
     public static String canonicalize(final String path) {
-        boolean seenSlash = true;
+        int state = START;
         for (int i = path.length() - 1; i >= 0; --i) {
             final char c = path.charAt(i);
             switch (c) {
                 case '/':
-                    if(seenSlash) {
-                        return realCanonicalize(path, i+1, FIRST_SLASH);
+                    if (state == FIRST_SLASH) {
+                        return realCanonicalize(path, i + 1, FIRST_SLASH);
+                    } else if (state == ONE_DOT) {
+                        return realCanonicalize(path, i + 2, FIRST_SLASH);
+                    } else if (state == TWO_DOT) {
+                        return realCanonicalize(path, i + 3, FIRST_SLASH);
                     }
-                    seenSlash = true;
+                    state = FIRST_SLASH;
                     break;
                 case '.':
-                    if (seenSlash) {
-                        return realCanonicalize(path, i, ONE_DOT);
+                    if (state == FIRST_SLASH || state == START) {
+                        state = ONE_DOT;
+                    } else if(state == ONE_DOT) {
+                        state = TWO_DOT;
+                    } else {
+                        state = NORMAL;
                     }
                     break;
                 default:
-                    seenSlash = false;
+                    state  = NORMAL;
                     break;
             }
         }
         return path;
     }
 
+    static final int START = -1;
     static final int NORMAL = 0;
     static final int FIRST_SLASH = 1;
     static final int ONE_DOT = 2;
@@ -95,7 +104,7 @@ public class CanonicalPathUtils {
                     if (c == '.') {
                         state = TWO_DOT;
                     } else if (c == '/') {
-                        if (i - 2 != tokenEnd) {
+                        if (i + 2 != tokenEnd) {
                             parts.add(path.substring(i + 2, tokenEnd));
                         }
                         tokenEnd = i;
@@ -107,7 +116,7 @@ public class CanonicalPathUtils {
                 }
                 case TWO_DOT: {
                     if (c == '/') {
-                        if (i - 3 != tokenEnd) {
+                        if (i + 3 != tokenEnd) {
                             parts.add(path.substring(i + 3, tokenEnd));
                         }
                         tokenEnd = i;
@@ -121,15 +130,15 @@ public class CanonicalPathUtils {
         }
         //the path is pointing at a higher directory than the root
         //so we just return /
-        if(eatCount > 0) {
+        if (eatCount > 0) {
             return "/";
         }
         final StringBuilder result = new StringBuilder();
-        if(tokenEnd != 0) {
+        if (tokenEnd != 0) {
             result.append(path.substring(0, tokenEnd));
         }
-        for(String part : parts) {
-            result.append(part);
+        for (int i = parts.size() - 1; i >= 0; --i) {
+            result.append(parts.get(i));
         }
         return result.toString();
     }

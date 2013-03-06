@@ -48,8 +48,9 @@ public class CanonicalPathUtilsTestCase {
         //removing /./
         Assert.assertEquals("a/b", CanonicalPathUtils.canonicalize("a/./b"));
         Assert.assertEquals("a/b", CanonicalPathUtils.canonicalize("a/././b"));
+        Assert.assertEquals("a/b/c", CanonicalPathUtils.canonicalize("a/./b/./c"));
         Assert.assertEquals("a/b", CanonicalPathUtils.canonicalize("a/./././b"));
-        Assert.assertEquals("a/b", CanonicalPathUtils.canonicalize("a/./././b/./"));
+        Assert.assertEquals("a/b/", CanonicalPathUtils.canonicalize("a/./././b/./"));
         Assert.assertEquals("a/b", CanonicalPathUtils.canonicalize("a/./././b/."));
 
         //dealing with /../
@@ -57,6 +58,11 @@ public class CanonicalPathUtilsTestCase {
         Assert.assertEquals("/b", CanonicalPathUtils.canonicalize("/a/../c/../e/../b"));
         Assert.assertEquals("/b", CanonicalPathUtils.canonicalize("/a/c/../../b"));
         Assert.assertEquals("/", CanonicalPathUtils.canonicalize("/a/../.."));
+
+        //preserve trailing /
+        Assert.assertEquals("/a/", CanonicalPathUtils.canonicalize("/a/"));
+        Assert.assertEquals("/", CanonicalPathUtils.canonicalize("/"));
+        Assert.assertEquals("/bbb/a", CanonicalPathUtils.canonicalize("/cc/../bbb/a/."));
     }
 
 }
