@@ -17,7 +17,9 @@
  */
 package io.undertow.security.impl;
 
-import static io.undertow.util.StatusCodes.CODE_307;
+import java.io.IOException;
+import java.util.Map;
+
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityContext;
@@ -33,8 +35,7 @@ import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 
-import java.io.IOException;
-import java.util.Map;
+import static io.undertow.util.StatusCodes.TEMPORARY_REDIRECT;
 
 /**
  * @author Stuart Douglas
@@ -129,14 +130,14 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
         if (exchange.getRequestURI().endsWith(postLocation) && exchange.getRequestMethod().equals(Methods.POST)) {
             // This method would no longer be called if authentication had already occurred.
             sendRedirect(exchange, errorPage);
-            return new ChallengeResult(true, CODE_307);
+            return new ChallengeResult(true, TEMPORARY_REDIRECT);
         } else {
             // we need to store the URL
             CookieImpl.addResponseCookie(exchange, new CookieImpl(LOCATION_COOKIE, exchange.getRequestURI()));
             // TODO - Rather than redirecting, in order to make this mechanism compatible with the other mechanisms we need to
             // return the actual error page not a redirect.
             sendRedirect(exchange, loginPage);
-            return new ChallengeResult(true, CODE_307);
+            return new ChallengeResult(true, TEMPORARY_REDIRECT);
         }
     }
 

@@ -33,7 +33,7 @@ import io.undertow.util.FlexBase64;
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.BASIC;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.CODE_401;
+import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 /**
  * The authentication handler responsible for BASIC authentication as described by RFC2617
@@ -101,7 +101,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
     }
 
-    public AuthenticationMechanismOutcome runBasic(final SecurityContext securityContext,final String userName, final char[] password) {
+    public AuthenticationMechanismOutcome runBasic(final SecurityContext securityContext, final String userName, final char[] password) {
         // To reach this point we must have been supplied a username and password.
         AuthenticationMechanismOutcome result = null;
         IdentityManager idm = securityContext.getIdentityManager();
@@ -123,7 +123,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
     @Override
     public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
         exchange.getResponseHeaders().add(WWW_AUTHENTICATE, challenge);
-        return new ChallengeResult(true, CODE_401);
+        return new ChallengeResult(true, UNAUTHORIZED);
     }
 
 }

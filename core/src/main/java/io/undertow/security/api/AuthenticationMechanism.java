@@ -19,7 +19,6 @@
 package io.undertow.security.api;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.StatusCodes;
 
 /**
  * The interface to be implemented by a single authentication mechanism.
@@ -67,8 +66,6 @@ public interface AuthenticationMechanism {
     /**
      * Perform authentication of the request. Any potentially blocking work should be performed in the handoff executor provided
      *
-     *
-     *
      * @param exchange The exchange
      * @return
      */
@@ -77,14 +74,12 @@ public interface AuthenticationMechanism {
 
     /**
      * Send an authentication challenge to the remote client.
-     *
+     * <p/>
      * The individual mechanisms should update the response headers and body of the message as appropriate however they should
      * not set the response code, instead that should be indicated in the {@link ChallengeResult} and the most appropriate
      * overall response code will be selected.
      *
-     *
-     *
-     * @param exchange The exchange
+     * @param exchange        The exchange
      * @param securityContext The security context
      * @return A {@link ChallengeResult} indicating if a challenge was sent and the desired response code.
      */
@@ -121,9 +116,9 @@ public interface AuthenticationMechanism {
     public class ChallengeResult {
 
         private final boolean challengeSent;
-        private final StatusCodes statusCode;
+        private final Integer statusCode;
 
-        public ChallengeResult(final boolean challengeSent, final StatusCodes statusCode) {
+        public ChallengeResult(final boolean challengeSent, final Integer statusCode) {
             this.statusCode = statusCode;
             this.challengeSent = challengeSent;
         }
@@ -134,19 +129,19 @@ public interface AuthenticationMechanism {
 
         /**
          * Obtain the response code desired by this mechanism for the challenge.
-         *
+         * <p/>
          * Where multiple mechanisms are in use concurrently all of the requested response codes will be checked and the most
          * suitable one selected. If no specific response code is required any value less than 0 can be set.
          *
          * @return The desired response code or null if no code specified.
          */
-        public StatusCodes getDesiredResponseCode() {
+        public Integer getDesiredResponseCode() {
             return statusCode;
         }
 
         /**
          * Check if the mechanism did send a challenge.
-         *
+         * <p/>
          * Some mechanisms do not send a challenge and just rely on the correct information to authenticate a user being
          * available in the request, in that case it would be normal for the mechanism to set this to false.
          *

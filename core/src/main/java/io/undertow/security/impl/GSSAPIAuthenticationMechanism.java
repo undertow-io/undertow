@@ -47,14 +47,14 @@ import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.HOST;
 import static io.undertow.util.Headers.NEGOTIATE;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.CODE_401;
+import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 /**
  * {@link io.undertow.security.api.AuthenticationMechanism} for GSSAPI / SPNEGO based authentication.
- *
+ * <p/>
  * GSSAPI authentication is associated with the HTTP connection, as long as a connection is being re-used allow the
  * authentication state to be re-used.
- *
+ * <p/>
  * TODO - May consider an option to allow it to also be associated with the underlying session but that has it's own risks so
  * would need to come with a warning.
  *
@@ -131,7 +131,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
         exchange.getResponseHeaders().add(WWW_AUTHENTICATE, header);
 
-        return new ChallengeResult(true, CODE_401);
+        return new ChallengeResult(true, UNAUTHORIZED);
     }
 
 

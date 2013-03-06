@@ -22,8 +22,8 @@ public interface UndertowClientMessages {
     IllegalStateException requestAlreadyWritten();
 
     // 1020
-    @Message(id = 1020, value = "Failed to upgrade channel: %s")
-    String failedToUpgradeChannel(String reason);
+    @Message(id = 1020, value = "Failed to upgrade channel due to response %s (%s)")
+    String failedToUpgradeChannel(final int responseCode, String reason);
 
     // 1030
     @Message(id = 1030, value = "invalid content length %d")

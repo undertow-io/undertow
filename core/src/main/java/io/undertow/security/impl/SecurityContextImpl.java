@@ -35,11 +35,10 @@ import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.StatusCodes;
 
 import static io.undertow.UndertowMessages.MESSAGES;
-import static io.undertow.util.StatusCodes.CODE_200;
-import static io.undertow.util.StatusCodes.CODE_403;
+import static io.undertow.util.StatusCodes.FORBIDDEN;
+import static io.undertow.util.StatusCodes.OK;
 
 /**
  * The internal SecurityContext used to hold the state of security for the current exchange.
@@ -292,7 +291,7 @@ public class SecurityContextImpl implements SecurityContext {
         private final HttpServerExchange exchange;
 
         private boolean atLeastOneChallenge = false;
-        private StatusCodes chosenStatusCode = null;
+        private Integer chosenStatusCode = null;
 
         private ChallengeSender(final Iterator<AuthenticationMechanism> mechanismIterator, final HttpServerExchange exchange) {
             this.mechanismIterator = mechanismIterator;
@@ -306,11 +305,11 @@ public class SecurityContextImpl implements SecurityContext {
 
                 if (result.isChallengeSent()) {
                     atLeastOneChallenge = true;
-                    StatusCodes desiredCode = result.getDesiredResponseCode();
+                    Integer desiredCode = result.getDesiredResponseCode();
                     if (chosenStatusCode == null) {
                         chosenStatusCode = desiredCode;
                     } else if (desiredCode != null) {
-                        if (chosenStatusCode.equals(CODE_200)) {
+                        if (chosenStatusCode.equals(OK)) {
                             // Allows a more specific code to be chosen.
                             // TODO - Still need a more complex code resolution strategy if many different codes are
                             // returned (Although those mechanisms may just never work together.)
@@ -327,11 +326,11 @@ public class SecurityContextImpl implements SecurityContext {
                 // Iterated all mechanisms, now need to select a suitable status code.
                 if (atLeastOneChallenge) {
                     if (chosenStatusCode != null) {
-                        exchange.setResponseCode(chosenStatusCode.getCode());
+                        exchange.setResponseCode(chosenStatusCode);
                     }
                 } else {
                     // No mechanism generated a challenge so send a 403 as our challenge - i.e. just rejecting the request.
-                    exchange.setResponseCode(CODE_403.getCode());
+                    exchange.setResponseCode(FORBIDDEN);
                 }
 
                 return AuthenticationState.CHALLENGE_SENT;

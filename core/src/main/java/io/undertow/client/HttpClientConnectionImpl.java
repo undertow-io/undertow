@@ -18,11 +18,16 @@
 
 package io.undertow.client;
 
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import io.undertow.UndertowLogger;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
-import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.FutureResult;
@@ -39,12 +44,6 @@ import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
-
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.undertow.client.UndertowClientMessages.MESSAGES;
 import static org.xnio.Bits.allAreClear;
@@ -174,18 +173,18 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
             // Upgrade the connection
             final URI requestURI = new URI("/"); // TOOD get this somewhere
             final HttpClientRequest request = internalCreateRequest(Methods.GET, requestURI, false); // disable pipelining for connection upgrades
-            if(request == null) {
+            if (request == null) {
                 return null;
             }
             // Set the upgraded flag already to prevent new requests after this one
             int oldState, newState;
             do {
                 oldState = state;
-                if(allAreSet(oldState, UPGRADED | CLOSE_REQ | CLOSED)) {
+                if (allAreSet(oldState, UPGRADED | CLOSE_REQ | CLOSED)) {
                     return null;
                 }
                 newState = oldState | UPGRADED;
-            } while (! stateUpdater.compareAndSet(this, oldState, newState));
+            } while (!stateUpdater.compareAndSet(this, oldState, newState));
 
             // Add connection headers
             request.getRequestHeaders().add(Headers.CONNECTION, Headers.UPGRADE_STRING);
@@ -197,7 +196,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
                 @Override
                 public void notify(IoFuture<? extends HttpClientResponse> future, Void attachment) {
                     IOException failure = null;
-                    switch(future.getStatus()) {
+                    switch (future.getStatus()) {
                         case CANCELLED:
                             result.setCancelled();
                             break;
@@ -207,15 +206,14 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
                         case DONE:
                             try {
                                 final HttpClientResponse response = future.get();
-                                if(response.getResponseCode() == 101) {
+                                if (response.getResponseCode() == 101) {
                                     // return the upgraded channel
                                     final AssembledConnectedStreamChannel channel = new AssembledConnectedStreamChannel(readChannel, underlyingChannel);
                                     result.setResult(channel);
                                     return;
                                 } else {
-                                    final String reason = StatusCodes.getReason(response.getResponseCode());
-                                    final String result = StatusCodes.UNKNOWN.getReason() == reason ? response.getReasonPhrase() : reason;
-                                    failure = new IOException(MESSAGES.failedToUpgradeChannel(result));
+                                    final String result = response.getReasonPhrase();
+                                    failure = new IOException(MESSAGES.failedToUpgradeChannel(response.getResponseCode(), result));
                                 }
                             } catch (IOException ex) {
                                 // not possible
@@ -226,20 +224,20 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
                     int oldState, newState;
                     do {
                         oldState = state;
-                        if(allAreClear(oldState, UPGRADED)) {
+                        if (allAreClear(oldState, UPGRADED)) {
                             break;
                         }
                         newState = oldState & UPGRADED;
-                    } while (! stateUpdater.compareAndSet(HttpClientConnectionImpl.this, oldState, newState));
+                    } while (!stateUpdater.compareAndSet(HttpClientConnectionImpl.this, oldState, newState));
                     // Report the error
-                    if(failure != null) {
+                    if (failure != null) {
                         result.setException(failure);
                     }
                 }
             }, null);
         } catch (IOException e) {
             result.setException(e);
-        } catch (Exception e){
+        } catch (Exception e) {
             result.setException(new IOException(e));
         }
         return result.getIoFuture();
@@ -248,13 +246,13 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
     /**
      * Create a http client request.
      *
-     * @param method the http method
-     * @param target the target uri
+     * @param method     the http method
+     * @param target     the target uri
      * @param pipelining whether to potentially allow pipelining
      * @return a new request instance
      */
     protected HttpClientRequest internalCreateRequest(final HttpString method, final URI target, final boolean pipelining) {
-        if(allAreSet(state, UPGRADED | CLOSE_REQ | CLOSE_REQ)) {
+        if (allAreSet(state, UPGRADED | CLOSE_REQ | CLOSE_REQ)) {
             return null;
         }
         return new HttpClientRequestImpl(this, underlyingChannel, method, target, pipelining);
@@ -265,11 +263,11 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         int oldState, newState;
         do {
             oldState = state;
-            if(allAreSet(oldState, CLOSED)) {
+            if (allAreSet(oldState, CLOSED)) {
                 return;
             }
             newState = oldState | CLOSED | CLOSE_REQ;
-        } while (! stateUpdater.compareAndSet(this, oldState, newState));
+        } while (!stateUpdater.compareAndSet(this, oldState, newState));
         underlyingChannel.close();
     }
 
@@ -283,7 +281,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         int oldState, newState;
         do {
             oldState = state;
-            if(anyAreSet(oldState, CLOSE_REQ | CLOSED)) {
+            if (anyAreSet(oldState, CLOSE_REQ | CLOSED)) {
                 throw new IOException(MESSAGES.connectionClosed());
             }
             newState = oldState + 1;
@@ -337,13 +335,13 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         int oldState, newState;
         do {
             oldState = state;
-            if(anyAreSet(oldState, CLOSE_REQ | CLOSED)) {
+            if (anyAreSet(oldState, CLOSE_REQ | CLOSED)) {
                 return;
             }
             newState = oldState | CLOSE_REQ;
-        } while (! stateUpdater.compareAndSet(this, oldState, newState));
+        } while (!stateUpdater.compareAndSet(this, oldState, newState));
         UndertowLogger.CLIENT_LOGGER.tracef("request to close the connection");
-        if(newState == CLOSE_REQ) {
+        if (newState == CLOSE_REQ) {
             close();
         }
     }
@@ -351,13 +349,13 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
     // Internal callback once a request is can start sending it's data
     void doSendRequest(final PendingHttpRequest request, boolean fromCallback) {
         int currentState = state;
-        if(anyAreSet(currentState, CLOSE_REQ | CLOSED)) {
+        if (anyAreSet(currentState, CLOSE_REQ | CLOSED)) {
             request.setCancelled();
             sendingCompleted(request);
             return;
         }
         UndertowLogger.CLIENT_LOGGER.tracef("start sending request %s", request);
-        if(fromCallback) { // Don't call startRequest in a read thread
+        if (fromCallback) { // Don't call startRequest in a read thread
             underlyingChannel.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
                 @Override
                 public void handleEvent(StreamSinkChannel channel) {
@@ -406,7 +404,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
                         return;
                     }
 
-                    if(res == 0) {
+                    if (res == 0) {
                         if (!channel.isReadResumed()) {
                             channel.getReadSetter().set(this);
                             channel.resumeReads();
@@ -445,7 +443,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
                         channel.unget(pooled);
                     }
 
-                } while(! state.isComplete());
+                } while (!state.isComplete());
 
                 channel.getReadSetter().set(null);
                 channel.suspendReads();

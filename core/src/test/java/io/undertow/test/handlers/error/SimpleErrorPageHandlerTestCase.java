@@ -50,7 +50,7 @@ public class SimpleErrorPageHandlerTestCase {
             Assert.assertEquals(404, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
 
-            Assert.assertTrue(response, response.contains(StatusCodes.CODE_404.getReason()));
+            Assert.assertTrue(response, response.contains(StatusCodes.NOT_FOUND_STRING));
 
         } finally {
             client.getConnectionManager().shutdown();

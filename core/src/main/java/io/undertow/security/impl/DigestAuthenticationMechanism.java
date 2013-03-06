@@ -44,7 +44,7 @@ import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.DIGEST;
 import static io.undertow.util.Headers.NEXT_NONCE;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.CODE_401;
+import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 /**
  * {@link io.undertow.server.HttpHandler} to handle HTTP Digest authentication, both according to RFC-2617 and draft update to allow additional
@@ -90,7 +90,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     // Maybe even support registration of a session so it can be invalidated?
 
     public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
-            final String realmName, final String domain, final NonceManager nonceManager, final boolean plainTextPasswords) {
+                                         final String realmName, final String domain, final NonceManager nonceManager, final boolean plainTextPasswords) {
         this.supportedAlgorithms = supportedAlgorithms;
         this.supportedQops = supportedQops;
         this.realmName = realmName;
@@ -153,7 +153,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     @Override
     public ChallengeResult sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext) {
         sendChallengeHeaders(exchange);
-        return new ChallengeResult(true, CODE_401);
+        return new ChallengeResult(true, UNAUTHORIZED);
     }
 
 
@@ -327,7 +327,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     private byte[] createHA1(final byte[] userName, final Account account, final MessageDigest digest,
-            final SecurityContext securityContext) throws AuthenticationException {
+                             final SecurityContext securityContext) throws AuthenticationException {
         if (plainTextPasswords) {
             byte[] password = new String(securityContext.getIdentityManager().getPassword(account)).getBytes(UTF_8);
 
