@@ -884,9 +884,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
      */
     public void asyncInitialRequestDone() {
         asyncContext.initialRequestDone();
-        asyncContext = null;
     }
 
+    void asyncRequestDispatched() {
+        asyncContext = null;
+    }
 
     public static HttpServletRequestImpl getRequestImpl(final ServletRequest request) {
         final HttpServletRequestImpl requestImpl;

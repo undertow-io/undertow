@@ -237,6 +237,7 @@ public class AsyncContextImpl implements AsyncContext {
             dispatched = true;
             HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
             request.asyncInitialRequestDone();
+            request.asyncRequestDispatched();
         } else {
             doDispatch(new Runnable() {
                 @Override
@@ -332,6 +333,8 @@ public class AsyncContextImpl implements AsyncContext {
             throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
         }
         dispatched = true;
+        HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
+        request.asyncRequestDispatched();
         if (initialRequestDone) {
             runnable.run();
         } else {

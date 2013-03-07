@@ -33,11 +33,16 @@ public class AsyncServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        final AsyncContext context = req.startAsync();
+        req.startAsync();
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
-                context.dispatch("/message");
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                req.getAsyncContext().dispatch("/message");
             }
         });
         t.start();
