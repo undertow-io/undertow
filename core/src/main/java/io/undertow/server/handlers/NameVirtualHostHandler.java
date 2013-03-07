@@ -39,10 +39,16 @@ public class NameVirtualHostHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
-        final String host = exchange.getRequestHeaders().getFirst(Headers.HOST);
-        if(host != null) {
+        final String hostHeader = exchange.getRequestHeaders().getFirst(Headers.HOST);
+        if (hostHeader != null) {
+            String host;
+            if (hostHeader.contains(":")) { //header can be in host:port format
+                host = hostHeader.substring(hostHeader.indexOf(":") - 1);
+            } else {
+                host = hostHeader;
+            }
             final HttpHandler handler = hosts.get(host);
-            if(handler != null) {
+            if (handler != null) {
                 HttpHandlers.executeHandler(handler, exchange);
                 return;
             }
