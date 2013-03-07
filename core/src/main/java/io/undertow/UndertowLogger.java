@@ -35,7 +35,7 @@ import java.net.SocketAddress;
  *
  * @author Stuart Douglas
  */
-@MessageLogger(projectCode = "UNDERTOW")
+@MessageLogger(projectCode = "UT")
 public interface UndertowLogger extends BasicLogger {
 
     UndertowLogger ROOT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName());

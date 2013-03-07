@@ -30,7 +30,7 @@ import org.jboss.logging.annotations.MessageBundle;
  * start at 20000
  * @author Stuart Douglas
  */
-@MessageBundle(projectCode = "UNDERTOW")
+@MessageBundle(projectCode = "UT")
 public interface WebSocketMessages {
 
     WebSocketMessages MESSAGES = Messages.getBundle(WebSocketMessages.class);

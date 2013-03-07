@@ -36,7 +36,7 @@ import org.jboss.logging.annotations.MessageLogger;
  *
  * @author Stuart Douglas
  */
-@MessageLogger(projectCode = "UNDERTOW")
+@MessageLogger(projectCode = "UT")
 public interface UndertowServletLogger extends BasicLogger {
 
     UndertowServletLogger ROOT_LOGGER = Logger.getMessageLogger(UndertowServletLogger.class, UndertowServletLogger.class.getPackage().getName());

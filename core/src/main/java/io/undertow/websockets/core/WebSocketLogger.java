@@ -30,7 +30,7 @@ import org.jboss.logging.annotations.MessageLogger;
  *
  * @author Stuart Douglas
  */
-@MessageLogger(projectCode = "UNDERTOW")
+@MessageLogger(projectCode = "UT")
 public interface WebSocketLogger extends BasicLogger {
 
     WebSocketLogger ROOT_LOGGER = Logger.getMessageLogger(WebSocketLogger.class, WebSocketLogger.class.getPackage().getName());
