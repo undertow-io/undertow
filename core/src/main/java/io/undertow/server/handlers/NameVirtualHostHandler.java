@@ -43,7 +43,7 @@ public class NameVirtualHostHandler implements HttpHandler {
         if (hostHeader != null) {
             String host;
             if (hostHeader.contains(":")) { //header can be in host:port format
-                host = hostHeader.substring(hostHeader.indexOf(":") - 1);
+                host = hostHeader.substring(0, hostHeader.indexOf(":"));
             } else {
                 host = hostHeader;
             }

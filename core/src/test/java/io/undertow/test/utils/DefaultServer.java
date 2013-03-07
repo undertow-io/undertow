@@ -158,7 +158,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return "http://" + getHostAddress(DEFAULT) + ":" + getHostPort(DEFAULT);
     }
 
-    public static SocketAddress getDefaultServerAddress() {
+    public static InetSocketAddress getDefaultServerAddress() {
         return new InetSocketAddress(DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default"));
     }
 
