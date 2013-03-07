@@ -173,16 +173,12 @@ public class SecurityPathMatches {
         }
 
         private Set<String> expandRolesAllowed(final Set<String> rolesAllowed) {
-            final Set<String> roles = new HashSet<String>();
-            for (final String role : rolesAllowed) {
-                if (role.equals("*")) {
-                    for(Map.Entry<String, Set<String>> entry : deploymentInfo.getPrincipleVsRoleMapping().entrySet()) {
-                        roles.addAll(deploymentInfo.getSecurityRoles());
-                    }
-                } else {
-                    roles.add(role);
-                }
+            final Set<String> roles = new HashSet<String>(rolesAllowed);
+            if (roles.contains("*")) {
+                roles.remove("*");
+                roles.addAll(deploymentInfo.getSecurityRoles());
             }
+
             return roles;
         }
 
