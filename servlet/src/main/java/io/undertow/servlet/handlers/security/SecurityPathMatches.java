@@ -146,8 +146,8 @@ public class SecurityPathMatches {
                     setupPathSecurityInformation(defaultPathSecurityInformation, securityInformation, webResources);
                 }
                 for (String pattern : webResources.getUrlPatterns()) {
-                    if (pattern.endsWith("/*")) {
-                        String part = pattern.substring(0, pattern.length() - 2);
+                    if (pattern.endsWith("/*") || pattern.endsWith("/")) {
+                        String part = pattern.substring(0, pattern.lastIndexOf('/'));
                         PathSecurityInformation info = prefixPathRoleInformation.get(part);
                         if (info == null) {
                             prefixPathRoleInformation.put(part, info = new PathSecurityInformation());
