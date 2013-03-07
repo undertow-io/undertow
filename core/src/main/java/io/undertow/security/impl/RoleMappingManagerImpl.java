@@ -58,23 +58,19 @@ public class RoleMappingManagerImpl implements RoleMappingManager {
         }
         Account account = securityContext.getAuthenticatedAccount();
         Principal principal = account.getPrincipal();
-        if (principal.getName().equals(role)) {
+        Set<String> principleGroups = principleVsRoleMappings.get(principal.getName());
+        if (principleGroups != null && principleGroups.contains(role)) {
             return true;
         } else {
-            Set<String> principleGroups = principleVsRoleMappings.get(principal.getName());
-            if (principleGroups != null && principleGroups.contains(role)) {
-                return true;
-            } else {
-                Set<String> groupRoles = roleVsPrincipleMappings.get(role);
-                if (groupRoles != null) {
-                    for (String group : groupRoles) {
-                        if (account.isUserInGroup(group)) {
-                            return true;
-                        }
+            Set<String> groupRoles = roleVsPrincipleMappings.get(role);
+            if (groupRoles != null) {
+                for (String group : groupRoles) {
+                    if (account.isUserInGroup(group)) {
+                        return true;
                     }
-                } else {
-                    return account.isUserInGroup(role);
                 }
+            } else {
+                return account.isUserInGroup(role);
             }
         }
         return false;
