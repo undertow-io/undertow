@@ -30,7 +30,7 @@ import java.io.IOException;
  * start at 3000
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-@MessageBundle(projectCode = "UNDERTOW")
+@MessageBundle(projectCode = "UT")
 public interface JsrWebSocketMessages {
 
     JsrWebSocketMessages MESSAGES = Messages.getBundle(JsrWebSocketMessages.class);

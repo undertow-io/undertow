@@ -39,7 +39,7 @@ import org.jboss.logging.Messages;
  *
  * @author Stuart Douglas
  */
-@MessageBundle(projectCode = "UNDERTOW")
+@MessageBundle(projectCode = "UT")
 public interface UndertowServletMessages {
 
     UndertowServletMessages MESSAGES = Messages.getBundle(UndertowServletMessages.class);

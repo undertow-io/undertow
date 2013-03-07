@@ -29,7 +29,7 @@ import java.net.SocketAddress;
 /**
  * @author Stuart Douglas
  */
-@MessageBundle(projectCode = "UNDERTOW")
+@MessageBundle(projectCode = "UT")
 public interface UndertowMessages {
 
     UndertowMessages MESSAGES = Messages.getBundle(UndertowMessages.class);

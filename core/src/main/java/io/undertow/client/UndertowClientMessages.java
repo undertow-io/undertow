@@ -9,7 +9,7 @@ import org.jboss.logging.annotations.MessageBundle;
  *
  * @author Emanuel Muckenhuber
  */
-@MessageBundle(projectCode = "UNDERTOW")
+@MessageBundle(projectCode = "UT")
 public interface UndertowClientMessages {
 
     UndertowClientMessages MESSAGES = Messages.getBundle(UndertowClientMessages.class);
