@@ -44,6 +44,7 @@ import javax.servlet.ServletRegistration;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import io.undertow.Version;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionManager;
@@ -228,7 +229,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServerInfo() {
-        return "Undertow 1.0.Alpha1"; //todo: fix this
+        return Version.getVersionString();
     }
 
     @Override
