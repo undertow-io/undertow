@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Set;
 
 import io.undertow.security.api.RoleMappingManager;
-import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.util.AttachmentKey;
 
@@ -13,7 +12,7 @@ import io.undertow.util.AttachmentKey;
  */
 public class ServletAttachments {
 
-    public static final AttachmentKey<ServletInfo> CURRENT_SERVLET = AttachmentKey.create(ServletInfo.class);
+    public static final AttachmentKey<ServletChain> CURRENT_SERVLET = AttachmentKey.create(ServletChain.class);
     public static final AttachmentKey<ServletPathMatch> SERVLET_PATH_MATCH = AttachmentKey.create(ServletPathMatch.class);
 
     public static final AttachmentKey<List<Set<String>>> REQUIRED_ROLES = AttachmentKey.create(List.class);

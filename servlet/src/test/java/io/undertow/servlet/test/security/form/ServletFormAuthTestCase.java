@@ -1,18 +1,22 @@
-package io.undertow.servlet.test.security.login;
+package io.undertow.servlet.test.security.form;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
-import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 
+import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.form.FormEncodedDataHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.LoginConfig;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.security.SendUsernameServlet;
 import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
@@ -21,8 +25,16 @@ import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.ProtocolException;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultRedirectStrategy;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HttpContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -34,24 +46,30 @@ import static org.junit.Assert.assertEquals;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class ServletLoginTestCase {
+public class ServletFormAuthTestCase {
 
+    public static final String HELLO_WORLD = "Hello World";
 
     @BeforeClass
     public static void setup() throws ServletException {
 
-        final CookieHandler cookieHandler = new CookieHandler();
         final PathHandler path = new PathHandler();
-        cookieHandler.setNext(path);
+
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
         ServletInfo s = new ServletInfo("servlet", SendUsernameServlet.class)
-                .addMapping("/*");
+                .setServletSecurityInfo(new ServletSecurityInfo()
+                        .addRoleAllowed("role1"))
+                .addMapping("/secured/*");
+
+        ServletInfo s1 = new ServletInfo("loginPAge", FormLoginServlet.class)
+                .setServletSecurityInfo(new ServletSecurityInfo()
+                        .addRoleAllowed("group1"))
+                .addMapping("/FormLoginServlet");
+
 
         ServletIdentityManager identityManager = new ServletIdentityManager();
         identityManager.addUser("user1", "password1", "group1");
-        identityManager.addUser("user2", "password2", "group2");
-        identityManager.addUser("user3", "password3", "group3");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -60,47 +78,50 @@ public class ServletLoginTestCase {
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .setIdentityManager(identityManager)
-                .setLoginConfig(new LoginConfig("BASIC", "Test Realm"))
-                .addServlet(s)
-                .addFilter(new FilterInfo("LoginFilter", LoginFilter.class))
-                .addFilterServletNameMapping("LoginFilter", "servlet", DispatcherType.REQUEST);
-
+                .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
+                .addServlets(s, s1);
 
         builder.addPrincipleVsRoleMapping("group1", "role1");
-        builder.addPrincipleVsRoleMapping("group2", "role2");
-        builder.addPrincipleVsRoleMapping("group3", "role1");
-        builder.addPrincipleVsRoleMapping("group3", "role2");
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         path.addPath(builder.getContextPath(), manager.start());
 
-        DefaultServer.setRootHandler(cookieHandler);
+        HttpHandler current = new CookieHandler(path);
+        current = new FormEncodedDataHandler(current);
+        DefaultServer.setRootHandler(current);
     }
 
     @Test
-    public void testHttpMethod() throws IOException {
+    public void testServletFormAuth() throws IOException {
         TestHttpClient client = new TestHttpClient();
-        final String url = DefaultServer.getDefaultServerURL() + "/servletContext/login";
+        client.setRedirectStrategy(new DefaultRedirectStrategy() {
+            @Override
+            public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
+                if (response.getStatusLine().getStatusCode() == 302) {
+                    return true;
+                }
+                return super.isRedirected(request, response, context);
+            }
+        });
         try {
-            HttpGet get = new HttpGet(url);
-            get.addHeader("username", "bob");
-            get.addHeader("password", "bogus");
+            final String uri = DefaultServer.getDefaultServerURL() + "/servletContext/secured/test";
+            HttpGet get = new HttpGet(uri);
             HttpResponse result = client.execute(get);
-            assertEquals(401, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
-            get = new HttpGet(url);
-            get.addHeader("username", "user1");
-            get.addHeader("password", "password1");
-            result = client.execute(get);
             assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("user1", response);
+            Assert.assertEquals("Login Page", response);
 
-            get = new HttpGet(url);
-            result = client.execute(get);
+            BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
+            final List<NameValuePair> data = new ArrayList<NameValuePair>();
+            data.addAll(Arrays.asList(pairs));
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/j_security_check");
+
+            post.setEntity(new UrlEncodedFormEntity(data));
+
+            result = client.execute(post);
             assertEquals(200, result.getStatusLine().getStatusCode());
+
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("user1", response);
         } finally {

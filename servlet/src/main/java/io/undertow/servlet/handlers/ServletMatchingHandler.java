@@ -20,7 +20,6 @@ package io.undertow.servlet.handlers;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpHandlers;
 
 /**
  * Handler that resolves servlet paths and attaches them to the exchange
@@ -42,8 +41,8 @@ public class ServletMatchingHandler implements HttpHandler {
         final String path = exchange.getRelativePath();
         ServletPathMatch info = paths.getServletHandlerByPath(path);
         exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, info);
-        exchange.putAttachment(ServletAttachments.CURRENT_SERVLET, info.getHandler().getManagedServlet().getServletInfo());
-        HttpHandlers.executeHandler(next, exchange);
+        exchange.putAttachment(ServletAttachments.CURRENT_SERVLET, info);
+        next.handleRequest(exchange);
     }
 
     public ServletPathMatches getPaths() {

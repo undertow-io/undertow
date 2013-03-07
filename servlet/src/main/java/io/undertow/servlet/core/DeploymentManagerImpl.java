@@ -44,7 +44,6 @@ import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
-import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.security.impl.RoleMappingManagerImpl;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
@@ -71,18 +70,19 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.handlers.DefaultServlet;
 import io.undertow.servlet.handlers.FilterHandler;
-import io.undertow.servlet.handlers.RequestListenerHandler;
+import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletDispatchingHandler;
-import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
-import io.undertow.servlet.handlers.ServletMatchingHandler;
+import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.handlers.security.CachedAuthenticatedSessionHandler;
 import io.undertow.servlet.handlers.security.SecurityPathMatches;
 import io.undertow.servlet.handlers.security.ServletAuthenticationConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletConfidentialityConstraintHandler;
+import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.servlet.handlers.security.ServletSecurityConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletSecurityRoleHandler;
+import io.undertow.servlet.handlers.security.ServletSecurityWrapper;
 import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
@@ -165,10 +165,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             HttpHandler wrappedHandlers = ServletDispatchingHandler.INSTANCE;
             wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getInnerHandlerChainWrappers());
-            wrappedHandlers = setupSecurityHandlers(wrappedHandlers);
+            HttpHandler securityHandler  = setupSecurityHandlers(wrappedHandlers);
+            wrappedHandlers = new ServletSecurityWrapper(wrappedHandlers, securityHandler);
             wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
-            final ServletMatchingHandler servletMatchingHandler = new ServletMatchingHandler(matches, wrappedHandlers);
-            deployment.setServletHandler(servletMatchingHandler);
+            final ServletInitialHandler servletInitialHandler = new ServletInitialHandler(matches, wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
+            deployment.setServletHandler(servletInitialHandler);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
@@ -187,6 +188,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private HttpHandler setupSecurityHandlers(HttpHandler initialHandler) {
         final DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
+
         HttpHandler current = initialHandler;
 
         current = new AuthenticationCallHandler(current);
@@ -204,7 +206,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH));
             } else if (requestedMechanism.equalsIgnoreCase(FORM_AUTH)) {
                 // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be comparable using '=='
-                authenticationMechanisms.add(new FormAuthenticationMechanism(FORM_AUTH, deploymentInfo.getContextPath() + loginConfig.getLoginPage(), deploymentInfo.getContextPath() + loginConfig.getErrorPage()));
+                authenticationMechanisms.add(new ServletFormAuthenticationMechanism(FORM_AUTH, loginConfig.getLoginPage(), loginConfig.getErrorPage()));
             } else if (requestedMechanism.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
                 authenticationMechanisms.add(new ClientCertAuthenticationMechanism(CLIENT_CERT_AUTH));
             } else {
@@ -217,7 +219,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
         // TODO - A switch to constraint driven could be configurable, however before we can support that with servlets we would
         // need additional tracking within sessions if a servlet has specifically requested that authentication occurs.
         current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, deploymentInfo.getIdentityManager(), current);
-
         return current;
     }
 
@@ -313,7 +314,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private ServletPathMatches setupServletChains(final ServletContextImpl servletContext, final CompositeThreadSetupAction threadSetupAction, final ApplicationListeners listeners) {
         final List<Lifecycle> lifecycles = new ArrayList<Lifecycle>();
         //create the default servlet
-        ServletInitialHandler defaultHandler = null;
+        ServletChain defaultHandler = null;
         ServletHandler defaultServlet = null;
 
         final Map<String, ManagedFilter> managedFilterMap = new LinkedHashMap<String, ManagedFilter>();
@@ -357,7 +358,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                         throw UndertowServletMessages.MESSAGES.twoServletsWithSameMapping(path);
                     }
                     defaultServlet = handler;
-                    defaultHandler = servletChain(handler, threadSetupAction, listeners, managedServlet);
+                    defaultHandler = servletChain(handler, managedServlet);
                 } else if (!path.startsWith("*.")) {
                     pathMatches.add(path);
                     if (pathServlets.containsKey(path)) {
@@ -379,7 +380,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             lifecycles.add(managedDefaultServlet);
             pathMatches.add("/*");
             defaultServlet = new ServletHandler(managedDefaultServlet);
-            defaultHandler = new ServletInitialHandler(new RequestListenerHandler(listeners, defaultServlet), threadSetupAction, servletContext, managedDefaultServlet);
+            defaultHandler = new ServletChain(defaultServlet, managedDefaultServlet);
         }
 
         final ServletPathMatches.Builder builder = ServletPathMatches.builder();
@@ -418,10 +419,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
             }
 
-            final ServletInitialHandler initialHandler;
+            final ServletChain initialHandler;
             if (noExtension.isEmpty()) {
                 if (targetServlet != null) {
-                    initialHandler = servletChain(targetServlet, threadSetupAction, listeners, targetServlet.getManagedServlet());
+                    initialHandler = servletChain(targetServlet, targetServlet.getManagedServlet());
                 } else {
                     initialHandler = defaultHandler;
                 }
@@ -432,7 +433,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 } else {
                     handler = new FilterHandler(noExtension, defaultServlet);
                 }
-                initialHandler = servletChain(handler, threadSetupAction, listeners, targetServlet == null ? defaultServlet.getManagedServlet() : targetServlet.getManagedServlet());
+                initialHandler = servletChain(handler, targetServlet == null ? defaultServlet.getManagedServlet() : targetServlet.getManagedServlet());
             }
 
             if (path.endsWith("/*")) {
@@ -451,7 +452,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     if (!entry.getValue().isEmpty()) {
                         handler = new FilterHandler(entry.getValue(), handler);
                     }
-                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, threadSetupAction, listeners, pathServlet.getManagedServlet()));
+                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet()));
                 }
             } else if (path.isEmpty()) {
                 builder.addExactMatch("/", initialHandler);
@@ -473,9 +474,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
             }
             if (filters.isEmpty()) {
-                builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), threadSetupAction, listeners, entry.getValue().getManagedServlet()));
+                builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), entry.getValue().getManagedServlet()));
             } else {
-                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filters, entry.getValue()), threadSetupAction, listeners, entry.getValue().getManagedServlet()));
+                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filters, entry.getValue()), entry.getValue().getManagedServlet()));
             }
         }
 
@@ -495,12 +496,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
         return new ApplicationListeners(managedListeners, deployment.getServletContext());
     }
 
-    private ServletInitialHandler servletChain(HttpHandler next, final CompositeThreadSetupAction setupAction, final ApplicationListeners applicationListeners, final ManagedServlet managedServlet) {
+    private ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet) {
         HttpHandler servletHandler = new ServletSecurityRoleHandler(next, new RoleMappingManagerImpl(deployment.getDeploymentInfo().getPrincipleVsRoleMapping()));
-        servletHandler = new RequestListenerHandler(applicationListeners, servletHandler);
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
         servletHandler = wrapHandlers(servletHandler, deployment.getDeploymentInfo().getDispatchedHandlerChainWrappers());
-        return new ServletInitialHandler(servletHandler, setupAction, deployment.getServletContext(), managedServlet);
+        return new ServletChain(servletHandler, managedServlet);
     }
 
     private HttpHandler wrapHandlers(final HttpHandler wrapee, final List<HandlerWrapper> wrappers) {

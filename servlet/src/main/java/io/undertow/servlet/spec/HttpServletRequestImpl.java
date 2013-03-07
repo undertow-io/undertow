@@ -75,6 +75,7 @@ import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.SecurityRoleRef;
 import io.undertow.servlet.core.ServletUpgradeListener;
 import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
@@ -264,9 +265,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             return false;
         }
         SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        final ServletPathMatch servlet = exchange.getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
+        final ServletChain servlet = exchange.getAttachment(ServletAttachments.CURRENT_SERVLET);
         //TODO: a more efficient imple
-        for (SecurityRoleRef ref : servlet.getHandler().getManagedServlet().getServletInfo().getSecurityRoleRefs()) {
+        for (SecurityRoleRef ref : servlet.getManagedServlet().getServletInfo().getSecurityRoleRefs()) {
             if (ref.getRole().equals(role)) {
                 return roleMappings.isUserInRole(ref.getLinkedRole(), sc);
             }

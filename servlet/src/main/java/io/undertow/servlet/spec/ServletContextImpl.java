@@ -59,7 +59,7 @@ import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.core.ManagedListener;
-import io.undertow.servlet.handlers.ServletInitialHandler;
+import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
@@ -184,9 +184,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public RequestDispatcher getNamedDispatcher(final String name) {
-        ServletInitialHandler handler = deployment.getServletPaths().getServletHandlerByName(name);
-        if (handler != null) {
-            return new RequestDispatcherImpl(handler, deployment.getServletContext());
+        ServletChain chain = deployment.getServletPaths().getServletHandlerByName(name);
+        if (chain != null) {
+            return new RequestDispatcherImpl(chain, deployment.getServletContext());
         } else {
             return null;
         }

@@ -83,7 +83,7 @@ public class DeploymentInfo implements Cloneable {
 
     /**
      * Handler chain wrappers that are applied outside all other handlers, including security but after the initial
-     * servlet matching handler.
+     * servlet handler.
      */
     private final List<HandlerWrapper> outerHandlerChainWrappers = new ArrayList<>();
 

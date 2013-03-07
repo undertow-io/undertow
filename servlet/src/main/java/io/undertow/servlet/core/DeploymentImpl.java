@@ -29,13 +29,15 @@ import java.util.Map;
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.ServletDispatcher;
+import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.spec.ServletContextImpl;
 
 /**
  * Class that represents the mutable state associated with a servlet deployment that is built up
  * during the bootstrap process.
- *
+ * <p/>
  * Classes calling deployment methods during bootstrap must be aware of ordering concerns.
  *
  * @author Stuart Douglas
@@ -46,7 +48,7 @@ public class DeploymentImpl implements Deployment {
     private final List<Lifecycle> lifecycleObjects = new ArrayList<Lifecycle>();
     private volatile ApplicationListeners applicationListeners;
     private volatile ServletContextImpl servletContext;
-    private volatile HttpHandler servletHandler;
+    private volatile ServletInitialHandler servletHandler;
     private volatile ServletPathMatches servletPaths;
     private volatile CompositeThreadSetupAction threadSetupAction;
     private volatile ErrorPages errorPages;
@@ -85,7 +87,7 @@ public class DeploymentImpl implements Deployment {
         return servletHandler;
     }
 
-    void setServletHandler(final HttpHandler servletHandler) {
+    void setServletHandler(final ServletInitialHandler servletHandler) {
         this.servletHandler = servletHandler;
     }
 
@@ -93,7 +95,7 @@ public class DeploymentImpl implements Deployment {
         lifecycleObjects.addAll(objects);
     }
 
-    void addLifecycleObjects(final Lifecycle ... objects) {
+    void addLifecycleObjects(final Lifecycle... objects) {
         lifecycleObjects.addAll(Arrays.asList(objects));
     }
 
@@ -133,5 +135,10 @@ public class DeploymentImpl implements Deployment {
 
     public void setMimeExtensionMappings(final Map<String, String> mimeExtensionMappings) {
         this.mimeExtensionMappings = Collections.unmodifiableMap(new HashMap<String, String>(mimeExtensionMappings));
+    }
+
+    @Override
+    public ServletDispatcher getServletDispatcher() {
+        return servletHandler;
     }
 }

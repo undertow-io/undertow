@@ -102,22 +102,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                 }
             } finally {
                 if (outcome == AuthenticationMechanismOutcome.AUTHENTICATED) {
-                    final Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
-                    if (cookies != null && cookies.containsKey(LOCATION_COOKIE)) {
-                        final String location = cookies.get(LOCATION_COOKIE).getValue();
-                        exchange.addDefaultResponseListener(new DefaultResponseListener() {
-                            @Override
-                            public boolean handleDefaultResponse(final HttpServerExchange exchange) {
-                                FormAuthenticationMechanism.sendRedirect(exchange, location);
-                                exchange.endExchange();
-                                return true;
-                            }
-                        });
-
-                        final CookieImpl cookie = new CookieImpl(LOCATION_COOKIE);
-                        cookie.setMaxAge(0);
-                        CookieImpl.addResponseCookie(exchange, cookie);
-                    }
+                    handleRedirectBack(exchange);
                 }
                 return outcome != null ? outcome : AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
             }
@@ -126,20 +111,49 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
         }
     }
 
+    protected void handleRedirectBack(final HttpServerExchange exchange) {
+        final Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
+        if (cookies != null && cookies.containsKey(LOCATION_COOKIE)) {
+            final String location = cookies.get(LOCATION_COOKIE).getValue();
+            exchange.addDefaultResponseListener(new DefaultResponseListener() {
+                @Override
+                public boolean handleDefaultResponse(final HttpServerExchange exchange) {
+                    FormAuthenticationMechanism.sendRedirect(exchange, location);
+                    exchange.endExchange();
+                    return true;
+                }
+            });
+
+            final CookieImpl cookie = new CookieImpl(LOCATION_COOKIE);
+            cookie.setMaxAge(0);
+            CookieImpl.addResponseCookie(exchange, cookie);
+        }
+    }
+
     public ChallengeResult sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext) {
         if (exchange.getRequestURI().endsWith(postLocation) && exchange.getRequestMethod().equals(Methods.POST)) {
             // This method would no longer be called if authentication had already occurred.
-            sendRedirect(exchange, errorPage);
-            return new ChallengeResult(true, TEMPORARY_REDIRECT);
+            Integer code = servePage(exchange, errorPage);
+            return new ChallengeResult(true, code);
         } else {
             // we need to store the URL
-            CookieImpl.addResponseCookie(exchange, new CookieImpl(LOCATION_COOKIE, exchange.getRequestURI()));
+            storeInitialLocation(exchange);
             // TODO - Rather than redirecting, in order to make this mechanism compatible with the other mechanisms we need to
             // return the actual error page not a redirect.
-            sendRedirect(exchange, loginPage);
-            return new ChallengeResult(true, TEMPORARY_REDIRECT);
+            Integer code = servePage(exchange, loginPage);
+            return new ChallengeResult(true, code);
         }
     }
+
+    protected void storeInitialLocation(final HttpServerExchange exchange) {
+        CookieImpl.addResponseCookie(exchange, new CookieImpl(LOCATION_COOKIE, exchange.getRequestURI()));
+    }
+
+    protected Integer servePage(final HttpServerExchange exchange, final String location) {
+        sendRedirect(exchange, location);
+        return TEMPORARY_REDIRECT;
+    }
+
 
     static void sendRedirect(final HttpServerExchange exchange, final String location) {
         String host = exchange.getRequestHeaders().getFirst(Headers.HOST);

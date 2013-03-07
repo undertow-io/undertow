@@ -32,23 +32,23 @@ public class ServletPathMatches {
 
     private final Map<String, PathMatch> prefixMatches;
 
-    private final Map<String, ServletInitialHandler> nameMatches;
+    private final Map<String, ServletChain> nameMatches;
 
-    private final ServletInitialHandler defaultServlet;
+    private final ServletChain defaultServlet;
 
-    public ServletPathMatches(final Map<String, ServletInitialHandler> exactPathMatches, final Map<String, PathMatch> prefixMatches, final Map<String, ServletInitialHandler> nameMatches, final ServletInitialHandler defaultServlet) {
+    public ServletPathMatches(final Map<String, ServletChain> exactPathMatches, final Map<String, PathMatch> prefixMatches, final Map<String, ServletChain> nameMatches, final ServletChain defaultServlet) {
         this.prefixMatches = prefixMatches;
         this.nameMatches = nameMatches;
         this.defaultServlet = defaultServlet;
-        Map<String, ServletPathMatch> newExactPathMatches = new HashMap<String, ServletPathMatch>();
-        for (Map.Entry<String, ServletInitialHandler> entry : exactPathMatches.entrySet()) {
-            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey(), null));
+        Map<String, ServletPathMatch> newExactPathMatches = new HashMap<>();
+        for (Map.Entry<String, ServletChain> entry : exactPathMatches.entrySet()) {
+            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue().getHandler(), entry.getValue().getManagedServlet(), entry.getKey(), null));
         }
         this.exactPathMatches = newExactPathMatches;
 
     }
 
-    public ServletInitialHandler getServletHandlerByName(final String name) {
+    public ServletChain getServletHandlerByName(final String name) {
         return nameMatches.get(name);
     }
 
@@ -90,15 +90,15 @@ public class ServletPathMatches {
                 }
             }
         }
-        return new ServletPathMatch(defaultServlet, "", path);
+        return new ServletPathMatch(defaultServlet.getHandler(), defaultServlet.getManagedServlet(), "", path);
     }
 
     private ServletPathMatch handleMatch(final String path, final PathMatch match, String matched, String remaining, final int qsPos, final int extensionPos) {
         if (match.extensionMatches.isEmpty()) {
-            return new ServletPathMatch(match.defaultHandler, matched, remaining);
+            return new ServletPathMatch(match.defaultHandler.getHandler(), match.defaultHandler.getManagedServlet(), matched, remaining);
         } else {
             if (extensionPos == -1) {
-                return new ServletPathMatch(match.defaultHandler, matched, remaining);
+                return new ServletPathMatch(match.defaultHandler.getHandler(), match.defaultHandler.getManagedServlet(), matched, remaining);
             } else {
                 final String ext;
                 if (qsPos == -1) {
@@ -106,22 +106,22 @@ public class ServletPathMatches {
                 } else {
                     ext = path.substring(extensionPos + 1, qsPos);
                 }
-                ServletInitialHandler handler = match.extensionMatches.get(ext);
+                ServletChain handler = match.extensionMatches.get(ext);
                 if (handler != null) {
                     //if this is an extension only mapping then the matched will be empty,
                     //and we do not add the remaining to the match
                     //as the path info should be null
                     if (matched.isEmpty()) {
                         if (qsPos == -1) {
-                            return new ServletPathMatch(handler, path, null);
+                            return new ServletPathMatch(handler.getHandler(), handler.getManagedServlet(), path, null);
                         } else {
-                            return new ServletPathMatch(handler, path.substring(0, qsPos), null);
+                            return new ServletPathMatch(handler.getHandler(), handler.getManagedServlet(), path.substring(0, qsPos), null);
                         }
                     } else {
-                        return new ServletPathMatch(handler, matched, remaining);
+                        return new ServletPathMatch(handler.getHandler(), handler.getManagedServlet(), matched, remaining);
                     }
                 } else {
-                    return new ServletPathMatch(match.defaultHandler, matched, remaining);
+                    return new ServletPathMatch(match.defaultHandler.getHandler(), match.defaultHandler.getManagedServlet(), matched, remaining);
                 }
             }
         }
@@ -133,19 +133,19 @@ public class ServletPathMatches {
 
     public static final class Builder {
 
-        private final Map<String, ServletInitialHandler> exactPathMatches = new HashMap<String, ServletInitialHandler>();
+        private final Map<String, ServletChain> exactPathMatches = new HashMap<String, ServletChain>();
 
         private final Map<String, PathMatch> prefixMatches = new HashMap<String, PathMatch>();
 
-        private final Map<String, ServletInitialHandler> nameMatches = new HashMap<String, ServletInitialHandler>();
+        private final Map<String, ServletChain> nameMatches = new HashMap<String, ServletChain>();
 
-        private ServletInitialHandler defaultServlet;
+        private ServletChain defaultServlet;
 
-        public void addExactMatch(final String exactMatch, final ServletInitialHandler match) {
+        public void addExactMatch(final String exactMatch, final ServletChain match) {
             exactPathMatches.put(exactMatch, match);
         }
 
-        public void addPrefixMatch(final String prefix, final ServletInitialHandler match) {
+        public void addPrefixMatch(final String prefix, final ServletChain match) {
             PathMatch m = prefixMatches.get(prefix);
             if (m == null) {
                 prefixMatches.put(prefix, m = new PathMatch(match));
@@ -153,7 +153,7 @@ public class ServletPathMatches {
             m.defaultHandler = match;
         }
 
-        public void addExtensionMatch(final String prefix, final String extension, final ServletInitialHandler match) {
+        public void addExtensionMatch(final String prefix, final String extension, final ServletChain match) {
             PathMatch m = prefixMatches.get(prefix);
             if (m == null) {
                 prefixMatches.put(prefix, m = new PathMatch(null));
@@ -161,15 +161,15 @@ public class ServletPathMatches {
             m.extensionMatches.put(extension, match);
         }
 
-        public void addNameMatch(final String name, final ServletInitialHandler match) {
+        public void addNameMatch(final String name, final ServletChain match) {
             nameMatches.put(name, match);
         }
 
-        public ServletInitialHandler getDefaultServlet() {
+        public ServletChain getDefaultServlet() {
             return defaultServlet;
         }
 
-        public void setDefaultServlet(final ServletInitialHandler defaultServlet) {
+        public void setDefaultServlet(final ServletChain defaultServlet) {
             this.defaultServlet = defaultServlet;
         }
 
@@ -182,12 +182,13 @@ public class ServletPathMatches {
 
     private static class PathMatch {
 
-        private final Map<String, ServletInitialHandler> extensionMatches = new HashMap<String, ServletInitialHandler>();
-        private volatile ServletInitialHandler defaultHandler;
+        private final Map<String, ServletChain> extensionMatches = new HashMap<>();
+        private volatile ServletChain defaultHandler;
 
-        public PathMatch(final ServletInitialHandler defaultHandler) {
+        public PathMatch(final ServletChain defaultHandler) {
             this.defaultHandler = defaultHandler;
         }
     }
+
 
 }

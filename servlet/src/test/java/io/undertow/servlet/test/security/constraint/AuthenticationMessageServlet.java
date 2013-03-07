@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.servlet.test.security;
+package io.undertow.servlet.test.security.constraint;
 
 import io.undertow.servlet.test.util.MessageServlet;
 

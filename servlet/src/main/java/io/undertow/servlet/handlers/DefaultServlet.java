@@ -183,6 +183,7 @@ public class DefaultServlet extends HttpServlet {
                 exchange.setRequestPath(exchange.getResolvedPath() + handler.getMatched());
                 exchange.setRequestURI(exchange.getResolvedPath() + handler.getMatched());
                 exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, handler);
+                exchange.putAttachment(ServletAttachments.CURRENT_SERVLET, handler);
                 try {
                     handler.getHandler().handleRequest(exchange);
                 } catch (ServletException e) {

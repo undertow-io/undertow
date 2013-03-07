@@ -34,16 +34,17 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.handlers.ServletAttachments;
-import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.SameThreadExecutor;
@@ -120,12 +121,12 @@ public class AsyncContextImpl implements AsyncContext {
     @Override
     public void dispatch() {
         final HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(servletRequest);
-        final ServletInitialHandler handler;
+        final ServletPathMatch handler;
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         if (servletRequest instanceof HttpServletRequest) {
-            handler = deployment.getServletPaths().getServletHandlerByPath(((HttpServletRequest) servletRequest).getServletPath()).getHandler();
+            handler = deployment.getServletPaths().getServletHandlerByPath(((HttpServletRequest) servletRequest).getServletPath());
         } else {
-            handler = deployment.getServletPaths().getServletHandlerByPath(exchange.getRelativePath()).getHandler();
+            handler = deployment.getServletPaths().getServletHandlerByPath(exchange.getRelativePath());
         }
 
         final HttpServerExchange exchange = requestImpl.getExchange();
@@ -135,10 +136,10 @@ public class AsyncContextImpl implements AsyncContext {
         exchange.putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, servletRequest);
         exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, servletResponse);
 
-        dispatchAsyncRequest(requestImpl, handler, exchange);
+        dispatchAsyncRequest(deployment.getServletDispatcher(), handler, exchange);
     }
 
-    private void dispatchAsyncRequest(final HttpServletRequestImpl requestImpl, final ServletInitialHandler handler, final HttpServerExchange exchange) {
+    private void dispatchAsyncRequest(final ServletDispatcher servletDispatcher, final ServletPathMatch pathInfo, final HttpServerExchange exchange) {
         Executor executor = exchange.getAttachment(ASYNC_EXECUTOR);
         if (executor == null) {
             executor = exchange.getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
@@ -150,7 +151,12 @@ public class AsyncContextImpl implements AsyncContext {
         doDispatch(new Runnable() {
             @Override
             public void run() {
-                HttpHandlers.executeRootHandler(handler, exchange, false);
+                HttpHandlers.executeRootHandler(new HttpHandler() {
+                    @Override
+                    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                        servletDispatcher.dispatchToPath(exchange, pathInfo, DispatcherType.ASYNC);
+                    }
+                }, exchange, false);
             }
         });
     }
@@ -165,7 +171,6 @@ public class AsyncContextImpl implements AsyncContext {
 
         HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(servletRequest);
         HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(servletResponse);
-        final ServletInitialHandler handler;
         final HttpServerExchange exchange = requestImpl.getExchange();
 
         exchange.putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.ASYNC);
@@ -212,9 +217,8 @@ public class AsyncContextImpl implements AsyncContext {
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         ServletPathMatch info = deployment.getServletPaths().getServletHandlerByPath(newServletPath);
         requestImpl.getExchange().putAttachment(ServletAttachments.SERVLET_PATH_MATCH, info);
-        handler = info.getHandler();
 
-        dispatchAsyncRequest(requestImpl, handler, exchange);
+        dispatchAsyncRequest(deployment.getServletDispatcher(), info, exchange);
     }
 
     @Override

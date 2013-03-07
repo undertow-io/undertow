@@ -47,4 +47,6 @@ public interface Deployment {
     ErrorPages getErrorPages();
 
     Map<String, String> getMimeExtensionMappings();
+
+    ServletDispatcher getServletDispatcher();
 }

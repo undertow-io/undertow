@@ -27,7 +27,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.test.SimpleServletTestCase;
-import io.undertow.servlet.test.security.SendSchemeMessageServlet;
+import io.undertow.servlet.test.security.constraint.SendSchemeMessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestConfidentialPortManager;
 import io.undertow.servlet.test.util.TestResourceLoader;

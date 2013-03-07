@@ -1,4 +1,4 @@
-package io.undertow.servlet.test.security;
+package io.undertow.servlet.test.security.constraint;
 
 import java.io.IOException;
 

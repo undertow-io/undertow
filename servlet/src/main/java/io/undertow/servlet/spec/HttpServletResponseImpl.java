@@ -124,7 +124,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (location != null) {
             RequestDispatcherImpl requestDispatcher = new RequestDispatcherImpl(location, servletContext);
             try {
-                requestDispatcher.error(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), exchange.getAttachment(ServletAttachments.CURRENT_SERVLET).getName(), msg);
+                requestDispatcher.error(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), exchange.getAttachment(ServletAttachments.CURRENT_SERVLET).getManagedServlet().getServletInfo().getName(), msg);
             } catch (ServletException e) {
                 throw new RuntimeException(e);
             }
