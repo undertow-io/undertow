@@ -31,11 +31,10 @@ import java.util.Set;
 import io.undertow.UndertowLogger;
 import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
-import io.undertow.util.WorkerDispatcher;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
@@ -69,7 +68,7 @@ public class FileErrorPageHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.addDefaultResponseListener(new DefaultResponseListener() {
             @Override
             public boolean handleDefaultResponse(final HttpServerExchange exchange) {
@@ -82,11 +81,11 @@ public class FileErrorPageHandler implements HttpHandler {
             }
         });
 
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
     private void serveFile(final HttpServerExchange exchange) {
-        WorkerDispatcher.dispatch(exchange, new Runnable() {
+        exchange.dispatch(new Runnable() {
             @Override
             public void run() {
                 final FileChannel fileChannel;

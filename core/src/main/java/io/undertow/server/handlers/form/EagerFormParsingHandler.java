@@ -18,19 +18,16 @@
 
 package io.undertow.server.handlers.form;
 
-import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import org.xnio.IoFuture;
-import org.xnio.IoUtils;
 
 /**
  * Handler that eagerly parses form data. The request chain will pause while the data is being read,
  * and then continue when the form data is fully passed.
  * <p/>
- *
+ * <p/>
  * NOTE: This is not strictly compatible with servlet, as it removes the option for the user to
  * parse the request themselves, however in practice this requirement is probably rare, and
  * using this handler gives a significant performance advantage in that a thread is not blocked
@@ -43,25 +40,13 @@ public class EagerFormParsingHandler implements HttpHandler {
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-        if(parser == null) {
-            HttpHandlers.executeHandler(next, exchange);
+        if (parser == null) {
+            next.handleRequest(exchange);
             return;
         }
-        final IoFuture<FormData> future = parser.parse();
-        future.addNotifier(new IoFuture.Notifier<FormData, Object>() {
-            @Override
-            public void notify(final IoFuture<? extends FormData> ioFuture, final Object attachment) {
-                if(ioFuture.getStatus() == IoFuture.Status.DONE) {
-                    HttpHandlers.executeHandler(next, exchange);
-                } else if(ioFuture.getStatus() == IoFuture.Status.FAILED) {
-                    UndertowLogger.REQUEST_LOGGER.ioExceptionReadingFromChannel(ioFuture.getException());
-                    IoUtils.safeClose(exchange.getRequestChannel());
-                    exchange.endExchange();
-                }
-            }
-        }, null);
+        parser.parse(next);
     }
 
     public HttpHandler getNext() {

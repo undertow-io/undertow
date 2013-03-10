@@ -23,7 +23,7 @@ import java.net.URISyntaxException;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.server.HttpHandlers;
 import io.undertow.util.Headers;
 
 /**
@@ -41,7 +41,7 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(HttpServerExchange exchange) {
+    public void handleRequest(HttpServerExchange exchange) throws Exception {
         if (isConfidential(exchange) || (confidentialityRequired(exchange) == false)) {
             HttpHandlers.executeHandler(next, exchange);
         } else {

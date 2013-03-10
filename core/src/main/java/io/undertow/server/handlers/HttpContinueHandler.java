@@ -7,6 +7,7 @@ import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpContinue;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -32,13 +33,13 @@ public class HttpContinueHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if(HttpContinue.requiresContinueResponse(exchange)) {
             if(acceptRequest(exchange)) {
                 HttpContinue.sendContinueResponse(exchange, new IoCallback() {
                     @Override
                     public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-                        HttpHandlers.executeHandler(next, exchange);
+                        exchange.dispatch(next);
                     }
 
                     @Override

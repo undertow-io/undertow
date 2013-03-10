@@ -65,7 +65,7 @@ public class InMemorySessionManager implements SessionManager {
         } else {
             sessionID = sessionIdGenerator.createSessionId();
         }
-        final SessionImpl session = new SessionImpl(sessionID, config, serverExchange.getWriteThread(), serverExchange.getConnection().getWorker());
+        final SessionImpl session = new SessionImpl(sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker());
         InMemorySession im = new InMemorySession(session, defaultSessionTimeout);
         sessions.put(sessionID, im);
         for (SessionListener listener : listeners) {

@@ -32,5 +32,5 @@ public interface HttpHandler {
      * @param exchange the HTTP request/response exchange
      *
      */
-    void handleRequest(HttpServerExchange exchange);
+    void handleRequest(HttpServerExchange exchange) throws Exception;
 }

@@ -25,8 +25,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.WorkerDispatcher;
 
 import static org.xnio.Bits.longBitMask;
 
@@ -58,7 +58,7 @@ public final class RequestLimitingHandler implements HttpHandler {
             try {
                 final QueuedRequest task = queue.poll();
                 if (task != null) {
-                    WorkerDispatcher.dispatch(exchange, task);
+                    exchange.dispatch(task);
                 } else {
                     decrementRequests();
                 }
@@ -107,7 +107,7 @@ public final class RequestLimitingHandler implements HttpHandler {
         this.queue = queue;
     }
 
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
         long oldVal, newVal;
         do {
@@ -156,7 +156,7 @@ public final class RequestLimitingHandler implements HttpHandler {
                 // now bump up the counter by one; this *could* put us over the max if it changed in the meantime but that's OK
                 newVal = stateUpdater.getAndIncrement(this);
                 current = (int) (newVal & MASK_CURRENT);
-                WorkerDispatcher.dispatch(request.exchange, request);
+                request.exchange.dispatch(request);
             }
         }
         return oldMax;
@@ -194,7 +194,7 @@ public final class RequestLimitingHandler implements HttpHandler {
         }
 
         public void run() {
-            HttpHandlers.executeHandler(nextHandler, exchange);
+            HttpHandlers.executeRootHandler(nextHandler, exchange);
         }
     }
 

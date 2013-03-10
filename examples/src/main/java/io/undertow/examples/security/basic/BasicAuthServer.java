@@ -35,7 +35,7 @@ public class BasicAuthServer {
                 .addListener(8080, "localhost")
                 .setDefaultHandler(new HttpHandler() {
                     @Override
-                    public void handleRequest(final HttpServerExchange exchange) {
+                    public void handleRequest(final HttpServerExchange exchange) throws Exception {
                         final SecurityContext context = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
                         exchange.getResponseSender().send("Hello " + context.getAuthenticatedAccount().getPrincipal().getName(), IoCallback.END_EXCHANGE);
                     }

@@ -71,7 +71,7 @@ public final class ResponseCodeHandler implements HttpHandler, BlockingHttpHandl
         this.responseCode = responseCode;
     }
 
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.setResponseCode(responseCode);
         if(traceEnabled) {
             log.tracef("Setting response code %s for exchange %s", responseCode, exchange);

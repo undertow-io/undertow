@@ -25,7 +25,7 @@ import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.server.HttpHandlers;
 import io.undertow.servlet.spec.ServletContextImpl;
 
 import javax.servlet.http.HttpSession;
@@ -52,7 +52,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(HttpServerExchange exchange) {
+    public void handleRequest(HttpServerExchange exchange) throws Exception {
         SecurityContext securityContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         securityContext.registerNotificationHandler(NOTIFICATION_HANDLER);
 

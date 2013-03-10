@@ -39,6 +39,7 @@ import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
@@ -54,10 +55,10 @@ public class MultipartFormDataParserTestCase {
         final MultiPartHandler fd = new MultiPartHandler();
         fd.setNext(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
                 try {
-                    FormData data = parser.parse().get();
+                    FormData data = parser.parseBlocking();
                     exchange.setResponseCode(500);
                     if (data.getFirst("formValue").getValue().equals("myValue")) {
                         FormData.FormValue file = data.getFirst("file");

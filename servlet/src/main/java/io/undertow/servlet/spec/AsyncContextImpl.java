@@ -90,7 +90,7 @@ public class AsyncContextImpl implements AsyncContext {
             }
         }
         if (timeout > 0) {
-            this.timeoutKey = exchange.getWriteThread().executeAfter(timeoutTask, timeout, TimeUnit.MILLISECONDS);
+            this.timeoutKey = exchange.getIoThread().executeAfter(timeoutTask, timeout, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -367,7 +367,7 @@ public class AsyncContextImpl implements AsyncContext {
         final Runnable task = asyncTaskQueue.poll();
         if (task != null) {
             processingAsyncTask  = true;
-            WorkerDispatcher.forceDispatch(exchange, new TaskDispatchRunnable(task));
+            exchange.dispatch(new TaskDispatchRunnable(task));
         } else {
             processingAsyncTask = false;
         }

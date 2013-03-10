@@ -18,7 +18,7 @@ public class HelloWorldServer {
                 .addListener(8080, "localhost")
                 .setDefaultHandler(new HttpHandler() {
                     @Override
-                    public void handleRequest(final HttpServerExchange exchange) {
+                    public void handleRequest(final HttpServerExchange exchange) throws Exception {
                         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "11");
                         exchange.getResponseSender().send("Hello World", IoCallback.END_EXCHANGE);
                     }

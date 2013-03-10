@@ -40,7 +40,7 @@ public class WriteTimeoutTestCase {
     public void testWriteTimeout() throws IOException, InterruptedException {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 final StreamSinkChannel response = exchange.getResponseChannel();
                 try {
                     response.setOption(Options.WRITE_TIMEOUT, 10);

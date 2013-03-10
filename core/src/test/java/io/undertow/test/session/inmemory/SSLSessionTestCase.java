@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.Session;
@@ -60,7 +60,7 @@ public class SSLSessionTestCase {
             final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(), sessionConfig)
                     .setNext(new HttpHandler() {
                         @Override
-                        public void handleRequest(final HttpServerExchange exchange) {
+                        public void handleRequest(final HttpServerExchange exchange) throws Exception {
                             Session session = sessionConfig.getAttachedSession(exchange);
                             if (session == null) {
                                 final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);

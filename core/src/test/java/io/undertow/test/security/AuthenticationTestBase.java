@@ -220,7 +220,7 @@ public abstract class AuthenticationTestBase {
         static final HttpString AUTHENTICATED_USER = new HttpString("AuthenticatedUser");
 
         @Override
-        public void handleRequest(HttpServerExchange exchange) {
+        public void handleRequest(HttpServerExchange exchange) throws Exception {
             HeaderMap responseHeader = exchange.getResponseHeaders();
             responseHeader.add(PROCESSED_BY, "ResponseHandler");
             String user = getAuthenticatedUser(exchange);

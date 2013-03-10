@@ -181,7 +181,7 @@ public class SimpleNonceManager implements SessionNonceManager {
                     // replacement nonce without a stale round trip.
                     long earliestAccepted = now - firstUseTimeOut;
                     if (value.timeStamp < earliestAccepted || value.timeStamp > now) {
-                        XnioExecutor executor = exchange.getWriteThread();
+                        XnioExecutor executor = exchange.getIoThread();
                         Nonce replacement = createNewNonce(holder);
                         if (value.executorKey != null) {
                             // The outcome doesn't matter - if we have the value we have all we need.
@@ -235,7 +235,7 @@ public class SimpleNonceManager implements SessionNonceManager {
      */
     @Override
     public boolean validateNonce(String nonce, int nonceCount, HttpServerExchange exchange) {
-        XnioExecutor executor = exchange.getWriteThread();
+        XnioExecutor executor = exchange.getIoThread();
         if (nonceCount < 0) {
             if (invalidNonces.contains(nonce)) {
                 // Without a nonce count the nonce is only useable once.

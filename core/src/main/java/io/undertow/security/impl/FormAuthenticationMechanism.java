@@ -82,7 +82,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
         }
 
         try {
-            final FormData data = parser.parse().get();
+            final FormData data = parser.parseBlocking();
             final FormData.FormValue jUsername = data.getFirst("j_username");
             final FormData.FormValue jPassword = data.getFirst("j_password");
             if (jUsername == null || jPassword == null) {

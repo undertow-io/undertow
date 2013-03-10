@@ -55,7 +55,7 @@ public class FixedLengthResponseTestCase {
         DefaultServer.setRootHandler(new HttpHandler() {
 
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 if (connection == null) {
                     connection = exchange.getConnection();
                 } else if (!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()) {

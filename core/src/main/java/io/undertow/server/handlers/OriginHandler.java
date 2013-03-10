@@ -27,6 +27,7 @@ import java.util.Set;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 
@@ -45,7 +46,7 @@ public class OriginHandler implements HttpHandler {
 
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final List<String> origin = exchange.getRequestHeaders().get(Headers.ORIGIN);
         if (origin == null) {
             if (requireOriginHeader) {

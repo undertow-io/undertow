@@ -46,7 +46,7 @@ public class ReadTimeoutTestCase {
     public void testReadTimeout() throws IOException, InterruptedException {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 final StreamSinkChannel response = exchange.getResponseChannel();
                 final StreamSourceChannel request = exchange.getRequestChannel();
                 try {

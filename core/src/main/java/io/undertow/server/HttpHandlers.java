@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-package io.undertow.server.handlers;
+package io.undertow.server;
+
+import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 
 /**
@@ -35,19 +35,41 @@ public final class HttpHandlers {
      * Safely execute a handler.  If the handler throws an exception before completing, this method will attempt
      * to set a 500 status code and complete the request.
      *
-     * @param handler           the handler to execute
-     * @param exchange          the HTTP exchange for the request
+     * @param handler  the handler to execute
+     * @param exchange the HTTP exchange for the request
      */
-    public static void executeHandler(final HttpHandler handler, final HttpServerExchange exchange) {
+    @Deprecated
+    public static void executeHandler(final HttpHandler handler, final HttpServerExchange exchange) throws Exception {
+        if (handler == null) {
+            exchange.setResponseCode(404);
+            return;
+        }
+        handler.handleRequest(exchange);
+    }
+
+    public static void executeRootHandler(final HttpHandler handler, final HttpServerExchange exchange) {
         try {
+            exchange.setInCall(true);
             handler.handleRequest(exchange);
-        } catch (Throwable t) {
-            try {
-                UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
-                exchange.setResponseCode(500);
+            exchange.setInCall(false);
+            if (exchange.isDispatched()) {
+                final Runnable dispatchTask = exchange.getAttachment(HttpServerExchange.DISPATCH_TASK);
+                Executor executor = exchange.getAttachment(HttpServerExchange.DISPATCH_EXECUTOR);
+                exchange.clearDispatched();
+                if(dispatchTask != null) {
+                    executor = executor == null ? exchange.getConnection().getWorker() : executor;
+                    executor.execute(dispatchTask);
+                }
+            } else {
                 exchange.endExchange();
-            } catch (Throwable ignored) {
             }
+        } catch (Throwable t) {
+            exchange.setInCall(false);
+            if (!exchange.isResponseStarted()) {
+                exchange.setResponseCode(500);
+            }
+            UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", exchange);
+            exchange.endExchange();
         }
     }
 

@@ -30,6 +30,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -37,6 +38,7 @@ import io.undertow.io.Sender;
 import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
 import io.undertow.util.AbstractAttachable;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -54,6 +56,8 @@ import org.xnio.XnioExecutor;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkChannelWrappingConduit;
@@ -74,6 +78,18 @@ import static org.xnio.Bits.intBitMask;
  */
 public final class HttpServerExchange extends AbstractAttachable {
     // immutable state
+
+    /**
+     * The executor that is to be used to dispatch the {@link #DISPATCH_TASK}
+     */
+    public static final AttachmentKey<Executor> DISPATCH_EXECUTOR = AttachmentKey.create(Executor.class);
+
+    /**
+     * When the call stack return this task will be executed by the executor specified in {@link #DISPATCH_EXECUTOR}.
+     * If the executor is null then it will be executed by the XNIO worker.
+     */
+    public static final AttachmentKey<Runnable> DISPATCH_TASK = AttachmentKey.create(Runnable.class);
+
 
     private static final Logger log = Logger.getLogger(HttpServerExchange.class);
 
@@ -141,6 +157,24 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_RESPONSE_TERMINATED = 1 << 11;
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
     private static final int FLAG_PERSISTENT = 1 << 14;
+
+    /**
+     * If this flag is set it means that the request has been dispatched,
+     * and will not be ending when the call stack returns. This could be because
+     * it is being dispatched to a worker thread from an IO thread, or because
+     * resume(Reads/Writes) has been called.
+     */
+    private static final int FLAG_DISPATCHED = 1 << 15;
+
+    /**
+     * If this flag is set the request is in an IO thread.
+     */
+    private static final int FLAG_IN_IO_THREAD = 1 << 16;
+
+    /**
+     * If this flag is set then the request is current being processed.
+     */
+    private static final int FLAG_IN_CALL = 1 << 17;
 
     public HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
         this.connection = connection;
@@ -371,6 +405,11 @@ public final class HttpServerExchange extends AbstractAttachable {
         return anyAreSet(state, FLAG_PERSISTENT);
     }
 
+
+    public boolean isInIoThread() {
+        return anyAreSet(state, FLAG_IN_IO_THREAD);
+    }
+
     public boolean isUpgrade() {
         return getResponseCode() == 101;
     }
@@ -383,6 +422,78 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
+    public boolean isDispatched() {
+        return anyAreSet(state, FLAG_DISPATCHED);
+    }
+
+    void clearDispatched() {
+        state |= FLAG_DISPATCHED;
+        removeAttachment(DISPATCH_EXECUTOR);
+        removeAttachment(DISPATCH_TASK);
+    }
+
+    /**
+     * Dispatches this request to the XNIO worker thread pool. Once the call stack returns
+     * the given runnable will be submitted to the executor.
+     * <p/>
+     * In general handlers should first check the value of {@link #isInIoThread()} before
+     * calling this method, and only dispatch if the request is actually running in the IO
+     * thread.
+     *
+     * @param runnable The task to run
+     * @throws IllegalStateException If this exchange has already been dispatched
+     */
+    public void dispatch(final Runnable runnable) {
+        dispatch(null, runnable);
+    }
+
+    /**
+     * Dispatches this request to the given executor. Once the call stack returns
+     * the given runnable will be submitted to the executor.
+     * <p/>
+     * In general handlers should first check the value of {@link #isInIoThread()} before
+     * calling this method, and only dispatch if the request is actually running in the IO
+     * thread.
+     *
+     * @param runnable The task to run
+     * @throws IllegalStateException If this exchange has already been dispatched
+     */
+    public void dispatch(final Executor executor, final Runnable runnable) {
+        if (isInCall()) {
+            state |= FLAG_DISPATCHED;
+            if (executor != null) {
+                putAttachment(DISPATCH_EXECUTOR, executor);
+            }
+            putAttachment(DISPATCH_TASK, runnable);
+        } else {
+            getConnection().getWorker().execute(runnable);
+        }
+    }
+
+
+    public void dispatch(final HttpHandler handler) {
+        final Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                HttpHandlers.executeRootHandler(handler, HttpServerExchange.this);
+            }
+        };
+        dispatch(null, runnable);
+    }
+
+    boolean isInCall() {
+        return anyAreSet(state, FLAG_IN_CALL);
+    }
+
+    void setInCall(boolean value) {
+        if (value) {
+            state |= FLAG_IN_CALL;
+        } else {
+            state &= ~FLAG_IN_CALL;
+        }
+    }
+
+
     /**
      * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
      * request and response as terminated, which means that once the current request is completed the raw channel
@@ -393,7 +504,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void upgradeChannel(final ExchangeCompletionListener upgradeCompleteListener) {
         setResponseCode(101);
-        int oldVal = state;
         exchangeCompleteListeners.add(0, upgradeCompleteListener);
     }
 
@@ -514,7 +624,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 }
             };
         }
-        return requestChannel = new ConduitStreamSourceChannel(underlyingRequestChannel, factory.create());
+        return requestChannel = new ConduitStreamSourceChannel(underlyingRequestChannel, new ReadDispatchConduit(factory.create()));
     }
 
     public boolean isRequestChannelAvailable() {
@@ -641,7 +751,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 }
             };
         }
-        final ConduitStreamSinkChannel channel = new ConduitStreamSinkChannel(underlyingResponseChannel, factory.create());
+        final ConduitStreamSinkChannel channel = new ConduitStreamSinkChannel(underlyingResponseChannel, new WriteDispatchConduit(factory.create()));
         this.responseChannel = channel;
         this.startResponse();
         return channel;
@@ -736,7 +846,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * When an exchange is in blocking mode the input stream methods become
      * available, other than that there is presently no major difference
      * between blocking an non-blocking modes.
-     *
+     * <p/>
      * Note that this method may be called multiple times with different
      * exchange objects, to allow handlers to modify the streams
      * that are being used.
@@ -939,12 +1049,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         responseHeaders.lock();
     }
 
-    public XnioExecutor getWriteThread() {
-        return underlyingResponseChannel.getWriteThread();
-    }
-
-    public XnioExecutor getReadThread() {
-        return underlyingRequestChannel.getReadThread();
+    public XnioExecutor getIoThread() {
+        return underlyingResponseChannel.getIoThread();
     }
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {
@@ -989,6 +1095,76 @@ public final class HttpServerExchange extends AbstractAttachable {
                 outputStream = new UndertowOutputStream(exchange);
             }
             return outputStream;
+        }
+    }
+
+    private class WriteDispatchConduit extends AbstractStreamSinkConduit<StreamSinkConduit> implements StreamSinkConduit, Runnable {
+
+        private boolean wakeup;
+
+        /**
+         * Construct a new instance.
+         *
+         * @param next the delegate conduit to set
+         */
+        protected WriteDispatchConduit(final StreamSinkConduit next) {
+            super(next);
+        }
+
+        @Override
+        public void resumeWrites() {
+            if (isInCall()) {
+                wakeup = false;
+                dispatch(this);
+            } else {
+                super.resumeWrites();
+            }
+        }
+
+        @Override
+        public void wakeupWrites() {
+            if (isInCall()) {
+                wakeup = true;
+                dispatch(this);
+            } else {
+                super.wakeupWrites();
+            }
+        }
+
+        @Override
+        public void run() {
+            if (wakeup) {
+                super.wakeupWrites();
+            } else {
+                super.resumeWrites();
+            }
+        }
+    }
+
+    private class ReadDispatchConduit extends AbstractStreamSourceConduit<StreamSourceConduit> implements StreamSourceConduit, Runnable {
+
+        /**
+         * Construct a new instance.
+         *
+         * @param next the delegate conduit to set
+         */
+        protected ReadDispatchConduit(final StreamSourceConduit next) {
+            super(next);
+        }
+
+        @Override
+        public void resumeReads() {
+            if (isInCall()) {
+                dispatch(this);
+            } else {
+                super.resumeReads();
+            }
+        }
+
+
+        @Override
+        public void run() {
+            super.resumeReads();
         }
     }
 

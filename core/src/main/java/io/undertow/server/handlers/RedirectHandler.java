@@ -20,7 +20,7 @@ public class RedirectHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.setResponseCode(302);
         exchange.getResponseHeaders().put(Headers.LOCATION, location);
         exchange.endExchange();

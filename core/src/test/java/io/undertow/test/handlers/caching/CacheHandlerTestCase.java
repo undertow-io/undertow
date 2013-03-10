@@ -38,7 +38,7 @@ public class CacheHandlerTestCase {
 
         final HttpHandler messageHandler = new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 final ResponseCache cache = exchange.getAttachment(ResponseCache.ATTACHMENT_KEY);
                 if(!cache.tryServeResponse()) {
                     final String data = "Response " + responseCount.incrementAndGet();

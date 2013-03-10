@@ -31,16 +31,13 @@ import java.util.concurrent.Executor;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.MultipartParser;
-import io.undertow.util.WorkerDispatcher;
 import org.xnio.FileAccess;
-import org.xnio.IoFuture;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -62,16 +59,14 @@ public class MultiPartHandler implements HttpHandler {
     private String defaultEncoding = "UTF-8";
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (mimeType != null && mimeType.startsWith(MULTIPART_FORM_DATA)) {
             String boundary = Headers.extractTokenFromHeader(mimeType, "boundary");
             final MultiPartUploadHandler multiPartUploadHandler = new MultiPartUploadHandler(exchange, boundary, defaultEncoding);
             exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, multiPartUploadHandler);
-            HttpHandlers.executeHandler(next, exchange);
-        } else {
-            HttpHandlers.executeHandler(next, exchange);
         }
+        next.handleRequest(exchange);
     }
 
 
@@ -118,7 +113,6 @@ public class MultiPartHandler implements HttpHandler {
         private final FormData data = new FormData();
         private final String boundary;
         private final List<File> createdFiles = new ArrayList<File>();
-        private volatile ConcreteIoFuture<FormData> ioFuture;
         private String defaultEncoding;
 
         //0=form data
@@ -129,6 +123,7 @@ public class MultiPartHandler implements HttpHandler {
         private File file;
         private FileChannel fileChannel;
         private HeaderMap headers;
+        private HttpHandler handler;
 
 
         private MultiPartUploadHandler(final HttpServerExchange exchange, final String boundary, final String defaultEncoding) {
@@ -139,54 +134,33 @@ public class MultiPartHandler implements HttpHandler {
 
 
         @Override
-        public IoFuture<FormData> parse() {
-            if (ioFuture == null) {
-                ConcreteIoFuture<FormData> created = null;
-                synchronized (this) {
-                    if (ioFuture == null) {
-                        ioFuture = created = new ConcreteIoFuture<FormData>();
-
-                    }
-                }
-                if (created != null) {
-                    //we need to delegate to a thread pool
-                    //as we parse with blocking operations
-                    if(executor == null) {
-                        WorkerDispatcher.dispatch(exchange, this);
-                    } else {
-                        executor.execute(this);
-                    }
-                }
+        public void parse(final HttpHandler handler) throws Exception {
+            if (exchange.getAttachment(FORM_DATA) != null) {
+                handler.handleRequest(exchange);
+                return;
             }
-            return ioFuture;
+            this.handler = handler;
+            //we need to delegate to a thread pool
+            //as we parse with blocking operations
+            if (executor == null) {
+                exchange.dispatch(this);
+            } else {
+                exchange.dispatch(executor, this);
+            }
         }
 
         @Override
         public FormData parseBlocking() throws IOException {
-            if (ioFuture == null) {
-                ConcreteIoFuture<FormData> created = null;
-                synchronized (this) {
-                    if (ioFuture == null) {
-                        ioFuture = created = new ConcreteIoFuture<FormData>();
-
-                    }
-                }
-                if (created != null) {
-                    run();
-                }
+            final FormData existing = exchange.getAttachment(FORM_DATA);
+            if (existing != null) {
+                return existing;
             }
-            return ioFuture.get();
-        }
-
-        @Override
-        public void run() {
 
             final MultipartParser.ParseState parser = MultipartParser.beginParse(exchange.getConnection().getBufferPool(), this, boundary.getBytes());
             final Pooled<ByteBuffer> resource = exchange.getConnection().getBufferPool().allocate();
             StreamSourceChannel requestChannel = exchange.getRequestChannel();
             if (requestChannel == null) {
-                ioFuture.setException(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
-                return;
+                throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
             }
             final ByteBuffer buf = resource.getResource();
             try {
@@ -196,20 +170,29 @@ public class MultiPartHandler implements HttpHandler {
                     int c = requestChannel.read(buf);
                     buf.flip();
                     if (c == -1) {
-                        UndertowLogger.REQUEST_LOGGER.connectionTerminatedReadingMultiPartData();
-                        exchange.endExchange();
-                        return;
+                        throw UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData();
                     } else if (c != 0) {
                         parser.parse(buf);
                     }
                 }
-            } catch (IOException e) {
-                ioFuture.setException(e);
+                exchange.putAttachment(FORM_DATA, data);
             } catch (MultipartParser.MalformedMessageException e) {
-                ioFuture.setException(new IOException(e));
+                throw new IOException(e);
             } finally {
                 resource.free();
-                ioFuture.setResult(data);
+            }
+            return exchange.getAttachment(FORM_DATA);
+        }
+
+        @Override
+        public void run() {
+            try {
+                parseBlocking();
+                HttpHandlers.executeRootHandler(handler, exchange);
+            } catch (Throwable e) {
+                UndertowLogger.REQUEST_LOGGER.debug("Exception parsing data", e);
+                exchange.setResponseCode(500);
+                exchange.endExchange();
             }
         }
 
@@ -227,7 +210,6 @@ public class MultiPartHandler implements HttpHandler {
                             createdFiles.add(file);
                             fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_WRITE);
                         } catch (IOException e) {
-                            ioFuture.setException(e);
                             throw new RuntimeException(e);
                         }
                     }
@@ -245,7 +227,6 @@ public class MultiPartHandler implements HttpHandler {
                 try {
                     fileChannel.write(buffer);
                 } catch (IOException e) {
-                    ioFuture.setException(e);
                     throw new RuntimeException(e);
                 }
             }
@@ -260,7 +241,6 @@ public class MultiPartHandler implements HttpHandler {
                     fileChannel.close();
                     fileChannel = null;
                 } catch (IOException e) {
-                    ioFuture.setException(e);
                     throw new RuntimeException(e);
                 }
             } else {
@@ -269,16 +249,15 @@ public class MultiPartHandler implements HttpHandler {
                 try {
                     String charset = defaultEncoding;
                     String contentType = headers.getFirst(Headers.CONTENT_TYPE);
-                    if(contentType != null) {
+                    if (contentType != null) {
                         String cs = Headers.extractTokenFromHeader(contentType, "charset");
-                        if(cs != null) {
+                        if (cs != null) {
                             charset = cs;
                         }
                     }
 
-                    data.add(currentName, new String(contentBytes.toByteArray(),charset), headers);
+                    data.add(currentName, new String(contentBytes.toByteArray(), charset), headers);
                 } catch (UnsupportedEncodingException e) {
-                    ioFuture.setException(e);
                     throw new RuntimeException(e);
                 }
                 contentBytes.reset();
@@ -293,7 +272,7 @@ public class MultiPartHandler implements HttpHandler {
         @Override
         public void close() throws IOException {
             //we have to dispatch this, as it may result in file IO
-            WorkerDispatcher.dispatch(exchange, new Runnable() {
+            exchange.dispatch(new Runnable() {
                 @Override
                 public void run() {
                     for (final File file : getCreatedFiles()) {

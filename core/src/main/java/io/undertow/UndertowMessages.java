@@ -18,13 +18,13 @@
 
 package io.undertow;
 
+import java.io.IOException;
+import java.net.SocketAddress;
+
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
-
-import java.io.IOException;
-import java.net.SocketAddress;
 
 /**
  * @author Stuart Douglas
@@ -130,4 +130,7 @@ public interface UndertowMessages {
 
     @Message(id = 35, value = "Cannot get stream as startBlocking has not been invoked")
     IllegalStateException startBlockingHasNotBeenCalled();
+
+    @Message(id = 36, value = "Connection terminated parsing multipart data")
+    IOException connectionTerminatedReadingMultiPartData();
 }

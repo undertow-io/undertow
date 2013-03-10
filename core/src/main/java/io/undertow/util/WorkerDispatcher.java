@@ -23,7 +23,6 @@ import java.util.Deque;
 import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.HttpServerExchange;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
@@ -37,55 +36,6 @@ public class WorkerDispatcher {
 
     public static final AttachmentKey<Executor> EXECUTOR_ATTACHMENT_KEY = AttachmentKey.create(Executor.class);
 
-    /**
-     * Dispatches the request. By default this will be dispatched to the Xnio Worker.This can be changed by
-     * attaching an executor to the exchange using {@link #EXECUTOR_ATTACHMENT_KEY}.
-     *
-     * If the request is already running in the selected executor then no dispatch takes place and the
-     * Runnable is simply run in the current thread
-     *
-     * @param exchange The exchange
-     * @param runnable The task to run
-     */
-    public static void dispatch(final HttpServerExchange exchange, final Runnable runnable) {
-        Executor executor = exchange.getAttachment(EXECUTOR_ATTACHMENT_KEY);
-        if (executor == null) {
-            executor = exchange.getConnection().getWorker();
-        }
-        final DispatchData dd = executingInWorker.get();
-        if (dd != null && dd.executor == executor) {
-            runnable.run();
-        } else {
-            executor.execute(new DispatchedRunnable(executor, runnable));
-        }
-    }
-    /**
-     * Dispatches the request. By default this will be dispatched to the Xnio Worker.This can be changed by
-     * attaching an executor to the exchange using {@link #EXECUTOR_ATTACHMENT_KEY}.
-     *
-     * This method will always dispatch, even if the request is already running in the executor.
-     *
-     * @param exchange The exchange
-     * @param runnable The task to run
-     */
-    public static void forceDispatch(final HttpServerExchange exchange, final Runnable runnable) {
-        Executor executor = exchange.getAttachment(EXECUTOR_ATTACHMENT_KEY);
-        if (executor == null) {
-            executor = exchange.getConnection().getWorker();
-        }
-        final DispatchData dd = executingInWorker.get();
-        executor.execute(new DispatchedRunnable(executor, runnable));
-    }
-
-    /**
-     * Forces a task dispatch with the specified executor
-     *
-     * @param executor The executor to use
-     * @param runnable The runnable
-     */
-    public static void dispatch(final Executor executor, final Runnable runnable) {
-        executor.execute(new DispatchedRunnable(executor, runnable));
-    }
 
     /**
      * Dispatches the next request in the current exectutor. If there is no current executor then the

@@ -19,7 +19,7 @@ public class AsyncWebSocketContainer extends ServerWebSocketContainer implements
 
 
     @Override
-    public void handleRequest(HttpServerExchange exchange) {
+    public void handleRequest(HttpServerExchange exchange) throws Exception {
         handler.handleRequest(exchange);
     }
 }

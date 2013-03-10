@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.WorkerDispatcher;
 
 /**
  * A {@link HttpHandler} that initiates a blocking request.
@@ -46,7 +45,7 @@ public final class BlockingHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -66,7 +65,7 @@ public final class BlockingHandler implements HttpHandler {
                 }
             }
         };
-        WorkerDispatcher.dispatch(exchange, runnable);
+        exchange.dispatch(runnable);
     }
 
     public BlockingHttpHandler getHandler() {

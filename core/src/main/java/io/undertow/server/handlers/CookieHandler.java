@@ -27,6 +27,7 @@ import java.util.Map;
 
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.ConduitFactory;
@@ -53,7 +54,7 @@ public class CookieHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
 
         final Map<String, Cookie> cookies = parseCookies(exchange);
         exchange.putAttachment(Cookie.REQUEST_COOKIES, new CopyOnWriteMap<String, Cookie>(cookies));

@@ -20,7 +20,7 @@ package io.undertow.servlet.handlers;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.server.HttpHandlers;
 
 /**
  * Handler that dispatches to the resolved servlet.
@@ -32,7 +32,7 @@ public class ServletDispatchingHandler implements HttpHandler {
     public static final ServletDispatchingHandler INSTANCE = new ServletDispatchingHandler();
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         ServletPathMatch info= exchange.getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
         HttpHandlers.executeHandler(info.getHandler(), exchange);
     }

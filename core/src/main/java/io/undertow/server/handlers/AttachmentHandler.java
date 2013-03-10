@@ -19,6 +19,7 @@
 package io.undertow.server.handlers;
 
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 
@@ -44,7 +45,7 @@ public class AttachmentHandler<T> implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.putAttachment(key, instance);
         HttpHandlers.executeHandler(next, exchange);
     }

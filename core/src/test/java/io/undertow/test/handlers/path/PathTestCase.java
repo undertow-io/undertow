@@ -120,7 +120,7 @@ public class PathTestCase {
         }
 
         @Override
-        public void handleRequest(HttpServerExchange exchange) {
+        public void handleRequest(HttpServerExchange exchange) throws Exception {
             exchange.getResponseHeaders().add(new HttpString(MATCHED), matched);
             exchange.getResponseHeaders().add(new HttpString(PATH), exchange.getRelativePath());
             for(Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {

@@ -21,6 +21,7 @@ package io.undertow.server.handlers;
 import java.util.Map;
 
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
@@ -38,7 +39,7 @@ public class NameVirtualHostHandler implements HttpHandler {
 
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String hostHeader = exchange.getRequestHeaders().getFirst(Headers.HOST);
         if (hostHeader != null) {
             String host;

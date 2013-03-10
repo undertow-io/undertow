@@ -75,7 +75,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if (!exchange.getRequestMethod().equals(Methods.GET)) {
             // Only GET is supported to start the handshake
             exchange.setResponseCode(403);

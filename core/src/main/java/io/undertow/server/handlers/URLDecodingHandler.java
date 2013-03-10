@@ -8,6 +8,7 @@ import java.util.Map;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -31,7 +32,7 @@ public class URLDecodingHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
 
         try {
             exchange.setRelativePath(URLDecoder.decode(exchange.getRelativePath(),charset));
@@ -44,7 +45,7 @@ public class URLDecodingHandler implements HttpHandler {
                 }
                 entry.setValue(newValue);
             }
-            HttpHandlers.executeHandler(next, exchange);
+            next.handleRequest(exchange);
         } catch (UnsupportedEncodingException e) {
             UndertowLogger.REQUEST_LOGGER.debug("Unsupported encoding", e);
             exchange.setResponseCode(500);

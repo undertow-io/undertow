@@ -28,17 +28,14 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
-import io.undertow.test.utils.SetHeaderHandler;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.TestHttpClient;
-import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpVersion;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.params.CoreProtocolPNames;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.channels.StreamSourceChannel;
@@ -60,7 +57,7 @@ public class ResumeWritesTestCase {
     public void testResumeWritesFixedLength() throws IOException {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.addResponseWrapper(new ReturnZeroWrapper());
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, HELLO_WORLD.length());
                 exchange.getResponseSender().send(HELLO_WORLD, IoCallback.END_EXCHANGE);
@@ -89,7 +86,7 @@ public class ResumeWritesTestCase {
     public void testResumeWritesChunked() throws IOException {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.addResponseWrapper(new ReturnZeroWrapper());
                 exchange.getResponseSender().send(HELLO_WORLD, IoCallback.END_EXCHANGE);
             }
@@ -118,7 +115,7 @@ public class ResumeWritesTestCase {
     public void testResumeWritesHttp10() throws IOException {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.addResponseWrapper(new ReturnZeroWrapper());
                 exchange.getResponseSender().send(HELLO_WORLD, IoCallback.END_EXCHANGE);
             }

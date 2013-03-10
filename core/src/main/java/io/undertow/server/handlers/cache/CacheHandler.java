@@ -3,7 +3,7 @@ package io.undertow.server.handlers.cache;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.ConduitFactory;
 import org.xnio.conduits.StreamSinkConduit;
@@ -33,7 +33,7 @@ public class CacheHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final ResponseCache responseCache = new ResponseCache(cache, exchange);
         exchange.putAttachment(ResponseCache.ATTACHMENT_KEY, responseCache);
         exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {

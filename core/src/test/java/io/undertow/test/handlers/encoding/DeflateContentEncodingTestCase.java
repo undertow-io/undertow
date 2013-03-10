@@ -35,7 +35,7 @@ public class DeflateContentEncodingTestCase {
                 .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, Predicates.maxContentSize(5))
                 .setNext(new HttpHandler() {
                     @Override
-                    public void handleRequest(final HttpServerExchange exchange) {
+                    public void handleRequest(final HttpServerExchange exchange) throws Exception {
                         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
                         exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
                     }

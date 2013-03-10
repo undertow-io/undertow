@@ -143,7 +143,8 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
                 httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
                 state = null;
                 this.httpServerExchange = null;
-                this.httpServerExchange = null;HttpTransferEncoding.handleRequest(httpServerExchange, connection.getRootHandler());
+                this.httpServerExchange = null;
+                HttpTransferEncoding.handleRequest(httpServerExchange, connection.getRootHandler());
 
             } catch (Throwable t) {
                 //TODO: we should attempt to return a 500 status code in this situation

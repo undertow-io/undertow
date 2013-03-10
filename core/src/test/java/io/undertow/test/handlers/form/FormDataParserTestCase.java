@@ -36,18 +36,17 @@ import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.TestHttpClient;
 import junit.textui.TestRunner;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
-import io.undertow.util.TestHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.xnio.IoUtils;
 
 /**
  * @author Stuart Douglas
@@ -71,24 +70,22 @@ public class FormDataParserTestCase {
         final FormEncodedDataHandler fd = new FormEncodedDataHandler();
         fd.setNext(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-                try {
-                    FormData data = parser.parse().get();
-                    Iterator<String> it = data.iterator();
-                    while (it.hasNext()) {
-                        String fd = it.next();
-                        for (FormData.FormValue val : data.get(fd)) {
-                            exchange.getResponseHeaders().add(new HttpString(fd), val.getValue());
+                parser.parse(new HttpHandler() {
+                    @Override
+                    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                        FormData data = exchange.getAttachment(FormDataParser.FORM_DATA);
+                        Iterator<String> it = data.iterator();
+                        while (it.hasNext()) {
+                            String fd = it.next();
+                            for (FormData.FormValue val : data.get(fd)) {
+                                exchange.getResponseHeaders().add(new HttpString(fd), val.getValue());
+                            }
                         }
                     }
-                    exchange.endExchange();
-                } catch (IOException e) {
-                    exchange.setResponseCode(500);
-                    exchange.endExchange();
-                } finally {
-                    IoUtils.safeClose(parser);
-                }
+                });
+
             }
         });
         ret.add(new Object[]{fd});

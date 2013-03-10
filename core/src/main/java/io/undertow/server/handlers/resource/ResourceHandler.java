@@ -14,7 +14,6 @@ import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.MimeMappings;
-import io.undertow.util.WorkerDispatcher;
 
 /**
  * @author Stuart Douglas
@@ -59,7 +58,7 @@ public class ResourceHandler implements HttpHandler {
     private volatile String lastExpiryHeader;
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if (exchange.getRequestMethod().equals(Methods.GET) ||
                 exchange.getRequestMethod().equals(Methods.POST)) {
             serveResource(exchange, true);
@@ -106,7 +105,7 @@ public class ResourceHandler implements HttpHandler {
 
         //we now dispatch to a worker thread
         //as resource manager methods are potentially blocking
-        WorkerDispatcher.dispatch(exchange, new Runnable() {
+        exchange.dispatch(new Runnable() {
             @Override
             public void run() {
                 Resource resource = null;

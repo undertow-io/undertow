@@ -50,7 +50,7 @@ public class SimpleConfidentialRedirectTestCase {
 
         HttpHandler current = new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
                 exchange.endExchange();
             }

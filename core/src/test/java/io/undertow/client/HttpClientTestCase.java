@@ -74,7 +74,7 @@ public class HttpClientTestCase {
 
         SIMPLE_MESSAGE_HANDLER = new HttpHandler() {
             @Override
-            public void handleRequest(HttpServerExchange exchange) {
+            public void handleRequest(HttpServerExchange exchange) throws Exception {
                 sendMessage(exchange);
             }
         };

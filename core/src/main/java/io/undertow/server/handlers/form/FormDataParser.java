@@ -21,13 +21,13 @@ package io.undertow.server.handlers.form;
 import java.io.Closeable;
 import java.io.IOException;
 
+import io.undertow.server.HttpHandler;
 import io.undertow.util.AttachmentKey;
-import org.xnio.IoFuture;
 
 /**
  * Parser for form data. This can be used by down-stream handlers to parse
  * form data.
- *
+ * <p/>
  * This parser must be closed to make sure any temporary files have been cleaned up.
  *
  * @author Stuart Douglas
@@ -37,17 +37,27 @@ public interface FormDataParser extends Closeable {
     AttachmentKey<FormDataParser> ATTACHMENT_KEY = AttachmentKey.create(FormDataParser.class);
 
     /**
+     * When the form data is parsed it will be attached under this key.
+     */
+    AttachmentKey<FormData> FORM_DATA = AttachmentKey.create(FormData.class);
+
+    /**
      * Parse the form data asynchronously. If all the data cannot be read immediately then a read listener will be
      * registered, and the data will be parsed by the read thread.
-     *
-     * @return An IoFuture that can be used to retrieve the parsed data
+     * <p/>
+     * When this method completes the handler will be invoked, and the data
+     * will be attached under {@link #FORM_DATA}.
+     * <p/>
+     * The method can either invoke the next handler directly, or may delegate to the IO thread
+     * to perform the parsing.
      */
-    IoFuture<FormData> parse();
+    void parse(final HttpHandler next) throws Exception;
 
     /**
      * Parse the data, blocking the current thread until parsing is complete. For blocking handlers this method is
      * more efficient than {@link #parse()}, as the calling thread should do that actual parsing, rather than the
      * read thread
+     *
      * @return The parsed form data
      * @throws IOException If the data could not be read
      */
@@ -63,6 +73,7 @@ public interface FormDataParser extends Closeable {
     /**
      * Sets the character encoding that will be used by this parser. If the request is already processed this will have
      * no effect
+     *
      * @param encoding The encoding
      */
     void setCharacterEncoding(String encoding);

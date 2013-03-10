@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 
@@ -47,7 +48,7 @@ public class PathHandler implements HttpHandler {
     private volatile int maxPathLength = 0;
 
     @Override
-    public void handleRequest(HttpServerExchange exchange) {
+    public void handleRequest(HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
         int length = path.length();
         int pos = length > maxPathLength ? maxPathLength : length;

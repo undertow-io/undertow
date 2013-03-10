@@ -25,13 +25,11 @@ import java.nio.ByteBuffer;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Headers;
 import org.xnio.ChannelListener;
-import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
@@ -63,7 +61,7 @@ public class FormEncodedDataHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (mimeType != null && mimeType.startsWith(APPLICATION_X_WWW_FORM_URLENCODED)) {
 
@@ -106,8 +104,8 @@ public class FormEncodedDataHandler implements HttpHandler {
         private final FormData data = new FormData();
         private final StringBuilder builder = new StringBuilder();
         private String name = null;
-        private volatile ConcreteIoFuture<FormData> ioFuture;
         private String charset;
+        private HttpHandler handler;
 
         //0= parsing name
         //1=parsing name, decode required
@@ -123,6 +121,20 @@ public class FormEncodedDataHandler implements HttpHandler {
 
         @Override
         public void handleEvent(final StreamSourceChannel channel) {
+            try {
+                doParse(channel);
+                if (state == 4) {
+                    HttpHandlers.executeRootHandler(handler, exchange);
+                }
+            } catch (IOException e) {
+                IoUtils.safeClose(channel);
+                UndertowLogger.REQUEST_LOGGER.ioExceptionReadingFromChannel(e);
+                exchange.endExchange();
+
+            }
+        }
+
+        private void doParse(final StreamSourceChannel channel) throws IOException {
             int c = 0;
             final Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
             try {
@@ -191,14 +203,8 @@ public class FormEncodedDataHandler implements HttpHandler {
                         data.add(name, URLDecoder.decode(builder.toString(), charset));
                     }
                     state = 4;
-                    ioFuture.setResult(data);
+                    exchange.putAttachment(FORM_DATA, data);
                 }
-            } catch (IOException e) {
-                ioFuture.setException(e);
-                IoUtils.safeClose(channel);
-                UndertowLogger.REQUEST_LOGGER.ioExceptionReadingFromChannel(e);
-                exchange.endExchange();
-
             } finally {
                 pooled.free();
             }
@@ -206,56 +212,45 @@ public class FormEncodedDataHandler implements HttpHandler {
 
 
         @Override
-        public IoFuture<FormData> parse() {
-            if (ioFuture == null) {
-                ConcreteIoFuture<FormData> created = null;
-                synchronized (this) {
-                    if (ioFuture == null) {
-                        ioFuture = created = new ConcreteIoFuture<FormData>();
-
-                    }
-                }
-                if (created != null) {
-                    StreamSourceChannel channel = exchange.getRequestChannel();
-                    if (channel == null) {
-                        created.setException(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
-                    } else {
-                        handleEvent(channel);
-                        if (state != 4) {
-                            channel.getReadSetter().set(this);
-                            channel.resumeReads();
-                        }
-                    }
+        public void parse(HttpHandler handler) throws Exception {
+            if (exchange.getAttachment(FORM_DATA) != null) {
+                handler.handleRequest(exchange);
+                return;
+            }
+            this.handler = handler;
+            StreamSourceChannel channel = exchange.getRequestChannel();
+            if (channel == null) {
+                throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
+            } else {
+                doParse(channel);
+                if (state != 4) {
+                    channel.getReadSetter().set(this);
+                    channel.resumeReads();
+                } else {
+                    HttpHandlers.executeRootHandler(handler, exchange);
                 }
             }
-            return ioFuture;
         }
 
         @Override
         public FormData parseBlocking() throws IOException {
-            if (ioFuture == null) {
-                ConcreteIoFuture<FormData> created = null;
-                synchronized (this) {
-                    if (ioFuture == null) {
-                        ioFuture = created = new ConcreteIoFuture<FormData>();
+            final FormData existing = exchange.getAttachment(FORM_DATA);
+            if (existing != null) {
+                return existing;
+            }
 
-                    }
-                }
-                if (created != null) {
-                    StreamSourceChannel channel = exchange.getRequestChannel();
-                    if (channel == null) {
-                        created.setException(new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided()));
-                    } else {
-                        while (state != 4) {
-                            handleEvent(channel);
-                            if (state != 4) {
-                                channel.awaitReadable();
-                            }
-                        }
+            StreamSourceChannel channel = exchange.getRequestChannel();
+            if (channel == null) {
+                throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
+            } else {
+                while (state != 4) {
+                    doParse(channel);
+                    if (state != 4) {
+                        channel.awaitReadable();
                     }
                 }
             }
-            return ioFuture.get();
+            return data;
         }
 
         @Override

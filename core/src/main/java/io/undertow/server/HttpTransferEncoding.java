@@ -30,7 +30,6 @@ import io.undertow.conduits.FixedLengthStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.PipelingBufferingStreamSinkConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
-import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -150,7 +149,7 @@ public class HttpTransferEncoding {
         //now the response wrapper, to add in the appropriate connection control headers
         exchange.addResponseWrapper(responseWrapper(persistentConnection));
 
-        HttpHandlers.executeHandler(next, exchange);
+        HttpHandlers.executeRootHandler(next, exchange);
     }
 
     private static ConduitWrapper<StreamSinkConduit> responseWrapper(final boolean requestLooksPersistent) {

@@ -23,8 +23,8 @@ import javax.servlet.ServletException;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpHandlers;
 import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.servlet.api.ServletInfo;
@@ -36,7 +36,6 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.util.WorkerDispatcher;
 import org.xnio.IoUtils;
 
 /**
@@ -76,7 +75,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
 //        if (asyncPath != null) {
 //            //if the next handler is the default servlet we just execute it directly
 //            HttpHandlers.executeHandler(asyncPath, exchange);
@@ -102,7 +101,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 }
             }
         };
-        WorkerDispatcher.dispatch(exchange, runnable);
+        exchange.dispatch(runnable);
     }
 
 
