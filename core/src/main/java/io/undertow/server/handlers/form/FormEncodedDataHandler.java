@@ -124,7 +124,7 @@ public class FormEncodedDataHandler implements HttpHandler {
             try {
                 doParse(channel);
                 if (state == 4) {
-                    HttpHandlers.executeRootHandler(handler, exchange);
+                    HttpHandlers.executeRootHandler(handler, exchange, true);
                 }
             } catch (IOException e) {
                 IoUtils.safeClose(channel);
@@ -227,7 +227,7 @@ public class FormEncodedDataHandler implements HttpHandler {
                     channel.getReadSetter().set(this);
                     channel.resumeReads();
                 } else {
-                    HttpHandlers.executeRootHandler(handler, exchange);
+                    HttpHandlers.executeRootHandler(handler, exchange, exchange.isInIoThread());
                 }
             }
         }

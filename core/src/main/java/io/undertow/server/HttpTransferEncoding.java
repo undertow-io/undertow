@@ -36,6 +36,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
+import org.xnio.XnioExecutor;
 import org.xnio.conduits.EmptyStreamSourceConduit;
 import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 import org.xnio.conduits.StreamSinkConduit;
@@ -149,7 +150,7 @@ public class HttpTransferEncoding {
         //now the response wrapper, to add in the appropriate connection control headers
         exchange.addResponseWrapper(responseWrapper(persistentConnection));
 
-        HttpHandlers.executeRootHandler(next, exchange);
+        HttpHandlers.executeRootHandler(next, exchange, Thread.currentThread() instanceof XnioExecutor);
     }
 
     private static ConduitWrapper<StreamSinkConduit> responseWrapper(final boolean requestLooksPersistent) {

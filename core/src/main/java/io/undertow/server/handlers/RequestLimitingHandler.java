@@ -47,7 +47,7 @@ public final class RequestLimitingHandler implements HttpHandler {
     private static final long MASK_MAX = longBitMask(32, 63);
     private static final long MASK_CURRENT = longBitMask(0, 30);
 
-    private final Queue<QueuedRequest> queue;
+    private final Queue<HttpServerExchange> queue;
 
     private static final Class<Queue> linkedTransferQueue;
 
@@ -56,9 +56,9 @@ public final class RequestLimitingHandler implements HttpHandler {
         @Override
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
             try {
-                final QueuedRequest task = queue.poll();
+                final HttpServerExchange task = queue.poll();
                 if (task != null) {
-                    exchange.dispatch(task);
+                    task.dispatch(nextHandler);
                 } else {
                     decrementRequests();
                 }
@@ -94,14 +94,14 @@ public final class RequestLimitingHandler implements HttpHandler {
         }
         state = (maximumConcurrentRequests & 0xFFFFFFFFL) << 32;
         this.nextHandler = nextHandler;
-        Queue<QueuedRequest> queue;
+        Queue<HttpServerExchange> queue;
         if (linkedTransferQueue == null) {
-            queue = new ConcurrentLinkedQueue<QueuedRequest>();
+            queue = new ConcurrentLinkedQueue<HttpServerExchange>();
         } else {
             try {
                 queue = linkedTransferQueue.newInstance();
             } catch (Throwable t) {
-                queue = new ConcurrentLinkedQueue<QueuedRequest>();
+                queue = new ConcurrentLinkedQueue<HttpServerExchange>();
             }
         }
         this.queue = queue;
@@ -115,7 +115,7 @@ public final class RequestLimitingHandler implements HttpHandler {
             final long current = oldVal & MASK_CURRENT;
             final long max = (oldVal & MASK_MAX) >> 32L;
             if (current >= max) {
-                queue.add(new QueuedRequest(exchange));
+                queue.add(exchange);
                 return;
             }
             newVal = oldVal + 1;
@@ -151,12 +151,12 @@ public final class RequestLimitingHandler implements HttpHandler {
         } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
         while (current < newMax) {
             // more space opened up!  Process queue entries for a while
-            final QueuedRequest request = queue.poll();
+            final HttpServerExchange request = queue.poll();
             if (request != null) {
                 // now bump up the counter by one; this *could* put us over the max if it changed in the meantime but that's OK
                 newVal = stateUpdater.getAndIncrement(this);
                 current = (int) (newVal & MASK_CURRENT);
-                request.exchange.dispatch(request);
+                request.dispatch(nextHandler);
             }
         }
         return oldMax;
@@ -186,16 +186,5 @@ public final class RequestLimitingHandler implements HttpHandler {
         return this;
     }
 
-    private final class QueuedRequest implements Runnable {
-        private final HttpServerExchange exchange;
-
-        QueuedRequest(final HttpServerExchange exchange) {
-            this.exchange = exchange;
-        }
-
-        public void run() {
-            HttpHandlers.executeRootHandler(nextHandler, exchange);
-        }
-    }
 
 }

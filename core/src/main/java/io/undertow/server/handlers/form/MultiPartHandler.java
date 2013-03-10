@@ -188,7 +188,7 @@ public class MultiPartHandler implements HttpHandler {
         public void run() {
             try {
                 parseBlocking();
-                HttpHandlers.executeRootHandler(handler, exchange);
+                HttpHandlers.executeRootHandler(handler, exchange, false);
             } catch (Throwable e) {
                 UndertowLogger.REQUEST_LOGGER.debug("Exception parsing data", e);
                 exchange.setResponseCode(500);
