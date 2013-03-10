@@ -18,9 +18,6 @@
 
 package io.undertow.server.handlers.blocking;
 
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
@@ -32,11 +29,9 @@ import io.undertow.server.HttpServerExchange;
  */
 public final class BlockingHandler implements HttpHandler {
 
-    private volatile BlockingHttpHandler handler;
+    private volatile HttpHandler handler;
 
-    private static final AtomicReferenceFieldUpdater<BlockingHandler, BlockingHttpHandler> handlerUpdater = AtomicReferenceFieldUpdater.newUpdater(BlockingHandler.class, BlockingHttpHandler.class, "handler");
-
-    public BlockingHandler(final BlockingHttpHandler handler) {
+    public BlockingHandler(final HttpHandler handler) {
         this.handler = handler;
     }
 
@@ -46,33 +41,21 @@ public final class BlockingHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    exchange.startBlocking();
-                    final BlockingHttpHandler handler = BlockingHandler.this.handler;
-                    if (handler != null) {
-                        handler.handleBlockingRequest(exchange);
-                    }
-                } catch (Throwable t) {
-                    if (!exchange.isResponseStarted()) {
-                        exchange.setResponseCode(500);
-                    }
-                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", exchange);
-                } finally {
-                    exchange.endExchange();
-                }
-            }
-        };
-        exchange.dispatch(runnable);
+
+        exchange.startBlocking();
+        if (exchange.isInIoThread()) {
+            exchange.dispatch(handler);
+        } else {
+            handler.handleRequest(exchange);
+        }
     }
 
-    public BlockingHttpHandler getHandler() {
+    public HttpHandler getHandler() {
         return handler;
     }
 
-    public BlockingHttpHandler setRootHandler(final BlockingHttpHandler rootHandler) {
-        return handlerUpdater.getAndSet(this, rootHandler);
+    public BlockingHandler setRootHandler(final HttpHandler rootHandler) {
+        this.handler = rootHandler;
+        return this;
     }
 }

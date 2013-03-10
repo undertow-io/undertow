@@ -10,7 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.security.api.RoleMappingManager;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
+import io.undertow.server.HttpHandler;
 import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
@@ -20,26 +20,26 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
  *
  * @author Stuart Douglas
  */
-public class ServletSecurityRoleHandler implements BlockingHttpHandler {
+public class ServletSecurityRoleHandler implements HttpHandler {
 
-    private final BlockingHttpHandler next;
+    private final HttpHandler next;
     private final RoleMappingManager roleMappingManager;
 
-    public ServletSecurityRoleHandler(final BlockingHttpHandler next, final RoleMappingManager roleMappingManager) {
+    public ServletSecurityRoleHandler(final HttpHandler next, final RoleMappingManager roleMappingManager) {
         this.next = next;
         this.roleMappingManager = roleMappingManager;
     }
 
     @Override
-    public void handleBlockingRequest(final HttpServerExchange exchange) throws Exception {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         List<Set<String>> roles = exchange.getAttachmentList(ServletAttachments.REQUIRED_ROLES);
         SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         exchange.putAttachment(ServletAttachments.SERVLET_ROLE_MAPPINGS, roleMappingManager);
         HttpServletRequest request = HttpServletRequestImpl.getRequestImpl(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
         if (request.getDispatcherType() != DispatcherType.REQUEST) {
-            next.handleBlockingRequest(exchange);
+            next.handleRequest(exchange);
         } else if (roles.isEmpty()) {
-            next.handleBlockingRequest(exchange);
+            next.handleRequest(exchange);
         } else {
             for (final Set<String> roleSet : roles) {
                 boolean found = false;
@@ -55,7 +55,7 @@ public class ServletSecurityRoleHandler implements BlockingHttpHandler {
                     return;
                 }
             }
-            next.handleBlockingRequest(exchange);
+            next.handleRequest(exchange);
         }
     }
 

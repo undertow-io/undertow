@@ -22,32 +22,32 @@ import javax.servlet.DispatcherType;
 import javax.servlet.ServletRequest;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
+import io.undertow.server.HttpHandler;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 
 /**
  * @author Stuart Douglas
  */
-public class RequestListenerHandler implements BlockingHttpHandler {
+public class RequestListenerHandler implements HttpHandler {
 
     private final ApplicationListeners listeners;
 
-    private final BlockingHttpHandler next;
+    private final HttpHandler next;
 
-    public RequestListenerHandler(final ApplicationListeners listeners, final BlockingHttpHandler next) {
+    public RequestListenerHandler(final ApplicationListeners listeners, final HttpHandler next) {
         this.listeners = listeners;
         this.next = next;
     }
 
     @Override
-    public void handleBlockingRequest(final HttpServerExchange exchange) throws Exception {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         DispatcherType type = exchange.getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
         if (type == DispatcherType.REQUEST) {
             final ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
             listeners.requestInitialized(request);
             try {
-                next.handleBlockingRequest(exchange);
+                next.handleRequest(exchange);
             } finally {
                 if (!request.isAsyncStarted()) {
                     listeners.requestDestroyed(request);
@@ -56,18 +56,18 @@ public class RequestListenerHandler implements BlockingHttpHandler {
         } else if (type == DispatcherType.ASYNC) {
             final ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
             try {
-                next.handleBlockingRequest(exchange);
+                next.handleRequest(exchange);
             } finally {
                 if (!request.isAsyncStarted()) {
                     listeners.requestDestroyed(request);
                 }
             }
         } else {
-            next.handleBlockingRequest(exchange);
+            next.handleRequest(exchange);
         }
     }
 
-    public BlockingHttpHandler getNext() {
+    public HttpHandler getNext() {
         return next;
     }
 }

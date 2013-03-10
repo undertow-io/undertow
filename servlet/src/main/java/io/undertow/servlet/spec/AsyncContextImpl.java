@@ -149,7 +149,7 @@ public class AsyncContextImpl implements AsyncContext {
                     public void run() {
 
                         try {
-                            handler.handleBlockingRequest(requestImpl.getExchange());
+                            handler.handleRequest(requestImpl.getExchange());
                         } catch (Exception e) {
                             //ignore
                         }

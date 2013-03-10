@@ -115,7 +115,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             try {
                 exchange.putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
                 exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
-                handler.handleBlockingRequest(exchange);
+                handler.handleRequest(exchange);
 
                 if(response instanceof HttpServletResponseImpl) {
                     responseImpl.closeStreamAndWriter();
@@ -222,7 +222,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             try {
                 exchange.putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
                 exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
-                handler.handleBlockingRequest(exchange);
+                handler.handleRequest(exchange);
             } catch (ServletException e) {
                 throw e;
             } catch (IOException e) {
@@ -322,7 +322,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             try {
                 exchange.putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
                 exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
-                handler.handleBlockingRequest(exchange);
+                handler.handleRequest(exchange);
             } catch (ServletException e) {
                 throw e;
             } catch (IOException e) {

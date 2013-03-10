@@ -177,7 +177,7 @@ public class Undertow {
                 paths.addPath(entry.getKey(), entry.getValue());
             }
             HttpHandler handler = paths;
-            for (HandlerWrapper<HttpHandler> wrapper : host.wrappers) {
+            for (HandlerWrapper wrapper : host.wrappers) {
                 handler = wrapper.wrap(handler);
             }
             handler = addLoginConfig(handler, host.loginConfig);
@@ -253,7 +253,7 @@ public class Undertow {
 
         T setDefaultHandler(final HttpHandler handler);
 
-        T addHandlerWrapper(final HandlerWrapper<HttpHandler> wrapper);
+        T addHandlerWrapper(final HandlerWrapper wrapper);
 
         T setLoginConfig(final LoginConfig loginConfig);
 
@@ -263,7 +263,7 @@ public class Undertow {
 
         private final List<String> hostNames = new ArrayList<String>();
         private final Map<String, HttpHandler> handlers = new HashMap<String, HttpHandler>();
-        private final List<HandlerWrapper<HttpHandler>> wrappers = new ArrayList<HandlerWrapper<HttpHandler>>();
+        private final List<HandlerWrapper> wrappers = new ArrayList<HandlerWrapper>();
         private final boolean defaultHost;
         private LoginConfig loginConfig;
         private HttpHandler defaultHandler = ResponseCodeHandler.HANDLE_404;
@@ -294,7 +294,7 @@ public class Undertow {
             return this;
         }
 
-        public VirtualHost addHandlerWrapper(final HandlerWrapper<HttpHandler> wrapper) {
+        public VirtualHost addHandlerWrapper(final HandlerWrapper wrapper) {
             wrappers.add(wrapper);
             return this;
         }
@@ -474,7 +474,7 @@ public class Undertow {
         }
 
         @Override
-        public Builder addHandlerWrapper(final HandlerWrapper<HttpHandler> wrapper) {
+        public Builder addHandlerWrapper(final HandlerWrapper wrapper) {
             defaultHost.addHandlerWrapper(wrapper);
             return this;
         }

@@ -31,7 +31,6 @@ import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
 
 import io.undertow.server.HandlerWrapper;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
 
@@ -46,7 +45,7 @@ public class ServletInfo implements Cloneable {
     private final List<String> mappings = new ArrayList<String>();
     private final Map<String, String> initParams = new HashMap<String, String>();
     private final List<SecurityRoleRef> securityRoleRefs = new ArrayList<SecurityRoleRef>();
-    private final List<HandlerWrapper<BlockingHttpHandler>> handlerChainWrappers = new ArrayList<HandlerWrapper<BlockingHttpHandler>>();
+    private final List<HandlerWrapper> handlerChainWrappers = new ArrayList<>();
 
     private volatile InstanceFactory<? extends Servlet> instanceFactory;
     private volatile String jspFile;
@@ -112,7 +111,7 @@ public class ServletInfo implements Cloneable {
         info.initParams.putAll(initParams);
         info.securityRoleRefs.addAll(securityRoleRefs);
         info.handlerChainWrappers.addAll(handlerChainWrappers);
-        if(servletSecurityInfo != null) {
+        if (servletSecurityInfo != null) {
             info.servletSecurityInfo = servletSecurityInfo.clone();
         }
         return info;
@@ -127,7 +126,7 @@ public class ServletInfo implements Cloneable {
     }
 
     public void setInstanceFactory(final InstanceFactory<? extends Servlet> instanceFactory) {
-        if(instanceFactory == null) {
+        if (instanceFactory == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("instanceFactory");
         }
         this.instanceFactory = instanceFactory;
@@ -153,7 +152,7 @@ public class ServletInfo implements Cloneable {
     }
 
 
-    public ServletInfo addMappings(final String ... mappings) {
+    public ServletInfo addMappings(final String... mappings) {
         this.mappings.addAll(Arrays.asList(mappings));
         return this;
     }
@@ -230,12 +229,12 @@ public class ServletInfo implements Cloneable {
         return Collections.unmodifiableList(securityRoleRefs);
     }
 
-    public ServletInfo addHandlerChainWrapper(final HandlerWrapper<BlockingHttpHandler> wrapper) {
+    public ServletInfo addHandlerChainWrapper(final HandlerWrapper wrapper) {
         this.handlerChainWrappers.add(wrapper);
         return this;
     }
 
-    public List<HandlerWrapper<BlockingHttpHandler>> getHandlerChainWrappers() {
+    public List<HandlerWrapper> getHandlerChainWrappers() {
         return Collections.unmodifiableList(handlerChainWrappers);
     }
 

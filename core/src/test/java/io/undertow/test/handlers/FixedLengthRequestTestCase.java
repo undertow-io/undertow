@@ -26,7 +26,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
+import io.undertow.server.HttpHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
@@ -63,9 +63,9 @@ public class FixedLengthRequestTestCase {
     public static void setup() {
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
-        blockingHandler.setRootHandler(new BlockingHttpHandler() {
+        blockingHandler.setRootHandler(new HttpHandler() {
             @Override
-            public void handleBlockingRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) {
                 try {
                     if (connection == null) {
                         connection = exchange.getConnection();

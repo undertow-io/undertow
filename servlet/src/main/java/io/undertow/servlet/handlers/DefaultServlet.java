@@ -184,7 +184,7 @@ public class DefaultServlet extends HttpServlet {
                 exchange.setRequestURI(exchange.getResolvedPath() + handler.getMatched());
                 exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, handler);
                 try {
-                    handler.getHandler().handleBlockingRequest(exchange);
+                    handler.getHandler().handleRequest(exchange);
                 } catch (ServletException e) {
                     throw e;
                 } catch (Exception e) {

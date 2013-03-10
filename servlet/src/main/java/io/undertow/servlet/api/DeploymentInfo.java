@@ -35,8 +35,6 @@ import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletMessages;
@@ -87,19 +85,19 @@ public class DeploymentInfo implements Cloneable {
      * Handler chain wrappers that are applied outside all other handlers, including security but after the initial
      * servlet matching handler.
      */
-    private final List<HandlerWrapper<HttpHandler>> outerHandlerChainWrappers = new ArrayList<HandlerWrapper<HttpHandler>>();
+    private final List<HandlerWrapper> outerHandlerChainWrappers = new ArrayList<>();
 
     /**
      * Handler chain wrappers that are applied just before the servlet request is dispatched. At this point the security
      * handlers have run, and any security information is attached to the request.
      */
-    private final List<HandlerWrapper<HttpHandler>> innerHandlerChainWrappers = new ArrayList<HandlerWrapper<HttpHandler>>();
+    private final List<HandlerWrapper> innerHandlerChainWrappers = new ArrayList<>();
 
     /**
      * Wrapper that is applied after the servlet request has been dispatched, but before any user code is run. This
      * is run outside any wrappers applied via {@link ServletInfo#handlerChainWrappers}
      */
-    private final List<HandlerWrapper<BlockingHttpHandler>> dispatchedHandlerChainWrappers = new ArrayList<HandlerWrapper<BlockingHttpHandler>>();
+    private final List<HandlerWrapper> dispatchedHandlerChainWrappers = new ArrayList<>();
 
     public void validate() {
         if (deploymentName == null) {
@@ -546,30 +544,30 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableSet(securityRoles);
     }
 
-    public DeploymentInfo addOuterHandlerChainWrapper(final HandlerWrapper<HttpHandler> wrapper) {
+    public DeploymentInfo addOuterHandlerChainWrapper(final HandlerWrapper wrapper) {
         outerHandlerChainWrappers.add(wrapper);
         return this;
     }
 
-    public List<HandlerWrapper<HttpHandler>> getOuterHandlerChainWrappers() {
+    public List<HandlerWrapper> getOuterHandlerChainWrappers() {
         return Collections.unmodifiableList(outerHandlerChainWrappers);
     }
 
-    public DeploymentInfo addInnerHandlerChainWrapper(final HandlerWrapper<HttpHandler> wrapper) {
+    public DeploymentInfo addInnerHandlerChainWrapper(final HandlerWrapper wrapper) {
         innerHandlerChainWrappers.add(wrapper);
         return this;
     }
 
-    public List<HandlerWrapper<HttpHandler>> getInnerHandlerChainWrappers() {
+    public List<HandlerWrapper> getInnerHandlerChainWrappers() {
         return Collections.unmodifiableList(innerHandlerChainWrappers);
     }
 
-    public DeploymentInfo addDispatchedHandlerChainWrapper(final HandlerWrapper<BlockingHttpHandler> wrapper) {
+    public DeploymentInfo addDispatchedHandlerChainWrapper(final HandlerWrapper wrapper) {
         dispatchedHandlerChainWrappers.add(wrapper);
         return this;
     }
 
-    public List<HandlerWrapper<BlockingHttpHandler>> getDispatchedHandlerChainWrappers() {
+    public List<HandlerWrapper> getDispatchedHandlerChainWrappers() {
         return Collections.unmodifiableList(dispatchedHandlerChainWrappers);
     }
 

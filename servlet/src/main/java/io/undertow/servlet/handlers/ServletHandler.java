@@ -29,7 +29,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.UnavailableException;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
+import io.undertow.server.HttpHandler;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.core.ManagedServlet;
@@ -44,7 +44,7 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
  *
  * @author Stuart Douglas
  */
-public class ServletHandler implements BlockingHttpHandler {
+public class ServletHandler implements HttpHandler {
 
     private final ManagedServlet managedServlet;
     private final boolean asyncSupported;
@@ -60,7 +60,7 @@ public class ServletHandler implements BlockingHttpHandler {
     }
 
     @Override
-    public void handleBlockingRequest(final HttpServerExchange exchange) throws IOException, ServletException {
+    public void handleRequest(final HttpServerExchange exchange) throws IOException, ServletException {
         if (managedServlet.isPermanentlyUnavailable()) {
             UndertowServletLogger.REQUEST_LOGGER.debugf("Returning 404 for servlet %s due to permanent unavailability", managedServlet.getServletInfo().getName());
             exchange.setResponseCode(404);

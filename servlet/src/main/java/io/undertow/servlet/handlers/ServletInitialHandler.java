@@ -25,13 +25,11 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ManagedServlet;
-import io.undertow.servlet.core.ServletBlockingHttpExchange;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
@@ -47,22 +45,22 @@ import org.xnio.IoUtils;
  *
  * @author Stuart Douglas
  */
-public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
+public class ServletInitialHandler implements HttpHandler {
 
-    private final BlockingHttpHandler next;
+    private final HttpHandler next;
     //private final HttpHandler asyncPath;
 
     private final CompositeThreadSetupAction setupAction;
 
     private final ServletContextImpl servletContext;
 
-    private volatile BlockingHttpHandler handler;
+    private volatile HttpHandler handler;
     /**
      * The target servlet
      */
     private final ManagedServlet managedServlet;
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ManagedServlet managedServlet) {
+    public ServletInitialHandler(final HttpHandler next, final HttpHandler asyncPath, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ManagedServlet managedServlet) {
         this.next = next;
         //this.asyncPath = asyncPath;
         this.setupAction = setupAction;
@@ -70,43 +68,17 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
         this.managedServlet = managedServlet;
     }
 
-    public ServletInitialHandler(final BlockingHttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ManagedServlet managedServlet) {
+    public ServletInitialHandler(final HttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext, final ManagedServlet managedServlet) {
         this(next, null, setupAction, servletContext, managedServlet);
     }
 
+
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-//        if (asyncPath != null) {
-//            //if the next handler is the default servlet we just execute it directly
-//            HttpHandlers.executeHandler(asyncPath, exchange);
-//            //this is not great, but as the file was not found we need to do error handling
-//            //so re just run the request again but via the normal servlet path
-//            //todo: fix this, we should just be able to run the error handling code without copy/pasting heaps of
-//            //code
-//            if (exchange.getResponseCode() != 404) {
-//                return;
-//            }
-//        }
-
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    exchange.startBlocking(new ServletBlockingHttpExchange(exchange));
-                    final BlockingHttpHandler handler = ServletInitialHandler.this;
-                    handler.handleBlockingRequest(exchange);
-                } catch (Throwable t) {
-                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Internal error handling servlet request %s", exchange.getRequestURI());
-                    exchange.endExchange();
-                }
-            }
-        };
-        exchange.dispatch(runnable);
-    }
-
-
-    @Override
-    public void handleBlockingRequest(final HttpServerExchange exchange) throws Exception {
+        if (exchange.isInIoThread()) {
+            exchange.dispatch(this);
+            return;
+        }
         ServletInfo old = exchange.getAttachment(ServletAttachments.CURRENT_SERVLET);
         try {
             exchange.putAttachment(ServletAttachments.CURRENT_SERVLET, managedServlet.getServletInfo());
@@ -126,7 +98,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
     private void handleDispatchedRequest(final HttpServerExchange exchange) throws Exception {
         final ThreadSetupAction.Handle handle = setupAction.setup(exchange);
         try {
-            next.handleBlockingRequest(exchange);
+            next.handleRequest(exchange);
         } finally {
             handle.tearDown();
         }
@@ -144,7 +116,7 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
                 exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
             }
 
-            next.handleBlockingRequest(exchange);
+            next.handleRequest(exchange);
             if (!exchange.isResponseStarted() && exchange.getResponseCode() >= 400) {
                 String location = servletContext.getDeployment().getErrorPages().getErrorLocation(exchange.getResponseCode());
                 if (location != null) {
@@ -189,20 +161,21 @@ public class ServletInitialHandler implements BlockingHttpHandler, HttpHandler {
             IoUtils.safeClose(parser);
         } else {
             request.asyncInitialRequestDone();
+            exchange.dispatch();
         }
     }
 
-    public BlockingHttpHandler getHandler() {
+    public HttpHandler getHandler() {
         return handler;
     }
 
-    public ServletInitialHandler setRootHandler(final BlockingHttpHandler rootHandler) {
+    public ServletInitialHandler setRootHandler(final HttpHandler rootHandler) {
         HttpHandlers.handlerNotNull(rootHandler);
         this.handler = rootHandler;
         return this;
     }
 
-    public BlockingHttpHandler getNext() {
+    public HttpHandler getNext() {
         return next;
     }
 

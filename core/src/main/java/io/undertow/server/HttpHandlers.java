@@ -22,7 +22,6 @@ import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 
 /**
  * Utility methods pertaining to HTTP handlers.
@@ -57,7 +56,7 @@ public final class HttpHandlers {
                 final Runnable dispatchTask = exchange.getAttachment(HttpServerExchange.DISPATCH_TASK);
                 Executor executor = exchange.getAttachment(HttpServerExchange.DISPATCH_EXECUTOR);
                 exchange.clearDispatched();
-                if(dispatchTask != null) {
+                if (dispatchTask != null) {
                     executor = executor == null ? exchange.getConnection().getWorker() : executor;
                     executor.execute(dispatchTask);
                 }
@@ -75,13 +74,6 @@ public final class HttpHandlers {
     }
 
     public static void handlerNotNull(final HttpHandler handler) {
-        if (handler == null) {
-            throw UndertowMessages.MESSAGES.handlerCannotBeNull();
-        }
-    }
-
-
-    public static void handlerNotNull(final BlockingHttpHandler handler) {
         if (handler == null) {
             throw UndertowMessages.MESSAGES.handlerCannotBeNull();
         }

@@ -27,7 +27,7 @@ import io.undertow.io.UndertowOutputStream;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpContinueHandler;
 import io.undertow.server.handlers.blocking.BlockingHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
+import io.undertow.server.HttpHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
@@ -60,9 +60,9 @@ public class HttpContinueTestCase {
             }
         };
         DefaultServer.setRootHandler(handler);
-        blockingHandler.setRootHandler(new BlockingHttpHandler() {
+        blockingHandler.setRootHandler(new HttpHandler() {
             @Override
-            public void handleBlockingRequest(final HttpServerExchange exchange) {
+            public void handleRequest(final HttpServerExchange exchange) {
                 try {
                     byte[] buffer = new byte[1024];
                     final ByteArrayOutputStream b = new ByteArrayOutputStream();

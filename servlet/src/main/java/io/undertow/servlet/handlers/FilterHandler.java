@@ -29,8 +29,8 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -39,14 +39,14 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 /**
  * @author Stuart Douglas
  */
-public class FilterHandler implements BlockingHttpHandler {
+public class FilterHandler implements HttpHandler {
 
     private final Map<DispatcherType, List<ManagedFilter>> filters;
     private final Map<DispatcherType, Boolean> asyncSupported;
 
-    private final BlockingHttpHandler next;
+    private final HttpHandler next;
 
-    public FilterHandler(final Map<DispatcherType, List<ManagedFilter>> filters, final BlockingHttpHandler next) {
+    public FilterHandler(final Map<DispatcherType, List<ManagedFilter>> filters, final HttpHandler next) {
         this.next = next;
         this.filters = new HashMap<DispatcherType, List<ManagedFilter>>(filters);
         Map<DispatcherType, Boolean> asyncSupported = new HashMap<DispatcherType, Boolean>();
@@ -64,7 +64,7 @@ public class FilterHandler implements BlockingHttpHandler {
     }
 
     @Override
-    public void handleBlockingRequest(final HttpServerExchange exchange) throws Exception {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         ServletResponse response = exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
         DispatcherType dispatcher = exchange.getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
@@ -75,7 +75,7 @@ public class FilterHandler implements BlockingHttpHandler {
 
         final List<ManagedFilter> filters = this.filters.get(dispatcher);
         if(filters == null) {
-            next.handleBlockingRequest(exchange);
+            next.handleRequest(exchange);
         } else {
             final FilterChainImpl filterChain = new FilterChainImpl(exchange, filters, next);
             filterChain.doFilter(request, response);
@@ -87,9 +87,9 @@ public class FilterHandler implements BlockingHttpHandler {
         int location = 0;
         final HttpServerExchange exchange;
         final List<ManagedFilter> filters;
-        final BlockingHttpHandler next;
+        final HttpHandler next;
 
-        private FilterChainImpl(final HttpServerExchange exchange, final List<ManagedFilter> filters, final BlockingHttpHandler next) {
+        private FilterChainImpl(final HttpServerExchange exchange, final List<ManagedFilter> filters, final HttpHandler next) {
             this.exchange = exchange;
             this.filters = filters;
             this.next = next;
@@ -105,7 +105,7 @@ public class FilterHandler implements BlockingHttpHandler {
                 exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
                 int index = location++;
                 if (index >= filters.size()) {
-                    next.handleBlockingRequest(exchange);
+                    next.handleRequest(exchange);
                 } else {
                     filters.get(index).doFilter(request, response, this);
                 }

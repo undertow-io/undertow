@@ -5,8 +5,8 @@ package io.undertow.server;
  *
  * @author Stuart Douglas
  */
-public interface HandlerWrapper<T> {
+public interface HandlerWrapper {
 
-    T wrap(T handler);
+    HttpHandler wrap(HttpHandler handler);
 
 }

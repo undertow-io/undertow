@@ -20,7 +20,6 @@ package io.undertow.server.handlers;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import org.jboss.logging.Logger;
 
 /**
@@ -28,7 +27,7 @@ import org.jboss.logging.Logger;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class ResponseCodeHandler implements HttpHandler, BlockingHttpHandler {
+public final class ResponseCodeHandler implements HttpHandler {
 
     private static final Logger log = Logger.getLogger(ResponseCodeHandler.class);
     private static final boolean traceEnabled;
@@ -71,16 +70,8 @@ public final class ResponseCodeHandler implements HttpHandler, BlockingHttpHandl
         this.responseCode = responseCode;
     }
 
-    public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        exchange.setResponseCode(responseCode);
-        if(traceEnabled) {
-            log.tracef("Setting response code %s for exchange %s", responseCode, exchange);
-        }
-        exchange.endExchange();
-    }
-
     @Override
-    public void handleBlockingRequest(final HttpServerExchange exchange) throws Exception {
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.setResponseCode(responseCode);
         if(traceEnabled) {
             log.tracef("Setting response code %s for exchange %s", responseCode, exchange);

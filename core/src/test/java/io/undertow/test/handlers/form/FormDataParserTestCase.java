@@ -28,7 +28,6 @@ import java.util.List;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.blocking.BlockingHandler;
-import io.undertow.server.handlers.blocking.BlockingHttpHandler;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.FormEncodedDataHandler;
@@ -93,11 +92,11 @@ public class FormDataParserTestCase {
 
         final FormEncodedDataHandler bf = new FormEncodedDataHandler();
         bf.setNext(blocking);
-        blocking.setRootHandler(new BlockingHttpHandler() {
+        blocking.setRootHandler(new HttpHandler() {
 
 
             @Override
-            public void handleBlockingRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
                 try {
                     FormData data = parser.parseBlocking();
