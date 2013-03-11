@@ -115,6 +115,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     private List<Part> parts = null;
     private volatile AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
+    private FormData parsedFormData;
     private Charset characterEncoding;
     private boolean readStarted;
 
@@ -530,20 +531,27 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         Deque<String> params = queryParameters.get(name);
         if (params == null) {
             if (exchange.getRequestMethod().equals(Methods.POST)) {
-                readStarted = true;
-                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-                if (parser != null) {
+                if (parsedFormData == null) {
+                    if (readStarted) {
+                        return null;
+                    }
+                    readStarted = true;
+                    final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+                    if (parser == null) {
+                        return null;
+                    }
                     try {
-                        FormData.FormValue res = parser.parseBlocking().getFirst(name);
-                        if (res == null) {
-                            return null;
-                        } else {
-                            return res.getValue();
-                        }
-
+                        parsedFormData = parser.parseBlocking();
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
+                }
+
+                FormData.FormValue res = parsedFormData.getFirst(name);
+                if (res == null) {
+                    return null;
+                } else {
+                    return res.getValue();
                 }
             }
             return null;
