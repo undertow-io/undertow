@@ -108,10 +108,17 @@ public class ServletPathMatches {
                 }
                 ServletInitialHandler handler = match.extensionMatches.get(ext);
                 if (handler != null) {
-                    if(qsPos == -1) {
-                        return new ServletPathMatch(handler, path, null);
+                    //if this is an extension only mapping then the matched will be empty,
+                    //and we do not add the remaining to the match
+                    //as the path info should be null
+                    if (matched.isEmpty()) {
+                        if (qsPos == -1) {
+                            return new ServletPathMatch(handler, path, null);
+                        } else {
+                            return new ServletPathMatch(handler, path.substring(0, qsPos), null);
+                        }
                     } else {
-                        return new ServletPathMatch(handler, path.substring(0, qsPos), null);
+                        return new ServletPathMatch(handler, matched, remaining);
                     }
                 } else {
                     return new ServletPathMatch(match.defaultHandler, matched, remaining);

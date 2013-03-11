@@ -38,10 +38,10 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -100,17 +100,17 @@ public class FilterPathMappingTestCase {
         DefaultServer.setRootHandler(root);
 
 
-
         TestHttpClient client = new TestHttpClient();
         try {
-            runTest(client, "aa","/aa", "/*", "/aa");
-            runTest(client, "a/c","/a/*", "/*", "/a/*");
-            runTest(client, "a","/a/*", "/*", "/a/*");
-            runTest(client, "aa/b","/", "/*");
-            runTest(client, "a/b/c/d","/a/*", "/*", "/a/*");
-            runTest(client, "defaultStuff","/", "/*");
-            runTest(client, "","contextRoot", "/*", "contextRoot");
-            runTest(client, "yyyy.bop","/", "/*", "*.bop");
+            runTest(client, "aa", "/aa - null", "/*", "/aa");
+            runTest(client, "a/c", "/a/* - /c", "/*", "/a/*");
+            runTest(client, "a", "/a/* - null", "/*", "/a/*");
+            runTest(client, "aa/b", "/ - /aa/b", "/*");
+            runTest(client, "a/b/c/d", "/a/* - /b/c/d", "/*", "/a/*");
+            runTest(client, "defaultStuff", "/ - /defaultStuff", "/*");
+            runTest(client, "", "contextRoot - null", "/*", "contextRoot");
+            runTest(client, "yyyy.bop", "/ - null", "/*", "*.bop");
+            runTest(client, "a/yyyy.bop", "/a/* - /yyyy.bop", "/*", "*.bop", "/a/*");
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -147,14 +147,14 @@ public class FilterPathMappingTestCase {
 
         TestHttpClient client = new TestHttpClient();
         try {
-            runTest(client, "aa.jsp","*.jsp", "/*");
+            runTest(client, "aa.jsp", "*.jsp - null", "/*");
 
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
 
-    private void runTest(final TestHttpClient client, final String path, final String expected, final String ... headers) throws IOException {
+    private void runTest(final TestHttpClient client, final String path, final String expected, final String... headers) throws IOException {
         final HttpGet get;
         final HttpResponse result;
         final String response;
@@ -169,8 +169,8 @@ public class FilterPathMappingTestCase {
     private void requireHeaders(final HttpResponse result, final String... headers) {
         final Header[] resultHeaders = result.getAllHeaders();
         final List<Header> realResultHeaders = new ArrayList<Header>();
-        for(Header header: resultHeaders) {
-            if(header.getName().startsWith("filter")) {
+        for (Header header : resultHeaders) {
+            if (header.getName().startsWith("filter")) {
                 realResultHeaders.add(header);
             }
         }

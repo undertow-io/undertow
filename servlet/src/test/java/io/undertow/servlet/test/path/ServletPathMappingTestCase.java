@@ -96,51 +96,51 @@ public class ServletPathMappingTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/aa", response);
+            Assert.assertEquals("/aa - null", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/a/c");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/a/*", response);
+            Assert.assertEquals("/a/* - /c", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/aa/*", response);
+            Assert.assertEquals("/aa/* - /b", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/a/b/c/d");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/a/b/*", response);
+            Assert.assertEquals("/a/b/* - /c/d", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/a/b");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/a/b/*", response);
+            Assert.assertEquals("/a/b/* - null", response);
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/defaultStuff");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/", response);
+            Assert.assertEquals("/ - /defaultStuff", response);
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("contextRoot", response);
+            Assert.assertEquals("contextRoot - null", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/bob.jsp");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("*.jsp", response);
+            Assert.assertEquals("*.jsp - null", response);
 
         } finally {
             client.getConnectionManager().shutdown();
