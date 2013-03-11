@@ -36,7 +36,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -51,6 +50,7 @@ public class ServletOutputStreamTestCase {
     public static final String HELLO_WORLD = "Hello World";
     public static final String BLOCKING_SERVLET = "blockingOutput";
     public static final String ASYNC_SERVLET = "asyncOutput";
+    public static final String CONTENT_LENGTH_SERVLET = "contentLength";
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -65,19 +65,45 @@ public class ServletOutputStreamTestCase {
                 .addMapping("/" + ASYNC_SERVLET)
                 .setAsyncSupported(true);
 
+        ServletInfo s3 = new ServletInfo(CONTENT_LENGTH_SERVLET, ContentLengthCloseFlushServlet.class)
+                .addMapping("/" + CONTENT_LENGTH_SERVLET);
+
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(ServletOutputStreamTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(s1, s2);
+                .addServlets(s1, s2, s3);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         root.addPath(builder.getContextPath(), manager.start());
 
         DefaultServer.setRootHandler(root);
+    }
+
+
+    @Test
+    public void testFlushAndCloseWithContentLength() throws Exception {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + CONTENT_LENGTH_SERVLET;
+
+            HttpGet get = new HttpGet(uri);
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("a", response);
+
+            get = new HttpGet(uri);
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("OK", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
     @Test

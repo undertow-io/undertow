@@ -299,9 +299,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      * {@inheritDoc}
      */
     public void flush() throws IOException {
+
         if (listener == null) {
             if (anyAreSet(state, FLAG_CLOSED)) {
-                throw UndertowServletMessages.MESSAGES.streamIsClosed();
+                //just return
+                return;
             }
             if (buffer != null && buffer.position() != 0) {
                 writeBufferBlocking();
