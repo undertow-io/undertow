@@ -82,4 +82,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3015, value = "No decoder accepted message %s")
     String noDecoderAcceptedMessage(List<? extends Decoder> decoders);
+
+    @Message(id = 3016, value = "Cannot send in middle of fragmeneted message")
+    IllegalStateException cannotSendInMiddleOfFragmentedMessage();
 }

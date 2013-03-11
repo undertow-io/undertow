@@ -62,8 +62,8 @@ final class EndpointSessionHandler implements WebSocketSessionHandler {
             UndertowSession session = new UndertowSession(channelSession, URI.create(exchange.getRequestURI()), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), this, null, instance, config.getEndpointConfiguration());
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());
             session.setMaxTextMessageBufferSize(getContainer().getDefaultMaxTextMessageBufferSize());
-            session.setTimeout(getContainer().getMaxSessionIdleTimeout());
-            session.getRemote().setAsyncSendTimeout(getContainer().getDefaultAsyncSendTimeout());
+            //session.setTimeout(getContainer().getMaxSessionIdleTimeout());
+            session.getAsyncRemote().setSendTimeout(getContainer().getDefaultAsyncSendTimeout());
             instance.getInstance().onOpen(session, config.getEndpointConfiguration());
         } catch (InstantiationException e) {
             JsrWebSocketLogger.REQUEST_LOGGER.endpointCreationFailed(e);

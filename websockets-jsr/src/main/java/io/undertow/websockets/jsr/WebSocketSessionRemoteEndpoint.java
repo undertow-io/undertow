@@ -15,22 +15,25 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.api.FragmentedBinaryFrameSender;
-import io.undertow.websockets.api.FragmentedTextFrameSender;
-import io.undertow.websockets.impl.WebSocketChannelSession;
-import io.undertow.websockets.jsr.util.ClassUtils;
+import java.io.ByteArrayOutputStream;
+import java.io.CharArrayWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Future;
 
 import javax.websocket.EncodeException;
 import javax.websocket.Encoder;
 import javax.websocket.EndpointConfiguration;
 import javax.websocket.RemoteEndpoint;
 import javax.websocket.SendHandler;
-import javax.websocket.SendResult;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.nio.ByteBuffer;
-import java.util.concurrent.Future;
+
+import io.undertow.websockets.api.FragmentedBinaryFrameSender;
+import io.undertow.websockets.api.FragmentedTextFrameSender;
+import io.undertow.websockets.api.SendCallback;
+import io.undertow.websockets.impl.WebSocketChannelSession;
+import io.undertow.websockets.jsr.util.ClassUtils;
 
 /**
  * {@link RemoteEndpoint} implementation which uses a WebSocketSession for all its operation.
@@ -39,189 +42,299 @@ import java.util.concurrent.Future;
  */
 final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
     private final WebSocketChannelSession session;
-    private volatile boolean batchingAllowed;
-    private FragmentedBinaryFrameSender binaryFrameSender;
-    private FragmentedTextFrameSender textFrameSender;
     private final EndpointConfiguration config;
+    private final Async async = new AsyncWebSocketSessionRemoteEndpoint();
+    private final Basic basic = new BasicWebSocketSessionRemoteEndpoint();
 
     public WebSocketSessionRemoteEndpoint(WebSocketChannelSession session, EndpointConfiguration config) {
         this.session = session;
         this.config = config;
     }
 
-    @Override
-    public void setBatchingAllowed(boolean batchingAllowed) {
-        this.batchingAllowed = batchingAllowed;
+    public Async getAsync() {
+        return async;
     }
 
-    @Override
-    public boolean getBatchingAllowed() {
-        return batchingAllowed;
+    public Basic getBasic() {
+        return basic;
     }
 
     @Override
     public void flushBatch() {
-       // Do nothing
+        // Do nothing
     }
 
     @Override
-    public long getAsyncSendTimeout() {
-        return session.getAsyncSendTimeout();
+    public void setBatchingAllowed(final boolean allowed) throws IOException {
+
     }
 
     @Override
-    public void setAsyncSendTimeout(long l) {
-        session.setAsyncSendTimeout((int) l);
+    public boolean getBatchingAllowed() {
+        return false;
     }
 
     @Override
-    public void sendString(String s) throws IOException {
-        session.sendText(s);
+    public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
+        session.sendPing(applicationData);
     }
 
     @Override
-    public void sendBytes(ByteBuffer byteBuffer) throws IOException {
-        session.sendBinary(byteBuffer);
+    public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
+        session.sendPong(applicationData);
     }
 
-    @Override
-    public void sendPartialString(String text, boolean last) throws IOException {
-        FragmentedTextFrameSender textFrameSender = this.textFrameSender;
-        if (textFrameSender == null) {
-            textFrameSender = this.textFrameSender = session.sendFragmentedText();
+    class AsyncWebSocketSessionRemoteEndpoint implements Async {
+
+        @Override
+        public long getSendTimeout() {
+            return session.getAsyncSendTimeout();
         }
-        if (last) {
-            textFrameSender.finalFragment();
-            this.textFrameSender = null;
+
+        @Override
+        public void setSendTimeout(final long timeoutmillis) {
+            session.setAsyncSendTimeout((int) timeoutmillis);
         }
-        textFrameSender.sendText(text);
-    }
 
-    @Override
-    public void sendPartialBytes(ByteBuffer byteBuffer, boolean last) throws IOException {
-        FragmentedBinaryFrameSender binaryFrameSender = this.binaryFrameSender;
-        if (binaryFrameSender == null) {
-            binaryFrameSender = this.binaryFrameSender = session.sendFragmentedBinary();
+        @Override
+        public void sendText(final String text, final SendHandler handler) {
+            session.sendText(text, new SendHandlerAdapter(handler));
         }
-        if (last) {
-            binaryFrameSender.finalFragment();
-            this.binaryFrameSender = null;
+
+        @Override
+        public Future<Void> sendText(final String text) {
+            final SendResultFuture future = new SendResultFuture();
+            session.sendText(text, future);
+            return future;
         }
-        binaryFrameSender.sendBinary(byteBuffer);
-    }
 
-    @Override
-    public OutputStream getSendStream() {
-        return new BinaryOutputStream(session.sendFragmentedBinary(), session.getBufferPool());
-    }
+        @Override
+        public Future<Void> sendBinary(final ByteBuffer data) {
+            final SendResultFuture future = new SendResultFuture();
+            session.sendBinary(data, future);
+            return future;
+        }
 
-    @Override
-    public Writer getSendWriter() {
-        return new TextWriter(session.sendFragmentedText(), session.getBufferPool());
-    }
+        @Override
+        public void sendBinary(final ByteBuffer data, final SendHandler completion) {
+            session.sendBinary(data, new SendHandlerAdapter(completion));
+        }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    @Override
-    public void sendObject(Object o) throws IOException, EncodeException {
-        for (Encoder encoder : config.getEncoders()) {
-            Class<?> type = ClassUtils.getEncoderType(encoder.getClass());
-            if (type.isInstance(o)) {
-                if (encoder instanceof Encoder.Binary) {
-                    sendBytes(((Encoder.Binary) encoder).encode(o));
-                    return;
+        @Override
+        public Future<Void> sendObject(final Object o) {
+            final SendResultFuture future = new SendResultFuture();
+            sendObjectImpl(o, future);
+            return future;
+        }
+
+        @Override
+        public void sendObject(final Object data, final SendHandler handler) {
+            sendObjectImpl(data, new SendHandlerAdapter(handler));
+        }
+
+        private void sendObjectImpl(final Object o, final SendCallback callback) {
+            try {
+                for (Encoder encoder : config.getEncoders()) {
+                    Class<?> type = ClassUtils.getEncoderType(encoder.getClass());
+                    if (type.isInstance(o)) {
+                        if (encoder instanceof Encoder.Binary) {
+                            session.sendBinary(((Encoder.Binary) encoder).encode(o), callback);
+                            return;
+                        }
+                        if (encoder instanceof Encoder.BinaryStream) {
+                            final ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                            ((Encoder.BinaryStream) encoder).encode(o, stream);
+                            session.sendBinary(ByteBuffer.wrap(stream.toByteArray()), callback);
+                            return;
+                        }
+                        if (encoder instanceof Encoder.Text) {
+                            session.sendText(((Encoder.Text) encoder).encode(o), callback);
+                            return;
+                        }
+                        if (encoder instanceof Encoder.TextStream) {
+                            final CharArrayWriter writer = new CharArrayWriter();
+                            ((Encoder.TextStream) encoder).encode(o, writer);
+                            session.sendText(new String(writer.toCharArray()), callback);
+                            return;
+                        }
+                    }
                 }
-                if (encoder instanceof Encoder.BinaryStream) {
-                    ((Encoder.BinaryStream) encoder).encode(o, getSendStream());
-                    return;
+                // TODO: Replace on bug is fixed
+                // https://issues.jboss.org/browse/LOGTOOL-64
+                throw new EncodeException(o, "No suitable encoder found");
+            } catch (IOException | EncodeException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public void setBatchingAllowed(final boolean allowed) throws IOException {
+
+        }
+
+        @Override
+        public boolean getBatchingAllowed() {
+            return false;
+        }
+
+        @Override
+        public void flushBatch() throws IOException {
+
+        }
+
+        @Override
+        public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
+            session.sendPing(applicationData);
+        }
+
+        @Override
+        public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
+            session.sendPong(applicationData);
+        }
+    }
+
+
+    class BasicWebSocketSessionRemoteEndpoint implements Basic {
+
+        private FragmentedBinaryFrameSender binaryFrameSender;
+        private FragmentedTextFrameSender textFrameSender;
+
+        public void assertNotInFragment() {
+            if (textFrameSender != null || binaryFrameSender != null) {
+                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
+            }
+        }
+
+        @Override
+        public void sendText(final String text) throws IOException {
+            assertNotInFragment();
+            session.sendText(text);
+        }
+
+        @Override
+        public void sendBinary(final ByteBuffer data) throws IOException {
+            assertNotInFragment();
+            session.sendBinary(data);
+        }
+
+        @Override
+        public void sendText(final String partialMessage, final boolean isLast) throws IOException {
+            if (binaryFrameSender != null) {
+                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
+            }
+            if (textFrameSender == null) {
+                textFrameSender = session.sendFragmentedText();
+            }
+            if (isLast) {
+                textFrameSender.finalFragment();
+            }
+            try {
+                textFrameSender.sendText(partialMessage);
+            } finally {
+                if (isLast) {
+                    textFrameSender = null;
                 }
-                if (encoder instanceof Encoder.Text) {
-                    sendString(((Encoder.Text) encoder).encode(o));
-                    return;
-                }
-                if (encoder instanceof Encoder.TextStream) {
-                    ((Encoder.TextStream) encoder).encode(o, getSendWriter());
-                    return;
+            }
+
+        }
+
+        @Override
+        public void sendBinary(final ByteBuffer partialByte, final boolean isLast) throws IOException {
+            if (textFrameSender != null) {
+                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
+            }
+            if (binaryFrameSender == null) {
+                binaryFrameSender = session.sendFragmentedBinary();
+            }
+            if (isLast) {
+                binaryFrameSender.finalFragment();
+            }
+            try {
+                binaryFrameSender.sendBinary(partialByte);
+            } finally {
+                if (isLast) {
+                    binaryFrameSender = null;
                 }
             }
         }
-        // TODO: Replace on bug is fixed
-        // https://issues.jboss.org/browse/LOGTOOL-64
-        throw new EncodeException(o, "No suitable encoder found");
-    }
 
-    @Override
-    public void sendStringByCompletion(String s, SendHandler sendHandler) {
-        session.sendText(s, new SendHandlerAdapter(sendHandler));
-    }
+        @Override
+        public OutputStream getSendStream() throws IOException {
+            assertNotInFragment();
+            //TODO: track fragment state
+            return new BinaryOutputStream(session.sendFragmentedBinary(), session.getBufferPool());
+        }
 
-    @Override
-    public Future<SendResult> sendStringByFuture(String text) {
-        SendResultFuture future = new SendResultFuture();
-        session.sendText(text, new SendHandlerAdapter(future));
-        return future;
-    }
+        @Override
+        public Writer getSendWriter() throws IOException {
+            assertNotInFragment();
+            return new TextWriter(session.sendFragmentedText(), session.getBufferPool());
+        }
 
-    @Override
-    public Future<SendResult> sendBytesByFuture(ByteBuffer byteBuffer) {
-        SendResultFuture future = new SendResultFuture();
-        session.sendBinary(byteBuffer, new SendHandlerAdapter(future));
-        return future;
-    }
+        @Override
+        public void sendObject(final Object data) throws IOException, EncodeException {
+            sendObjectImpl(data);
+        }
 
-    @Override
-    public void sendBytesByCompletion(ByteBuffer byteBuffer, SendHandler sendHandler) {
-        session.sendBinary(byteBuffer, new SendHandlerAdapter(sendHandler));
-    }
-
-    @Override
-    public Future<SendResult> sendObjectByFuture(Object o) {
-        SendResultFuture future = new SendResultFuture();
-        sendObjectByCompletion(o, future);
-        return future;
-    }
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    @Override
-    public void sendObjectByCompletion(Object o, SendHandler sendHandler) {
-        try {
-            for (Encoder encoder: config.getEncoders()) {
-                Class<?> type = ClassUtils.getEncoderType(encoder.getClass());
-                if (type.isInstance(o)) {
-                    if (encoder instanceof Encoder.Binary) {
-                        sendBytesByCompletion(((Encoder.Binary) encoder).encode(o), sendHandler);
-                        return;
-                    }
-                    if (encoder instanceof Encoder.BinaryStream) {
-                        ((Encoder.BinaryStream)encoder).encode(o, getSendStream());
-                        sendHandler.setResult(new SendResult());
-                        return;
-                    }
-                    if (encoder instanceof Encoder.Text) {
-                        sendStringByCompletion(((Encoder.Text) encoder).encode(o), sendHandler);
-                        return;
-                    }
-                    if (encoder instanceof Encoder.TextStream) {
-                        ((Encoder.TextStream)encoder).encode(o, getSendWriter());
-                        sendHandler.setResult(new SendResult());
-                        return;
+        private void sendObjectImpl(final Object o) throws IOException {
+            try {
+                for (Encoder encoder : config.getEncoders()) {
+                    Class<?> type = ClassUtils.getEncoderType(encoder.getClass());
+                    if (type.isInstance(o)) {
+                        if (encoder instanceof Encoder.Binary) {
+                            session.sendBinary(((Encoder.Binary) encoder).encode(o));
+                            return;
+                        }
+                        if (encoder instanceof Encoder.BinaryStream) {
+                            final ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                            ((Encoder.BinaryStream) encoder).encode(o, stream);
+                            session.sendBinary(ByteBuffer.wrap(stream.toByteArray()));
+                            return;
+                        }
+                        if (encoder instanceof Encoder.Text) {
+                            session.sendText(((Encoder.Text) encoder).encode(o));
+                            return;
+                        }
+                        if (encoder instanceof Encoder.TextStream) {
+                            final CharArrayWriter writer = new CharArrayWriter();
+                            ((Encoder.TextStream) encoder).encode(o, writer);
+                            session.sendText(new String(writer.toCharArray()));
+                            return;
+                        }
                     }
                 }
+                // TODO: Replace on bug is fixed
+                // https://issues.jboss.org/browse/LOGTOOL-64
+                throw new EncodeException(o, "No suitable encoder found");
+            } catch (EncodeException e) {
+                throw new RuntimeException(e);
             }
-            // TODO: Replace on bug is fixed
-            // https://issues.jboss.org/browse/LOGTOOL-64
-            throw new EncodeException(o, "No suitable encoder found");
-        } catch (Throwable e) {
-            sendHandler.setResult(new SendResult(e));
+        }
+
+        @Override
+        public void setBatchingAllowed(final boolean allowed) throws IOException {
+
+        }
+
+        @Override
+        public boolean getBatchingAllowed() {
+            return false;
+        }
+
+        @Override
+        public void flushBatch() throws IOException {
+
+        }
+
+        @Override
+        public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
+            session.sendPing(applicationData);
+        }
+
+        @Override
+        public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
+            session.sendPong(applicationData);
         }
     }
 
-    @Override
-    public void sendPing(ByteBuffer byteBuffer) throws IOException {
-        session.sendPing(byteBuffer);
-    }
-
-    @Override
-    public void sendPong(ByteBuffer byteBuffer) throws IOException {
-        session.sendPong(byteBuffer);
-    }
 }

@@ -75,6 +75,7 @@
         <version.org.jboss.logging.processor>1.1.0.Final</version.org.jboss.logging.processor>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Alpha1</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.1.Final</version.org.jboss.spec.javax.servlet.jsp>
+        <version.org.jboss.spec.javax.websockets>1.0.0.Alpha1</version.org.jboss.spec.javax.websockets>
         <version.org.jboss.web.jasper-jdt>7.0.3.Final</version.org.jboss.web.jasper-jdt>
 
         <!-- Surefire args -->
@@ -304,6 +305,12 @@
             </dependency>
 
             <dependency>
+                <groupId>org.jboss.spec.javax.websocket</groupId>
+                <artifactId>jboss-websocket-api_1.0_spec</artifactId>
+                <version>${version.org.jboss.spec.javax.websockets}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.jboss.web</groupId>
                 <artifactId>jasper-jdt</artifactId>
                 <version>${version.org.jboss.web.jasper-jdt}</version>
@@ -327,11 +334,6 @@
                 <version>${version.xnio}</version>
             </dependency>
 
-            <dependency>
-                <groupId>javax.websocket</groupId>
-                <artifactId>javax.websocket-api</artifactId>
-                <version>1.0-b12</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 

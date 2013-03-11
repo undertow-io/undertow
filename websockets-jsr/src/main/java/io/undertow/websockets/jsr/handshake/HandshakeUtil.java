@@ -18,9 +18,13 @@
 package io.undertow.websockets.jsr.handshake;
 
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.websocket.server.ServerEndpointConfiguration;
+import javax.websocket.server.ServerEndpointConfigurator;
 
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
@@ -34,6 +38,9 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 public final class HandshakeUtil {
     private static final String CONFIG_KEY = "ServerEndpointConfiguration";
 
+
+    private static final AttachmentKey<Map<String, String>> PATH_PARAMS = AttachmentKey.create(Map.class);
+
     private HandshakeUtil() {
     }
 
@@ -41,8 +48,12 @@ public final class HandshakeUtil {
      * Returns {@code true} if the Handshake should be used for the {@link io.undertow.websockets.spi.WebSocketHttpExchange}.
      */
     public static boolean matches(ServerEndpointConfiguration config, WebSocketHttpExchange exchange) {
-        return config.checkOrigin(exchange.getRequestHeader(Headers.ORIGIN_STRING))
-                && config.matchesURI(URI.create(exchange.getRequestURI()));
+        final Map<String, String> pathParams = new HashMap<>();
+        exchange.putAttachment(PATH_PARAMS, pathParams);
+        ServerEndpointConfigurator c = config.getServerEndpointConfigurator();
+        final URI requestUri = URI.create(exchange.getRequestURI());
+        return c.checkOrigin(exchange.getRequestHeader(Headers.ORIGIN_STRING))
+                && c.matchesURI(config.getPath(), requestUri, pathParams);
     }
 
     /**
@@ -51,7 +62,8 @@ public final class HandshakeUtil {
     public static void prepareUpgrade(final ServerEndpointConfiguration config, final WebSocketHttpExchange exchange) {
         ExchangeHandshakeRequest request = new ExchangeHandshakeRequest(exchange);
         ExchangeHandshakeResponse response = new ExchangeHandshakeResponse(exchange);
-        config.modifyHandshake(request, response);
+        ServerEndpointConfigurator c = config.getServerEndpointConfigurator();
+        c.modifyHandshake(config, request, response);
         response.update();
     }
 

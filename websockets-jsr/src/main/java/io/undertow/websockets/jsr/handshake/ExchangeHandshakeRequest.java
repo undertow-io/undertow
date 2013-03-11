@@ -66,9 +66,8 @@ public final class ExchangeHandshakeRequest implements HandshakeRequest {
     }
 
     @Override
-    public Object getSession() {
-        // TODO: What todo ?
-        return null;
+    public Object getHttpSession() {
+        return exchange.getSession();
     }
 
     @Override

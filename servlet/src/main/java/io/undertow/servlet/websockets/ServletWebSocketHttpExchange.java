@@ -37,6 +37,7 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.spi.UpgradeCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
@@ -58,6 +59,16 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
         this.response = response;
     }
 
+
+    @Override
+    public <T> void putAttachment(final AttachmentKey<T> key, final T value) {
+        HttpServletRequestImpl.getRequestImpl(request).getExchange().putAttachment(key, value);
+    }
+
+    @Override
+    public <T> T getAttachment(final AttachmentKey<T> key) {
+        return HttpServletRequestImpl.getRequestImpl(request).getExchange().getAttachment(key);
+    }
 
     @Override
     public String getRequestHeader(final String headerName) {

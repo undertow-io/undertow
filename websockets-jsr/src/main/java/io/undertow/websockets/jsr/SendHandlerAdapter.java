@@ -36,11 +36,11 @@ final class SendHandlerAdapter implements SendCallback {
 
     @Override
     public void onCompletion() {
-        handler.setResult(OK);
+        handler.onResult(new SendResult());
     }
 
     @Override
     public void onError(Throwable cause) {
-        handler.setResult(new SendResult(cause));
+        handler.onResult(new SendResult(cause));
     }
 }

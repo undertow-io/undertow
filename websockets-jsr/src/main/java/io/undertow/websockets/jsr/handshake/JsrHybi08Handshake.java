@@ -62,6 +62,6 @@ public final class JsrHybi08Handshake extends Hybi08Handshake {
 
     @Override
     protected String supportedSubprotols(String[] requestedSubprotocolArray) {
-        return config.getEndpointConfiguration().getNegotiatedSubprotocol(Arrays.asList(requestedSubprotocolArray));
+        return config.getEndpointConfiguration().getServerEndpointConfigurator().getNegotiatedSubprotocol(config.getEndpointConfiguration().getSubprotocols(), Arrays.asList(requestedSubprotocolArray));
     }
 }

@@ -13,6 +13,7 @@ import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -36,6 +37,16 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
         this.exchange = exchange;
     }
 
+
+    @Override
+    public <T> void putAttachment(final AttachmentKey<T> key, final T value) {
+        exchange.putAttachment(key, value);
+    }
+
+    @Override
+    public <T> T getAttachment(final AttachmentKey<T> key) {
+        return exchange.getAttachment(key);
+    }
 
     @Override
     public String getRequestHeader(final String headerName) {

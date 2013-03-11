@@ -49,7 +49,7 @@ final class UndertowSession implements Session {
     private final WebSocketSession session;
     private final WebSocketContainer container;
     private final Principal user;
-    private final RemoteEndpoint remote;
+    private final WebSocketSessionRemoteEndpoint remote;
     private final Map<String, Object> attrs = new ConcurrentHashMap<String, Object>();
     private final Map<String, List<String>> requestParameterMap;
     private final URI requestUri;
@@ -183,18 +183,13 @@ final class UndertowSession implements Session {
     }
 
     @Override
-    public long getTimeout() {
-        return session.getIdleTimeout();
+    public long getMaxIdleTimeout() {
+        return 0;
     }
 
     @Override
-    public void setTimeout(long timeout) {
-        session.setIdleTimeout((int) timeout);
-    }
+    public void setMaxIdleTimeout(final long milliseconds) {
 
-    @Override
-    public RemoteEndpoint getRemote() {
-        return remote;
     }
 
     @Override
@@ -264,6 +259,16 @@ final class UndertowSession implements Session {
     @Override
     public int getMaxTextMessageBufferSize() {
         return (int) session.getMaximumTextFrameSize();
+    }
+
+    @Override
+    public RemoteEndpoint.Async getAsyncRemote() {
+        return remote.getAsync();
+    }
+
+    @Override
+    public RemoteEndpoint.Basic getBasicRemote() {
+        return remote.getBasic();
     }
 
     @Override

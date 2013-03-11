@@ -22,8 +22,6 @@ import java.io.OutputStream;
 import java.io.Writer;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,12 +30,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfiguration;
-import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 import javax.websocket.Session;
-import javax.websocket.server.DefaultServerConfiguration;
+import javax.websocket.server.ServerEndpointConfigurationBuilder;
 
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
@@ -82,7 +79,7 @@ public class JsrWebSocketServer07Test {
                                 buf.put(message);
                                 buf.flip();
                                 try {
-                                    session.getRemote().sendBytes(buf);
+                                    session.getBasicRemote().sendBinary(buf);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
@@ -96,7 +93,7 @@ public class JsrWebSocketServer07Test {
             }
 
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -105,6 +102,7 @@ public class JsrWebSocketServer07Test {
         Assert.assertNull(cause.get());
         client.destroy();
     }
+
 
     @org.junit.Test
     public void testBinaryWithByteArray() throws Exception {
@@ -123,7 +121,7 @@ public class JsrWebSocketServer07Test {
                             @Override
                             public void onMessage(byte[] message) {
                                 try {
-                                    session.getRemote().sendBytes(ByteBuffer.wrap(message.clone()));
+                                    session.getBasicRemote().sendBinary(ByteBuffer.wrap(message.clone()));
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
@@ -135,7 +133,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -162,7 +160,7 @@ public class JsrWebSocketServer07Test {
                             @Override
                             public void onMessage(String message) {
                                 try {
-                                    session.getRemote().sendString(message);
+                                    session.getBasicRemote().sendText(message);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
@@ -174,7 +172,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -203,9 +201,9 @@ public class JsrWebSocketServer07Test {
                                 ByteBuffer buf = ByteBuffer.allocate(message.remaining());
                                 buf.put(message);
                                 buf.flip();
-                                session.getRemote().sendBytesByCompletion(buf, new SendHandler() {
+                                session.getAsyncRemote().sendBinary(buf, new SendHandler() {
                                     @Override
-                                    public void setResult(SendResult result) {
+                                    public void onResult(SendResult result) {
                                         sendResult.set(result);
                                         latch.countDown();
                                         if (result.getException() != null) {
@@ -219,7 +217,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -249,9 +247,9 @@ public class JsrWebSocketServer07Test {
                         session.addMessageHandler(new MessageHandler.Basic<String>() {
                             @Override
                             public void onMessage(String message) {
-                                session.getRemote().sendStringByCompletion(message, new SendHandler() {
+                                session.getAsyncRemote().sendText(message, new SendHandler() {
                                     @Override
-                                    public void setResult(SendResult result) {
+                                    public void onResult(SendResult result) {
                                         sendResult.set(result);
                                         latch.countDown();
                                         if (result.getException() != null) {
@@ -265,7 +263,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -282,7 +280,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testBinaryWithByteBufferByFuture() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Future<SendResult>> sendResult = new AtomicReference<Future<SendResult>>();
+        final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
@@ -298,7 +296,7 @@ public class JsrWebSocketServer07Test {
                                 ByteBuffer buf = ByteBuffer.allocate(message.remaining());
                                 buf.put(message);
                                 buf.flip();
-                                sendResult.set(session.getRemote().sendBytesByFuture(buf));
+                                sendResult.set(session.getAsyncRemote().sendBinary(buf));
                                 latch.countDown();
 
                             }
@@ -307,16 +305,14 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
         latch.await();
 
-        Future<SendResult> result = sendResult.get();
-        Assert.assertNotNull(result);
-        Assert.assertNull(result.get().getException());
+        Future<Void> result = sendResult.get();
 
         client.destroy();
     }
@@ -324,7 +320,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testTextByFuture() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Future<SendResult>> sendResult = new AtomicReference<Future<SendResult>>();
+        final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
@@ -337,7 +333,7 @@ public class JsrWebSocketServer07Test {
                         session.addMessageHandler(new MessageHandler.Basic<String>() {
                             @Override
                             public void onMessage(String message) {
-                                sendResult.set(session.getRemote().sendStringByFuture(message));
+                                sendResult.set(session.getAsyncRemote().sendText(message));
                                 latch.countDown();
                             }
                         });
@@ -346,16 +342,14 @@ public class JsrWebSocketServer07Test {
             }
         };
 
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
         latch.await();
 
-        Future<SendResult> result = sendResult.get();
-        Assert.assertNotNull(result);
-        Assert.assertNull(result.get().getException());
+        sendResult.get();
 
         client.destroy();
     }
@@ -377,7 +371,7 @@ public class JsrWebSocketServer07Test {
                             @Override
                             public void onMessage(byte[] message) {
                                 try {
-                                    OutputStream out = session.getRemote().getSendStream();
+                                    OutputStream out = session.getBasicRemote().getSendStream();
                                     out.write(message);
                                     out.flush();
                                     out.close();
@@ -392,7 +386,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -419,7 +413,7 @@ public class JsrWebSocketServer07Test {
                             @Override
                             public void onMessage(String message) {
                                 try {
-                                    Writer writer = session.getRemote().getSendWriter();
+                                    Writer writer = session.getBasicRemote().getSendWriter();
                                     writer.write(message);
                                     writer.flush();
                                     ;
@@ -435,7 +429,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -462,7 +456,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -500,7 +494,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -533,7 +527,7 @@ public class JsrWebSocketServer07Test {
                                 buf.put(message);
                                 buf.flip();
                                 try {
-                                    session.getRemote().sendBytes(buf);
+                                    session.getBasicRemote().sendBinary(buf);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
@@ -546,7 +540,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -574,7 +568,7 @@ public class JsrWebSocketServer07Test {
                             public void onMessage(String message, boolean last) {
                                 Assert.assertTrue(last);
                                 try {
-                                    session.getRemote().sendString(message);
+                                    session.getBasicRemote().sendText(message);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
@@ -586,7 +580,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory)));
+        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -607,25 +601,7 @@ public class JsrWebSocketServer07Test {
         }
     }
 
-
-    private static final class TestServerConfiguration extends DefaultServerConfiguration {
-        TestServerConfiguration() {
-            super(MyEndpoint.class, "/");
-        }
-
-        @Override
-        public String getNegotiatedSubprotocol(List<String> requestedSubprotocols) {
-            return null;
-        }
-
-        @Override
-        public List<Extension> getNegotiatedExtensions(List<Extension> requestedExtensions) {
-            return Collections.emptyList();
-        }
-
-        @Override
-        public boolean checkOrigin(String originHeaderValue) {
-            return true;
-        }
+    private static ConfiguredServerEndpoint getConfiguredServerEndpoint(final InstanceFactory<Endpoint> factory) {
+        return new ConfiguredServerEndpoint(ServerEndpointConfigurationBuilder.create(MyEndpoint.class, "/").build(), factory);
     }
 }

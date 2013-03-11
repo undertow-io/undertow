@@ -50,8 +50,8 @@
             <artifactId>undertow-servlet</artifactId>
         </dependency>
         <dependency>
-            <groupId>javax.websocket</groupId>
-            <artifactId>javax.websocket-api</artifactId>
+            <groupId>org.jboss.spec.javax.websocket</groupId>
+            <artifactId>jboss-websocket-api_1.0_spec</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jboss.logging</groupId>

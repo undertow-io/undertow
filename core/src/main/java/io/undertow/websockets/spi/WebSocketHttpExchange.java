@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
+import io.undertow.util.AttachmentKey;
 import org.xnio.IoFuture;
 import org.xnio.Pool;
 
@@ -27,6 +28,10 @@ import org.xnio.Pool;
  */
 public interface WebSocketHttpExchange extends Closeable {
 
+    <T> void putAttachment(final AttachmentKey<T> key, T value);
+
+    <T> T getAttachment(final AttachmentKey<T> key);
+
     /**
      * gets the first request header with the specified name
      *
@@ -36,7 +41,6 @@ public interface WebSocketHttpExchange extends Closeable {
     String getRequestHeader(final String headerName);
 
     /**
-     *
      * @return An unmodifiable map of request headers
      */
     Map<String, List<String>> getRequestHeaders();
@@ -50,7 +54,6 @@ public interface WebSocketHttpExchange extends Closeable {
     String getResponseHeader(final String headerName);
 
     /**
-     *
      * @return An unmodifiable map of response headers
      */
     Map<String, List<String>> getResponseHeaders();
@@ -92,7 +95,6 @@ public interface WebSocketHttpExchange extends Closeable {
 
     /**
      * Gets the body of the request.
-     *
      */
     IoFuture<byte[]> readRequestData();
 
@@ -120,19 +122,18 @@ public interface WebSocketHttpExchange extends Closeable {
     String getRequestURI();
 
     /**
-     *
      * @return The buffer pool
      */
     Pool<ByteBuffer> getBufferPool();
 
     /**
-     *
      * @return The query string
      */
     String getQueryString();
 
     /**
      * Gets the session, if any
+     *
      * @return The session object, or null
      */
     Object getSession();

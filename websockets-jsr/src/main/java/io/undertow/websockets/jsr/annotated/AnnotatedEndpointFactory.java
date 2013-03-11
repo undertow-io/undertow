@@ -12,13 +12,13 @@ import java.util.Set;
 import javax.websocket.DeploymentException;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfiguration;
+import javax.websocket.OnClose;
+import javax.websocket.OnError;
+import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
 import javax.websocket.PongMessage;
 import javax.websocket.Session;
-import javax.websocket.WebSocketClose;
-import javax.websocket.WebSocketError;
-import javax.websocket.WebSocketMessage;
-import javax.websocket.WebSocketOpen;
-import javax.websocket.server.WebSocketPathParam;
+import javax.websocket.server.PathParam;
 
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
@@ -33,20 +33,20 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
     private final InstanceFactory<Object> underlyingFactory;
     private final Class<?> endpontClass;
-    private final BoundMethod webSocketOpen;
-    private final BoundMethod webSocketClose;
-    private final BoundMethod webSocketError;
+    private final BoundMethod OnOpen;
+    private final BoundMethod OnClose;
+    private final BoundMethod OnError;
     private final BoundMethod textMessage;
     private final BoundMethod binaryByteArrayMessage;
     private final BoundMethod binaryByteBufferMessage;
     private final BoundMethod pongMessage;
 
-    private AnnotatedEndpointFactory(final Class<?> endpointClass, final InstanceFactory<Object> underlyingFactory, final EndpointConfiguration configuration, final BoundMethod webSocketOpen, final BoundMethod webSocketClose, final BoundMethod webSocketError, final BoundMethod textMessage, final BoundMethod binaryByteArrayMessage, final BoundMethod binaryByteBufferMessage, final BoundMethod pongMessage) {
+    private AnnotatedEndpointFactory(final Class<?> endpointClass, final InstanceFactory<Object> underlyingFactory, final EndpointConfiguration configuration, final BoundMethod OnOpen, final BoundMethod OnClose, final BoundMethod OnError, final BoundMethod textMessage, final BoundMethod binaryByteArrayMessage, final BoundMethod binaryByteBufferMessage, final BoundMethod pongMessage) {
         this.underlyingFactory = underlyingFactory;
         this.endpontClass = endpointClass;
-        this.webSocketOpen = webSocketOpen;
-        this.webSocketClose = webSocketClose;
-        this.webSocketError = webSocketError;
+        this.OnOpen = OnOpen;
+        this.OnClose = OnClose;
+        this.OnError = OnError;
 
         this.textMessage = textMessage;
         this.binaryByteArrayMessage = binaryByteArrayMessage;
@@ -57,9 +57,9 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
     public static AnnotatedEndpointFactory create(final Class<?> endpointClass, final InstanceFactory<Object> underlyingInstance, final EndpointConfiguration configuration) throws DeploymentException {
         final Set<Class<? extends Annotation>> found = new HashSet<>();
-        BoundMethod webSocketOpen = null;
-        BoundMethod webSocketClose = null;
-        BoundMethod webSocketError = null;
+        BoundMethod OnOpen = null;
+        BoundMethod OnClose = null;
+        BoundMethod OnError = null;
         BoundMethod textMessage = null;
         BoundMethod binaryByteBufferMessage = null;
         BoundMethod binaryByteArrayMessage = null;
@@ -67,36 +67,36 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
         Class<?> c = endpointClass;
         do {
             for (final Method method : c.getDeclaredMethods()) {
-                if (method.isAnnotationPresent(WebSocketOpen.class)) {
-                    if (found.contains(WebSocketOpen.class)) {
-                        throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(WebSocketOpen.class);
+                if (method.isAnnotationPresent(OnOpen.class)) {
+                    if (found.contains(OnOpen.class)) {
+                        throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnOpen.class);
                     }
-                    found.add(WebSocketOpen.class);
-                    webSocketOpen = new BoundMethod(method,
+                    found.add(OnOpen.class);
+                    OnOpen = new BoundMethod(method,
                             new BoundSingleParameter(method, Session.class, true),
                             new BoundSingleParameter(method, EndpointConfiguration.class, true),
                             new BoundPathParameters(pathParams(method)));
                 }
-                if (method.isAnnotationPresent(WebSocketClose.class)) {
-                    if (found.contains(WebSocketClose.class)) {
-                        throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(WebSocketClose.class);
+                if (method.isAnnotationPresent(OnClose.class)) {
+                    if (found.contains(OnClose.class)) {
+                        throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnClose.class);
                     }
-                    found.add(WebSocketClose.class);
-                    webSocketClose = new BoundMethod(method,
+                    found.add(OnClose.class);
+                    OnClose = new BoundMethod(method,
                             new BoundSingleParameter(method, Session.class, true),
                             new BoundPathParameters(pathParams(method)));
                 }
-                if (method.isAnnotationPresent(WebSocketError.class)) {
-                    if (found.contains(WebSocketError.class)) {
-                        throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(WebSocketError.class);
+                if (method.isAnnotationPresent(OnError.class)) {
+                    if (found.contains(OnError.class)) {
+                        throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnError.class);
                     }
-                    found.add(WebSocketError.class);
-                    webSocketError = new BoundMethod(method,
+                    found.add(OnError.class);
+                    OnError = new BoundMethod(method,
                             new BoundSingleParameter(method, Session.class, true),
                             new BoundSingleParameter(method, Throwable.class, false),
                             new BoundPathParameters(pathParams(method)));
                 }
-                if (method.isAnnotationPresent(WebSocketMessage.class)) {
+                if (method.isAnnotationPresent(OnMessage.class)) {
                     //TODO: maxMessageSize
                     boolean messageHandled = false;
                     //this is a bit more complex
@@ -104,7 +104,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                         final Class<?> param = method.getParameterTypes()[i];
                         if (param.equals(byte[].class)) {
                             if (binaryByteArrayMessage != null || binaryByteBufferMessage != null) {
-                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(WebSocketMessage.class);
+                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
                             binaryByteArrayMessage = new BoundMethod(method,
                                     new BoundSingleParameter(method, Session.class, true),
@@ -115,7 +115,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             break;
                         } else if (param.equals(ByteBuffer.class)) {
                             if (binaryByteArrayMessage != null || binaryByteBufferMessage != null) {
-                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(WebSocketMessage.class);
+                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
                             binaryByteBufferMessage = new BoundMethod(method,
                                     new BoundSingleParameter(method, Session.class, true),
@@ -127,7 +127,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
                         } else if (param.equals(String.class) && getPathParam(method, i) == null) {
                             if (textMessage != null) {
-                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(WebSocketMessage.class);
+                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
                             textMessage = new BoundMethod(method,
                                     new BoundSingleParameter(method, Session.class, true),
@@ -139,7 +139,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
                         } else if (param.equals(PongMessage.class)) {
                             if (pongMessage != null) {
-                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(WebSocketMessage.class);
+                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
                             pongMessage = new BoundMethod(method,
                                     new BoundSingleParameter(method, Session.class, true),
@@ -158,14 +158,14 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
             }
             c = c.getSuperclass();
         } while (c != Object.class && c != null);
-        return new AnnotatedEndpointFactory(endpointClass, underlyingInstance, configuration, webSocketOpen, webSocketClose, webSocketError, textMessage, binaryByteArrayMessage, binaryByteBufferMessage, pongMessage);
+        return new AnnotatedEndpointFactory(endpointClass, underlyingInstance, configuration, OnOpen, OnClose, OnError, textMessage, binaryByteArrayMessage, binaryByteBufferMessage, pongMessage);
     }
 
 
     private static Map<String, Integer> pathParams(final Method method) {
         Map<String, Integer> params = new HashMap<>();
         for (int i = 0; i < method.getParameterTypes().length; ++i) {
-            WebSocketPathParam param = getPathParam(method, i);
+            PathParam param = getPathParam(method, i);
             if (param != null) {
                 params.put(param.value(), i);
             }
@@ -173,10 +173,10 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
         return params;
     }
 
-    private static WebSocketPathParam getPathParam(final Method method, final int parameter) {
+    private static PathParam getPathParam(final Method method, final int parameter) {
         for (final Annotation annotation : method.getParameterAnnotations()[parameter]) {
-            if (annotation.annotationType().equals(WebSocketPathParam.class)) {
-                return (WebSocketPathParam) annotation;
+            if (annotation.annotationType().equals(PathParam.class)) {
+                return (PathParam) annotation;
             }
         }
         return null;
@@ -186,7 +186,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     @Override
     public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
         final InstanceHandle<Object> instance = underlyingFactory.createInstance();
-        final AnnotatedEndpoint endpoint = new AnnotatedEndpoint(instance, webSocketOpen, webSocketClose, webSocketError, textMessage, binaryByteArrayMessage, binaryByteBufferMessage, pongMessage);
+        final AnnotatedEndpoint endpoint = new AnnotatedEndpoint(instance, OnOpen, OnClose, OnError, textMessage, binaryByteArrayMessage, binaryByteBufferMessage, pongMessage);
         return new InstanceHandle<Endpoint>() {
             @Override
             public Endpoint getInstance() {

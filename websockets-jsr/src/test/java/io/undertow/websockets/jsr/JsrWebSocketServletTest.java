@@ -3,8 +3,6 @@ package io.undertow.websockets.jsr;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -12,10 +10,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.servlet.Servlet;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfiguration;
-import javax.websocket.Extension;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
-import javax.websocket.server.DefaultServerConfiguration;
+import javax.websocket.server.ServerEndpointConfigurationBuilder;
 
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -59,7 +56,7 @@ public class JsrWebSocketServletTest {
                             @Override
                             public void onMessage(byte[] message) {
                                 try {
-                                    OutputStream out = session.getRemote().getSendStream();
+                                    OutputStream out = session.getBasicRemote().getSendStream();
                                     out.write(message);
                                     out.flush();
                                     out.close();
@@ -75,7 +72,7 @@ public class JsrWebSocketServletTest {
             }
         };
 
-        final ServletWebSocketContainer webSocketContainer = new ServletWebSocketContainer(new ConfiguredServerEndpoint(new TestServerConfiguration(), factory));
+        final ServletWebSocketContainer webSocketContainer = new ServletWebSocketContainer(getConfiguredServerEndpoint(factory));
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
@@ -119,25 +116,8 @@ public class JsrWebSocketServletTest {
         client.destroy();
     }
 
-    private static final class TestServerConfiguration extends DefaultServerConfiguration {
-        TestServerConfiguration() {
-            super(MyEndpoint.class, "/");
-        }
-
-        @Override
-        public String getNegotiatedSubprotocol(List<String> requestedSubprotocols) {
-            return null;
-        }
-
-        @Override
-        public List<Extension> getNegotiatedExtensions(List<Extension> requestedExtensions) {
-            return Collections.emptyList();
-        }
-
-        @Override
-        public boolean checkOrigin(String originHeaderValue) {
-            return true;
-        }
+    private static ConfiguredServerEndpoint getConfiguredServerEndpoint(final InstanceFactory<Endpoint> factory) {
+        return new ConfiguredServerEndpoint(ServerEndpointConfigurationBuilder.create(MyEndpoint.class, "/").build(), factory);
     }
 
     private static final class MyEndpoint extends Endpoint {

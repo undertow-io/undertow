@@ -17,37 +17,48 @@
  */
 package io.undertow.websockets.jsr;
 
-import javax.websocket.SendHandler;
-import javax.websocket.SendResult;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+
+import io.undertow.websockets.api.SendCallback;
+
 /**
- * Default implementation of a {@link Future} that can be used to retrieve the {@link SendResult} for an async
- * operation. This implementation also implements {@link SendHandler} which is used to set the {@link SendResult} once
- * it is ready on this future.
+ * Default implementation of a {@link Future} that is used in the {@link javax.websocket.RemoteEndpoint.Async}
+ * implementation
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class SendResultFuture implements Future<SendResult>, SendHandler {
+final class SendResultFuture implements Future<Void>, SendCallback {
     private boolean done;
-    private SendResult result;
+    private Throwable exception;
     private int waiters;
 
+
     @Override
-    public synchronized void setResult(SendResult result) {
-        // Allow only once.
+    public synchronized void onCompletion() {
         if (done) {
             throw new IllegalStateException();
         }
 
-        done = true;
         if (waiters > 0) {
             notifyAll();
         }
-        this.result = result;
+        done = true;
+    }
+
+    @Override
+    public synchronized void onError(final Throwable cause) {
+        if (done) {
+            throw new IllegalStateException();
+        }
+        exception = cause;
+        if (waiters > 0) {
+            notifyAll();
+        }
+
     }
 
     /**
@@ -64,12 +75,12 @@ final class SendResultFuture implements Future<SendResult>, SendHandler {
     }
 
     @Override
-    public synchronized  boolean isDone() {
+    public synchronized boolean isDone() {
         return done;
     }
 
     @Override
-    public SendResult get() throws InterruptedException, ExecutionException {
+    public Void get() throws InterruptedException, ExecutionException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
@@ -84,11 +95,11 @@ final class SendResultFuture implements Future<SendResult>, SendHandler {
                 }
             }
         }
-        return result;
+        return handleResult();
     }
 
     @Override
-    public SendResult get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
@@ -98,7 +109,7 @@ final class SendResultFuture implements Future<SendResult>, SendHandler {
 
         synchronized (this) {
             if (done) {
-                return result;
+                return handleResult();
             }
             if (waitTime <= 0) {
                 throw new TimeoutException();
@@ -110,12 +121,12 @@ final class SendResultFuture implements Future<SendResult>, SendHandler {
                     wait(waitTime / 1000000, (int) (waitTime % 1000000));
 
                     if (done) {
-                        return result;
+                        return handleResult();
                     } else {
                         waitTime = timeoutNanos - (System.nanoTime() - startTime);
                         if (waitTime <= 0) {
                             if (done) {
-                                return result;
+                                return handleResult();
                             }
                             if (waitTime <= 0) {
                                 throw new TimeoutException();
@@ -128,4 +139,12 @@ final class SendResultFuture implements Future<SendResult>, SendHandler {
             }
         }
     }
+
+    private Void handleResult() throws ExecutionException {
+        if (exception != null) {
+            throw new ExecutionException(exception);
+        }
+        return null;
+    }
+
 }
