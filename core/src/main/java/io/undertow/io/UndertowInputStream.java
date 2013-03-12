@@ -10,7 +10,8 @@ import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- * Input stream that reads from the
+ * Input stream that reads from the underlying channel. This stream delays creation
+ * of the channel till it is actually used.
  *
  * @author Stuart Douglas
  */
