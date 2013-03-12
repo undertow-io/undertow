@@ -406,7 +406,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     void setInIoThread(final boolean inIoThread) {
-        if(inIoThread) {
+        if (inIoThread) {
             state |= FLAG_IN_IO_THREAD;
         } else {
             state &= ~FLAG_IN_IO_THREAD;
@@ -480,19 +480,26 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             putAttachment(DISPATCH_TASK, runnable);
         } else {
-            getConnection().getWorker().execute(runnable);
+            if (executor == null) {
+                getConnection().getWorker().execute(runnable);
+            } else {
+                executor.execute(runnable);
+            }
         }
     }
 
-
     public void dispatch(final HttpHandler handler) {
+        dispatch(null, handler);
+    }
+
+    public void dispatch(final Executor executor, final HttpHandler handler) {
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
                 HttpHandlers.executeRootHandler(handler, HttpServerExchange.this, false);
             }
         };
-        dispatch(null, runnable);
+        dispatch(executor, runnable);
     }
 
     boolean isInCall() {

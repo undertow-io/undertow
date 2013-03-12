@@ -53,9 +53,10 @@ import static org.xnio.Bits.anyAreSet;
  * <p/>
  * Once the write listener has been set operations must only be invoked on this stream from the write
  * listener callback. Attempting to invoke from a different thread will result in an IllegalStateException.
- *<p/>
+ * <p/>
  * Async listener tasks are queued in the {@link AsyncContextImpl}. At most one lister can be active at
  * one time, which simplifies the thread safety requirements.
+ *
  * @author Stuart Douglas
  */
 public class ServletOutputStreamImpl extends ServletOutputStream {
@@ -139,6 +140,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
+        if (len <1) {
+            return;
+        }
 
         if (listener == null) {
             if (len < 1) {
@@ -166,9 +170,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             if (anyAreClear(state, FLAG_READY)) {
                 throw UndertowServletMessages.MESSAGES.streamNotReady();
             }
-            if (len < 1) {
-                return;
-            }
             //even though we are in async mode we are still buffering
             try {
                 ByteBuffer buffer = buffer();
@@ -181,9 +182,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                     long toWrite = Buffers.remaining(bufs);
                     long res;
                     long written = 0;
-                    if (channel == null) {
-                        channel = servletResponse.getExchange().getResponseChannel();
-                    }
+                    createChannel();
                     state |= FLAG_WRITE_STARTED;
                     do {
                         res = channel.write(bufs);
@@ -200,7 +199,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                             } else {
                                 buffersToWrite = bufs;
                             }
-                            state = state & ~FLAG_READY;
+                            state &= ~FLAG_READY;
+                            resumeWrites();
                             return;
                         }
                     } while (written < toWrite);
@@ -239,6 +239,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             //writes will be resumed at the end of the callback
             return;
         }
+
         underlyingConnectionChannel.getWriteSetter().set(internalListener);
         underlyingConnectionChannel.resumeWrites();
     }
@@ -258,9 +259,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             return true;
         }
         state |= FLAG_WRITE_STARTED;
-        if (channel == null) {
-            channel = servletResponse.getExchange().getResponseChannel();
-        }
+        createChannel();
         long res;
         long written = 0;
         do {
@@ -316,9 +315,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             if (anyAreClear(state, FLAG_READY)) {
                 return;
             }
-            if (channel == null) {
-                channel = servletResponse.getExchange().getResponseChannel();
-            }
+            createChannel();
             if (buffer == null || buffer.position() == 0) {
                 //nothing to flush, we just flush the underlying stream
                 //it does not matter if this succeeds or not
@@ -411,9 +408,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                 servletResponse.setHeader(Headers.CONTENT_LENGTH, "" + buffer.position());
             }
         }
-        if (channel == null) {
-            channel = servletResponse.getExchange().getResponseChannel();
-        }
+        createChannel();
         if (buffer != null) {
             if (!flushBufferAsync()) {
                 resumeWrites();
@@ -424,6 +419,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         state |= FLAG_DELEGATE_SHUTDOWN;
         if (!channel.flush()) {
             resumeWrites();
+        }
+    }
+
+    private void createChannel() {
+        if (channel == null) {
+            channel = servletResponse.getExchange().getResponseChannel();
+            channel.getWriteSetter().set(internalListener);
         }
     }
 
@@ -494,7 +496,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         //under normal circumstances this will break write listener delegation
         this.internalListener = new WriteChannelListener();
         underlyingConnectionChannel.getWriteSetter().set(internalListener);
-        underlyingConnectionChannel.resumeWrites();
+        //we resume from an async task, after the request has been dispatched
+        internalListener.handleEvent(underlyingConnectionChannel);
     }
 
     private class WriteChannelListener implements ChannelListener<StreamSinkChannel> {
@@ -511,7 +514,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                         try {
                             //either it will work, and the channel is closed
                             //or it won't, and we continue with writes resumed
-                            if(!channel.flush()) {
+                            if (!channel.flush()) {
                                 theConnectionChannel.resumeWrites();
                             }
                             return;
@@ -542,13 +545,22 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                         try {
                             channel.shutdownWrites();
                             state |= FLAG_DELEGATE_SHUTDOWN;
-                            if(!channel.flush()) {
+                            if (!channel.flush()) {
                                 theConnectionChannel.resumeWrites();
                             }
                         } catch (IOException e) {
                             handleError(e);
                         }
                     } else {
+
+
+                        if (asyncContext.isDispatched()) {
+                            //this is no longer an async request
+                            //we just return for now
+                            //TODO: what do we do here? Revert back to blocking mode?
+                            return;
+                        }
+
                         state |= FLAG_READY;
                         try {
                             state |= FLAG_IN_CALLBACK;
@@ -564,6 +576,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                                 //if the stream is still ready then we do not resume writes
                                 //this is per spec, we only call the listener once for each time
                                 //isReady returns true
+                                state &= ~FLAG_IN_CALLBACK;
                                 theConnectionChannel.resumeWrites();
                             }
                         } catch (Throwable e) {

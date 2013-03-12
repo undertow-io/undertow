@@ -71,8 +71,15 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
         asyncContext = request.getAsyncContext();
         listener = readListener;
-        channel.getReadSetter().set(new UpgradeServletChannelListener());
-        channel.resumeReads();
+        channel.getReadSetter().set(new ServletInputStreamChannelListener());
+
+        //we resume from an async task, after the request has been dispatched
+        asyncContext.addAsyncTask(new Runnable() {
+            @Override
+            public void run() {
+                channel.resumeReads();
+            }
+        });
     }
 
     @Override
@@ -95,6 +102,9 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (anyAreSet(state, FLAG_FINISHED)) {
             return -1;
         }
+        if(len == 0) {
+            return 0;
+        }
         ByteBuffer buffer = ByteBuffer.wrap(b, off, len);
         if (listener == null) {
             int res = Channels.readBlocking(channel, buffer);
@@ -111,7 +121,6 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 state |= FLAG_FINISHED;
             } else if (res == 0) {
                 state &= ~FLAG_READY;
-                channel.resumeReads();
             }
             return res;
         }
@@ -123,17 +132,23 @@ public class ServletInputStreamImpl extends ServletInputStream {
         state |= FLAG_FINISHED | FLAG_CLOSED;
     }
 
-    private class UpgradeServletChannelListener implements ChannelListener<StreamSourceChannel> {
+    private class ServletInputStreamChannelListener implements ChannelListener<StreamSourceChannel> {
         @Override
         public void handleEvent(final StreamSourceChannel channel) {
-            if (anyAreSet(state, FLAG_FINISHED)) {
-                return;
-            }
-            state |= FLAG_READY;
             channel.suspendReads();
             asyncContext.addAsyncTask(new Runnable() {
                 @Override
                 public void run() {
+                    if (asyncContext.isDispatched()) {
+                        //this is no longer an async request
+                        //we just return
+                        //TODO: what do we do here? Revert back to blocking mode?
+                        return;
+                    }
+                    if (anyAreSet(state, FLAG_FINISHED)) {
+                        return;
+                    }
+                    state |= FLAG_READY;
                     try {
                         CompositeThreadSetupAction action = request.getServletContext().getDeployment().getThreadSetupAction();
                         ThreadSetupAction.Handle handle = action.setup(request.getExchange());

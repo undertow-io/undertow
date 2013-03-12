@@ -34,6 +34,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
+import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
@@ -45,6 +46,7 @@ import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.WorkerDispatcher;
 import org.xnio.XnioExecutor;
 
@@ -67,19 +69,24 @@ public class AsyncContextImpl implements AsyncContext {
 
     private volatile XnioExecutor.Key timeoutKey;
 
-    private Runnable dispatchAction;
     private boolean dispatched;
     private boolean initialRequestDone;
     private Thread initiatingThread;
 
     private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<>();
-    private boolean processingAsyncTask;
+    private boolean processingAsyncTask = false;
 
     public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse) {
         this.exchange = exchange;
         this.servletRequest = servletRequest;
         this.servletResponse = servletResponse;
         initiatingThread = Thread.currentThread();
+        exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
+            @Override
+            public void run() {
+                initialRequestDone();
+            }
+        });
     }
 
     public void updateTimeout() {
@@ -139,22 +146,11 @@ public class AsyncContextImpl implements AsyncContext {
         if (executor == null) {
             executor = exchange.getConnection().getWorker();
         }
-
         final Executor e = executor;
         doDispatch(new Runnable() {
             @Override
             public void run() {
-                e.execute(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        try {
-                            handler.handleRequest(requestImpl.getExchange());
-                        } catch (Exception e) {
-                            //ignore
-                        }
-                    }
-                });
+                HttpHandlers.executeRootHandler(handler, exchange, false);
             }
         });
     }
@@ -236,7 +232,7 @@ public class AsyncContextImpl implements AsyncContext {
             }
             dispatched = true;
             HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
-            request.asyncInitialRequestDone();
+            initialRequestDone();
             request.asyncRequestDispatched();
         } else {
             doDispatch(new Runnable() {
@@ -256,13 +252,7 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public void start(final Runnable run) {
-        Executor executor = exchange.getAttachment(ASYNC_EXECUTOR);
-        if (executor == null) {
-            executor = exchange.getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
-        }
-        if (executor == null) {
-            executor = exchange.getConnection().getWorker();
-        }
+        Executor executor = asyncExecutor();
         final CompositeThreadSetupAction setup = HttpServletRequestImpl.getRequestImpl(servletRequest).getServletContext().getDeployment().getThreadSetupAction();
         executor.execute(new Runnable() {
             @Override
@@ -278,6 +268,17 @@ public class AsyncContextImpl implements AsyncContext {
 
     }
 
+    private Executor asyncExecutor() {
+        Executor executor = exchange.getAttachment(ASYNC_EXECUTOR);
+        if (executor == null) {
+            executor = exchange.getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
+        }
+        if (executor == null) {
+            executor = exchange.getConnection().getWorker();
+        }
+        return executor;
+    }
+
 
     @Override
     public void addListener(final AsyncListener listener) {
@@ -287,6 +288,10 @@ public class AsyncContextImpl implements AsyncContext {
     @Override
     public void addListener(final AsyncListener listener, final ServletRequest servletRequest, final ServletResponse servletResponse) {
         HttpServletRequestImpl.getRequestImpl(servletRequest).addAsyncListener(listener, servletRequest, servletResponse);
+    }
+
+    public boolean isDispatched() {
+        return dispatched;
     }
 
     @Override
@@ -318,11 +323,8 @@ public class AsyncContextImpl implements AsyncContext {
      */
     public synchronized void initialRequestDone() {
         initialRequestDone = true;
-        if (dispatchAction != null) {
-            dispatchAction.run();
-        } else {
+        if (!processingAsyncTask) {
             processAsyncTask();
-            updateTimeout();
         }
         initiatingThread = null;
     }
@@ -335,11 +337,7 @@ public class AsyncContextImpl implements AsyncContext {
         dispatched = true;
         HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
         request.asyncRequestDispatched();
-        if (initialRequestDone) {
-            runnable.run();
-        } else {
-            this.dispatchAction = runnable;
-        }
+        addAsyncTask(runnable);
         if (timeoutKey != null) {
             timeoutKey.remove();
         }
@@ -361,13 +359,14 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     private synchronized void processAsyncTask() {
-        if(!initialRequestDone) {
+        if (!initialRequestDone) {
             return;
         }
+        updateTimeout();
         final Runnable task = asyncTaskQueue.poll();
         if (task != null) {
-            processingAsyncTask  = true;
-            exchange.dispatch(new TaskDispatchRunnable(task));
+            processingAsyncTask = true;
+            asyncExecutor().execute(new TaskDispatchRunnable(task));
         } else {
             processingAsyncTask = false;
         }
@@ -377,8 +376,8 @@ public class AsyncContextImpl implements AsyncContext {
      * Adds a task to be run to the async context. These tasks are run one at a time,
      * after the initial request is finished. If the request is dispatched before the initial
      * request is complete then these tasks will not be run
-     *
-     *
+     * <p/>
+     * <p/>
      * This method is intended to be used to queue read and write tasks for async streams,
      * to make sure that multiple threads do not end up working on the same exchange at once
      *
@@ -386,7 +385,7 @@ public class AsyncContextImpl implements AsyncContext {
      */
     public synchronized void addAsyncTask(final Runnable runnable) {
         asyncTaskQueue.add(runnable);
-        if(!processingAsyncTask) {
+        if (!processingAsyncTask) {
             processAsyncTask();
         }
     }

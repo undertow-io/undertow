@@ -97,8 +97,8 @@ public class ServletInputStreamTestCase {
     }
 
     @Test
-    @Ignore("This test hangs occasionally")
     public void testAsyncServletInputStream() {
+        //for(int h = 0; h < 20 ; ++h) {
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
         for (int i = 0; i < 10; ++i) {
             try {
@@ -111,6 +111,7 @@ public class ServletInputStreamTestCase {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
         }
+        //}
     }
 
     public void runTest(final String message, String url) throws IOException {

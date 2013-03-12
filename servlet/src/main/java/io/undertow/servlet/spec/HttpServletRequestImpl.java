@@ -887,13 +887,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         this.servletContext = servletContext;
     }
 
-    /**
-     * called when the outstanding async request is dispatched
-     */
-    public void asyncInitialRequestDone() {
-        asyncContext.initialRequestDone();
-    }
-
     void asyncRequestDispatched() {
         asyncContext = null;
     }
