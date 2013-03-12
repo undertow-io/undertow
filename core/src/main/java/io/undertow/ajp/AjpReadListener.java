@@ -15,7 +15,6 @@ import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.util.WorkerDispatcher;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -176,10 +175,8 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
             final StreamSourceChannel channel = this.requestChannel;
             final AjpReadListener listener = new AjpReadListener(responseChannel, channel, exchange.getConnection());
-            if (channel.isReadResumed()) {
-                channel.suspendReads();
-            }
-            WorkerDispatcher.dispatchNextRequest(channel, new DoNextRequestRead(listener, channel));
+            channel.getReadSetter().set(listener);
+            channel.resumeReads();
             responseChannel = null;
             this.requestChannel = null;
             nextListener.proceed();

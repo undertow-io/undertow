@@ -48,7 +48,6 @@ import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.SameThreadExecutor;
-import io.undertow.util.WorkerDispatcher;
 import org.xnio.XnioExecutor;
 
 /**
@@ -85,6 +84,7 @@ public class AsyncContextImpl implements AsyncContext {
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
             public void run() {
+                exchange.setDispatchExecutor(null);
                 initialRequestDone();
             }
         });
@@ -140,14 +140,6 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     private void dispatchAsyncRequest(final ServletDispatcher servletDispatcher, final ServletPathMatch pathInfo, final HttpServerExchange exchange) {
-        Executor executor = exchange.getAttachment(ASYNC_EXECUTOR);
-        if (executor == null) {
-            executor = exchange.getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
-        }
-        if (executor == null) {
-            executor = exchange.getConnection().getWorker();
-        }
-        final Executor e = executor;
         doDispatch(new Runnable() {
             @Override
             public void run() {
@@ -275,7 +267,7 @@ public class AsyncContextImpl implements AsyncContext {
     private Executor asyncExecutor() {
         Executor executor = exchange.getAttachment(ASYNC_EXECUTOR);
         if (executor == null) {
-            executor = exchange.getAttachment(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY);
+            executor = exchange.getDispatchExecutor();
         }
         if (executor == null) {
             executor = exchange.getConnection().getWorker();

@@ -47,6 +47,7 @@ import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.security.impl.RoleMappingManagerImpl;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.AttachmentHandler;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DefaultServletConfig;
@@ -87,7 +88,6 @@ import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.util.MimeMappings;
-import io.undertow.util.WorkerDispatcher;
 
 import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
 import static javax.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
@@ -557,7 +557,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             if (deployment.getDeploymentInfo().getExecutorFactory() != null) {
                 try {
                     executor = deployment.getDeploymentInfo().getExecutorFactory().createInstance();
-                    root = new AttachmentHandler<Executor>(WorkerDispatcher.EXECUTOR_ATTACHMENT_KEY, root, executor.getInstance());
+                    root = new AttachmentHandler<>(HttpServerExchange.DISPATCH_EXECUTOR, root, executor.getInstance());
                 } catch (InstantiationException e) {
                     throw new RuntimeException(e);
                 }
@@ -566,7 +566,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 if (deployment.getDeploymentInfo().getAsyncExecutorFactory() != null) {
                     try {
                         asyncExecutor = deployment.getDeploymentInfo().getAsyncExecutorFactory().createInstance();
-                        root = new AttachmentHandler<Executor>(AsyncContextImpl.ASYNC_EXECUTOR, root, asyncExecutor.getInstance());
+                        root = new AttachmentHandler<>(AsyncContextImpl.ASYNC_EXECUTOR, root, asyncExecutor.getInstance());
                     } catch (InstantiationException e) {
                         throw new RuntimeException(e);
                     }

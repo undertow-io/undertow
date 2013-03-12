@@ -80,7 +80,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     // immutable state
 
     /**
-     * The executor that is to be used to dispatch the {@link #DISPATCH_TASK}
+     * The executor that is to be used to dispatch the {@link #DISPATCH_TASK}. Note that this is not cleared
+     * between dispatches, so once a request has been dispatched once then all subsequent dispatches will use
+     * the same executor.
      */
     public static final AttachmentKey<Executor> DISPATCH_EXECUTOR = AttachmentKey.create(Executor.class);
 
@@ -500,6 +502,28 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         };
         dispatch(executor, runnable);
+    }
+
+    /**
+     * Sets the executor that is used for dispatch operations where no executor is specified.
+     *
+     * @param executor The executor to use
+     */
+    public void setDispatchExecutor(final Executor executor) {
+        if(executor == null) {
+            removeAttachment(DISPATCH_EXECUTOR);
+        } else {
+            putAttachment(DISPATCH_EXECUTOR, executor);
+        }
+    }
+
+    /**
+     * Gets the current executor that is used for dispatch operations. This may be null
+     *
+     * @return The current dispatch executor
+     */
+    public Executor getDispatchExecutor() {
+        return getAttachment(DISPATCH_EXECUTOR);
     }
 
     boolean isInCall() {

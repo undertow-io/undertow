@@ -20,10 +20,10 @@ package io.undertow.server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.util.WorkerDispatcher;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -180,15 +180,24 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
             if (exchange.isPersistent() && !exchange.isUpgrade()) {
                 final StreamSourceChannel channel = this.requestChannel;
                 final HttpReadListener listener = new HttpReadListener(responseChannel, channel, exchange.getConnection());
-                if(exchange.getConnection().getExtraBytes() == null) {
+                if (exchange.getConnection().getExtraBytes() == null) {
                     //if we are not pipelining we just register a listener
                     channel.getReadSetter().set(listener);
                     channel.resumeReads();
                 } else {
-                    if (channel.isReadResumed()) {
-                        channel.suspendReads();
+                    if (exchange.isInIoThread()) {
+                        channel.getReadSetter().set(listener);
+                        channel.wakeupReads();
+                    } else {
+                        if(channel.isReadResumed()) {
+                            channel.suspendReads();
+                        }
+                        Executor executor = exchange.getDispatchExecutor();
+                        if(executor == null) {
+                            executor = exchange.getConnection().getWorker();
+                        }
+                        executor.execute(new DoNextRequestRead(listener, channel));
                     }
-                    WorkerDispatcher.dispatchNextRequest(channel, new DoNextRequestRead(listener, channel));
                 }
                 responseChannel = null;
                 this.requestChannel = null;
