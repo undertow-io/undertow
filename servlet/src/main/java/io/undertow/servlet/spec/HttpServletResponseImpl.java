@@ -476,7 +476,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         }
         if (servletOutputStream != null) {
             try {
-                servletOutputStream.closeAsync();
+                servletOutputStream.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
