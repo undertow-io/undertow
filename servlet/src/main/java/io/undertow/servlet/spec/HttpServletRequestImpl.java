@@ -107,7 +107,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     private final List<BoundAsyncListener> asyncListeners = new CopyOnWriteArrayList<BoundAsyncListener>();
 
-    private final HashMap<String, Object> attributes = new HashMap<String, Object>();
+    private Map<String, Object> attributes = null;
 
     private ServletInputStream servletInputStream;
     private BufferedReader reader;
@@ -455,12 +455,18 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Object getAttribute(final String name) {
+        if(attributes == null) {
+            return null;
+        }
         return attributes.get(name);
     }
 
     @Override
     public Enumeration<String> getAttributeNames() {
-        return new IteratorEnumeration<String>(attributes.keySet().iterator());
+        if(attributes == null) {
+            return Collections.emptyEnumeration();
+        }
+        return new IteratorEnumeration<>(attributes.keySet().iterator());
     }
 
     @Override
@@ -728,6 +734,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void setAttribute(final String name, final Object object) {
+        if(attributes == null) {
+            attributes = new HashMap<>();
+        }
         Object existing = attributes.put(name, object);
         if (existing != null) {
             servletContext.getDeployment().getApplicationListeners().servletRequestAttributeReplaced(this, name, existing);
@@ -738,6 +747,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void removeAttribute(final String name) {
+        if(attributes == null) {
+            return;
+        }
         Object exiting = attributes.remove(name);
         servletContext.getDeployment().getApplicationListeners().servletRequestAttributeRemoved(this, name, exiting);
     }
