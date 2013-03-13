@@ -49,7 +49,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     protected void storeInitialLocation(final HttpServerExchange exchange) {
         HttpServletRequest req = (HttpServletRequest) exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
         HttpServletResponse resp = (HttpServletResponse) exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
-        final Cookie cookie = new Cookie(LOCATION_COOKIE, req.getContextPath() + req.getServletPath() + req.getPathInfo());
+        final Cookie cookie = new Cookie(LOCATION_COOKIE, req.getContextPath() + req.getServletPath() + (req.getPathInfo() == null ? "" : req.getPathInfo()));
         cookie.setPath(req.getServletContext().getContextPath());
         resp.addCookie(cookie);
     }
