@@ -31,6 +31,19 @@ public class SecurityPathMatches {
         this.extensionRoleInformation = extensionRoleInformation;
     }
 
+    /**
+     *
+     * @return <code>true</code> If no security path information has been defined
+     */
+    public boolean isEmpty() {
+        return defaultPathSecurityInformation.excludedMethodRoles.isEmpty() &&
+                defaultPathSecurityInformation.perMethodRequiredRoles.isEmpty() &&
+                defaultPathSecurityInformation.defaultRequiredRoles.isEmpty() &&
+                exactPathRoleInformation.isEmpty() &&
+                prefixPathRoleInformation.isEmpty() &&
+                extensionRoleInformation.isEmpty();
+    }
+
     public SecurityPathMatch getSecurityInfo(final String path, final String method) {
         final List<Set<String>> roleSet = new ArrayList<Set<String>>();
         TransportGuaranteeType type = TransportGuaranteeType.NONE;

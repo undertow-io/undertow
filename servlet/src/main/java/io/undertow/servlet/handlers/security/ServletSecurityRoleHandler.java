@@ -38,7 +38,7 @@ public class ServletSecurityRoleHandler implements HttpHandler {
         HttpServletRequest request = HttpServletRequestImpl.getRequestImpl(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
         if (request.getDispatcherType() != DispatcherType.REQUEST) {
             next.handleRequest(exchange);
-        } else if (roles.isEmpty()) {
+        } else if (roles == null || roles.isEmpty()) {
             next.handleRequest(exchange);
         } else {
             for (final Set<String> roleSet : roles) {
