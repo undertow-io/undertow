@@ -185,13 +185,12 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
                     channel.getReadSetter().set(listener);
                     channel.resumeReads();
                 } else {
+                    if(channel.isReadResumed()) {
+                        channel.suspendReads();
+                    }
                     if (exchange.isInIoThread()) {
-                        channel.getReadSetter().set(listener);
-                        channel.wakeupReads();
+                        channel.getIoThread().execute(new DoNextRequestRead(listener, channel));
                     } else {
-                        if(channel.isReadResumed()) {
-                            channel.suspendReads();
-                        }
                         Executor executor = exchange.getDispatchExecutor();
                         if(executor == null) {
                             executor = exchange.getConnection().getWorker();
