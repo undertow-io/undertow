@@ -54,9 +54,9 @@ public class SecurityContextImpl implements SecurityContext {
     private boolean authenticationRequired;
     private AuthenticationState authenticationState = AuthenticationState.NOT_ATTEMPTED;
     private final HttpServerExchange exchange;
-    private final List<AuthenticationMechanism> authMechanisms = new ArrayList<AuthenticationMechanism>();
+    private final List<AuthenticationMechanism> authMechanisms = new ArrayList<>();
     private final IdentityManager identityManager;
-    private final Set<NotificationHandler> notificationHandler = new HashSet<NotificationHandler>();
+    private final List<NotificationHandler> notificationHandler = new ArrayList<>();
 
     // Maybe this will need to be a custom mechanism that doesn't exchange tokens with the client but will then
     // be configured to either associate with the connection, the session or some other arbitrary whatever.
