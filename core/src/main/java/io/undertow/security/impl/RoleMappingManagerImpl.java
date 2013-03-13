@@ -32,7 +32,6 @@ import io.undertow.security.idm.Account;
  */
 public class RoleMappingManagerImpl implements RoleMappingManager {
 
-
     private final Map<String, Set<String>> principleVsRoleMappings;
     private final Map<String, Set<String>> roleVsPrincipleMappings;
 
@@ -69,10 +68,8 @@ public class RoleMappingManagerImpl implements RoleMappingManager {
                         return true;
                     }
                 }
-            } else {
-                return account.isUserInGroup(role);
             }
+            return account.isUserInGroup(role);
         }
-        return false;
     }
 }
