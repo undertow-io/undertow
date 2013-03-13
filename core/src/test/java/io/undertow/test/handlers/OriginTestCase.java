@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import io.undertow.server.handlers.OriginHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.server.handlers.blocking.BlockingHandler;
+import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;

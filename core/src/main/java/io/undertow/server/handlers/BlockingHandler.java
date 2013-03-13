@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package io.undertow.server.handlers.blocking;
+package io.undertow.server.handlers;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
 /**
- * A {@link HttpHandler} that initiates a blocking request.
+ * A {@link HttpHandler} that initiates a blocking request. If the thread is currently running
+ * in the io thread it will be dispatched.
  *
  * @author Stuart Douglas
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>

@@ -23,10 +23,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import io.undertow.io.UndertowOutputStream;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpContinueHandler;
-import io.undertow.server.handlers.blocking.BlockingHandler;
+import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
@@ -40,7 +39,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.streams.ChannelInputStream;
 
 /**
  * @author Stuart Douglas

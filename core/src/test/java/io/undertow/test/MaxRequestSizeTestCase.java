@@ -24,7 +24,7 @@ import java.io.OutputStream;
 
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.blocking.BlockingHandler;
+import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
@@ -39,8 +39,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
-import org.xnio.streams.ChannelInputStream;
-import org.xnio.streams.ChannelOutputStream;
 
 /**
  * @author Stuart Douglas
