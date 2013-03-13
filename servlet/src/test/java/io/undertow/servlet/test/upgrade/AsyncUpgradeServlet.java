@@ -98,6 +98,13 @@ public class AsyncUpgradeServlet extends HttpServlet {
 
         @Override
         public synchronized void onWritePossible() throws IOException {
+            if(builder.toString().equals("exit\r\n\r\n")) {
+                try {
+                    connection.close();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
             if (reading) {
                 return;
             }
