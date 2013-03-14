@@ -29,6 +29,7 @@ import org.jboss.logging.annotations.MessageLogger;
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.file.Path;
 
 /**
  * log messages start at 5000
@@ -48,7 +49,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = Logger.Level.INFO)
     @Message(id = 5002, value = "Exception reading file %s: %s")
-    void exceptionReadingFile(final File file, final IOException e);
+    void exceptionReadingFile(final Path file, final IOException e);
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5003, value = "IOException reading from channel")

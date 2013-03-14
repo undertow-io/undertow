@@ -98,7 +98,7 @@ public class FileErrorPageHandler implements HttpHandler {
                         return;
                     }
                 } catch (IOException e) {
-                    UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file, e);
+                    UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file.toPath(), e);
                     exchange.endExchange();
                     return;
                 }

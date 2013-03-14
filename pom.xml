@@ -65,7 +65,7 @@
             For example: <version.org.jboss.as.console>
          -->
         <version.org.jboss.classfilewriter>1.0.4.Final</version.org.jboss.classfilewriter>
-        <version.junit>4.8.2</version.junit>
+        <version.junit>4.11</version.junit>
         <version.easymock>3.1</version.easymock>
         <version.netty>3.6.2.Final</version.netty>
         <version.xnio>3.1.0.Beta9</version.xnio>

@@ -18,14 +18,19 @@
 
 package io.undertow.server.handlers.resource;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
+import java.nio.file.DirectoryIteratorException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
@@ -46,16 +51,19 @@ import org.xnio.channels.StreamSinkChannel;
 public class FileResource implements Resource {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.resources.file");
+    private final Path file;
 
-    private final File file;
-
-    public FileResource(final File file) {
+    public FileResource(final Path file) {
         this.file = file;
     }
 
     @Override
     public Date getLastModified() {
-        return new Date(file.lastModified());
+        try {
+            return new Date(Files.getLastModifiedTime(file).toMillis());
+        } catch (IOException e) {
+            return new Date(0);
+        }
     }
 
     @Override
@@ -65,27 +73,31 @@ public class FileResource implements Resource {
 
     @Override
     public String getName() {
-        return file.getName();
+        return file.getFileName().toString();
     }
 
     @Override
     public boolean isDirectory() {
-        return file.isDirectory();
+        return Files.isDirectory(file);
     }
 
     @Override
     public List<Resource> list() {
-        final List<Resource> resources = new ArrayList<Resource>();
-        for (String f : file.list()) {
-            final File child = new File(file, f);
-            resources.add(new FileResource(child));
+        final List<Resource> resources = new ArrayList<>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(file)) {
+            for (Path child : stream) {
+                resources.add(new FileResource(child));
+            }
+        } catch (IOException | DirectoryIteratorException x) {
+            // IOException can never be thrown by the iteration.
+            UndertowLogger.ROOT_LOGGER.warn("could not list directory", x);
         }
         return resources;
     }
 
     @Override
     public String getContentType(final MimeMappings mimeMappings) {
-        final String fileName = file.getName();
+        final String fileName = file.getFileName().toString();
         int index = fileName.lastIndexOf('.');
         if (index != -1 && index != fileName.length() - 1) {
             return mimeMappings.getMimeType(fileName.substring(index + 1));
@@ -99,7 +111,7 @@ public class FileResource implements Resource {
         final FileChannel fileChannel;
         try {
             try {
-                fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
+                fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file.toFile(), FileAccess.READ_ONLY);
             } catch (FileNotFoundException e) {
                 exchange.setResponseCode(404);
                 exchange.endExchange();
@@ -122,7 +134,7 @@ public class FileResource implements Resource {
 
         try {
             log.tracef("Serving file %s (blocking)", fileChannel);
-            Channels.transferBlocking(response, fileChannel, 0, file.length());
+            Channels.transferBlocking(response, fileChannel, 0, Files.size(file));
             log.tracef("Finished serving %s, shutting down (blocking)", fileChannel);
             response.shutdownWrites();
             log.tracef("Finished serving %s, flushing (blocking)", fileChannel);
@@ -140,6 +152,34 @@ public class FileResource implements Resource {
 
     @Override
     public Long getContentLength() {
-        return file.length();
+        try {
+            return Files.size(file);
+        } catch (IOException e) {
+            return 0L;
+        }
+    }
+
+    @Override
+    public Resource getIndexResource(final List<String> possible) {
+        try (DirectoryStream<Path> stream =
+                     Files.newDirectoryStream(file, new DirectoryStream.Filter<Path>() {
+                         @Override
+                         public boolean accept(Path entry) throws IOException {
+                             return possible.contains(entry.getFileName().toString());
+                         }
+                     })) {
+            Map<String, Path> found = new HashMap<>();
+            for (Path entry : stream) {
+                found.put(entry.getFileName().toString(), entry);
+            }
+            for (String possibility : possible) {//this extra loop is for ensuring order!
+                if (found.containsKey(possibility)) {
+                    return new FileResource(found.get(possibility));
+                }
+            }
+        } catch (IOException e) {
+            e.getStackTrace();
+        }
+        return null;
     }
 }

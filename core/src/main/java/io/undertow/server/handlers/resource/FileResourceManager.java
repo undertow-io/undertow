@@ -18,7 +18,8 @@
 
 package io.undertow.server.handlers.resource;
 
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import io.undertow.UndertowMessages;
 
@@ -27,20 +28,20 @@ import io.undertow.UndertowMessages;
  */
 public class FileResourceManager implements ResourceManager {
 
-    private volatile File base;
+    private volatile Path base;
 
-    public FileResourceManager(final File base) {
+    public FileResourceManager(final Path base) {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         this.base = base;
     }
 
-    public File getBase() {
+    public Path getBase() {
         return base;
     }
 
-    public FileResourceManager setBase(final File base) {
+    public FileResourceManager setBase(final Path base) {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
@@ -50,15 +51,11 @@ public class FileResourceManager implements ResourceManager {
 
     public Resource getResource(final String p) {
         String path = p;
-        if (File.separatorChar != '/') {
-            if (path.indexOf(File.separatorChar) != -1) {
-                return null;
-            }
-            path = path.replace('/', File.separatorChar);
+        if (p.startsWith("/")) {
+            path = p.substring(1);
         }
-
-        final File file = new File(base, path);
-        if(file.exists()) {
+        Path file = base.resolve(path);
+        if (Files.exists(file)) {
             return new FileResource(file);
         } else {
             return null;
