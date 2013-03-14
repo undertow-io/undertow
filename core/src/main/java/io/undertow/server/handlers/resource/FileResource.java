@@ -28,9 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
@@ -161,24 +159,11 @@ public class FileResource implements Resource {
 
     @Override
     public Resource getIndexResource(final List<String> possible) {
-        try (DirectoryStream<Path> stream =
-                     Files.newDirectoryStream(file, new DirectoryStream.Filter<Path>() {
-                         @Override
-                         public boolean accept(Path entry) throws IOException {
-                             return possible.contains(entry.getFileName().toString());
-                         }
-                     })) {
-            Map<String, Path> found = new HashMap<>();
-            for (Path entry : stream) {
-                found.put(entry.getFileName().toString(), entry);
+        for (String possibility : possible) {
+            Path index = file.resolve(possibility);
+            if (Files.exists(index)) {
+                return new FileResource(index);
             }
-            for (String possibility : possible) {//this extra loop is for ensuring order!
-                if (found.containsKey(possibility)) {
-                    return new FileResource(found.get(possibility));
-                }
-            }
-        } catch (IOException e) {
-            e.getStackTrace();
         }
         return null;
     }
