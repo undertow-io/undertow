@@ -122,8 +122,8 @@ public class ResourceHandler implements HttpHandler {
                 }
 
                 if (resource.isDirectory()) {
-                    resource = resource.getIndexResource(welcomeFiles);
-                    if (resource == null) {
+                    Resource indexResource = resource.getIndexResource(welcomeFiles);
+                    if (indexResource == null) {
                         if (directoryListingEnabled) {
                             DirectoryUtils.renderDirectoryListing(exchange, resource);
                             return;
@@ -133,7 +133,7 @@ public class ResourceHandler implements HttpHandler {
                             return;
                         }
                     }
-
+                    resource = indexResource;
                 }
 
                 final ETag etag = resource.getETag();

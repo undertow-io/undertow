@@ -67,12 +67,12 @@ public class DirectoryUtils {
         }
 
         StringBuilder builder = new StringBuilder();
-        builder.append("<html><head><script src='").append(resolvedPath).append("?js'></script>")
-                .append("<link rel='stylesheet' type='txt/css' href='").append(resolvedPath).append("?css'/></head>");
-        builder.append("<body onresize='growit()' onload='growit()'><table id='thetable'><thead>");
-        builder.append("<tr><th class='loc' colspan='3'>Directory Listing - ").append(requestPath)
-                .append("<tr><th class='label offset'>Name</th><th class='label'>Last Modified</th><th class='label'>Size</th></tr></thead>")
-                .append("<tfoot><tr><th class=\"loc footer\" colspan=\"3\">Powered by Undertow</th></tr></tfoot><tbody>");
+        builder.append("<html>\n<head>\n<script src='").append(resolvedPath).append("?js'></script>\n")
+                .append("<link rel='stylesheet' type='text/css' href='").append(resolvedPath).append("?css' />\n</head>\n");
+        builder.append("<body onresize='growit()' onload='growit()'>\n<table id='thetable'>\n<thead>\n");
+        builder.append("<tr><th class='loc' colspan='3'>Directory Listing - ").append(requestPath).append("</th></tr>\n")
+                .append("<tr><th class='label offset'>Name</th><th class='label'>Last Modified</th><th class='label'>Size</th></tr>\n</thead>\n")
+                .append("<tfoot>\n<tr><th class=\"loc footer\" colspan=\"3\">Powered by Undertow</th></tr>\n</tfoot>\n<tbody>\n");
 
         int state  = 0;
         String parent = null;
@@ -95,7 +95,7 @@ public class DirectoryUtils {
         if (parent != null) {
             i++;
             builder.append("<tr class='odd'><td><a class='icon up' href='").append(parent).append("'>[..]</a></td><td>");
-            builder.append(format.format(resource.getLastModified())).append("</td><td>--</td></tr>");
+            builder.append(format.format(resource.getLastModified())).append("</td><td>--</td></tr>\n");
         }
 
         for (Resource entry : resource.list()) {
@@ -108,9 +108,9 @@ public class DirectoryUtils {
             } else {
                 formatSize(builder, entry.getContentLength());
             }
-            builder.append("</td></tr>");
+            builder.append("</td></tr>\n");
         }
-        builder.append("</tbody></table></body></html>");
+        builder.append("</tbody>\n</table>\n</body>\n</html>");
 
         try {
             ByteBuffer output = ByteBuffer.wrap(builder.toString().getBytes("UTF-8"));
@@ -123,7 +123,6 @@ public class DirectoryUtils {
         }
 
         exchange.endExchange();
-        return;
     }
 
 
