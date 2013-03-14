@@ -38,10 +38,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
- * @author Stuart Douglas
+ * @author Tomaz Cerar
  */
 @RunWith(DefaultServer.class)
-public class FileHandlerTestCase {
+public class FileHandlerIndexTestCase {
 
 
     @Test
@@ -53,9 +53,10 @@ public class FileHandlerTestCase {
                     .setNext(new PathHandler()
                             .addPath("/path", new ResourceHandler()
                                     .setResourceManager(new FileResourceManager(rootPath))
-                                    .setDirectoryListingEnabled(true))));
+                                    .setDirectoryListingEnabled(true)
+                                    .addWelcomeFiles("page.html"))));
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);

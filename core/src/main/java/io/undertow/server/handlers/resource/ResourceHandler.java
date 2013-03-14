@@ -1,7 +1,10 @@
 package io.undertow.server.handlers.resource;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
@@ -14,28 +17,25 @@ import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.MimeMappings;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas
  */
 public class ResourceHandler implements HttpHandler {
 
+    private final List<String> welcomeFiles = new CopyOnWriteArrayList<>(new String[]{"index.html", "index.htm", "default.html", "default.htm"});
     /**
      * If directory listing is enabled.
      */
     private volatile boolean directoryListingEnabled = false;
-
     /**
      * The mime mappings that are used to determine the content type.
      */
     private volatile MimeMappings mimeMappings = MimeMappings.DEFAULT;
-
     private volatile Predicate<HttpServerExchange> cachable = Predicates.truePredicate();
-
     private volatile Predicate<HttpServerExchange> allowed = Predicates.truePredicate();
-
     private volatile ResourceManager resourceManager;
-
     /**
      * If this is set this will be the maximum time the client will cache the resource.
      *
@@ -47,7 +47,6 @@ public class ResourceHandler implements HttpHandler {
      * This will only be used if the {@link #cachable} predicate returns true
      */
     private volatile Integer cacheTime;
-
     /**
      * we do not calculate a new expiry date every request. Instead calculate it once
      * and cache it until it is in the past.
@@ -123,8 +122,18 @@ public class ResourceHandler implements HttpHandler {
                 }
 
                 if (resource.isDirectory()) {
-                    DirectoryUtils.renderDirectoryListing(exchange, resource);
-                    return;
+                    resource = resource.getIndexResource(welcomeFiles);
+                    if (resource == null) {
+                        if (directoryListingEnabled) {
+                            DirectoryUtils.renderDirectoryListing(exchange, resource);
+                            return;
+                        } else {
+                            exchange.setResponseCode(StatusCodes.FORBIDDEN);
+                            exchange.endExchange();
+                            return;
+                        }
+                    }
+
                 }
 
                 final ETag etag = resource.getETag();
@@ -176,6 +185,17 @@ public class ResourceHandler implements HttpHandler {
 
     public ResourceHandler setDirectoryListingEnabled(final boolean directoryListingEnabled) {
         this.directoryListingEnabled = directoryListingEnabled;
+        return this;
+    }
+
+    public ResourceHandler addWelcomeFiles(String... files) {
+        this.welcomeFiles.addAll(Arrays.asList(files));
+        return this;
+    }
+
+    public ResourceHandler setWelcomeFiles(String... files) {
+        this.welcomeFiles.clear();
+        this.welcomeFiles.addAll(Arrays.asList(files));
         return this;
     }
 

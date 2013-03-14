@@ -20,6 +20,10 @@ package io.undertow.test.handlers.file;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -54,11 +58,12 @@ public class FileHandlerStressTestCase {
     public static final int NUM_REQUESTS = 100;
 
     @Test
-    public void simpleFileStressTest() throws IOException, ExecutionException, InterruptedException {
+    public void simpleFileStressTest() throws IOException, ExecutionException, InterruptedException, URISyntaxException {
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
+            Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
             final ResourceHandler handler = new ResourceHandler()
-                    .setResourceManager(new FileResourceManager(new File(getClass().getResource("page.html").getFile()).getParentFile()));
+                    .setResourceManager(new FileResourceManager(rootPath));
 
             final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache<CachedHttpRequest>(1024, 10480), handler);
             final PathHandler path = new PathHandler();

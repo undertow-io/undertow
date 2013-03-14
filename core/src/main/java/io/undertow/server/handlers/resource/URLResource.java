@@ -94,4 +94,9 @@ public class URLResource implements Resource {
     public Long getContentLength() {
         return (long) connection.getContentLength();
     }
+
+    @Override
+    public Resource getIndexResource(List<String> possible) {
+        return null;
+    }
 }

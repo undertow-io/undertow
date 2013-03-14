@@ -65,4 +65,6 @@ public interface Resource {
      * @return The content length, or null if it is unknown
      */
     Long getContentLength();
+
+    Resource getIndexResource(List<String> possible);
 }
