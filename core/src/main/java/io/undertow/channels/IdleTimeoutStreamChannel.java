@@ -193,7 +193,7 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
 
     @Override
     public void shutdownReads() throws IOException {
-        channel.wakeupReads();
+        channel.shutdownReads();
     }
 
     @Override

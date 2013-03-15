@@ -133,4 +133,16 @@ public interface WebSocketMessages {
 
     @Message(id = 2033, value = "Blocking operation was called in IO thread")
     IllegalStateException blockingOperationInIoThread();
+
+    @Message(id = 2034, value = "Web socket frame was not masked")
+    WebSocketFrameCorruptedException frameNotMasked();
+
+    @Message(id = 2035, value = "The response did not contain an 'Upgrade: websocket' header")
+    IOException noWebSocketUpgradeHeader();
+
+    @Message(id = 2036, value = "The response did not contain a 'Connection: upgrade' header")
+    IOException noWebSocketConnectionHeader();
+
+    @Message(id = 2037, value = "Sec-WebSocket-Accept mismatch, expecting %s, received %s")
+    IOException webSocketAcceptKeyMismatch(String dKey, String acceptKey);
 }

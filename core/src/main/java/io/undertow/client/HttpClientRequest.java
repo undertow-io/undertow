@@ -92,7 +92,7 @@ public abstract class HttpClientRequest extends AbstractAttachable {
      * @return the future http response
      * @throws IOException
      */
-    public IoFuture<HttpClientResponse> writeRequest() throws IOException {
+    public IoFuture<HttpClientResponse> writeRequest(){
         writeRequestBody(0);
         return getResponse();
     }
@@ -105,7 +105,7 @@ public abstract class HttpClientRequest extends AbstractAttachable {
      * @return the request channel
      * @throws IOException
      */
-    public abstract StreamSinkChannel writeRequestBody(long contentLength) throws IOException;
+    public abstract StreamSinkChannel writeRequestBody(long contentLength);
 
     /**
      * Get the future response.
@@ -120,7 +120,7 @@ public abstract class HttpClientRequest extends AbstractAttachable {
      * @param responseCallback the response completion handler
      * @throws IOException
      */
-    public void writeRequest(final HttpClientCallback<HttpClientResponse> responseCallback) throws IOException {
+    public void writeRequest(final HttpClientCallback<HttpClientResponse> responseCallback){
         final IoFuture<HttpClientResponse> response = writeRequest();
         addCallback(response, responseCallback);
     }

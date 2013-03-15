@@ -90,7 +90,7 @@ public class Hybi00Handshake extends Handshake {
 
     @Override
     public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final ConnectedStreamChannel channel, final Pool<ByteBuffer> pool) {
-        return new WebSocket00Channel(channel, pool, getWebSocketLocation(exchange), subprotocols);
+        return new WebSocket00Channel(channel, pool, getWebSocketLocation(exchange), subprotocols, false);
     }
 
     protected static byte[] solve(final String hashAlgorithm, String encodedKey1, String encodedKey2, byte[] key3) {

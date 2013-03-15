@@ -84,8 +84,8 @@ public class WebSocket07Channel extends WebSocketChannel {
      * @param wsUrl      The url for which the {@link WebSocket07Channel} was created.
      */
     public WebSocket07Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool,
-                              String wsUrl, Set<String> subProtocols, boolean allowExtensions) {
-        super(channel, bufferPool, WebSocketVersion.V08, wsUrl, subProtocols, allowExtensions);
+                              String wsUrl, Set<String> subProtocols, final boolean client, boolean allowExtensions) {
+        super(channel, bufferPool, WebSocketVersion.V08, wsUrl, subProtocols, client, allowExtensions);
     }
 
     @Override
@@ -361,6 +361,11 @@ public class WebSocket07Channel extends WebSocketChannel {
             }
 
             private void validateDataFrame() throws WebSocketFrameCorruptedException {
+
+                if(!isClient() && !frameMasked) {
+                    throw WebSocketMessages.MESSAGES.frameNotMasked();
+                }
+
                 // check for reserved data frame opcodes
                 if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT || frameOpcode == OPCODE_BINARY)) {
                     throw WebSocketMessages.MESSAGES.reservedOpCodeInDataFrame(frameOpcode);

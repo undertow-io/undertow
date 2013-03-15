@@ -30,9 +30,11 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.undertow.channels.IdleTimeoutStreamChannel;
+import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -52,6 +54,8 @@ import static org.xnio.IoUtils.safeClose;
  * @author Stuart Douglas
  */
 public abstract class WebSocketChannel implements ConnectedChannel {
+
+    private final boolean client;
 
     private final Queue<SendChannel> senders = new ArrayDeque<SendChannel>();
     private final IdleTimeoutStreamChannel<ConnectedStreamChannel> channel;
@@ -85,14 +89,16 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * Create a new {@link WebSocketChannel}
      * 8
      *
-     * @param connectedStreamChannel The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
+     * @param connectedStreamChannel The {@link org.xnio.channels.ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
      *                               Be aware that it already must be "upgraded".
-     * @param bufferPool             The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
-     * @param version                The {@link WebSocketVersion} of the {@link WebSocketChannel}
+     * @param bufferPool             The {@link org.xnio.Pool} which will be used to acquire {@link java.nio.ByteBuffer}'s from.
+     * @param version                The {@link io.undertow.websockets.core.WebSocketVersion} of the {@link io.undertow.websockets.core.WebSocketChannel}
      * @param wsUrl                  The url for which the {@link io.undertow.websockets.core.protocol.version00.WebSocket00Channel} was created.
+     * @param client
      */
-    protected WebSocketChannel(final ConnectedStreamChannel connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, Set<String> subProtocols, boolean extensionsSupported) {
-        channel = new IdleTimeoutStreamChannel<ConnectedStreamChannel>(connectedStreamChannel);
+    protected WebSocketChannel(final ConnectedStreamChannel connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, Set<String> subProtocols, final boolean client, boolean extensionsSupported) {
+        this.client = client;
+        channel = new IdleTimeoutStreamChannel<>(connectedStreamChannel);
         this.version = version;
         this.wsUrl = wsUrl;
         this.bufferPool = bufferPool;
@@ -367,6 +373,10 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
+    public boolean isClient() {
+        return client;
+    }
+
     /**
      * Resume the receive of new frames via {@link #receive()}
      */
@@ -458,8 +468,18 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * Send a Close frame without a payload
      */
     public void sendClose() throws IOException {
-        StreamSinkFrameChannel closeChannel = createStreamSinkChannel(channel, WebSocketFrameType.CLOSE, 0);
-        closeChannel.close();
+        StreamSinkFrameChannel closeChannel = send(WebSocketFrameType.CLOSE, 0);
+        closeChannel.shutdownWrites();
+        if(!closeChannel.flush()) {
+            closeChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
+                    null, new ChannelExceptionHandler<StreamSinkFrameChannel>() {
+                        @Override
+                        public void handleException(final StreamSinkFrameChannel channel, final IOException exception) {
+                            IoUtils.safeClose(WebSocketChannel.this);
+                        }
+                    }
+            ));
+        }
     }
 
     @Override
@@ -570,6 +590,8 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                     WebSocketLogger.REQUEST_LOGGER.debugf("Suspending reads on channel %s due to no listener", receiver);
                     channel.suspendReads();
                 }
+            } else if(closeFrameReceived) {
+                channel.suspendReads();
             } else {
                 final ChannelListener listener = receiveSetter.get();
                 if (listener != null) {

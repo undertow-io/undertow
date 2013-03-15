@@ -133,4 +133,8 @@ public interface UndertowMessages {
 
     @Message(id = 36, value = "Connection terminated parsing multipart data")
     IOException connectionTerminatedReadingMultiPartData();
+
+    @Message(id = 37, value = "Failed to parse path in HTTP request")
+    RuntimeException failedToParsePath();
+
 }

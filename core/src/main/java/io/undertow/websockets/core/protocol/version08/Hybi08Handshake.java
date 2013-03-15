@@ -44,7 +44,7 @@ public class Hybi08Handshake extends Hybi07Handshake {
 
     @Override
     public WebSocketChannel createChannel(final WebSocketHttpExchange exchange, final ConnectedStreamChannel channel, final Pool<ByteBuffer> pool) {
-        return new WebSocket08Channel(channel, pool, getWebSocketLocation(exchange), subprotocols, allowExtensions);
+        return new WebSocket08Channel(channel, pool, getWebSocketLocation(exchange), subprotocols, false, allowExtensions);
 
     }
 }

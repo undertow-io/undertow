@@ -458,7 +458,7 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendC
     }
 
     @Override
-    public final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
         checkClosed();
 
         if (!isActive()) {

@@ -52,8 +52,8 @@ public class WebSocket00Channel extends WebSocketChannel {
      * @param wsUrl      The url for which the {@link WebSocket00Channel} was created.
      */
     public WebSocket00Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool,
-                              String wsUrl, Set<String> subProtocols) {
-        super(channel, bufferPool, WebSocketVersion.V00, wsUrl, subProtocols, false);
+                              String wsUrl, Set<String> subProtocols, final boolean client) {
+        super(channel, bufferPool, WebSocketVersion.V00, wsUrl, subProtocols, client, false);
     }
 
     @Override

@@ -67,8 +67,7 @@ public class HttpClientTestCase {
                 .set(Options.WORKER_IO_THREADS, 8)
                 .set(Options.TCP_NODELAY, true)
                 .set(Options.KEEP_ALIVE, true)
-                .set(Options.WORKER_NAME, "Client")
-                ;
+                .set(Options.WORKER_NAME, "Client");
 
         DEFAULT_OPTIONS = builder.getMap();
 
@@ -159,7 +158,7 @@ public class HttpClientTestCase {
                     IoUtils.safeClose(channel);
                 }
                 try {
-                    connection.createRequest(Methods.GET, new URI("/1324")).writeRequest();
+                    connection.createRequest(Methods.GET, new URI("/1324")).writeRequest().get();
                     Assert.fail();
                 } catch (IOException e) {
                     // OK

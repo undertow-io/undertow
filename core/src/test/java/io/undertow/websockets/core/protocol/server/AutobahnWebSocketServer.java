@@ -115,17 +115,21 @@ public class AutobahnWebSocketServer {
             server = worker.createStreamServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
 
-            setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
-                @Override
-                public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
-                    channel.getReceiveSetter().set(new Receiver());
-                    channel.resumeReceives();
-                }
-            }));
+            setRootHandler(getRootHandler());
             server.resumeAccepts();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static WebSocketProtocolHandshakeHandler getRootHandler() {
+        return new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
+            @Override
+            public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
+                channel.getReceiveSetter().set(new Receiver());
+                channel.resumeReceives();
+            }
+        });
     }
 
     private static final class Receiver implements ChannelListener<WebSocketChannel> {

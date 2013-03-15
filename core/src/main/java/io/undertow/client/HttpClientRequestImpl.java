@@ -114,14 +114,14 @@ class HttpClientRequestImpl extends HttpClientRequest {
 
     String getURIString() {
         try {
-            return new URI(null, null, null, -1, target.getPath(), target.getQuery(), target.getFragment()).toASCIIString();
+            return new URI(null, null, null, -1, target.getPath().isEmpty() ? "/" : target.getPath(), target.getQuery(), target.getFragment()).toASCIIString();
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 
     @Override
-    public StreamSinkChannel writeRequestBody(long contentLength) throws IOException {
+    public StreamSinkChannel writeRequestBody(long contentLength) {
         if(requestChannel != null) {
             throw UndertowClientMessages.MESSAGES.requestAlreadyWritten();
         }
@@ -133,7 +133,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
         boolean keepAlive;
         if (http11) {
             if(headers.contains(Headers.CONNECTION)) {
-                keepAlive = headers.get(Headers.CONNECTION).equals(Headers.KEEP_ALIVE.toString());
+                keepAlive = !headers.get(Headers.CONNECTION).equals(Headers.CLOSE.toString());
             } else {
                 keepAlive = true;
             }
@@ -165,7 +165,9 @@ class HttpClientRequestImpl extends HttpClientRequest {
             }
         }
         if(keepAlive) {
-            headers.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
+            if(!headers.contains(Headers.CONNECTION)) {
+                headers.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
+            }
         } else {
             headers.put(Headers.CONNECTION, Headers.CLOSE.toString());
         }

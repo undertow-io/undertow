@@ -25,12 +25,10 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
-import io.undertow.util.Headers;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Option;
@@ -167,59 +165,44 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
     }
 
     @Override
-    public IoFuture<ConnectedStreamChannel> upgradeToWebSocket(String service, OptionMap optionMap) {
-        final FutureResult<ConnectedStreamChannel> result = new FutureResult<ConnectedStreamChannel>();
-        try {
-            // Upgrade the connection
-            final URI requestURI = new URI("/"); // TOOD get this somewhere
-            final HttpClientRequest request = internalCreateRequest(Methods.GET, requestURI, false); // disable pipelining for connection upgrades
-            if (request == null) {
-                return null;
+    public void performUpgrade(final UpgradeHandshake handshake, OptionMap optionMap, final HttpClientCallback<ConnectedStreamChannel> callback) {
+
+        // Upgrade the connection
+        // Set the upgraded flag already to prevent new requests after this one
+        int oldState, newState;
+        do {
+            oldState = state;
+            if (allAreSet(oldState, UPGRADED | CLOSE_REQ | CLOSED)) {
+                return;
             }
-            // Set the upgraded flag already to prevent new requests after this one
-            int oldState, newState;
-            do {
-                oldState = state;
-                if (allAreSet(oldState, UPGRADED | CLOSE_REQ | CLOSED)) {
-                    return null;
-                }
-                newState = oldState | UPGRADED;
-            } while (!stateUpdater.compareAndSet(this, oldState, newState));
+            newState = oldState | UPGRADED;
+        } while (!stateUpdater.compareAndSet(this, oldState, newState));
 
-            // Add connection headers
-            request.getRequestHeaders().add(Headers.CONNECTION, Headers.UPGRADE_STRING);
-            request.getRequestHeaders().add(Headers.UPGRADE, service);
-
-            // Get the response
-            final IoFuture<HttpClientResponse> responseFuture = request.writeRequest();
-            responseFuture.addNotifier(new IoFuture.Notifier<HttpClientResponse, Void>() {
-                @Override
-                public void notify(IoFuture<? extends HttpClientResponse> future, Void attachment) {
-                    IOException failure = null;
-                    switch (future.getStatus()) {
-                        case CANCELLED:
-                            result.setCancelled();
-                            break;
-                        case FAILED:
-                            failure = future.getException();
-                            break;
-                        case DONE:
-                            try {
-                                final HttpClientResponse response = future.get();
-                                if (response.getResponseCode() == 101) {
-                                    // return the upgraded channel
-                                    final AssembledConnectedStreamChannel channel = new AssembledConnectedStreamChannel(readChannel, underlyingChannel);
-                                    result.setResult(channel);
-                                    return;
-                                } else {
-                                    final String result = response.getReasonPhrase();
-                                    failure = new IOException(MESSAGES.failedToUpgradeChannel(response.getResponseCode(), result));
-                                }
-                            } catch (IOException ex) {
-                                // not possible
-                                throw new IllegalStateException();
-                            }
+        // Get the response
+        HttpClientRequest request = handshake.createRequest(this);
+        request.writeRequest(new HttpClientCallback<HttpClientResponse>() {
+            @Override
+            public void completed(final HttpClientResponse response) {
+                if (response.getResponseCode() == 101) {
+                    // return the upgraded channel
+                    try {
+                        handshake.validateResponse(HttpClientConnectionImpl.this, response);
+                        final AssembledConnectedStreamChannel channel = new AssembledConnectedStreamChannel(readChannel, underlyingChannel);
+                        callback.completed(channel);
+                    } catch (IOException e) {
+                        callback.failed(e);
                     }
+                } else {
+                    final String result = response.getReasonPhrase();
+                    callback.failed(new IOException(MESSAGES.failedToUpgradeChannel(response.getResponseCode(), result)));
+                }
+            }
+
+            @Override
+            public void failed(final IOException e) {
+                try {
+                    callback.failed(e);
+                } finally {
                     // Clear the upgraded flag
                     int oldState, newState;
                     do {
@@ -229,18 +212,27 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
                         }
                         newState = oldState & UPGRADED;
                     } while (!stateUpdater.compareAndSet(HttpClientConnectionImpl.this, oldState, newState));
-                    // Report the error
-                    if (failure != null) {
-                        result.setException(failure);
-                    }
                 }
-            }, null);
-        } catch (IOException e) {
-            result.setException(e);
-        } catch (Exception e) {
-            result.setException(new IOException(e));
-        }
-        return result.getIoFuture();
+
+            }
+        });
+    }
+
+    @Override
+    public IoFuture<ConnectedStreamChannel> performUpgrade(UpgradeHandshake request, OptionMap optionMap) {
+        final ConcreteIoFuture<ConnectedStreamChannel> future = new ConcreteIoFuture<>();
+        performUpgrade(request, optionMap, new HttpClientCallback<ConnectedStreamChannel>() {
+            @Override
+            public void completed(final ConnectedStreamChannel result) {
+                future.setResult(result);
+            }
+
+            @Override
+            public void failed(final IOException e) {
+                future.setException(e);
+            }
+        });
+        return future;
     }
 
     /**
@@ -277,12 +269,13 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
      * @param request the request to addNewRequest
      * @throws IOException
      */
-    void enqueueRequest(final PendingHttpRequest request) throws IOException {
+    void enqueueRequest(final PendingHttpRequest request) {
         int oldState, newState;
         do {
             oldState = state;
             if (anyAreSet(oldState, CLOSE_REQ | CLOSED)) {
-                throw new IOException(MESSAGES.connectionClosed());
+                request.setFailed(new IOException(MESSAGES.connectionClosed()));
+                return;
             }
             newState = oldState + 1;
         } while (!stateUpdater.compareAndSet(this, oldState, newState));

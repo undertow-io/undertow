@@ -90,7 +90,7 @@ public class WebSocket00ChannelTest {
         replay(mockChannel);
 
 
-        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws", Collections.<String>emptySet());
+        WebSocket00Channel wsChannel = new WebSocket00Channel(mockChannel, null, "ws://localhost/ws", Collections.<String>emptySet(), false);
         StreamSinkFrameChannel ch = wsChannel.send(type, size);
         assertTrue(clazz.isInstance(ch));
         assertTrue(ch.isOpen());

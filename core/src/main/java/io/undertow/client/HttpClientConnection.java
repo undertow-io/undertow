@@ -68,17 +68,29 @@ public abstract class HttpClientConnection extends AbstractAttachable implements
      * @return the new request, or{@code null} if no more request can be made on this connection
      * @throws IOException
      */
-    public abstract HttpClientRequest createRequest(final HttpString method, final URI target) throws IOException;
+    public abstract HttpClientRequest createRequest(final HttpString method, final URI target);
 
     /**
-     * Upgrade this HTTP connection to a raw socket.
+     * Upgrade this HTTP connection to a raw socket
      *
-     * @param service the service to upgrade to
+     * @param handshake The handshake class
      * @param optionMap the channel options
      * @return the future channel
      * @throws IOException
      */
-    public abstract IoFuture<ConnectedStreamChannel> upgradeToWebSocket(final String service, final OptionMap optionMap) throws IOException;
+    public abstract IoFuture<ConnectedStreamChannel> performUpgrade(final UpgradeHandshake request, final OptionMap optionMap) throws IOException;
+
+    /**
+     * Upgrade this HTTP connection to a raw socket
+     *
+     * @param handshake The handshake class
+     * @param optionMap the channel options
+     * @param callback the callback
+     * @return the future channel
+     * @throws IOException
+     */
+    public abstract void performUpgrade(final UpgradeHandshake handshake, final OptionMap optionMap, HttpClientCallback<ConnectedStreamChannel> callback) throws IOException;
+
 
     abstract OptionMap getOptions();
     abstract Pool<ByteBuffer> getBufferPool();
