@@ -61,9 +61,9 @@ public class SSLSessionTestCase {
                     .setNext(new HttpHandler() {
                         @Override
                         public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                            Session session = sessionConfig.getAttachedSession(exchange);
+                            final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
+                            Session session = manager.getSession(exchange, sessionConfig);
                             if (session == null) {
-                                final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
                                 session = manager.createSession(exchange, sessionConfig);
                                 session.setAttribute(COUNT, 0);
                             }

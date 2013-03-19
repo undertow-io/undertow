@@ -77,10 +77,6 @@ public class ServletContextImpl implements ServletContext {
     private final SessionCookieConfigImpl sessionCookieConfig;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
 
-
-    private volatile boolean bootstrapComplete = false;
-
-
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
         this.deployment = deployment;
@@ -483,10 +479,7 @@ public class ServletContextImpl implements ServletContext {
         HttpSessionImpl httpSession = exchange.getAttachment(sessionAttachmentKey);
         if (httpSession == null) {
             final SessionManager sessionManager = deploymentInfo.getSessionManager();
-            Session session = c.getAttachedSession(exchange);
-            if (session == null) {
-                session = sessionManager.getSession(exchange, c);
-            }
+            Session session = sessionManager.getSession(exchange, c);
             if (session != null) {
                 httpSession = new HttpSessionImpl(session, this, getDeployment().getApplicationListeners(), exchange, false);
                 exchange.putAttachment(sessionAttachmentKey, httpSession);

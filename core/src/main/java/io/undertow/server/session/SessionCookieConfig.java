@@ -23,7 +23,6 @@ import java.util.Map;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
-import io.undertow.util.AttachmentKey;
 
 /**
  * Encapsulation of session cookie configuration. This removes the need for the session manager to
@@ -35,9 +34,8 @@ public class SessionCookieConfig implements SessionConfig {
 
     public static final String DEFAULT_SESSION_ID = "JSESSIONID";
 
-    private final AttachmentKey<Session> attachmentKey = AttachmentKey.create(Session.class);
     private String cookieName = DEFAULT_SESSION_ID;
-    private String path = "/";;
+    private String path = "/";
     private String domain;
     private boolean discard;
     private boolean secure;
@@ -46,24 +44,29 @@ public class SessionCookieConfig implements SessionConfig {
     private String comment;
 
 
-    public void attachSession(final HttpServerExchange exchange, final Session session) {
-        exchange.putAttachment(attachmentKey, session);
-        Cookie cookie = new CookieImpl(cookieName, session.getId())
+    @Override
+    public String rewriteUrl(final String originalUrl, final Session session) {
+        return originalUrl;
+    }
+
+    @Override
+    public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
+        Cookie cookie = new CookieImpl(cookieName, sessionId)
                 .setPath(path)
                 .setDomain(domain)
                 .setDiscard(discard)
                 .setSecure(secure)
                 .setHttpOnly(httpOnly)
                 .setComment(comment);
-        if(maxAge > 0) {
+        if (maxAge > 0) {
             cookie.setMaxAge(maxAge);
         }
         CookieImpl.addResponseCookie(exchange, cookie);
-
     }
 
-    public void clearSession(final HttpServerExchange exchange, final Session session) {
-        Cookie cookie = new CookieImpl(cookieName, session.getId())
+    @Override
+    public void clearSession(final HttpServerExchange exchange, final String sessionId) {
+        Cookie cookie = new CookieImpl(cookieName, sessionId)
                 .setPath(path)
                 .setDomain(domain)
                 .setDiscard(discard)
@@ -71,16 +74,6 @@ public class SessionCookieConfig implements SessionConfig {
                 .setHttpOnly(httpOnly)
                 .setMaxAge(0);
         CookieImpl.addResponseCookie(exchange, cookie);
-    }
-
-    @Override
-    public Session getAttachedSession(final HttpServerExchange exchange) {
-        return exchange.getAttachment(attachmentKey);
-    }
-
-    @Override
-    public String rewriteUrl(final String originalUrl, final Session session) {
-        return originalUrl;
     }
 
     @Override

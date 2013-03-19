@@ -71,7 +71,7 @@ public class InMemorySessionManager implements SessionManager {
         for (SessionListener listener : listeners) {
             listener.sessionCreated(session, serverExchange);
         }
-        config.attachSession(serverExchange, session);
+        config.setSessionId(serverExchange, session.getId());
         im.lastAccessed = System.currentTimeMillis();
         session.bumpTimeout();
         return session;
@@ -87,7 +87,7 @@ public class InMemorySessionManager implements SessionManager {
         if (sess == null) {
             return null;
         } else {
-            config.attachSession(serverExchange, sess.session);
+            config.setSessionId(serverExchange, sess.session.getId());
             return sess.session;
         }
     }
@@ -263,7 +263,7 @@ public class InMemorySessionManager implements SessionManager {
                 listener.sessionDestroyed(sess.session, exchange, false);
             }
             if (exchange != null) {
-                sessionCookieConfig.clearSession(exchange, this);
+                sessionCookieConfig.clearSession(exchange, this.getId());
             }
         }
 
@@ -288,7 +288,7 @@ public class InMemorySessionManager implements SessionManager {
             this.sessionId = newId;
             sessions.put(newId, sess);
             sessions.remove(oldId);
-            config.attachSession(exchange, this);
+            config.setSessionId(exchange, this.getId());
             return newId;
         }
 

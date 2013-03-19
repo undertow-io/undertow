@@ -70,7 +70,7 @@ public class SessionAttachmentHandler implements HttpHandler {
         }
         exchange.putAttachment(SessionManager.ATTACHMENT_KEY, sessionManager);
         sessionManager.getSession(exchange, sessionConfig);
-        final UpdateLastAccessTimeListener handler = new UpdateLastAccessTimeListener(sessionConfig);
+        final UpdateLastAccessTimeListener handler = new UpdateLastAccessTimeListener(sessionConfig, sessionManager);
         exchange.addExchangeCompleteListener(handler);
         HttpHandlers.executeHandler(next, exchange);
 
@@ -102,15 +102,17 @@ public class SessionAttachmentHandler implements HttpHandler {
     private static class UpdateLastAccessTimeListener implements ExchangeCompletionListener {
 
         private final SessionConfig sessionConfig;
+        private final SessionManager sessionManager;
 
-        private UpdateLastAccessTimeListener(final SessionConfig sessionConfig) {
+        private UpdateLastAccessTimeListener(final SessionConfig sessionConfig, final SessionManager sessionManager) {
             this.sessionConfig = sessionConfig;
+            this.sessionManager = sessionManager;
         }
 
         @Override
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener next) {
             try {
-                final Session session = sessionConfig.getAttachedSession(exchange);
+                final Session session = sessionManager.getSession(exchange, sessionConfig);
                 if (session != null) {
                     session.updateLastAccessedTime();
                 }

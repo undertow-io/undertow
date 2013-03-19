@@ -21,13 +21,13 @@ public interface SessionConfig {
      * Generally this will involve setting a cookie
      * <p/>
      * Once a session has been attached it must be possible to retrieve it via
-     * {@link #getAttachedSession(io.undertow.server.HttpServerExchange)}
+     * {@link #findSessionId(io.undertow.server.HttpServerExchange)}
      *
      *
      * @param exchange The exchange
      * @param session  The session
      */
-    void attachSession(final HttpServerExchange exchange, final Session session);
+    void setSessionId(final HttpServerExchange exchange, final String sessionId);
 
     /**
      * Clears this session from the exchange, removing the attachment and making any changes to the response necessary,
@@ -36,20 +36,7 @@ public interface SessionConfig {
      * @param exchange The exchange
      * @param session  The session
      */
-    void clearSession(final HttpServerExchange exchange, final Session session);
-
-    /**
-     * Retrieve an existing session from the exchange. This method is basically just a performance optimisation,
-     * and allows the config to stash the session into the exchange as an attachment. Conceptually it should give the
-     * same result as looking up the results of {@link #findSessionId(io.undertow.server.HttpServerExchange)} in the
-     * session manager.
-     *
-     * Implementations are required to implement this however,
-     *
-     * @param exchange the exchange
-     * @return The existing session, or null if it has not been attached
-     */
-    Session getAttachedSession(final HttpServerExchange exchange);
+    void clearSession(final HttpServerExchange exchange, final String sessionId);
 
     /**
      * Retrieves a session id of an existing session from an exchange.

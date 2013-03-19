@@ -21,7 +21,6 @@ package io.undertow.server.session;
 import javax.net.ssl.SSLSession;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
 
 /**
  * Session config that stores the session ID in the current SSL session.
@@ -33,53 +32,37 @@ import io.undertow.util.AttachmentKey;
 public class SslSessionConfig implements SessionConfig {
 
     private final SessionConfig fallbackSessionConfig;
-    private final AttachmentKey<Session> attachmentKey;
-
-    public SslSessionConfig(final SessionConfig fallbackSessionConfig, final AttachmentKey<Session> attachmentKey) {
-        this.fallbackSessionConfig = fallbackSessionConfig;
-        this.attachmentKey = attachmentKey;
-    }
 
     public SslSessionConfig(final SessionConfig fallbackSessionConfig) {
-        this(fallbackSessionConfig, AttachmentKey.<Session>create(Session.class));
-    }
-
-    public SslSessionConfig(final AttachmentKey<Session> attachmentKey) {
-        this(null, attachmentKey);
+        this.fallbackSessionConfig = fallbackSessionConfig;
     }
 
     public SslSessionConfig() {
-        this(null, AttachmentKey.<Session>create(Session.class));
+        this(null);
     }
 
     @Override
-    public void attachSession(final HttpServerExchange exchange, final Session session) {
-        exchange.putAttachment(attachmentKey, session);
+    public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
         SSLSession sslSession = exchange.getConnection().getSslSession();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
-                fallbackSessionConfig.attachSession(exchange, session);
+                fallbackSessionConfig.setSessionId(exchange, sessionId);
             }
         } else {
-            sslSession.putValue(SslSessionConfig.class.getName(), session.getId());
+            sslSession.putValue(SslSessionConfig.class.getName(), sessionId);
         }
     }
 
     @Override
-    public void clearSession(final HttpServerExchange exchange, final Session session) {
+    public void clearSession(final HttpServerExchange exchange, final String sessionId) {
         SSLSession sslSession = exchange.getConnection().getSslSession();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
-                fallbackSessionConfig.clearSession(exchange, session);
+                fallbackSessionConfig.clearSession(exchange, sessionId);
             }
         } else {
             sslSession.putValue(SslSessionConfig.class.getName(), null);
         }
-    }
-
-    @Override
-    public Session getAttachedSession(final HttpServerExchange exchange) {
-        return exchange.getAttachment(attachmentKey);
     }
 
     @Override
