@@ -1,4 +1,4 @@
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.test;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -7,7 +7,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.servlet.Servlet;
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfiguration;
 import javax.websocket.MessageHandler;
@@ -16,14 +17,18 @@ import javax.websocket.server.ServerEndpointConfigurationBuilder;
 
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.test.utils.DefaultServer;
+import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
+import io.undertow.websockets.jsr.JsrWebSocketFilter;
+import io.undertow.websockets.jsr.ServletWebSocketContainer;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -76,24 +81,7 @@ public class JsrWebSocketServletTest {
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
-        ServletInfo s = new ServletInfo("servlet", JsrWebSocketServlet.class, new InstanceFactory<Servlet>() {
-            @Override
-            public InstanceHandle<Servlet> createInstance() throws InstantiationException {
-                return new InstanceHandle<Servlet>() {
-
-                    @Override
-                    public Servlet getInstance() {
-                        return webSocketContainer.getServlet();
-                    }
-
-                    @Override
-                    public void release() {
-
-                    }
-                };
-            }
-        })
-                .addMapping("/*");
+        FilterInfo f = new FilterInfo("filter", JsrWebSocketFilter.class, new ImmediateInstanceFactory<Filter>(webSocketContainer.getFilter()));
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(JsrWebSocketServletTest.class.getClassLoader())
@@ -101,7 +89,8 @@ public class JsrWebSocketServletTest {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlet(s);
+                .addFilter(f)
+                .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

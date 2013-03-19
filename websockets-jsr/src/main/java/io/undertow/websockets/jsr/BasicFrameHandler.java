@@ -20,6 +20,7 @@ package io.undertow.websockets.jsr;
 import io.undertow.websockets.api.AssembledFrameHandler;
 import io.undertow.websockets.api.WebSocketFrameHeader;
 import io.undertow.websockets.api.WebSocketSession;
+import org.xnio.Buffers;
 
 import javax.websocket.Endpoint;
 import javax.websocket.MessageHandler;
@@ -57,7 +58,7 @@ final class BasicFrameHandler extends AbstractFrameHandler<MessageHandler.Basic<
                 mHandler.onMessage(toBuffer(payload));
             }
             if (handler.getMessageType() == byte[].class) {
-                int size = size(payload);
+                long size = Buffers.remaining(payload);
                 if (size == 0) {
                     mHandler.onMessage(EMPTY);
                 } else {

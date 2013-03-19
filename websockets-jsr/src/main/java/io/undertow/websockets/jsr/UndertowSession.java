@@ -35,6 +35,7 @@ import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
 
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.websockets.api.FrameHandler;
 import io.undertow.websockets.api.WebSocketSession;
 import io.undertow.websockets.impl.WebSocketChannelSession;
 import org.xnio.ChannelListener;
@@ -44,7 +45,7 @@ import org.xnio.ChannelListener;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class UndertowSession implements Session {
+public final class UndertowSession implements Session {
 
     private final WebSocketSession session;
     private final WebSocketContainer container;
@@ -160,6 +161,14 @@ final class UndertowSession implements Session {
             }
             session.setFrameHandler(handler);
         }
+    }
+
+    /**
+     * sets the frame handler. This should only be used for annotated endpoints.
+     * @param handler The handler
+     */
+    public void setFrameHandler(final FrameHandler handler) {
+        session.setFrameHandler(handler);
     }
 
     @Override

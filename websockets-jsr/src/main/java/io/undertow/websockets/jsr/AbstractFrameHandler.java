@@ -90,7 +90,7 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
         if (payload.length == 1) {
             return payload[0];
         }
-        int size = size(payload);
+        int size = (int) Buffers.remaining(payload);
         if (size == 0) {
             return Buffers.EMPTY_BYTE_BUFFER;
         }
@@ -102,14 +102,6 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
         return buffer;
     }
 
-    protected static int size(ByteBuffer... payload) {
-        int size = 0;
-        for (ByteBuffer buf: payload) {
-            size += buf.remaining();
-        }
-        return size;
-    }
-
     protected static byte[] toArray(ByteBuffer... payload) {
         if (payload.length == 1) {
             ByteBuffer buf = payload[0];
@@ -117,7 +109,7 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
                 return buf.array();
             }
         }
-        int size = size(payload);
+        int size = (int) Buffers.remaining(payload);
         byte[] data = new byte[size];
         for (ByteBuffer buf: payload) {
             buf.get(data);

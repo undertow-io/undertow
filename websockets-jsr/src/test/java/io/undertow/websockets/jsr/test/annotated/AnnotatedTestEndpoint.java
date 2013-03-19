@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2013 Red Hat, Inc., and individual contributors
+ * Copyright 2012 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,16 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.jsr;
 
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
+package io.undertow.websockets.jsr.test.annotated;
+
+import javax.websocket.OnMessage;
+import javax.websocket.server.PathParam;
+import javax.websocket.server.ServerEndpoint;
 
 /**
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
+ * @author Stuart Douglas
  */
-public class JsrWebSocketServer08Test extends JsrWebSocketServer07Test{
-    @Override
-    protected WebSocketVersion getVersion() {
-        return WebSocketVersion.V08;
+@ServerEndpoint("/chat/{user}")
+public class AnnotatedTestEndpoint {
+
+    @OnMessage
+    public String handleMessage(final String message, @PathParam("user") String user) {
+        return message + " " + user;
     }
+
 }

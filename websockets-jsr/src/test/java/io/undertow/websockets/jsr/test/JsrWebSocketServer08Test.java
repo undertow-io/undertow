@@ -15,16 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.test;
 
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class JsrWebSocketServer13Test extends JsrWebSocketServer08Test {
+public class JsrWebSocketServer08Test extends JsrWebSocketServer07Test{
     @Override
     protected WebSocketVersion getVersion() {
-        return WebSocketVersion.V13;
+        return WebSocketVersion.V08;
     }
 }

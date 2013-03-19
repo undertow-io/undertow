@@ -20,6 +20,7 @@ package io.undertow.websockets.jsr;
 import io.undertow.websockets.api.FragmentedFrameHandler;
 import io.undertow.websockets.api.WebSocketFrameHeader;
 import io.undertow.websockets.api.WebSocketSession;
+import org.xnio.Buffers;
 
 import javax.websocket.Endpoint;
 import javax.websocket.MessageHandler;
@@ -83,7 +84,7 @@ class AsyncFrameHandler extends AbstractFrameHandler<MessageHandler> implements 
                 mHandler.onMessage(toBuffer(payload), header.isLastFragement());
             }
             if (handler.getMessageType() == byte[].class) {
-                int size = size(payload);
+                long size = Buffers.remaining(payload);
                 if (size == 0) {
                     mHandler.onMessage(EMPTY, header.isLastFragement());
                 } else {
@@ -105,68 +106,4 @@ class AsyncFrameHandler extends AbstractFrameHandler<MessageHandler> implements 
         }
     }
 
-    /**
-     * Utility class which allows to extract a UTF8 String from bytes respecting valid code-points
-     */
-    static final class UTF8Output {
-        private static final int UTF8_ACCEPT = 0;
-
-        private static final byte[] TYPES = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 7, 7, 7, 7,
-                7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8,
-                8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-                2, 2, 10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 11, 6, 6, 6, 5, 8, 8, 8, 8, 8,
-                8, 8, 8, 8, 8, 8 };
-
-        private static final byte[] STATES = { 0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12,
-                12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12,
-                12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
-                12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 36,
-                12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12,
-                12, 12, 12, 12, 12, 12 };
-
-        @SuppressWarnings("RedundantFieldInitialization")
-        private int state = UTF8_ACCEPT;
-        private int codep;
-
-        private final StringBuilder stringBuilder;
-
-        UTF8Output(ByteBuffer... payload) {
-            stringBuilder = new StringBuilder(size(payload));
-            write(payload);
-        }
-
-        public void write(ByteBuffer... bytes) {
-            for (ByteBuffer buf: bytes) {
-                while(buf.hasRemaining()) {
-                    write(buf.get());
-                }
-            }
-        }
-
-        private void write(int b) {
-            byte type = TYPES[b & 0xFF];
-
-            codep = state != UTF8_ACCEPT ? b & 0x3f | codep << 6 : 0xff >> type & b;
-
-            state = STATES[state + type];
-
-            if (state == UTF8_ACCEPT) {
-                stringBuilder.append((char) codep);
-            }
-        }
-
-        /**
-         * Extract a String holding the utf8 text
-         */
-        public String extract() {
-            String text = stringBuilder.toString();
-            stringBuilder.delete(0, stringBuilder.length());
-            return text;
-        }
-    }
 }

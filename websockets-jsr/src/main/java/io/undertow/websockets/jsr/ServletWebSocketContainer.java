@@ -8,15 +8,15 @@ import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
  */
 public class ServletWebSocketContainer extends ServerWebSocketContainer {
 
-    private final JsrWebSocketServlet servlet;
+    private final JsrWebSocketFilter filter;
 
     public ServletWebSocketContainer(final ConfiguredServerEndpoint... configs) {
 
-        servlet = new JsrWebSocketServlet(new WebSocketSessionConnectionCallback(new UuidWebSocketSessionIdGenerator(),
+        filter = new JsrWebSocketFilter(new WebSocketSessionConnectionCallback(new UuidWebSocketSessionIdGenerator(),
                 new EndpointSessionHandler(this), false), configs);
     }
 
-    public JsrWebSocketServlet getServlet() {
-        return servlet;
+    public JsrWebSocketFilter getFilter() {
+        return filter;
     }
 }

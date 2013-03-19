@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.test;
 
 import io.undertow.websockets.jsr.util.ClassUtils;
 import org.junit.Assert;

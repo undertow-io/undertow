@@ -15,38 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.test;
 
-import org.xnio.Buffers;
-
-import javax.websocket.PongMessage;
-import java.nio.ByteBuffer;
+import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 /**
- * Default {@link PongMessage} implementation
- *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public final class DefaultPongMessage implements PongMessage {
-    private static final PongMessage EMPTY = new DefaultPongMessage(Buffers.EMPTY_BYTE_BUFFER);
-    private final ByteBuffer data;
-
-    private DefaultPongMessage(ByteBuffer data) {
-        this.data = data;
-    }
-
+public class JsrWebSocketServer13Test extends JsrWebSocketServer08Test {
     @Override
-    public ByteBuffer getApplicationData() {
-        return data;
-    }
-
-    /**
-     * Create a {@link PongMessage} from the given {@link ByteBuffer}.
-     */
-    public static PongMessage create(ByteBuffer data) {
-        if (data == null || data.hasRemaining()) {
-            return new DefaultPongMessage(data);
-        }
-        return EMPTY;
+    protected WebSocketVersion getVersion() {
+        return WebSocketVersion.V13;
     }
 }
