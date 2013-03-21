@@ -194,7 +194,7 @@ public class SecurityContextImpl implements SecurityContext {
             return false;
         }
 
-        authenticationComplete(account, "TODO", true);
+        authenticationComplete(account, "TODO");
         this.authenticationState = AuthenticationState.AUTHENITCATED;
 
         return true;
@@ -203,7 +203,7 @@ public class SecurityContextImpl implements SecurityContext {
     @Override
     public void logout() {
         sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.LOGGED_OUT, account, mechanismName,
-                true, MESSAGES.userLoggedOut(account.getPrincipal().getName())));
+                MESSAGES.userLoggedOut(account.getPrincipal().getName())));
 
         this.account = null;
         this.mechanismName = null;
@@ -211,12 +211,12 @@ public class SecurityContextImpl implements SecurityContext {
     }
 
     @Override
-    public void authenticationComplete(Account account, String mechanism, boolean cacheable) {
+    public void authenticationComplete(Account account, String mechanism) {
         this.account = account;
         this.mechanismName = mechanism;
 
         sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.AUTHENTICATED, account, mechanism,
-                cacheable, MESSAGES.userAuthenticated(account.getPrincipal().getName())));
+                MESSAGES.userAuthenticated(account.getPrincipal().getName())));
     }
 
     private void sendNoticiation(final SecurityNotification notification) {

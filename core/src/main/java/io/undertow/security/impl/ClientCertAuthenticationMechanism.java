@@ -82,7 +82,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         IdentityManager idm = securityContext.getIdentityManager();
         Account account = idm.verify(credential);
         if (account != null) {
-            securityContext.authenticationComplete(account, getName(), false);
+            securityContext.authenticationComplete(account, getName());
             return AuthenticationMechanismOutcome.AUTHENTICATED;
         } else {
             // Return NOT_ATTEMPTED to give other mechanisms a chance.

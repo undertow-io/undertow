@@ -73,7 +73,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
             EventType eventType = notification.getEventType();
             switch (eventType) {
                 case AUTHENTICATED:
-                    if (notification.isCacheable()) {
+                    if (isCacheable(notification)) {
                         HttpSession session = servletContext.getSession(notification.getExchange(), true);
                         // It is normal for this notification to be received when using a previously cached session - in that
                         // case the IDM would have been given an opportunity to re-load the Account so updating here ready for
@@ -105,6 +105,10 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
             return null;
         }
 
+    }
+
+    private boolean isCacheable(final SecurityNotification notification) {
+        return "FORM".equals(notification.getMechanism()) || "TODO".equals(notification.getMechanism());
     }
 
 }

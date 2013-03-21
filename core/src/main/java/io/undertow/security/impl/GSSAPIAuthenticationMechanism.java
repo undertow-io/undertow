@@ -86,7 +86,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                 IdentityManager identityManager = securityContext.getIdentityManager();
                 final Account account = identityManager.verify(new GSSContextCredential(negContext.getGssContext()));
                 if (account != null) {
-                    securityContext.authenticationComplete(account, getName(), false);
+                    securityContext.authenticationComplete(account, getName());
                     return AuthenticationMechanismOutcome.AUTHENTICATED;
                 } else {
                     return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
@@ -206,7 +206,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                 IdentityManager identityManager = securityContext.getIdentityManager();
                 final Account account = identityManager.verify(new GSSContextCredential(negContext.getGssContext()));
                 if (account != null) {
-                    securityContext.authenticationComplete(account, getName(), false);
+                    securityContext.authenticationComplete(account, getName());
                     return AuthenticationMechanismOutcome.AUTHENTICATED;
                 } else {
                     return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
