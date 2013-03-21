@@ -60,7 +60,7 @@ public interface JsrWebSocketMessages {
     IllegalStateException unsupportedFrameType(Class<?> clazz);
 
     @Message(id = 3007, value = "Unable to detect MessageHandler type for %s")
-    IllegalStateException unkownHandlerType(Class<?> clazz);
+    IllegalStateException unknownHandlerType(Class<?> clazz);
 
     @Message(id = 3008, value = "Unable to detect Encoder type for %s")
     IllegalStateException unknownEncoderType(Class<?> clazz);

@@ -41,7 +41,7 @@ public final class ClassUtils {
                return m.getParameterTypes()[0];
             }
         }
-        throw JsrWebSocketMessages.MESSAGES.unkownHandlerType(clazz);
+        throw JsrWebSocketMessages.MESSAGES.unknownHandlerType(clazz);
     }
 
     /**

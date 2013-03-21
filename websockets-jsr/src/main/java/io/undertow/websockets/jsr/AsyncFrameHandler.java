@@ -29,7 +29,7 @@ import java.nio.charset.Charset;
 
 /**
  * {@link AbstractFrameHandler} subclass which will allow to use {@link MessageHandler.Async} implementations
- * to operated on received fragements.
+ * to operated on received fragments.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
