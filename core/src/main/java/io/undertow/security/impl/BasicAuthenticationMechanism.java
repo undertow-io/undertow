@@ -85,9 +85,23 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                     int colonPos;
                     if (plainChallenge != null && (colonPos = plainChallenge.indexOf(COLON)) > -1) {
                         String userName = plainChallenge.substring(0, colonPos);
-                        String password = plainChallenge.substring(colonPos + 1);
+                        char[] password = plainChallenge.substring(colonPos + 1).toCharArray();
 
-                        return runBasic(securityContext, userName, password.toCharArray());
+                        IdentityManager idm = securityContext.getIdentityManager();
+                        PasswordCredential credential = new PasswordCredential(password);
+                        try {
+                            final AuthenticationMechanismOutcome result;
+                            Account account = idm.verify(userName, credential);
+                            if (account != null) {
+                                securityContext.authenticationComplete(account, getName(), false);
+                                result = AuthenticationMechanismOutcome.AUTHENTICATED;
+                            } else {
+                                result = AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
+                            }
+                            return result;
+                        } finally {
+                            clear(password);
+                        }
                     }
 
                     // By this point we had a header we should have been able to verify but for some reason
@@ -101,29 +115,16 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
     }
 
-    public AuthenticationMechanismOutcome runBasic(final SecurityContext securityContext, final String userName, final char[] password) {
-        // To reach this point we must have been supplied a username and password.
-        AuthenticationMechanismOutcome result = null;
-        IdentityManager idm = securityContext.getIdentityManager();
-        PasswordCredential credential = new PasswordCredential(password);
-        try {
-            Account account = idm.verify(userName, credential);
-            if (account != null) {
-                securityContext.authenticationComplete(account, getName(), false);
-                result = AuthenticationMechanismOutcome.AUTHENTICATED;
-            }
-            return result != null ? result : AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
-        } finally {
-            for (int i = 0; i < password.length; i++) {
-                password[i] = 0x00;
-            }
-        }
-    }
-
     @Override
     public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
         exchange.getResponseHeaders().add(WWW_AUTHENTICATE, challenge);
         return new ChallengeResult(true, UNAUTHORIZED);
+    }
+
+    private static void clear(final char[] array) {
+        for (int i = 0; i < array.length; i++) {
+            array[i] = 0x00;
+        }
     }
 
 }
