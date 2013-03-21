@@ -157,10 +157,8 @@ public interface SecurityContext {
      *
      * @param account - The authenticated {@link Account}
      * @param mechanismName - The name of the mechanism used to authenticate the account.
-     * @param cacheable - Is the authentication cache-able i.e. can it be stored in a session to skip authentication for
-     *        subsequent requests.
      */
-    void authenticationComplete(final Account account, final String mechanismName, final boolean cacheable);
+    void authenticationComplete(final Account account, final String mechanismName);
 
     // TODO - Should there be an authenticationFailed method that can be called by a mechanism for audit purposes to indicate that an authentication attempt failed.
 
