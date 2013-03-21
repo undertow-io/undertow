@@ -169,20 +169,20 @@ public interface SecurityContext {
      */
 
     /**
-     * Register a {@link NotificationHandler} interested in receiving notifications for security events that happen on this SecurityContext.
+     * Register a {@link NotificationReceiver} interested in receiving notifications for security events that happen on this SecurityContext.
      *
-     * @param handler - The {@link NotificationHandler} to register.
+     * @param receiver - The {@link NotificationReceiver} to register.
      */
-    void registerNotificationHandler(final NotificationHandler handler);
+    void registerNotificationReceiver(final NotificationReceiver receiver);
 
     /**
-     * Remove a previously registered {@link NotificationHandler} from this SecurityContext.
+     * Remove a previously registered {@link NotificationReceiver} from this SecurityContext.
      *
-     * If the supplied handler has not been previously registered this method will fail silently.
+     * If the supplied receiver has not been previously registered this method will fail silently.
      *
-     * @param handler - The {@link NotificationHandler} to remove.
+     * @param receiver - The {@link NotificationReceiver} to remove.
      */
-    void removeNotificationHandler(final NotificationHandler handler);
+    void removeNotificationReceiver(final NotificationReceiver receiver);
 
     class AuthenticationResult {
 

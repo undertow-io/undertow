@@ -19,7 +19,7 @@ package io.undertow.servlet.handlers.security;
 
 import io.undertow.security.api.AuthenticatedSessionManager;
 import io.undertow.security.api.AuthenticatedSessionManager.AuthenticatedSession;
-import io.undertow.security.api.NotificationHandler;
+import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.api.SecurityNotification.EventType;
@@ -40,7 +40,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
 
     private static final String ATTRIBUTE_NAME = CachedAuthenticatedSessionHandler.class.getName() + ".AuthenticatedSession";
 
-    private final NotificationHandler NOTIFICATION_HANDLER = new SecurityNotificationHandler();
+    private final NotificationReceiver NOTIFICATION_RECEIVER = new SecurityNotificationReceiver();
     private final AuthenticatedSessionManager SESSION_MANAGER = new ServletAuthenticatedSessionManager();
 
     private final HttpHandler next;
@@ -54,7 +54,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         SecurityContext securityContext = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        securityContext.registerNotificationHandler(NOTIFICATION_HANDLER);
+        securityContext.registerNotificationReceiver(NOTIFICATION_RECEIVER);
 
         HttpSession session = servletContext.getSession(exchange, false);
         // If there was no existing HttpSession then there could not be a cached AuthenticatedSession so don't bother setting
@@ -66,7 +66,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
         HttpHandlers.executeHandler(next, exchange);
     }
 
-    private class SecurityNotificationHandler implements NotificationHandler {
+    private class SecurityNotificationReceiver implements NotificationReceiver {
 
         @Override
         public void handleNotification(SecurityNotification notification) {
