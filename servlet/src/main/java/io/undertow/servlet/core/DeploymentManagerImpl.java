@@ -38,8 +38,10 @@ import javax.servlet.annotation.ServletSecurity;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
+import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.handlers.AuthenticationCallHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
+import io.undertow.security.handlers.NotificationReceiverHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
@@ -222,6 +224,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
         }
 
         current = new CachedAuthenticatedSessionHandler(current, this.deployment.getServletContext());
+        List<NotificationReceiver> notificationReceivers = deploymentInfo.getNotificationReceivers();
+        if (notificationReceivers.isEmpty() == false) {
+            current = new NotificationReceiverHandler(current, notificationReceivers);
+        }
+
         // TODO - A switch to constraint driven could be configurable, however before we can support that with servlets we would
         // need additional tracking within sessions if a servlet has specifically requested that authentication occurs.
         current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, deploymentInfo.getIdentityManager(), current);
