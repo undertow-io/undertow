@@ -29,6 +29,7 @@ import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.api.SecurityNotification;
+import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
@@ -215,8 +216,13 @@ public class SecurityContextImpl implements SecurityContext {
         this.account = account;
         this.mechanismName = mechanism;
 
-        sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.AUTHENTICATED, account, mechanism,
+        sendNoticiation(new SecurityNotification(exchange, EventType.AUTHENTICATED, account, mechanism,
                 MESSAGES.userAuthenticated(account.getPrincipal().getName())));
+    }
+
+    @Override
+    public void authenticationFailed(String message, String mechanism) {
+        sendNoticiation(new SecurityNotification(exchange, EventType.FAILED_AUTHENTICATION, null, mechanism, message));
     }
 
     private void sendNoticiation(final SecurityNotification notification) {

@@ -38,6 +38,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HexConverter;
 
 import static io.undertow.UndertowLogger.REQUEST_LOGGER;
+import static io.undertow.UndertowMessages.MESSAGES;
 import static io.undertow.security.impl.DigestAuthorizationToken.parseHeader;
 import static io.undertow.util.Headers.AUTHENTICATION_INFO;
 import static io.undertow.util.Headers.AUTHORIZATION;
@@ -251,6 +252,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         final Account account = identityManager.getAccount(userName);
         if (account == null) {
             //the user does not exist.
+            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), getName());
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 
@@ -265,6 +267,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             context.setHa1(ha1);
         } catch (AuthenticationException e) {
             // Most likely the user does not exist.
+            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), getName());
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 
@@ -288,6 +291,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             // TODO - We should look at still marking the nonce as used, a failure in authentication due to say a failure
             // looking up the users password would leave it open to the packet being replayed.
             REQUEST_LOGGER.authenticationFailed(parsedHeader.get(DigestAuthorizationToken.USERNAME), DIGEST.toString());
+            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), getName());
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 
@@ -298,6 +302,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             // side could leave a packet that could be 're-played' after the failed auth.
             // The username and password verification passed but for some reason we do not like the nonce.
             context.markStale();
+            // We do not mark as a failure on the security context as this is not quite a failure, a client with a cached nonce
+            // can easily hit this point.
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 

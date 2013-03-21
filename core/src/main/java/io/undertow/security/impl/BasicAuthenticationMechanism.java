@@ -17,6 +17,7 @@
  */
 package io.undertow.security.impl;
 
+import static io.undertow.UndertowMessages.MESSAGES;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -96,6 +97,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                                 securityContext.authenticationComplete(account, getName());
                                 result = AuthenticationMechanismOutcome.AUTHENTICATED;
                             } else {
+                                securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), getName());
                                 result = AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
                             }
                             return result;

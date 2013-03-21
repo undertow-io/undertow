@@ -137,4 +137,7 @@ public interface UndertowMessages {
     @Message(id = 37, value = "Failed to parse path in HTTP request")
     RuntimeException failedToParsePath();
 
+    @Message(id = 38, value = "Authentication failed, requested user name '%s'")
+    String authenticationFailed(final String userName);
+
 }

@@ -19,6 +19,7 @@ package io.undertow.test.security;
 
 import static org.junit.Assert.assertEquals;
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
@@ -81,6 +82,7 @@ public class ClientCertTestCase extends AuthenticationTestBase {
         assertEquals("AuthenticatedUser Headers", 1, values.length);
         assertEquals("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB", values[0].getValue());
         HttpClientUtils.readResponse(result);
+        assertSingleNotificationType(EventType.AUTHENTICATED);
     }
 
 }
