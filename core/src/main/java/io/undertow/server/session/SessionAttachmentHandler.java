@@ -114,7 +114,7 @@ public class SessionAttachmentHandler implements HttpHandler {
             try {
                 final Session session = sessionManager.getSession(exchange, sessionConfig);
                 if (session != null) {
-                    session.updateLastAccessedTime();
+                    session.requestDone(exchange);
                 }
             } finally {
                 next.proceed();

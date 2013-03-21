@@ -496,7 +496,7 @@ public class ServletContextImpl implements ServletContext {
     public void updateSessionAccessTime(final HttpServerExchange exchange) {
         HttpSessionImpl httpSession = getSession(exchange, false);
         if (httpSession != null) {
-            httpSession.getSession().updateLastAccessedTime();
+            httpSession.getSession().requestDone(exchange);
         }
     }
 

@@ -39,6 +39,16 @@ public interface SessionManager {
     AttachmentKey<SessionManager> ATTACHMENT_KEY = AttachmentKey.create(SessionManager.class);
 
     /**
+     * Starts the session manager
+     */
+    void start();
+
+    /**
+     * stops the session manager
+     */
+    void stop();
+
+    /**
      * Creates a new session. Any {@link SessionListener}s registered with this manager will be notified
      * of the session creation.
      *

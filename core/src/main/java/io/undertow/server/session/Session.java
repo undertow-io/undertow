@@ -180,13 +180,6 @@ public interface Session {
      */
     SessionManager getSessionManager();
 
-
-    /**
-     * Sets the last accessed time for the session
-     * @param sessionId The session id
-     */
-    void updateLastAccessedTime();
-
     /**
      * Generate a new session id for this session, and return the new id.
      *

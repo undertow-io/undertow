@@ -561,6 +561,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     public HttpHandler start() throws ServletException {
         ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
+            deployment.getDeploymentInfo().getSessionManager().start();
             for (Lifecycle object : deployment.getLifecycleObjects()) {
                 object.start();
             }
@@ -622,6 +623,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             executor = null;
             asyncExecutor = null;
         }
+        deployment.getDeploymentInfo().getSessionManager().stop();
         state = State.DEPLOYED;
     }
 

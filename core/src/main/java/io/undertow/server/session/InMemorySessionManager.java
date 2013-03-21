@@ -52,6 +52,16 @@ public class InMemorySessionManager implements SessionManager {
     private volatile int defaultSessionTimeout = 30 * 60;
 
     @Override
+    public void start() {
+
+    }
+
+    @Override
+    public void stop() {
+        sessions.clear();
+    }
+
+    @Override
     public Session createSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         if (config == null) {
             throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
@@ -161,7 +171,10 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public void requestDone(final HttpServerExchange serverExchange) {
-            //noop
+            final InMemorySession sess = sessions.get(sessionId);
+            if (sess != null) {
+                sess.lastAccessed = System.currentTimeMillis();
+            }
         }
 
         @Override
@@ -270,14 +283,6 @@ public class InMemorySessionManager implements SessionManager {
         @Override
         public SessionManager getSessionManager() {
             return InMemorySessionManager.this;
-        }
-
-        @Override
-        public void updateLastAccessedTime() {
-            final InMemorySession sess = sessions.get(sessionId);
-            if(sess != null) {
-                sess.lastAccessed = System.currentTimeMillis();
-            }
         }
 
         @Override
