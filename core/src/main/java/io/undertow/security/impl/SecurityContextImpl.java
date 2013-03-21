@@ -26,7 +26,7 @@ import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome;
 import io.undertow.security.api.AuthenticationMechanism.ChallengeResult;
 import io.undertow.security.api.AuthenticationMode;
-import io.undertow.security.api.NotificationHandler;
+import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.idm.Account;
@@ -54,7 +54,7 @@ public class SecurityContextImpl implements SecurityContext {
     private final HttpServerExchange exchange;
     private final List<AuthenticationMechanism> authMechanisms = new ArrayList<>();
     private final IdentityManager identityManager;
-    private final List<NotificationHandler> notificationHandler = new ArrayList<>();
+    private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
 
     // Maybe this will need to be a custom mechanism that doesn't exchange tokens with the client but will then
     // be configured to either associate with the connection, the session or some other arbitrary whatever.
@@ -220,24 +220,24 @@ public class SecurityContextImpl implements SecurityContext {
     }
 
     private void sendNoticiation(final SecurityNotification notification) {
-        synchronized (notificationHandler) {
-            for (NotificationHandler current : notificationHandler) {
+        synchronized (notificationReceivers) {
+            for (NotificationReceiver current : notificationReceivers) {
                 current.handleNotification(notification);
             }
         }
     }
 
     @Override
-    public void registerNotificationHandler(NotificationHandler handler) {
-        synchronized (notificationHandler) {
-            notificationHandler.add(handler);
+    public void registerNotificationReceiver(NotificationReceiver receiver) {
+        synchronized (notificationReceivers) {
+            notificationReceivers.add(receiver);
         }
     }
 
     @Override
-    public void removeNotificationHandler(NotificationHandler handler) {
-        synchronized (notificationHandler) {
-            notificationHandler.remove(handler);
+    public void removeNotificationReceiver(NotificationReceiver receiver) {
+        synchronized (notificationReceivers) {
+            notificationReceivers.remove(receiver);
         }
     }
 

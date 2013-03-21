@@ -18,11 +18,11 @@
 package io.undertow.security.api;
 
 /**
- * The interface to be interested by handlers interested in processing security related notifications.
+ * The interface to be interested by classes interested in processing security related notifications.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-public interface NotificationHandler {
+public interface NotificationReceiver {
 
     /**
      * Handle a security related notification.
