@@ -66,7 +66,7 @@ public abstract class ServerWebSocketContainer implements WebSocketContainer {
 
     @Override
     public void setDefaultMaxSessionIdleTimeout(final long timeout) {
-        this.maxSessionIdleTimeout = maxSessionIdleTimeout;
+        this.maxSessionIdleTimeout = timeout;
     }
 
     @Override
