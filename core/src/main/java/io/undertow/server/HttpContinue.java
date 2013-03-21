@@ -39,7 +39,7 @@ public class HttpContinue {
             return false;
         }
         if (exchange.getConnection().getExtraBytes() != null) {
-            //we have already recieved some of the request body
+            //we have already received some of the request body
             //so according to the RFC we do not need to send the Continue
             return false;
         }
