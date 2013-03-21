@@ -55,16 +55,20 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         return name;
     }
 
-    public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
-                                                       final SecurityContext securityContext) {
-
+    public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange, final SecurityContext securityContext) {
         SSLSession sslSession = exchange.getConnection().getSslSession();
         if (sslSession != null) {
             try {
                 Certificate[] clientCerts = sslSession.getPeerCertificates();
                 if (clientCerts[0] instanceof X509Certificate) {
-                    // Hand off to the executor as now we need an IDM based check.
-                    return runClientCert(securityContext,  (X509Certificate) clientCerts[0]);
+                    Credential credential = new X509CertificateCredential((X509Certificate) clientCerts[0]);
+
+                    IdentityManager idm = securityContext.getIdentityManager();
+                    Account account = idm.verify(credential);
+                    if (account != null) {
+                        securityContext.authenticationComplete(account, getName());
+                        return AuthenticationMechanismOutcome.AUTHENTICATED;
+                    }
                 }
             } catch (SSLPeerUnverifiedException e) {
                 // No action - this mechanism can not attempt authentication without peer certificates so allow it to drop out
@@ -72,22 +76,13 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
             }
         }
 
-        // There was no SSLSession to verify or early verification failed.
+        /*
+         * For ClientCert we do not have a concept of a failed authentication, if the client did use a key then it was deemed
+         * acceptable for the connection to be established, this mechanism then just 'attempts' to use it for authentication but
+         * does not mandate success.
+         */
+
         return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
-    }
-
-    public AuthenticationMechanismOutcome runClientCert(final SecurityContext securityContext, final X509Certificate certificate) {
-        Credential credential = new X509CertificateCredential(certificate);
-
-        IdentityManager idm = securityContext.getIdentityManager();
-        Account account = idm.verify(credential);
-        if (account != null) {
-            securityContext.authenticationComplete(account, getName());
-            return AuthenticationMechanismOutcome.AUTHENTICATED;
-        } else {
-            // Return NOT_ATTEMPTED to give other mechanisms a chance.
-            return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
-        }
     }
 
     @Override
