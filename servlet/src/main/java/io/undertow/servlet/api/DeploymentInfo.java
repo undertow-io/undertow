@@ -33,6 +33,7 @@ import java.util.concurrent.Executor;
 import javax.servlet.DispatcherType;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.session.InMemorySessionManager;
@@ -80,6 +81,7 @@ public class DeploymentInfo implements Cloneable {
     private final List<SecurityConstraint> securityConstraints = new ArrayList<SecurityConstraint>();
     private final Map<String, Set<String>> principleVsRoleMapping = new HashMap<String, Set<String>>();
     private final Set<String> securityRoles = new HashSet<String>();
+    private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
 
     /**
      * Handler chain wrappers that are applied outside all other handlers, including security but after the initial
@@ -571,6 +573,25 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(dispatchedHandlerChainWrappers);
     }
 
+    public DeploymentInfo addNotificationReceiver(final NotificationReceiver notificationReceiver) {
+        this.notificationReceivers.add(notificationReceiver);
+        return this;
+    }
+
+    public DeploymentInfo addNotificactionReceivers(final NotificationReceiver... notificationReceivers) {
+        this.notificationReceivers.addAll(Arrays.asList(notificationReceivers));
+        return this;
+    }
+
+    public DeploymentInfo addNotificationReceivers(final Collection<NotificationReceiver> notificationReceivers) {
+        this.notificationReceivers.addAll(notificationReceivers);
+        return this;
+    }
+
+    public List<NotificationReceiver> getNotificationReceivers() {
+        return Collections.unmodifiableList(notificationReceivers);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -615,6 +636,7 @@ public class DeploymentInfo implements Cloneable {
         info.innerHandlerChainWrappers.addAll(innerHandlerChainWrappers);
         info.dispatchedHandlerChainWrappers.addAll(dispatchedHandlerChainWrappers);
         info.securityRoles.addAll(securityRoles);
+        info.notificationReceivers.addAll(notificationReceivers);
         return info;
     }
 
