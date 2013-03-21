@@ -20,10 +20,13 @@ package io.undertow.test.security;
 import static org.junit.Assert.assertEquals;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
+import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContext;
+import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.handlers.AuthenticationCallHandler;
 import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.security.handlers.AuthenticationMechanismsHandler;
+import io.undertow.security.handlers.NotificationReceiverHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
@@ -38,10 +41,12 @@ import io.undertow.util.HttpString;
 import io.undertow.util.TestHttpClient;
 
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -58,6 +63,7 @@ import org.junit.Test;
 public abstract class AuthenticationTestBase {
 
     protected static final IdentityManager identityManager;
+    protected static final AuditReceiver auditReceiver = new AuditReceiver();
 
     static {
         final Set<String> certUsers = new HashSet<String>();
@@ -162,19 +168,19 @@ public abstract class AuthenticationTestBase {
     }
 
     protected void setAuthenticationChain() {
-        HttpHandler responseHandler = new ResponseHandler();
-        HttpHandler callHandler = new AuthenticationCallHandler(responseHandler);
-        HttpHandler constraintHandler = new AuthenticationConstraintHandler(callHandler);
+        HttpHandler current = new ResponseHandler();
+        current = new AuthenticationCallHandler(current);
+        current = new AuthenticationConstraintHandler(current);
 
         AuthenticationMechanism authMech = getTestMechanism();
 
-        HttpHandler methodsAddHandler = new AuthenticationMechanismsHandler(constraintHandler,
-                Collections.<AuthenticationMechanism> singletonList(authMech));
+        current = new AuthenticationMechanismsHandler(current, Collections.<AuthenticationMechanism> singletonList(authMech));
+        auditReceiver.takeNotifications(); // Ensure empty on initialisation.
+        current = new NotificationReceiverHandler(current, Collections.<NotificationReceiver> singleton(auditReceiver));
 
-        HttpHandler initialHandler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager,
-                methodsAddHandler);
+        current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, current);
 
-        DefaultServer.setRootHandler(initialHandler);
+        DefaultServer.setRootHandler(current);
     }
 
     protected abstract AuthenticationMechanism getTestMechanism();
@@ -194,6 +200,12 @@ public abstract class AuthenticationTestBase {
         Header[] values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
+    }
+
+    public void assertSingleNotificationType(final SecurityNotification.EventType eventType) {
+        List<SecurityNotification> notifications = auditReceiver.takeNotifications();
+        assertEquals("A single notification is expected.", 1, notifications.size());
+        assertEquals("Expected EventType not matched.", eventType, notifications.get(0).getEventType());
     }
 
     protected static String getAuthenticatedUser(final HttpServerExchange exchange) {
@@ -229,6 +241,24 @@ public abstract class AuthenticationTestBase {
             }
 
             exchange.endExchange();
+        }
+    }
+
+    protected static class AuditReceiver implements NotificationReceiver {
+
+        private final List<SecurityNotification> receivedNotifications = new ArrayList<>();
+
+        @Override
+        public void handleNotification(SecurityNotification notification) {
+            receivedNotifications.add(notification);
+        }
+
+        public List<SecurityNotification> takeNotifications() {
+            try {
+                return new ArrayList<>(receivedNotifications);
+            } finally {
+                receivedNotifications.clear();
+            }
         }
 
     }

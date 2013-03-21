@@ -160,7 +160,19 @@ public interface SecurityContext {
      */
     void authenticationComplete(final Account account, final String mechanismName);
 
-    // TODO - Should there be an authenticationFailed method that can be called by a mechanism for audit purposes to indicate that an authentication attempt failed.
+    /**
+     * Called by the {@link AuthenticationMechanism} to indicate that an authentication attempt has failed.
+     *
+     * This should only be called where an authentication attempt has truly failed, for authentication mechanisms where an
+     * additional round trip with the client is expected this should not be called.
+     *
+     * Where possible the failure message should contain the name of the identity that authentication was being attempted for,
+     * however as this is not always possible to identify in advance a generic message may be all that can be reported.
+     *
+     * @param message - The message describing the failure.
+     * @param mechanismName - The name of the mechanism reporting the failure.
+     */
+    void authenticationFailed(final String message, final String mechanismName);
 
     /*
      * Methods for the management of NotificationHandler registrations.

@@ -18,6 +18,7 @@
 package io.undertow.test.security;
 
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
@@ -69,6 +70,7 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
         HttpClientUtils.readResponse(result);
+        assertSingleNotificationType(EventType.AUTHENTICATED);
     }
 
     @Test
@@ -89,6 +91,7 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         HttpClientUtils.readResponse(result);
+        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
     @Test
@@ -109,6 +112,7 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
         result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
         HttpClientUtils.readResponse(result);
+        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
 }

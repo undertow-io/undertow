@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Random;
 
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.AuthenticationInfoToken;
 import io.undertow.security.impl.DigestAlgorithm;
 import io.undertow.security.impl.DigestAuthenticationMechanism;
@@ -218,6 +219,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
             values = result.getHeaders("ProcessedBy");
             assertEquals(1, values.length);
             assertEquals("ResponseHandler", values[0].getValue());
+            assertSingleNotificationType(EventType.AUTHENTICATED);
 
             values = result.getHeaders("Authentication-Info");
             assertEquals(1, values.length);
@@ -270,6 +272,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         get.addHeader(AUTHORIZATION.toString(), authorization);
         result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
+        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
     /**
@@ -309,6 +312,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         get.addHeader(AUTHORIZATION.toString(), authorization);
         result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
+        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
     /**
@@ -348,6 +352,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         get.addHeader(AUTHORIZATION.toString(), authorization);
         result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
+        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
     /**
@@ -392,6 +397,8 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
 
             if (i == 0) {
                 assertEquals(200, result.getStatusLine().getStatusCode());
+                assertSingleNotificationType(EventType.AUTHENTICATED);
+
 
                 values = result.getHeaders("ProcessedBy");
                 assertEquals(1, values.length);

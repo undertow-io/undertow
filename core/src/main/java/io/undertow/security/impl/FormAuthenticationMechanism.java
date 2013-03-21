@@ -35,6 +35,7 @@ import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 
+import static io.undertow.UndertowMessages.MESSAGES;
 import static io.undertow.util.StatusCodes.TEMPORARY_REDIRECT;
 
 /**
@@ -99,6 +100,8 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                 if (account != null) {
                     securityContext.authenticationComplete(account, name);
                     outcome = AuthenticationMechanismOutcome.AUTHENTICATED;
+                } else {
+                    securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), getName());
                 }
             } finally {
                 if (outcome == AuthenticationMechanismOutcome.AUTHENTICATED) {

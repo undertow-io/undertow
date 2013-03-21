@@ -25,6 +25,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import io.undertow.security.impl.AuthenticationInfoToken;
 import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.DigestAlgorithm;
 import io.undertow.security.impl.DigestAuthenticationMechanism;
 import io.undertow.security.impl.DigestAuthorizationToken;
@@ -145,6 +146,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
 
         nonce = parsedAuthInfo.get(AuthenticationInfoToken.NEXT_NONCE);
         response = createResponse("userOne", REALM_NAME, "passwordOne", "GET", "/", nonce);
+        assertSingleNotificationType(EventType.AUTHENTICATED);
 
         client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerURL());
@@ -163,6 +165,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
+        assertSingleNotificationType(EventType.AUTHENTICATED);
     }
 
     /**
@@ -204,6 +207,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
+        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
     /**
@@ -242,6 +246,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
         result = client.execute(get);
         assertEquals(401, result.getStatusLine().getStatusCode());
+        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
     }
 
     /**
@@ -311,6 +316,8 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
+        // The additional round trip for the bad nonce should not trigger a security notification.
+        assertSingleNotificationType(EventType.AUTHENTICATED);
     }
 
     /**
@@ -352,6 +359,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
+        assertSingleNotificationType(EventType.AUTHENTICATED);
 
         client = new TestHttpClient();
         get = new HttpGet(DefaultServer.getDefaultServerURL());
@@ -390,6 +398,8 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
         values = result.getHeaders("ProcessedBy");
         assertEquals(1, values.length);
         assertEquals("ResponseHandler", values[0].getValue());
+        // The additional round trip for the bad nonce should not trigger a security notification.
+        assertSingleNotificationType(EventType.AUTHENTICATED);
     }
 
     // Test choosing different algorithm.
