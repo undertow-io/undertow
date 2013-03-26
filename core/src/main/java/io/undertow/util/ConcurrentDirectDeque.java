@@ -18,7 +18,6 @@
 
 package io.undertow.util;
 
-import java.lang.reflect.Constructor;
 import java.util.AbstractCollection;
 import java.util.Deque;
 
@@ -28,27 +27,10 @@ import java.util.Deque;
  * @author Jason T. Greene
  */
 public abstract  class ConcurrentDirectDeque<E> extends AbstractCollection<E> implements Deque<E>, java.io.Serializable {
-    private static final Constructor<? extends ConcurrentDirectDeque> CONSTRUCTOR;
-
-    static {
-        boolean fast = false;
-        try {
-            new FastConcurrentDirectDeque();
-            fast = true;
-        } catch (Throwable t) {
-        }
-
-        Class<? extends ConcurrentDirectDeque> klazz = fast ? FastConcurrentDirectDeque.class : PortableConcurrentDirectDeque.class;
-        try {
-            CONSTRUCTOR = klazz.getConstructor();
-        } catch (NoSuchMethodException e) {
-            throw new NoSuchMethodError(e.getMessage());
-        }
-    }
 
     public static <K> ConcurrentDirectDeque<K> newInstance() {
         try {
-            return CONSTRUCTOR.newInstance();
+            return new FastConcurrentDirectDeque<K>();
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
