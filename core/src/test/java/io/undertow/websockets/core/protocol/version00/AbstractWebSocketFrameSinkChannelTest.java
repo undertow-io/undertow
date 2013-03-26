@@ -27,7 +27,7 @@ import io.undertow.websockets.core.WebSocketUtils;
  *
  */
 public abstract class AbstractWebSocketFrameSinkChannelTest {
-    protected final static byte[] DATA = "MyData".getBytes(WebSocketUtils.UTF_8);
+    protected static final byte[] DATA = "MyData".getBytes(WebSocketUtils.UTF_8);
 /*
     @Test
     public void testWriteWithBuffer() throws IOException {

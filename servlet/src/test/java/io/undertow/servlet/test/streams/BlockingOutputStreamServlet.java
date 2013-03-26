@@ -19,9 +19,7 @@
 package io.undertow.servlet.test.streams;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;

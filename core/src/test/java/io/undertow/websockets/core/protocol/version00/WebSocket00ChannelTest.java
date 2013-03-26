@@ -21,9 +21,7 @@ import java.io.IOException;
 import java.util.Collections;
 
 import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.utils.TestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -36,7 +34,7 @@ import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertTrue;
 
 /**
- * {@link WebSocketChannel} which is used for {@link WebSocketVersion#V00}
+ * {@link io.undertow.websockets.core.WebSocketChannel} which is used for {@link io.undertow.websockets.core.WebSocketVersion#V00}
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  *

@@ -144,7 +144,9 @@ public class WebSocket00ServerTest {
                             }
                             Assert.assertEquals(WebSocketFrameType.BINARY, ws.getType());
                             ByteBuffer buf = ByteBuffer.allocate(32);
-                            while (ws.read(buf) != -1) ;
+                            while (ws.read(buf) != -1){
+                                //noting is needed
+                            }
                             buf.flip();
 
                             StreamSinkFrameChannel sink = channel.send(WebSocketFrameType.BINARY, buf.remaining());

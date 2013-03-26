@@ -146,7 +146,7 @@ public final class WebSocketTestClient {
         void onError(Throwable t);
     }
 
-    private final static class WSClientHandler extends SimpleChannelUpstreamHandler {
+    private static final class WSClientHandler extends SimpleChannelUpstreamHandler {
 
         private final WebSocketClientHandshaker handshaker;
         private final CountDownLatch handshakeLatch;

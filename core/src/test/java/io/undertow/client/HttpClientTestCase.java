@@ -28,7 +28,7 @@ import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StringWriteChannelListener;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;

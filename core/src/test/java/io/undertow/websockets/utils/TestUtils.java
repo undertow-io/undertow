@@ -17,23 +17,21 @@
  */
 package io.undertow.websockets.utils;
 
+import static org.easymock.EasyMock.reset;
+import static org.easymock.EasyMock.verify;
+
 import java.nio.ByteBuffer;
-
-import org.easymock.EasyMock;
-
-import static org.easymock.EasyMock.*;
 
 /**
  * An utility class which is used for testing
- * @author norman
  *
+ * @author norman
  */
 public final class TestUtils {
 
     private TestUtils() {
         // utility class
     }
-
 
     /**
      * Return a array of bytes that holds all the readable data of the {@link ByteBuffer}. It will not increase the position
@@ -46,10 +44,9 @@ public final class TestUtils {
     }
 
     /**
-     * Verify and reset the mocks which were created via {@link EasyMock}.
-     * 
+     * Verify and reset the mocks which were created via {@link org.easymock.EasyMock}.
      */
-    public static void verifyAndReset(Object...objects) {
+    public static void verifyAndReset(Object... objects) {
         verify(objects);
         reset(objects);
     }

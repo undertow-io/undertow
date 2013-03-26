@@ -56,7 +56,7 @@ import static org.junit.Assert.assertTrue;
  *
  */
 public class WebSocket00TextFrameSourceChannelTest {
-    private final static Pool<ByteBuffer> POOL = Buffers.allocatedBufferPool(new BufferAllocator<ByteBuffer>() {
+    private static final Pool<ByteBuffer> POOL = Buffers.allocatedBufferPool(new BufferAllocator<ByteBuffer>() {
 
         @Override
         public ByteBuffer allocate(int size) throws IllegalArgumentException {
@@ -65,9 +65,8 @@ public class WebSocket00TextFrameSourceChannelTest {
 
     }, 1024);
 
-
-    private final static byte[] TEXT_BYTES = "Text".getBytes(WebSocketUtils.UTF_8);
-    private final static byte[] SOURCE_BYTES = new byte[7];
+    private static final byte[] TEXT_BYTES = "Text".getBytes(WebSocketUtils.UTF_8);
+    private static final byte[] SOURCE_BYTES = new byte[7];
     static {
         System.arraycopy(TEXT_BYTES, 0, SOURCE_BYTES, 0, TEXT_BYTES.length);
         SOURCE_BYTES[4] = (byte) 0xFF;

@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.undertow.test.utils.FileUtils;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
