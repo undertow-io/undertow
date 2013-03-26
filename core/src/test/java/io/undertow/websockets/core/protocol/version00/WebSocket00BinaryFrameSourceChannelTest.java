@@ -49,8 +49,8 @@ import static org.junit.Assert.*;
  */
 public class WebSocket00BinaryFrameSourceChannelTest {
 
-    private final static byte[] TEXT_BYTES = "Text".getBytes(WebSocketUtils.UTF_8);
-    private final static byte[] SOURCE_BYTES = new byte[6];
+    private static final byte[] TEXT_BYTES = "Text".getBytes(WebSocketUtils.UTF_8);
+    private static final byte[] SOURCE_BYTES = new byte[6];
 
     static {
         System.arraycopy(TEXT_BYTES, 0, SOURCE_BYTES, 0, TEXT_BYTES.length);

@@ -19,7 +19,6 @@ package io.undertow.servlet.test.security;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.Override;
 import java.security.Principal;
 
 import javax.servlet.ServletException;

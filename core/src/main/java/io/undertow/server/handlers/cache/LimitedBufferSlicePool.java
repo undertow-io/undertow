@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -39,23 +39,13 @@ import org.xnio.BufferAllocator;
 public final class LimitedBufferSlicePool {
 
     private static final AtomicIntegerFieldUpdater regionUpdater = AtomicIntegerFieldUpdater.newUpdater(LimitedBufferSlicePool.class, "regionsUsed");
-    private static final Class<?> queueClass;
-    private final Queue<Slice> sliceQueue;
+    private final Queue<Slice> sliceQueue = new LinkedTransferQueue<>();
     private final BufferAllocator<ByteBuffer> allocator;
     private final int bufferSize;
     private final int buffersPerRegion;
     private final int maxRegions;
     private volatile int regionsUsed;
 
-    static {
-        Class<?> c = ConcurrentLinkedQueue.class;
-        try {
-            c = Class.forName("java.util.concurrent.LinkedTransferQueue");
-        } catch (Exception ignore) {
-
-        }
-        queueClass = c;
-    }
 
     /**
      * Construct a new instance.
@@ -75,13 +65,6 @@ public final class LimitedBufferSlicePool {
         buffersPerRegion = maxRegionSize / bufferSize;
         this.bufferSize = bufferSize;
         this.allocator = allocator;
-        try {
-            sliceQueue = (Queue<Slice>) queueClass.newInstance();
-        } catch (InstantiationException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
         this.maxRegions = maxRegions;
     }
 

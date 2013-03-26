@@ -35,7 +35,6 @@ import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -48,8 +47,6 @@ import org.xnio.OptionMap;
  */
 @RunWith(DefaultServer.class)
 public class ChunkedRequestTransferCodingTestCase {
-
-    private static final Logger log = Logger.getLogger(ChunkedRequestTransferCodingTestCase.class);
 
     private static final String MESSAGE = "My HTTP Request!";
 
@@ -157,7 +154,7 @@ public class ChunkedRequestTransferCodingTestCase {
                     return -1;
                 }
             });
-            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, 3l));
+            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, 3L));
             HttpResponse result = client.execute(post);
             Assert.assertEquals(500, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);

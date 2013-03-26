@@ -9,7 +9,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 import org.xnio.IoUtils;
 

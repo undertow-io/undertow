@@ -8,8 +8,8 @@ import javax.servlet.http.HttpSessionIdListener;
  */
 public class ChangeSessionIdListener implements HttpSessionIdListener {
 
-    public volatile static String oldId;
-    public volatile static String newId;
+    public static volatile String oldId;
+    public static volatile String newId;
 
     @Override
     public void sessionIdChanged(final HttpSessionEvent event, final String oldSessionId) {
