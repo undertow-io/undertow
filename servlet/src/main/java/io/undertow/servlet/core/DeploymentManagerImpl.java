@@ -204,23 +204,26 @@ public class DeploymentManagerImpl implements DeploymentManager {
             current = new ServletSecurityConstraintHandler(securityPathMatches, current);
         }
 
+        final String mechName;
         if (loginConfig != null) {
             List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<AuthenticationMechanism>();
             authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism());
 
-            String requestedMechanism = loginConfig.getAuthMethod();
-            if (requestedMechanism.equalsIgnoreCase(BASIC_AUTH)) {
+            mechName = loginConfig.getAuthMethod();
+            if (mechName.equalsIgnoreCase(BASIC_AUTH)) {
                 // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be comparable using '=='
                 authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH));
-            } else if (requestedMechanism.equalsIgnoreCase(FORM_AUTH)) {
+            } else if (mechName.equalsIgnoreCase(FORM_AUTH)) {
                 // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be comparable using '=='
                 authenticationMechanisms.add(new ServletFormAuthenticationMechanism(FORM_AUTH, loginConfig.getLoginPage(), loginConfig.getErrorPage()));
-            } else if (requestedMechanism.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
+            } else if (mechName.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
                 authenticationMechanisms.add(new ClientCertAuthenticationMechanism(CLIENT_CERT_AUTH));
             } else {
                 //NYI
             }
             current = new AuthenticationMechanismsHandler(current, authenticationMechanisms);
+        } else {
+            mechName = null;
         }
 
         current = new CachedAuthenticatedSessionHandler(current, this.deployment.getServletContext());
@@ -231,7 +234,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         // TODO - A switch to constraint driven could be configurable, however before we can support that with servlets we would
         // need additional tracking within sessions if a servlet has specifically requested that authentication occurs.
-        current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, deploymentInfo.getIdentityManager(), current);
+        current = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, deploymentInfo.getIdentityManager(), mechName, current);
         return current;
     }
 

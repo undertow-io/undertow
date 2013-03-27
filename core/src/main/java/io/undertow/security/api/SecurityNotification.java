@@ -31,13 +31,15 @@ public class SecurityNotification {
     private final EventType eventType;
     private final Account account;
     private final String mechanism;
+    private final boolean programatic;
     private final String message;
 
-    public SecurityNotification(final HttpServerExchange exchange, final EventType eventType, final Account account, final String mechanism, final String message) {
+    public SecurityNotification(final HttpServerExchange exchange, final EventType eventType, final Account account, final String mechanism, final boolean programatic, final String message) {
         this.exchange = exchange;
         this.eventType = eventType;
         this.account = account;
         this.mechanism = mechanism;
+        this.programatic = programatic;
         this.message = message;
     }
 
@@ -55,6 +57,10 @@ public class SecurityNotification {
 
     public String getMechanism() {
         return mechanism;
+    }
+
+    public boolean isProgramatic() {
+        return programatic;
     }
 
     public String getMessage() {
