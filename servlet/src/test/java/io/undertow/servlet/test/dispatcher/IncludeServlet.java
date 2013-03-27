@@ -44,4 +44,10 @@ public class IncludeServlet extends HttpServlet {
         }
         dispatcher.include(req, resp);
     }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        doGet(req, resp);
+    }
+
 }

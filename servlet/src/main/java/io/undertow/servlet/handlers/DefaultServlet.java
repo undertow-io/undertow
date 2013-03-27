@@ -63,7 +63,6 @@ import org.xnio.IoUtils;
  */
 public class DefaultServlet extends HttpServlet {
 
-
     private final Deployment deployment;
     private final DefaultServletConfig config;
 
@@ -95,6 +94,22 @@ public class DefaultServlet extends HttpServlet {
             handleWelcomePage(req, resp, resource);
         } else {
             serveFileBlocking(resp, resource);
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        /*
+         * Where a servlet has received a POST request we still require the capability to include static content.
+         */
+        DispatcherType dispatchType = req.getDispatcherType();
+        switch (req.getDispatcherType()) {
+            case INCLUDE:
+            case FORWARD:
+                doGet(req, resp);
+                break;
+            default:
+                super.doPost(req, resp);
         }
     }
 

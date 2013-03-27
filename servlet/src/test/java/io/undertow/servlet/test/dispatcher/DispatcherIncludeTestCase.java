@@ -38,6 +38,8 @@ import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+
 import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -62,7 +64,7 @@ public class DispatcherIncludeTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
+                .setResourceLoader(new TestResourceLoader(DispatcherIncludeTestCase.class))
                 .addServlet(
                         new ServletInfo("include", MessageServlet.class)
                                 .addInitParam(MessageServlet.MESSAGE, "included")
@@ -117,6 +119,36 @@ public class DispatcherIncludeTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(IncludeServlet.MESSAGE + "Name!included", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testPathBasedStaticInclude() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
+            get.setHeader("include", "/snippet.html");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(IncludeServlet.MESSAGE + "SnippetText", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testPathBasedStaticIncludePost() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
+            post.setHeader("include", "/snippet.html");
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(IncludeServlet.MESSAGE + "SnippetText", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
