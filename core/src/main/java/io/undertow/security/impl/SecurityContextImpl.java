@@ -51,11 +51,13 @@ public class SecurityContextImpl implements SecurityContext {
 
     private final AuthenticationMode authenticationMode;
     private boolean authenticationRequired;
+    private String programaticMechName = "Programatic";
     private AuthenticationState authenticationState = AuthenticationState.NOT_ATTEMPTED;
     private final HttpServerExchange exchange;
     private final List<AuthenticationMechanism> authMechanisms = new ArrayList<>();
     private final IdentityManager identityManager;
     private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
+
 
     // Maybe this will need to be a custom mechanism that doesn't exchange tokens with the client but will then
     // be configured to either associate with the connection, the session or some other arbitrary whatever.
@@ -160,6 +162,15 @@ public class SecurityContextImpl implements SecurityContext {
     }
 
     /**
+     * Set the name of the mechanism used for authentication to be reported if authentication was handled programatically.
+     *
+     * @param programaticMechName
+     */
+    public void setProgramaticMechName(final String programaticMechName) {
+        this.programaticMechName = programaticMechName;
+    }
+
+    /**
      * @return The name of the mechanism used to authenticate the request.
      */
     @Override
@@ -195,7 +206,7 @@ public class SecurityContextImpl implements SecurityContext {
             return false;
         }
 
-        authenticationComplete(account, "TODO");
+        authenticationComplete(account, programaticMechName, true);
         this.authenticationState = AuthenticationState.AUTHENITCATED;
 
         return true;
@@ -203,7 +214,7 @@ public class SecurityContextImpl implements SecurityContext {
 
     @Override
     public void logout() {
-        sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.LOGGED_OUT, account, mechanismName,
+        sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.LOGGED_OUT, account, mechanismName, true,
                 MESSAGES.userLoggedOut(account.getPrincipal().getName())));
 
         this.account = null;
@@ -213,16 +224,20 @@ public class SecurityContextImpl implements SecurityContext {
 
     @Override
     public void authenticationComplete(Account account, String mechanism) {
+        authenticationComplete(account, mechanism, false);
+    }
+
+    protected void authenticationComplete(Account account, String mechanism, boolean programatic) {
         this.account = account;
         this.mechanismName = mechanism;
 
-        sendNoticiation(new SecurityNotification(exchange, EventType.AUTHENTICATED, account, mechanism,
+        sendNoticiation(new SecurityNotification(exchange, EventType.AUTHENTICATED, account, mechanism, programatic,
                 MESSAGES.userAuthenticated(account.getPrincipal().getName())));
     }
 
     @Override
     public void authenticationFailed(String message, String mechanism) {
-        sendNoticiation(new SecurityNotification(exchange, EventType.FAILED_AUTHENTICATION, null, mechanism, message));
+        sendNoticiation(new SecurityNotification(exchange, EventType.FAILED_AUTHENTICATION, null, mechanism, false, message));
     }
 
     private void sendNoticiation(final SecurityNotification notification) {

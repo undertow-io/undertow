@@ -22,8 +22,8 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.SecurityContextImpl;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpHandlers;
+import io.undertow.server.HttpServerExchange;
 
 /**
  * The security handler responsible for attaching the SecurityContext to the current {@link HttpServerExchange}.
@@ -32,9 +32,9 @@ import io.undertow.server.HttpHandlers;
  * be added to the context, a decision will then be made if authentication is required or optional and the associated mechanisms
  * will be called.
  *
- * In addition to the HTTPExchange authentication state can also be associated with the {@link io.undertow.server.HttpServerConnection} and with
- * the {@link io.undertow.server.session.Session} however this is mechanism specific so it is down to the actual mechanisms to decide if there is state
- * that can be re-used.
+ * In addition to the HTTPExchange authentication state can also be associated with the
+ * {@link io.undertow.server.HttpServerConnection} and with the {@link io.undertow.server.session.Session} however this is
+ * mechanism specific so it is down to the actual mechanisms to decide if there is state that can be re-used.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
@@ -43,11 +43,19 @@ public class SecurityInitialHandler implements HttpHandler {
     private final AuthenticationMode authenticationMode;
     private final IdentityManager identityManager;
     private final HttpHandler next;
+    private final String programaticMechName;
 
-    public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager, final HttpHandler next) {
+    public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager,
+            final String programaticMechName, final HttpHandler next) {
         this.authenticationMode = authenticationMode;
         this.identityManager = identityManager;
+        this.programaticMechName = programaticMechName;
         this.next = next;
+    }
+
+    public SecurityInitialHandler(final AuthenticationMode authenticationMode, final IdentityManager identityManager,
+            final HttpHandler next) {
+        this(authenticationMode, identityManager, null, next);
     }
 
     /**
@@ -55,10 +63,12 @@ public class SecurityInitialHandler implements HttpHandler {
      */
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        SecurityContext newContext = new SecurityContextImpl(exchange, authenticationMode, identityManager);
+        SecurityContextImpl newContext = new SecurityContextImpl(exchange, authenticationMode, identityManager);
+        if (programaticMechName != null) {
+            newContext.setProgramaticMechName(programaticMechName);
+        }
         exchange.putAttachment(SecurityContext.ATTACHMENT_KEY, newContext);
         HttpHandlers.executeHandler(next, exchange);
     }
-
 
 }
