@@ -57,9 +57,9 @@ public class SecurityConstraintUrlMappingTestCase {
                 .addMapping("/public/*");
 
         ServletIdentityManager identityManager = new ServletIdentityManager();
-        identityManager.addUser("user1", "password1", "group1");
-        identityManager.addUser("user2", "password2", "group2");
-        identityManager.addUser("user3", "password3", "group3");
+        identityManager.addUser("user1", "password1", "role1");
+        identityManager.addUser("user2", "password2", "role2");
+        identityManager.addUser("user3", "password3", "role1", "role2");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -100,11 +100,6 @@ public class SecurityConstraintUrlMappingTestCase {
                         .addUrlPattern("/public/postSecured/*")
                         .addHttpMethod("POST"))
                 .addRoleAllowed("role1"));
-
-        builder.addPrincipleVsRoleMapping("group1", "role1");
-        builder.addPrincipleVsRoleMapping("group2", "role2");
-        builder.addPrincipleVsRoleMapping("group3", "role1");
-        builder.addPrincipleVsRoleMapping("group3", "role2");
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

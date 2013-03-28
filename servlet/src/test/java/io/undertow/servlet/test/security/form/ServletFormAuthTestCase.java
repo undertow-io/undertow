@@ -69,7 +69,7 @@ public class ServletFormAuthTestCase {
 
 
         ServletIdentityManager identityManager = new ServletIdentityManager();
-        identityManager.addUser("user1", "password1", "group1");
+        identityManager.addUser("user1", "password1", "role1");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -80,8 +80,6 @@ public class ServletFormAuthTestCase {
                 .setIdentityManager(identityManager)
                 .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
                 .addServlets(s, s1);
-
-        builder.addPrincipleVsRoleMapping("group1", "role1");
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

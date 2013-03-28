@@ -18,6 +18,34 @@
 
 package io.undertow.servlet.spec;
 
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.CookieImpl;
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.MultiPartHandler;
+import io.undertow.servlet.UndertowServletLogger;
+import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.api.SecurityRoleRef;
+import io.undertow.servlet.core.ServletUpgradeListener;
+import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletChain;
+import io.undertow.servlet.handlers.ServletPathMatch;
+import io.undertow.servlet.util.EmptyEnumeration;
+import io.undertow.servlet.util.IteratorEnumeration;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.CanonicalPathUtils;
+import io.undertow.util.DateUtils;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.LocaleUtils;
+import io.undertow.util.Methods;
+import io.undertow.util.QValueParser;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -60,34 +88,6 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
-import io.undertow.security.api.RoleMappingManager;
-import io.undertow.security.api.SecurityContext;
-import io.undertow.security.idm.Account;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.CookieImpl;
-import io.undertow.server.handlers.form.FormData;
-import io.undertow.server.handlers.form.FormDataParser;
-import io.undertow.server.handlers.form.MultiPartHandler;
-import io.undertow.servlet.UndertowServletLogger;
-import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.servlet.api.SecurityRoleRef;
-import io.undertow.servlet.core.ServletUpgradeListener;
-import io.undertow.servlet.handlers.ServletAttachments;
-import io.undertow.servlet.handlers.ServletChain;
-import io.undertow.servlet.handlers.ServletPathMatch;
-import io.undertow.servlet.util.EmptyEnumeration;
-import io.undertow.servlet.util.IteratorEnumeration;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.CanonicalPathUtils;
-import io.undertow.util.DateUtils;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.LocaleUtils;
-import io.undertow.util.Methods;
-import io.undertow.util.QValueParser;
 import org.xnio.LocalSocketAddress;
 
 /**
@@ -260,19 +260,20 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isUserInRole(final String role) {
-        final RoleMappingManager roleMappings = exchange.getAttachment(ServletAttachments.SERVLET_ROLE_MAPPINGS);
-        if (roleMappings == null) {
+        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        Account account = sc.getAuthenticatedAccount();
+        if (account == null) {
             return false;
         }
-        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+
         final ServletChain servlet = exchange.getAttachment(ServletAttachments.CURRENT_SERVLET);
         //TODO: a more efficient imple
         for (SecurityRoleRef ref : servlet.getManagedServlet().getServletInfo().getSecurityRoleRefs()) {
             if (ref.getRole().equals(role)) {
-                return roleMappings.isUserInRole(ref.getLinkedRole(), sc);
+                return account.isUserInRole(ref.getLinkedRole());
             }
         }
-        return roleMappings.isUserInRole(role, sc);
+        return account.isUserInRole(role);
     }
 
     @Override

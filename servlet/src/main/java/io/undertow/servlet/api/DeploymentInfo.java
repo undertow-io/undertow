@@ -79,7 +79,6 @@ public class DeploymentInfo implements Cloneable {
     private final List<ErrorPage> errorPages = new ArrayList<ErrorPage>();
     private final List<MimeMapping> mimeMappings = new ArrayList<MimeMapping>();
     private final List<SecurityConstraint> securityConstraints = new ArrayList<SecurityConstraint>();
-    private final Map<String, Set<String>> principleVsRoleMapping = new HashMap<String, Set<String>>();
     private final Set<String> securityRoles = new HashSet<String>();
     private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
 
@@ -514,19 +513,6 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public DeploymentInfo addPrincipleVsRoleMapping(final String principle, final String role) {
-        Set<String> roles = principleVsRoleMapping.get(principle);
-        if (roles == null) {
-            principleVsRoleMapping.put(principle, roles = new HashSet<String>());
-        }
-        roles.add(role);
-        return this;
-    }
-
-    public Map<String, Set<String>> getPrincipleVsRoleMapping() {
-        return Collections.unmodifiableMap(principleVsRoleMapping);
-    }
-
     public DeploymentInfo addSecurityRole(final String role) {
         this.securityRoles.add(role);
         return this;
@@ -631,7 +617,6 @@ public class DeploymentInfo implements Cloneable {
         info.identityManager = identityManager;
         info.confidentialPortManager = confidentialPortManager;
         info.securityConstraints.addAll(securityConstraints);
-        info.principleVsRoleMapping.putAll(principleVsRoleMapping);
         info.outerHandlerChainWrappers.addAll(outerHandlerChainWrappers);
         info.innerHandlerChainWrappers.addAll(innerHandlerChainWrappers);
         info.dispatchedHandlerChainWrappers.addAll(dispatchedHandlerChainWrappers);
