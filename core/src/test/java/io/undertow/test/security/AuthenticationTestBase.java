@@ -104,7 +104,7 @@ public abstract class AuthenticationTestBase {
                             }
 
                             @Override
-                            public boolean isUserInGroup(String group) {
+                            public boolean isUserInRole(String role) {
                                 return false;
                             }
 
@@ -150,7 +150,7 @@ public abstract class AuthenticationTestBase {
                         }
 
                         @Override
-                        public boolean isUserInGroup(String group) {
+                        public boolean isUserInRole(String role) {
                             return false;
                         }
 

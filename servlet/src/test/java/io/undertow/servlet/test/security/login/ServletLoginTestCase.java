@@ -49,9 +49,9 @@ public class ServletLoginTestCase {
                 .addMapping("/*");
 
         ServletIdentityManager identityManager = new ServletIdentityManager();
-        identityManager.addUser("user1", "password1", "group1");
-        identityManager.addUser("user2", "password2", "group2");
-        identityManager.addUser("user3", "password3", "group3");
+        identityManager.addUser("user1", "password1", "role1");
+        identityManager.addUser("user2", "password2", "role2");
+        identityManager.addUser("user3", "password3", "role3");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -64,12 +64,6 @@ public class ServletLoginTestCase {
                 .addServlet(s)
                 .addFilter(new FilterInfo("LoginFilter", LoginFilter.class))
                 .addFilterServletNameMapping("LoginFilter", "servlet", DispatcherType.REQUEST);
-
-
-        builder.addPrincipleVsRoleMapping("group1", "role1");
-        builder.addPrincipleVsRoleMapping("group2", "role2");
-        builder.addPrincipleVsRoleMapping("group3", "role1");
-        builder.addPrincipleVsRoleMapping("group3", "role2");
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

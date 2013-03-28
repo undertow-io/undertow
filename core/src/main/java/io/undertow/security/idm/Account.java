@@ -29,17 +29,17 @@ public interface Account {
     Principal getPrincipal();
 
     /**
-     * Check if the given account is in the specified group.
+     * Check if the given account has the specified role.
      *
-     * Note that this check is for identity manager level groups, such as LDAP groups. These groups are then mapped to roles in
-     * the servlet module.
+     * Not that it is expected that the identity manager implementation returns an account which maps the users groups to roles
+     * specific for the application.
      *
-     * @param group The group
-     * @return <code>true</code> if the user is in the specified group
+     * @param role The role.
+     * @return <code>true</code> if the user has the specified role.
      */
-    boolean isUserInGroup(final String group);
+    boolean isUserInRole(final String role);
 
-    // TODO - Do we need a way to pass back to IDM that account is logging out?  A few scenarios: -
+    // TODO - Do we need a way to pass back to IDM that account is logging out? A few scenarios: -
     // 1 - Session expiration so cached account known to be logging out.
     // 2 - API call to logout.
     // 3 - End of HTTP request where account not cached, not strictly logging out but then again no real log-in.

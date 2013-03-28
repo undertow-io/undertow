@@ -88,7 +88,7 @@ class MapIdentityManager implements IdentityManager {
                 }
 
                 @Override
-                public boolean isUserInGroup(String group) {
+                public boolean isUserInRole(String role) {
                     return false;
                 }
 

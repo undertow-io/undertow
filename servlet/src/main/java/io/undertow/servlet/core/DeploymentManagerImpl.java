@@ -18,24 +18,9 @@
 
 package io.undertow.servlet.core;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executor;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.Servlet;
-import javax.servlet.ServletContainerInitializer;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.annotation.ServletSecurity;
-
+import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
+import static javax.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
+import static javax.servlet.http.HttpServletRequest.FORM_AUTH;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
@@ -46,7 +31,6 @@ import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
-import io.undertow.security.impl.RoleMappingManagerImpl;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -77,8 +61,8 @@ import io.undertow.servlet.handlers.DispatcherTypePredicate;
 import io.undertow.servlet.handlers.FilterHandler;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletDispatchingHandler;
-import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletHandler;
+import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.handlers.security.CachedAuthenticatedSessionHandler;
 import io.undertow.servlet.handlers.security.SecurityPathMatches;
@@ -92,9 +76,23 @@ import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.util.MimeMappings;
 
-import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
-import static javax.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
-import static javax.servlet.http.HttpServletRequest.FORM_AUTH;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Executor;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.Servlet;
+import javax.servlet.ServletContainerInitializer;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.ServletSecurity;
 
 /**
  * The deployment manager. This manager is responsible for controlling the lifecycle of a servlet deployment.
@@ -513,7 +511,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet) {
-        HttpHandler servletHandler = new ServletSecurityRoleHandler(next, new RoleMappingManagerImpl(deployment.getDeploymentInfo().getPrincipleVsRoleMapping()));
+        HttpHandler servletHandler = new ServletSecurityRoleHandler(next);
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
         servletHandler = wrapHandlers(servletHandler, deployment.getDeploymentInfo().getDispatchedHandlerChainWrappers());
         return new ServletChain(servletHandler, managedServlet);

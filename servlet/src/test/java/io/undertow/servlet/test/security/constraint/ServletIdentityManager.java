@@ -115,8 +115,8 @@ public class ServletIdentityManager implements IdentityManager {
         }
 
         @Override
-        public boolean isUserInGroup(String group) {
-            return roles.contains(group);
+        public boolean isUserInRole(String role) {
+            return roles.contains(role);
         }
     }
 
