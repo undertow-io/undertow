@@ -142,7 +142,7 @@ public class AjpParser {
                 } else {
                     final byte prefix = buf.get();
                     if (prefix != 2) {
-                        throw new IllegalArgumentException("We do  not support prefix codes other than 2 yet." + prefix);
+                        throw new IllegalArgumentException("We do not support prefix codes other than 2 yet. Received: " + prefix);
                     }
                 }
             }
