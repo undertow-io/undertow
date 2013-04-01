@@ -28,7 +28,6 @@ import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import org.jboss.logging.Logger;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.XnioWorker;
@@ -43,8 +42,6 @@ import static org.xnio.Bits.allAreSet;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
-
-    private static final Logger log = Logger.getLogger("io.undertow.server.channel.response");
 
     private final Pool<ByteBuffer> pool;
 
@@ -113,7 +110,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         int res;
         // BUFFER IS FLIPPED COMING IN
         if (state != STATE_START && buffer.hasRemaining()) {
-            log.trace("Flushing remaining buffer");
             do {
                 res = next.write(buffer);
                 if (res == 0) {
@@ -130,7 +126,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     return state;
                 }
                 case STATE_START: {
-                    log.trace("Starting response");
                     // we assume that our buffer has enough space for the initial response line plus one more CR+LF
                     assert buffer.remaining() >= 0x100;
                     exchange.getProtocol().appendTo(buffer);
@@ -150,19 +145,16 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     HeaderMap headers = exchange.getResponseHeaders();
                     nameIterator = headers.iterator();
                     if (! nameIterator.hasNext()) {
-                        log.trace("No response headers");
                         buffer.put((byte) '\r').put((byte) '\n');
                         buffer.flip();
                         while (buffer.hasRemaining()) {
                             res = next.write(buffer);
                             if (res == 0) {
-                                log.trace("Continuation");
                                 return STATE_BUF_FLUSH;
                             }
                         }
                         pooledBuffer.free();
                         pooledBuffer = null;
-                        log.trace("Body");
                         return STATE_BODY;
                     }
                     headerName = nameIterator.next();
@@ -170,13 +162,11 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     // fall thru
                 }
                 case STATE_HDR_NAME: {
-                    log.tracef("Processing header '%s'", headerName);
                     length = headerName.length();
                     while (charIndex < length) {
                         if (buffer.hasRemaining()) {
                             buffer.put(headerName.byteAt(charIndex++));
                         } else {
-                            log.trace("Buffer flush");
                             buffer.flip();
                             do {
                                 res = next.write(buffer);
@@ -186,7 +176,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                                     this.charIndex = charIndex;
                                     this.valueIterator = valueIterator;
                                     this.nameIterator = nameIterator;
-                                    log.trace("Continuation");
                                     return STATE_HDR_NAME;
                                 }
                             } while (buffer.hasRemaining());
@@ -201,7 +190,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         do {
                             res = next.write(buffer);
                             if (res == 0) {
-                                log.trace("Continuation");
                                 this.string = string;
                                 this.headerName = headerName;
                                 this.charIndex = charIndex;
@@ -221,7 +209,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         do {
                             res = next.write(buffer);
                             if (res == 0) {
-                                log.trace("Continuation");
                                 this.string = string;
                                 this.headerName = headerName;
                                 this.charIndex = charIndex;
@@ -242,7 +229,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     // fall thru
                 }
                 case STATE_HDR_VAL: {
-                    log.tracef("Processing header value '%s'", string);
                     length = string.length();
                     while (charIndex < length) {
                         if (buffer.hasRemaining()) {
@@ -257,7 +243,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                                     this.charIndex = charIndex;
                                     this.valueIterator = valueIterator;
                                     this.nameIterator = nameIterator;
-                                    log.trace("Continuation");
                                     return STATE_HDR_VAL;
                                 }
                             } while (buffer.hasRemaining());
@@ -297,7 +282,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                                 do {
                                     res = next.write(buffer);
                                     if (res == 0) {
-                                        log.trace("Continuation");
                                         return STATE_BUF_FLUSH;
                                     }
                                 } while (buffer.hasRemaining());
@@ -306,14 +290,12 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                                 do {
                                     long r = next.write(b, 0, b.length);
                                     if (r == 0 && buffer.hasRemaining()) {
-                                        log.trace("Continuation");
                                         return STATE_BUF_FLUSH;
                                     }
                                 } while (buffer.hasRemaining());
                             }
                             pooledBuffer.free();
                             pooledBuffer = null;
-                            log.trace("Body");
                             return STATE_BODY;
                         }
                         // not reached
@@ -364,7 +346,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         do {
                             res = next.write(buffer);
                             if (res == 0) {
-                                log.trace("Continuation");
                                 return STATE_BUF_FLUSH;
                             }
                         } while (buffer.hasRemaining());
@@ -373,7 +354,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         do {
                             long r = next.write(b, 0, b.length);
                             if (r == 0) {
-                                log.trace("Continuation");
                                 return STATE_BUF_FLUSH;
                             }
                         } while (buffer.hasRemaining());
@@ -399,7 +379,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         do {
             res = next.write(buffer);
             if (res == 0) {
-                log.trace("Continuation");
                 return true;
             }
         } while (buffer.hasRemaining());
@@ -408,7 +387,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     public int write(final ByteBuffer src) throws IOException {
-        log.trace("write");
         int oldState = this.state;
         int state = oldState & MASK_STATE;
         int alreadyWritten = 0;
@@ -440,7 +418,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
-        log.trace("write");
         if (length == 0) {
             return 0L;
         }
@@ -465,7 +442,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
-        log.trace("transfer");
         if (count == 0L) {
             return 0L;
         }
@@ -489,7 +465,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     public long transferFrom(final StreamSourceChannel source, final long count, final ByteBuffer throughBuffer) throws IOException {
-        log.trace("transfer");
         if (count == 0) {
             throughBuffer.clear().limit(0);
             return 0L;
@@ -514,14 +489,12 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     public boolean flush() throws IOException {
-        log.trace("flush");
         int oldVal = state;
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
                 state = processWrite(state, null);
                 if (state != 0) {
-                    log.trace("Flush false because headers aren't written yet");
                     return false;
                 }
                 if (allAreSet(oldVal, FLAG_SHUTDOWN)) {
@@ -529,7 +502,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     // fall out to the flush
                 }
             }
-            log.trace("Delegating flush");
             return next.flush();
         } finally {
             this.state = oldVal & ~MASK_STATE | state;
@@ -538,7 +510,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
 
     public void terminateWrites() throws IOException {
-        log.trace("shutdown");
         int oldVal = this.state;
         if (allAreClear(oldVal, MASK_STATE)) {
             next.terminateWrites();
@@ -548,7 +519,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     }
 
     public void truncateWrites() throws IOException {
-        log.trace("close");
         int oldVal = this.state;
         if (allAreClear(oldVal, MASK_STATE)) {
             try {
