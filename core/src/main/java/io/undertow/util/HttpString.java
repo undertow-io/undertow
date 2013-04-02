@@ -202,7 +202,9 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      * @param buffer the buffer to append to
      */
     public void appendTo(ByteBuffer buffer) {
-        buffer.put(bytes);
+        for(int i = 0; i < bytes.length; ++i) {
+            buffer.put(bytes[i]);
+        }
     }
 
     /**
