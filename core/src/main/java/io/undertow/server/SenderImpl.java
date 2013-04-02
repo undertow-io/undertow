@@ -48,8 +48,10 @@ class SenderImpl implements Sender {
                                         return;
                                     }
                                 } while (buffer.hasRemaining());
+                                streamSinkChannel.suspendWrites();
                                 callback.onComplete(exchange, SenderImpl.this);
                             } catch (IOException e) {
+                                streamSinkChannel.suspendWrites();
                                 callback.onException(exchange, SenderImpl.this, e);
                             }
                         }
