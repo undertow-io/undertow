@@ -64,14 +64,13 @@ public abstract class AbstractParserGenerator {
     private static final int CONSTRUCTOR_HTTP_STRING_MAP_VAR = 1;
 
     protected static final int BYTE_BUFFER_VAR = 1;
-    protected static final int BYTES_REMAINING_VAR = 2;
-    protected static final int PARSE_STATE_VAR = 3;
-    protected static final int HTTP_RESULT = 4;
-    protected static final int CURRENT_STATE_VAR = 5;
-    protected static final int STATE_POS_VAR = 6;
-    protected static final int STATE_CURRENT_VAR = 7;
-    protected static final int STATE_STRING_BUILDER_VAR = 8;
-    protected static final int STATE_CURRENT_BYTES_VAR = 9;
+    protected static final int PARSE_STATE_VAR = 2;
+    protected static final int HTTP_RESULT = 3;
+    protected static final int CURRENT_STATE_VAR = 4;
+    protected static final int STATE_POS_VAR = 5;
+    protected static final int STATE_CURRENT_VAR = 6;
+    protected static final int STATE_STRING_BUILDER_VAR = 7;
+    protected static final int STATE_CURRENT_BYTES_VAR = 8;
 
     public static final String HANDLE_HTTP_VERB = "handleHttpVerb";
     public static final String HANDLE_PATH = "handlePath";
@@ -129,7 +128,7 @@ public abstract class AbstractParserGenerator {
 
         final int noStates = stateCounter.get();
 
-        final ClassMethod handle = file.addMethod(Modifier.PROTECTED, methodName, "I", DescriptorUtils.makeDescriptor(ByteBuffer.class), "I", parseStateDescriptor, httpExchangeDescriptor);
+        final ClassMethod handle = file.addMethod(Modifier.PROTECTED, methodName, "V", DescriptorUtils.makeDescriptor(ByteBuffer.class), parseStateDescriptor, httpExchangeDescriptor);
         writeStateMachine(className, file, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, sctor);
     }
 
@@ -230,8 +229,8 @@ public abstract class AbstractParserGenerator {
         c.getfield(parseStateClass, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
         c.astore(STATE_STRING_BUILDER_VAR);
 
-
-        c.iload(BYTES_REMAINING_VAR);
+        c.aload(BYTE_BUFFER_VAR);
+        c.invokevirtual(ByteBuffer.class.getName(), "hasRemaining", "()Z");
         final BranchEnd nonZero = c.ifne();
         //we have run out of bytes, return 0
         c.iconst(0);
@@ -276,7 +275,6 @@ public abstract class AbstractParserGenerator {
         c.putfield(parseStateClass, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
         c.iload(CURRENT_STATE_VAR);
         c.putfield(parseStateClass, "parseState", "I");
-        c.iload(BYTES_REMAINING_VAR);
         c.returnInstruction();
         setupLocalVariables(c);
         final CodeLocation returnCompleteCode = c.mark();
@@ -296,7 +294,6 @@ public abstract class AbstractParserGenerator {
         c.putfield(parseStateClass, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
         c.iconst(0);
         c.putfield(parseStateClass, "parseState", "I");
-        c.iload(BYTES_REMAINING_VAR);
         c.returnInstruction();
 
         //prefix
@@ -309,7 +306,6 @@ public abstract class AbstractParserGenerator {
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
         c.dup();
         c.dup();
-        c.iinc(BYTES_REMAINING_VAR, -1);
         final Set<BranchEnd> prefixHandleSpace = new HashSet<BranchEnd>();
         if (stateMachine.isHeader()) {
             c.iconst(':');
@@ -413,7 +409,6 @@ public abstract class AbstractParserGenerator {
         c.aload(BYTE_BUFFER_VAR);
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
         c.dup();
-        c.iinc(BYTES_REMAINING_VAR, -1);
 
         final Set<BranchEnd> nostateHandleSpace = new HashSet<BranchEnd>();
         if (stateMachine.isHeader()) {
@@ -436,7 +431,8 @@ public abstract class AbstractParserGenerator {
         c.swap();
         c.invokevirtual(StringBuilder.class.getName(), "append", "(C)Ljava/lang/StringBuilder;");
         c.pop();
-        c.iload(BYTES_REMAINING_VAR);
+        c.aload(BYTE_BUFFER_VAR);
+        c.invokevirtual(ByteBuffer.class.getName(), "hasRemaining", "()Z");
         c.ifne(noStateLoop); //go back to the start if we have not run out of bytes
 
         //we have run out of bytes, so we need to write back the current state
@@ -476,8 +472,7 @@ public abstract class AbstractParserGenerator {
 
     private void setupLocalVariables(final CodeAttribute c) {
         c.setupFrame(DescriptorUtils.makeDescriptor("fakeclass"),
-                "[B",
-                "I",
+                DescriptorUtils.makeDescriptor(ByteBuffer.class),
                 parseStateDescriptor,
                 httpExchangeDescriptor,
                 "I",
@@ -488,7 +483,8 @@ public abstract class AbstractParserGenerator {
     }
 
     private void handleReturnIfNoMoreBytes(final CodeAttribute c, final CodeLocation returnCode) {
-        c.iload(BYTES_REMAINING_VAR);
+        c.aload(BYTE_BUFFER_VAR);
+        c.invokevirtual(ByteBuffer.class.getName(), "hasRemaining", "()Z");
         c.ifEq(returnCode); //go back to the start if we have not run out of bytes
     }
 
@@ -515,7 +511,6 @@ public abstract class AbstractParserGenerator {
             handleReturnIfNoMoreBytes(c, returnIncompleteCode);
             c.aload(BYTE_BUFFER_VAR);
             c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
-            c.iinc(BYTES_REMAINING_VAR, -1);
             BranchEnd cont = c.gotoInstruction();
             c.branchEnd(end);
             c.aload(PARSE_STATE_VAR);
@@ -529,7 +524,6 @@ public abstract class AbstractParserGenerator {
             //load 2 copies of the current byte into the stack
             c.aload(BYTE_BUFFER_VAR);
             c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
-            c.iinc(BYTES_REMAINING_VAR, -1);
         }
 
         c.dup();

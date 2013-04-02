@@ -155,58 +155,54 @@ public abstract class HttpParser {
     }
 
 
-    /**
-     * This method is implemented by a generated subclass
-     */
-    public int handle(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpServerExchange builder) {
+    public void handle(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) {
         if (currentState.state == ParseState.VERB) {
-            noBytes = handleHttpVerb(buffer, noBytes, currentState, builder);
-            if (noBytes == 0) {
-                return 0;
+            handleHttpVerb(buffer, currentState, builder);
+            if (!buffer.hasRemaining()) {
+                return;
             }
         }
         if (currentState.state == ParseState.PATH) {
-            noBytes = handlePath(buffer, noBytes, currentState, builder);
-            if (noBytes == 0) {
-                return 0;
+            handlePath(buffer, currentState, builder);
+            if (!buffer.hasRemaining()) {
+                return;
             }
         }
 
         if (currentState.state == ParseState.VERSION) {
-            noBytes = handleHttpVersion(buffer, noBytes, currentState, builder);
-            if (noBytes == 0) {
-                return 0;
+            handleHttpVersion(buffer, currentState, builder);
+            if (!buffer.hasRemaining()) {
+                return;
             }
         }
         if (currentState.state == ParseState.AFTER_VERSION) {
-            noBytes = handleAfterVersion(buffer, noBytes, currentState, builder);
-            if (noBytes == 0) {
-                return 0;
+            handleAfterVersion(buffer, currentState, builder);
+            if (!buffer.hasRemaining()) {
+                return;
             }
         }
         while (currentState.state != ParseState.PARSE_COMPLETE) {
             if (currentState.state == ParseState.HEADER) {
-                noBytes = handleHeader(buffer, noBytes, currentState, builder);
-                if (noBytes == 0) {
-                    return 0;
+                handleHeader(buffer, currentState, builder);
+                if (!buffer.hasRemaining()) {
+                    return;
                 }
             }
             if (currentState.state == ParseState.HEADER_VALUE) {
-                noBytes = handleHeaderValue(buffer, noBytes, currentState, builder);
-                if (noBytes == 0) {
-                    return 0;
+                handleHeaderValue(buffer, currentState, builder);
+                if (!buffer.hasRemaining()) {
+                    return;
                 }
             }
         }
-        return noBytes;
     }
 
 
-    abstract int handleHttpVerb(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpServerExchange builder);
+    abstract void handleHttpVerb(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder);
 
-    abstract int handleHttpVersion(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpServerExchange builder);
+    abstract void handleHttpVersion(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder);
 
-    abstract int handleHeader(ByteBuffer buffer, int noBytes, final ParseState currentState, final HttpServerExchange builder);
+    abstract void handleHeader(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder);
 
     /**
      * The parse states for parsing the path.
@@ -222,14 +218,13 @@ public abstract class HttpParser {
     /**
      * Parses a path value. This is called from the generated  bytecode.
      *
-     * @param buffer    The buffer
-     * @param remaining The number of bytes remaining
-     * @param state     The current state
-     * @param exchange  The exchange builder
+     * @param buffer   The buffer
+     * @param state    The current state
+     * @param exchange The exchange builder
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final int handlePath(ByteBuffer buffer, int remaining, ParseState state, HttpServerExchange exchange) {
+    final void handlePath(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) {
         StringBuilder stringBuilder = state.stringBuilder;
         int parseState = state.parseState;
         int canonicalPathStart = state.pos;
@@ -239,9 +234,8 @@ public abstract class HttpParser {
         if (stringBuilder == null) {
             state.stringBuilder = stringBuilder = new StringBuilder();
         }
-        while (remaining > 0) {
+        while (buffer.hasRemaining()) {
             final char next = (char) buffer.get();
-            --remaining;
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
@@ -269,9 +263,9 @@ public abstract class HttpParser {
                     state.queryParamPos = 0;
                     state.requestEnd = 0;
                     state.mapCount = 0;
-                    return remaining;
+                    return;
                 }
-            } else if( next == '\r' || next == '\n') {
+            } else if (next == '\r' || next == '\n') {
                 UndertowLogger.REQUEST_LOGGER.debug("Failed to parser URI due to newline");
                 IoUtils.safeClose(exchange.getConnection());
                 throw UndertowMessages.MESSAGES.failedToParsePath();
@@ -331,7 +325,6 @@ public abstract class HttpParser {
         state.nextQueryParam = nextQueryParam;
         state.queryParamPos = queryParamPos;
         state.requestEnd = requestEnd;
-        return remaining;
     }
 
     /**
@@ -346,14 +339,13 @@ public abstract class HttpParser {
     /**
      * Parses a header value. This is called from the generated  bytecode.
      *
-     * @param buffer    The buffer
-     * @param remaining The number of bytes remaining
-     * @param state     The current state
-     * @param builder   The exchange builder
+     * @param buffer  The buffer
+     * @param state   The current state
+     * @param builder The exchange builder
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final int handleHeaderValue(ByteBuffer buffer, int remaining, ParseState state, HttpServerExchange builder) {
+    final void handleHeaderValue(ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
         StringBuilder stringBuilder = state.stringBuilder;
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
@@ -367,9 +359,8 @@ public abstract class HttpParser {
 
 
         int parseState = state.parseState;
-        while (remaining > 0) {
+        while (buffer.hasRemaining()) {
             final byte next = buffer.get();
-            --remaining;
             switch (parseState) {
                 case NORMAL: {
                     if (next == '\r') {
@@ -423,36 +414,35 @@ public abstract class HttpParser {
                         } else {
                             state.state = ParseState.HEADER;
                             state.parseState = 0;
-                            return remaining;
+                            return;
                         }
                     }
                     break;
                 }
                 case AWAIT_DATA_END: {
                     state.state = ParseState.PARSE_COMPLETE;
-                    return remaining;
+                    return;
                 }
             }
         }
         //we only write to the state if we did not finish parsing
         state.parseState = parseState;
         state.stringBuilder = stringBuilder;
-        return remaining;
+        return;
     }
 
-    protected int handleAfterVersion(ByteBuffer buffer, int remaining, ParseState state, HttpServerExchange builder) {
+    protected void handleAfterVersion(ByteBuffer buffer, ParseState state, HttpServerExchange builder) {
         boolean newLine = state.leftOver == '\n';
-        while (remaining > 0) {
+        while (buffer.hasRemaining()) {
             final byte next = buffer.get();
-            --remaining;
             if (newLine) {
                 if (next == '\n') {
                     state.state = ParseState.PARSE_COMPLETE;
-                    return remaining;
+                    return;
                 } else {
                     state.state = ParseState.HEADER;
                     state.leftOver = next;
-                    return remaining;
+                    return;
                 }
             } else {
                 if (next == '\n') {
@@ -460,14 +450,13 @@ public abstract class HttpParser {
                 } else if (next != '\r' && next != ' ' && next != '\t') {
                     state.state = ParseState.HEADER;
                     state.leftOver = next;
-                    return remaining;
+                    return;
                 }
             }
         }
         if (newLine) {
             state.leftOver = '\n';
         }
-        return remaining;
     }
 
     /**

@@ -430,8 +430,8 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
 
                     buffer.flip();
 
-                    int remaining = HttpResponseParser.INSTANCE.handle(buffer, res, state, builder);
-                    if (remaining > 0) {
+                    HttpResponseParser.INSTANCE.handle(buffer, state, builder);
+                    if (buffer.hasRemaining()) {
                         free = false;
                         channel.unget(pooled);
                     }

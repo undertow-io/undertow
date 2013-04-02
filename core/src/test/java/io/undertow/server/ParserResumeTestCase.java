@@ -53,8 +53,10 @@ public class ParserResumeTestCase {
         final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null, null, null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
+        buffer.limit(1);
         while (context.state != ParseState.PARSE_COMPLETE) {
-            HttpParser.INSTANCE.handle(buffer, 1, context, result);
+            HttpParser.INSTANCE.handle(buffer, context, result);
+            buffer.limit(buffer.limit() + 1);
         }
         runAssertions(result, context);
     }
@@ -63,11 +65,12 @@ public class ParserResumeTestCase {
         final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null, null, null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
-        int left = HttpParser.INSTANCE.handle(buffer, split, context, result);
-        Assert.assertEquals(0, left);
-        left = HttpParser.INSTANCE.handle(buffer, in.length - split, context, result);
+        buffer.limit(split);
+        HttpParser.INSTANCE.handle(buffer, context, result);
+        buffer.limit(buffer.capacity());
+        HttpParser.INSTANCE.handle(buffer, context, result);
         runAssertions(result, context);
-        Assert.assertEquals(4, left);
+        Assert.assertEquals(4, buffer.remaining());
     }
 
     private void runAssertions(final HttpServerExchange result, final ParseState context) {

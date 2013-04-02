@@ -118,17 +118,18 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel> {
                 } else {
                     buffer.flip();
                 }
-                int remaining = HttpParser.INSTANCE.handle(buffer, res, state, httpServerExchange);
-                if (remaining > 0) {
+                HttpParser.INSTANCE.handle(buffer, state, httpServerExchange);
+                if (buffer.hasRemaining()) {
                     free = false;
                     connection.setExtraBytes(pooled);
-                }
-                int total = read + res - remaining;
-                read = total;
-                if (read > maxRequestSize) {
-                    UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
-                    IoUtils.safeClose(connection);
-                    return;
+                } else {
+                    int total = read + res;
+                    read = total;
+                    if (read > maxRequestSize) {
+                        UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
+                        IoUtils.safeClose(connection);
+                        return;
+                    }
                 }
             } while (!state.isComplete());
 

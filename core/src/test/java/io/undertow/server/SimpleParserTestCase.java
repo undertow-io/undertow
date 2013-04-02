@@ -71,7 +71,7 @@ public class SimpleParserTestCase {
 
         final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null, null, null);
-        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context, result);
         Assert.assertEquals("/somepath", result.getRelativePath());
         Assert.assertEquals("http://www.somehost.net/somepath", result.getRequestURI());
     }
@@ -82,7 +82,7 @@ public class SimpleParserTestCase {
 
         final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null, null, null);
-        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context, result);
         Assert.assertTrue(context.isComplete());
         Assert.assertEquals("/aa", result.getRelativePath());
     }
@@ -93,7 +93,7 @@ public class SimpleParserTestCase {
 
         final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null, null, null);
-        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context, result);
         Assert.assertEquals("/somepath", result.getRelativePath());
         Assert.assertEquals("http://www.somehost.net/somepath", result.getRequestURI());
         Assert.assertEquals("a=b&b=c&d&e&f=", result.getQueryString());
@@ -111,11 +111,11 @@ public class SimpleParserTestCase {
 
         final ParseState context1 = new ParseState();
         HttpServerExchange result1 = new HttpServerExchange(null, null, null);
-        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context1, result1);
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in),context1, result1);
 
         final ParseState context2 = new ParseState();
         HttpServerExchange result2 = new HttpServerExchange(null, null, null);
-        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context2, result2);
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context2, result2);
 
         Assert.assertSame(result1.getProtocol(), result2.getProtocol());
         Assert.assertSame(result1.getRequestMethod(), result2.getRequestMethod());
@@ -138,7 +138,7 @@ public class SimpleParserTestCase {
     private void runTest(final byte[] in) {
         final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null, null, null);
-        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), in.length, context, result);
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
         Assert.assertEquals("/somepath", result.getRequestURI());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());

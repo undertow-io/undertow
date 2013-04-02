@@ -52,8 +52,10 @@ public class ResponseParserResumeTestCase {
         final ResponseParseState context = new ResponseParseState();
         PendingHttpRequest result = new PendingHttpRequest(null, null, false, false, false, false, null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
+        buffer.limit(1);
         while (context.state != ResponseParseState.PARSE_COMPLETE) {
-            HttpResponseParser.INSTANCE.handle(buffer, 1, context, result);
+            HttpResponseParser.INSTANCE.handle(buffer, context, result);
+            buffer.limit(buffer.limit() + 1);
         }
         runAssertions(result, context);
     }
@@ -62,11 +64,13 @@ public class ResponseParserResumeTestCase {
         final ResponseParseState context = new ResponseParseState();
         PendingHttpRequest result = new PendingHttpRequest(null, null, false, false, false, false, null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
-        int left = HttpResponseParser.INSTANCE.handle(buffer, split, context, result);
-        Assert.assertEquals(0, left);
-        left = HttpResponseParser.INSTANCE.handle(buffer, in.length - split, context, result);
+        buffer.limit(split);
+        HttpResponseParser.INSTANCE.handle(buffer, context, result);
+        Assert.assertEquals(0, buffer.remaining());
+        buffer.limit(buffer.capacity());
+        HttpResponseParser.INSTANCE.handle(buffer,context, result);
         runAssertions(result, context);
-        Assert.assertEquals(4, left);
+        Assert.assertEquals(4, buffer.remaining());
     }
 
     private void runAssertions(final PendingHttpRequest result, final ResponseParseState context) {
