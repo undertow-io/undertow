@@ -25,12 +25,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>1.0.0.Alpha4</version>
+        <version>1.0.0.Alpha5-SNAPSHOT</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-jsp</artifactId>
-    <version>1.0.0.Alpha4</version>
+    <version>1.0.0.Alpha5-SNAPSHOT</version>
 
     <name>Undertow JSP</name>
 
