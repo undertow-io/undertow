@@ -158,9 +158,16 @@ public abstract class HttpParser {
     public void handle(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) {
         if (currentState.state == ParseState.VERB) {
             handleHttpVerb(buffer, currentState, builder);
-            if (!buffer.hasRemaining()) {
-                return;
+            handlePath(buffer, currentState, builder);
+            handleHttpVersion(buffer, currentState, builder);
+            handleAfterVersion(buffer, currentState, builder);
+            while (currentState.state != ParseState.PARSE_COMPLETE && buffer.hasRemaining()) {
+                handleHeader(buffer, currentState, builder);
+                if (currentState.state == ParseState.HEADER_VALUE) {
+                    handleHeaderValue(buffer, currentState, builder);
+                }
             }
+            return;
         }
         if (currentState.state == ParseState.PATH) {
             handlePath(buffer, currentState, builder);
@@ -298,7 +305,7 @@ public abstract class HttpParser {
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && parseState == QUERY_PARAM_NAME) {
                     parseState = QUERY_PARAM_NAME;
-                    if(state.mapCount++ > 1000) {
+                    if (state.mapCount++ > 1000) {
                         //todo: make configurable
                         throw UndertowMessages.MESSAGES.tooManyQueryParameters(1000);
                     }
@@ -307,7 +314,7 @@ public abstract class HttpParser {
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && parseState == QUERY_PARAM_VALUE) {
                     parseState = QUERY_PARAM_NAME;
-                    if(state.mapCount++ > 1000) {
+                    if (state.mapCount++ > 1000) {
                         //todo: make configurable
                         throw UndertowMessages.MESSAGES.tooManyQueryParameters(1000);
                     }
@@ -351,7 +358,7 @@ public abstract class HttpParser {
             stringBuilder = new StringBuilder();
             state.parseState = 0;
 
-            if(state.mapCount++ > 1000) {
+            if (state.mapCount++ > 1000) {
                 //todo: make configurable
                 throw UndertowMessages.MESSAGES.tooManyHeaders(1000);
             }
