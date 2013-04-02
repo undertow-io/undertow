@@ -961,6 +961,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      * If the exchange is already complete this method is a noop
      */
     public void endExchange() {
+        final int state = this.state;
+        if(allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+            return;
+        }
         while (!defaultResponseListeners.isEmpty()) {
             DefaultResponseListener listener = defaultResponseListeners.poll();
             try {
@@ -972,7 +976,6 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
 
-        final int state = this.state;
         //417 means that we are rejecting the request
         //so the client should not actually send any data
         //TODO: how
