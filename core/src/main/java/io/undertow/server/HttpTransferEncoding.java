@@ -63,9 +63,9 @@ public class HttpTransferEncoding {
     public static void handleRequest(final HttpServerExchange exchange, final HttpHandler next) {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         boolean persistentConnection;
-        final boolean hasConnectionHeader = requestHeaders.contains(Headers.CONNECTION);
-        final boolean hasTransferEncoding = requestHeaders.contains(Headers.TRANSFER_ENCODING);
-        final boolean hasContentLength = requestHeaders.contains(Headers.CONTENT_LENGTH);
+        final String connectionHeader = requestHeaders.getFirst(Headers.CONNECTION);
+        final String transferEncodingHeader = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
+        final String contentLengthHeader = requestHeaders.getFirst(Headers.CONTENT_LENGTH);
 
         final HttpServerConnection connection = exchange.getConnection();
         //if we are already using the pipelineing buffer add it to the exchange
@@ -76,15 +76,12 @@ public class HttpTransferEncoding {
 
         exchange.addRequestWrapper(ReadDataStreamSourceConduit.WRAPPER);
         if (exchange.isHttp11()) {
-            persistentConnection = !(hasConnectionHeader && new HttpString(requestHeaders.getFirst(Headers.CONNECTION)).equals(Headers.CLOSE));
+            persistentConnection = !(connectionHeader != null && new HttpString(connectionHeader).equals(Headers.CLOSE));
         } else if (exchange.isHttp10()) {
             persistentConnection = false;
-            if (hasConnectionHeader) {
-                for (String value : requestHeaders.get(Headers.CONNECTION)) {
-                    if (Headers.KEEP_ALIVE.equals(new HttpString(value))) {
-                        persistentConnection = true;
-                        break;
-                    }
+            if (connectionHeader != null) {
+                if (Headers.KEEP_ALIVE.equals(new HttpString(connectionHeader))) {
+                    persistentConnection = true;
                 }
             }
         } else {
@@ -92,15 +89,15 @@ public class HttpTransferEncoding {
             persistentConnection = false;
         }
         HttpString transferEncoding = Headers.IDENTITY;
-        if (hasTransferEncoding) {
-            transferEncoding = new HttpString(requestHeaders.getLast(Headers.TRANSFER_ENCODING));
+        if (transferEncodingHeader != null) {
+            transferEncoding = new HttpString(transferEncodingHeader);
         }
-        if (hasTransferEncoding && !transferEncoding.equals(Headers.IDENTITY)) {
+        if (transferEncodingHeader != null && !transferEncoding.equals(Headers.IDENTITY)) {
             exchange.addRequestWrapper(CHUNKED_STREAM_SOURCE_CONDUIT_WRAPPER);
-        } else if (hasContentLength) {
+        } else if (contentLengthHeader != null) {
             final long contentLength;
             try {
-                contentLength = Long.parseLong(requestHeaders.getFirst(Headers.CONTENT_LENGTH));
+                contentLength = Long.parseLong(contentLengthHeader);
             } catch (NumberFormatException e) {
                 log.trace("Invalid request due to unparsable content length");
                 // content length is bad; invalid request
@@ -117,7 +114,7 @@ public class HttpTransferEncoding {
                 // fixed-length content - add a wrapper for a fixed-length stream
                 exchange.addRequestWrapper(fixedLengthStreamSourceConduitWrapper(contentLength));
             }
-        } else if (hasTransferEncoding) {
+        } else if (transferEncodingHeader != null) {
             if (transferEncoding.equals(Headers.IDENTITY)) {
                 log.trace("Connection not persistent (no content length and identity transfer encoding)");
                 // make it not persistent
@@ -161,14 +158,16 @@ public class HttpTransferEncoding {
                 // test to see if we're still persistent
                 boolean stillPersistent = requestLooksPersistent;
                 HttpString transferEncoding = Headers.IDENTITY;
-                if (responseHeaders.contains(Headers.TRANSFER_ENCODING)) {
+                final String transferEncodingHeader = responseHeaders.getLast(Headers.TRANSFER_ENCODING);
+                final String contentLengthHeader = responseHeaders.getFirst(Headers.CONTENT_LENGTH);
+                if (transferEncodingHeader != null) {
                     if (exchange.isHttp11()) {
-                        transferEncoding = new HttpString(responseHeaders.getLast(Headers.TRANSFER_ENCODING));
+                        transferEncoding = new HttpString(transferEncodingHeader);
                     } else {
                         // RFC 2616 3.6 last paragraph
                         responseHeaders.remove(Headers.TRANSFER_ENCODING);
                     }
-                } else if (exchange.isHttp11() && !responseHeaders.contains(Headers.CONTENT_LENGTH)) {
+                } else if (exchange.isHttp11() && contentLengthHeader == null) {
                     //if we have a HTTP 1.1 request with no transfer encoding and no content length
                     //then we default to chunked, to enable persistent connections to work
                     responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
@@ -178,11 +177,11 @@ public class HttpTransferEncoding {
                 final int code = exchange.getResponseCode();
                 if (exchange.getRequestMethod().equals(Methods.HEAD) || (100 <= code && code <= 199) || code == 204 || code == 304) {
                     final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    if (code == 101 && responseHeaders.contains(Headers.CONTENT_LENGTH)) {
+                    if (code == 101 && contentLengthHeader != null) {
                         // add least for websocket upgrades we can have a content length
                         final long contentLength;
                         try {
-                            contentLength = Long.parseLong(responseHeaders.getFirst(Headers.CONTENT_LENGTH));
+                            contentLength = Long.parseLong(contentLengthHeader);
                             // fixed-length response
                             wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener);
                         } catch (NumberFormatException e) {
@@ -196,10 +195,10 @@ public class HttpTransferEncoding {
                 } else if (!transferEncoding.equals(Headers.IDENTITY)) {
                     final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                     wrappedConduit = new ChunkedStreamSinkConduit(channel, true, !stillPersistent, finishListener);
-                } else if (responseHeaders.contains(Headers.CONTENT_LENGTH)) {
+                } else if (contentLengthHeader != null) {
                     final long contentLength;
                     try {
-                        contentLength = Long.parseLong(responseHeaders.getFirst(Headers.CONTENT_LENGTH));
+                        contentLength = Long.parseLong(contentLengthHeader);
                         final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
                         // fixed-length response
                         wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener);

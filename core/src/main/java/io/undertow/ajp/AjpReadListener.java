@@ -221,15 +221,16 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                     final HeaderMap requestHeaders = exchange.getRequestHeaders();
                     HttpString transferEncoding = Headers.IDENTITY;
                     Long length;
-                    boolean hasTransferEncoding = requestHeaders.contains(Headers.TRANSFER_ENCODING);
+                    final String teHeader = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
+                    boolean hasTransferEncoding = teHeader != null;
                     if (hasTransferEncoding) {
-                        transferEncoding = new HttpString(requestHeaders.getLast(Headers.TRANSFER_ENCODING));
+                        transferEncoding = new HttpString(teHeader);
                     }
-
+                    final String requestContentLength= requestHeaders.getFirst(Headers.CONTENT_LENGTH);
                     if (hasTransferEncoding && !transferEncoding.equals(Headers.IDENTITY)) {
                         length = null; //unkown length
-                    } else if (exchange.getRequestHeaders().contains(Headers.CONTENT_LENGTH)) {
-                        final long contentLength = Long.parseLong(requestHeaders.getFirst(Headers.CONTENT_LENGTH));
+                    } else if (requestContentLength != null) {
+                        final long contentLength = Long.parseLong(requestContentLength);
                         if (contentLength == 0L) {
                             UndertowLogger.REQUEST_LOGGER.trace("No content, starting next request");
                             // no content - immediately start the next request, returning an empty stream for this one
