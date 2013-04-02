@@ -268,6 +268,7 @@ public abstract class HttpParser {
                     state.nextHeader = null;
                     state.queryParamPos = 0;
                     state.requestEnd = 0;
+                    state.mapCount = 0;
                     return remaining;
                 }
             } else if( next == '\r' || next == '\n') {
@@ -303,11 +304,19 @@ public abstract class HttpParser {
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && parseState == QUERY_PARAM_NAME) {
                     parseState = QUERY_PARAM_NAME;
+                    if(state.mapCount++ > 1000) {
+                        //todo: make configurable
+                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(1000);
+                    }
                     exchange.addQueryParam(stringBuilder.substring(queryParamPos), "");
                     nextQueryParam = null;
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && parseState == QUERY_PARAM_VALUE) {
                     parseState = QUERY_PARAM_NAME;
+                    if(state.mapCount++ > 1000) {
+                        //todo: make configurable
+                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(1000);
+                    }
                     exchange.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
                     nextQueryParam = null;
                     queryParamPos = stringBuilder.length() + 1;
@@ -349,6 +358,11 @@ public abstract class HttpParser {
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
             state.parseState = 0;
+
+            if(state.mapCount++ > 1000) {
+                //todo: make configurable
+                throw UndertowMessages.MESSAGES.tooManyHeaders(1000);
+            }
         }
 
 

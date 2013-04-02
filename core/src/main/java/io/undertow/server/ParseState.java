@@ -96,6 +96,7 @@ class ParseState {
 
     String nextQueryParam;
 
+    int mapCount;
 
     public ParseState() {
         this.parseState = 0;

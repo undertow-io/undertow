@@ -140,4 +140,9 @@ public interface UndertowMessages {
     @Message(id = 38, value = "Authentication failed, requested user name '%s'")
     String authenticationFailed(final String userName);
 
+    @Message(id = 39, value = "To many query parameters, cannot have more than %s query parameters")
+    RuntimeException tooManyQueryParameters(int noParams);
+
+    @Message(id = 40, value = "To many headers, cannot have more than %s header")
+    RuntimeException tooManyHeaders(int noParams);
 }
