@@ -24,8 +24,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * This implementation sucks and is incomplete.  It's just here to illustrate.
@@ -34,54 +32,65 @@ import java.util.TreeMap;
  */
 public final class HeaderMap implements Iterable<HttpString> {
 
-    private final Map<HttpString, Object> values = new TreeMap<>();
+    private static final int SIZE = 17;
+
+    private static final int SIGN_MASK = 0x7FFFFFFF;
+
+    private final HeaderEntry[] entries = new HeaderEntry[SIZE];
 
     public Iterator<HttpString> iterator() {
-        return values.keySet().iterator();
+        return new MapIterator();
     }
 
     public String getFirst(HttpString headerName) {
-        Object value = values.get(headerName);
-        if(value instanceof List) {
+        Object value = getValue(headerName);
+        if (value instanceof List) {
             return ((List<String>) value).get(0);
         } else {
-            return (String)value;
+            return (String) value;
         }
     }
 
+
     public String getLast(HttpString headerName) {
-        Object value = values.get(headerName);
-        if(value instanceof List) {
+        Object value = getValue(headerName);
+        if (value instanceof List) {
             List<String> list = (List<String>) value;
-            return list.get(list.size()-1);
+            return list.get(list.size() - 1);
         } else {
-            return (String)value;
+            return (String) value;
         }
     }
 
     public List<String> get(HttpString headerName) {
-        Object value = values.get(headerName);
-        if(value == null) {
+        Object value = getValue(headerName);
+        if (value == null) {
             return null;
-        } else if(value instanceof List) {
-            return (List<String>)value;
+        } else if (value instanceof List) {
+            return (List<String>) value;
         } else {
             return Collections.singletonList((String) value);
         }
     }
 
     public void add(HttpString headerName, String headerValue) {
-        final Object value = values.get(headerName);
-        if (value == null) {
-            values.put(headerName, headerValue);
+        HeaderEntry entry = getEntry(headerName);
+        if (entry == null) {
+            final int pos = (headerName.hashCode() & SIGN_MASK) % SIZE;
+            HeaderEntry exiting = entries[pos];
+            entry = new HeaderEntry();
+            entry.next = exiting;
+            entry.name = headerName;
+            entry.value = headerValue;
+            entries[pos] = entry;
         } else {
-            if(value instanceof List) {
-                ((List) value).add(headerValue);
+            if (entry.value instanceof List) {
+                ((List) entry.value).add(headerValue);
             } else {
                 final ArrayList<String> list = new ArrayList<String>(1);
-                list.add((String) value);
+                list.add((String) entry.value);
                 list.add(headerValue);
-                values.put(headerName, list);
+                entry.value = list;
             }
         }
     }
@@ -92,49 +101,90 @@ public final class HeaderMap implements Iterable<HttpString> {
 
 
     public void addAll(HttpString headerName, Collection<String> headerValues) {
-        final Object value = values.get(headerName);
-        if (value == null) {
-            values.put(headerName, new ArrayList<>(headerValues));
+        HeaderEntry entry = getEntry(headerName);
+        if (entry == null) {
+            final int pos = (headerName.hashCode() & SIGN_MASK) % SIZE;
+            HeaderEntry exiting = entries[pos];
+            entry = new HeaderEntry();
+            entry.next = exiting;
+            entry.name = headerName;
+            entry.value = new ArrayList<>(headerValues);
+            entries[pos] = entry;
         } else {
-            if(value instanceof List) {
-                ((List) value).addAll(headerValues);
+            if (entry.value instanceof List) {
+                ((List) entry.value).addAll(headerValues);
             } else {
                 final ArrayList<String> list = new ArrayList<String>(1);
-                list.add((String) value);
+                list.add((String) entry.value);
                 list.addAll(headerValues);
-                values.put(headerName, list);
+                entry.value = list;
             }
         }
     }
 
     public void clear() {
-        values.clear();
+        for(int i = 0; i < SIZE; ++i) {
+            entries[i] = null;
+        }
     }
 
     public Collection<HttpString> getHeaderNames() {
-        return new HashSet<HttpString>(values.keySet());
+
+        HashSet<HttpString> ret = new HashSet<>();
+        for(HttpString i : this) {
+            ret.add(i);
+        }
+        return ret;
     }
 
     public void put(HttpString headerName, String headerValue) {
-        values.put(headerName, headerValue);
+        HeaderEntry entry = getEntry(headerName);
+        if (entry == null) {
+            final int pos = (headerName.hashCode() & SIGN_MASK) % SIZE;
+            HeaderEntry exiting = entries[pos];
+            entry = new HeaderEntry();
+            entry.next = exiting;
+            entry.name = headerName;
+            entry.value = headerValue;
+            entries[pos] = entry;
+        } else {
+            entry.value = headerValue;
+        }
     }
 
     public void put(HttpString headerName, long headerValue) {
-        values.put(headerName, Long.toString(headerValue));
-    }
-
-    public void putAll(HttpString headerName, Collection<String> headerValues) {
-        final ArrayList<String> list = new ArrayList<>(headerValues);
-        values.put(headerName, list);
+        put(headerName, Long.toString(headerValue));
     }
 
     public Collection<String> remove(HttpString headerName) {
-        Object value = values.remove(headerName);
-        if(value instanceof List) {
-            return (Collection<String>) value;
-        } else {
-            return Collections.singletonList((String)value);
+        final int pos = (headerName.hashCode() & SIGN_MASK) % SIZE;
+        HeaderEntry entry = entries[pos];
+        if(entry == null) {
+            return null;
         }
+        if(entry.name.equals(headerName)) {
+            entries[pos] = entry.next;
+            if (entry.value instanceof List) {
+                return (Collection<String>) entry.value;
+            } else {
+                return (List)Collections.singletonList(entry.value);
+            }
+        }
+        HeaderEntry prev = entry;
+        entry = entry.next;
+        while (entry != null) {
+            if(entry.name.equals(headerName)) {
+                prev.next = entry.next;
+                if (entry.value instanceof List) {
+                    return (Collection<String>) entry.value;
+                } else {
+                    return (List)Collections.singletonList(entry.value);
+                }
+            }
+            prev = entry;
+            entry = entry.next;
+        }
+        return null;
     }
 
     /**
@@ -145,7 +195,7 @@ public final class HeaderMap implements Iterable<HttpString> {
     }
 
     public boolean contains(HttpString headerName) {
-        final Object value = values.get(headerName);
+        final Object value = getEntry(headerName);
         return value != null;
     }
 
@@ -162,7 +212,78 @@ public final class HeaderMap implements Iterable<HttpString> {
     @Override
     public String toString() {
         return "HeaderMap{" +
-                "values=" + values +
+                "values=" + entries +
                 '}';
+    }
+
+    private Object getValue(HttpString headerName) {
+        HeaderEntry entry = getEntry(headerName);
+        if(entry == null) {
+            return null;
+        }
+        return entry.value;
+    }
+
+    private HeaderEntry getEntry(HttpString headerName) {
+        final int pos = (headerName.hashCode() & SIGN_MASK) % SIZE;
+        HeaderEntry entry = entries[pos];
+        while (entry != null) {
+            if(entry.name.equals(headerName)) {
+                return entry;
+            }
+            entry = entry.next;
+        }
+        return null;
+    }
+
+    private static final class HeaderEntry {
+        HeaderEntry next;
+        Object value;
+        HttpString name;
+    }
+
+    private class MapIterator implements Iterator<HttpString> {
+        private int pos = 0;
+        private HeaderEntry current;
+
+        MapIterator() {
+            while (pos < entries.length && entries[pos] == null) {
+                ++pos;
+            }
+            if (pos < entries.length) {
+                current = entries[pos];
+            }
+        }
+
+
+        @Override
+        public boolean hasNext() {
+            return current != null;
+        }
+
+        @Override
+        public HttpString next() {
+            HttpString toReturn = current.name;
+            if (current.next != null) {
+                current = current.next;
+            } else {
+
+                do {
+                    ++pos;
+                } while (pos < entries.length && entries[pos] == null);
+
+                if (pos < entries.length) {
+                    current = entries[pos];
+                } else {
+                    current = null;
+                }
+            }
+            return toReturn;
+        }
+
+        @Override
+        public void remove() {
+            throw new IllegalStateException();
+        }
     }
 }
