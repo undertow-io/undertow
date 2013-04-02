@@ -128,7 +128,7 @@ public abstract class AbstractParserGenerator {
 
         final int noStates = stateCounter.get();
 
-        final ClassMethod handle = file.addMethod(Modifier.PROTECTED, methodName, "V", DescriptorUtils.makeDescriptor(ByteBuffer.class), parseStateDescriptor, httpExchangeDescriptor);
+        final ClassMethod handle = file.addMethod(Modifier.PROTECTED | Modifier.FINAL, methodName, "V", DescriptorUtils.makeDescriptor(ByteBuffer.class), parseStateDescriptor, httpExchangeDescriptor);
         writeStateMachine(className, file, handle.getCodeAttribute(), initial, allStates, noStates, stateMachine, sctor);
     }
 
