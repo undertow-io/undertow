@@ -25,6 +25,7 @@ import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.StreamSinkConduit;
 
+import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
@@ -187,13 +188,10 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
      * @throws IOException
      */
     public boolean flushPipelinedData() throws IOException {
-        if (buffer == null || buffer.getResource().position() == 0) {
+        if (buffer == null || (buffer.getResource().position() == 0 && allAreClear(state, FLUSHING))) {
             return next.flush();
         }
-        if (!flushBuffer()) {
-            return false;
-        }
-        return next.flush();
+        return flushBuffer();
     }
 
     /**
