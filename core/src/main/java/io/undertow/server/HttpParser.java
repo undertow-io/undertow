@@ -366,6 +366,19 @@ public abstract class HttpParser {
 
 
         int parseState = state.parseState;
+        while (buffer.hasRemaining() && parseState == NORMAL) {
+            final byte next = buffer.get();
+            if (next == '\r') {
+                parseState = BEGIN_LINE_END;
+            } else if (next == '\n') {
+                parseState = LINE_END;
+            } else if (next == ' ' || next == '\t') {
+                parseState = WHITESPACE;
+            } else {
+                stringBuilder.append((char) next);
+            }
+        }
+
         while (buffer.hasRemaining()) {
             final byte next = buffer.get();
             switch (parseState) {
