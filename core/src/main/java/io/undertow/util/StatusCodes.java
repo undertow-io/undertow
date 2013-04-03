@@ -18,14 +18,16 @@
 
 package io.undertow.util;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * @author Stuart Douglas
  */
 public class StatusCodes {
+
+    //chosen simply because it gives no collisions
+    //if more codes are added this will need to be re-evaluated
+    private static final int SIZE = 64;
+    private static final Entry[] TABLE = new Entry[SIZE];
+
     public static final int CONTINUE = 100;
     public static final int SWITCHING_PROTOCOLS = 101;
     public static final int OK = 200;
@@ -67,7 +69,6 @@ public class StatusCodes {
     public static final int GATEWAY_TIME_OUT = 504;
     public static final int HTTP_VERSION_NOT_SUPPORTED = 505;
 
-
     public static final String CONTINUE_STRING = "Continue";
     public static final String SWITCHING_PROTOCOLS_STRING = "Switching Protocols";
     public static final String OK_STRING = "OK";
@@ -108,66 +109,79 @@ public class StatusCodes {
     public static final String SERVICE_UNAVAILABLE_STRING = "Service Unavailable";
     public static final String GATEWAY_TIME_OUT_STRING = "Gateway Time-out";
     public static final String HTTP_VERSION_NOT_SUPPORTED_STRING = "HTTP Version not supported";
-    ;
-
-    private static final Map<Integer, String> CODES;
 
     static {
-        final Map<Integer, String> codes = new HashMap<Integer, String>();
-        codes.put(CONTINUE, CONTINUE_STRING);
-        codes.put(SWITCHING_PROTOCOLS, SWITCHING_PROTOCOLS_STRING);
-        codes.put(OK, OK_STRING);
-        codes.put(CREATED, CREATED_STRING);
-        codes.put(ACCEPTED, ACCEPTED_STRING);
-        codes.put(NON_AUTHORITATIVE_INFORMATION, NON_AUTHORITATIVE_INFORMATION_STRING);
-        codes.put(NO_CONTENT, NO_CONTENT_STRING);
-        codes.put(RESET_CONTENT, RESET_CONTENT_STRING);
-        codes.put(PARTIAL_CONTENT, PARTIAL_CONTENT_STRING);
-        codes.put(MULTIPLE_CHOICES, MULTIPLE_CHOICES_STRING);
-        codes.put(MOVED_PERMENANTLY, MOVED_PERMENANTLY_STRING);
-        codes.put(FOUND, FOUND_STRING);
-        codes.put(SEE_OTHER, SEE_OTHER_STRING);
-        codes.put(NOT_MODIFIED, NOT_MODIFIED_STRING);
-        codes.put(USE_PROXY, USE_PROXY_STRING);
-        codes.put(TEMPORARY_REDIRECT, TEMPORARY_REDIRECT_STRING);
-        codes.put(BAD_REQUEST, BAD_REQUEST_STRING);
-        codes.put(UNAUTHORIZED, UNAUTHORIZED_STRING);
-        codes.put(PAYMENT_REQUIRED, PAYMENT_REQUIRED_STRING);
-        codes.put(FORBIDDEN, FORBIDDEN_STRING);
-        codes.put(NOT_FOUND, NOT_FOUND_STRING);
-        codes.put(METHOD_NOT_ALLOWED, METHOD_NOT_ALLOWED_STRING);
-        codes.put(NOT_ACCEPTABLE, NOT_ACCEPTABLE_STRING);
-        codes.put(PROXY_AUTHENTICATION_REQUIRED, PROXY_AUTHENTICATION_REQUIRED_STRING);
-        codes.put(REQUEST_TIME_OUT, REQUEST_TIME_OUT_STRING);
-        codes.put(CONFLICT, CONFLICT_STRING);
-        codes.put(GONE, GONE_STRING);
-        codes.put(LENGTH_REQUIRED, LENGTH_REQUIRED_STRING);
-        codes.put(PRECONDITION_FAILED, PRECONDITION_FAILED_STRING);
-        codes.put(REQUEST_ENTITY_TOO_LARGE, REQUEST_ENTITY_TOO_LARGE_STRING);
-        codes.put(REQUEST_URI_TOO_LARGE, REQUEST_URI_TOO_LARGE_STRING);
-        codes.put(UNSUPPORTED_MEDIA_TYPE, UNSUPPORTED_MEDIA_TYPE_STRING);
-        codes.put(REQUEST_RANGE_NOT_SATISFIABLE, REQUEST_RANGE_NOT_SATISFIABLE_STRING);
-        codes.put(EXPECTATION_FAILED, EXPECTATION_FAILED_STRING);
-        codes.put(INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR_STRING);
-        codes.put(NOT_IMPLEMENTED, NOT_IMPLEMENTED_STRING);
-        codes.put(BAD_GATEWAY, BAD_GATEWAY_STRING);
-        codes.put(SERVICE_UNAVAILABLE, SERVICE_UNAVAILABLE_STRING);
-        codes.put(GATEWAY_TIME_OUT, GATEWAY_TIME_OUT_STRING);
-        codes.put(HTTP_VERSION_NOT_SUPPORTED, HTTP_VERSION_NOT_SUPPORTED_STRING);
+        putCode(CONTINUE, CONTINUE_STRING);
+        putCode(SWITCHING_PROTOCOLS, SWITCHING_PROTOCOLS_STRING);
+        putCode(OK, OK_STRING);
+        putCode(CREATED, CREATED_STRING);
+        putCode(ACCEPTED, ACCEPTED_STRING);
+        putCode(NON_AUTHORITATIVE_INFORMATION, NON_AUTHORITATIVE_INFORMATION_STRING);
+        putCode(NO_CONTENT, NO_CONTENT_STRING);
+        putCode(RESET_CONTENT, RESET_CONTENT_STRING);
+        putCode(PARTIAL_CONTENT, PARTIAL_CONTENT_STRING);
+        putCode(MULTIPLE_CHOICES, MULTIPLE_CHOICES_STRING);
+        putCode(MOVED_PERMENANTLY, MOVED_PERMENANTLY_STRING);
+        putCode(FOUND, FOUND_STRING);
+        putCode(SEE_OTHER, SEE_OTHER_STRING);
+        putCode(NOT_MODIFIED, NOT_MODIFIED_STRING);
+        putCode(USE_PROXY, USE_PROXY_STRING);
+        putCode(TEMPORARY_REDIRECT, TEMPORARY_REDIRECT_STRING);
+        putCode(BAD_REQUEST, BAD_REQUEST_STRING);
+        putCode(UNAUTHORIZED, UNAUTHORIZED_STRING);
+        putCode(PAYMENT_REQUIRED, PAYMENT_REQUIRED_STRING);
+        putCode(FORBIDDEN, FORBIDDEN_STRING);
+        putCode(NOT_FOUND, NOT_FOUND_STRING);
+        putCode(METHOD_NOT_ALLOWED, METHOD_NOT_ALLOWED_STRING);
+        putCode(NOT_ACCEPTABLE, NOT_ACCEPTABLE_STRING);
+        putCode(PROXY_AUTHENTICATION_REQUIRED, PROXY_AUTHENTICATION_REQUIRED_STRING);
+        putCode(REQUEST_TIME_OUT, REQUEST_TIME_OUT_STRING);
+        putCode(CONFLICT, CONFLICT_STRING);
+        putCode(GONE, GONE_STRING);
+        putCode(LENGTH_REQUIRED, LENGTH_REQUIRED_STRING);
+        putCode(PRECONDITION_FAILED, PRECONDITION_FAILED_STRING);
+        putCode(REQUEST_ENTITY_TOO_LARGE, REQUEST_ENTITY_TOO_LARGE_STRING);
+        putCode(REQUEST_URI_TOO_LARGE, REQUEST_URI_TOO_LARGE_STRING);
+        putCode(UNSUPPORTED_MEDIA_TYPE, UNSUPPORTED_MEDIA_TYPE_STRING);
+        putCode(REQUEST_RANGE_NOT_SATISFIABLE, REQUEST_RANGE_NOT_SATISFIABLE_STRING);
+        putCode(EXPECTATION_FAILED, EXPECTATION_FAILED_STRING);
+        putCode(INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR_STRING);
+        putCode(NOT_IMPLEMENTED, NOT_IMPLEMENTED_STRING);
+        putCode(BAD_GATEWAY, BAD_GATEWAY_STRING);
+        putCode(SERVICE_UNAVAILABLE, SERVICE_UNAVAILABLE_STRING);
+        putCode(GATEWAY_TIME_OUT, GATEWAY_TIME_OUT_STRING);
+        putCode(HTTP_VERSION_NOT_SUPPORTED, HTTP_VERSION_NOT_SUPPORTED_STRING);
 
+    }
 
-        CODES = Collections.unmodifiableMap(codes);
+    private static void putCode(int code, String reason) {
+        Entry e = new Entry(reason, code);
+        int h = code % SIZE;
+        if(TABLE[h] != null) {
+            throw new IllegalArgumentException("hash collision");
+        }
+        TABLE[h] = e;
     }
 
     private StatusCodes() {
     }
 
     public static final String getReason(final int code) {
-        final String result = CODES.get(code);
-        if (result == null) {
+        final Entry result = TABLE[code % SIZE];
+        if (result == null || result.code != code) {
             return "Unknown";
         } else {
-            return result;
+            return result.reason;
+        }
+    }
+
+    private static final class Entry {
+        final String reason;
+        final int code;
+
+        private Entry(final String reason, final int code) {
+            this.reason = reason;
+            this.code = code;
         }
     }
 }
