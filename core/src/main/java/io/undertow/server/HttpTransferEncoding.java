@@ -62,7 +62,6 @@ public class HttpTransferEncoding {
 
     public static void handleRequest(final HttpServerExchange exchange, final HttpHandler next) {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
-        boolean persistentConnection;
         final String connectionHeader = requestHeaders.getFirst(Headers.CONNECTION);
         final String transferEncodingHeader = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
         final String contentLengthHeader = requestHeaders.getFirst(Headers.CONTENT_LENGTH);
@@ -75,19 +74,35 @@ public class HttpTransferEncoding {
         }
 
         exchange.addRequestWrapper(ReadDataStreamSourceConduit.WRAPPER);
-        if (exchange.isHttp11()) {
-            persistentConnection = !(connectionHeader != null && new HttpString(connectionHeader).equals(Headers.CLOSE));
-        } else if (exchange.isHttp10()) {
-            persistentConnection = false;
-            if (connectionHeader != null) {
-                if (Headers.KEEP_ALIVE.equals(new HttpString(connectionHeader))) {
-                    persistentConnection = true;
-                }
+
+        boolean persistentConnection = persistentConnection(exchange, connectionHeader);
+
+        if(exchange.getRequestMethod().equals(Methods.GET)) {
+            if(persistentConnection
+                    && connection.getExtraBytes() != null
+                    && pipeliningBuffer == null
+                    && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
+                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(connection.getChannel()), connection.getBufferPool());
+                connection.putAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
+                exchange.addResponseWrapper(pipeliningBuffer.getChannelWrapper());
             }
+            // no content - immediately start the next request, returning an empty stream for this one
+            exchange.terminateRequest();
+            exchange.addRequestWrapper(EMPTY_STREAM_SOURCE_CONDUIT_WRAPPER);
         } else {
-            log.trace("Connection not persistent");
-            persistentConnection = false;
+            persistentConnection = handleRequestEncoding(exchange, transferEncodingHeader, contentLengthHeader, connection, pipeliningBuffer, persistentConnection);
         }
+
+        exchange.setPersistent(persistentConnection);
+
+        exchange.addResponseWrapper(HttpResponseConduit.WRAPPER);
+        //now the response wrapper, to add in the appropriate connection control headers
+        exchange.addResponseWrapper(responseWrapper(persistentConnection));
+
+        HttpHandlers.executeRootHandler(next, exchange, Thread.currentThread() instanceof XnioExecutor);
+    }
+
+    private static boolean handleRequestEncoding(HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipelingBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) {
         HttpString transferEncoding = Headers.IDENTITY;
         if (transferEncodingHeader != null) {
             transferEncoding = new HttpString(transferEncodingHeader);
@@ -96,15 +111,7 @@ public class HttpTransferEncoding {
             exchange.addRequestWrapper(CHUNKED_STREAM_SOURCE_CONDUIT_WRAPPER);
         } else if (contentLengthHeader != null) {
             final long contentLength;
-            try {
                 contentLength = Long.parseLong(contentLengthHeader);
-            } catch (NumberFormatException e) {
-                log.trace("Invalid request due to unparsable content length");
-                // content length is bad; invalid request
-                exchange.setResponseCode(400);
-                exchange.endExchange();
-                return;
-            }
             if (contentLength == 0L) {
                 log.trace("No content, starting next request");
                 // no content - immediately start the next request, returning an empty stream for this one
@@ -123,7 +130,7 @@ public class HttpTransferEncoding {
         } else if (persistentConnection) {
             //we have no content and a persistent request. This may mean we need to use the pipelining buffer to improve
             //performance
-            if(connection.getExtraBytes() != null
+            if (connection.getExtraBytes() != null
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
                 pipeliningBuffer = new PipelingBufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(connection.getChannel()), connection.getBufferPool());
@@ -134,20 +141,27 @@ public class HttpTransferEncoding {
             // no content - immediately start the next request, returning an empty stream for this one
             exchange.terminateRequest();
             exchange.addRequestWrapper(EMPTY_STREAM_SOURCE_CONDUIT_WRAPPER);
-        } else if(exchange.isHttp11()) {
+        } else if (exchange.isHttp11()) {
             //this is a http 1.1 non-persistent connection
             //we still know there is no content
             exchange.terminateRequest();
             exchange.addRequestWrapper(EMPTY_STREAM_SOURCE_CONDUIT_WRAPPER);
         }
+        return persistentConnection;
+    }
 
-        exchange.setPersistent(persistentConnection);
-
-        exchange.addResponseWrapper(HttpResponseConduit.WRAPPER);
-        //now the response wrapper, to add in the appropriate connection control headers
-        exchange.addResponseWrapper(responseWrapper(persistentConnection));
-
-        HttpHandlers.executeRootHandler(next, exchange, Thread.currentThread() instanceof XnioExecutor);
+    private static boolean persistentConnection(HttpServerExchange exchange, String connectionHeader) {
+        if (exchange.isHttp11()) {
+            return !(connectionHeader != null && new HttpString(connectionHeader).equals(Headers.CLOSE));
+        } else if (exchange.isHttp10()) {
+            if (connectionHeader != null) {
+                if (Headers.KEEP_ALIVE.equals(new HttpString(connectionHeader))) {
+                    return true;
+                }
+            }
+        }
+        log.trace("Connection not persistent");
+        return false;
     }
 
     private static ConduitWrapper<StreamSinkConduit> responseWrapper(final boolean requestLooksPersistent) {
