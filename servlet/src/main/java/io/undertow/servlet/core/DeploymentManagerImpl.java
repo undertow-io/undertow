@@ -155,10 +155,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
             }
 
-            listeners.contextInitialized();
             initializeErrorPages(deployment, deploymentInfo);
             initializeMimeMappings(deployment, deploymentInfo);
             initializeTempDir(servletContext, deploymentInfo);
+            listeners.contextInitialized();
             //run
 
             ServletPathMatches matches = setupServletChains(servletContext, threadSetupAction, listeners);
