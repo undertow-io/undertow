@@ -524,12 +524,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public ServletInputStream getInputStream() throws IOException {
-        if (servletInputStream == null) {
-            if (reader != null) {
-                throw UndertowServletMessages.MESSAGES.getReaderAlreadyCalled();
-            }
-            servletInputStream = new ServletInputStreamImpl(this);
+        if (reader != null) {
+            throw UndertowServletMessages.MESSAGES.getReaderAlreadyCalled();
         }
+        servletInputStream = new ServletInputStreamImpl(this);
         readStarted = true;
         return servletInputStream;
     }
