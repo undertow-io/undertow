@@ -207,28 +207,7 @@ public abstract class AbstractParserGenerator {
 
     private void writeStateMachine(final String className, final ClassFile file, final CodeAttribute c, final State initial, final List<State> allStates, int noStates, final CustomStateMachine stateMachine, final ClassMethod sctor) {
 
-        final List<State> states = new ArrayList<State>();
-        states.add(initial);
-        states.addAll(allStates);
-        Collections.sort(states);
-
-        //store the current state in a local variable
-        c.aload(PARSE_STATE_VAR);
-        c.dup();
-        c.dup();
-        c.dup();
-        c.dup();
-        c.getfield(parseStateClass, "parseState", "I");
-        c.istore(CURRENT_STATE_VAR);
-        c.getfield(parseStateClass, "pos", "I");
-        c.istore(STATE_POS_VAR);
-        c.getfield(parseStateClass, "current", HTTP_STRING_DESCRIPTOR);
-        c.astore(STATE_CURRENT_VAR);
-        c.getfield(parseStateClass, "currentBytes", "[B");
-        c.astore(STATE_CURRENT_BYTES_VAR);
-        c.getfield(parseStateClass, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
-        c.astore(STATE_STRING_BUILDER_VAR);
-
+        //initial hasRemaining check
         c.aload(BYTE_BUFFER_VAR);
         c.invokevirtual(ByteBuffer.class.getName(), "hasRemaining", "()Z");
         final BranchEnd nonZero = c.ifne();
@@ -237,6 +216,34 @@ public abstract class AbstractParserGenerator {
         c.returnInstruction();
 
         c.branchEnd(nonZero);
+
+
+        final List<State> states = new ArrayList<State>();
+        states.add(initial);
+        states.addAll(allStates);
+        Collections.sort(states);
+
+        //store the current state in a local variable
+        c.aload(PARSE_STATE_VAR);
+        c.dup();
+        c.getfield(parseStateClass, "parseState", "I");
+        c.dup();
+        c.istore(CURRENT_STATE_VAR);
+        //if this is state 0 there is a lot of stuff can ignore
+        BranchEnd optimizationEnd = c.ifeq();
+        c.dup();
+        c.getfield(parseStateClass, "pos", "I");
+        c.istore(STATE_POS_VAR);
+        c.dup();
+        c.getfield(parseStateClass, "current", HTTP_STRING_DESCRIPTOR);
+        c.astore(STATE_CURRENT_VAR);
+        c.dup();
+        c.getfield(parseStateClass, "currentBytes", "[B");
+        c.astore(STATE_CURRENT_BYTES_VAR);
+        c.getfield(parseStateClass, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
+        c.astore(STATE_STRING_BUILDER_VAR);
+
+
 
         //load the current state
         c.iload(CURRENT_STATE_VAR);
@@ -452,11 +459,23 @@ public abstract class AbstractParserGenerator {
         //TODO: exit if it returns null
         tokenDone(c, returnCompleteCode, stateMachine);
 
+        c.branchEnd(optimizationEnd);
+        c.pop();
+        c.iconst(0);
+        c.istore(STATE_POS_VAR);
+        c.aconstNull();
+        c.astore(STATE_CURRENT_VAR);
+        c.aconstNull();
+        c.astore(STATE_CURRENT_BYTES_VAR);
+        c.aconstNull();
+        c.astore(STATE_STRING_BUILDER_VAR);
 
-        invokeState(className, file, c, ends.get(initial).get(), initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
+        c.branchEnd(ends.get(initial).get());
+        invokeState(className, file, c, initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
         for (final State s : allStates) {
             if (s.stateno >= 0) {
-                invokeState(className, file, c, ends.get(s).get(), s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
+                c.branchEnd(ends.get(s).get());
+                invokeState(className, file, c, s, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
             }
         }
 
@@ -485,8 +504,7 @@ public abstract class AbstractParserGenerator {
         c.gotoInstruction(returnCode);
     }
 
-    private void invokeState(final String className, final ClassFile file, final CodeAttribute c, BranchEnd methodState, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine) {
-        c.branchEnd(methodState);
+    private void invokeState(final String className, final ClassFile file, final CodeAttribute c, final State currentState, final State initialState, final CodeLocation noStateStart, final CodeLocation prefixStart, final CodeLocation returnIncompleteCode, final CodeLocation returnCompleteCode, final CustomStateMachine stateMachine) {
         currentState.mark(c);
 
         BranchEnd parseDone = null;
@@ -521,7 +539,7 @@ public abstract class AbstractParserGenerator {
         c.dup();
         final Set<AtomicReference<BranchEnd>> tokenEnds = new HashSet<AtomicReference<BranchEnd>>();
         final Map<State, AtomicReference<BranchEnd>> ends = new IdentityHashMap<State, AtomicReference<BranchEnd>>();
-        if (currentState.next.size() > 6) {
+        if (currentState.next.size() > 600) {
             final LookupSwitchBuilder s = new LookupSwitchBuilder();
             if (stateMachine.isHeader()) {
                 tokenEnds.add(s.add((byte) ':'));
