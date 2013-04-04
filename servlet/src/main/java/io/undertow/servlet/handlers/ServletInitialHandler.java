@@ -150,10 +150,14 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         }
 
         if (!exchange.isDispatched()) {
-            response.responseDone();
-            //this request is done, so we close any parser that may have been used
-            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-            IoUtils.safeClose(parser);
+            try {
+                request.getServletContext().getDeployment().getApplicationListeners().requestDestroyed(request);
+            } finally {
+                response.responseDone();
+                //this request is done, so we close any parser that may have been used
+                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+                IoUtils.safeClose(parser);
+            }
         }
     }
 
