@@ -82,7 +82,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     /**
      * Handles writing out the header data. It can also take a byte buffer of user
      * data, to enable both user data and headers to be written out in a single operation,
-     * which has a noticable performance impact.
+     * which has a noticeable performance impact.
      *
      * It is up to the caller to note the current position of this buffer before and after they
      * call this method, and use this to figure out how many bytes (if any) have been written.
@@ -144,7 +144,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                     }
                     buffer.put((byte) '\r').put((byte) '\n');
                     HeaderMap headers = request.getRequestHeaders();
-                    nameIterator = headers.iterator();
+                    nameIterator = headers.getHeaderNames().iterator();
                     if (! nameIterator.hasNext()) {
                         log.trace("No request headers");
                         buffer.put((byte) '\r').put((byte) '\n');

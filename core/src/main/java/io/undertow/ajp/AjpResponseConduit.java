@@ -185,7 +185,7 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                 putInt(buffer, headers);
 
 
-                for (final HttpString header : responseHeaders) {
+                for (final HttpString header : responseHeaders.getHeaderNames()) {
                     for (String headerValue : responseHeaders.get(header)) {
                         Integer headerCode = HEADER_MAP.get(header);
                         if (headerCode != null) {
