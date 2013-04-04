@@ -1095,7 +1095,6 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         log.tracef("Starting to write response for %s using channel %s", this, underlyingResponseChannel);
         final HeaderMap responseHeaders = this.responseHeaders;
-        responseHeaders.lock();
     }
 
     public XnioExecutor getIoThread() {

@@ -284,6 +284,14 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     }
 
     private static int calcHashCode(final byte[] bytes) {
+        if (true) {
+            int hc = 17;
+            for (byte b : bytes) {
+                hc = (hc << 4) + hc + higher(b);
+            }
+            return hc;
+        }
+
         // use murmur-3 algorithm similar to the one that String uses, but case-insensitive and latin-1 specific
         int hc = hashCodeBase;
         final int length = bytes.length;

@@ -249,7 +249,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public Collection<String> getHeaderNames() {
         final Set<String> headers = new HashSet<String>();
-        for (final HttpString i : exchange.getResponseHeaders()) {
+        for (final HttpString i : exchange.getResponseHeaders().getHeaderNames()) {
             headers.add(i.toString());
         }
         return headers;

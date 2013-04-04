@@ -143,7 +143,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     }
                     buffer.put((byte) '\r').put((byte) '\n');
                     HeaderMap headers = exchange.getResponseHeaders();
-                    nameIterator = headers.iterator();
+                    nameIterator = headers.getHeaderNames().iterator();
                     if (! nameIterator.hasNext()) {
                         buffer.put((byte) '\r').put((byte) '\n');
                         buffer.flip();
