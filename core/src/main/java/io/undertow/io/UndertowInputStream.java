@@ -71,8 +71,11 @@ public class UndertowInputStream extends InputStream {
 
     @Override
     public int read() throws IOException {
-        byte[] data = new byte[1];
-        read(data);
-        return data[0];
+        byte[] b = new byte[1];
+        int read = read(b);
+        if(read == -1) {
+            return -1;
+        }
+        return b[0];
     }
 }

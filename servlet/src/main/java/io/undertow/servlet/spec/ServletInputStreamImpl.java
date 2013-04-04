@@ -85,7 +85,10 @@ public class ServletInputStreamImpl extends ServletInputStream {
     @Override
     public int read() throws IOException {
         byte[] b = new byte[1];
-        read(b);
+        int read = read(b);
+        if(read == -1) {
+            return -1;
+        }
         return b[0];
     }
 
