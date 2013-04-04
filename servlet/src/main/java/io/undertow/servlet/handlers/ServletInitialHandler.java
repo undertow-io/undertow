@@ -125,6 +125,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 }
             }
         } catch (Throwable t) {
+            exchange.unDispatch();
             HttpServletRequestImpl.getRequestImpl(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY)).onAsyncError(t);
             if (!exchange.isResponseStarted()) {
                 exchange.setResponseCode(500);
@@ -148,7 +149,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             handle.tearDown();
         }
 
-        if (!request.isAsyncStarted()) {
+        if (!exchange.isDispatched()) {
             response.responseDone();
             //this request is done, so we close any parser that may have been used
             final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);

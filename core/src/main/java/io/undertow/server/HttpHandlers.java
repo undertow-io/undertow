@@ -55,7 +55,7 @@ public final class HttpHandlers {
             if (exchange.isDispatched()) {
                 final Runnable dispatchTask = exchange.getAttachment(HttpServerExchange.DISPATCH_TASK);
                 Executor executor = exchange.getAttachment(HttpServerExchange.DISPATCH_EXECUTOR);
-                exchange.clearDispatched();
+                exchange.unDispatch();
                 if (dispatchTask != null) {
                     executor = executor == null ? exchange.getConnection().getWorker() : executor;
                     executor.execute(dispatchTask);

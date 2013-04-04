@@ -435,7 +435,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return anyAreSet(state, FLAG_DISPATCHED);
     }
 
-    void clearDispatched() {
+    public void unDispatch() {
         state &= ~FLAG_DISPATCHED;
         removeAttachment(DISPATCH_EXECUTOR);
         removeAttachment(DISPATCH_TASK);

@@ -226,6 +226,7 @@ public class AsyncContextImpl implements AsyncContext {
             if (dispatched) {
                 throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
             }
+            exchange.unDispatch();
             dispatched = true;
             HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
             initialRequestDone();
@@ -331,9 +332,14 @@ public class AsyncContextImpl implements AsyncContext {
             throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
         }
         dispatched = true;
-        HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
-        request.asyncRequestDispatched();
-        addAsyncTask(runnable);
+        final HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
+        addAsyncTask(new Runnable() {
+            @Override
+            public void run() {
+                request.asyncRequestDispatched();
+                runnable.run();
+            }
+        });
         if (timeoutKey != null) {
             timeoutKey.remove();
         }
