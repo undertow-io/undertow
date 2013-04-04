@@ -1040,9 +1040,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                 getResponseChannel();
             }
-            if (responseChannel.isOpen()) {
-                responseChannel.shutdownWrites();
-            }
+            responseChannel.shutdownWrites();
             if (!responseChannel.flush()) {
                 responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
                         new ChannelListener<StreamSinkChannel>() {
