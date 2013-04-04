@@ -53,45 +53,7 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
     private final Pool<ByteBuffer> pool;
     private Pooled<ByteBuffer> buffer;
 
-    private final ExchangeCompletionListener completionListener = new ExchangeCompletionListener() {
-        @Override
-        public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-            //if we ever fail to read then we flush the pipeline buffer
-            //this relies on us always doing an eager read when starting a request,
-            //rather than waiting to be notified of data being available
-            final HttpServerConnection connection = exchange.getConnection();
-            if (connection.getExtraBytes() == null || exchange.isUpgrade()) {
-                try {
-                    if (!flushPipelinedData()) {
-                        final StreamConnection channel = connection.getChannel();
-                        channel.getSinkChannel().setWriteListener(new ChannelListener<Channel>() {
-                            @Override
-                            public void handleEvent(Channel c) {
-                                try {
-                                    if (flushPipelinedData()) {
-                                        channel.getSinkChannel().setWriteListener(null);
-                                        channel.getSinkChannel().suspendWrites();
-                                        nextListener.proceed();
-                                    }
-                                } catch (IOException e) {
-                                    UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
-                                    IoUtils.safeClose(channel);
-                                }
-                            }
-                        });
-                        channel.getSinkChannel().resumeWrites();
-                        return;
-                    } else {
-                        nextListener.proceed();
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                nextListener.proceed();
-            }
-        }
-    };
+    private final ExchangeCompletionListener completionListener = new PipelineExchangeCompletionListener();
 
     public PipelingBufferingStreamSinkConduit(StreamSinkConduit next, final Pool<ByteBuffer> pool) {
         super(next);
@@ -285,6 +247,50 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
         } finally {
             if (buffer != null) {
                 buffer.free();
+            }
+        }
+    }
+
+    private class PipelineExchangeCompletionListener implements ExchangeCompletionListener {
+        @Override
+        public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+            //if we ever fail to read then we flush the pipeline buffer
+            //this relies on us always doing an eager read when starting a request,
+            //rather than waiting to be notified of data being available
+            final HttpServerConnection connection = exchange.getConnection();
+            if (connection.getExtraBytes() == null || exchange.isUpgrade()) {
+                performFlush(nextListener, connection);
+            } else {
+                nextListener.proceed();
+            }
+        }
+
+        private void performFlush(final NextListener nextListener, HttpServerConnection connection) {
+            try {
+                if (!flushPipelinedData()) {
+                    final StreamConnection channel = connection.getChannel();
+                    channel.getSinkChannel().getWriteSetter().set(new ChannelListener<Channel>() {
+                        @Override
+                        public void handleEvent(Channel c) {
+                            try {
+                                if (flushPipelinedData()) {
+                                    channel.getSinkChannel().getWriteSetter().set(null);
+                                    channel.getSinkChannel().suspendWrites();
+                                    nextListener.proceed();
+                                }
+                            } catch (IOException e) {
+                                UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+                                IoUtils.safeClose(channel);
+                            }
+                        }
+                    });
+                    connection.getChannel().getSinkChannel().resumeWrites();
+                    return;
+                } else {
+                    nextListener.proceed();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }
