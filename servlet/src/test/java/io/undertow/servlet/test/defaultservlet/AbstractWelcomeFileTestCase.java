@@ -13,7 +13,7 @@ import org.junit.Test;
 /**
  * @author Stuart Douglas
  */
-public class AbstractWelcomeFileTestCase {
+public abstract class AbstractWelcomeFileTestCase {
 
 
     @Test

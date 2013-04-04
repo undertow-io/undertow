@@ -37,10 +37,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
 import org.xnio.IoUtils;
 
 /**
@@ -145,88 +143,42 @@ public class DefaultServlet extends HttpServlet {
             IoUtils.safeClose(in);
         }
     }
-/*
-    @Override
-    public void handleRequest(final HttpServerExchange exchange) {
-        if (!isAllowed(exchange.getRelativePath())) {
-            //we don't call the completion handler, as we allow the initial handler to do error handling
-            exchange.setResponseCode(404);
-            return;
-        }
-        File resource = deployment.getDeploymentInfo().getResourceLoader().getResource(exchange.getRelativePath());
-        if (resource == null) {
-            exchange.setResponseCode(404);
-            return;
-        } else if (resource.isDirectory()) {
-            handleWelcomePage(exchange, resource);
-        } else {
-            fileSource.serveFile(exchange, resource, false);
-        }
-    }
-
-    private void handleWelcomePage(final HttpServerExchange exchange, final File resource) {
-        File welcomePage = findWelcomeFile(resource);
-        if (welcomePage != null) {
-            fileSource.serveFile(exchange, welcomePage, false);
-        } else {
-            ServletPathMatch handler = findWelcomeServlet(exchange.getRelativePath().endsWith("/") ? exchange.getRelativePath() : exchange.getRelativePath() + "/");
-            if (handler != null && handler.getHandler() != null) {
-                exchange.setRequestPath(exchange.getResolvedPath() + handler.getMatched());
-                exchange.setRequestURI(exchange.getResolvedPath() + handler.getMatched());
-                exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, handler);
-                handler.getHandler().handleRequest(exchange);
-            } else {
-                exchange.setResponseCode(404);
-                exchange.endExchange();
-            }
-        }
-    }*/
 
     private void handleWelcomePage(final HttpServletRequest req, final HttpServletResponse resp, final File resource) throws IOException, ServletException {
-        File welcomePage = findWelcomeFile(resource);
+        String welcomePage = findWelcomeFile(resource);
+
+        String pathInfo = req.getPathInfo();
+        if (pathInfo == null) {
+            pathInfo = "/";
+        }
+        final String pathWithTraingSlash = pathInfo.endsWith("/") ? pathInfo : pathInfo + "/";
         if (welcomePage != null) {
-            serveFileBlocking(resp, welcomePage);
+            req.getRequestDispatcher(pathWithTraingSlash + welcomePage + "?" + req.getQueryString()).forward(req, resp);
         } else {
-            String pathInfo = req.getPathInfo();
-            if (pathInfo == null) {
-                pathInfo = "";
-            }
-            ServletPathMatch handler = findWelcomeServlet(pathInfo.endsWith("/") ? pathInfo : pathInfo + "/");
-            if (handler != null) {
-                HttpServletRequestImpl servletRequestImpl = HttpServletRequestImpl.getRequestImpl(req);
-                HttpServerExchange exchange = servletRequestImpl.getExchange();
-                exchange.setRequestPath(exchange.getResolvedPath() + handler.getMatched());
-                exchange.setRequestURI(exchange.getResolvedPath() + handler.getMatched());
-                exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, handler);
-                exchange.putAttachment(ServletAttachments.CURRENT_SERVLET, handler);
-                try {
-                    handler.getHandler().handleRequest(exchange);
-                } catch (ServletException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new ServletException(e);
-                }
+            String path = findWelcomeServlet(pathWithTraingSlash);
+            if (path != null) {
+                req.getRequestDispatcher(pathWithTraingSlash + path + "?" + req.getQueryString()).forward(req, resp);
             } else {
                 resp.sendError(404);
             }
         }
     }
 
-    private File findWelcomeFile(final File resource) {
+    private String findWelcomeFile(final File resource) {
         for (String i : welcomePages) {
             final File res = new File(resource + File.separator + i);
             if (res.exists()) {
-                return res;
+                return i;
             }
         }
         return null;
     }
 
-    private ServletPathMatch findWelcomeServlet(final String path) {
+    private String findWelcomeServlet(final String path) {
         for (String i : welcomePages) {
             final ServletPathMatch handler = deployment.getServletPaths().getServletHandlerByExactPath(path + i);
             if (handler != null) {
-                return handler;
+                return i;
             }
         }
         return null;
