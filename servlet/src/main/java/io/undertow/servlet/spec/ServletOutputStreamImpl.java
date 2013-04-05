@@ -33,7 +33,6 @@ import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.Channels;
-import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 
 import static org.xnio.Bits.allAreClear;
@@ -88,11 +87,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     private static final int FLAG_DELEGATE_SHUTDOWN = 1 << 3;
     private static final int FLAG_IN_CALLBACK = 1 << 4;
 
-    /**
-     * we use the underlying connection channel for write listeners
-     * so we don't force the actual response channel to be created
-     */
-    private final ConnectedStreamChannel underlyingConnectionChannel;
+    private final StreamSinkChannel underlyingConnectionChannel;
     private CompositeThreadSetupAction threadSetupAction;
 
     /**
@@ -103,7 +98,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     public ServletOutputStreamImpl(Long contentLength, final HttpServletResponseImpl servletResponse) {
         this.servletResponse = servletResponse;
         this.contentLength = contentLength;
-        this.underlyingConnectionChannel = servletResponse.getExchange().getConnection().getChannel();
+        this.underlyingConnectionChannel = servletResponse.getExchange().getConnection().getChannel().getSinkChannel();
         this.threadSetupAction = servletResponse.getServletContext().getDeployment().getThreadSetupAction();
     }
 
@@ -116,7 +111,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         this.servletResponse = servletResponse;
         this.bufferSize = bufferSize;
         this.contentLength = contentLength;
-        underlyingConnectionChannel = servletResponse.getExchange().getConnection().getChannel();
+        underlyingConnectionChannel = servletResponse.getExchange().getConnection().getChannel().getSinkChannel();
     }
 
     /**

@@ -43,10 +43,10 @@ import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Pool;
+import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
-import org.xnio.channels.ConnectedStreamChannel;
 
 /**
  * Convenience class used to build an Undertow server.
@@ -67,7 +67,7 @@ public class Undertow {
     private final List<VirtualHost> hosts = new ArrayList<VirtualHost>();
 
     private XnioWorker worker;
-    private List<AcceptingChannel<? extends ConnectedStreamChannel>> channels;
+    private List<AcceptingChannel<? extends StreamConnection>> channels;
     private Xnio xnio;
 
     private Undertow(Builder builder) {
@@ -111,7 +111,7 @@ public class Undertow {
 
     public synchronized void start() {
         xnio = Xnio.getInstance("nio", Undertow.class.getClassLoader());
-        channels = new ArrayList<AcceptingChannel<? extends ConnectedStreamChannel>>();
+        channels = new ArrayList<>();
         try {
             worker = xnio.createWorker(OptionMap.builder()
                     .set(Options.WORKER_WRITE_THREADS, ioThreads)
@@ -138,15 +138,15 @@ public class Undertow {
                 if (listener.type == ListenerType.AJP) {
                     AjpOpenListener openListener = new AjpOpenListener(buffers, bufferSize);
                     openListener.setRootHandler(rootHandler);
-                    ChannelListener<AcceptingChannel<ConnectedStreamChannel>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                    AcceptingChannel<? extends ConnectedStreamChannel> server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, serverOptions);
+                    ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
+                    AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, serverOptions);
                     server.resumeAccepts();
                     channels.add(server);
                 } else if (listener.type == ListenerType.HTTP) {
                     HttpOpenListener openListener = new HttpOpenListener(buffers, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), bufferSize);
                     openListener.setRootHandler(rootHandler);
-                    ChannelListener<AcceptingChannel<ConnectedStreamChannel>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                    AcceptingChannel<? extends ConnectedStreamChannel> server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, serverOptions);
+                    ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
+                    AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, serverOptions);
                     server.resumeAccepts();
                     channels.add(server);
                 }
@@ -159,7 +159,7 @@ public class Undertow {
     }
 
     public synchronized void stop() {
-        for (AcceptingChannel<? extends ConnectedStreamChannel> channel : channels) {
+        for (AcceptingChannel<? extends StreamConnection> channel : channels) {
             IoUtils.safeClose(channel);
         }
         channels = null;

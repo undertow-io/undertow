@@ -164,7 +164,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     }
 
     private void queueWriteListener() {
-        exchange.getConnection().getChannel().getWriteThread().execute(new Runnable() {
+        exchange.getConnection().getIoThread().execute(new Runnable() {
             @Override
             public void run() {
                 if(writeReadyHandler != null) {

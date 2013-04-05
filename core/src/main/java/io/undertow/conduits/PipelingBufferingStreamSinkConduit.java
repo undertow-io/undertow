@@ -19,7 +19,7 @@ import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
@@ -63,14 +63,14 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
             if (connection.getExtraBytes() == null || exchange.isUpgrade()) {
                 try {
                     if (!flushPipelinedData()) {
-                        final ConnectedStreamChannel channel = connection.getChannel();
-                        channel.getWriteSetter().set(new ChannelListener<Channel>() {
+                        final StreamConnection channel = connection.getChannel();
+                        channel.getSinkChannel().setWriteListener(new ChannelListener<Channel>() {
                             @Override
                             public void handleEvent(Channel c) {
                                 try {
                                     if (flushPipelinedData()) {
-                                        channel.getWriteSetter().set(null);
-                                        channel.suspendWrites();
+                                        channel.getSinkChannel().setWriteListener(null);
+                                        channel.getSinkChannel().suspendWrites();
                                         nextListener.proceed();
                                     }
                                 } catch (IOException e) {
@@ -79,7 +79,7 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
                                 }
                             }
                         });
-                        connection.getChannel().resumeWrites();
+                        channel.getSinkChannel().resumeWrites();
                         return;
                     } else {
                         nextListener.proceed();

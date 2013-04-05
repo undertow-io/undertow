@@ -12,7 +12,9 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
 
 /**
  * Class that provides support for dealing with HTTP 100 (Continue) responses.
@@ -65,13 +67,14 @@ public class HttpContinue {
             throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
         }
         final PipelingBufferingStreamSinkConduit pipelingbuffer = exchange.getAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY);
-        final ConnectedStreamChannel channel = exchange.getConnection().getChannel();
+        final StreamConnection channel = exchange.getConnection().getChannel();
+        final ConduitStreamSinkChannel sinkChannel = channel.getSinkChannel();
         if (pipelingbuffer != null) {
             try {
                 if (!pipelingbuffer.flushPipelinedData()) {
-                    channel.getWriteSetter().set(new ChannelListener<ConnectedStreamChannel>() {
+                    sinkChannel.setWriteListener(new ChannelListener<StreamSinkChannel>() {
                         @Override
-                        public void handleEvent(final ConnectedStreamChannel channel) {
+                        public void handleEvent(final StreamSinkChannel channel) {
                             try {
                                 if (pipelingbuffer.flushPipelinedData()) {
                                     channel.suspendWrites();
@@ -84,14 +87,14 @@ public class HttpContinue {
                             }
                         }
                     });
-                    channel.resumeWrites();
+                    sinkChannel.resumeWrites();
                 }
             } catch (IOException e) {
                 callback.onException(exchange, null, e);
                 return;
             }
         }
-        internalSendContinueResponse(exchange, channel, callback);
+        internalSendContinueResponse(exchange, sinkChannel, callback);
     }
 
 
@@ -105,20 +108,20 @@ public class HttpContinue {
             throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
         }
         final PipelingBufferingStreamSinkConduit pipelingBuffer = exchange.getAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY);
-        final ConnectedStreamChannel channel = exchange.getConnection().getChannel();
+        final StreamConnection channel = exchange.getConnection().getChannel();
         if (pipelingBuffer != null) {
             if (!pipelingBuffer.flushPipelinedData()) {
-                channel.awaitWritable();
+                channel.getSinkChannel().awaitWritable();
             }
         }
         final ByteBuffer buf = BUFFER.duplicate();
-        channel.write(buf);
+        channel.getSinkChannel().write(buf);
         while (buf.hasRemaining()) {
-            channel.awaitWritable();
-            channel.write(buf);
+            channel.getSinkChannel().awaitWritable();
+            channel.getSinkChannel().write(buf);
         }
-        while (!channel.flush()) {
-            channel.awaitWritable();
+        while (!channel.getSinkChannel().flush()) {
+            channel.getSinkChannel().awaitWritable();
         }
     }
 
@@ -133,16 +136,16 @@ public class HttpContinue {
     }
 
 
-    private static void internalSendContinueResponse(final HttpServerExchange exchange, final ConnectedStreamChannel channel, final IoCallback callback) {
+    private static void internalSendContinueResponse(final HttpServerExchange exchange, final StreamSinkChannel channel, final IoCallback callback) {
         final ByteBuffer buf = BUFFER.duplicate();
         int res = 0;
         do {
             try {
                 res = channel.write(buf);
                 if (res == 0) {
-                    channel.getWriteSetter().set(new ChannelListener<ConnectedStreamChannel>() {
+                    channel.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
                         @Override
-                        public void handleEvent(final ConnectedStreamChannel channel) {
+                        public void handleEvent(final StreamSinkChannel channel) {
                             int res = 0;
                             do {
                                 try {
@@ -169,19 +172,19 @@ public class HttpContinue {
         flushChannel(exchange, channel, callback);
     }
 
-    private static void flushChannel(final HttpServerExchange exchange, final ConnectedStreamChannel channel, final IoCallback callback) {
+    private static void flushChannel(final HttpServerExchange exchange, final StreamSinkChannel channel, final IoCallback callback) {
         try {
             if (!channel.flush()) {
                 channel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
-                        new ChannelListener<ConnectedStreamChannel>() {
+                        new ChannelListener<StreamSinkChannel>() {
                             @Override
-                            public void handleEvent(final ConnectedStreamChannel channel) {
+                            public void handleEvent(final StreamSinkChannel channel) {
                                 callback.onComplete(exchange, null);
                                 channel.suspendWrites();
                             }
-                        }, new ChannelExceptionHandler<ConnectedStreamChannel>() {
+                        }, new ChannelExceptionHandler<StreamSinkChannel>() {
                             @Override
-                            public void handleException(final ConnectedStreamChannel channel, final IOException exception) {
+                            public void handleException(final StreamSinkChannel channel, final IOException exception) {
                                 callback.onException(exchange, null, exception);
                                 channel.suspendWrites();
                             }

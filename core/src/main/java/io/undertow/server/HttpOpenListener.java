@@ -22,18 +22,10 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.channels.ReadTimeoutStreamSourceChannel;
-import io.undertow.channels.WriteTimeoutStreamSinkChannel;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
-import org.xnio.Options;
 import org.xnio.Pool;
-import org.xnio.channels.AssembledConnectedSslStreamChannel;
-import org.xnio.channels.AssembledConnectedStreamChannel;
-import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.channels.SslChannel;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
+import org.xnio.StreamConnection;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -41,7 +33,7 @@ import org.xnio.channels.StreamSourceChannel;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HttpOpenListener implements ChannelListener<ConnectedStreamChannel>, OpenListener {
+public final class HttpOpenListener implements ChannelListener<StreamConnection>, OpenListener {
 
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;
@@ -60,31 +52,14 @@ public final class HttpOpenListener implements ChannelListener<ConnectedStreamCh
         this.bufferSize = bufferSize;
     }
 
-    public void handleEvent(final ConnectedStreamChannel channel) {
+    public void handleEvent(final StreamConnection channel) {
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
-        StreamSourceChannel readChannel = channel;
-        StreamSinkChannel writeChannel = channel;
-        //set read and write timeouts
-        if (channel.supportsOption(Options.READ_TIMEOUT)) {
-            readChannel = new ReadTimeoutStreamSourceChannel(readChannel);
-        }
-        if (channel.supportsOption(Options.WRITE_TIMEOUT)) {
-            writeChannel = new WriteTimeoutStreamSinkChannel(writeChannel);
-        }
-
-        final AssembledConnectedStreamChannel assembledChannel;
-        if (channel instanceof SslChannel) {
-            assembledChannel = new AssembledConnectedSslStreamChannel((SslChannel) channel, readChannel, writeChannel);
-        } else {
-            assembledChannel = new AssembledConnectedStreamChannel(channel, readChannel, writeChannel);
-        }
-
-        HttpServerConnection connection = new HttpServerConnection(assembledChannel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        HttpReadListener readListener = new HttpReadListener(writeChannel, readChannel, connection);
-        readChannel.getReadSetter().set(readListener);
-        readListener.handleEvent(readChannel);
+        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
+        HttpReadListener readListener = new HttpReadListener(channel.getSinkChannel(), channel.getSourceChannel(), connection);
+        channel.getSourceChannel().setReadListener(readListener);
+        readListener.handleEvent(channel.getSourceChannel());
     }
 
     @Override

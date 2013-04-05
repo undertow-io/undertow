@@ -30,6 +30,8 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.spi.UpgradeCallback;
 import org.xnio.IoFuture;
 import org.xnio.Pool;
+import org.xnio.StreamConnection;
+import org.xnio.channels.AssembledConnectedStreamChannel;
 import org.xnio.channels.ConnectedStreamChannel;
 
 /**
@@ -97,8 +99,9 @@ public abstract class Handshake {
         exchange.upgradeChannel(new UpgradeCallback() {
 
             @Override
-            public void handleUpgrade(final ConnectedStreamChannel channel, final Pool<ByteBuffer> buffers) {
-                WebSocketChannel webSocket = createChannel(exchange, channel, buffers);
+            public void handleUpgrade(final StreamConnection channel, final Pool<ByteBuffer> buffers) {
+                //TODO: fix this up to use the new API and not assembled
+                WebSocketChannel webSocket = createChannel(exchange, new AssembledConnectedStreamChannel(channel, channel.getSourceChannel(), channel.getSinkChannel()), buffers);
                 callback.onConnect(exchange, webSocket);
             }
         });

@@ -69,7 +69,7 @@
         <version.junit>4.11</version.junit>
         <version.easymock>3.1</version.easymock>
         <version.netty>3.6.2.Final</version.netty>
-        <version.xnio>3.1.0.Beta9</version.xnio>
+        <version.xnio>3.1.0.CR1</version.xnio>
         <version.io.undertow.jastow>1.0.0.Alpha1</version.io.undertow.jastow>
         <version.org.jboss.logging>3.1.2.GA</version.org.jboss.logging>
         <version.org.jboss.logmanager>1.4.0.Final</version.org.jboss.logmanager>

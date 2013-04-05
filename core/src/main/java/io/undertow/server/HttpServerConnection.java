@@ -31,10 +31,10 @@ import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.Pooled;
+import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
-import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.SslChannel;
 
 /**
@@ -43,7 +43,7 @@ import org.xnio.channels.SslChannel;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class HttpServerConnection extends AbstractAttachable implements ConnectedChannel {
-    private final ConnectedStreamChannel channel;
+    private final StreamConnection channel;
     private final ChannelListener.Setter<HttpServerConnection> closeSetter;
     private final Pool<ByteBuffer> bufferPool;
     private final HttpHandler rootHandler;
@@ -55,7 +55,7 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
      */
     private Pooled<ByteBuffer> extraBytes;
 
-    public HttpServerConnection(ConnectedStreamChannel channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
+    public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         this.channel = channel;
         this.bufferPool = bufferPool;
         this.rootHandler = rootHandler;
@@ -87,7 +87,7 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
      *
      * @return the underlying channel
      */
-    public ConnectedStreamChannel getChannel() {
+    public StreamConnection getChannel() {
         return channel;
     }
 

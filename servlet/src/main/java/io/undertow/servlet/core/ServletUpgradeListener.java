@@ -9,7 +9,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.spec.WebConnectionImpl;
 import org.xnio.ChannelListener;
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
 
 /**
  * Lister that handles a servlet exchange upgrade event.
@@ -25,7 +25,7 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Exc
 
     @Override
     public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-        final ConnectedStreamChannel channel = exchange.getConnection().getChannel();
+        final StreamConnection channel = exchange.getConnection().getChannel();
         channel.getCloseSetter().set(new ChannelListener<Channel>() {
             @Override
             public void handleEvent(final Channel channel) {

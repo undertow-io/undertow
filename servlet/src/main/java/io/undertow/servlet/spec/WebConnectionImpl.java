@@ -6,7 +6,7 @@ import javax.servlet.ServletInputStream;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.WebConnection;
 
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
 
 /**
  * @author Stuart Douglas
@@ -16,9 +16,9 @@ public class WebConnectionImpl implements WebConnection {
     private final UpgradeServletOutputStream outputStream;
     private final UpgradeServletInputStream inputStream;
 
-    public WebConnectionImpl(final ConnectedStreamChannel channel) {
-        this.outputStream = new UpgradeServletOutputStream(channel);
-        this.inputStream = new UpgradeServletInputStream(channel);
+    public WebConnectionImpl(final StreamConnection channel) {
+        this.outputStream = new UpgradeServletOutputStream(channel.getSinkChannel());
+        this.inputStream = new UpgradeServletInputStream(channel.getSourceChannel());
     }
 
     @Override

@@ -54,10 +54,10 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
+import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
-import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
 
@@ -79,8 +79,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static OpenListener openListener;
     private static ChannelListener acceptListener;
     private static XnioWorker worker;
-    private static AcceptingChannel<? extends ConnectedStreamChannel> server;
-    private static AcceptingChannel<? extends ConnectedStreamChannel> sslServer;
+    private static AcceptingChannel<? extends StreamConnection> server;
+    private static AcceptingChannel<? extends StreamConnection> sslServer;
     private static SSLContext clientSslContext;
     private static Xnio xnio;
 
@@ -203,11 +203,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 if(ajp) {
                     openListener = new AjpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), 8192);
                     acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                    server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 7777), acceptListener, serverOptions);
+                    server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 7777), acceptListener, serverOptions);
                 } else {
                     openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                     acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                    server = worker.createStreamServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
+                    server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
                 }
                 server.resumeAccepts();
             } catch (Exception e) {
@@ -284,7 +284,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         OptionMap combined = OptionMap.builder().addAll(serverOptions).addAll(options).getMap();
 
         XnioSsl xnioSsl = new JsseXnioSsl(xnio, combined, context);
-        sslServer = xnioSsl.createSslTcpServer(worker, new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)),
+        sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)),
                 getHostSSLPort(DEFAULT)), acceptListener, combined);
         sslServer.resumeAccepts();
     }

@@ -2,12 +2,12 @@ package io.undertow.server;
 
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
 
 /**
  * @author Stuart Douglas
  */
-public interface OpenListener extends ChannelListener<ConnectedStreamChannel> {
+public interface OpenListener extends ChannelListener<StreamConnection> {
     HttpHandler getRootHandler();
 
     void setRootHandler(HttpHandler rootHandler);

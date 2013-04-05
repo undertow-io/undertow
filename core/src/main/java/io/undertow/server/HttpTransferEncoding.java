@@ -82,7 +82,7 @@ public class HttpTransferEncoding {
                     && connection.getExtraBytes() != null
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
-                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(connection.getChannel()), connection.getBufferPool());
+                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(connection.getChannel().getSinkChannel()), connection.getBufferPool());
                 connection.putAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
                 exchange.addResponseWrapper(pipeliningBuffer.getChannelWrapper());
             }
@@ -133,7 +133,7 @@ public class HttpTransferEncoding {
             if (connection.getExtraBytes() != null
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
-                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(connection.getChannel()), connection.getBufferPool());
+                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(connection.getChannel().getSinkChannel()), connection.getBufferPool());
                 connection.putAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
                 exchange.addResponseWrapper(pipeliningBuffer.getChannelWrapper());
             }

@@ -19,6 +19,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
+import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -35,7 +36,7 @@ import static org.xnio.IoUtils.safeClose;
 
 final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
-    private final StreamSinkChannel responseChannel;
+    private final StreamConnection channel;
 
     private AjpParseState state = new AjpParseState();
     private HttpServerExchange httpServerExchange;
@@ -44,13 +45,13 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     private volatile int read = 0;
     private final int maxRequestSize;
 
-    AjpReadListener(final StreamSinkChannel responseChannel, final StreamSourceChannel requestChannel, final HttpServerConnection connection) {
-        this.responseChannel = responseChannel;
+    AjpReadListener(final StreamConnection channel, final HttpServerConnection connection) {
+        this.channel = channel;
         this.connection = connection;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
 
-        httpServerExchange = new HttpServerExchange(connection, requestChannel, this.responseChannel);
-        httpServerExchange.addExchangeCompleteListener(new StartNextRequestAction(requestChannel, responseChannel));
+        httpServerExchange = new HttpServerExchange(connection, channel.getSourceChannel(), channel.getSinkChannel());
+        httpServerExchange.addExchangeCompleteListener(new StartNextRequestAction(channel.getSourceChannel(), channel.getSinkChannel()));
     }
 
     public void handleEvent(final StreamSourceChannel channel) {
@@ -87,7 +88,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 if (res == -1) {
                     try {
                         channel.shutdownReads();
-                        final StreamSinkChannel responseChannel = this.responseChannel;
+                        final StreamSinkChannel responseChannel = this.channel.getSinkChannel();
                         responseChannel.shutdownWrites();
                         // will return false if there's a response queued ahead of this one, so we'll set up a listener then
                         if (!responseChannel.flush()) {
@@ -132,7 +133,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
-            AjpConduitWrapper channelWrapper = new AjpConduitWrapper(new AjpResponseConduit(new StreamSinkChannelWrappingConduit(responseChannel), connection.getBufferPool(), httpServerExchange));
+            AjpConduitWrapper channelWrapper = new AjpConduitWrapper(new AjpResponseConduit(new StreamSinkChannelWrappingConduit(this.channel.getSinkChannel()), connection.getBufferPool(), httpServerExchange));
             httpServerExchange.addResponseWrapper(channelWrapper);
             httpServerExchange.addRequestWrapper(channelWrapper.getRequestWrapper());
 
@@ -174,7 +175,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
 
             final StreamSourceChannel channel = this.requestChannel;
-            final AjpReadListener listener = new AjpReadListener(responseChannel, channel, exchange.getConnection());
+            final AjpReadListener listener = new AjpReadListener(exchange.getConnection().getChannel(), exchange.getConnection());
             channel.getReadSetter().set(listener);
             channel.resumeReads();
             responseChannel = null;
@@ -226,7 +227,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                     if (hasTransferEncoding) {
                         transferEncoding = new HttpString(teHeader);
                     }
-                    final String requestContentLength= requestHeaders.getFirst(Headers.CONTENT_LENGTH);
+                    final String requestContentLength = requestHeaders.getFirst(Headers.CONTENT_LENGTH);
                     if (hasTransferEncoding && !transferEncoding.equals(Headers.IDENTITY)) {
                         length = null; //unkown length
                     } else if (requestContentLength != null) {

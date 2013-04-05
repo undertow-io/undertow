@@ -29,7 +29,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
 
 /**
  * An HTTP request handler which upgrades the HTTP request and hands it off as a socket to any XNIO consumer.
@@ -37,7 +37,7 @@ import org.xnio.channels.ConnectedStreamChannel;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ChannelUpgradeHandler implements HttpHandler {
-    private final CopyOnWriteMap<String, ChannelListener<? super ConnectedStreamChannel>> handlers = new CopyOnWriteMap<String, ChannelListener<? super ConnectedStreamChannel>>();
+    private final CopyOnWriteMap<String, ChannelListener<? super StreamConnection>> handlers = new CopyOnWriteMap<String, ChannelListener<? super StreamConnection>>();
     private volatile HttpHandler nonUpgradeHandler = ResponseCodeHandler.HANDLE_404;
 
     /**
@@ -47,7 +47,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
      * @param openListener  the open listener to call
      * @return {@code true} if this product string was not previously registered, {@code false} otherwise
      */
-    public boolean addProtocol(String productString, ChannelListener<? super ConnectedStreamChannel> openListener) {
+    public boolean addProtocol(String productString, ChannelListener<? super StreamConnection> openListener) {
         if (productString == null) {
             throw new IllegalArgumentException("productString is null");
         }
@@ -63,7 +63,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
      * @param productString the product string to match
      * @return the previously registered open listener, or {@code null} if none was registered
      */
-    public ChannelListener<? super ConnectedStreamChannel> removeProtocol(String productString) {
+    public ChannelListener<? super StreamConnection> removeProtocol(String productString) {
         return handlers.remove(productString);
     }
 
@@ -91,7 +91,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         final List<String> upgradeStrings = exchange.getRequestHeaders().get(Headers.UPGRADE);
         if (upgradeStrings != null && exchange.getRequestMethod().equals(Methods.GET)) {
             for (String string : upgradeStrings) {
-                final ChannelListener<? super ConnectedStreamChannel> listener = handlers.get(string);
+                final ChannelListener<? super StreamConnection> listener = handlers.get(string);
                 if (listener != null) {
                     exchange.upgradeChannel(string, new ExchangeCompletionListener() {
                         @Override

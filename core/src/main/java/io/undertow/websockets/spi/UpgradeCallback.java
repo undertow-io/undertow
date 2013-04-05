@@ -3,12 +3,12 @@ package io.undertow.websockets.spi;
 import java.nio.ByteBuffer;
 
 import org.xnio.Pool;
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
 
 /**
  * @author Stuart Douglas
  */
 public interface UpgradeCallback {
 
-    void handleUpgrade(final ConnectedStreamChannel channel, final Pool<ByteBuffer> buffers);
+    void handleUpgrade(final StreamConnection channel, final Pool<ByteBuffer> buffers);
 }
