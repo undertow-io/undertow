@@ -19,6 +19,7 @@
 package io.undertow.servlet.core;
 
 import java.util.List;
+import java.util.ListIterator;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.servlet.ServletContext;
@@ -129,7 +130,8 @@ public class ApplicationListeners implements Lifecycle {
 
     public void contextDestroyed() {
         final ServletContextEvent event = new ServletContextEvent(servletContext);
-        for (ManagedListener listener : servletContextListeners) {
+        for (ListIterator<ManagedListener> iterator = getReturningListIterator(servletContextListeners); iterator.hasPrevious(); ) {
+            ManagedListener listener = iterator.previous();
             try {
                 this.<ServletContextListener>get(listener).contextDestroyed(event);
             } catch (Exception e) {
@@ -168,7 +170,8 @@ public class ApplicationListeners implements Lifecycle {
 
     public void requestDestroyed(final ServletRequest request) {
         final ServletRequestEvent sre = new ServletRequestEvent(servletContext, request);
-        for (final ManagedListener listener : servletRequestListeners) {
+        for (ListIterator<ManagedListener> iterator = getReturningListIterator(servletRequestListeners); iterator.hasPrevious(); ) {
+            ManagedListener listener = iterator.previous();
             try {
                 this.<ServletRequestListener>get(listener).requestDestroyed(sre);
             } catch (Exception e) {
@@ -207,7 +210,8 @@ public class ApplicationListeners implements Lifecycle {
 
     public void sessionDestroyed(final HttpSession session) {
         final HttpSessionEvent sre = new HttpSessionEvent(session);
-        for (final ManagedListener listener : httpSessionListeners) {
+        for (ListIterator<ManagedListener> iterator = getReturningListIterator(httpSessionListeners); iterator.hasPrevious(); ) {
+            ManagedListener listener = iterator.previous();
             this.<HttpSessionListener>get(listener).sessionDestroyed(sre);
         }
     }
@@ -241,6 +245,10 @@ public class ApplicationListeners implements Lifecycle {
 
     private <T> T get(final ManagedListener listener) {
         return (T) listener.instance();
+    }
+
+    private <T> ListIterator<T> getReturningListIterator(List<T> list) {
+        return list.listIterator(list.size());
     }
 
 }
