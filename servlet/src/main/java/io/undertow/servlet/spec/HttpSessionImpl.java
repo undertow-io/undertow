@@ -169,4 +169,8 @@ public class HttpSessionImpl implements HttpSession {
     public Session getSession() {
         return session;
     }
+
+    public boolean isInvalid() {
+        return invalid;
+    }
 }

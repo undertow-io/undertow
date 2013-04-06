@@ -477,6 +477,10 @@ public class ServletContextImpl implements ServletContext {
     public HttpSessionImpl getSession(final HttpServerExchange exchange, boolean create) {
         final SessionCookieConfigImpl c = getSessionCookieConfig();
         HttpSessionImpl httpSession = exchange.getAttachment(sessionAttachmentKey);
+        if (httpSession != null && httpSession.isInvalid()) {
+            exchange.removeAttachment(sessionAttachmentKey);
+            httpSession = null;
+        }
         if (httpSession == null) {
             final SessionManager sessionManager = deploymentInfo.getSessionManager();
             Session session = sessionManager.getSession(exchange, c);
