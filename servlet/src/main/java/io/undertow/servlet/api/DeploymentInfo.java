@@ -586,7 +586,8 @@ public class DeploymentInfo implements Cloneable {
                 .setResourceLoader(resourceLoader)
                 .setMajorVersion(majorVersion)
                 .setMinorVersion(minorVersion)
-                .setDeploymentName(deploymentName);
+                .setDeploymentName(deploymentName)
+                .setClassIntrospecter(classIntrospecter);
 
         for (Map.Entry<String, ServletInfo> e : servlets.entrySet()) {
             info.addServlet(e.getValue().clone());
