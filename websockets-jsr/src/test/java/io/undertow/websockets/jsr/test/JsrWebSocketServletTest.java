@@ -3,7 +3,6 @@ package io.undertow.websockets.jsr.test;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -26,6 +25,7 @@ import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.test.utils.DefaultServer;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServletWebSocketContainer;
@@ -48,7 +48,7 @@ public class JsrWebSocketServletTest {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
 
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
@@ -68,7 +68,7 @@ public class JsrWebSocketServletTest {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
-                                    latch.countDown();
+                                    latch.setException(e);
                                 }
                             }
                         });
@@ -100,7 +100,7 @@ public class JsrWebSocketServletTest {
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }

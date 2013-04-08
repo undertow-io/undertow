@@ -39,7 +39,7 @@ public final class HandshakeUtil {
     private static final String CONFIG_KEY = "ServerEndpointConfiguration";
 
 
-    private static final AttachmentKey<Map<String, String>> PATH_PARAMS = AttachmentKey.create(Map.class);
+    public static final AttachmentKey<Map<String, String>> PATH_PARAMS = AttachmentKey.create(Map.class);
 
     private HandshakeUtil() {
     }

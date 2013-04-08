@@ -17,21 +17,21 @@
  */
 package io.undertow.websockets.utils;
 
+import io.undertow.util.ConcreteIoFuture;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.junit.Assert;
 
-import java.util.concurrent.CountDownLatch;
-
+import java.io.IOException;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public final class FrameChecker implements WebSocketTestClient.FrameListener {
     private final Class<? extends WebSocketFrame> clazz;
     private final byte[] expectedPayload;
-    private final CountDownLatch latch;
+    private final ConcreteIoFuture latch;
 
-    public FrameChecker(Class<? extends WebSocketFrame> clazz, byte[] expectedPayload, CountDownLatch latch) {
+    public FrameChecker(Class<? extends WebSocketFrame> clazz, byte[] expectedPayload, ConcreteIoFuture<?> latch) {
         this.clazz = clazz;
         this.expectedPayload = expectedPayload;
         this.latch = latch;
@@ -48,8 +48,9 @@ public final class FrameChecker implements WebSocketTestClient.FrameListener {
             buf.readBytes(data);
 
             Assert.assertArrayEquals(expectedPayload, data);
-        } finally {
-            latch.countDown();
+            latch.setResult(null);
+        } catch (Throwable e){
+            latch.setException(new IOException(e));
         }
     }
 
@@ -59,7 +60,7 @@ public final class FrameChecker implements WebSocketTestClient.FrameListener {
             t.printStackTrace();
             Assert.fail();
         } finally {
-            latch.countDown();
+            latch.setException(new IOException(t));
         }
     }
 }

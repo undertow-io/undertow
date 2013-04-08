@@ -18,6 +18,7 @@
 package io.undertow.websockets.core.protocol.version07;
 
 import io.undertow.test.utils.DefaultServer;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -39,7 +40,6 @@ import org.xnio.ChannelListener;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -89,13 +89,13 @@ public class WebSocket07ServerTest extends WebSocket00ServerTest {
             }
         }));
 
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final byte[] payload =  "payload".getBytes();
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ':' + DefaultServer.getHostPort("default") + '/'));
         client.connect();
         client.send(new PingWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(PongWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
         client.destroy();
     }
 }

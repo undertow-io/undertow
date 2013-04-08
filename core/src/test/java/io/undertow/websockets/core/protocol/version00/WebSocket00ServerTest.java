@@ -19,6 +19,7 @@ package io.undertow.websockets.core.protocol.version00;
 
 import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
@@ -117,11 +118,11 @@ public class WebSocket00ServerTest {
         }));
 
         final AtomicReference<String> result = new AtomicReference<String>();
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture<?> latch = new ConcreteIoFuture();
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.copiedBuffer("hello", CharsetUtil.US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(CharsetUtil.US_ASCII), latch));
-        latch.await();
+        latch.get();
         client.destroy();
     }
 
@@ -168,13 +169,13 @@ public class WebSocket00ServerTest {
             }
         }));
 
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final byte[] payload = "payload".getBytes();
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
 
         client.destroy();
     }

@@ -22,7 +22,6 @@ import java.io.OutputStream;
 import java.io.Writer;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,6 +39,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.test.utils.DefaultServer;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.jsr.AsyncWebSocketContainer;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.utils.FrameChecker;
@@ -65,7 +65,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
 
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
@@ -85,7 +85,7 @@ public class JsrWebSocketServer07Test {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
-                                    latch.countDown();
+                                    latch.setException(e);
                                 }
                             }
                         });
@@ -100,7 +100,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -111,7 +111,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -127,7 +127,7 @@ public class JsrWebSocketServer07Test {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
-                                    latch.countDown();
+                                    latch.setException(e);
                                 }
                             }
                         });
@@ -140,7 +140,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -150,7 +150,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -166,7 +166,7 @@ public class JsrWebSocketServer07Test {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
-                                    latch.countDown();
+                                    latch.setException(e);
                                 }
                             }
                         });
@@ -179,7 +179,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -189,7 +189,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<SendResult> sendResult = new AtomicReference<SendResult>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(2);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -207,9 +207,8 @@ public class JsrWebSocketServer07Test {
                                     @Override
                                     public void onResult(SendResult result) {
                                         sendResult.set(result);
-                                        latch.countDown();
                                         if (result.getException() != null) {
-                                            latch.countDown();
+                                            latch.setException(new IOException(result.getException()));
                                         }
                                     }
                                 });
@@ -224,7 +223,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
 
         SendResult result = sendResult.get();
         Assert.assertNotNull(result);
@@ -238,7 +237,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<SendResult> sendResult = new AtomicReference<SendResult>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(2);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -253,9 +252,8 @@ public class JsrWebSocketServer07Test {
                                     @Override
                                     public void onResult(SendResult result) {
                                         sendResult.set(result);
-                                        latch.countDown();
                                         if (result.getException() != null) {
-                                            latch.countDown();
+                                            latch.setException(new IOException(result.getException()));
                                         }
                                     }
                                 });
@@ -270,7 +268,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
 
         SendResult result = sendResult.get();
         Assert.assertNotNull(result);
@@ -284,7 +282,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(2);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -299,8 +297,6 @@ public class JsrWebSocketServer07Test {
                                 buf.put(message);
                                 buf.flip();
                                 sendResult.set(session.getAsyncRemote().sendBinary(buf));
-                                latch.countDown();
-
                             }
                         });
                     }
@@ -312,7 +308,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
 
         Future<Void> result = sendResult.get();
 
@@ -324,7 +320,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(2);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -336,7 +332,6 @@ public class JsrWebSocketServer07Test {
                             @Override
                             public void onMessage(String message) {
                                 sendResult.set(session.getAsyncRemote().sendText(message));
-                                latch.countDown();
                             }
                         });
                     }
@@ -349,7 +344,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
 
         sendResult.get();
 
@@ -361,7 +356,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -380,7 +375,7 @@ public class JsrWebSocketServer07Test {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
-                                    latch.countDown();
+                                    latch.setException(e);
                                 }
                             }
                         });
@@ -393,7 +388,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -403,7 +398,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -422,7 +417,7 @@ public class JsrWebSocketServer07Test {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
-                                    latch.countDown();
+                                    latch.setException(e);
                                 }
                             }
                         });
@@ -435,7 +430,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -445,7 +440,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -462,7 +457,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new PingWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(PongWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -478,7 +473,7 @@ public class JsrWebSocketServer07Test {
         payload.flip();
 
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -500,7 +495,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new CloseWebSocketFrame(code, reasonText), new FrameChecker(CloseWebSocketFrame.class, payload.array(), latch));
-        latch.await();
+        latch.get();
         Assert.assertEquals(code, reason.get().getCloseCode().getCode());
         Assert.assertEquals(reasonText, reason.get().getReasonPhrase());
         client.destroy();
@@ -512,7 +507,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -532,7 +527,7 @@ public class JsrWebSocketServer07Test {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
-                                    latch.countDown();
+                                    latch.setException(e);
                                 }
 
                             }
@@ -546,7 +541,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -556,7 +551,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -573,7 +568,7 @@ public class JsrWebSocketServer07Test {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
-                                    latch.countDown();
+                                    latch.setException(e);
                                 }
                             }
                         });
@@ -586,7 +581,7 @@ public class JsrWebSocketServer07Test {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
-        latch.await();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }

@@ -18,7 +18,6 @@
 package io.undertow.websockets.jsr.test.annotated;
 
 import java.net.URI;
-import java.util.concurrent.CountDownLatch;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
@@ -35,6 +34,7 @@ import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.test.utils.DefaultServer;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServletWebSocketContainer;
@@ -56,7 +56,7 @@ public class AnnotatedEndpointTest {
     @org.junit.Test
     public void testStringOnMessage() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
 
 
         final InstanceFactory<Endpoint> factory = AnnotatedEndpointFactory.create(AnnotatedTestEndpoint.class, new ConstructorInstanceFactory<>(AnnotatedTestEndpoint.class.getDeclaredConstructor()));
@@ -84,7 +84,7 @@ public class AnnotatedEndpointTest {
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Stuart"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
-        latch.await();
+        latch.get();
         client.destroy();
     }
 

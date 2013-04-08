@@ -2,7 +2,6 @@ package io.undertow.servlet.test.websocket;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -19,6 +18,7 @@ import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.websockets.WebSocketServlet;
 import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
+import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
@@ -120,11 +120,11 @@ public class WebSocketServletTest {
 
 
         final AtomicReference<String> result = new AtomicReference<String>();
-        final CountDownLatch latch = new CountDownLatch(1);
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
         WebSocketTestClient client = new WebSocketTestClient(org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.copiedBuffer("hello", CharsetUtil.US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(CharsetUtil.US_ASCII), latch));
-        latch.await();
+        latch.get();
         client.destroy();
     }
 }
