@@ -280,7 +280,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @param options - Additional options to be passed to the JsseXnioSsl, this will be merged with the default options where
      *        applicable.
      */
-    public static void startSSLServer(final SSLContext context, final OptionMap options) throws IOException {
+    public static void  startSSLServer(final SSLContext context, final OptionMap options) throws IOException {
         OptionMap combined = OptionMap.builder().addAll(serverOptions).addAll(options).getMap();
 
         XnioSsl xnioSsl = new JsseXnioSsl(xnio, combined, context);
