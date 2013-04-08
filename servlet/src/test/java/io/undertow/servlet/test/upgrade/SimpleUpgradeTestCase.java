@@ -33,6 +33,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
@@ -43,6 +44,7 @@ import org.junit.runner.RunWith;
 /**
  * @author Stuart Douglas
  */
+@AjpIgnore
 @RunWith(DefaultServer.class)
 public class SimpleUpgradeTestCase {
 

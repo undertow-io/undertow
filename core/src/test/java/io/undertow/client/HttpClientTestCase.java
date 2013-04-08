@@ -23,6 +23,7 @@ import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpContinueHandler;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Headers;
@@ -54,6 +55,7 @@ import java.util.List;
  * @author Emanuel Muckenhuber
  */
 @RunWith(DefaultServer.class)
+@AjpIgnore
 public class HttpClientTestCase {
 
     private static final String message = "Hello World!";

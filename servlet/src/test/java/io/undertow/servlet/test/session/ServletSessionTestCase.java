@@ -121,13 +121,11 @@ public class ServletSessionTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("2", response);
-            Assert.assertTrue(result.getHeaders("Set-Cookie")[0].getValue().contains("MySessionCookie"));
 
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("3", response);
-            Assert.assertTrue(result.getHeaders("Set-Cookie")[0].getValue().contains("MySessionCookie"));
 
 
         } finally {

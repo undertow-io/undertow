@@ -36,6 +36,7 @@ import io.undertow.server.handlers.cache.CachedHttpRequest;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.FileResourceManager;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
@@ -48,6 +49,7 @@ import org.junit.runner.RunWith;
 /**
  * @author Stuart Douglas
  */
+@AjpIgnore // it looks like apache actually has trouble with the number of requests
 @RunWith(DefaultServer.class)
 public class FileHandlerStressTestCase {
 

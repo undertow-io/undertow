@@ -43,7 +43,7 @@ import org.junit.runner.RunWith;
  * @author Jozef Hartinger
  */
 @RunWith(DefaultServer.class)
-public class ServletSessionTestCase {
+public class ServletSessionInvalidateTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {

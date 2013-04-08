@@ -50,7 +50,7 @@ import org.junit.runner.RunWith;
  *
  */
 @RunWith(DefaultServer.class)
-public class ServletSessionTestCase {
+public class ServletSessionListenerOrderingTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {

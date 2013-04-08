@@ -17,6 +17,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.websockets.WebSocketServlet;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
@@ -37,6 +38,7 @@ import org.xnio.ChannelListener;
 /**
  * @author Stuart Douglas
  */
+@AjpIgnore
 @RunWith(DefaultServer.class)
 public class WebSocketServletTest {
 
