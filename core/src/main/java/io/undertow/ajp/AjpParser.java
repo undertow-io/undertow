@@ -43,6 +43,12 @@ public class AjpParser {
 
     public static final AjpParser INSTANCE = new AjpParser();
 
+    public static final int FORWARD_REQUEST = 2;
+    public static final int CPING = 10;
+    public static final int SHUTDOWN = 7;
+
+
+
     private static final HttpString[] HTTP_METHODS;
     private static final HttpString[] HTTP_HEADERS;
     private static final String[] ATTRIBUTES;
@@ -141,8 +147,10 @@ public class AjpParser {
                     return;
                 } else {
                     final byte prefix = buf.get();
+                    state.prefix = prefix;
                     if (prefix != 2) {
-                        throw new IllegalArgumentException("We do not support prefix codes other than 2 yet. Received: " + prefix);
+                        state.state = AjpParseState.DONE;
+                        return;
                     }
                 }
             }

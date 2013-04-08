@@ -23,6 +23,7 @@ import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.EmptyStreamSourceConduit;
 import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 import org.xnio.conduits.StreamSinkConduit;
@@ -35,6 +36,8 @@ import static org.xnio.IoUtils.safeClose;
  */
 
 final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
+
+    private static final byte[] CPONG = {'A', 'B', 0, 0, 0, 1, 9}; //CPONG response data
 
     private final StreamConnection channel;
 
@@ -126,6 +129,17 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 }
             } while (!state.isComplete());
 
+
+            if (state.prefix != AjpParser.FORWARD_REQUEST) {
+                if (state.prefix == AjpParser.CPING) {
+                    handleCPing();
+                } else {
+                    UndertowLogger.REQUEST_LOGGER.ignoringAjpRequestWithPrefixCode(state.prefix);
+                    IoUtils.safeClose(connection);
+                    return;
+                }
+            }
+
             // we remove ourselves as the read listener from the channel;
             // if the http handler doesn't set any then reads will suspend, which is the right thing to do
             channel.getReadSetter().set(null);
@@ -154,6 +168,45 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             IoUtils.safeClose(connection.getChannel());
         } finally {
             if (free) pooled.free();
+        }
+    }
+
+    private void handleCPing() {
+        state = new AjpParseState();
+        channel.getSourceChannel().suspendReads();
+        final ByteBuffer buffer = ByteBuffer.wrap(CPONG);
+        int res;
+        try {
+            do{
+            res = channel.getSinkChannel().write(buffer);
+                if(res == 0) {
+                    channel.getSinkChannel().setWriteListener(new ChannelListener<ConduitStreamSinkChannel>() {
+                        @Override
+                        public void handleEvent(ConduitStreamSinkChannel channel) {
+                            int res;
+                            do {
+                                try {
+                                    res = channel.write(buffer);
+                                    if(res == 0) {
+                                        return;
+                                    }
+                                } catch (IOException e) {
+                                    UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+                                    IoUtils.safeClose(connection);
+                                }
+                            } while (buffer.hasRemaining());
+                            channel.suspendWrites();
+                            AjpReadListener.this.handleEvent(AjpReadListener.this.channel.getSourceChannel());
+                        }
+                    });
+                    channel.getSinkChannel().resumeWrites();
+                    return;
+                }
+            } while (buffer.hasRemaining());
+            AjpReadListener.this.handleEvent(AjpReadListener.this.channel.getSourceChannel());
+        } catch (IOException e) {
+            UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+            IoUtils.safeClose(connection);
         }
     }
 

@@ -27,6 +27,8 @@ import io.undertow.util.HttpString;
 
     int state;
 
+    byte prefix;
+
     //the length of the string being read
     int stringLength = -1;
     StringBuilder currentString;

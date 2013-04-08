@@ -79,4 +79,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5010, value = "Verification of authentication tokens for user '%s' has failed using mechanism '%s'.")
     void authenticationFailed(final String userName, final String mechanism);
 
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5011, value = "Ignoring AJP request with prefix %s")
+    void ignoringAjpRequestWithPrefixCode(byte prefix);
 }
