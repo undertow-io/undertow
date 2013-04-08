@@ -149,7 +149,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * the query string
      */
-    private String queryString;
+    private String queryString = "";
 
     private List<ConduitWrapper<StreamSourceConduit>> requestWrappers = new ArrayList<ConduitWrapper<StreamSourceConduit>>(3);
     private List<ConduitWrapper<StreamSinkConduit>> responseWrappers = new ArrayList<ConduitWrapper<StreamSinkConduit>>(3);

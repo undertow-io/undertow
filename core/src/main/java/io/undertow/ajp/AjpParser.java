@@ -181,6 +181,7 @@ public class AjpParser {
                 StringHolder result = parseString(buf, state, false);
                 if (result.readComplete) {
                     String res = result.value;
+                    exchange.setRequestURI(res);
                     exchange.setRequestPath(res);
                     exchange.setRelativePath(res);
                 } else {
@@ -301,7 +302,7 @@ public class AjpParser {
                     //query string.
                     if(state.currentAttribute.equals(ATTRIBUTES[5])) {
                         String res = result.value;
-                        exchange.setQueryString(res);
+                        exchange.setQueryString(res == null ? "" : res);
                         int stringStart = 0;
                         String attrName = null;
                         for (int i = 0; i < res.length(); ++i) {
