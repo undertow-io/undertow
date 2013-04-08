@@ -175,11 +175,11 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(boolean.class, true);
                 Object result = textMessage.invoke(instance.getInstance(), params);
                 assembledTextFrame = null;
-                sendResult(s, result);
+                sendResult(result);
             }
         }
 
-        private void sendResult(final WebSocketSession s, final Object result) {
+        private void sendResult(final Object result) {
             if (result != null) {
                 if (result instanceof String) {
                     session.getAsyncRemote().sendText((String) result, errorReportingSendHandler);
@@ -211,7 +211,7 @@ public class AnnotatedEndpoint extends Endpoint {
                     params.put(ByteBuffer.class, payload);
                     params.put(boolean.class, header.isLastFragement() && i == payload.length - 1);
                     result = textMessage.invoke(instance.getInstance(), params);
-                    sendResult(s, result);
+                    sendResult(result);
                 }
             } else {
                 if (assembledBinaryFrame == null) {
@@ -238,7 +238,7 @@ public class AnnotatedEndpoint extends Endpoint {
                     params.put(boolean.class, header.isLastFragement());
                     Object result = binaryMessage.invoke(instance.getInstance(), params);
                     assembledBinaryFrame = null;
-                    sendResult(s, result);
+                    sendResult(result);
                 }
             }
         }
