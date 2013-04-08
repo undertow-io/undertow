@@ -155,6 +155,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
                 state = null;
                 this.httpServerExchange = null;
+                httpServerExchange.setPersistent(true);
                 HttpHandlers.executeRootHandler(connection.getRootHandler(), httpServerExchange, Thread.currentThread() instanceof XnioExecutor);
 
             } catch (Throwable t) {
@@ -234,21 +235,6 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             responseChannel = null;
             this.requestChannel = null;
             nextListener.proceed();
-        }
-
-        private static class DoNextRequestRead implements Runnable {
-            private final AjpReadListener listener;
-            private final StreamSourceChannel channel;
-
-            public DoNextRequestRead(AjpReadListener listener, StreamSourceChannel channel) {
-                this.listener = listener;
-                this.channel = channel;
-            }
-
-            @Override
-            public void run() {
-                listener.handleEvent(channel);
-            }
         }
     }
 

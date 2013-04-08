@@ -49,10 +49,10 @@ public class ResponseParseState {
 
     /**
      * This has different meanings depending on the current state.
-     *
+     * <p/>
      * In state {@link #HEADER} it is a the first character of the header, that was read by
      * {@link #HEADER_VALUE} to see if this was a continuation.
-     *
+     * <p/>
      * In state {@link #HEADER_VALUE} if represents the last character that was seen.
      */
     byte leftOver;
@@ -69,6 +69,10 @@ public class ResponseParseState {
 
     public boolean isComplete() {
         return state == PARSE_COMPLETE;
+    }
+
+    public final void parseComplete() {
+        state = PARSE_COMPLETE;
     }
 }
 

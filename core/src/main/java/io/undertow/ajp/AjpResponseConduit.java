@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
@@ -159,36 +160,62 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         } while (!stateUpdater.compareAndSet(this, state, writeEnteredState));
         int newState = writeEnteredState;
 
+        //if currentDataBuffer is set then we just
         if (anyAreSet(oldState, FLAG_START)) {
-            currentDataBuffer = pool.allocate();
-            final ByteBuffer buffer = currentDataBuffer.getResource();
-            packetHeaderAndDataBuffer = new ByteBuffer[1];
-            packetHeaderAndDataBuffer[0] = buffer;
-            buffer.put((byte) 'A');
-            buffer.put((byte) 'B');
-            buffer.put((byte) 0); //we fill the size in later
-            buffer.put((byte) 0);
-            buffer.put((byte) 4);
-            putInt(buffer, exchange.getResponseCode());
-            putString(buffer, StatusCodes.getReason(exchange.getResponseCode()));
-            putInt(buffer, exchange.getResponseHeaders().getHeaderNames().size());
-            for (final HttpString header : exchange.getResponseHeaders()) {
-                for (String headerValue : exchange.getResponseHeaders().get(header)) {
-                    Integer headerCode = HEADER_MAP.get(header);
-                    if (headerCode != null) {
-                        putInt(buffer, headerCode);
-                    } else {
-                        putString(buffer, header.toString());
-                    }
-                    putString(buffer, headerValue);
-                }
-            }
+            if (readBodyChunkBuffer == null) {
+                currentDataBuffer = pool.allocate();
+                final ByteBuffer buffer = currentDataBuffer.getResource();
+                packetHeaderAndDataBuffer = new ByteBuffer[1];
+                packetHeaderAndDataBuffer[0] = buffer;
+                buffer.put((byte) 'A');
+                buffer.put((byte) 'B');
+                buffer.put((byte) 0); //we fill the size in later
+                buffer.put((byte) 0);
+                buffer.put((byte) 4);
+                putInt(buffer, exchange.getResponseCode());
+                putString(buffer, StatusCodes.getReason(exchange.getResponseCode()));
 
-            int dataLength = buffer.position() - 4;
-            buffer.put(2, (byte) ((dataLength >> 8) & 0xFF));
-            buffer.put(3, (byte) (dataLength & 0xFF));
-            buffer.flip();
-            newState = (newState & ~FLAG_START);
+                int headers = 0;
+                //we need to cound the headers
+                final HeaderMap responseHeaders = exchange.getResponseHeaders();
+                for (HttpString name : responseHeaders.getHeaderNames()) {
+                    headers += responseHeaders.get(name).size();
+                }
+
+                putInt(buffer, headers);
+
+
+                for (final HttpString header : responseHeaders) {
+                    for (String headerValue : responseHeaders.get(header)) {
+                        Integer headerCode = HEADER_MAP.get(header);
+                        if (headerCode != null) {
+                            putInt(buffer, headerCode);
+                        } else {
+                            putString(buffer, header.toString());
+                        }
+                        putString(buffer, headerValue);
+                    }
+                }
+
+                int dataLength = buffer.position() - 4;
+                buffer.put(2, (byte) ((dataLength >> 8) & 0xFF));
+                buffer.put(3, (byte) (dataLength & 0xFF));
+                buffer.flip();
+                newState = (newState & ~FLAG_START);
+            } else {
+                //otherwise we just write out the get request body chunk and return
+                ByteBuffer readBuffer = readBodyChunkBuffer;
+                do {
+                    int res = next.write(readBuffer);
+                    if (res == 0) {
+                        stateUpdater.set(this, newState & ~FLAG_WRITE_ENTERED); //clear the write entered flag
+                        return false;
+                    }
+                } while (readBodyChunkBuffer.hasRemaining());
+                readBodyChunkBuffer = null;
+                stateUpdater.set(this, newState & ~FLAG_WRITE_ENTERED); //clear the write entered flag
+                return true;
+            }
         }
 
         if (currentDataBuffer != null) {
@@ -223,7 +250,7 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             buffer.put((byte) 0);
             buffer.put((byte) 2);
             buffer.put((byte) 5);
-            buffer.put((byte) 0); //reuse
+            buffer.put((byte) (exchange.isPersistent() ? 1 : 0)); //reuse
             buffer.flip();
             if (!writeCurrentBuffer()) {
                 stateUpdater.set(this, newState & ~FLAG_WRITE_ENTERED); //clear the write entered flag

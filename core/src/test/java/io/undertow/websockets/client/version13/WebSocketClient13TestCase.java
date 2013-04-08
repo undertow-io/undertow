@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.undertow.client.HttpClient;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.FileUtils;
 import io.undertow.util.StringWriteChannelListener;
@@ -38,6 +39,7 @@ import sun.nio.ch.ChannelInputStream;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@AjpIgnore
 public class WebSocketClient13TestCase {
     private static XnioWorker worker;
 

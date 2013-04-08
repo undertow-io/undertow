@@ -7,6 +7,7 @@ import java.nio.ByteBuffer;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.Pooled;
+import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
@@ -38,8 +39,7 @@ public class UndertowInputStream extends InputStream {
         if (closed) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
-        channel.awaitReadable();
-        return channel.read(ByteBuffer.wrap(b, off, len));
+        return Channels.readBlocking(channel, ByteBuffer.wrap(b, off, len));
     }
 
     @Override
@@ -73,7 +73,7 @@ public class UndertowInputStream extends InputStream {
     public int read() throws IOException {
         byte[] b = new byte[1];
         int read = read(b);
-        if(read == -1) {
+        if (read == -1) {
             return -1;
         }
         return b[0];

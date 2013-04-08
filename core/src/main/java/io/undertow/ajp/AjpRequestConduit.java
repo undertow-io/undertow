@@ -176,7 +176,7 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
                 }
             }
         } else {
-            chunkRemaining = this.state & ~STATE_MASK;
+            chunkRemaining = this.state & STATE_MASK;
         }
 
         int limit = dst.limit();

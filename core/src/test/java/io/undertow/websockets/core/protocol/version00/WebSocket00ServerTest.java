@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.core.protocol.version00;
 
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
@@ -53,6 +54,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 @RunWith(DefaultServer.class)
+@AjpIgnore
 public class WebSocket00ServerTest {
 
     @org.junit.Test

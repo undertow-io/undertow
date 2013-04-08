@@ -27,6 +27,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpContinueHandler;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.server.HttpHandler;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
@@ -44,6 +45,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@AjpIgnore
 public class HttpContinueTestCase {
 
     private static volatile boolean accept = false;

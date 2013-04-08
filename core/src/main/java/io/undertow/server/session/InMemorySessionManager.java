@@ -97,7 +97,6 @@ public class InMemorySessionManager implements SessionManager {
         if (sess == null) {
             return null;
         } else {
-            config.setSessionId(serverExchange, sess.session.getId());
             return sess.session;
         }
     }
