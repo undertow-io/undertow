@@ -260,7 +260,7 @@ public class HttpTransferEncoding {
             public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
                 StreamSourceConduit channel = factory.create();
                 final long max = maxEntitySize(exchange);
-                if(contentLength > max) {
+                if(max > 0 && contentLength > max) {
                     return new BrokenStreamSourceConduit(channel, UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getSourceAddress(), max));
                 }
                 return new FixedLengthStreamSourceConduit(channel, contentLength, fixedLengthDrainListener(exchange));

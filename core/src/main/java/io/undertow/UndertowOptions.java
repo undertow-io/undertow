@@ -43,10 +43,12 @@ public class UndertowOptions {
      */
     public static final Option<Long> MAX_ENTITY_SIZE = Option.simple(UndertowOptions.class, "MAX_ENTITY_SIZE", Long.class);
 
-    public static final long DEFAULT_MAX_ENTITY_SIZE = 10 * 1024 * 1024;
+    /**
+     * We do not have a default upload limit
+     */
+    public static final long DEFAULT_MAX_ENTITY_SIZE = -1;
 
     /**
-
      * If we should buffer pipelined requests. Defaults to false.
      */
     public static final Option<Boolean> BUFFER_PIPELINED_DATA = Option.simple(UndertowOptions.class, "BUFFER_PIPELINED_DATA", Boolean.class);

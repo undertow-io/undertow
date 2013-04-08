@@ -105,15 +105,19 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     }
 
     private void updateRemainingAllowed(final int written) throws IOException {
-        remainingAllowed -= written;
-        if (remainingAllowed < 0) {
-            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxSize);
+        if(maxSize > 0) {
+            remainingAllowed -= written;
+            if (remainingAllowed < 0) {
+                throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxSize);
+            }
         }
     }
 
     private void checkMaxLength() throws IOException {
-        if (remainingAllowed < 0) {
-            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxSize);
+        if(maxSize > 0) {
+            if (remainingAllowed < 0) {
+                throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxSize);
+            }
         }
     }
 
