@@ -16,20 +16,18 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.test.listener.request.async;
+package io.undertow.servlet.test.response.contenttype;
 
-import java.io.IOException;
+import java.net.URLEncoder;
 
 import javax.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
-import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
@@ -46,9 +44,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class RequestListenerAsyncRequest {
-
-    public static final String HELLO_WORLD = "Hello World";
+public class ContentTypeCharsetTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -56,16 +52,8 @@ public class RequestListenerAsyncRequest {
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
-        ServletInfo m = new ServletInfo("messageServlet", MessageServlet.class)
-                .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
-                .setAsyncSupported(true)
-                .addMapping("/message");
-
-
-        ServletInfo a = new ServletInfo("asyncServlet", AsyncServlet.class)
-                .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
-                .setAsyncSupported(true)
-                .addMapping("/async");
+        ServletInfo m = new ServletInfo("charset", ContentTypeServlet.class)
+                .addMapping("/*");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -73,8 +61,7 @@ public class RequestListenerAsyncRequest {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(m, a)
-                .addListener(new ListenerInfo(TestListener.class));
+                .addServlets(m);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -84,17 +71,25 @@ public class RequestListenerAsyncRequest {
     }
 
     @Test
-    public void testSimpleHttpServlet() throws IOException {
+    public void testCharsetAndContentType() throws Exception {
+        runtest("text/html", "UTF8", "text/html;charset=UTF8", "text/html;charset=UTF8\nUTF8");
+        runtest("text/html", "", "text/html", "text/html\nISO-8859-1");
+        runtest("text/html;   charset=UTF8", "", "text/html;charset=UTF8", "text/html;charset=UTF8\nUTF8");
+        runtest("text/html;   charset=UTF8; boundary=someString;", "", "text/html; boundary=someString;charset=UTF8", "text/html; boundary=someString;charset=UTF8\nUTF8");
+        runtest("text/html;   charset=UTF8; boundary=someString;   ", "", "text/html; boundary=someString;charset=UTF8", "text/html; boundary=someString;charset=UTF8\nUTF8");
+        runtest("multipart/related; type=\"text/xml\"; boundary=\"uuid:ce7d652a-d035-42fa-962c-5b8315084e32\"; start=\"<root.message@cxf.apache.org>\"; start-info=\"text/xml\"", "", "multipart/related; type=\"text/xml\"; boundary=\"uuid:ce7d652a-d035-42fa-962c-5b8315084e32\"; start=\"<root.message@cxf.apache.org>\"; start-info=\"text/xml\"", "multipart/related; type=\"text/xml\"; boundary=\"uuid:ce7d652a-d035-42fa-962c-5b8315084e32\"; start=\"<root.message@cxf.apache.org>\"; start-info=\"text/xml\"\nISO-8859-1");
+
+    }
+
+    private void runtest(String contentType, String charset, String expectedContentType, String expectedBody) throws Exception {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/test?contentType=" + URLEncoder.encode(contentType) + "&charset=" + URLEncoder.encode(charset));
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
-
-            Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST", "created ASYNC", "destroyed ASYNC"}, TestListener.RESULTS.toArray());
-
+            Assert.assertEquals(expectedContentType, result.getHeaders("Content-Type")[0].getValue());
+            Assert.assertEquals(expectedBody, response);
         } finally {
             client.getConnectionManager().shutdown();
         }

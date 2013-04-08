@@ -61,13 +61,15 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private Integer bufferSize;
     private Long contentLength;
     private boolean insideInclude = false;
-    private boolean charsetSet = false;
-    private String contentType;
-    private String charset;
     private Locale locale;
     private boolean responseDone = false;
 
-    public HttpServletResponseImpl(final HttpServerExchange exchange,  final ServletContextImpl servletContext) {
+
+    private boolean charsetSet = false; //if a content type has been set either implicitly or implicitly
+    private String contentType;
+    private String charset;
+
+    public HttpServletResponseImpl(final HttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
         this.servletContext = servletContext;
     }
@@ -264,7 +266,11 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public String getContentType() {
         if (contentType != null) {
-            return contentType + ";charset=" + getCharacterEncoding();
+            if (charsetSet) {
+                return contentType + ";charset=" + getCharacterEncoding();
+            } else {
+                return contentType;
+            }
         }
         return null;
     }
@@ -321,7 +327,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             return;
         }
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
-        this.contentLength = (long)len;
+        this.contentLength = (long) len;
     }
 
     @Override
@@ -341,21 +347,40 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         contentType = type;
         int split = type.indexOf(";");
         if (split != -1) {
-            contentType = contentType.substring(0, split);
             int pos = type.indexOf("charset=");
             if (pos != -1) {
                 int i = pos + "charset=".length();
                 do {
-                    char c = type.charAt(i++);
+                    char c = type.charAt(i);
                     if (c == ' ' || c == '\t' || c == ';') {
                         break;
                     }
+                    ++i;
                 } while (i < type.length());
                 if (writer == null && !isCommitted()) {
                     charsetSet = true;
                     //we only change the charset if the writer has not been retrieved yet
                     this.charset = type.substring(pos + "charset=".length(), i);
                 }
+                int charsetStart = pos;
+                while (type.charAt(--charsetStart) != ';' && charsetStart >0) {}
+                StringBuilder contentTypeBuilder = new StringBuilder();
+                contentTypeBuilder.append(type.substring(0, charsetStart));
+                if (i != type.length()) {
+                    contentTypeBuilder.append(type.substring(i));
+                }
+                contentType = contentTypeBuilder.toString();
+            }
+            //strip any trailing semicolon
+            for (int i = contentType.length() - 1; i >= 0; --i) {
+                char c = contentType.charAt(i);
+                if (c == ' ' || c == '\t') {
+                    continue;
+                }
+                if(c == ';') {
+                    contentType = contentType.substring(0, i);
+                }
+                break;
             }
         }
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
@@ -371,7 +396,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public int getBufferSize() {
-        if(bufferSize == null){
+        if (bufferSize == null) {
             return exchange.getConnection().getBufferSize();
         }
         return bufferSize;
