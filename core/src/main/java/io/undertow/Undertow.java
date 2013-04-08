@@ -47,6 +47,8 @@ import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
+import org.xnio.channels.SslConnection;
+import org.xnio.ssl.JsseXnioSsl;
 
 /**
  * Convenience class used to build an Undertow server.
@@ -114,8 +116,7 @@ public class Undertow {
         channels = new ArrayList<>();
         try {
             worker = xnio.createWorker(OptionMap.builder()
-                    .set(Options.WORKER_WRITE_THREADS, ioThreads)
-                    .set(Options.WORKER_READ_THREADS, ioThreads)
+                    .set(Options.WORKER_IO_THREADS, ioThreads)
                     .set(Options.CONNECTION_HIGH_WATER, 1000000)
                     .set(Options.CONNECTION_LOW_WATER, 1000000)
                     .set(Options.WORKER_TASK_CORE_THREADS, workerThreads)
@@ -125,7 +126,7 @@ public class Undertow {
                     .getMap());
 
             OptionMap serverOptions = OptionMap.builder()
-                    .set(Options.WORKER_ACCEPT_THREADS, ioThreads)
+                    .set(Options.WORKER_IO_THREADS, ioThreads)
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();
@@ -149,8 +150,16 @@ public class Undertow {
                     AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, serverOptions);
                     server.resumeAccepts();
                     channels.add(server);
+                } else if (listener.type == ListenerType.HTTPS){
+                    HttpOpenListener openListener = new HttpOpenListener(buffers, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), bufferSize);
+                    openListener.setRootHandler(rootHandler);
+                    ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
+                    JsseXnioSsl xnioSsl = new JsseXnioSsl(worker.getXnio(),OptionMap.EMPTY);
+                    AcceptingChannel<SslConnection> sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, serverOptions);
+                    sslServer.resumeAccepts();
+                    channels.add(sslServer);
                 }
-                //TODO: https
+
             }
 
         } catch (Exception e) {

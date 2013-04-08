@@ -114,6 +114,7 @@ public class DirectoryUtils {
 
         try {
             ByteBuffer output = ByteBuffer.wrap(builder.toString().getBytes("UTF-8"));
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html");
             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(output.limit()));
             Channels.writeBlocking(exchange.getResponseChannel(), output);
         } catch (UnsupportedEncodingException e) {
