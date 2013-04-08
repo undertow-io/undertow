@@ -49,11 +49,13 @@ public class ETagUtils {
                 continue;
             }
             for (ETag tag : etags) {
-                if (tag.isWeak() && !allowWeak) {
-                    continue;
-                }
-                if (tag.getTag().equals(part.getTag())) {
-                    return true;
+                if(tag != null) {
+                    if (tag.isWeak() && !allowWeak) {
+                        continue;
+                    }
+                    if (tag.getTag().equals(part.getTag())) {
+                        return true;
+                    }
                 }
             }
         }
@@ -92,11 +94,13 @@ public class ETagUtils {
                 continue;
             }
             for (ETag tag : etags) {
-                if (tag.isWeak() && !allowWeak) {
-                    continue;
-                }
-                if (tag.getTag().equals(part.getTag())) {
-                    return false;
+                if(tag != null) {
+                    if (tag.isWeak() && !allowWeak) {
+                        continue;
+                    }
+                    if (tag.getTag().equals(part.getTag())) {
+                        return false;
+                    }
                 }
             }
         }
