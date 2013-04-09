@@ -1024,6 +1024,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_LOGGER.debug("Exception draining request stream", e);
                     IoUtils.safeClose(connection.getChannel());
+                    break;
                 }
 
             }
