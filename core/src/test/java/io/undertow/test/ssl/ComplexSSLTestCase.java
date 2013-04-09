@@ -80,18 +80,28 @@ public class ComplexSSLTestCase {
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "");
-            HttpResponse result = client.execute(get);
+            //get file list, this works
+            HttpGet getFileList = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            HttpResponse resultList = client.execute(getFileList);
+            Assert.assertEquals(200, resultList.getStatusLine().getStatusCode());
+            String responseList = HttpClientUtils.readResponse(resultList);
+            Assert.assertTrue(responseList, responseList.contains("page.html"));
+            Header[] headersList = resultList.getHeaders("Content-Type");
+            Assert.assertEquals("text/html", headersList[0].getValue());
+
+            //get file itself, breaks
+            HttpGet getFile = new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/page.html");
+            HttpResponse result = client.execute(getFile);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
+            String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
-            Assert.assertTrue(response, response.contains("page.html"));
+            Assert.assertTrue(response, response.contains("A web page"));
+
+
         } finally {
             client.getConnectionManager().shutdown();
             DefaultServer.stopSSLServer();
         }
     }
-
-
 }
