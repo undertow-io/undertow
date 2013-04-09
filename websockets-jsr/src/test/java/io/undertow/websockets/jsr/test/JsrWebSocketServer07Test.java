@@ -190,6 +190,7 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<SendResult> sendResult = new AtomicReference<SendResult>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
+        final ConcreteIoFuture latch2 = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -208,7 +209,9 @@ public class JsrWebSocketServer07Test {
                                     public void onResult(SendResult result) {
                                         sendResult.set(result);
                                         if (result.getException() != null) {
-                                            latch.setException(new IOException(result.getException()));
+                                            latch2.setException(new IOException(result.getException()));
+                                        } else {
+                                            latch2.setResult(null);
                                         }
                                     }
                                 });
@@ -224,6 +227,7 @@ public class JsrWebSocketServer07Test {
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
         latch.get();
+        latch2.get();
 
         SendResult result = sendResult.get();
         Assert.assertNotNull(result);
@@ -238,6 +242,7 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<SendResult> sendResult = new AtomicReference<SendResult>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
+        final ConcreteIoFuture latch2 = new ConcreteIoFuture();
         final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
             @Override
             public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
@@ -253,7 +258,9 @@ public class JsrWebSocketServer07Test {
                                     public void onResult(SendResult result) {
                                         sendResult.set(result);
                                         if (result.getException() != null) {
-                                            latch.setException(new IOException(result.getException()));
+                                            latch2.setException(new IOException(result.getException()));
+                                        } else {
+                                            latch2.setResult(null);
                                         }
                                     }
                                 });
@@ -269,6 +276,7 @@ public class JsrWebSocketServer07Test {
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
         latch.get();
+        latch2.get();
 
         SendResult result = sendResult.get();
         Assert.assertNotNull(result);
