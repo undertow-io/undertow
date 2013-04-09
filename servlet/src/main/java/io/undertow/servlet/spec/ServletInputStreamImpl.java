@@ -9,8 +9,11 @@ import javax.servlet.ServletInputStream;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
+import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
+import org.xnio.Pool;
+import org.xnio.Pooled;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -27,6 +30,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     private final HttpServletRequestImpl request;
     private final StreamSourceChannel channel;
+    private final Pool<ByteBuffer> bufferPool;
 
     private volatile ReadListener listener;
 
@@ -40,10 +44,12 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     private int state;
     private AsyncContextImpl asyncContext;
+    private Pooled<ByteBuffer> pooled;
 
     public ServletInputStreamImpl(final HttpServletRequestImpl request) {
         this.request = request;
         this.channel = request.getExchange().getRequestChannel();
+        this.bufferPool = request.getExchange().getConnection().getBufferPool();
     }
 
 
@@ -86,7 +92,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
     public int read() throws IOException {
         byte[] b = new byte[1];
         int read = read(b);
-        if(read == -1) {
+        if (read == -1) {
             return -1;
         }
         return b[0];
@@ -102,35 +108,69 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
+        readIntoBuffer();
         if (anyAreSet(state, FLAG_FINISHED)) {
             return -1;
         }
-        if(len == 0) {
+        if (len == 0) {
             return 0;
         }
-        ByteBuffer buffer = ByteBuffer.wrap(b, off, len);
-        if (listener == null) {
-            int res = Channels.readBlocking(channel, buffer);
-            if (res == -1) {
-                state |= FLAG_FINISHED;
+        ByteBuffer buffer = pooled.getResource();
+        int copied = Buffers.copy(ByteBuffer.wrap(b, off, len), buffer);
+        if (!buffer.hasRemaining()) {
+            pooled.free();
+            pooled = null;
+        }
+        return copied;
+    }
+
+    private void readIntoBuffer() throws IOException {
+        if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
+            pooled = bufferPool.allocate();
+            if (listener == null) {
+                int res = Channels.readBlocking(channel, pooled.getResource());
+                pooled.getResource().flip();
+                if (res == -1) {
+                    state |= FLAG_FINISHED;
+                    pooled.free();
+                    pooled = null;
+                }
+            } else {
+                if (anyAreClear(state, FLAG_READY)) {
+                    throw UndertowServletMessages.MESSAGES.streamNotReady();
+                }
+                int res = channel.read(pooled.getResource());
+                pooled.getResource().flip();
+                if (res == -1) {
+                    state |= FLAG_FINISHED;
+                    pooled.free();
+                    pooled = null;
+                } else if (res == 0) {
+                    state &= ~FLAG_READY;
+                    //we don't free the buffer, that will be done on next read
+                }
             }
-            return res;
-        } else {
-            if (anyAreClear(state, FLAG_READY)) {
-                throw UndertowServletMessages.MESSAGES.streamNotReady();
-            }
-            int res = channel.read(buffer);
-            if (res == -1) {
-                state |= FLAG_FINISHED;
-            } else if (res == 0) {
-                state &= ~FLAG_READY;
-            }
-            return res;
         }
     }
 
     @Override
+    public int available() throws IOException {
+        if (anyAreSet(state, FLAG_CLOSED)) {
+            throw UndertowServletMessages.MESSAGES.streamIsClosed();
+        }
+        readIntoBuffer();
+        if (anyAreSet(state, FLAG_FINISHED)) {
+            return -1;
+        }
+        return pooled.getResource().remaining();
+    }
+
+    @Override
     public void close() throws IOException {
+        if(pooled != null) {
+            pooled.free();
+            pooled = null;
+        }
         channel.shutdownReads();
         state |= FLAG_FINISHED | FLAG_CLOSED;
     }

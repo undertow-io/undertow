@@ -37,6 +37,9 @@ public class BlockingInputStreamServlet extends HttpServlet {
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         final ServletInputStream inputStream = req.getInputStream();
+        if(inputStream.available() == 0) {
+            throw new ServletException("Nothing available");
+        }
         byte[] buf = new byte[1024];
         int read;
         while ((read = inputStream.read(buf)) != -1) {
