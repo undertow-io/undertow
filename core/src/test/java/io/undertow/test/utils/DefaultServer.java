@@ -281,7 +281,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      *        applicable.
      */
     public static void  startSSLServer(final SSLContext context, final OptionMap options) throws IOException {
-        OptionMap combined = OptionMap.builder().addAll(serverOptions).addAll(options).getMap();
+        OptionMap combined = OptionMap.builder().addAll(serverOptions).addAll(options)
+                .set(Options.USE_DIRECT_BUFFERS,true)
+                .getMap();
 
         XnioSsl xnioSsl = new JsseXnioSsl(xnio, combined, context);
         sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)),
