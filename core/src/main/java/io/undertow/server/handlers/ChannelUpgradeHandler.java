@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import io.undertow.server.ExchangeCompletionListener;
@@ -35,9 +37,10 @@ import org.xnio.StreamConnection;
  * An HTTP request handler which upgrades the HTTP request and hands it off as a socket to any XNIO consumer.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author Stuart Douglas
  */
 public final class ChannelUpgradeHandler implements HttpHandler {
-    private final CopyOnWriteMap<String, ChannelListener<? super StreamConnection>> handlers = new CopyOnWriteMap<String, ChannelListener<? super StreamConnection>>();
+    private final CopyOnWriteMap<String, List<Holder>> handlers = new CopyOnWriteMap<>();
     private volatile HttpHandler nonUpgradeHandler = ResponseCodeHandler.HANDLE_404;
 
     /**
@@ -45,26 +48,63 @@ public final class ChannelUpgradeHandler implements HttpHandler {
      *
      * @param productString the product string to match
      * @param openListener  the open listener to call
-     * @return {@code true} if this product string was not previously registered, {@code false} otherwise
+     * @param handshake     a handshake implementation that can be used to verify the client request and modify the response
      */
-    public boolean addProtocol(String productString, ChannelListener<? super StreamConnection> openListener) {
+    public synchronized void addProtocol(String productString, ChannelListener<? super StreamConnection> openListener, final HttpUpgradeHandshake handshake) {
         if (productString == null) {
             throw new IllegalArgumentException("productString is null");
         }
         if (openListener == null) {
             throw new IllegalArgumentException("openListener is null");
         }
-        return handlers.putIfAbsent(productString, openListener) == null;
+        List<Holder> list = handlers.get(productString);
+        if (list == null) {
+            handlers.put(productString, list = new ArrayList<>());
+        }
+        list.add(new Holder(openListener, handshake));
+    }
+
+    /**
+     * Add a protocol to this handler.
+     *
+     * @param productString the product string to match
+     * @param openListener  the open listener to call
+     */
+    public void addProtocol(String productString, ChannelListener<? super StreamConnection> openListener) {
+        addProtocol(productString, openListener, null);
+    }
+
+    /**
+     * Remove a protocol from this handler. This will remove all upgrade handlers that match the product string
+     *
+     * @param productString the product string to match
+     */
+    public synchronized void removeProtocol(String productString) {
+        handlers.remove(productString);
     }
 
     /**
      * Remove a protocol from this handler.
      *
      * @param productString the product string to match
-     * @return the previously registered open listener, or {@code null} if none was registered
+     * @param openListener  The open listener
      */
-    public ChannelListener<? super StreamConnection> removeProtocol(String productString) {
-        return handlers.remove(productString);
+    public synchronized void removeProtocol(String productString, ChannelListener<? super StreamConnection> openListener) {
+        List<Holder> holders = handlers.get(productString);
+        if (holders == null) {
+            return;
+        }
+        Iterator<Holder> it = holders.iterator();
+        while (it.hasNext()) {
+            Holder holder = it.next();
+            if (holder.listener == openListener) {
+                it.remove();
+                break;
+            }
+        }
+        if (holders.isEmpty()) {
+            handlers.remove(productString);
+        }
     }
 
     /**
@@ -91,8 +131,16 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         final List<String> upgradeStrings = exchange.getRequestHeaders().get(Headers.UPGRADE);
         if (upgradeStrings != null && exchange.getRequestMethod().equals(Methods.GET)) {
             for (String string : upgradeStrings) {
-                final ChannelListener<? super StreamConnection> listener = handlers.get(string);
-                if (listener != null) {
+                final List<Holder> holders = handlers.get(string);
+                for (Holder holder : holders) {
+                    final ChannelListener<? super StreamConnection> listener = holder.listener;
+                    if (holder.handshake != null) {
+                        if (!holder.handshake.handleUpgrade(exchange)) {
+                            //handshake did not match, try again
+                            continue;
+                        }
+                    }
+
                     exchange.upgradeChannel(string, new ExchangeCompletionListener() {
                         @Override
                         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
@@ -106,5 +154,16 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         }
         final HttpHandler handler = nonUpgradeHandler;
         HttpHandlers.executeHandler(handler, exchange);
+    }
+
+
+    private static final class Holder {
+        final ChannelListener<? super StreamConnection> listener;
+        final HttpUpgradeHandshake handshake;
+
+        private Holder(final ChannelListener<? super StreamConnection> listener, final HttpUpgradeHandshake handshake) {
+            this.listener = listener;
+            this.handshake = handshake;
+        }
     }
 }
