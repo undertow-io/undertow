@@ -65,6 +65,7 @@ import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.handlers.security.CachedAuthenticatedSessionHandler;
+import io.undertow.servlet.handlers.security.SSLInformationAssociationHandler;
 import io.undertow.servlet.handlers.security.SecurityPathMatches;
 import io.undertow.servlet.handlers.security.ServletAuthenticationConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletConfidentialityConstraintHandler;
@@ -512,6 +513,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     private ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet) {
         HttpHandler servletHandler = new ServletSecurityRoleHandler(next);
+        servletHandler = new SSLInformationAssociationHandler(servletHandler);
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
         servletHandler = wrapHandlers(servletHandler, deployment.getDeploymentInfo().getDispatchedHandlerChainWrappers());
         return new ServletChain(servletHandler, managedServlet);

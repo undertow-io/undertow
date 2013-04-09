@@ -2,6 +2,7 @@ package io.undertow.util;
 
 import javax.net.ssl.SSLContext;
 
+import io.undertow.test.utils.DefaultServer;
 import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
@@ -23,6 +24,7 @@ public class TestHttpClient extends DefaultHttpClient {
         SchemeRegistry registry = getConnectionManager().getSchemeRegistry();
         registry.unregister("https");
         registry.register(new Scheme("https", 443, new SSLSocketFactory(sslContext)));
+        registry.register(new Scheme("https", DefaultServer.getHostSSLPort("default"), new SSLSocketFactory(sslContext)));
 
     }
 }
