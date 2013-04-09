@@ -15,8 +15,6 @@
  */
 package io.undertow.websockets.jsr;
 
-import java.io.ByteArrayOutputStream;
-import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
@@ -24,8 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.Future;
 
 import javax.websocket.EncodeException;
-import javax.websocket.Encoder;
-import javax.websocket.EndpointConfiguration;
+import javax.websocket.EndpointConfig;
 import javax.websocket.RemoteEndpoint;
 import javax.websocket.SendHandler;
 
@@ -33,7 +30,6 @@ import io.undertow.websockets.api.FragmentedBinaryFrameSender;
 import io.undertow.websockets.api.FragmentedTextFrameSender;
 import io.undertow.websockets.api.SendCallback;
 import io.undertow.websockets.impl.WebSocketChannelSession;
-import io.undertow.websockets.jsr.util.ClassUtils;
 
 /**
  * {@link RemoteEndpoint} implementation which uses a WebSocketSession for all its operation.
@@ -42,11 +38,11 @@ import io.undertow.websockets.jsr.util.ClassUtils;
  */
 final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
     private final WebSocketChannelSession session;
-    private final EndpointConfiguration config;
+    private final EndpointConfig config;
     private final Async async = new AsyncWebSocketSessionRemoteEndpoint();
     private final Basic basic = new BasicWebSocketSessionRemoteEndpoint();
 
-    public WebSocketSessionRemoteEndpoint(WebSocketChannelSession session, EndpointConfiguration config) {
+    public WebSocketSessionRemoteEndpoint(WebSocketChannelSession session, EndpointConfig config) {
         this.session = session;
         this.config = config;
     }
@@ -134,6 +130,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         private void sendObjectImpl(final Object o, final SendCallback callback) {
             try {
+                /*
                 for (Encoder encoder : config.getEncoders()) {
                     Class<?> type = ClassUtils.getEncoderType(encoder.getClass());
                     if (type.isInstance(o)) {
@@ -159,10 +156,11 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                         }
                     }
                 }
+                */
                 // TODO: Replace on bug is fixed
                 // https://issues.jboss.org/browse/LOGTOOL-64
                 throw new EncodeException(o, "No suitable encoder found");
-            } catch (IOException | EncodeException e) {
+            } catch (EncodeException e) {
                 throw new RuntimeException(e);
             }
         }
@@ -278,7 +276,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         private void sendObjectImpl(final Object o) throws IOException {
             try {
-                for (Encoder encoder : config.getEncoders()) {
+                /*for (Encoder encoder : config.getEncoders()) {
                     Class<?> type = ClassUtils.getEncoderType(encoder.getClass());
                     if (type.isInstance(o)) {
                         if (encoder instanceof Encoder.Binary) {
@@ -302,7 +300,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                             return;
                         }
                     }
-                }
+                }*/
                 // TODO: Replace on bug is fixed
                 // https://issues.jboss.org/browse/LOGTOOL-64
                 throw new EncodeException(o, "No suitable encoder found");

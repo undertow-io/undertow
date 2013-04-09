@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2013 Red Hat, Inc., and individual contributors
+ * Copyright 2012 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,14 +28,14 @@ import javax.websocket.PongMessage;
 import java.nio.ByteBuffer;
 
 /**
- * {@link AbstractFrameHandler} subclass which will allow to use {@link MessageHandler.Basic} implementations
+ * {@link AbstractFrameHandler} subclass which will allow to use {@link MessageHandler.Whole} implementations
  * to operated on received fragements.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class BasicFrameHandler extends AbstractFrameHandler<MessageHandler.Basic<?>> implements AssembledFrameHandler {
+final class WholeFrameHandler extends AbstractFrameHandler<MessageHandler.Whole<?>> implements AssembledFrameHandler {
 
-    public BasicFrameHandler(UndertowSession session, Endpoint endpoint) {
+    public WholeFrameHandler(UndertowSession session, Endpoint endpoint) {
         super(session, endpoint);
     }
 
@@ -44,7 +44,7 @@ final class BasicFrameHandler extends AbstractFrameHandler<MessageHandler.Basic<
     public void onTextFrame(WebSocketSession s, WebSocketFrameHeader header, CharSequence payload) {
         HandlerWrapper handler =  getHandler(FrameType.TEXT);
         if (handler != null) {
-            ((MessageHandler.Basic)handler.getHandler()).onMessage(payload.toString());
+            ((MessageHandler.Whole)handler.getHandler()).onMessage(payload.toString());
         }
     }
 
@@ -53,7 +53,7 @@ final class BasicFrameHandler extends AbstractFrameHandler<MessageHandler.Basic<
     public void onBinaryFrame(WebSocketSession s, WebSocketFrameHeader header, ByteBuffer... payload) {
         HandlerWrapper handler =  getHandler(FrameType.BYTE);
         if (handler != null) {
-            MessageHandler.Basic mHandler = (MessageHandler.Basic) handler.getHandler();
+            MessageHandler.Whole mHandler = (MessageHandler.Whole) handler.getHandler();
             if (handler.getMessageType() == ByteBuffer.class) {
                 mHandler.onMessage(toBuffer(payload));
             }
@@ -81,7 +81,7 @@ final class BasicFrameHandler extends AbstractFrameHandler<MessageHandler.Basic<
             } else {
                 message = DefaultPongMessage.create(toBuffer(payload));
             }
-            ((MessageHandler.Basic)handler.getHandler()).onMessage(message);
+            ((MessageHandler.Whole)handler.getHandler()).onMessage(message);
         }
     }
 }

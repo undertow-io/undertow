@@ -26,22 +26,27 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.servlet.ServletException;
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfiguration;
+import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 import javax.websocket.Session;
-import javax.websocket.server.ServerEndpointConfigurationBuilder;
+import javax.websocket.server.ServerEndpointConfig;
 
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.servlet.util.ImmediateInstanceHandle;
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.ConcreteIoFuture;
-import io.undertow.websockets.jsr.AsyncWebSocketContainer;
-import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
+import io.undertow.websockets.jsr.bootstrap.WebSocketDeployer;
+import io.undertow.websockets.jsr.bootstrap.WebSocketDeployment;
+import io.undertow.websockets.jsr.bootstrap.WebSocketDeploymentInfo;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -67,35 +72,36 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
 
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Whole<ByteBuffer>() {
                     @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Basic<ByteBuffer>() {
-                            @Override
-                            public void onMessage(ByteBuffer message) {
-                                ByteBuffer buf = ByteBuffer.allocate(message.remaining());
-                                buf.put(message);
-                                buf.flip();
-                                try {
-                                    session.getBasicRemote().sendBinary(buf);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    cause.set(e);
-                                    latch.setException(e);
-                                }
-                            }
-                        });
+                    public void onMessage(ByteBuffer message) {
+                        ByteBuffer buf = ByteBuffer.allocate(message.remaining());
+                        buf.put(message);
+                        buf.flip();
+                        try {
+                            session.getBasicRemote().sendBinary(buf);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            cause.set(e);
+                            latch.setException(e);
+                        }
                     }
                 });
-
             }
+        }
 
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -112,30 +118,32 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                     @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Basic<byte[]>() {
-                            @Override
-                            public void onMessage(byte[] message) {
-                                try {
-                                    session.getBasicRemote().sendBinary(ByteBuffer.wrap(message.clone()));
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    cause.set(e);
-                                    latch.setException(e);
-                                }
-                            }
-                        });
+                    public void onMessage(byte[] message) {
+                        try {
+                            session.getBasicRemote().sendBinary(ByteBuffer.wrap(message.clone()));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            cause.set(e);
+                            latch.setException(e);
+                        }
                     }
                 });
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -151,30 +159,33 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Whole<String>() {
                     @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Basic<String>() {
-                            @Override
-                            public void onMessage(String message) {
-                                try {
-                                    session.getBasicRemote().sendText(message);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    cause.set(e);
-                                    latch.setException(e);
-                                }
-                            }
-                        });
+                    public void onMessage(String message) {
+                        try {
+                            session.getBasicRemote().sendText(message);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            cause.set(e);
+                            latch.setException(e);
+                        }
                     }
                 });
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -191,37 +202,40 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
         final ConcreteIoFuture latch2 = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Whole<ByteBuffer>() {
                     @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Basic<ByteBuffer>() {
+                    public void onMessage(ByteBuffer message) {
+                        ByteBuffer buf = ByteBuffer.allocate(message.remaining());
+                        buf.put(message);
+                        buf.flip();
+                        session.getAsyncRemote().sendBinary(buf, new SendHandler() {
                             @Override
-                            public void onMessage(ByteBuffer message) {
-                                ByteBuffer buf = ByteBuffer.allocate(message.remaining());
-                                buf.put(message);
-                                buf.flip();
-                                session.getAsyncRemote().sendBinary(buf, new SendHandler() {
-                                    @Override
-                                    public void onResult(SendResult result) {
-                                        sendResult.set(result);
-                                        if (result.getException() != null) {
-                                            latch2.setException(new IOException(result.getException()));
-                                        } else {
-                                            latch2.setResult(null);
-                                        }
-                                    }
-                                });
+                            public void onResult(SendResult result) {
+                                sendResult.set(result);
+                                if (result.getException() != null) {
+                                    latch2.setException(new IOException(result.getException()));
+                                } else {
+                                    latch2.setResult(null);
+                                }
                             }
                         });
                     }
                 });
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -243,34 +257,37 @@ public class JsrWebSocketServer07Test {
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
         final ConcreteIoFuture latch2 = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Whole<String>() {
                     @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Basic<String>() {
+                    public void onMessage(String message) {
+                        session.getAsyncRemote().sendText(message, new SendHandler() {
                             @Override
-                            public void onMessage(String message) {
-                                session.getAsyncRemote().sendText(message, new SendHandler() {
-                                    @Override
-                                    public void onResult(SendResult result) {
-                                        sendResult.set(result);
-                                        if (result.getException() != null) {
-                                            latch2.setException(new IOException(result.getException()));
-                                        } else {
-                                            latch2.setResult(null);
-                                        }
-                                    }
-                                });
+                            public void onResult(SendResult result) {
+                                sendResult.set(result);
+                                if (result.getException() != null) {
+                                    latch2.setException(new IOException(result.getException()));
+                                } else {
+                                    latch2.setResult(null);
+                                }
                             }
                         });
                     }
                 });
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -291,27 +308,31 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Whole<ByteBuffer>() {
                     @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Basic<ByteBuffer>() {
-                            @Override
-                            public void onMessage(ByteBuffer message) {
-                                ByteBuffer buf = ByteBuffer.allocate(message.remaining());
-                                buf.put(message);
-                                buf.flip();
-                                sendResult.set(session.getAsyncRemote().sendBinary(buf));
-                            }
-                        });
+                    public void onMessage(ByteBuffer message) {
+                        ByteBuffer buf = ByteBuffer.allocate(message.remaining());
+                        buf.put(message);
+                        buf.flip();
+                        sendResult.set(session.getAsyncRemote().sendBinary(buf));
                     }
                 });
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -329,25 +350,28 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Whole<String>() {
                     @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Basic<String>() {
-                            @Override
-                            public void onMessage(String message) {
-                                sendResult.set(session.getAsyncRemote().sendText(message));
-                            }
-                        });
+                    public void onMessage(String message) {
+                        sendResult.set(session.getAsyncRemote().sendText(message));
                     }
                 });
             }
-        };
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
 
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -365,33 +389,35 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                     @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Basic<byte[]>() {
-                            @Override
-                            public void onMessage(byte[] message) {
-                                try {
-                                    OutputStream out = session.getBasicRemote().getSendStream();
-                                    out.write(message);
-                                    out.flush();
-                                    out.close();
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    cause.set(e);
-                                    latch.setException(e);
-                                }
-                            }
-                        });
+                    public void onMessage(byte[] message) {
+                        try {
+                            OutputStream out = session.getBasicRemote().getSendStream();
+                            out.write(message);
+                            out.flush();
+                            out.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            cause.set(e);
+                            latch.setException(e);
+                        }
                     }
                 });
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -407,33 +433,36 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Whole<String>() {
                     @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Basic<String>() {
-                            @Override
-                            public void onMessage(String message) {
-                                try {
-                                    Writer writer = session.getBasicRemote().getSendWriter();
-                                    writer.write(message);
-                                    writer.flush();
-                                    writer.flush();
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    cause.set(e);
-                                    latch.setException(e);
-                                }
-                            }
-                        });
+                    public void onMessage(String message) {
+                        try {
+                            Writer writer = session.getBasicRemote().getSendWriter();
+                            writer.write(message);
+                            writer.flush();
+                            writer.flush();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            cause.set(e);
+                            latch.setException(e);
+                        }
                     }
                 });
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -449,18 +478,21 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
-                    @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                    }
-                });
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -482,23 +514,26 @@ public class JsrWebSocketServer07Test {
 
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
-            @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
-                    @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                    }
 
-                    @Override
-                    public void onClose(Session session, CloseReason closeReason) {
-                        reason.set(closeReason);
-                    }
-                });
+        class TestEndPoint extends Endpoint {
+            @Override
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+
+            @Override
+            public void onClose(Session session, CloseReason closeReason) {
+                reason.set(closeReason);
+            }
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -516,35 +551,38 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
-            @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
-                    @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Async<ByteBuffer>() {
-                            @Override
-                            public void onMessage(ByteBuffer message, boolean last) {
-                                Assert.assertTrue(last);
-                                ByteBuffer buf = ByteBuffer.allocate(message.remaining());
-                                buf.put(message);
-                                buf.flip();
-                                try {
-                                    session.getBasicRemote().sendBinary(buf);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    cause.set(e);
-                                    latch.setException(e);
-                                }
 
-                            }
-                        });
+        class TestEndPoint extends Endpoint {
+            @Override
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Partial<ByteBuffer>() {
+                    @Override
+                    public void onMessage(ByteBuffer message, boolean last) {
+                        Assert.assertTrue(last);
+                        ByteBuffer buf = ByteBuffer.allocate(message.remaining());
+                        buf.put(message);
+                        buf.flip();
+                        try {
+                            session.getBasicRemote().sendBinary(buf);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            cause.set(e);
+                            latch.setException(e);
+                        }
+
                     }
                 });
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -560,31 +598,33 @@ public class JsrWebSocketServer07Test {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        final InstanceFactory<Endpoint> factory = new InstanceFactory<Endpoint>() {
+        class TestEndPoint extends Endpoint {
             @Override
-            public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
-                return new ImmediateInstanceHandle<Endpoint>(new Endpoint() {
+            public void onOpen(final Session session, EndpointConfig config) {
+                connected.set(true);
+                session.addMessageHandler(new MessageHandler.Partial<String>() {
                     @Override
-                    public void onOpen(final Session session, EndpointConfiguration config) {
-                        connected.set(true);
-                        session.addMessageHandler(new MessageHandler.Async<String>() {
-                            @Override
-                            public void onMessage(String message, boolean last) {
-                                Assert.assertTrue(last);
-                                try {
-                                    session.getBasicRemote().sendText(message);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    cause.set(e);
-                                    latch.setException(e);
-                                }
-                            }
-                        });
+                    public void onMessage(String message, boolean last) {
+                        Assert.assertTrue(last);
+                        try {
+                            session.getBasicRemote().sendText(message);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            cause.set(e);
+                            latch.setException(e);
+                        }
                     }
                 });
             }
-        };
-        DefaultServer.setRootHandler(new AsyncWebSocketContainer(getConfiguredServerEndpoint(factory)));
+        }
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+
+        DeploymentInfo builder = createDeploymentInfo();
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
+        deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
@@ -598,14 +638,39 @@ public class JsrWebSocketServer07Test {
         return WebSocketVersion.V07;
     }
 
-    private static final class MyEndpoint extends Endpoint {
+
+    private DeploymentInfo createDeploymentInfo() {
+        return new DeploymentInfo()
+                .setClassLoader(getClass().getClassLoader())
+                .setContextPath("/")
+                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setDeploymentName("websocket.war")
+                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER);
+    }
+
+
+    private void deployServlet(final DeploymentInfo builder) throws ServletException {
+        final PathHandler root = new PathHandler();
+        final ServletContainer container = ServletContainer.Factory.newInstance();
+        DeploymentManager manager = container.addDeployment(builder);
+        manager.deploy();
+        root.addPath(builder.getContextPath(), manager.start());
+
+        DefaultServer.setRootHandler(root);
+    }
+
+    private static class InstanceConfigurator extends ServerEndpointConfig.Configurator {
+
+        private final Object endpoint;
+
+        private InstanceConfigurator(final Object endpoint) {
+            this.endpoint = endpoint;
+        }
+
         @Override
-        public void onOpen(Session session, EndpointConfiguration config) {
-            throw new UnsupportedOperationException();
+        public <T> T getEndpointInstance(final Class<T> endpointClass) throws InstantiationException {
+            return (T) endpoint;
         }
     }
 
-    private static ConfiguredServerEndpoint getConfiguredServerEndpoint(final InstanceFactory<Endpoint> factory) {
-        return new ConfiguredServerEndpoint(ServerEndpointConfigurationBuilder.create(MyEndpoint.class, "/").build(), factory);
-    }
 }

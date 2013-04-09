@@ -18,7 +18,6 @@
 package io.undertow.websockets.jsr.handshake;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 
 import io.undertow.websockets.core.WebSocketChannel;
@@ -57,11 +56,11 @@ public final class JsrHybi13Handshake extends Hybi13Handshake {
 
     @Override
     public boolean matches(WebSocketHttpExchange exchange) {
-        return super.matches(exchange) && HandshakeUtil.matches(config.getEndpointConfiguration(), exchange);
+        return super.matches(exchange) && HandshakeUtil.checkOrigin(config.getEndpointConfiguration(), exchange);
     }
 
     @Override
     protected String supportedSubprotols(String[] requestedSubprotocolArray) {
-        return config.getEndpointConfiguration().getServerEndpointConfigurator().getNegotiatedSubprotocol(config.getEndpointConfiguration().getSubprotocols(), Arrays.asList(requestedSubprotocolArray));
+        return HandshakeUtil.selectSubProtocol(config, requestedSubprotocolArray);
     }
 }

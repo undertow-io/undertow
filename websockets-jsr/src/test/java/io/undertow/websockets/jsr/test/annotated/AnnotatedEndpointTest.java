@@ -19,27 +19,16 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import java.net.URI;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
-import javax.websocket.Endpoint;
-import javax.websocket.server.ServerEndpointConfigurationBuilder;
-
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.FilterInfo;
-import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
-import io.undertow.servlet.util.ConstructorInstanceFactory;
-import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.ConcreteIoFuture;
-import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
-import io.undertow.websockets.jsr.JsrWebSocketFilter;
-import io.undertow.websockets.jsr.ServletWebSocketContainer;
-import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
-import io.undertow.websockets.jsr.test.JsrWebSocketServletTest;
+import io.undertow.websockets.jsr.bootstrap.WebSocketDeployer;
+import io.undertow.websockets.jsr.bootstrap.WebSocketDeployment;
+import io.undertow.websockets.jsr.bootstrap.WebSocketDeploymentInfo;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -59,22 +48,21 @@ public class AnnotatedEndpointTest {
         final ConcreteIoFuture latch = new ConcreteIoFuture();
 
 
-        final InstanceFactory<Endpoint> factory = AnnotatedEndpointFactory.create(AnnotatedTestEndpoint.class, new ConstructorInstanceFactory<>(AnnotatedTestEndpoint.class.getDeclaredConstructor()));
-
-        final ServletWebSocketContainer webSocketContainer = new ServletWebSocketContainer(getConfiguredServerEndpoint(factory));
-
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
-        FilterInfo f = new FilterInfo("filter", JsrWebSocketFilter.class, new ImmediateInstanceFactory<Filter>(webSocketContainer.getFilter()));
-
         DeploymentInfo builder = new DeploymentInfo()
-                .setClassLoader(JsrWebSocketServletTest.class.getClassLoader())
+                .setClassLoader(AnnotatedEndpointTest.class.getClassLoader())
                 .setContextPath("/")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addFilter(f)
-                .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
+                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER);
+
+
+        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
+        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        deployment.getDeploymentInfo().addAnnotatedEndpoints(AnnotatedTestEndpoint.class);
+        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -88,8 +76,4 @@ public class AnnotatedEndpointTest {
         client.destroy();
     }
 
-
-    private static ConfiguredServerEndpoint getConfiguredServerEndpoint(final InstanceFactory<Endpoint> factory) {
-        return new ConfiguredServerEndpoint(ServerEndpointConfigurationBuilder.create(AnnotatedTestEndpoint.class, "/chat/{user}").build(), factory);
-    }
 }

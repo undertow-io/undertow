@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-class MixedFrameHandler extends AsyncFrameHandler {
+class MixedFrameHandler extends PartialFrameHandler {
     final List<ByteBuffer> textFrame = new ArrayList<ByteBuffer>();
     final List<ByteBuffer> binaryFrame = new ArrayList<ByteBuffer>();
 
@@ -46,11 +46,11 @@ class MixedFrameHandler extends AsyncFrameHandler {
             return;
         }
         MessageHandler mHandler = handler.getHandler();
-        if (mHandler instanceof MessageHandler.Async) {
+        if (mHandler instanceof MessageHandler.Partial) {
             super.onTextFrame(s, header, payload);
         } else {
             if (textFrame.isEmpty() && header.isLastFragement()) {
-                ((MessageHandler.Basic) mHandler).onMessage(toString(payload));
+                ((MessageHandler.Whole) mHandler).onMessage(toString(payload));
             } else {
                 for (ByteBuffer buf: payload) {
                     if (buf.hasRemaining()) {
@@ -59,7 +59,7 @@ class MixedFrameHandler extends AsyncFrameHandler {
                 }
                 if (header.isLastFragement()) {
                     try {
-                        ((MessageHandler.Basic) mHandler).onMessage(toString(textFrame.toArray(new ByteBuffer[0])));
+                        ((MessageHandler.Whole) mHandler).onMessage(toString(textFrame.toArray(new ByteBuffer[0])));
                     } finally {
                         textFrame.clear();
                     }
@@ -76,11 +76,11 @@ class MixedFrameHandler extends AsyncFrameHandler {
             return;
         }
         MessageHandler mHandler = handler.getHandler();
-        if (mHandler instanceof AsyncFrameHandler) {
+        if (mHandler instanceof MessageHandler.Partial) {
             super.onBinaryFrame(s, header, payload);
         } else {
             if (binaryFrame.isEmpty() && header.isLastFragement()) {
-                ((MessageHandler.Basic) mHandler).onMessage(toBuffer(payload));
+                ((MessageHandler.Whole) mHandler).onMessage(toBuffer(payload));
             } else {
                 for (ByteBuffer buf: payload) {
                     if (buf.hasRemaining()) {
@@ -89,7 +89,7 @@ class MixedFrameHandler extends AsyncFrameHandler {
                 }
                 if (header.isLastFragement()) {
                     try {
-                        ((MessageHandler.Basic) mHandler).onMessage(toBuffer(binaryFrame.toArray(new ByteBuffer[0])));
+                        ((MessageHandler.Whole) mHandler).onMessage(toBuffer(binaryFrame.toArray(new ByteBuffer[0])));
                     } finally {
                         binaryFrame.clear();
                     }
@@ -109,7 +109,7 @@ class MixedFrameHandler extends AsyncFrameHandler {
             } else {
                 message = DefaultPongMessage.create(toBuffer(payload));
             }
-            ((MessageHandler.Basic)handler.getHandler()).onMessage(message);
+            ((MessageHandler.Whole)handler.getHandler()).onMessage(message);
         }
     }
 }

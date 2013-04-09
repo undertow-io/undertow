@@ -23,7 +23,9 @@ import java.util.List;
 
 import javax.websocket.Endpoint;
 
+import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.websockets.api.WebSocketSession;
 import io.undertow.websockets.api.WebSocketSessionHandler;
 import io.undertow.websockets.impl.WebSocketChannelSession;
@@ -37,10 +39,10 @@ import org.xnio.IoUtils;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class EndpointSessionHandler implements WebSocketSessionHandler {
+public final class EndpointSessionHandler implements WebSocketSessionHandler {
     private final ServerWebSocketContainer container;
 
-    EndpointSessionHandler(ServerWebSocketContainer container) {
+    public EndpointSessionHandler(ServerWebSocketContainer container) {
         this.container = container;
     }
 
@@ -58,7 +60,13 @@ final class EndpointSessionHandler implements WebSocketSessionHandler {
 
 
         try {
-            final InstanceHandle<Endpoint> instance = config.getEndpointFactory().createInstance();
+            InstanceFactory<Endpoint> endpointFactory = config.getEndpointFactory();
+            final InstanceHandle<Endpoint> instance;
+            if(endpointFactory != null) {
+                instance = endpointFactory.createInstance();
+            } else {
+                instance = new ImmediateInstanceHandle<>((Endpoint) config.getEndpointConfiguration().getConfigurator().getEndpointInstance(config.getEndpointConfiguration().getEndpointClass()));
+            }
 
             UndertowSession session = new UndertowSession(channelSession, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), Collections.<String, List<String>>emptyMap(), this, null, instance, config.getEndpointConfiguration());
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());

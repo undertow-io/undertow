@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import javax.websocket.EncodeException;
 import javax.websocket.Encoder;
+import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -58,17 +59,18 @@ public class ClassUtilsTest {
         Assert.assertEquals(String.class, clazz4);
     }
 
-    private static final class MessageHandlerImpl implements MessageHandler.Basic<ByteBuffer> {
+    private static final class MessageHandlerImpl implements MessageHandler.Whole<ByteBuffer> {
         @Override
         public void onMessage(ByteBuffer message) {
             // NOOP
         }
     }
 
-    private static final class AsyncMessageHandlerImpl implements MessageHandler.Async<ByteBuffer> {
+    private static final class AsyncMessageHandlerImpl implements MessageHandler.Partial<ByteBuffer> {
+
         @Override
-        public void onMessage(ByteBuffer message, boolean last) {
-            // NOOP
+        public void onMessage(final ByteBuffer partialMessage, final boolean last) {
+
         }
     }
 
@@ -77,12 +79,32 @@ public class ClassUtilsTest {
         public ByteBuffer encode(String object) throws EncodeException {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public void init(final EndpointConfig config) {
+
+        }
+
+        @Override
+        public void destroy() {
+
+        }
     }
 
     private static final class TextEncoder implements Encoder.Text<String> {
         @Override
         public String encode(String object) throws EncodeException {
             throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void init(final EndpointConfig config) {
+
+        }
+
+        @Override
+        public void destroy() {
+
         }
     }
 
@@ -91,6 +113,16 @@ public class ClassUtilsTest {
         public void encode(String object, Writer writer) throws EncodeException, IOException {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public void init(final EndpointConfig config) {
+
+        }
+
+        @Override
+        public void destroy() {
+
+        }
     }
 
 
@@ -98,6 +130,16 @@ public class ClassUtilsTest {
         @Override
         public void encode(String object, OutputStream stream) throws EncodeException, IOException {
             throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void init(final EndpointConfig config) {
+
+        }
+
+        @Override
+        public void destroy() {
+
         }
     }
 }

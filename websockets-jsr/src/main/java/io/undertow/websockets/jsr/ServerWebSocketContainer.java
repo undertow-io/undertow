@@ -17,27 +17,39 @@
  */
 package io.undertow.websockets.jsr;
 
-import javax.websocket.ClientEndpointConfiguration;
-import javax.websocket.DeploymentException;
-import javax.websocket.Endpoint;
-import javax.websocket.Extension;
-import javax.websocket.Session;
-import javax.websocket.WebSocketContainer;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Set;
 
+import javax.websocket.ClientEndpointConfig;
+import javax.websocket.DeploymentException;
+import javax.websocket.Endpoint;
+import javax.websocket.Extension;
+import javax.websocket.Session;
+import javax.websocket.server.ServerContainer;
+import javax.websocket.server.ServerEndpointConfig;
+
+import io.undertow.websockets.jsr.bootstrap.WebSocketDeploymentInfo;
+
 
 /**
- * {@link WebSocketContainer} implementation which allows to deploy endpoints for a server.
+ * {@link ServerContainer} implementation which allows to deploy endpoints for a server.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public abstract class ServerWebSocketContainer implements WebSocketContainer {
+public class ServerWebSocketContainer implements ServerContainer {
+
+    private final WebSocketDeploymentInfo webSocketDeploymentInfo;
     private volatile long defaultAsyncSendTimeout;
     private volatile long maxSessionIdleTimeout;
     private volatile int defaultMaxBinaryMessageBufferSize;
     private volatile int defaultMaxTextMessageBufferSize;
+    private volatile boolean deploymentComplete = false;
+
+    public ServerWebSocketContainer(final WebSocketDeploymentInfo webSocketDeploymentInfo) {
+        this.webSocketDeploymentInfo = webSocketDeploymentInfo;
+    }
 
     @Override
     public long getDefaultAsyncSendTimeout() {
@@ -50,13 +62,23 @@ public abstract class ServerWebSocketContainer implements WebSocketContainer {
     }
 
     @Override
+    public Session connectToServer(final Object annotatedEndpointInstance, final URI path) throws DeploymentException, IOException {
+        return null;
+    }
+
+    @Override
     public Session connectToServer(Class<?> aClass, URI uri) throws DeploymentException {
         throw JsrWebSocketMessages.MESSAGES.clientNotSupported();
     }
 
     @Override
-    public Session connectToServer(Class<? extends Endpoint> aClass, ClientEndpointConfiguration clientEndpointConfiguration, URI uri) throws DeploymentException {
-        throw JsrWebSocketMessages.MESSAGES.clientNotSupported();
+    public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
+        return null;
+    }
+
+    @Override
+    public Session connectToServer(final Class<? extends Endpoint> endpointClass, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
+        return null;
     }
 
     @Override
@@ -94,4 +116,19 @@ public abstract class ServerWebSocketContainer implements WebSocketContainer {
         return Collections.emptySet();
     }
 
+    @Override
+    public void addEndpoint(final Class<?> endpointClass) throws DeploymentException {
+        if (deploymentComplete) {
+            throw JsrWebSocketMessages.MESSAGES.cannotAddEndpointAfterDeployment();
+        }
+        webSocketDeploymentInfo.addProgramaticAnnotatedEndpoints(endpointClass);
+    }
+
+    @Override
+    public void addEndpoint(final ServerEndpointConfig serverConfig) throws DeploymentException {
+        if (deploymentComplete) {
+            throw JsrWebSocketMessages.MESSAGES.cannotAddEndpointAfterDeployment();
+        }
+        webSocketDeploymentInfo.addProgramaticEndpoints(serverConfig);
+    }
 }

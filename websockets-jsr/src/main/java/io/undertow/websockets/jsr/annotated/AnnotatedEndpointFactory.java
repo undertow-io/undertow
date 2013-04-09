@@ -11,7 +11,7 @@ import java.util.Set;
 
 import javax.websocket.DeploymentException;
 import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfiguration;
+import javax.websocket.EndpointConfig;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
@@ -71,7 +71,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                     found.add(OnOpen.class);
                     OnOpen = new BoundMethod(method,
                             new BoundSingleParameter(method, Session.class, true),
-                            new BoundSingleParameter(method, EndpointConfiguration.class, true),
+                            new BoundSingleParameter(method, EndpointConfig.class, true),
                             new BoundPathParameters(pathParams(method)));
                 }
                 if (method.isAnnotationPresent(OnClose.class)) {

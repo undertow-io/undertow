@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2013 Red Hat, Inc., and individual contributors
+ * Copyright 2012 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,16 +29,16 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 /**
- * {@link AbstractFrameHandler} subclass which will allow to use {@link MessageHandler.Async} implementations
+ * {@link AbstractFrameHandler} subclass which will allow to use {@link MessageHandler.Partial} implementations
  * to operated on received fragments.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-class AsyncFrameHandler extends AbstractFrameHandler<MessageHandler> implements FragmentedFrameHandler {
+class PartialFrameHandler extends AbstractFrameHandler<MessageHandler> implements FragmentedFrameHandler {
     private static final Charset UTF_8 = Charset.forName("UTF-8");
     private UTF8Output utf8Output;
 
-    public AsyncFrameHandler(UndertowSession session, Endpoint endpoint) {
+    public PartialFrameHandler(UndertowSession session, Endpoint endpoint) {
         super(session, endpoint);
     }
 
@@ -63,13 +63,13 @@ class AsyncFrameHandler extends AbstractFrameHandler<MessageHandler> implements 
                     utf8Output = null;
                 }
             }
-            ((MessageHandler.Async) handler.getHandler()).onMessage(text, last);
+            ((MessageHandler.Partial) handler.getHandler()).onMessage(text, last);
         }
     }
 
     @Override
     protected void verify(Class<?> type, MessageHandler handler) {
-        if (handler instanceof MessageHandler.Async && type == PongMessage.class) {
+        if (handler instanceof MessageHandler.Partial && type == PongMessage.class) {
             throw JsrWebSocketMessages.MESSAGES.pongMessageNotSupported();
         }
     }
@@ -79,7 +79,7 @@ class AsyncFrameHandler extends AbstractFrameHandler<MessageHandler> implements 
     public void onBinaryFrame(WebSocketSession s, WebSocketFrameHeader header, ByteBuffer... payload) {
         HandlerWrapper handler =  getHandler(FrameType.BYTE);
         if (handler != null) {
-            MessageHandler.Async mHandler = (MessageHandler.Async) handler.getHandler();
+            MessageHandler.Partial mHandler = (MessageHandler.Partial) handler.getHandler();
             if (handler.getMessageType() == ByteBuffer.class) {
                 mHandler.onMessage(toBuffer(payload), header.isLastFragement());
             }

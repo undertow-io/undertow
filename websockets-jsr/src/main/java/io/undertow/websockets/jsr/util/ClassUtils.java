@@ -17,28 +17,29 @@
  */
 package io.undertow.websockets.jsr.util;
 
+import java.lang.reflect.Method;
+
 import javax.websocket.Decoder;
 import javax.websocket.Encoder;
 import javax.websocket.MessageHandler;
-import java.lang.reflect.Method;
 
 import io.undertow.websockets.jsr.JsrWebSocketMessages;
 
 /**
- *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public final class ClassUtils {
-    private ClassUtils() {}
+    private ClassUtils() {
+    }
 
     /**
      * Returns the frame type the {@link MessageHandler} handles.
      */
     public static Class<?> getHandlerType(Class<? extends MessageHandler> clazz) {
         Method[] methods = clazz.getDeclaredMethods();
-        for (Method m: methods) {
+        for (Method m : methods) {
             if ("onMessage".equals(m.getName())) {
-               return m.getParameterTypes()[0];
+                return m.getParameterTypes()[0];
             }
         }
         throw JsrWebSocketMessages.MESSAGES.unknownHandlerType(clazz);
@@ -48,9 +49,9 @@ public final class ClassUtils {
      * Returns the Object type for which the {@link Encoder} can be used.
      */
     public static Class<?> getEncoderType(Class<? extends Encoder> clazz) {
-        Method[] methods = clazz.getDeclaredMethods();
-        for (Method m: methods) {
-            if ("encode".equals(m.getName())) {
+        Method[] methods = clazz.getMethods();
+        for (Method m : methods) {
+            if ("encode".equals(m.getName()) && !m.isBridge()) {
                 return m.getParameterTypes()[0];
             }
         }
@@ -61,9 +62,9 @@ public final class ClassUtils {
      * Returns the Object type for which the {@link Encoder} can be used.
      */
     public static Class<?> getDecoderType(Class<? extends Decoder> clazz) {
-        Method[] methods = clazz.getDeclaredMethods();
-        for (Method m: methods) {
-            if ("decode".equals(m.getName())) {
+        Method[] methods = clazz.getMethods();
+        for (Method m : methods) {
+            if ("decode".equals(m.getName()) && !m.isBridge()) {
                 return m.getReturnType();
             }
         }

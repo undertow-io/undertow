@@ -7,7 +7,7 @@ import java.util.Map;
 
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfiguration;
+import javax.websocket.EndpointConfig;
 import javax.websocket.PongMessage;
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
@@ -47,12 +47,12 @@ public class AnnotatedEndpoint extends Endpoint {
     }
 
     @Override
-    public void onOpen(final Session session, final EndpointConfiguration endpointConfiguration) {
+    public void onOpen(final Session session, final EndpointConfig endpointConfiguration) {
 
         if (webSocketOpen != null) {
             final Map<Class<?>, Object> params = new HashMap<>();
             params.put(Session.class, session);
-            params.put(EndpointConfiguration.class, endpointConfiguration);
+            params.put(EndpointConfig.class, endpointConfiguration);
             params.put(Map.class, session.getPathParameters());
             webSocketOpen.invoke(instance.getInstance(), params);
         }

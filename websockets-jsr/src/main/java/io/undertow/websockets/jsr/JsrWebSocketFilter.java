@@ -19,8 +19,13 @@
 package io.undertow.websockets.jsr;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -34,22 +39,53 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.protocol.Handshake;
+import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
 import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
 import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
 
 /**
+ * Filter that provides HTTP upgrade functionality. This should be run after all user filters, but before any servlets.
+ * <p/>
+ * The use of a filter rather than a servlet allows for normal HTTP requests to be served from the same location
+ * as a web socket endpoint if no upgrade header is found.
+ * <p/>
+ * TODO: this needs a lot of work
+ *
  * @author Stuart Douglas
  */
 public class JsrWebSocketFilter implements Filter {
 
-    private final Set<Handshake> handshakes;
+    private final List<ConfiguredServerEndpoint> configuredServerEndpoints;
+
+    private final Map<ConfiguredServerEndpoint, List<Handshake>> handshakes;
 
     private final WebSocketConnectionCallback callback;
 
-    public JsrWebSocketFilter(WebSocketConnectionCallback callback, ConfiguredServerEndpoint... configs) {
+    public JsrWebSocketFilter(WebSocketConnectionCallback callback, List<ConfiguredServerEndpoint> config) {
         this.callback = callback;
-        this.handshakes = handshakes(configs);
+        List<ConfiguredServerEndpoint> endpoints = new ArrayList<>(config);
+        Collections.sort(endpoints, new Comparator<ConfiguredServerEndpoint>() {
+            @Override
+            public int compare(final ConfiguredServerEndpoint o1, final ConfiguredServerEndpoint o2) {
+                return o1.getPathTemplate().compareTo(o2.getPathTemplate());
+            }
+        });
+
+        this.configuredServerEndpoints = endpoints;
+        this.handshakes = handshakes(endpoints);
+    }
+
+    protected Map<ConfiguredServerEndpoint, List<Handshake>> handshakes(List<ConfiguredServerEndpoint> configs) {
+        final IdentityHashMap<ConfiguredServerEndpoint, List<Handshake>> ret = new IdentityHashMap<>();
+        for (ConfiguredServerEndpoint config : configs) {
+            List<Handshake> handshakes = new ArrayList<>();
+            handshakes.add(new JsrHybi13Handshake(config));
+            handshakes.add(new JsrHybi08Handshake(config));
+            handshakes.add(new JsrHybi07Handshake(config));
+            ret.put(config, handshakes);
+        }
+        return ret;
     }
 
     @Override
@@ -59,36 +95,53 @@ public class JsrWebSocketFilter implements Filter {
 
     @Override
     public void doFilter(final ServletRequest request, final ServletResponse response, final FilterChain chain) throws IOException, ServletException {
-        final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange((HttpServletRequest) request, (HttpServletResponse) response);
-        Handshake handshaker = null;
-        for (Handshake method : handshakes) {
-            if (method.matches(facade)) {
-                handshaker = method;
-                break;
-            }
-        }
+        HttpServletRequest req = (HttpServletRequest) request;
+        HttpServletResponse resp = (HttpServletResponse) response;
+        if (req.getHeader("Upgrade") != null) {
+            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp);
 
-        if (handshaker == null) {
+            String path;
+            if (req.getPathInfo() == null) {
+                path = req.getServletPath();
+            } else {
+                path = req.getServletPath() + req.getPathInfo();
+            }
+            if(!path.startsWith("/")) {
+                path = "/" + path;
+            }
+
+            final Map<String, String> params = new HashMap<>();
+            //we need a better way of handling this mapping.
+            for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
+                if (endpoint.getPathTemplate().matches(path, params)) {
+                    Handshake handshaker = null;
+                    for (Handshake method : handshakes.get(endpoint)) {
+                        if (method.matches(facade)) {
+                            handshaker = method;
+                            break;
+                        }
+                    }
+
+                    if (handshaker == null) {
+                        chain.doFilter(request, response);
+                    } else {
+                        facade.putAttachment(HandshakeUtil.PATH_PARAMS, params);
+                        handshaker.handshake(facade, callback);
+                        return;
+                    }
+                }
+            }
+
             chain.doFilter(request, response);
+
+
         } else {
-            handshaker.handshake(facade, callback);
+            chain.doFilter(request, response);
         }
     }
 
     @Override
     public void destroy() {
 
-    }
-
-
-
-    protected Set<Handshake> handshakes(ConfiguredServerEndpoint... configs) {
-        Set<Handshake> handshakes = new HashSet<Handshake>();
-        for (ConfiguredServerEndpoint config : configs) {
-            handshakes.add(new JsrHybi07Handshake(config));
-            handshakes.add(new JsrHybi08Handshake(config));
-            handshakes.add(new JsrHybi13Handshake(config));
-        }
-        return handshakes;
     }
 }

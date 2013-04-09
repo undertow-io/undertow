@@ -1,12 +1,9 @@
 package io.undertow.websockets.jsr.annotated;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.websocket.Decoder;
-import javax.websocket.EndpointConfiguration;
-
-import io.undertow.websockets.jsr.util.ClassUtils;
+import javax.websocket.EndpointConfig;
 
 /**
  * @author Stuart Douglas
@@ -20,17 +17,17 @@ public class DecoderUtils {
      * @param endpointConfiguration The endpoint configuration
      * @return A list of decoders, or null if no decoders exist
      */
-    public static List<Decoder> getDecodersForType(final Class<?> type, final EndpointConfiguration endpointConfiguration) {
-        final List<Decoder> decoders = new ArrayList<>();
-        for (final Decoder decoder : endpointConfiguration.getDecoders()) {
-            final Class<?> clazz = ClassUtils.getDecoderType(decoder.getClass());
-            if (type.isAssignableFrom(clazz)) {
-                decoders.add(decoder);
-            }
-        }
-        if (!decoders.isEmpty()) {
-            return decoders;
-        }
+    public static List<Decoder> getDecodersForType(final Class<?> type, final EndpointConfig endpointConfiguration) {
+//        final List<Decoder> decoders = new ArrayList<>();
+//        for (final Decoder decoder : endpointConfiguration.getDecoders()) {
+//            final Class<?> clazz = ClassUtils.getDecoderType(decoder.getClass());
+//            if (type.isAssignableFrom(clazz)) {
+//                decoders.add(decoder);
+//            }
+//        }
+//        if (!decoders.isEmpty()) {
+//            return decoders;
+//        }
         return null;
     }
 

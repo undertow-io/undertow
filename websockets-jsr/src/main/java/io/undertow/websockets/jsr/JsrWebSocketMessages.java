@@ -25,8 +25,10 @@ import java.util.Set;
 
 import javax.websocket.Decoder;
 import javax.websocket.DeploymentException;
+import javax.websocket.Encoder;
 
 import org.jboss.logging.Messages;
+import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
@@ -85,4 +87,28 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3016, value = "Cannot send in middle of fragmeneted message")
     IllegalStateException cannotSendInMiddleOfFragmentedMessage();
+
+    @Message(id = 3017, value = "Cannot add endpoint after deployment")
+    IllegalStateException cannotAddEndpointAfterDeployment();
+
+    @Message(id = 3018, value = "Could not determine type of decode method for class %s")
+    DeploymentException couldNotDetermineTypeOfDecodeMethodForClass(Class<? extends Decoder> decoder, @Cause Exception e);
+
+    @Message(id = 3019, value = "Could not determine type of encode method for class %s")
+    DeploymentException couldNotDetermineTypeOfEncodeMethodForClass(Class<? extends Encoder> encoder);
+
+    @Message(id = 3020, value = "%s did not implement known decoder interface")
+    DeploymentException didNotImplementKnownDecoderSubclass(Class<? extends Decoder> decoder);
+
+    @Message(id = 3021, value = "%s does not have default constructor")
+    DeploymentException classDoesNotHaveDefaultConstructor(Class<?> c, @Cause NoSuchMethodException e);
+
+    @Message(id = 3022, value = "Could not parse URI template %s, exception at char %s")
+    DeploymentException couldNotParseUriTemplate(String path, int i);
+
+    @Message(id = 3023, value = "Multiple endpoints with the same logical mapping %s and %s")
+    DeploymentException multipleEndpointsWithOverlappingPaths(PathTemplate template, PathTemplate existing);
+
+    @Message(id = 3024, value = "Web socket deployment failed")
+    DeploymentException couldNotDeploy(@Cause Exception e);
 }

@@ -17,12 +17,10 @@
  */
 package io.undertow.websockets.jsr.handshake;
 
-import java.net.URI;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.Map;
 
-import javax.websocket.server.ServerEndpointConfiguration;
-import javax.websocket.server.ServerEndpointConfigurator;
+import javax.websocket.server.ServerEndpointConfig;
 
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
@@ -45,24 +43,20 @@ public final class HandshakeUtil {
     }
 
     /**
-     * Returns {@code true} if the Handshake should be used for the {@link io.undertow.websockets.spi.WebSocketHttpExchange}.
+     * Checks the orgin against the
      */
-    public static boolean matches(ServerEndpointConfiguration config, WebSocketHttpExchange exchange) {
-        final Map<String, String> pathParams = new HashMap<>();
-        exchange.putAttachment(PATH_PARAMS, pathParams);
-        ServerEndpointConfigurator c = config.getServerEndpointConfigurator();
-        final URI requestUri = URI.create(exchange.getRequestURI());
-        return c.checkOrigin(exchange.getRequestHeader(Headers.ORIGIN_STRING))
-                && c.matchesURI(config.getPath(), requestUri, pathParams);
+    public static boolean checkOrigin(ServerEndpointConfig config, WebSocketHttpExchange exchange) {
+        ServerEndpointConfig.Configurator c = config.getConfigurator();
+        return c.checkOrigin(exchange.getRequestHeader(Headers.ORIGIN_STRING));
     }
 
     /**
      * Prepare for upgrade
      */
-    public static void prepareUpgrade(final ServerEndpointConfiguration config, final WebSocketHttpExchange exchange) {
+    public static void prepareUpgrade(final ServerEndpointConfig config, final WebSocketHttpExchange exchange) {
         ExchangeHandshakeRequest request = new ExchangeHandshakeRequest(exchange);
         ExchangeHandshakeResponse response = new ExchangeHandshakeResponse(exchange);
-        ServerEndpointConfigurator c = config.getServerEndpointConfigurator();
+        ServerEndpointConfig.Configurator c = config.getConfigurator();
         c.modifyHandshake(config, request, response);
         response.update();
     }
@@ -79,5 +73,21 @@ public final class HandshakeUtil {
      */
     public static ConfiguredServerEndpoint getConfig(WebSocketChannel channel) {
         return (ConfiguredServerEndpoint) channel.getAttribute(CONFIG_KEY);
+    }
+
+
+    static String selectSubProtocol(final ConfiguredServerEndpoint config, final String[] requestedSubprotocolArray) {
+        if (config.getEndpointConfiguration().getConfigurator() != null) {
+            return config.getEndpointConfiguration().getConfigurator().getNegotiatedSubprotocol(config.getEndpointConfiguration().getSubprotocols(), Arrays.asList(requestedSubprotocolArray));
+        } else {
+            for (final String protocol : config.getEndpointConfiguration().getSubprotocols()) {
+                for (String clientsupported : requestedSubprotocolArray) {
+                    if (protocol.equals(clientsupported)) {
+                        return protocol;
+                    }
+                }
+            }
+            return null;
+        }
     }
 }
