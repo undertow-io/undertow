@@ -7,6 +7,8 @@ import java.util.Properties;
  */
 public class Version {
     private static final String versionString;
+    private static final String SERVER_NAME = "Undertow";
+    private static final String fullVersionString;
 
     static {
         String version = "Unknown";
@@ -18,9 +20,14 @@ public class Version {
             e.printStackTrace();
         }
         versionString = version;
+        fullVersionString = SERVER_NAME + " - "+ versionString;
     }
 
     public static String getVersionString() {
         return versionString;
+    }
+
+    public static String getFullVersionString() {
+        return fullVersionString;
     }
 }
