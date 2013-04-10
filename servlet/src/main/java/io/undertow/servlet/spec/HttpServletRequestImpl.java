@@ -238,7 +238,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getPathTranslated() {
-        return null;
+        return getRealPath(getPathInfo());
     }
 
     @Override
@@ -800,7 +800,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRealPath(final String path) {
-        return null;
+        return servletContext.getRealPath(path);
     }
 
     @Override

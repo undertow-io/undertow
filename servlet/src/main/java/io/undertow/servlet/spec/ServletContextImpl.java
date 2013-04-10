@@ -220,12 +220,12 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getRealPath(final String path) {
-        return null;
+       return deploymentInfo.getResourceLoader().getResource(path).getAbsolutePath();
     }
 
     @Override
     public String getServerInfo() {
-        return Version.getVersionString();
+        return  Version.getFullVersionString();
     }
 
     @Override
