@@ -961,7 +961,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         for (final BoundAsyncListener listener : asyncListeners) {
             AsyncEvent event = new AsyncEvent(asyncContext, listener.servletRequest, listener.servletResponse, t);
             try {
-                listener.asyncListener.onStartAsync(event);
+                listener.asyncListener.onError(event);
             } catch (IOException e) {
                 UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
             }
