@@ -353,8 +353,18 @@ public class AsyncContextImpl implements AsyncContext {
             synchronized (AsyncContextImpl.this) {
                 if (!dispatched) {
                     UndertowServletLogger.REQUEST_LOGGER.debug("Async request timed out");
-                    HttpServletRequestImpl.getRequestImpl(servletRequest).onAsyncTimeout();
-                    completeInternal();
+                    onAsyncTimeout();
+                    if(!dispatched) {
+                        //servlet
+                        try {
+                            ((HttpServletResponse)servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                        } catch (IOException e) {
+                            //ignore
+                        }
+                        if(!dispatched) {
+                            complete();
+                        }
+                    }
                 }
             }
         }
