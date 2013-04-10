@@ -323,6 +323,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         openListener.setUndertowOptions(options);
     }
 
+    public static XnioWorker getWorker() {
+        return worker;
+    }
+
     public static class Parameterized extends org.junit.runners.Parameterized {
 
         public Parameterized(Class<?> klass) throws Throwable {

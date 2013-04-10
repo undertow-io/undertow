@@ -111,4 +111,10 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3024, value = "Web socket deployment failed")
     DeploymentException couldNotDeploy(@Cause Exception e);
+
+    @Message(id = 3025, value = "Cannot connect until deployment is complete")
+    IllegalStateException cannotConnectUntilDeploymentComplete();
+
+    @Message(id = 3026, value = "%s is not a valid client endpoint type")
+    DeploymentException notAValidClientEndpointType(Class<?> type);
 }

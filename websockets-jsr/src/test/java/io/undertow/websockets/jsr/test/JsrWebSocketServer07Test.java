@@ -36,6 +36,7 @@ import javax.websocket.SendResult;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpointConfig;
 
+import io.undertow.client.HttpClient;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -58,6 +59,7 @@ import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -95,7 +97,7 @@ public class JsrWebSocketServer07Test {
         }
 
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -137,7 +139,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -179,7 +181,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -229,7 +231,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -281,7 +283,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -326,7 +328,7 @@ public class JsrWebSocketServer07Test {
 
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -364,7 +366,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
 
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
@@ -411,7 +413,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -456,7 +458,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -486,7 +488,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -527,7 +529,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -576,7 +578,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();
@@ -618,7 +620,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         DeploymentInfo builder = createDeploymentInfo();

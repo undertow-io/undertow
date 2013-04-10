@@ -22,6 +22,7 @@ import javax.websocket.server.PathParam;
 
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.websockets.jsr.JsrWebSocketMessages;
 
 /**
@@ -194,6 +195,10 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                 instance.release();
             }
         };
+    }
+
+    public Endpoint createInstanceForExisting(final Object instance) {
+        return new AnnotatedEndpoint(new ImmediateInstanceHandle<Object>(instance), OnOpen, OnClose, OnError, textMessage,  binaryMessage, pongMessage);
     }
 
 

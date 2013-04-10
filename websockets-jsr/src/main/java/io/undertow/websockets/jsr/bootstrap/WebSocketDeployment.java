@@ -18,12 +18,15 @@
 
 package io.undertow.websockets.jsr.bootstrap;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import io.undertow.client.HttpClient;
+import io.undertow.websockets.jsr.ConfiguredClientEndpoint;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 
 /**
- * Represents a web socket deployment. This class does not manage the deployment
- * lifecycle, but rather just manages adding web socket servlets etc into the servlet
- * deployment.
+ * Represents a web socket deployment.
  *
  * @author Stuart Douglas
  */
@@ -31,14 +34,19 @@ public class WebSocketDeployment {
 
     private final WebSocketDeploymentInfo deploymentInfo;
     private final ServerWebSocketContainer container;
+    private final HttpClient httpClient;
 
-    private WebSocketDeployment(final WebSocketDeploymentInfo deploymentInfo) {
+    private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new HashMap<>();
+
+
+    private WebSocketDeployment(final WebSocketDeploymentInfo deploymentInfo, final HttpClient httpClient) {
         this.deploymentInfo = deploymentInfo;
-        this.container = new ServerWebSocketContainer(deploymentInfo);
+        this.httpClient = httpClient;
+        this.container = new ServerWebSocketContainer(this);
     }
 
-    public static WebSocketDeployment create(final WebSocketDeploymentInfo deploymentInfo) {
-        return new WebSocketDeployment(deploymentInfo);
+    public static WebSocketDeployment create(final WebSocketDeploymentInfo deploymentInfo, final HttpClient httpClient) {
+        return new WebSocketDeployment(deploymentInfo, httpClient);
     }
 
 
@@ -48,5 +56,17 @@ public class WebSocketDeployment {
 
     public ServerWebSocketContainer getContainer() {
         return container;
+    }
+
+    void addClientEndpoint(final Class<?> clazz, ConfiguredClientEndpoint endpoint) {
+        clientEndpoints.put(clazz, endpoint);
+    }
+
+    public ConfiguredClientEndpoint getClientEndpoint(final Class<?> type) {
+        return clientEndpoints.get(type);
+    }
+
+    public HttpClient getHttpClient() {
+        return httpClient;
     }
 }

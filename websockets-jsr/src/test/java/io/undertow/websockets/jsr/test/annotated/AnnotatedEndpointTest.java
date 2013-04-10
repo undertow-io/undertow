@@ -19,6 +19,7 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import java.net.URI;
 
+import io.undertow.client.HttpClient;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
@@ -35,6 +36,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -59,7 +61,7 @@ public class AnnotatedEndpointTest {
 
 
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info);
+        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
         deployment.getDeploymentInfo().addAnnotatedEndpoints(AnnotatedTestEndpoint.class);
         WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
 
