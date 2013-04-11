@@ -202,7 +202,11 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                             chunkRemaining <<= 4; //shift it 4 bytes and then add the next value to the end
                             chunkRemaining += Integer.parseInt("" + (char) b, 16);
                         } else {
-                            newVal = newVal & ~FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE;
+                            if(b == '\n') {
+                                newVal = newVal & ~FLAG_READING_LENGTH;
+                            } else {
+                                newVal = newVal & ~FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE;
+                            }
                             break;
                         }
                     }
