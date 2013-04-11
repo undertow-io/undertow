@@ -67,13 +67,18 @@ public class AsyncListenerOnErrorTest {
         .setAsyncSupported(true)
         .addMapping("/async2");
 
+
+        ServletInfo a3 = new ServletInfo("asyncServlet3", AsyncServlet3.class)
+        .setAsyncSupported(true)
+        .addMapping("/async3");
+
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(AsyncListenerOnErrorTest.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(f, a1, a2);
+                .addServlets(f, a1, a2, a3);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -91,6 +96,7 @@ public class AsyncListenerOnErrorTest {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+            Assert.assertArrayEquals(new String[] {"ERROR", "COMPLETE"}, AsyncEventListener.results());
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -105,9 +111,24 @@ public class AsyncListenerOnErrorTest {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+            Assert.assertArrayEquals(new String[] {"COMPLETE", "ERROR"}, AsyncEventListener.results());
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
 
+    @Test
+    public void testMultiAsyncDispatchError() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async3");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+            Assert.assertArrayEquals(new String[] {"START", "COMPLETE", "ERROR"}, AsyncEventListener.results());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }

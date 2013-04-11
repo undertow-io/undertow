@@ -18,34 +18,6 @@
 
 package io.undertow.servlet.spec;
 
-import io.undertow.security.api.SecurityContext;
-import io.undertow.security.idm.Account;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.CookieImpl;
-import io.undertow.server.handlers.form.FormData;
-import io.undertow.server.handlers.form.FormDataParser;
-import io.undertow.server.handlers.form.MultiPartHandler;
-import io.undertow.servlet.UndertowServletLogger;
-import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.servlet.api.SecurityRoleRef;
-import io.undertow.servlet.core.ServletUpgradeListener;
-import io.undertow.servlet.handlers.ServletAttachments;
-import io.undertow.servlet.handlers.ServletChain;
-import io.undertow.servlet.handlers.ServletPathMatch;
-import io.undertow.servlet.util.EmptyEnumeration;
-import io.undertow.servlet.util.IteratorEnumeration;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.CanonicalPathUtils;
-import io.undertow.util.DateUtils;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.LocaleUtils;
-import io.undertow.util.Methods;
-import io.undertow.util.QValueParser;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -69,11 +41,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.servlet.AsyncContext;
-import javax.servlet.AsyncEvent;
-import javax.servlet.AsyncListener;
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -88,6 +57,32 @@ import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.CookieImpl;
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.MultiPartHandler;
+import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.api.SecurityRoleRef;
+import io.undertow.servlet.core.ServletUpgradeListener;
+import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletChain;
+import io.undertow.servlet.handlers.ServletPathMatch;
+import io.undertow.servlet.util.EmptyEnumeration;
+import io.undertow.servlet.util.IteratorEnumeration;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.CanonicalPathUtils;
+import io.undertow.util.DateUtils;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.LocaleUtils;
+import io.undertow.util.Methods;
+import io.undertow.util.QValueParser;
 import org.xnio.LocalSocketAddress;
 
 /**
@@ -105,8 +100,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     private final HttpServerExchange exchange;
     private ServletContextImpl servletContext;
 
-    private final List<BoundAsyncListener> asyncListeners = new CopyOnWriteArrayList<BoundAsyncListener>();
-
     private Map<String, Object> attributes = null;
 
     private ServletInputStream servletInputStream;
@@ -114,6 +107,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     private Cookie[] cookies;
     private List<Part> parts = null;
+    private volatile boolean asyncStarted = false;
     private volatile AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
     private FormData parsedFormData;
@@ -456,7 +450,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Object getAttribute(final String name) {
-        if(attributes == null) {
+        if (attributes == null) {
             return null;
         }
         return attributes.get(name);
@@ -464,7 +458,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Enumeration<String> getAttributeNames() {
-        if(attributes == null) {
+        if (attributes == null) {
             return Collections.emptyEnumeration();
         }
         return new IteratorEnumeration<>(attributes.keySet().iterator());
@@ -733,7 +727,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void setAttribute(final String name, final Object object) {
-        if(attributes == null) {
+        if (attributes == null) {
             attributes = new HashMap<>();
         }
         Object existing = attributes.put(name, object);
@@ -746,7 +740,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public void removeAttribute(final String name) {
-        if(attributes == null) {
+        if (attributes == null) {
             return;
         }
         Object exiting = attributes.remove(name);
@@ -779,7 +773,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isSecure() {
-        return getAttribute("javax.servlet.request.ssl_session_id")!=null;//todo this could be done better
+        return getAttribute("javax.servlet.request.ssl_session_id") != null;//todo this could be done better
     }
 
     @Override
@@ -842,29 +836,27 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public AsyncContext startAsync() throws IllegalStateException {
         if (!isAsyncSupported()) {
             throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
-        } else if (asyncContext != null) {
+        } else if (asyncStarted) {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
-        onAsyncStart();
-        asyncListeners.clear();
-        return asyncContext = new AsyncContextImpl(exchange, exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
+        asyncStarted = true;
+        return asyncContext = new AsyncContextImpl(exchange, exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), asyncContext);
     }
 
     @Override
     public AsyncContext startAsync(final ServletRequest servletRequest, final ServletResponse servletResponse) throws IllegalStateException {
         if (!isAsyncSupported()) {
             throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
-        } else if (asyncContext != null) {
+        } else if (asyncStarted) {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
-        onAsyncStart();
-        asyncListeners.clear();
-        return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse);
+        asyncStarted = true;
+        return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, asyncContext);
     }
 
     @Override
     public boolean isAsyncStarted() {
-        return asyncContext != null;
+        return asyncStarted;
     }
 
     @Override
@@ -875,9 +867,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public AsyncContextImpl getAsyncContext() {
-        if (asyncContext == null) {
+        if (!asyncStarted) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }
+        return asyncContext;
+    }
+
+    public AsyncContextImpl getAsyncContextInternal() {
         return asyncContext;
     }
 
@@ -900,7 +896,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     void asyncRequestDispatched() {
-        asyncContext = null;
+        asyncStarted = false;
     }
 
     public static HttpServletRequestImpl getRequestImpl(final ServletRequest request) {
@@ -913,70 +909,5 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
         }
         return requestImpl;
-    }
-
-
-    public void addAsyncListener(final AsyncListener listener) {
-        asyncListeners.add(new BoundAsyncListener(listener, this, exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY)));
-    }
-
-    public void addAsyncListener(final AsyncListener listener, final ServletRequest servletRequest, final ServletResponse servletResponse) {
-        asyncListeners.add(new BoundAsyncListener(listener, servletRequest, servletResponse));
-    }
-
-    public void onAsyncComplete() {
-        for (final BoundAsyncListener listener : asyncListeners) {
-            AsyncEvent event = new AsyncEvent(asyncContext, listener.servletRequest, listener.servletResponse);
-            try {
-                listener.asyncListener.onComplete(event);
-            } catch (IOException e) {
-                UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
-            }
-        }
-    }
-
-    public void onAsyncTimeout() {
-        for (final BoundAsyncListener listener : asyncListeners) {
-            AsyncEvent event = new AsyncEvent(asyncContext, listener.servletRequest, listener.servletResponse);
-            try {
-                listener.asyncListener.onTimeout(event);
-            } catch (IOException e) {
-                UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
-            }
-        }
-    }
-
-    public void onAsyncStart() {
-        for (final BoundAsyncListener listener : asyncListeners) {
-            AsyncEvent event = new AsyncEvent(asyncContext, listener.servletRequest, listener.servletResponse);
-            try {
-                listener.asyncListener.onStartAsync(event);
-            } catch (IOException e) {
-                UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
-            }
-        }
-    }
-
-    public void onAsyncError(Throwable t) {
-        for (final BoundAsyncListener listener : asyncListeners) {
-            AsyncEvent event = new AsyncEvent(asyncContext, listener.servletRequest, listener.servletResponse, t);
-            try {
-                listener.asyncListener.onError(event);
-            } catch (IOException e) {
-                UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
-            }
-        }
-    }
-
-    private final class BoundAsyncListener {
-        final AsyncListener asyncListener;
-        final ServletRequest servletRequest;
-        final ServletResponse servletResponse;
-
-        private BoundAsyncListener(final AsyncListener asyncListener, final ServletRequest servletRequest, final ServletResponse servletResponse) {
-            this.asyncListener = asyncListener;
-            this.servletRequest = servletRequest;
-            this.servletResponse = servletResponse;
-        }
     }
 }

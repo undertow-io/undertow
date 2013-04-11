@@ -117,32 +117,37 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
             listeners.requestInitialized(request);
             next.handleRequest(exchange);
-            if (!exchange.isResponseStarted() && exchange.getResponseCode() >= 400) {
+
+            if (!exchange.isResponseStarted() && exchange.getResponseCode() >= 400 && !exchange.isDispatched()) {
                 String location = servletContext.getDeployment().getErrorPages().getErrorLocation(exchange.getResponseCode());
                 if (location != null) {
                     RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
                     dispatcher.error(request, response, servletChain.getManagedServlet().getServletInfo().getName());
                 }
             }
+            //
         } catch (Throwable t) {
-            exchange.unDispatch();
-            HttpServletRequestImpl.getRequestImpl(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY)).onAsyncError(t);
-            if (!exchange.isResponseStarted()) {
-                exchange.setResponseCode(500);
-                exchange.getResponseHeaders().clear();
-                String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
-                if (location == null && t instanceof ServletException) {
-                    location = servletContext.getDeployment().getErrorPages().getErrorLocation(t.getCause());
-                }
-                if (location != null) {
-                    RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
-                    try {
-                        dispatcher.error(request, response, servletChain.getManagedServlet().getServletInfo().getName(), t);
-                    } catch (Exception e) {
-                        UndertowLogger.REQUEST_LOGGER.errorf(e, "Exception while generating error page %s", location);
+            if(request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
+                exchange.unDispatch();
+                request.getAsyncContextInternal().handleError(t);
+            } else {
+                if (!exchange.isResponseStarted()) {
+                    exchange.setResponseCode(500);
+                    exchange.getResponseHeaders().clear();
+                    String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
+                    if (location == null && t instanceof ServletException) {
+                        location = servletContext.getDeployment().getErrorPages().getErrorLocation(t.getCause());
                     }
-                } else {
-                    UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", exchange);
+                    if (location != null) {
+                        RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
+                        try {
+                            dispatcher.error(request, response, servletChain.getManagedServlet().getServletInfo().getName(), t);
+                        } catch (Exception e) {
+                            UndertowLogger.REQUEST_LOGGER.errorf(e, "Exception while generating error page %s", location);
+                        }
+                    } else {
+                        UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", exchange);
+                    }
                 }
             }
         } finally {

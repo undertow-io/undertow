@@ -46,7 +46,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class RequestListenerAsyncRequest {
+public class RequestListenerAsyncRequestTestCase {
 
     public static final String HELLO_WORLD = "Hello World";
 

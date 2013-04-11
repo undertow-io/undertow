@@ -29,6 +29,7 @@ public class AsyncServlet1 extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         AsyncContext ctx = req.startAsync();
+        ctx.addListener(new AsyncEventListener());
         ctx.addListener(new SimpleAsyncListener(ctx));
         Thread thread = new Thread(new AsyncTask(ctx));
         thread.start();

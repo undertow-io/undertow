@@ -18,21 +18,27 @@
 
 package io.undertow.servlet.spec;
 
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.AsyncContext;
+import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
 import javax.servlet.DispatcherType;
+import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
@@ -58,10 +64,14 @@ public class AsyncContextImpl implements AsyncContext {
     public static final AttachmentKey<Boolean> ASYNC_SUPPORTED = AttachmentKey.create(Boolean.class);
     public static final AttachmentKey<Executor> ASYNC_EXECUTOR = AttachmentKey.create(Executor.class);
 
+    private final List<BoundAsyncListener> asyncListeners = new CopyOnWriteArrayList<BoundAsyncListener>();
+
     private final HttpServerExchange exchange;
     private final ServletRequest servletRequest;
     private final ServletResponse servletResponse;
     private final TimeoutTask timeoutTask = new TimeoutTask();
+
+    private AsyncContextImpl previousAsyncContext; //the previous async context
 
 
     //todo: make default configurable
@@ -76,10 +86,11 @@ public class AsyncContextImpl implements AsyncContext {
     private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<>();
     private boolean processingAsyncTask = false;
 
-    public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse) {
+    public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse, final AsyncContextImpl previousAsyncContext) {
         this.exchange = exchange;
         this.servletRequest = servletRequest;
         this.servletResponse = servletResponse;
+        this.previousAsyncContext = previousAsyncContext;
         initiatingThread = Thread.currentThread();
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
@@ -215,7 +226,7 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public synchronized void complete() {
-        HttpServletRequestImpl.getRequestImpl(servletRequest).onAsyncComplete();
+        onAsyncComplete();
         completeInternal();
     }
 
@@ -279,12 +290,12 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public void addListener(final AsyncListener listener) {
-        HttpServletRequestImpl.getRequestImpl(servletRequest).addAsyncListener(listener);
+        asyncListeners.add(new BoundAsyncListener(listener, servletRequest, servletResponse));
     }
 
     @Override
     public void addListener(final AsyncListener listener, final ServletRequest servletRequest, final ServletResponse servletResponse) {
-        HttpServletRequestImpl.getRequestImpl(servletRequest).addAsyncListener(listener, servletRequest, servletResponse);
+        asyncListeners.add(new BoundAsyncListener(listener, servletRequest, servletResponse));
     }
 
     public boolean isDispatched() {
@@ -313,6 +324,22 @@ public class AsyncContextImpl implements AsyncContext {
         return timeout;
     }
 
+    public void handleError(final Throwable error) {
+        dispatched = false; //we reset the dispatched state
+        onAsyncError(error);
+        if(!dispatched) {
+            servletRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, error);
+            try {
+                ((HttpServletResponse)servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            } catch (IOException e) {
+                //ignore, not much we can do here
+            }
+            if(!dispatched) {
+                complete();
+            }
+        }
+    }
+
     /**
      * Called by the container when the initial request is finished.
      * If this request has a dispatch or complete call pending then
@@ -320,6 +347,10 @@ public class AsyncContextImpl implements AsyncContext {
      */
     public synchronized void initialRequestDone() {
         initialRequestDone = true;
+        if(previousAsyncContext != null) {
+            previousAsyncContext.onAsyncStart(this);
+            previousAsyncContext = null;
+        }
         if (!processingAsyncTask) {
             processAsyncTask();
         }
@@ -420,4 +451,61 @@ public class AsyncContextImpl implements AsyncContext {
         }
     }
 
+
+    private void onAsyncComplete() {
+        for (final BoundAsyncListener listener : asyncListeners) {
+            AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse);
+            try {
+                listener.asyncListener.onComplete(event);
+            } catch (IOException e) {
+                UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+            }
+        }
+    }
+
+    private void onAsyncTimeout() {
+        for (final BoundAsyncListener listener : asyncListeners) {
+            AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse);
+            try {
+                listener.asyncListener.onTimeout(event);
+            } catch (IOException e) {
+                UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+            }
+        }
+    }
+
+    private void onAsyncStart(AsyncContext newAsyncContext) {
+        for (final BoundAsyncListener listener : asyncListeners) {
+            //make sure we use the new async context
+            AsyncEvent event = new AsyncEvent(newAsyncContext, listener.servletRequest, listener.servletResponse);
+            try {
+                listener.asyncListener.onStartAsync(event);
+            } catch (IOException e) {
+                UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+            }
+        }
+    }
+
+    private void onAsyncError(Throwable t) {
+        for (final BoundAsyncListener listener : asyncListeners) {
+            AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse, t);
+            try {
+                listener.asyncListener.onError(event);
+            } catch (IOException e) {
+                UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+            }
+        }
+    }
+
+    private final class BoundAsyncListener {
+        final AsyncListener asyncListener;
+        final ServletRequest servletRequest;
+        final ServletResponse servletResponse;
+
+        private BoundAsyncListener(final AsyncListener asyncListener, final ServletRequest servletRequest, final ServletResponse servletResponse) {
+            this.asyncListener = asyncListener;
+            this.servletRequest = servletRequest;
+            this.servletResponse = servletResponse;
+        }
+    }
 }
