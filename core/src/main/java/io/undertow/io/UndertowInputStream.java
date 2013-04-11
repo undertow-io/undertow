@@ -6,6 +6,8 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
+import org.xnio.Buffers;
+import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSourceChannel;
@@ -18,55 +20,14 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public class UndertowInputStream extends InputStream {
 
-    private final HttpServerExchange exchange;
-    private StreamSourceChannel channel;
+    private final Pool<ByteBuffer> bufferPool;
+    private final StreamSourceChannel channel;
     private boolean closed;
+    private Pooled<ByteBuffer> pooled;
 
     public UndertowInputStream(final HttpServerExchange exchange) {
-        this.exchange = exchange;
-    }
-
-    @Override
-    public int read(final byte[] b) throws IOException {
-        return read(b, 0, b.length);
-    }
-
-    @Override
-    public int read(final byte[] b, final int off, final int len) throws IOException {
-        if (channel == null) {
-            channel = exchange.getRequestChannel();
-        }
-        if (closed) {
-            throw UndertowMessages.MESSAGES.streamIsClosed();
-        }
-        return Channels.readBlocking(channel, ByteBuffer.wrap(b, off, len));
-    }
-
-    @Override
-    public void close() throws IOException {
-        closed = true;
-        if (channel == null) {
-            channel = exchange.getRequestChannel();
-        }
-
-        final Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
-        final ByteBuffer buffer = pooled.getResource();
-        try {
-            //drain the channel
-            int res;
-            do {
-                channel.awaitReadable();
-                res = channel.read(buffer);
-            } while (res != -1);
-            channel.shutdownReads();
-        } finally {
-            pooled.free();
-        }
-    }
-
-    @Override
-    public long skip(final long n) throws IOException {
-        return super.skip(n);
+        this.bufferPool = exchange.getConnection().getBufferPool();
+        this.channel = exchange.getRequestChannel();
     }
 
     @Override
@@ -77,5 +38,67 @@ public class UndertowInputStream extends InputStream {
             return -1;
         }
         return b[0];
+    }
+
+    @Override
+    public int read(final byte[] b) throws IOException {
+        return read(b, 0, b.length);
+    }
+
+    @Override
+    public int read(final byte[] b, final int off, final int len) throws IOException {
+        if (closed) {
+            throw UndertowMessages.MESSAGES.streamIsClosed();
+        }
+        readIntoBuffer();
+        if (closed) {
+            return -1;
+        }
+        if (len == 0) {
+            return 0;
+        }
+        ByteBuffer buffer = pooled.getResource();
+        int copied = Buffers.copy(ByteBuffer.wrap(b, off, len), buffer);
+        if (!buffer.hasRemaining()) {
+            pooled.free();
+            pooled = null;
+        }
+        return copied;
+    }
+
+    private void readIntoBuffer() throws IOException {
+        if (pooled == null && !closed) {
+            pooled = bufferPool.allocate();
+            int res = Channels.readBlocking(channel, pooled.getResource());
+            pooled.getResource().flip();
+            if (res == -1) {
+                closed = true;
+                pooled.free();
+                pooled = null;
+            }
+
+        }
+    }
+
+    @Override
+    public int available() throws IOException {
+        if (closed) {
+            throw UndertowMessages.MESSAGES.streamIsClosed();
+        }
+        readIntoBuffer();
+        if (closed) {
+            return -1;
+        }
+        return pooled.getResource().remaining();
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (pooled != null) {
+            pooled.free();
+            pooled = null;
+        }
+        channel.shutdownReads();
+        closed = true;
     }
 }

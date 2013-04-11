@@ -86,7 +86,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
             @Override
             public void pushBack(Pooled<ByteBuffer> pooled) {
-                exchange.getConnection().setExtraBytes(pooled);
+                exchange.ungetRequestBytes(pooled);
             }
         }, finishListener, maxLength);
     }

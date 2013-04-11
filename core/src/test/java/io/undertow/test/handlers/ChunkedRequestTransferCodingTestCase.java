@@ -24,10 +24,10 @@ import java.io.OutputStream;
 import java.util.Random;
 
 import io.undertow.UndertowOptions;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
-import io.undertow.server.HttpHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
@@ -103,35 +103,37 @@ public class ChunkedRequestTransferCodingTestCase {
             HttpClientUtils.readResponse(result);
 
 
-            generateMessage(1000);
-            post.setEntity(new StringEntity(message) {
-                @Override
-                public long getContentLength() {
-                    return -1;
-                }
-
-                @Override
-                public boolean isChunked() {
-                    return true;
-                }
-
-                @Override
-                public void writeTo(OutputStream outstream) throws IOException {
-                    int l = 0;
-                    int i = 0;
-                    Random random = new Random(1000);
-                    while (i < message.length()) {
-                        i += random.nextInt(100);
-                        i = Math.min(i, message.length());
-                        outstream.write(message.getBytes(), l, i - l);
-                        l = i;
-                        ++i;
+            for (int i = 0; i < 10; ++i) {
+                generateMessage(100 * i);
+                post.setEntity(new StringEntity(message) {
+                    @Override
+                    public long getContentLength() {
+                        return -1;
                     }
-                }
-            });
-            result = client.execute(post);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+
+                    @Override
+                    public boolean isChunked() {
+                        return true;
+                    }
+
+                    @Override
+                    public void writeTo(OutputStream outstream) throws IOException {
+                        int l = 0;
+                        int i = 0;
+                        Random random = new Random();
+                        while (i < message.length()) {
+                            i += random.nextInt(1000);
+                            i = Math.min(i, message.length());
+                            outstream.write(message.getBytes(), l, i - l);
+                            l = i;
+                            ++i;
+                        }
+                    }
+                });
+                result = client.execute(post);
+                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                HttpClientUtils.readResponse(result);
+            }
         } finally {
 
             client.getConnectionManager().shutdown();
