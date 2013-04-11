@@ -66,13 +66,17 @@ public class SimpleAsyncTestCase {
                 .setAsyncSupported(true)
                 .addMapping("/async");
 
+        ServletInfo a2 = new ServletInfo("asyncServlet2", AnotherAsyncServlet.class)
+        .setAsyncSupported(true)
+        .addMapping("/async2");
+
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(m, a);
+                .addServlets(m, a, a2);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -90,6 +94,20 @@ public class SimpleAsyncTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(HELLO_WORLD, response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testSimpleHttpAsyncServletWithoutDispatch() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async2");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(AnotherAsyncServlet.class.getSimpleName(), response);
         } finally {
             client.getConnectionManager().shutdown();
         }
