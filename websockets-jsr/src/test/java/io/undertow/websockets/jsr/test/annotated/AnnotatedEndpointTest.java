@@ -19,6 +19,8 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import java.net.URI;
 
+import javax.websocket.Session;
+
 import io.undertow.client.HttpClient;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -35,7 +37,11 @@ import io.undertow.websockets.utils.WebSocketTestClient;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
+import org.xnio.ByteBufferSlicePool;
 import org.xnio.OptionMap;
 
 /**
@@ -44,11 +50,10 @@ import org.xnio.OptionMap;
 @RunWith(DefaultServer.class)
 public class AnnotatedEndpointTest {
 
-    @org.junit.Test
-    public void testStringOnMessage() throws Exception {
-        final byte[] payload = "hello".getBytes();
-        final ConcreteIoFuture latch = new ConcreteIoFuture();
+    private static WebSocketDeployment deployment;
 
+    @BeforeClass
+    public static void setup() throws Exception {
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
@@ -61,15 +66,28 @@ public class AnnotatedEndpointTest {
 
 
         WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getDeploymentInfo().addAnnotatedEndpoints(AnnotatedTestEndpoint.class);
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+        info.setBufferPool(new ByteBufferSlicePool(100, 1000));
+        deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
+        deployment.getDeploymentInfo().addAnnotatedEndpoints(AnnotatedTestEndpoint.class, AnnotatedClientEndpoint.class);
+        WebSocketDeployer.deploy(deployment, builder, AnnotatedEndpointTest.class.getClassLoader());
 
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
 
+
         DefaultServer.setRootHandler(manager.start());
+    }
+
+    @AfterClass
+    public static void after() {
+        deployment = null;
+    }
+
+    @org.junit.Test
+    public void testStringOnMessage() throws Exception {
+        final byte[] payload = "hello".getBytes();
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Stuart"));
         client.connect();
@@ -78,4 +96,15 @@ public class AnnotatedEndpointTest {
         client.destroy();
     }
 
+    @org.junit.Test
+    public void testAnnotatedClientEndpoint() throws Exception {
+
+
+        Session session = deployment.getContainer().connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
+
+        Assert.assertEquals("hi Bob", AnnotatedClientEndpoint.message());
+
+        session.close();
+        Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());
+    }
 }

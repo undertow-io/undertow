@@ -27,6 +27,8 @@ import java.util.TreeSet;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
+import javax.websocket.ClientEndpoint;
+import javax.websocket.ClientEndpointConfig;
 import javax.websocket.DeploymentException;
 import javax.websocket.Endpoint;
 import javax.websocket.server.ServerApplicationConfig;
@@ -38,6 +40,7 @@ import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
+import io.undertow.websockets.jsr.ConfiguredClientEndpoint;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.jsr.EndpointSessionHandler;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
@@ -103,6 +106,7 @@ public class WebSocketDeployer {
             try {
                 for (Class<?> endpoint : allAnnotatedEndpoints) {
                     ServerEndpoint serverEndpoint = endpoint.getAnnotation(ServerEndpoint.class);
+                    ClientEndpoint clientEndpoint = endpoint.getAnnotation(ClientEndpoint.class);
                     if (serverEndpoint != null) {
                         final PathTemplate template = PathTemplate.create(serverEndpoint.value());
                         if (seenPaths.contains(template)) {
@@ -122,14 +126,28 @@ public class WebSocketDeployer {
                                 .decoders(Arrays.asList(serverEndpoint.decoders()))
                                 .encoders(Arrays.asList(serverEndpoint.encoders()))
                                 .subprotocols(Arrays.asList(serverEndpoint.subprotocols()))
-                                .configurator(new InstanceFactoryConfigurator(factory))
+                                .configurator(new ServerInstanceFactoryConfigurator(factory))
                                 .build();
 
                         ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, factory, template);
                         configuredServerEndpoints.add(confguredServerEndpoint);
+                    } else if (clientEndpoint != null) {
+                        AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, target.getClassIntrospecter().createInstanceFactory(endpoint));
+
+                        ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
+                                .decoders(Arrays.asList(clientEndpoint.decoders()))
+                                .encoders(Arrays.asList(clientEndpoint.encoders()))
+                                .preferredSubprotocols(Arrays.asList(clientEndpoint.subprotocols()))
+                                .configurator(clientEndpoint.configurator().newInstance())
+                                .build();
+
+                        ConfiguredClientEndpoint configuredClientEndpoint = new ConfiguredClientEndpoint(config, factory);
+                        deployment.addClientEndpoint(endpoint, configuredClientEndpoint);
+                    } else {
+                        throw JsrWebSocketMessages.MESSAGES.classWasNotAnnotated(endpoint);
                     }
                 }
-            } catch (NoSuchMethodException e) {
+            } catch (NoSuchMethodException|InstantiationException|IllegalAccessException e) {
                 throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
             }
 
@@ -155,6 +173,7 @@ public class WebSocketDeployer {
             target.addFilter(new FilterInfo(FILTER_NAME, JsrWebSocketFilter.class, new ImmediateInstanceFactory<Filter>(filter))
                     .setAsyncSupported(true));
             target.addFilterUrlMapping(FILTER_NAME, "/*", DispatcherType.REQUEST);
+            deployment.getContainer().deploymentComplete();
 
         } finally {
             Thread.currentThread().setContextClassLoader(oldTccl);
@@ -162,11 +181,11 @@ public class WebSocketDeployer {
 
     }
 
-    private static final class InstanceFactoryConfigurator extends ServerEndpointConfig.Configurator {
+    private static final class ServerInstanceFactoryConfigurator extends ServerEndpointConfig.Configurator {
 
         private final InstanceFactory<?> factory;
 
-        private InstanceFactoryConfigurator(final InstanceFactory<?> factory) {
+        private ServerInstanceFactoryConfigurator(final InstanceFactory<?> factory) {
             this.factory = factory;
         }
 

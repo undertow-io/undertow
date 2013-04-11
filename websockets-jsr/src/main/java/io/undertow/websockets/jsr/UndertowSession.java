@@ -208,11 +208,12 @@ public final class UndertowSession implements Session {
 
     @Override
     public void close() throws IOException {
-        session.sendClose(null);
+        close(null);
     }
 
     @Override
     public void close(CloseReason closeReason) throws IOException {
+        endpoint.getInstance().onClose(this, closeReason);
         if (closeReason == null) {
             session.sendClose(null);
         } else {

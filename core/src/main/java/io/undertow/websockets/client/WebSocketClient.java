@@ -71,4 +71,8 @@ public class WebSocketClient {
         });
 
     }
+
+    private WebSocketClient() {
+
+    }
 }

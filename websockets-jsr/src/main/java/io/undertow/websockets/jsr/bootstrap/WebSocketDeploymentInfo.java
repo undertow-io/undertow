@@ -18,6 +18,7 @@
 
 package io.undertow.websockets.jsr.bootstrap;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -27,6 +28,10 @@ import javax.websocket.Endpoint;
 import javax.websocket.server.ServerApplicationConfig;
 import javax.websocket.server.ServerEndpointConfig;
 
+import io.undertow.websockets.api.WebSocketSessionIdGenerator;
+import io.undertow.websockets.impl.UuidWebSocketSessionIdGenerator;
+import org.xnio.Pool;
+
 /**
  * The deployment info that is used to build up a web socket deployment.
  *
@@ -35,6 +40,8 @@ import javax.websocket.server.ServerEndpointConfig;
 public class WebSocketDeploymentInfo {
 
     private final Set<Class<?>> annotatedEndpoints = new HashSet<>();
+    private Pool<ByteBuffer> bufferPool;
+    private WebSocketSessionIdGenerator sessionIdGenerator = new UuidWebSocketSessionIdGenerator();
     private final Set<Class<? extends Endpoint>> discoveredEndpoints = new HashSet<>();
     private final Set<Class<? extends ServerApplicationConfig>> serverApplicationConfigClasses = new HashSet<>();
     private final Set<ServerEndpointConfig> programaticEndpoints = new HashSet<>();
@@ -83,6 +90,22 @@ public class WebSocketDeploymentInfo {
 
     public Set<Class<?>> getProgramaticAnnotatedEndpoints() {
         return Collections.unmodifiableSet(programaticAnnotatedEndpoints);
+    }
+
+    public Pool<ByteBuffer> getBufferPool() {
+        return bufferPool;
+    }
+
+    public void setBufferPool(final Pool<ByteBuffer> bufferPool) {
+        this.bufferPool = bufferPool;
+    }
+
+    public WebSocketSessionIdGenerator getSessionIdGenerator() {
+        return sessionIdGenerator;
+    }
+
+    public void setSessionIdGenerator(final WebSocketSessionIdGenerator sessionIdGenerator) {
+        this.sessionIdGenerator = sessionIdGenerator;
     }
 
     /**

@@ -117,4 +117,7 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3026, value = "%s is not a valid client endpoint type")
     DeploymentException notAValidClientEndpointType(Class<?> type);
+
+    @Message(id = 3027, value = "Class %s was not annotated with @ClientEndpoint or @ServerEndpoint")
+    DeploymentException classWasNotAnnotated(Class<?> endpoint);
 }

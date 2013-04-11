@@ -20,7 +20,7 @@ package io.undertow.websockets.jsr;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 import javax.websocket.ClientEndpointConfig;
@@ -32,12 +32,13 @@ import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpointConfig;
 
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.impl.WebSocketChannelSession;
+import io.undertow.websockets.impl.WebSocketRecieveListeners;
 import io.undertow.websockets.jsr.bootstrap.WebSocketDeployment;
-import org.xnio.ByteBufferSlicePool;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 
@@ -99,15 +100,20 @@ public class ServerWebSocketContainer implements ServerContainer {
         if (!deploymentComplete) {
             throw JsrWebSocketMessages.MESSAGES.cannotConnectUntilDeploymentComplete();
         }
-        final Map<String, String>
 
 
-        WebSocketClient client = new WebSocketClient();
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(webSocketDeployment.getHttpClient(), new ByteBufferSlicePool(100, 1000), OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(webSocketDeployment.getHttpClient(), webSocketDeployment.getDeploymentInfo().getBufferPool(), OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
         WebSocketChannel channel = session.get();
-        WebSocketChannelSession wss = new WebSocketChannelSession(channel, "", false);
-        return new UndertowSession(wss, path, Collections.<String,String>emptyMap(), Collections.emptyMap(), );
-        return null;
+        EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
+
+        WebSocketChannelSession wss = new WebSocketChannelSession(channel, webSocketDeployment.getDeploymentInfo().getSessionIdGenerator().nextId(), false);
+
+        WebSocketRecieveListeners.startRecieving(wss, channel, false);
+
+        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec);
+        endpointInstance.onOpen(undertowSession, cec);
+
+        return undertowSession;
     }
 
     @Override
@@ -170,5 +176,9 @@ public class ServerWebSocketContainer implements ServerContainer {
             throw JsrWebSocketMessages.MESSAGES.cannotAddEndpointAfterDeployment();
         }
         webSocketDeployment.getDeploymentInfo().addProgramaticEndpoints(serverConfig);
+    }
+
+    public void deploymentComplete() {
+        deploymentComplete = true;
     }
 }

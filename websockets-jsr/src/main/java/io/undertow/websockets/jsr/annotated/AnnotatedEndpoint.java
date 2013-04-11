@@ -49,6 +49,9 @@ public class AnnotatedEndpoint extends Endpoint {
     @Override
     public void onOpen(final Session session, final EndpointConfig endpointConfiguration) {
 
+        UndertowSession s = (UndertowSession) session;
+        s.setFrameHandler(new AnnotatedEndpointFrameHandler(session));
+
         if (webSocketOpen != null) {
             final Map<Class<?>, Object> params = new HashMap<>();
             params.put(Session.class, session);
@@ -56,8 +59,6 @@ public class AnnotatedEndpoint extends Endpoint {
             params.put(Map.class, session.getPathParameters());
             webSocketOpen.invoke(instance.getInstance(), params);
         }
-        UndertowSession s = (UndertowSession) session;
-        s.setFrameHandler(new AnnotatedEndpointFrameHandler(session));
 
     }
 
