@@ -1,5 +1,8 @@
 package io.undertow.servlet.handlers.security;
 
+import java.io.ByteArrayInputStream;
+import java.security.cert.X509Certificate;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.servlet.ServletRequest;
 
@@ -65,6 +68,38 @@ public class SSLInformationAssociationHandler implements HttpHandler {
 
      /* ------------------------------------------------------------ */
 
+    /**
+     * <p>Return the chain of X509 certificates used to negotiate the SSL Session.</p>
+     *
+     * We convert JSSE's javax.security.cert.X509Certificate[]  to servlet's  java.security.cert.X509Certificate[]
+     *
+     * @param session the   javax.net.ssl.SSLSession to use as the source of the cert chain.
+     * @return the chain of java.security.cert.X509Certificates used to
+     *         negotiate the SSL connection. <br>
+     *         Will be null if the chain is missing or empty.
+     */
+    private X509Certificate[] getCerts(SSLSession session) {
+        try {
+            javax.security.cert.X509Certificate[] javaxCerts = session.getPeerCertificateChain();
+            if (javaxCerts == null || javaxCerts.length == 0) {
+                return null;
+            }
+            X509Certificate[] javaCerts = new X509Certificate[javaxCerts.length];
+            java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
+            for (int i = 0; i < javaxCerts.length; i++) {
+                byte[] bytes = javaxCerts[i].getEncoded();
+                ByteArrayInputStream stream = new ByteArrayInputStream(bytes);
+                javaCerts[i] = (X509Certificate) cf.generateCertificate(stream);
+            }
+
+            return javaCerts;
+        } catch (SSLPeerUnverifiedException pue) {
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
@@ -73,10 +108,12 @@ public class SSLInformationAssociationHandler implements HttpHandler {
             request.setAttribute("javax.servlet.request.cipher_suite", ssl.getCipherSuite());
             request.setAttribute("javax.servlet.request.key_size", getKeyLenght(ssl.getCipherSuite()));
             request.setAttribute("javax.servlet.request.ssl_session_id", ssl.getId());
-            if (ssl.getPeerCertificateChain() != null) {
-                request.setAttribute("javax.servlet.request.X509Certificate", ssl.getPeerCertificateChain());
+            X509Certificate[] certs = getCerts(ssl);
+            if (certs != null) {
+                request.setAttribute("javax.servlet.request.X509Certificate", certs);
             }
         }
         HttpHandlers.executeHandler(next, exchange);
     }
+
 }
