@@ -115,7 +115,7 @@ public class RequestListenerAsyncRequestTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(AnotherAsyncServlet.class.getSimpleName(), response);
-            Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST", "created REQUEST", "destroyed REQUEST"}, TestListener.RESULTS.toArray());
+            Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST"}, TestListener.RESULTS.toArray());
         } finally {
             client.getConnectionManager().shutdown();
         }
