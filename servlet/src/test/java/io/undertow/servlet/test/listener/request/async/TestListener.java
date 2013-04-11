@@ -19,6 +19,7 @@
 package io.undertow.servlet.test.listener.request.async;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.servlet.ServletRequestEvent;
@@ -29,7 +30,7 @@ import javax.servlet.ServletRequestListener;
  */
 public class TestListener implements ServletRequestListener{
 
-    public static final List<String> RESULTS = new ArrayList<>();
+    public static final List<String> RESULTS = Collections.synchronizedList(new ArrayList<String>());
 
     @Override
     public void requestDestroyed(final ServletRequestEvent sre) {
