@@ -59,11 +59,6 @@ import io.undertow.server.HttpServerExchange;
 public interface AuthenticationMechanism {
 
     /**
-     * @return The name of the mechanism.
-     */
-    String getName();
-
-    /**
      * Perform authentication of the request. Any potentially blocking work should be performed in the handoff executor provided
      *
      * @param exchange The exchange

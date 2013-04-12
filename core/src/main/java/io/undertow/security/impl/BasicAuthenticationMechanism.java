@@ -62,10 +62,6 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         this.name = mechanismName;
     }
 
-    public String getName() {
-        return name;
-    }
-
     /**
      * @see io.undertow.server.HttpHandler#handleRequest(io.undertow.server.HttpServerExchange)
      */
@@ -94,10 +90,10 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                             final AuthenticationMechanismOutcome result;
                             Account account = idm.verify(userName, credential);
                             if (account != null) {
-                                securityContext.authenticationComplete(account, getName());
+                                securityContext.authenticationComplete(account, name);
                                 result = AuthenticationMechanismOutcome.AUTHENTICATED;
                             } else {
-                                securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), getName());
+                                securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), name);
                                 result = AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
                             }
                             return result;

@@ -51,10 +51,6 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         this.name = mechanismName;
     }
 
-    public String getName() {
-        return name;
-    }
-
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange, final SecurityContext securityContext) {
         SSLSession sslSession = exchange.getConnection().getSslSession();
         if (sslSession != null) {
@@ -66,7 +62,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
                     IdentityManager idm = securityContext.getIdentityManager();
                     Account account = idm.verify(credential);
                     if (account != null) {
-                        securityContext.authenticationComplete(account, getName());
+                        securityContext.authenticationComplete(account, name);
                         return AuthenticationMechanismOutcome.AUTHENTICATED;
                     }
                 }

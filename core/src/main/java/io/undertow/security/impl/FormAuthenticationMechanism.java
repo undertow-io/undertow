@@ -101,7 +101,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                     securityContext.authenticationComplete(account, name);
                     outcome = AuthenticationMechanismOutcome.AUTHENTICATED;
                 } else {
-                    securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), getName());
+                    securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), name);
                 }
             } finally {
                 if (outcome == AuthenticationMechanismOutcome.AUTHENTICATED) {
@@ -166,10 +166,5 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
         // TODO - String concatenation to construct URLS is extremely error prone - switch to a URI which will better handle this.
         String loc = exchange.getRequestScheme() + "://" + host + location;
         exchange.getResponseHeaders().put(Headers.LOCATION, loc);
-    }
-
-    @Override
-    public String getName() {
-        return name;
     }
 }

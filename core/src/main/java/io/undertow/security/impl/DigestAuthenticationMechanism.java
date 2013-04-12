@@ -55,6 +55,8 @@ import static io.undertow.util.StatusCodes.UNAUTHORIZED;
  */
 public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
+    private static final String DEFAULT_NAME = "DIGEST";
+    private final String mechanismName;
     private static final String DIGEST_PREFIX = DIGEST + " ";
     private static final int PREFIX_LENGTH = DIGEST_PREFIX.length();
     private static final String OPAQUE_VALUE = "00000000000000000000000000000000";
@@ -91,7 +93,13 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     // Maybe even support registration of a session so it can be invalidated?
 
     public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
-                                         final String realmName, final String domain, final NonceManager nonceManager, final boolean plainTextPasswords) {
+            final String realmName, final String domain, final NonceManager nonceManager, final boolean plainTextPasswords) {
+        this(supportedAlgorithms, supportedQops, realmName, domain, nonceManager, plainTextPasswords, DEFAULT_NAME);
+    }
+
+    public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
+            final String realmName, final String domain, final NonceManager nonceManager, final boolean plainTextPasswords,
+            final String mechanismName) {
         this.supportedAlgorithms = supportedAlgorithms;
         this.supportedQops = supportedQops;
         this.realmName = realmName;
@@ -99,6 +107,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         this.realmBytes = realmName.getBytes(UTF_8);
         this.nonceManager = nonceManager;
         this.plainTextPasswords = plainTextPasswords;
+        this.mechanismName = mechanismName;
 
         if (supportedQops.size() > 0) {
             StringBuilder sb = new StringBuilder();
@@ -111,11 +120,6 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         } else {
             qopString = null;
         }
-    }
-
-
-    public String getName() {
-        return "DIGEST";
     }
 
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
@@ -252,7 +256,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         final Account account = identityManager.getAccount(userName);
         if (account == null) {
             //the user does not exist.
-            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), getName());
+            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), mechanismName);
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 
@@ -267,7 +271,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             context.setHa1(ha1);
         } catch (AuthenticationException e) {
             // Most likely the user does not exist.
-            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), getName());
+            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), mechanismName);
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 
@@ -291,7 +295,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             // TODO - We should look at still marking the nonce as used, a failure in authentication due to say a failure
             // looking up the users password would leave it open to the packet being replayed.
             REQUEST_LOGGER.authenticationFailed(parsedHeader.get(DigestAuthorizationToken.USERNAME), DIGEST.toString());
-            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), getName());
+            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), mechanismName);
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 
@@ -310,7 +314,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         // We have authenticated the remote user.
 
         sendAuthenticationInfoHeader(exchange);
-        securityContext.authenticationComplete(account, getName());
+        securityContext.authenticationComplete(account, mechanismName);
         return AuthenticationMechanismOutcome.AUTHENTICATED;
 
         // Step 4 - Set up any QOP related requirements.

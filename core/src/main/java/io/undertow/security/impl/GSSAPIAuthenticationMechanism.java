@@ -64,15 +64,12 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
     private static final String NEGOTIATION_PLAIN = NEGOTIATE.toString();
     private static final String NEGOTIATE_PREFIX = NEGOTIATE + " ";
+    private final String name = "SPNEGO";
 
     private final GSSAPIServerSubjectFactory subjectFactory;
 
     public GSSAPIAuthenticationMechanism(final GSSAPIServerSubjectFactory subjectFactory) {
         this.subjectFactory = subjectFactory;
-    }
-
-    public String getName() {
-        return "SPNEGO";
     }
 
     @Override
@@ -86,7 +83,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                 IdentityManager identityManager = securityContext.getIdentityManager();
                 final Account account = identityManager.verify(new GSSContextCredential(negContext.getGssContext()));
                 if (account != null) {
-                    securityContext.authenticationComplete(account, getName());
+                    securityContext.authenticationComplete(account, name);
                     return AuthenticationMechanismOutcome.AUTHENTICATED;
                 } else {
                     return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
@@ -206,7 +203,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                 IdentityManager identityManager = securityContext.getIdentityManager();
                 final Account account = identityManager.verify(new GSSContextCredential(negContext.getGssContext()));
                 if (account != null) {
-                    securityContext.authenticationComplete(account, getName());
+                    securityContext.authenticationComplete(account, name);
                     return AuthenticationMechanismOutcome.AUTHENTICATED;
                 } else {
                     return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
