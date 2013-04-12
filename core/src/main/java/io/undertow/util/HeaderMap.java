@@ -18,81 +18,529 @@
 
 package io.undertow.util;
 
-import java.util.ArrayList;
+import java.util.AbstractCollection;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
- * This implementation sucks and is incomplete.  It's just here to illustrate.
+ * An optimized array-backed header map.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HeaderMap implements Iterable<HttpString> {
+public final class HeaderMap implements Iterable<HeaderValues> {
 
-    private static final int SIZE = 17;
+    private Object[] table;
+    private int size;
+    private Collection<HttpString> headerNames;
 
-    private static final int SIGN_MASK = 0x7FFFFFFF;
+    public HeaderMap() {
+        table = new Object[32];
+    }
 
-    private final HeaderEntry[] entries = new HeaderEntry[SIZE];
+    private HeaderValues getEntry(final HttpString headerName) {
+        if (headerName == null) {
+            return null;
+        }
+        final int hc = headerName.hashCode();
+        final int idx = hc & (table.length - 1);
+        final Object o = table[idx];
+        if (o == null) {
+            return null;
+        }
+        HeaderValues headerValues;
+        if (o instanceof HeaderValues) {
+            headerValues = (HeaderValues) o;
+            if (! headerName.equals(headerValues.key)) {
+                return null;
+            }
+            return headerValues;
+        } else {
+            final HeaderValues[] row = (HeaderValues[]) o;
+            for (int i = 0; i < row.length; i++) {
+                headerValues = row[i];
+                if (headerValues != null && headerName.equals(headerValues.key)) { return headerValues; }
+            }
+            return null;
+        }
+    }
 
-    public Iterator<HttpString> iterator() {
-        return new MapIterator();
+    private HeaderValues removeEntry(final HttpString headerName) {
+        if (headerName == null) {
+            return null;
+        }
+        final int hc = headerName.hashCode();
+        final Object[] table = this.table;
+        final int idx = hc & (table.length - 1);
+        final Object o = table[idx];
+        if (o == null) {
+            return null;
+        }
+        HeaderValues headerValues;
+        if (o instanceof HeaderValues) {
+            headerValues = (HeaderValues) o;
+            if (! headerName.equals(headerValues.key)) {
+                return null;
+            }
+            table[idx] = null;
+            size --;
+            return headerValues;
+        } else {
+            final HeaderValues[] row = (HeaderValues[]) o;
+            for (int i = 0; i < row.length; i++) {
+                headerValues = row[i];
+                if (headerValues != null && headerName.equals(headerValues.key)) {
+                    row[i] = null;
+                    size --;
+                    return headerValues;
+                }
+            }
+            return null;
+        }
+    }
+
+    private void resize() {
+        final int oldLen = table.length;
+        if (oldLen == 0x40000000) {
+            return;
+        }
+        assert Integer.bitCount(oldLen) == 1;
+        Object[] newTable = Arrays.copyOf(table, oldLen << 1);
+        table = newTable;
+        for (int i = 0; i < oldLen; i ++) {
+            if (newTable[i] == null) {
+                continue;
+            }
+            if (newTable[i] instanceof HeaderValues) {
+                HeaderValues e = (HeaderValues) newTable[i];
+                if ((e.key.hashCode() & oldLen) != 0) {
+                    newTable[i] = null;
+                    newTable[i + oldLen] = e;
+                }
+                continue;
+            }
+            HeaderValues[] oldRow = (HeaderValues[]) newTable[i];
+            HeaderValues[] newRow = oldRow.clone();
+            int rowLen = oldRow.length;
+            newTable[i + oldLen] = newRow;
+            HeaderValues item;
+            for (int j = 0; j < rowLen; j ++) {
+                item = oldRow[j];
+                if (item != null) {
+                    if ((item.key.hashCode() & oldLen) != 0) {
+                        oldRow[j] = null;
+                    } else {
+                        newRow[j] = null;
+                    }
+                }
+            }
+        }
+    }
+
+    private HeaderValues getOrCreateEntry(final HttpString headerName) {
+        if (headerName == null) {
+            return null;
+        }
+        final int hc = headerName.hashCode();
+        final Object[] table = this.table;
+        final int length = table.length;
+        final int idx = hc & (length - 1);
+        final Object o = table[idx];
+        HeaderValues headerValues;
+        if (o == null) {
+            if (size >= length >> 1) {
+                resize();
+                return getOrCreateEntry(headerName);
+            }
+            headerValues = new HeaderValues(headerName);
+            table[idx] = headerValues;
+            size++;
+            return headerValues;
+        }
+        if (o instanceof HeaderValues) {
+            headerValues = (HeaderValues) o;
+            if (! headerName.equals(headerValues.key)) {
+                if (size >= length >> 1) {
+                    resize();
+                    return getOrCreateEntry(headerName);
+                }
+                size++;
+                final HeaderValues[] row = { headerValues, new HeaderValues(headerName), null, null };
+                table[idx] = row;
+                return row[1];
+            }
+            return headerValues;
+        } else {
+            final HeaderValues[] row = (HeaderValues[]) o;
+            int empty = -1;
+            for (int i = 0; i < row.length; i++) {
+                headerValues = row[i];
+                if (headerValues != null) {
+                    if (headerName.equals(headerValues.key)) { return headerValues; }
+                } else if (empty == -1) {
+                    empty = i;
+                }
+            }
+            if (size >= length >> 1) {
+                resize();
+                return getOrCreateEntry(headerName);
+            }
+            size++;
+            headerValues = new HeaderValues(headerName);
+            if (empty != -1) {
+                row[empty] = headerValues;
+            } else {
+                if (row.length >= 16) {
+                    throw new SecurityException("Excessive collisions");
+                }
+                final HeaderValues[] newRow = Arrays.copyOf(row, row.length + 3);
+                newRow[row.length] = headerValues;
+                table[idx] = newRow;
+            }
+            return headerValues;
+        }
+    }
+
+    // get
+
+    public HeaderValues get(final HttpString headerName) {
+        return getEntry(headerName);
     }
 
     public String getFirst(HttpString headerName) {
-        Object value = getValue(headerName);
-        if (value instanceof List) {
-            return ((List<String>) value).get(0);
-        } else {
-            return (String) value;
-        }
+        HeaderValues headerValues = getEntry(headerName);
+        if (headerValues == null) return null;
+        return headerValues.getFirst();
     }
 
+    public String get(HttpString headerName, int index) throws IndexOutOfBoundsException {
+        if (headerName == null) {
+            return null;
+        }
+        final HeaderValues headerValues = getEntry(headerName);
+        if (headerValues == null) {
+            return null;
+        }
+        return headerValues.get(index);
+    }
 
     public String getLast(HttpString headerName) {
-        Object value = getValue(headerName);
-        if (value instanceof List) {
-            List<String> list = (List<String>) value;
-            return list.get(list.size() - 1);
+        if (headerName == null) {
+            return null;
+        }
+        HeaderValues headerValues = getEntry(headerName);
+        if (headerValues == null) return null;
+        return headerValues.getLast();
+    }
+
+    // count
+
+    public int count(HttpString headerName) {
+        if (headerName == null) {
+            return 0;
+        }
+        final HeaderValues headerValues = getEntry(headerName);
+        if (headerValues == null) {
+            return 0;
+        }
+        return headerValues.size();
+    }
+
+    public int size() {
+        return size;
+    }
+
+    // iterate
+
+    /**
+     * Do a fast iteration of this header map without creating any objects.
+     *
+     * @return an opaque iterating cookie, or -1 if no iteration is possible
+     *
+     * @see #fiNext(long)
+     * @see #fiCurrent(long)
+     */
+    public long fastIterate() {
+        final Object[] table = this.table;
+        final int len = table.length;
+        int ri = 0;
+        int ci;
+        while (ri < len) {
+            final Object item = table[ri];
+            if (item != null) {
+                if (item instanceof HeaderValues) {
+                    return (long)ri << 32L;
+                } else {
+                    final HeaderValues[] row = (HeaderValues[]) item;
+                    ci = 0;
+                    final int rowLen = row.length;
+                    while (ci < rowLen) {
+                        if (row[ci] != null) {
+                            return (long)ri << 32L | (ci & 0xffffffffL);
+                        }
+                        ci ++;
+                    }
+                }
+            }
+            ri++;
+        }
+        return -1L;
+    }
+
+    /**
+     * Do a fast iteration of this header map without creating any objects, only considering non-empty header values.
+     *
+     * @return an opaque iterating cookie, or -1 if no iteration is possible
+     */
+    public long fastIterateNonEmpty() {
+        long cookie = fastIterate();
+        while (cookie != -1L && fiCurrent(cookie).isEmpty()) {
+            cookie = fiNext(cookie);
+        }
+        return cookie;
+    }
+
+    /**
+     * Find the next index in a fast iteration.
+     *
+     * @param cookie the previous cookie value
+     * @return the next cookie value, or -1L if iteration is done
+     */
+    public long fiNext(long cookie) {
+        if (cookie == -1L) return -1L;
+        final Object[] table = this.table;
+        final int len = table.length;
+        int ri = (int) (cookie >> 32);
+        int ci = (int) cookie;
+        Object item = table[ri];
+        if (item instanceof HeaderValues[]) {
+            final HeaderValues[] row = (HeaderValues[]) item;
+            final int rowLen = row.length;
+            if (++ci >= rowLen) {
+                ri ++; ci = 0;
+            } else if (row[ci] != null) {
+                return (long)ri << 32L | (ci & 0xffffffffL);
+            }
         } else {
-            return (String) value;
+            ri ++; ci = 0;
+        }
+        while (ri < len) {
+            item = table[ri];
+            if (item instanceof HeaderValues) {
+                return (long)ri << 32L;
+            } else if (item instanceof HeaderValues[]) {
+                final HeaderValues[] row = (HeaderValues[]) item;
+                final int rowLen = row.length;
+                while (ci < rowLen) {
+                    if (row[ci] != null) {
+                        return (long)ri << 32L | (ci & 0xffffffffL);
+                    }
+                    ci ++;
+                }
+            }
+            ci = 0;
+            ri ++;
+        }
+        return -1L;
+    }
+
+    /**
+     * Find the next non-empty index in a fast iteration.
+     *
+     * @param cookie the previous cookie value
+     * @return the next cookie value, or -1L if iteration is done
+     */
+    public long fiNextNonEmpty(long cookie) {
+        if (cookie == -1L) return -1L;
+        do {
+            cookie = fiNext(cookie);
+        } while (cookie != -1L && fiCurrent(cookie).isEmpty());
+        return cookie;
+    }
+
+    /**
+     * Return the value at the current index in a fast iteration.
+     *
+     * @param cookie the iteration cookie value
+     * @return the values object at this position
+     * @throws NoSuchElementException if the cookie value is invalid
+     */
+    public HeaderValues fiCurrent(long cookie) {
+        try {
+            final Object[] table = this.table;
+            int ri = (int) (cookie >> 32);
+            int ci = (int) cookie;
+            final Object item = table[ri];
+            if (item instanceof HeaderValues[]) {
+                return ((HeaderValues[])item)[ci];
+            } else if (ci == 0) {
+                return (HeaderValues) item;
+            } else {
+                throw new NoSuchElementException();
+            }
+        } catch (RuntimeException e) {
+            throw new NoSuchElementException();
         }
     }
 
-    public List<String> get(HttpString headerName) {
-        Object value = getValue(headerName);
-        if (value == null) {
-            return null;
-        } else if (value instanceof List) {
-            return (List<String>) value;
-        } else {
-            return Collections.singletonList((String) value);
+    public Iterable<String> eachValue(final HttpString headerName) {
+        if (headerName == null) {
+            return Collections.emptyList();
         }
+        final HeaderValues entry = getEntry(headerName);
+        if (entry == null) {
+            return Collections.emptyList();
+        }
+        return entry;
     }
+
+    public Iterator<HeaderValues> iterator() {
+        return new Iterator<HeaderValues>() {
+            final Object[] table = HeaderMap.this.table;
+            boolean consumed;
+            int ri, ci;
+
+            private HeaderValues _next() {
+                for (;;) {
+                    if (ri >= table.length) {
+                        return null;
+                    }
+                    final Object o = table[ri];
+                    if (o == null) {
+                        // zero-entry row
+                        ri++;
+                        ci = 0;
+                        consumed = false;
+                        continue;
+                    }
+                    if (o instanceof HeaderValues) {
+                        // one-entry row
+                        if (ci > 0 || consumed) {
+                            ri++;
+                            ci = 0;
+                            consumed = false;
+                            continue;
+                        }
+                        return (HeaderValues) o;
+                    }
+                    final HeaderValues[] row = (HeaderValues[]) o;
+                    final int len = row.length;
+                    if (ci >= len) {
+                        ri ++;
+                        ci = 0;
+                        consumed = false;
+                        continue;
+                    }
+                    if (consumed) {
+                        ci++;
+                        consumed = false;
+                        continue;
+                    }
+                    final HeaderValues headerValues = row[ci];
+                    if (headerValues == null) {
+                        ci ++;
+                        continue;
+                    }
+                    return headerValues;
+                }
+            }
+
+            public boolean hasNext() {
+                return _next() != null;
+            }
+
+            public HeaderValues next() {
+                final HeaderValues next = _next();
+                if (next == null) {
+                    throw new NoSuchElementException();
+                }
+                consumed = true;
+                return next;
+            }
+
+            public void remove() {
+            }
+        };
+    }
+
+    public Collection<HttpString> getHeaderNames() {
+        if (headerNames != null) {
+            return headerNames;
+        }
+        return headerNames = new AbstractCollection<HttpString>() {
+            public boolean contains(final Object o) {
+                return o instanceof HttpString && getEntry((HttpString) o) != null;
+            }
+
+            public boolean add(final HttpString httpString) {
+                getOrCreateEntry(httpString);
+                return true;
+            }
+
+            public boolean remove(final Object o) {
+                if (! (o instanceof HttpString)) return false;
+                HttpString s = (HttpString) o;
+                HeaderValues entry = getEntry(s);
+                if (entry == null) {
+                    return false;
+                }
+                entry.clear();
+                return true;
+            }
+
+            public void clear() {
+                HeaderMap.this.clear();
+            }
+
+            public Iterator<HttpString> iterator() {
+                final Iterator<HeaderValues> iterator = HeaderMap.this.iterator();
+                return new Iterator<HttpString>() {
+                    public boolean hasNext() {
+                        return iterator.hasNext();
+                    }
+
+                    public HttpString next() {
+                        return iterator.next().getHeaderName();
+                    }
+
+                    public void remove() {
+                        iterator.remove();
+                    }
+                };
+            }
+
+            public int size() {
+                return HeaderMap.this.size();
+            }
+        };
+    }
+
+    // add
 
     public void add(HttpString headerName, String headerValue) {
-        HeaderEntry entry = getEntry(headerName);
-        if (entry == null) {
-            final int pos = (headerName.hashCode() & SIGN_MASK) % SIZE;
-            HeaderEntry exiting = entries[pos];
-            entry = new HeaderEntry();
-            entry.next = exiting;
-            entry.name = headerName;
-            entry.value = headerValue;
-            entries[pos] = entry;
-        } else {
-            if (entry.value instanceof List) {
-                ((List) entry.value).add(headerValue);
-            } else {
-                final ArrayList<String> list = new ArrayList<String>(1);
-                list.add((String) entry.value);
-                list.add(headerValue);
-                entry.value = list;
-            }
+        addLast(headerName, headerValue);
+    }
+
+    public void addFirst(final HttpString headerName, final String headerValue) {
+        if (headerName == null) {
+            throw new IllegalArgumentException("headerName is null");
         }
+        if (headerValue == null) {
+            return;
+        }
+        getOrCreateEntry(headerName).addFirst(headerValue);
+    }
+
+    public void addLast(final HttpString headerName, final String headerValue) {
+        if (headerName == null) {
+            throw new IllegalArgumentException("headerName is null");
+        }
+        if (headerValue == null) {
+            return;
+        }
+        getOrCreateEntry(headerName).addLast(headerValue);
     }
 
     public void add(HttpString headerName, long headerValue) {
@@ -101,103 +549,89 @@ public final class HeaderMap implements Iterable<HttpString> {
 
 
     public void addAll(HttpString headerName, Collection<String> headerValues) {
-        HeaderEntry entry = getEntry(headerName);
-        if (entry == null) {
-            final int pos = (headerName.hashCode() & SIGN_MASK) % SIZE;
-            HeaderEntry exiting = entries[pos];
-            entry = new HeaderEntry();
-            entry.next = exiting;
-            entry.name = headerName;
-            entry.value = new ArrayList<>(headerValues);
-            entries[pos] = entry;
-        } else {
-            if (entry.value instanceof List) {
-                ((List) entry.value).addAll(headerValues);
-            } else {
-                final ArrayList<String> list = new ArrayList<String>(1);
-                list.add((String) entry.value);
-                list.addAll(headerValues);
-                entry.value = list;
-            }
+        if (headerName == null) {
+            throw new IllegalArgumentException("headerName is null");
         }
+        if (headerValues == null || headerValues.isEmpty()) {
+            return;
+        }
+        getOrCreateEntry(headerName).addAll(headerValues);
     }
 
-    public void clear() {
-        for(int i = 0; i < SIZE; ++i) {
-            entries[i] = null;
-        }
-    }
-
-    public Collection<HttpString> getHeaderNames() {
-
-        HashSet<HttpString> ret = new HashSet<>();
-        for(HttpString i : this) {
-            ret.add(i);
-        }
-        return ret;
-    }
+    // put
 
     public void put(HttpString headerName, String headerValue) {
-        HeaderEntry entry = getEntry(headerName);
-        if (entry == null) {
-            final int pos = (headerName.hashCode() & SIGN_MASK) % SIZE;
-            HeaderEntry exiting = entries[pos];
-            entry = new HeaderEntry();
-            entry.next = exiting;
-            entry.name = headerName;
-            entry.value = headerValue;
-            entries[pos] = entry;
-        } else {
-            entry.value = headerValue;
+        if (headerName == null) {
+            throw new IllegalArgumentException("headerName is null");
         }
+        if (headerValue == null) {
+            remove(headerName);
+            return;
+        }
+        final HeaderValues headerValues = getOrCreateEntry(headerName);
+        headerValues.clear();
+        headerValues.add(headerValue);
     }
 
     public void put(HttpString headerName, long headerValue) {
-        put(headerName, Long.toString(headerValue));
+        if (headerName == null) {
+            throw new IllegalArgumentException("headerName is null");
+        }
+        final HeaderValues entry = getOrCreateEntry(headerName);
+        entry.clear();
+        entry.add(Long.toString(headerValue));
     }
+
+    public void putAll(HttpString headerName, Collection<String> headerValues) {
+        if (headerName == null) {
+            throw new IllegalArgumentException("headerName is null");
+        }
+        if (headerValues == null || headerValues.isEmpty()) {
+            remove(headerName);
+        }
+        final HeaderValues entry = getOrCreateEntry(headerName);
+        entry.clear();
+        entry.addAll(headerValues);
+    }
+
+    // clear
+
+    public void clear() {
+        Arrays.fill(table, null);
+        size = 0;
+    }
+
+    // remove
 
     public Collection<String> remove(HttpString headerName) {
-        final int pos = (headerName.hashCode() & SIGN_MASK) % SIZE;
-        HeaderEntry entry = entries[pos];
-        if(entry == null) {
-            return null;
+        if (headerName == null) {
+            return Collections.emptyList();
         }
-        if(entry.name.equals(headerName)) {
-            entries[pos] = entry.next;
-            if (entry.value instanceof List) {
-                return (Collection<String>) entry.value;
-            } else {
-                return (List)Collections.singletonList(entry.value);
-            }
-        }
-        HeaderEntry prev = entry;
-        entry = entry.next;
-        while (entry != null) {
-            if(entry.name.equals(headerName)) {
-                prev.next = entry.next;
-                if (entry.value instanceof List) {
-                    return (Collection<String>) entry.value;
-                } else {
-                    return (List)Collections.singletonList(entry.value);
-                }
-            }
-            prev = entry;
-            entry = entry.next;
-        }
-        return null;
+        final Collection<String> values = removeEntry(headerName);
+        return values != null ? values : Collections.<String>emptyList();
     }
 
-    /**
-     * Lock this header map to make it immutable.  This method is idempotent.
-     */
-    public void lock() {
-
-    }
+    // contains
 
     public boolean contains(HttpString headerName) {
-        final Object value = getEntry(headerName);
-        return value != null;
+        final HeaderValues headerValues = getEntry(headerName);
+        if (headerValues == null) {
+            return false;
+        }
+        final Object v = headerValues.value;
+        if (v instanceof String) {
+            return true;
+        }
+        final String[] list = (String[]) v;
+        for (int i = 0; i < list.length; i++) {
+            if (list[i] != null) {
+                return true;
+            }
+        }
+        return false;
     }
+
+    // compare
 
     @Override
     public boolean equals(final Object o) {
@@ -211,79 +645,7 @@ public final class HeaderMap implements Iterable<HttpString> {
 
     @Override
     public String toString() {
-        return "HeaderMap{" +
-                "values=" + entries +
-                '}';
-    }
-
-    private Object getValue(HttpString headerName) {
-        HeaderEntry entry = getEntry(headerName);
-        if(entry == null) {
-            return null;
-        }
-        return entry.value;
-    }
-
-    private HeaderEntry getEntry(HttpString headerName) {
-        final int pos = (headerName.hashCode() & SIGN_MASK) % SIZE;
-        HeaderEntry entry = entries[pos];
-        while (entry != null) {
-            if(entry.name.equals(headerName)) {
-                return entry;
-            }
-            entry = entry.next;
-        }
-        return null;
-    }
-
-    private static final class HeaderEntry {
-        HeaderEntry next;
-        Object value;
-        HttpString name;
-    }
-
-    private class MapIterator implements Iterator<HttpString> {
-        private int pos = 0;
-        private HeaderEntry current;
-
-        MapIterator() {
-            while (pos < entries.length && entries[pos] == null) {
-                ++pos;
-            }
-            if (pos < entries.length) {
-                current = entries[pos];
-            }
-        }
-
-
-        @Override
-        public boolean hasNext() {
-            return current != null;
-        }
-
-        @Override
-        public HttpString next() {
-            HttpString toReturn = current.name;
-            if (current.next != null) {
-                current = current.next;
-            } else {
-
-                do {
-                    ++pos;
-                } while (pos < entries.length && entries[pos] == null);
-
-                if (pos < entries.length) {
-                    current = entries[pos];
-                } else {
-                    current = null;
-                }
-            }
-            return toReturn;
-        }
-
-        @Override
-        public void remove() {
-            throw new IllegalStateException();
-        }
+        // todo...
+        return "HeaderMap";
     }
 }

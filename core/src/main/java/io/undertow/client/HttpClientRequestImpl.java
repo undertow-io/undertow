@@ -203,7 +203,6 @@ class HttpClientRequestImpl extends HttpClientRequest {
                 }
             }
         }
-        headers.lock();
         conduitChannel = new ConduitStreamSinkChannel(underlyingChannel, conduit);
         requestChannel = new GatedStreamSinkChannel(conduitChannel, this, false, false);
         // Enqueue the request for sending

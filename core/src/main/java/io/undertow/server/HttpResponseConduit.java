@@ -18,11 +18,11 @@
 
 package io.undertow.server;
 
+import io.undertow.util.HeaderValues;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
-import java.util.Iterator;
 
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
@@ -47,10 +47,10 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
 
     private int state = STATE_START;
 
-    private Iterator<HttpString> nameIterator;
+    private long fiCookie = -1L;
     private String string;
-    private HttpString headerName;
-    private Iterator<String> valueIterator;
+    private HeaderValues headerValues;
+    private int valueIdx;
     private int charIndex;
     private Pooled<ByteBuffer> pooledBuffer;
     private final HttpServerExchange exchange;
@@ -87,7 +87,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
     /**
      * Handles writing out the header data. It can also take a byte buffer of user
      * data, to enable both user data and headers to be written out in a single operation,
-     * which has a noticable performance impact.
+     * which has a noticeable performance impact.
      *
      * It is up to the caller to note the current position of this buffer before and after they
      * call this method, and use this to figure out how many bytes (if any) have been written.
@@ -101,12 +101,12 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             pooledBuffer = pool.allocate();
         }
         ByteBuffer buffer = pooledBuffer.getResource();
-        Iterator<HttpString> nameIterator = this.nameIterator;
-        Iterator<String> valueIterator = this.valueIterator;
+        long fiCookie = this.fiCookie;
+        int valueIdx = this.valueIdx;
         int charIndex = this.charIndex;
         int length;
         String string = this.string;
-        HttpString headerName = this.headerName;
+        HeaderValues headerValues = this.headerValues;
         int res;
         // BUFFER IS FLIPPED COMING IN
         if (state != STATE_START && buffer.hasRemaining()) {
@@ -118,6 +118,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             } while (buffer.hasRemaining());
         }
         buffer.clear();
+        HeaderMap headers = exchange.getResponseHeaders();
         // BUFFER IS NOW EMPTY FOR FILLING
         for (;;) {
             switch (state) {
@@ -142,9 +143,8 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         buffer.put((byte) string.charAt(charIndex));
                     }
                     buffer.put((byte) '\r').put((byte) '\n');
-                    HeaderMap headers = exchange.getResponseHeaders();
-                    nameIterator = headers.iterator();
-                    if (! nameIterator.hasNext()) {
+                    fiCookie = headers.fastIterateNonEmpty();
+                    if (fiCookie == -1L) {
                         buffer.put((byte) '\r').put((byte) '\n');
                         buffer.flip();
                         while (buffer.hasRemaining()) {
@@ -157,11 +157,12 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         pooledBuffer = null;
                         return STATE_BODY;
                     }
-                    headerName = nameIterator.next();
+                    headerValues = headers.fiCurrent(fiCookie);
                     charIndex = 0;
                     // fall thru
                 }
                 case STATE_HDR_NAME: {
+                    final HttpString headerName = headerValues.getHeaderName();
                     length = headerName.length();
                     while (charIndex < length) {
                         if (buffer.hasRemaining()) {
@@ -172,10 +173,10 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                                 res = next.write(buffer);
                                 if (res == 0) {
                                     this.string = string;
-                                    this.headerName = headerName;
+                                    this.headerValues = headerValues;
                                     this.charIndex = charIndex;
-                                    this.valueIterator = valueIterator;
-                                    this.nameIterator = nameIterator;
+                                    this.fiCookie = fiCookie;
+                                    this.valueIdx = valueIdx;
                                     return STATE_HDR_NAME;
                                 }
                             } while (buffer.hasRemaining());
@@ -191,10 +192,10 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                             res = next.write(buffer);
                             if (res == 0) {
                                 this.string = string;
-                                this.headerName = headerName;
+                                this.headerValues = headerValues;
                                 this.charIndex = charIndex;
-                                this.valueIterator = valueIterator;
-                                this.nameIterator = nameIterator;
+                                this.fiCookie = fiCookie;
+                                this.valueIdx = valueIdx;
                                 return STATE_HDR_D;
                             }
                         } while (buffer.hasRemaining());
@@ -210,21 +211,17 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                             res = next.write(buffer);
                             if (res == 0) {
                                 this.string = string;
-                                this.headerName = headerName;
+                                this.headerValues = headerValues;
                                 this.charIndex = charIndex;
-                                this.valueIterator = valueIterator;
-                                this.nameIterator = nameIterator;
+                                this.fiCookie = fiCookie;
+                                this.valueIdx = valueIdx;
                                 return STATE_HDR_DS;
                             }
                         } while (buffer.hasRemaining());
                         buffer.clear();
                     }
                     buffer.put((byte) ' ');
-                    if(valueIterator == null) {
-                        valueIterator = exchange.getResponseHeaders().get(headerName).iterator();
-                    }
-                    assert valueIterator.hasNext();
-                    string = valueIterator.next();
+                    string = headerValues.get(valueIdx++);
                     charIndex = 0;
                     // fall thru
                 }
@@ -239,10 +236,10 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                                 res = next.write(buffer);
                                 if (res == 0) {
                                     this.string = string;
-                                    this.headerName = headerName;
+                                    this.headerValues = headerValues;
                                     this.charIndex = charIndex;
-                                    this.valueIterator = valueIterator;
-                                    this.nameIterator = nameIterator;
+                                    this.fiCookie = fiCookie;
+                                    this.valueIdx = valueIdx;
                                     return STATE_HDR_VAL;
                                 }
                             } while (buffer.hasRemaining());
@@ -250,7 +247,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         }
                     }
                     charIndex = 0;
-                    if (! valueIterator.hasNext()) {
+                    if (valueIdx == headerValues.size()) {
                         if (! buffer.hasRemaining()) {
                             if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_CR;
                         }
@@ -259,9 +256,9 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                             if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_LF;
                         }
                         buffer.put((byte) 10); // LF
-                        if (nameIterator.hasNext()) {
-                            headerName = nameIterator.next();
-                            valueIterator = null;
+                        if ((fiCookie = headers.fiNextNonEmpty(fiCookie)) != -1L) {
+                            headerValues = headers.fiCurrent(fiCookie);
+                            valueIdx = 0;
                             state = STATE_HDR_NAME;
                             break;
                         } else {
@@ -273,8 +270,8 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                                 if (flushHeaderBuffer(buffer)) return STATE_HDR_FINAL_LF;
                             }
                             buffer.put((byte) 10); // LF
-                            this.nameIterator = null;
-                            this.valueIterator = null;
+                            this.fiCookie = -1;
+                            this.valueIdx = 0;
                             this.string = null;
                             buffer.flip();
                             //for performance reasons we use a gather write if there is user data
@@ -314,12 +311,12 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_LF;
                     }
                     buffer.put((byte) 10); // LF
-                    if(valueIterator.hasNext()) {
+                    if (valueIdx < headerValues.size()) {
                         state = STATE_HDR_NAME;
                         break;
-                    } else if (nameIterator.hasNext()) {
-                        headerName = nameIterator.next();
-                        valueIterator = null;
+                    } else if ((fiCookie = headers.fiNextNonEmpty(fiCookie)) != -1L) {
+                        headerValues = headers.fiCurrent(fiCookie);
+                        valueIdx = 0;
                         state = STATE_HDR_NAME;
                         break;
                     }
@@ -337,8 +334,8 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         if (flushHeaderBuffer(buffer)) return STATE_HDR_FINAL_LF;
                     }
                     buffer.put((byte) 10); // LF
-                    this.nameIterator = null;
-                    this.valueIterator = null;
+                    this.fiCookie = -1L;
+                    this.valueIdx = 0;
                     this.string = null;
                     buffer.flip();
                     //for performance reasons we use a gather write if there is user data

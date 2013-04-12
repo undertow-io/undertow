@@ -49,7 +49,6 @@ public final class HttpClientResponse extends AbstractAttachable {
         this.reason = responseBuilder.getReasonPhrase();
         this.responseCode = responseBuilder.getStatusCode();
         this.headers = responseBuilder.getResponseHeaders();
-        this.headers.lock();
 
         this.contentLength = contentLength;
         this.sourceChannel = sourceChannel;
