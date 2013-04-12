@@ -19,19 +19,20 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import java.net.URI;
 
+import javax.servlet.DispatcherType;
 import javax.websocket.Session;
 
 import io.undertow.client.HttpClient;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.ConcreteIoFuture;
-import io.undertow.websockets.jsr.bootstrap.WebSocketDeployer;
-import io.undertow.websockets.jsr.bootstrap.WebSocketDeployment;
-import io.undertow.websockets.jsr.bootstrap.WebSocketDeploymentInfo;
+import io.undertow.websockets.jsr.JsrWebSocketFilter;
+import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -50,27 +51,27 @@ import org.xnio.OptionMap;
 @RunWith(DefaultServer.class)
 public class AnnotatedEndpointTest {
 
-    private static WebSocketDeployment deployment;
+    private static ServerWebSocketContainer deployment;
 
     @BeforeClass
     public static void setup() throws Exception {
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
+        deployment = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(AnnotatedEndpointTest.class.getClassLoader())
                 .setContextPath("/")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER);
+                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
+                .addServletContextAttribute(javax.websocket.server.ServerContainer.class.getName(), deployment)
+                .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
+                .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
 
-
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        info.setBufferPool(new ByteBufferSlicePool(100, 1000));
-        deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getDeploymentInfo().addAnnotatedEndpoints(AnnotatedTestEndpoint.class, AnnotatedClientEndpoint.class);
-        WebSocketDeployer.deploy(deployment, builder, AnnotatedEndpointTest.class.getClassLoader());
-
+        deployment.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 1000));
+        deployment.addEndpoint(AnnotatedTestEndpoint.class);
+        deployment.addEndpoint(AnnotatedClientEndpoint.class);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -100,7 +101,7 @@ public class AnnotatedEndpointTest {
     public void testAnnotatedClientEndpoint() throws Exception {
 
 
-        Session session = deployment.getContainer().connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
+        Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Bob"));
 
         Assert.assertEquals("hi Bob", AnnotatedClientEndpoint.message());
 

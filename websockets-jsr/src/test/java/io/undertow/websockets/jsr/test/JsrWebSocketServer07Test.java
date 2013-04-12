@@ -26,6 +26,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
@@ -40,14 +41,14 @@ import io.undertow.client.HttpClient;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.ConcreteIoFuture;
-import io.undertow.websockets.jsr.bootstrap.WebSocketDeployer;
-import io.undertow.websockets.jsr.bootstrap.WebSocketDeployment;
-import io.undertow.websockets.jsr.bootstrap.WebSocketDeploymentInfo;
+import io.undertow.websockets.jsr.JsrWebSocketFilter;
+import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -59,6 +60,7 @@ import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
+import org.xnio.ByteBufferSlicePool;
 import org.xnio.OptionMap;
 
 /**
@@ -96,13 +98,10 @@ public class JsrWebSocketServer07Test {
             }
         }
 
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
 
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
-
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
@@ -112,7 +111,6 @@ public class JsrWebSocketServer07Test {
         Assert.assertNull(cause.get());
         client.destroy();
     }
-
 
     @org.junit.Test
     public void testBinaryWithByteArray() throws Exception {
@@ -138,12 +136,9 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
-
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         deployServlet(builder);
 
@@ -180,13 +175,9 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
-
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
-
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
@@ -230,13 +221,10 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
 
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
-
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
@@ -282,12 +270,10 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
 
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         deployServlet(builder);
 
@@ -327,13 +313,10 @@ public class JsrWebSocketServer07Test {
             }
 
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
 
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
-
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
@@ -365,14 +348,9 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
-
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
-
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
@@ -412,12 +390,10 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
 
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         deployServlet(builder);
 
@@ -457,13 +433,10 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
 
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
-
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
@@ -487,13 +460,10 @@ public class JsrWebSocketServer07Test {
                 connected.set(true);
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
 
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
-
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
@@ -528,13 +498,10 @@ public class JsrWebSocketServer07Test {
                 reason.set(closeReason);
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
 
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
-
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
@@ -545,7 +512,6 @@ public class JsrWebSocketServer07Test {
         Assert.assertEquals(reasonText, reason.get().getReasonPhrase());
         client.destroy();
     }
-
 
     @org.junit.Test
     public void testBinaryWithByteBufferAsync() throws Exception {
@@ -577,13 +543,10 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
 
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
-
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
@@ -619,13 +582,10 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        WebSocketDeploymentInfo info = new WebSocketDeploymentInfo();
-        WebSocketDeployment deployment = WebSocketDeployment.create(info, HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY));
-        deployment.getContainer().addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
 
-        DeploymentInfo builder = createDeploymentInfo();
-        WebSocketDeployer.deploy(deployment, builder, getClass().getClassLoader());
-
+        builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
@@ -640,18 +600,19 @@ public class JsrWebSocketServer07Test {
         return WebSocketVersion.V07;
     }
 
+    private void deployServlet(final ServerWebSocketContainer deployment) throws ServletException {
 
-    private DeploymentInfo createDeploymentInfo() {
-        return new DeploymentInfo()
+        final DeploymentInfo builder;
+        builder = new DeploymentInfo()
                 .setClassLoader(getClass().getClassLoader())
                 .setContextPath("/")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("websocket.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER);
-    }
+                .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
+                .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST)
+                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
+                .addServletContextAttribute(javax.websocket.server.ServerContainer.class.getName(), deployment);
 
-
-    private void deployServlet(final DeploymentInfo builder) throws ServletException {
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
         DeploymentManager manager = container.addDeployment(builder);

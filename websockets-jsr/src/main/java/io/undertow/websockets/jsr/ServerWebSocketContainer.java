@@ -19,28 +19,42 @@ package io.undertow.websockets.jsr;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
+import javax.websocket.ClientEndpoint;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.DeploymentException;
 import javax.websocket.Endpoint;
 import javax.websocket.Extension;
 import javax.websocket.Session;
 import javax.websocket.server.ServerContainer;
+import javax.websocket.server.ServerEndpoint;
 import javax.websocket.server.ServerEndpointConfig;
 
+import io.undertow.client.HttpClient;
+import io.undertow.servlet.api.ClassIntrospecter;
+import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
+import io.undertow.websockets.api.WebSocketSessionIdGenerator;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
+import io.undertow.websockets.impl.UuidWebSocketSessionIdGenerator;
 import io.undertow.websockets.impl.WebSocketChannelSession;
 import io.undertow.websockets.impl.WebSocketRecieveListeners;
-import io.undertow.websockets.jsr.bootstrap.WebSocketDeployment;
+import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
+import org.xnio.Pool;
 
 
 /**
@@ -50,15 +64,42 @@ import org.xnio.OptionMap;
  */
 public class ServerWebSocketContainer implements ServerContainer {
 
-    private final WebSocketDeployment webSocketDeployment;
+    private final ClassIntrospecter classIntrospecter;
+
+    private final WebSocketSessionIdGenerator sessionIdGenerator = new UuidWebSocketSessionIdGenerator();
+
+    private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new HashMap<>();
+
+    private final List<ConfiguredServerEndpoint> configuredServerEndpoints = new ArrayList<>();
+
+    /**
+     * set of all deployed server endpoint paths. Due to the comparison function we can detect
+     * overlaps
+     */
+    private final TreeSet<PathTemplate> seenPaths = new TreeSet<>();
+
+    private HttpClient httpClient;
+    private Pool<ByteBuffer> bufferPool;
+
     private volatile long defaultAsyncSendTimeout;
     private volatile long maxSessionIdleTimeout;
     private volatile int defaultMaxBinaryMessageBufferSize;
     private volatile int defaultMaxTextMessageBufferSize;
     private volatile boolean deploymentComplete = false;
 
-    public ServerWebSocketContainer(final WebSocketDeployment webSocketDeployment) {
-        this.webSocketDeployment = webSocketDeployment;
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter) {
+        this.classIntrospecter = classIntrospecter;
+    }
+
+
+    public void start(HttpClient httpClient, Pool<ByteBuffer> bufferPool) {
+        this.httpClient = httpClient;
+        this.bufferPool = bufferPool;
+    }
+
+    public void stop() {
+        this.httpClient = null;
+        this.bufferPool = null;
     }
 
     @Override
@@ -73,7 +114,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     @Override
     public Session connectToServer(final Object annotatedEndpointInstance, final URI path) throws DeploymentException, IOException {
-        ConfiguredClientEndpoint config = webSocketDeployment.getClientEndpoint(annotatedEndpointInstance.getClass());
+        ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass());
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
         }
@@ -83,7 +124,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     @Override
     public Session connectToServer(Class<?> aClass, URI uri) throws DeploymentException, IOException {
-        ConfiguredClientEndpoint config = webSocketDeployment.getClientEndpoint(aClass);
+        ConfiguredClientEndpoint config = getClientEndpoint(aClass);
         if (config == null) {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(aClass);
         }
@@ -97,16 +138,14 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     @Override
     public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
-        if (!deploymentComplete) {
-            throw JsrWebSocketMessages.MESSAGES.cannotConnectUntilDeploymentComplete();
-        }
 
+        //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
 
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(webSocketDeployment.getHttpClient(), webSocketDeployment.getDeploymentInfo().getBufferPool(), OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(httpClient, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
-        WebSocketChannelSession wss = new WebSocketChannelSession(channel, webSocketDeployment.getDeploymentInfo().getSessionIdGenerator().nextId(), false);
+        WebSocketChannelSession wss = new WebSocketChannelSession(channel, sessionIdGenerator.nextId(), false);
 
         WebSocketRecieveListeners.startRecieving(wss, channel, false);
 
@@ -163,22 +202,104 @@ public class ServerWebSocketContainer implements ServerContainer {
 
 
     @Override
-    public void addEndpoint(final Class<?> endpointClass) throws DeploymentException {
+    public void addEndpoint(final Class<?> endpoint) throws DeploymentException {
         if (deploymentComplete) {
             throw JsrWebSocketMessages.MESSAGES.cannotAddEndpointAfterDeployment();
         }
-        webSocketDeployment.getDeploymentInfo().addProgramaticAnnotatedEndpoints(endpointClass);
+        try {
+            ServerEndpoint serverEndpoint = endpoint.getAnnotation(ServerEndpoint.class);
+            ClientEndpoint clientEndpoint = endpoint.getAnnotation(ClientEndpoint.class);
+            if (serverEndpoint != null) {
+                final PathTemplate template = PathTemplate.create(serverEndpoint.value());
+                if (seenPaths.contains(template)) {
+                    PathTemplate existing = null;
+                    for (PathTemplate p : seenPaths) {
+                        if (p.compareTo(template) == 0) {
+                            existing = p;
+                            break;
+                        }
+                    }
+                    throw JsrWebSocketMessages.MESSAGES.multipleEndpointsWithOverlappingPaths(template, existing);
+                }
+                seenPaths.add(template);
+                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint));
+
+                ServerEndpointConfig config = ServerEndpointConfig.Builder.create(endpoint, serverEndpoint.value())
+                        .decoders(Arrays.asList(serverEndpoint.decoders()))
+                        .encoders(Arrays.asList(serverEndpoint.encoders()))
+                        .subprotocols(Arrays.asList(serverEndpoint.subprotocols()))
+                        .configurator(new ServerInstanceFactoryConfigurator(factory))
+                        .build();
+
+                ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, factory, template);
+                configuredServerEndpoints.add(confguredServerEndpoint);
+            } else if (clientEndpoint != null) {
+                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint));
+
+                ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
+                        .decoders(Arrays.asList(clientEndpoint.decoders()))
+                        .encoders(Arrays.asList(clientEndpoint.encoders()))
+                        .preferredSubprotocols(Arrays.asList(clientEndpoint.subprotocols()))
+                        .configurator(clientEndpoint.configurator().newInstance())
+                        .build();
+
+                ConfiguredClientEndpoint configuredClientEndpoint = new ConfiguredClientEndpoint(config, factory);
+                clientEndpoints.put(endpoint, configuredClientEndpoint);
+            } else {
+                throw JsrWebSocketMessages.MESSAGES.classWasNotAnnotated(endpoint);
+            }
+
+        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException e) {
+            throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+        }
     }
 
     @Override
-    public void addEndpoint(final ServerEndpointConfig serverConfig) throws DeploymentException {
+    public void addEndpoint(final ServerEndpointConfig endpoint) throws DeploymentException {
         if (deploymentComplete) {
             throw JsrWebSocketMessages.MESSAGES.cannotAddEndpointAfterDeployment();
         }
-        webSocketDeployment.getDeploymentInfo().addProgramaticEndpoints(serverConfig);
+        final PathTemplate template = PathTemplate.create(endpoint.getPath());
+        if (seenPaths.contains(template)) {
+            PathTemplate existing = null;
+            for (PathTemplate p : seenPaths) {
+                if (p.compareTo(template) == 0) {
+                    existing = p;
+                    break;
+                }
+            }
+            throw JsrWebSocketMessages.MESSAGES.multipleEndpointsWithOverlappingPaths(template, existing);
+        }
+        seenPaths.add(template);
+        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template);
+        configuredServerEndpoints.add(confguredServerEndpoint);
     }
+
+
+    public ConfiguredClientEndpoint getClientEndpoint(final Class<?> type) {
+        return clientEndpoints.get(type);
+    }
+
 
     public void deploymentComplete() {
         deploymentComplete = true;
+    }
+
+    private static final class ServerInstanceFactoryConfigurator extends ServerEndpointConfig.Configurator {
+
+        private final InstanceFactory<?> factory;
+
+        private ServerInstanceFactoryConfigurator(final InstanceFactory<?> factory) {
+            this.factory = factory;
+        }
+
+        @Override
+        public <T> T getEndpointInstance(final Class<T> endpointClass) throws InstantiationException {
+            return (T) factory.createInstance().getInstance();
+        }
+    }
+
+    public List<ConfiguredServerEndpoint> getConfiguredServerEndpoints() {
+        return configuredServerEndpoints;
     }
 }

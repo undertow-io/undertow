@@ -35,10 +35,12 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.websocket.server.ServerContainer;
 
 import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.protocol.Handshake;
+import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
 import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
@@ -56,25 +58,12 @@ import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
  */
 public class JsrWebSocketFilter implements Filter {
 
-    private final List<ConfiguredServerEndpoint> configuredServerEndpoints;
 
-    private final Map<ConfiguredServerEndpoint, List<Handshake>> handshakes;
+    private WebSocketConnectionCallback callback;
 
-    private final WebSocketConnectionCallback callback;
+    private Map<ConfiguredServerEndpoint, List<Handshake>> handshakes;
 
-    public JsrWebSocketFilter(WebSocketConnectionCallback callback, List<ConfiguredServerEndpoint> config) {
-        this.callback = callback;
-        List<ConfiguredServerEndpoint> endpoints = new ArrayList<>(config);
-        Collections.sort(endpoints, new Comparator<ConfiguredServerEndpoint>() {
-            @Override
-            public int compare(final ConfiguredServerEndpoint o1, final ConfiguredServerEndpoint o2) {
-                return o1.getPathTemplate().compareTo(o2.getPathTemplate());
-            }
-        });
-
-        this.configuredServerEndpoints = endpoints;
-        this.handshakes = handshakes(endpoints);
-    }
+    private List<ConfiguredServerEndpoint> configuredServerEndpoints;
 
     protected Map<ConfiguredServerEndpoint, List<Handshake>> handshakes(List<ConfiguredServerEndpoint> configs) {
         final IdentityHashMap<ConfiguredServerEndpoint, List<Handshake>> ret = new IdentityHashMap<>();
@@ -90,7 +79,17 @@ public class JsrWebSocketFilter implements Filter {
 
     @Override
     public void init(final FilterConfig filterConfig) throws ServletException {
-
+        ServerWebSocketContainer container = (ServerWebSocketContainer) filterConfig.getServletContext().getAttribute(ServerContainer.class.getName());
+        container.deploymentComplete();
+        configuredServerEndpoints = new ArrayList<>(container.getConfiguredServerEndpoints());
+        Collections.sort(configuredServerEndpoints, new Comparator<ConfiguredServerEndpoint>() {
+            @Override
+            public int compare(final ConfiguredServerEndpoint o1, final ConfiguredServerEndpoint o2) {
+                return o1.getPathTemplate().compareTo(o2.getPathTemplate());
+            }
+        });
+        this.handshakes = handshakes(configuredServerEndpoints);
+        this.callback = new WebSocketSessionConnectionCallback(new EndpointSessionHandler(container));
     }
 
     @Override
@@ -106,7 +105,7 @@ public class JsrWebSocketFilter implements Filter {
             } else {
                 path = req.getServletPath() + req.getPathInfo();
             }
-            if(!path.startsWith("/")) {
+            if (!path.startsWith("/")) {
                 path = "/" + path;
             }
 
