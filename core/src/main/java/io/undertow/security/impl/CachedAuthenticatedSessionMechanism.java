@@ -31,14 +31,6 @@ import io.undertow.server.HttpServerExchange;
  */
 public class CachedAuthenticatedSessionMechanism implements AuthenticationMechanism {
 
-    private static final String NAME = "CACHED";
-
-    @Override
-    public String getName() {
-        // TODO - The API changes probably mean we do not need to be able to return a name anymore.
-        return NAME;
-    }
-
     @Override
     public AuthenticationMechanismOutcome authenticate(HttpServerExchange exchange, SecurityContext securityContext) {
         AuthenticatedSessionManager sessionManager = exchange.getAttachment(AuthenticatedSessionManager.ATTACHMENT_KEY);
