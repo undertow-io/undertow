@@ -58,9 +58,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.AbstractStreamSourceConduit;
-import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
-import org.xnio.conduits.StreamSourceChannelWrappingConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
 import static org.xnio.Bits.allAreSet;
@@ -89,7 +87,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      * If the executor is null then it will be executed by the XNIO worker.
      */
     public static final AttachmentKey<Runnable> DISPATCH_TASK = AttachmentKey.create(Runnable.class);
-
 
     private static final Logger log = Logger.getLogger(HttpServerExchange.class);
 
@@ -149,8 +146,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private String queryString = "";
 
-    private List<ConduitWrapper<StreamSourceConduit>> requestWrappers = new ArrayList<ConduitWrapper<StreamSourceConduit>>(3);
-    private List<ConduitWrapper<StreamSinkConduit>> responseWrappers = new ArrayList<ConduitWrapper<StreamSinkConduit>>(3);
+    private int requestWrapperCount = 0;
+    private ConduitWrapper<StreamSourceConduit>[] requestWrappers = new ConduitWrapper[2];
+
+    private int responseWrapperCount = 0;
+    private ConduitWrapper<StreamSinkConduit>[] responseWrappers = new ConduitWrapper[4];
 
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
     private static final int FLAG_RESPONSE_SENT = 1 << 10;
@@ -508,7 +508,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param executor The executor to use
      */
     public void setDispatchExecutor(final Executor executor) {
-        if(executor == null) {
+        if (executor == null) {
             removeAttachment(DISPATCH_EXECUTOR);
         } else {
             putAttachment(DISPATCH_EXECUTOR, executor);
@@ -650,15 +650,16 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the channel for the inbound request, or {@code null} if another party already acquired the channel
      */
     public StreamSourceChannel getRequestChannel() {
-        final List<ConduitWrapper<StreamSourceConduit>> wrappers = this.requestWrappers;
+        final ConduitWrapper<StreamSourceConduit>[] wrappers = this.requestWrappers;
         this.requestWrappers = null;
         if (wrappers == null) {
             return null;
         }
 
 
-        ConduitFactory<StreamSourceConduit> factory = new ImmediateConduitFactory<StreamSourceConduit>(new StreamSourceChannelWrappingConduit(underlyingRequestChannel));
-        for (final ConduitWrapper<StreamSourceConduit> wrapper : wrappers) {
+        ConduitFactory<StreamSourceConduit> factory = new ImmediateConduitFactory<StreamSourceConduit>(connection.getChannel().getSourceChannel().getConduit());
+        for (int i = 0; i < requestWrapperCount; ++i) {
+            final ConduitWrapper<StreamSourceConduit> wrapper = wrappers[i];
             final ConduitFactory oldFactory = factory;
             factory = new ConduitFactory<StreamSourceConduit>() {
                 @Override
@@ -667,7 +668,8 @@ public final class HttpServerExchange extends AbstractAttachable {
                 }
             };
         }
-        return requestChannel = new ConduitStreamSourceChannel(underlyingRequestChannel, new ReadDispatchConduit(factory.create()));
+        connection.getChannel().getSourceChannel().setConduit(new ReadDispatchConduit(factory.create()));
+        return requestChannel = connection.getChannel().getSourceChannel();
     }
 
     public boolean isRequestChannelAvailable() {
@@ -778,14 +780,15 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the response channel, or {@code null} if another party already acquired the channel
      */
     public StreamSinkChannel getResponseChannel() {
-        final List<ConduitWrapper<StreamSinkConduit>> wrappers = responseWrappers;
+        final ConduitWrapper<StreamSinkConduit>[] wrappers = responseWrappers;
         this.responseWrappers = null;
         if (wrappers == null) {
             return null;
         }
 
         ConduitFactory<StreamSinkConduit> factory = new ImmediateConduitFactory<>(connection.getChannel().getSinkChannel().getConduit());
-        for (final ConduitWrapper<StreamSinkConduit> wrapper : wrappers) {
+        for (int i = 0; i < responseWrapperCount; ++i) {
+            final ConduitWrapper<StreamSinkConduit> wrapper = wrappers[i];
             final ConduitFactory oldFactory = factory;
             factory = new ConduitFactory<StreamSinkConduit>() {
                 @Override
@@ -846,11 +849,16 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param wrapper the wrapper
      */
     public void addRequestWrapper(final ConduitWrapper<StreamSourceConduit> wrapper) {
-        List<ConduitWrapper<StreamSourceConduit>> wrappers = requestWrappers;
+        ConduitWrapper<StreamSourceConduit>[] wrappers = requestWrappers;
         if (wrappers == null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
-        wrappers.add(wrapper);
+        if (wrappers.length == requestWrapperCount) {
+            requestWrappers = new ConduitWrapper[wrappers.length + 2];
+            System.arraycopy(wrappers, 0, requestWrappers, 0, wrappers.length);
+            wrappers = requestWrappers;
+        }
+        wrappers[requestWrapperCount++] = wrapper;
     }
 
     /**
@@ -859,11 +867,16 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param wrapper the wrapper
      */
     public void addResponseWrapper(final ConduitWrapper<StreamSinkConduit> wrapper) {
-        List<ConduitWrapper<StreamSinkConduit>> wrappers = responseWrappers;
+        ConduitWrapper<StreamSinkConduit>[] wrappers = responseWrappers;
         if (wrappers == null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
-        wrappers.add(wrapper);
+        if (wrappers.length == responseWrapperCount) {
+            responseWrappers = new ConduitWrapper[wrappers.length + 2];
+            System.arraycopy(wrappers, 0, responseWrappers, 0, wrappers.length);
+            wrappers = responseWrappers;
+        }
+        wrappers[responseWrapperCount++] = wrapper;
     }
 
     /**
@@ -960,7 +973,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void endExchange() {
         final int state = this.state;
-        if(allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
+        if (allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
             return;
         }
         while (!defaultResponseListeners.isEmpty()) {
