@@ -37,7 +37,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
     private Collection<HttpString> headerNames;
 
     public HeaderMap() {
-        table = new Object[32];
+        table = new Object[16];
     }
 
     private HeaderValues getEntry(final HttpString headerName) {
