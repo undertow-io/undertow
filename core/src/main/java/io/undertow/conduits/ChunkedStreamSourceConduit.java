@@ -198,7 +198,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                 while (anyAreSet(newVal, FLAG_READING_LENGTH)) {
                     while (buf.hasRemaining()) {
                         byte b = buf.get();
-                        if ((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b < 'F')) {
+                        if ((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')) {
                             chunkRemaining <<= 4; //shift it 4 bytes and then add the next value to the end
                             chunkRemaining += Integer.parseInt("" + (char) b, 16);
                         } else {
