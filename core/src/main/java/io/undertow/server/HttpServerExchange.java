@@ -58,9 +58,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.AbstractStreamSourceConduit;
-import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
-import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceChannelWrappingConduit;
 import org.xnio.conduits.StreamSourceConduit;
@@ -786,7 +784,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             return null;
         }
 
-        ConduitFactory<StreamSinkConduit> factory = new ImmediateConduitFactory<StreamSinkConduit>(new StreamSinkChannelWrappingConduit(underlyingResponseChannel));
+        ConduitFactory<StreamSinkConduit> factory = new ImmediateConduitFactory<>(connection.getChannel().getSinkChannel().getConduit());
         for (final ConduitWrapper<StreamSinkConduit> wrapper : wrappers) {
             final ConduitFactory oldFactory = factory;
             factory = new ConduitFactory<StreamSinkConduit>() {
@@ -796,10 +794,10 @@ public final class HttpServerExchange extends AbstractAttachable {
                 }
             };
         }
-        final ConduitStreamSinkChannel channel = new ConduitStreamSinkChannel(underlyingResponseChannel, new WriteDispatchConduit(factory.create()));
-        this.responseChannel = channel;
+        connection.getChannel().getSinkChannel().setConduit(new WriteDispatchConduit(factory.create()));
+        this.responseChannel = connection.getChannel().getSinkChannel();
         this.startResponse();
-        return channel;
+        return responseChannel;
     }
 
     /**
