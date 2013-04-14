@@ -45,6 +45,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediateConduitFactory;
 import io.undertow.util.Protocols;
+import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.SecureHashMap;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
@@ -1162,7 +1163,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         public void resumeWrites() {
             if (isInCall()) {
                 wakeup = false;
-                dispatch(this);
+                dispatch(SameThreadExecutor.INSTANCE, this);
             } else {
                 super.resumeWrites();
             }
@@ -1172,7 +1173,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         public void wakeupWrites() {
             if (isInCall()) {
                 wakeup = true;
-                dispatch(this);
+                dispatch(SameThreadExecutor.INSTANCE, this);
             } else {
                 super.wakeupWrites();
             }
@@ -1202,7 +1203,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public void resumeReads() {
             if (isInCall()) {
-                dispatch(this);
+                dispatch(SameThreadExecutor.INSTANCE, this);
             } else {
                 super.resumeReads();
             }
@@ -1214,5 +1215,4 @@ public final class HttpServerExchange extends AbstractAttachable {
             super.resumeReads();
         }
     }
-
 }
