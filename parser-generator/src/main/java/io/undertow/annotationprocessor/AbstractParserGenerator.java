@@ -271,8 +271,6 @@ public abstract class AbstractParserGenerator {
         c.putfield(parseStateClass, "current", HTTP_STRING_DESCRIPTOR);
         c.aload(STATE_CURRENT_BYTES_VAR);
         c.putfield(parseStateClass, "currentBytes", "[B");
-        c.aload(STATE_STRING_BUILDER_VAR);
-        c.putfield(parseStateClass, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
         c.iload(CURRENT_STATE_VAR);
         c.putfield(parseStateClass, "parseState", "I");
         c.returnInstruction();
@@ -290,8 +288,9 @@ public abstract class AbstractParserGenerator {
         c.putfield(parseStateClass, "current", HTTP_STRING_DESCRIPTOR);
         c.aconstNull();
         c.putfield(parseStateClass, "currentBytes", "[B");
-        c.aconstNull();
-        c.putfield(parseStateClass, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
+        c.aload(STATE_STRING_BUILDER_VAR);
+        c.iconst(0);
+        c.invokevirtual(StringBuilder.class.getName(), "setLength", "(I)V");
         c.iconst(0);
         c.putfield(parseStateClass, "parseState", "I");
         c.returnInstruction();
@@ -349,19 +348,17 @@ public abstract class AbstractParserGenerator {
         c.istore(CURRENT_STATE_VAR);
 
         //create the string builder
-        c.newInstruction(StringBuilder.class);
-        c.dup();
+        c.aload(STATE_STRING_BUILDER_VAR);
         c.aload(STATE_CURRENT_VAR);
         c.invokevirtual(HTTP_STRING_CLASS, "toString", "()Ljava/lang/String;");
         c.iconst(0);
         c.iload(STATE_POS_VAR);
         c.invokevirtual(String.class.getName(), "substring", "(II)Ljava/lang/String;");
-        c.invokespecial(StringBuilder.class.getName(), "<init>", "(Ljava/lang/String;)V");
+        c.invokevirtual(StringBuilder.class.getName(), "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;");
         c.swap();
 
         c.invokevirtual(StringBuilder.class.getName(), "append", "(C)Ljava/lang/StringBuilder;");
-        c.astore(STATE_STRING_BUILDER_VAR);
-        c.pop();
+        c.pop2();
         BranchEnd prefixToNoState = c.gotoInstruction();
 
         //handle the space case
@@ -437,9 +434,6 @@ public abstract class AbstractParserGenerator {
 
         //we have run out of bytes, so we need to write back the current state
         c.aload(PARSE_STATE_VAR);
-        c.dup();
-        c.aload(STATE_STRING_BUILDER_VAR);
-        c.putfield(parseStateClass, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
         c.iload(CURRENT_STATE_VAR);
         c.putfield(parseStateClass, "parseState", "I");
         c.iconst(0);
@@ -449,8 +443,6 @@ public abstract class AbstractParserGenerator {
         }
         c.aload(STATE_STRING_BUILDER_VAR);
         c.invokevirtual(StringBuilder.class.getName(), "toString", "()Ljava/lang/String;");
-        c.aconstNull();
-        c.astore(STATE_STRING_BUILDER_VAR);
 
         c.newInstruction(HTTP_STRING_CLASS);
         c.dupX1();
@@ -573,15 +565,13 @@ public abstract class AbstractParserGenerator {
         c.istore(CURRENT_STATE_VAR);
 
         //create the string builder
-        c.newInstruction(StringBuilder.class);
-        c.dup();
+        c.aload(STATE_STRING_BUILDER_VAR);
         c.ldc(currentState.soFar);
-        c.invokespecial(StringBuilder.class.getName(), "<init>", "(Ljava/lang/String;)V");
+        c.invokevirtual(StringBuilder.class.getName(), "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;");
         c.swap();
-
         c.invokevirtual(StringBuilder.class.getName(), "append", "(C)Ljava/lang/StringBuilder;");
+        c.pop();
 
-        c.astore(STATE_STRING_BUILDER_VAR);
         c.gotoInstruction(noStateStart);
 
         //now we write out tokenEnd

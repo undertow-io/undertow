@@ -238,9 +238,6 @@ public abstract class HttpParser {
         int queryParamPos = state.queryParamPos;
         int requestEnd = state.requestEnd;
         String nextQueryParam = state.nextQueryParam;
-        if (stringBuilder == null) {
-            state.stringBuilder = stringBuilder = new StringBuilder();
-        }
         while (buffer.hasRemaining()) {
             final char next = (char) buffer.get();
             if (next == ' ' || next == '\t') {
@@ -263,7 +260,7 @@ public abstract class HttpParser {
                         exchange.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
                     }
                     state.state = ParseState.VERSION;
-                    state.stringBuilder = null;
+                    state.stringBuilder.setLength(0);
                     state.parseState = 0;
                     state.pos = 0;
                     state.nextHeader = null;
@@ -326,7 +323,6 @@ public abstract class HttpParser {
             }
 
         }
-        state.stringBuilder = stringBuilder;
         state.parseState = parseState;
         state.pos = canonicalPathStart;
         state.nextQueryParam = nextQueryParam;
@@ -428,7 +424,7 @@ public abstract class HttpParser {
                         state.nextHeader = null;
 
                         state.leftOver = next;
-                        state.stringBuilder = null;
+                        state.stringBuilder.setLength(0);
                         if (next == '\r') {
                             parseState = AWAIT_DATA_END;
                         } else {
@@ -447,7 +443,6 @@ public abstract class HttpParser {
         }
         //we only write to the state if we did not finish parsing
         state.parseState = parseState;
-        state.stringBuilder = stringBuilder;
         return;
     }
 

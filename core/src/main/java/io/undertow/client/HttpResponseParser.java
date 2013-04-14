@@ -156,15 +156,12 @@ public abstract class HttpResponseParser {
     @SuppressWarnings("unused")
     final void handleStatusCode(ByteBuffer buffer, ResponseParseState state, PendingHttpRequest builder) {
         StringBuilder stringBuilder = state.stringBuilder;
-        if (stringBuilder == null) {
-            state.stringBuilder = stringBuilder = new StringBuilder();
-        }
         while (buffer.hasRemaining()) {
             final char next = (char) buffer.get();
             if (next == ' ' || next == '\t') {
                 builder.setStatusCode(Integer.parseInt(stringBuilder.toString()));
                 state.state = ResponseParseState.REASON_PHRASE;
-                state.stringBuilder = null;
+                state.stringBuilder.setLength(0);
                 state.parseState = 0;
                 state.pos = 0;
                 state.nextHeader = null;
@@ -186,15 +183,12 @@ public abstract class HttpResponseParser {
     @SuppressWarnings("unused")
     final void handleReasonPhrase(ByteBuffer buffer, ResponseParseState state, PendingHttpRequest builder) {
         StringBuilder stringBuilder = state.stringBuilder;
-        if (stringBuilder == null) {
-            state.stringBuilder = stringBuilder = new StringBuilder();
-        }
         while (buffer.hasRemaining()) {
             final char next = (char) buffer.get();
             if (next == '\n' || next == '\r') {
                 builder.setReasonPhrase(stringBuilder.toString());
                 state.state = ResponseParseState.AFTER_REASON_PHRASE;
-                state.stringBuilder = null;
+                state.stringBuilder.setLength(0);
                 state.parseState = 0;
                 state.leftOver = (byte) next;
                 state.pos = 0;
@@ -281,7 +275,7 @@ public abstract class HttpResponseParser {
                         state.nextHeader = null;
 
                         state.leftOver = next;
-                        state.stringBuilder = null;
+                        state.stringBuilder.setLength(0);
                         if (next == '\r') {
                             parseState = AWAIT_DATA_END;
                         } else {
@@ -300,7 +294,6 @@ public abstract class HttpResponseParser {
         }
         //we only write to the state if we did not finish parsing
         state.parseState = parseState;
-        state.stringBuilder = stringBuilder;
     }
 
     protected void handleAfterReasonPhrase(ByteBuffer buffer, ResponseParseState state, PendingHttpRequest builder) {

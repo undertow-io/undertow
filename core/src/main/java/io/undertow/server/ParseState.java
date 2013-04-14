@@ -76,7 +76,7 @@ class ParseState {
     /**
      * If this is in {@link #NO_STATE} then this holds the current token that has been read so far.
      */
-    StringBuilder stringBuilder;
+    final StringBuilder stringBuilder = new StringBuilder();
 
     /**
      * This has different meanings depending on the current state.

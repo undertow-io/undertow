@@ -242,7 +242,7 @@ public final class PendingHttpRequest {
             request.openGate();
             // Clear the parse state
             parseState.state = ResponseParseState.VERSION;
-            parseState.stringBuilder = null;
+            parseState.stringBuilder.setLength(0);
             parseState.pos = 0;
             // Now go on and process the actual response
             connection.doReadResponse(this);
