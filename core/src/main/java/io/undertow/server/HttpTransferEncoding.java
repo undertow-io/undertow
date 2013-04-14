@@ -38,6 +38,7 @@ import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
 import org.xnio.XnioExecutor;
 import org.xnio.conduits.EmptyStreamSourceConduit;
+import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
@@ -81,7 +82,7 @@ public class HttpTransferEncoding {
                     && connection.getExtraBytes() != null
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
-                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getBufferPool());
+                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(connection.getChannel().getSinkChannel()), connection.getBufferPool());
                 connection.putAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
                 exchange.addResponseWrapper(pipeliningBuffer.getChannelWrapper());
             }
@@ -132,7 +133,7 @@ public class HttpTransferEncoding {
             if (connection.getExtraBytes() != null
                     && pipeliningBuffer == null
                     && connection.getUndertowOptions().get(UndertowOptions.BUFFER_PIPELINED_DATA, false)) {
-                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(connection.getOriginalSinkConduit(), connection.getBufferPool());
+                pipeliningBuffer = new PipelingBufferingStreamSinkConduit(new StreamSinkChannelWrappingConduit(connection.getChannel().getSinkChannel()), connection.getBufferPool());
                 connection.putAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY, pipeliningBuffer);
                 exchange.addResponseWrapper(pipeliningBuffer.getChannelWrapper());
             }
