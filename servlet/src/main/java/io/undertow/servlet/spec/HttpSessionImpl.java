@@ -116,19 +116,21 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public void setAttribute(final String name, final Object value) {
-        Object old = session.setAttribute(name, value);
-        if (value == null && old != null) {
-            applicationListeners.httpSessionAttributeRemoved(this, name, old);
-        } else if (old == null) {
-            applicationListeners.httpSessionAttributeAdded(this, name, value);
+        if (value == null) {
+            removeAttribute(name);
         } else {
-            if (old instanceof HttpSessionBindingListener) {
-                ((HttpSessionBindingListener) old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
+            Object old = session.setAttribute(name, value);
+            if (old == null) {
+                applicationListeners.httpSessionAttributeAdded(this, name, value);
+            } else if (old != value) {
+                if (old instanceof HttpSessionBindingListener) {
+                    ((HttpSessionBindingListener) old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
+                }
+                applicationListeners.httpSessionAttributeReplaced(this, name, old);
             }
-            applicationListeners.httpSessionAttributeReplaced(this, name, old);
-        }
-        if (value instanceof HttpSessionBindingListener) {
-            ((HttpSessionBindingListener) value).valueBound(new HttpSessionBindingEvent(this, name, value));
+            if (value instanceof HttpSessionBindingListener) {
+                ((HttpSessionBindingListener) value).valueBound(new HttpSessionBindingEvent(this, name, value));
+            }
         }
     }
 
@@ -140,9 +142,11 @@ public class HttpSessionImpl implements HttpSession {
     @Override
     public void removeAttribute(final String name) {
         Object old = session.removeAttribute(name);
-        applicationListeners.httpSessionAttributeRemoved(this, name, old);
-        if (old instanceof HttpSessionBindingListener) {
-            ((HttpSessionBindingListener) old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
+        if (old != null) {
+            applicationListeners.httpSessionAttributeRemoved(this, name, old);
+            if (old instanceof HttpSessionBindingListener) {
+                ((HttpSessionBindingListener) old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
+            }
         }
     }
 
