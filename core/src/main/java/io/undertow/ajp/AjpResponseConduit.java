@@ -176,7 +176,7 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                 putString(buffer, StatusCodes.getReason(exchange.getResponseCode()));
 
                 int headers = 0;
-                //we need to cound the headers
+                //we need to count the headers
                 final HeaderMap responseHeaders = exchange.getResponseHeaders();
                 for (HttpString name : responseHeaders.getHeaderNames()) {
                     headers += responseHeaders.get(name).size();

@@ -57,7 +57,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
     public void newRequest() {
         state.reset();
         read = 0;
-        httpServerExchange = new HttpServerExchange(connection, connection.getChannel().getSourceChannel(), connection.getChannel().getSinkChannel());
+        httpServerExchange = new HttpServerExchange(connection);
         httpServerExchange.addExchangeCompleteListener(this);
     }
 

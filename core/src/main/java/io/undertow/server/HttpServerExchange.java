@@ -99,8 +99,6 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private Map<String, Deque<String>> queryParameters;
 
-    private final StreamSinkChannel underlyingResponseChannel;
-    private final StreamSourceChannel underlyingRequestChannel;
     /**
      * The actual response channel. May be null if it has not been created yet.
      */
@@ -176,15 +174,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private static final int FLAG_IN_CALL = 1 << 17;
 
-    public HttpServerExchange(final HttpServerConnection connection, final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
+    public HttpServerExchange(final HttpServerConnection connection) {
         this.connection = connection;
-        this.underlyingRequestChannel = requestChannel;
-        if (connection == null) {
-            //just for unit tests
-            this.underlyingResponseChannel = null;
-        } else {
-            this.underlyingResponseChannel = responseChannel;
-        }
     }
 
     /**
@@ -1102,12 +1093,11 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         this.state = oldVal | FLAG_RESPONSE_SENT;
 
-        log.tracef("Starting to write response for %s using channel %s", this, underlyingResponseChannel);
-        final HeaderMap responseHeaders = this.responseHeaders;
+        log.tracef("Starting to write response for %s", this);
     }
 
     public XnioExecutor getIoThread() {
-        return underlyingResponseChannel.getIoThread();
+        return connection.getIoThread();
     }
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {

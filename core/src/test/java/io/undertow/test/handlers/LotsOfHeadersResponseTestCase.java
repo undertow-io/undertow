@@ -23,6 +23,7 @@ import java.io.IOException;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.HttpString;
 import io.undertow.util.TestHttpClient;
@@ -37,6 +38,7 @@ import org.junit.runner.RunWith;
 /**
  * @author Stuart Douglas
  */
+@AjpIgnore //this test generates to many headers to fit in an AJP response
 @RunWith(DefaultServer.class)
 public class LotsOfHeadersResponseTestCase {
 

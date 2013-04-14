@@ -24,8 +24,8 @@ import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.EmptyStreamSourceConduit;
-import org.xnio.conduits.StreamSinkChannelWrappingConduit;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
@@ -35,11 +35,9 @@ import static org.xnio.IoUtils.safeClose;
  * @author Stuart Douglas
  */
 
-final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
+final class AjpReadListener implements ChannelListener<StreamSourceChannel>, ExchangeCompletionListener {
 
     private static final byte[] CPONG = {'A', 'B', 0, 0, 0, 1, 9}; //CPONG response data
-
-    private final StreamConnection channel;
 
     private AjpParseState state = new AjpParseState();
     private HttpServerExchange httpServerExchange;
@@ -48,13 +46,16 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     private volatile int read = 0;
     private final int maxRequestSize;
 
-    AjpReadListener(final StreamConnection channel, final HttpServerConnection connection) {
-        this.channel = channel;
+    AjpReadListener(final HttpServerConnection connection) {
         this.connection = connection;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
 
-        httpServerExchange = new HttpServerExchange(connection, channel.getSourceChannel(), channel.getSinkChannel());
-        httpServerExchange.addExchangeCompleteListener(new StartNextRequestAction(channel.getSourceChannel(), channel.getSinkChannel()));
+        httpServerExchange = new HttpServerExchange(connection);
+        httpServerExchange.addExchangeCompleteListener(this);
+    }
+
+    public void startRequest() {
+        connection.resetChannel();
     }
 
     public void handleEvent(final StreamSourceChannel channel) {
@@ -91,7 +92,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 if (res == -1) {
                     try {
                         channel.shutdownReads();
-                        final StreamSinkChannel responseChannel = this.channel.getSinkChannel();
+                        final StreamSinkChannel responseChannel = connection.getChannel().getSinkChannel();
                         responseChannel.shutdownWrites();
                         // will return false if there's a response queued ahead of this one, so we'll set up a listener then
                         if (!responseChannel.flush()) {
@@ -147,7 +148,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
-            AjpConduitWrapper channelWrapper = new AjpConduitWrapper(new AjpResponseConduit(new StreamSinkChannelWrappingConduit(this.channel.getSinkChannel()), connection.getBufferPool(), httpServerExchange));
+            AjpConduitWrapper channelWrapper = new AjpConduitWrapper(new AjpResponseConduit(connection.getChannel().getSinkChannel().getConduit(), connection.getBufferPool(), httpServerExchange));
             httpServerExchange.addResponseWrapper(channelWrapper);
             httpServerExchange.addRequestWrapper(channelWrapper.getRequestWrapper());
 
@@ -174,14 +175,15 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
     private void handleCPing() {
         state = new AjpParseState();
-        channel.getSourceChannel().suspendReads();
+        final StreamConnection underlyingChannel = connection.getChannel();
+        underlyingChannel.getSourceChannel().suspendReads();
         final ByteBuffer buffer = ByteBuffer.wrap(CPONG);
         int res;
         try {
             do{
-            res = channel.getSinkChannel().write(buffer);
+            res = underlyingChannel.getSinkChannel().write(buffer);
                 if(res == 0) {
-                    channel.getSinkChannel().setWriteListener(new ChannelListener<ConduitStreamSinkChannel>() {
+                    underlyingChannel.getSinkChannel().setWriteListener(new ChannelListener<ConduitStreamSinkChannel>() {
                         @Override
                         public void handleEvent(ConduitStreamSinkChannel channel) {
                             int res;
@@ -197,46 +199,30 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                                 }
                             } while (buffer.hasRemaining());
                             channel.suspendWrites();
-                            AjpReadListener.this.handleEvent(AjpReadListener.this.channel.getSourceChannel());
+                            AjpReadListener.this.handleEvent(underlyingChannel.getSourceChannel());
                         }
                     });
-                    channel.getSinkChannel().resumeWrites();
+                    underlyingChannel.getSinkChannel().resumeWrites();
                     return;
                 }
             } while (buffer.hasRemaining());
-            AjpReadListener.this.handleEvent(AjpReadListener.this.channel.getSourceChannel());
+            AjpReadListener.this.handleEvent(underlyingChannel.getSourceChannel());
         } catch (IOException e) {
             UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
             IoUtils.safeClose(connection);
         }
     }
 
-    /**
-     * Action that starts the next request
-     */
-    private static class StartNextRequestAction implements ExchangeCompletionListener {
-
-        private StreamSourceChannel requestChannel;
-        private StreamSinkChannel responseChannel;
-
-
-        public StartNextRequestAction(final StreamSourceChannel requestChannel, final StreamSinkChannel responseChannel) {
-            this.requestChannel = requestChannel;
-            this.responseChannel = responseChannel;
-        }
 
         @Override
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-
-            final StreamSourceChannel channel = this.requestChannel;
-            final AjpReadListener listener = new AjpReadListener(exchange.getConnection().getChannel(), exchange.getConnection());
+            startRequest();
+            final AjpReadListener listener = new AjpReadListener(exchange.getConnection());
+            ConduitStreamSourceChannel channel = exchange.getConnection().getChannel().getSourceChannel();
             channel.getReadSetter().set(listener);
             channel.resumeReads();
-            responseChannel = null;
-            this.requestChannel = null;
             nextListener.proceed();
         }
-    }
 
     private class AjpConduitWrapper implements ConduitWrapper<StreamSinkConduit> {
 

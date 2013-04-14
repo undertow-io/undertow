@@ -41,7 +41,7 @@ public class AjpParsingUnitTestCase {
     @Test
     public void testAjpParsing() {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
-        HttpServerExchange result = new HttpServerExchange(null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null);
         final AjpParseState state = new AjpParseState();
         AjpParser.INSTANCE.parse(buffer, state, result);
         Assert.assertEquals(165, state.dataSize);
@@ -55,7 +55,7 @@ public class AjpParsingUnitTestCase {
     public void testByteByByteAjpParsing() {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
 
-        HttpServerExchange result = new HttpServerExchange(null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null);
         final AjpParseState state = new AjpParseState();
         int limit = buffer.limit();
         for (int i = 1; i <= limit; ++i) {

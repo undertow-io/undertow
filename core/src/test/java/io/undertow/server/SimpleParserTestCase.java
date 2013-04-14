@@ -29,9 +29,9 @@ import org.junit.Test;
 
 /**
  * Basic test of the HTTP parser functionality.
- *
+ * <p/>
  * This tests parsing the same basic request, over and over, with minor differences.
- *
+ * <p/>
  * Not all these actually conform to the HTTP/1.1 specification, however we are supposed to be
  * liberal in what we accept.
  *
@@ -70,7 +70,7 @@ public class SimpleParserTestCase {
         byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context, result);
         Assert.assertEquals("/somepath", result.getRelativePath());
         Assert.assertEquals("http://www.somehost.net/somepath", result.getRequestURI());
@@ -81,7 +81,7 @@ public class SimpleParserTestCase {
         byte[] in = "GET\t/aa\tHTTP/1.1\n\n\n".getBytes();
 
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context, result);
         Assert.assertTrue(context.isComplete());
         Assert.assertEquals("/aa", result.getRelativePath());
@@ -92,7 +92,7 @@ public class SimpleParserTestCase {
         byte[] in = "GET\thttp://www.somehost.net/somepath?a=b&b=c&d&e&f=\tHTTP/1.1\nHost: \t www.somehost.net\nOtherHeader:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context, result);
         Assert.assertEquals("/somepath", result.getRelativePath());
         Assert.assertEquals("http://www.somehost.net/somepath", result.getRequestURI());
@@ -110,25 +110,25 @@ public class SimpleParserTestCase {
         byte[] in = "GET\thttp://www.somehost.net/somepath\tHTTP/1.1\nHost: \t www.somehost.net\nAccept-Charset:\tsome\n \t  value\n\r\n".getBytes();
 
         final ParseState context1 = new ParseState();
-        HttpServerExchange result1 = new HttpServerExchange(null, null, null);
-        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in),context1, result1);
+        HttpServerExchange result1 = new HttpServerExchange(null);
+        HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context1, result1);
 
         final ParseState context2 = new ParseState();
-        HttpServerExchange result2 = new HttpServerExchange(null, null, null);
+        HttpServerExchange result2 = new HttpServerExchange(null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context2, result2);
 
         Assert.assertSame(result1.getProtocol(), result2.getProtocol());
         Assert.assertSame(result1.getRequestMethod(), result2.getRequestMethod());
 
-        for(final HttpString header: result1.getRequestHeaders().getHeaderNames()) {
+        for (final HttpString header : result1.getRequestHeaders().getHeaderNames()) {
             boolean found = false;
-            for(final HttpString header2: result1.getRequestHeaders().getHeaderNames()) {
-                if(header == header2){
+            for (final HttpString header2 : result1.getRequestHeaders().getHeaderNames()) {
+                if (header == header2) {
                     found = true;
                     break;
                 }
             }
-            if(header.equals(Headers.HOST)) {
+            if (header.equals(Headers.HOST)) {
                 Assert.assertSame(Headers.HOST, header);
             }
             Assert.assertTrue("Could not found header " + header, found);
@@ -137,7 +137,7 @@ public class SimpleParserTestCase {
 
     private void runTest(final byte[] in) {
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null);
         HttpParser.INSTANCE.handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
         Assert.assertEquals("/somepath", result.getRequestURI());

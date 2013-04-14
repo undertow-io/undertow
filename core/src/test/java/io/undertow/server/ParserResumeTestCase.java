@@ -51,7 +51,7 @@ public class ParserResumeTestCase {
     public void testOneCharacterAtATime() {
         byte[] in = DATA.getBytes();
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(1);
         while (context.state != ParseState.PARSE_COMPLETE) {
@@ -63,7 +63,7 @@ public class ParserResumeTestCase {
 
     private void testResume(final int split, byte[] in) {
         final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null, null, null);
+        HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(split);
         HttpParser.INSTANCE.handle(buffer, context, result);
