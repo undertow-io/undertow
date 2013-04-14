@@ -265,8 +265,9 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
             }
         }
 
-        private void performFlush(final NextListener nextListener, HttpServerConnection connection) {
+        private void performFlush(final NextListener nextListener, final HttpServerConnection connection) {
             try {
+                final HttpServerConnection.ConduitState oldState = connection.resetChannel();
                 if (!flushPipelinedData()) {
                     final StreamConnection channel = connection.getChannel();
                     channel.getSinkChannel().getWriteSetter().set(new ChannelListener<Channel>() {
@@ -276,6 +277,7 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
                                 if (flushPipelinedData()) {
                                     channel.getSinkChannel().getWriteSetter().set(null);
                                     channel.getSinkChannel().suspendWrites();
+                                    connection.restoreChannel(oldState);
                                     nextListener.proceed();
                                 }
                             } catch (IOException e) {
@@ -287,6 +289,7 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
                     connection.getChannel().getSinkChannel().resumeWrites();
                     return;
                 } else {
+                    connection.restoreChannel(oldState);
                     nextListener.proceed();
                 }
             } catch (IOException e) {
