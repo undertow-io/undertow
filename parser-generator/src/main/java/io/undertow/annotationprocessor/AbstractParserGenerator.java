@@ -226,6 +226,9 @@ public abstract class AbstractParserGenerator {
         //store the current state in a local variable
         c.aload(PARSE_STATE_VAR);
         c.dup();
+        c.getfield(parseStateClass, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
+        c.astore(STATE_STRING_BUILDER_VAR);
+        c.dup();
         c.getfield(parseStateClass, "parseState", "I");
         c.dup();
         c.istore(CURRENT_STATE_VAR);
@@ -237,11 +240,8 @@ public abstract class AbstractParserGenerator {
         c.dup();
         c.getfield(parseStateClass, "current", HTTP_STRING_DESCRIPTOR);
         c.astore(STATE_CURRENT_VAR);
-        c.dup();
         c.getfield(parseStateClass, "currentBytes", "[B");
         c.astore(STATE_CURRENT_BYTES_VAR);
-        c.getfield(parseStateClass, "stringBuilder", DescriptorUtils.makeDescriptor(StringBuilder.class));
-        c.astore(STATE_STRING_BUILDER_VAR);
 
 
 
@@ -467,8 +467,6 @@ public abstract class AbstractParserGenerator {
         c.astore(STATE_CURRENT_VAR);
         c.aconstNull();
         c.astore(STATE_CURRENT_BYTES_VAR);
-        c.aconstNull();
-        c.astore(STATE_STRING_BUILDER_VAR);
 
         c.branchEnd(ends.get(initial).get());
         invokeState(className, file, c, initial, initial, noStateLoop, prefixLoop, returnIncompleteCode, returnCompleteCode, stateMachine);
