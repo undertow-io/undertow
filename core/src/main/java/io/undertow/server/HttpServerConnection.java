@@ -36,6 +36,8 @@ import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.SslChannel;
+import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.StreamSourceConduit;
 
 /**
  * A server-side HTTP connection.
@@ -48,10 +50,12 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     private final Pool<ByteBuffer> bufferPool;
     private final HttpHandler rootHandler;
     private final OptionMap undertowOptions;
+    private final StreamSourceConduit originalSourceConduit;
+    private final StreamSinkConduit originalSinkConduit;
+
     private final int bufferSize;
     /**
      * Any extra bytes that were read from the channel. This could be data for this requests, or the next response.
-     *
      */
     private Pooled<ByteBuffer> extraBytes;
 
@@ -62,6 +66,8 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
         closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
+        this.originalSinkConduit = channel.getSinkChannel().getConduit();
+        this.originalSourceConduit = channel.getSourceChannel().getConduit();
     }
 
     /**
@@ -145,7 +151,6 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     }
 
     /**
-     *
      * @return The size of the buffers allocated by the buffer pool
      */
     public int getBufferSize() {
@@ -166,5 +171,56 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
 
     public void setExtraBytes(final Pooled<ByteBuffer> extraBytes) {
         this.extraBytes = extraBytes;
+    }
+
+    /**
+     *
+     * @return The original source conduit
+     */
+    public StreamSourceConduit getOriginalSourceConduit() {
+        return originalSourceConduit;
+    }
+
+    /**
+     *
+     * @return The original underlying sink conduit
+     */
+    public StreamSinkConduit getOriginalSinkConduit() {
+        return originalSinkConduit;
+    }
+
+    /**
+     * Resets the channel to its original state, effectively disabling all current conduit
+     * wrappers. The current state is encapsulated inside a {@link ConduitState} object that
+     * can be used the restore the channel.
+     *
+     * @return An opaque representation of the previous channel state
+     */
+    public ConduitState resetChannel() {
+        ConduitState ret = new ConduitState(channel.getSinkChannel().getConduit(), channel.getSourceChannel().getConduit());
+        channel.getSinkChannel().setConduit(originalSinkConduit);
+        channel.getSourceChannel().setConduit(originalSourceConduit);
+        return ret;
+    }
+
+    /**
+     * Resores the channel conduits to a previous state.
+     *
+     * @see #resetChannel()
+     * @param state The original state
+     */
+    public void restoreChannel(final ConduitState state){
+        channel.getSinkChannel().setConduit(state.sink);
+        channel.getSourceChannel().setConduit(state.source);
+    }
+
+    public static class ConduitState {
+        final StreamSinkConduit sink;
+        final StreamSourceConduit source;
+
+        private ConduitState(final StreamSinkConduit sink, final StreamSourceConduit source) {
+            this.sink = sink;
+            this.source = source;
+        }
     }
 }
