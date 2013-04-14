@@ -110,4 +110,9 @@ class ParseState {
     public final void parseComplete(){
         state = PARSE_COMPLETE;
     }
+
+    public void reset() {
+        this.state = 0;
+        this.pos = 0;
+    }
 }

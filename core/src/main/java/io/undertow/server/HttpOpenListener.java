@@ -57,7 +57,8 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        HttpReadListener readListener = new HttpReadListener(channel.getSinkChannel(), channel.getSourceChannel(), connection);
+        HttpReadListener readListener = new HttpReadListener(connection);
+        readListener.newRequest();
         channel.getSourceChannel().setReadListener(readListener);
         readListener.handleEvent(channel.getSourceChannel());
     }

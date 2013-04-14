@@ -102,6 +102,11 @@ public class ChunkedRequestTransferCodingTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
+            final Random random = new Random();
+            final int seed = random.nextInt();
+            System.out.print("Using Seed " + seed);
+            random.setSeed(seed);
+
 
             for (int i = 0; i < 10; ++i) {
                 generateMessage(100 * i);
@@ -120,7 +125,6 @@ public class ChunkedRequestTransferCodingTestCase {
                     public void writeTo(OutputStream outstream) throws IOException {
                         int l = 0;
                         int i = 0;
-                        Random random = new Random();
                         while (i < message.length()) {
                             i += random.nextInt(1000);
                             i = Math.min(i, message.length());
