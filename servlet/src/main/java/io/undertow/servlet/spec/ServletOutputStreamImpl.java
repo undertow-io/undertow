@@ -515,6 +515,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                             return;
                         } catch (IOException e) {
                             handleError(e);
+                            return;
                         }
                     }
                     //if there is data still to write
@@ -532,6 +533,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                                 }
                             } catch (IOException e) {
                                 handleError(e);
+                                return;
                             }
                         } while (written < toWrite);
                         buffersToWrite = null;
@@ -545,6 +547,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                             }
                         } catch (IOException e) {
                             handleError(e);
+                            return;
                         }
                     } else {
 
