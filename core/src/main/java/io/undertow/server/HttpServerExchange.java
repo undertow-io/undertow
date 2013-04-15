@@ -34,6 +34,8 @@ import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.channels.StreamSinkChannelFacade;
+import io.undertow.channels.StreamSourceChannelFacade;
 import io.undertow.io.Sender;
 import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
@@ -661,7 +663,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             };
         }
         connection.getChannel().getSourceChannel().setConduit(new ReadDispatchConduit(factory.create()));
-        return requestChannel = connection.getChannel().getSourceChannel();
+        return requestChannel = new StreamSourceChannelFacade(connection.getChannel().getSourceChannel());
     }
 
     public boolean isRequestChannelAvailable() {
@@ -790,7 +792,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             };
         }
         connection.getChannel().getSinkChannel().setConduit(new WriteDispatchConduit(factory.create()));
-        this.responseChannel = connection.getChannel().getSinkChannel();
+        this.responseChannel = new StreamSinkChannelFacade(connection.getChannel().getSinkChannel());
         this.startResponse();
         return responseChannel;
     }
