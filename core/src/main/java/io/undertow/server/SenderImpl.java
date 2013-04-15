@@ -36,6 +36,10 @@ class SenderImpl implements Sender {
         }
         try {
             do {
+                if(buffer.remaining() == 0) {
+                    callback.onComplete(exchange, this);
+                    return;
+                }
                 int res = streamSinkChannel.write(buffer);
                 if (res == 0) {
                     streamSinkChannel.getWriteSetter().set(new ChannelListener<Channel>() {
