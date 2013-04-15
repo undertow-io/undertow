@@ -283,7 +283,8 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRequestedSessionId() {
-        return null;
+        SessionCookieConfigImpl config = servletContext.getSessionCookieConfig();
+        return config.findSessionId(exchange);
     }
 
     @Override
