@@ -25,6 +25,7 @@ import io.undertow.conduits.BrokenStreamSourceConduit;
 import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
+import io.undertow.conduits.EmptyStreamSourceConduit;
 import io.undertow.conduits.FinishableStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
@@ -37,7 +38,6 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
 import org.xnio.XnioExecutor;
-import org.xnio.conduits.EmptyStreamSourceConduit;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 

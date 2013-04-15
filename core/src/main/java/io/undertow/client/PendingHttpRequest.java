@@ -4,6 +4,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
+import io.undertow.conduits.EmptyStreamSourceConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -15,7 +16,6 @@ import org.xnio.Result;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
-import org.xnio.conduits.EmptyStreamSourceConduit;
 import org.xnio.conduits.StreamSourceChannelWrappingConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
