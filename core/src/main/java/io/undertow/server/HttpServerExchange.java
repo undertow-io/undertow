@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
+import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -31,11 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.channels.StreamSinkChannelFacade;
-import io.undertow.channels.StreamSourceChannelFacade;
 import io.undertow.io.Sender;
 import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
@@ -54,13 +54,14 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
+import org.xnio.Option;
 import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.AbstractStreamSinkConduit;
-import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
@@ -662,8 +663,8 @@ public final class HttpServerExchange extends AbstractAttachable {
                 }
             };
         }
-        connection.getChannel().getSourceChannel().setConduit(new ReadDispatchConduit(factory.create()));
-        return requestChannel = new StreamSourceChannelFacade(connection.getChannel().getSourceChannel());
+        connection.getChannel().getSourceChannel().setConduit(factory.create());
+        return requestChannel = new ReadDispatchChannel(connection.getChannel().getSourceChannel());
     }
 
     public boolean isRequestChannelAvailable() {
@@ -791,8 +792,8 @@ public final class HttpServerExchange extends AbstractAttachable {
                 }
             };
         }
-        connection.getChannel().getSinkChannel().setConduit(new WriteDispatchConduit(factory.create()));
-        this.responseChannel = new StreamSinkChannelFacade(connection.getChannel().getSinkChannel());
+        connection.getChannel().getSinkChannel().setConduit(factory.create());
+        this.responseChannel = new WriteDispatchChannel(connection.getChannel().getSinkChannel());
         this.startResponse();
         return responseChannel;
     }
@@ -1148,73 +1149,385 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
-    private class WriteDispatchConduit extends AbstractStreamSinkConduit<StreamSinkConduit> implements StreamSinkConduit, Runnable {
+    /**
+     * Channel implementation that is actually provided to clients of the exchange.
+     *
+     * We do not provide the underlying conduit channel, as this is shared between requests, so we need to make sure that after this request
+     * is done the the channel cannot affect the next request.
+     *
+     * It also delays a wakeup/resumesWrites calls until the current call stack has returned, thus ensuring that only 1 thread is
+     * active in the exchange at any one time.
+     *
+     */
+    private class WriteDispatchChannel implements StreamSinkChannel, Runnable {
 
+        protected final StreamSinkChannel delegate;
+        protected final ChannelListener.SimpleSetter<WriteDispatchChannel> writeSetter = new ChannelListener.SimpleSetter<WriteDispatchChannel>();
+        protected final ChannelListener.SimpleSetter<WriteDispatchChannel> closeSetter = new ChannelListener.SimpleSetter<WriteDispatchChannel>();
         private boolean wakeup;
 
-        /**
-         * Construct a new instance.
-         *
-         * @param next the delegate conduit to set
-         */
-        protected WriteDispatchConduit(final StreamSinkConduit next) {
-            super(next);
+        public WriteDispatchChannel(final StreamSinkChannel delegate) {
+            this.delegate = delegate;
+            delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
+            delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
+        }
+
+
+        @Override
+        public void suspendWrites() {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                return;
+            }
+            delegate.suspendWrites();
+        }
+
+
+        @Override
+        public boolean isWriteResumed() {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                return false;
+            }
+            return delegate.isWriteResumed();
+        }
+
+        @Override
+        public void shutdownWrites() throws IOException {
+            if(allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                return;
+            }
+            delegate.shutdownWrites();
+        }
+
+        @Override
+        public void awaitWritable() throws IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            delegate.awaitWritable();
+        }
+
+        @Override
+        public void awaitWritable(final long time, final TimeUnit timeUnit) throws IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            delegate.awaitWritable(time, timeUnit);
+        }
+
+        @Override
+        public XnioExecutor getWriteThread() {
+            return delegate.getWriteThread();
+        }
+
+        @Override
+        public boolean isOpen() {
+            return !allAreSet(state, FLAG_RESPONSE_TERMINATED) && delegate.isOpen();
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) return;
+            delegate.close();
+        }
+
+        @Override
+        public boolean flush() throws IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                return true;
+            }
+            return delegate.flush();
+        }
+
+        @Override
+        public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            return delegate.transferFrom(src, position, count);
+        }
+
+        @Override
+        public long transferFrom(final StreamSourceChannel source, final long count, final ByteBuffer throughBuffer) throws IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            return delegate.transferFrom(source, count, throughBuffer);
+        }
+
+        @Override
+        public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter() {
+            return writeSetter;
+        }
+
+        @Override
+        public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
+            return closeSetter;
+        }
+
+        @Override
+        public XnioWorker getWorker() {
+            return delegate.getWorker();
+        }
+
+        @Override
+        public XnioIoThread getIoThread() {
+            return delegate.getIoThread();
+        }
+
+        @Override
+        public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            return delegate.write(srcs, offset, length);
+        }
+
+        @Override
+        public long write(final ByteBuffer[] srcs) throws IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            return delegate.write(srcs);
+        }
+
+        @Override
+        public boolean supportsOption(final Option<?> option) {
+            return delegate.supportsOption(option);
+        }
+
+        @Override
+        public <T> T getOption(final Option<T> option) throws IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            return delegate.getOption(option);
+        }
+
+        @Override
+        public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            return delegate.setOption(option, value);
+        }
+
+        @Override
+        public int write(final ByteBuffer src) throws IOException {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            return delegate.write(src);
         }
 
         @Override
         public void resumeWrites() {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                return;
+            }
             if (isInCall()) {
                 wakeup = false;
                 dispatch(SameThreadExecutor.INSTANCE, this);
             } else {
-                super.resumeWrites();
+                delegate.resumeWrites();
             }
         }
 
         @Override
         public void wakeupWrites() {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+                return;
+            }
             if (isInCall()) {
                 wakeup = true;
                 dispatch(SameThreadExecutor.INSTANCE, this);
             } else {
-                super.wakeupWrites();
+                delegate.wakeupWrites();
             }
         }
 
         @Override
         public void run() {
             if (wakeup) {
-                super.wakeupWrites();
+                delegate.wakeupWrites();
             } else {
-                super.resumeWrites();
+                delegate.resumeWrites();
             }
         }
     }
 
-    private class ReadDispatchConduit extends AbstractStreamSourceConduit<StreamSourceConduit> implements StreamSourceConduit, Runnable {
+    /**
+     * Channel implementation that is actually provided to clients of the exchange. We do not provide the underlying
+     * conduit channel, as this will become the next requests conduit channel, so if a thread is still hanging onto this
+     * exchange it can result in problems.
+     *
+     * It also delays a readResume call until the current call stack has returned, thus ensuring that only 1 thread is
+     * active in the exchange at any one time.
+     *
+     */
+    private final class ReadDispatchChannel implements StreamSourceChannel, Runnable {
 
-        /**
-         * Construct a new instance.
-         *
-         * @param next the delegate conduit to set
-         */
-        protected ReadDispatchConduit(final StreamSourceConduit next) {
-            super(next);
+        private final StreamSourceChannel delegate;
+
+        protected final ChannelListener.SimpleSetter<ReadDispatchChannel> readSetter = new ChannelListener.SimpleSetter<ReadDispatchChannel>();
+        protected final ChannelListener.SimpleSetter<ReadDispatchChannel> closeSetter = new ChannelListener.SimpleSetter<ReadDispatchChannel>();
+
+        public ReadDispatchChannel(final StreamSourceChannel delegate) {
+            this.delegate = delegate;
+            delegate.getReadSetter().set(ChannelListeners.delegatingChannelListener(this, readSetter));
+            delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
         }
 
         @Override
         public void resumeReads() {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return;
+            }
             if (isInCall()) {
                 dispatch(SameThreadExecutor.INSTANCE, this);
             } else {
-                super.resumeReads();
+                delegate.resumeReads();
             }
         }
 
 
         @Override
         public void run() {
-            super.resumeReads();
+            if (!allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                delegate.resumeReads();
+            }
+        }
+
+
+        public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return -1;
+            }
+            return delegate.transferTo(position, count, target);
+        }
+
+        public void awaitReadable() throws IOException {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            delegate.awaitReadable();
+        }
+
+        public void suspendReads() {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return;
+            }
+            delegate.suspendReads();
+        }
+
+        public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
+
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            return delegate.transferTo(count, throughBuffer, target);
+        }
+
+        public XnioWorker getWorker() {
+            return delegate.getWorker();
+        }
+
+        public boolean isReadResumed() {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return false;
+            }
+            return delegate.isReadResumed();
+        }
+
+        public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
+
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            return delegate.setOption(option, value);
+        }
+
+        public boolean supportsOption(final Option<?> option) {
+            return delegate.supportsOption(option);
+        }
+
+        public void shutdownReads() throws IOException {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return;
+            }
+            delegate.shutdownReads();
+        }
+
+        public ChannelListener.Setter<? extends StreamSourceChannel> getReadSetter() {
+            return readSetter;
+        }
+
+        public boolean isOpen() {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return false;
+            }
+            return delegate.isOpen();
+        }
+
+        public long read(final ByteBuffer[] dsts) throws IOException {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return -1;
+            }
+            return delegate.read(dsts);
+        }
+
+        public long read(final ByteBuffer[] dsts, final int offset, final int length) throws IOException {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return -1;
+            }
+            return delegate.read(dsts, offset, length);
+        }
+
+        public void wakeupReads() {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return;
+            }
+            delegate.wakeupReads();
+        }
+
+        public XnioExecutor getReadThread() {
+            return delegate.getReadThread();
+        }
+
+        public void awaitReadable(final long time, final TimeUnit timeUnit) throws IOException {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.channelIsClosed();
+            }
+            delegate.awaitReadable(time, timeUnit);
+        }
+
+        public ChannelListener.Setter<? extends StreamSourceChannel> getCloseSetter() {
+            return closeSetter;
+        }
+
+        public void close() throws IOException {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return;
+            }
+            delegate.close();
+        }
+
+        public <T> T getOption(final Option<T> option) throws IOException {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                throw UndertowMessages.MESSAGES.streamIsClosed();
+            }
+            return delegate.getOption(option);
+        }
+
+        public int read(final ByteBuffer dst) throws IOException {
+            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+                return -1;
+            }
+            return delegate.read(dst);
+        }
+
+        @Override
+        public XnioIoThread getIoThread() {
+            return delegate.getIoThread();
         }
     }
 }

@@ -20,6 +20,7 @@ package io.undertow;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
@@ -145,4 +146,7 @@ public interface UndertowMessages {
 
     @Message(id = 40, value = "To many headers, cannot have more than %s header")
     RuntimeException tooManyHeaders(int noParams);
+
+    @Message(id = 41, value = "Channel is closed")
+    ClosedChannelException channelIsClosed();
 }
