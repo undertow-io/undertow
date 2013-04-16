@@ -7,10 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.annotation.ServletSecurity;
-
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.SecurityConstraint;
+import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
 
@@ -45,17 +44,17 @@ public class SecurityPathMatches {
     }
 
     public SecurityPathMatch getSecurityInfo(final String path, final String method) {
-        final List<Set<String>> roleSet = new ArrayList<Set<String>>();
+        final List<SingleConstraintMatch> constraintSet = new ArrayList<SingleConstraintMatch>();
         TransportGuaranteeType type = TransportGuaranteeType.NONE;
-        type = handleMatch(method, defaultPathSecurityInformation, roleSet, type);
+        type = handleMatch(method, defaultPathSecurityInformation, constraintSet, type);
         PathSecurityInformation match = exactPathRoleInformation.get(path);
         if (match != null) {
-            type = handleMatch(method, match, roleSet, type);
+            type = handleMatch(method, match, constraintSet, type);
         }
 
         match = prefixPathRoleInformation.get(path);
         if (match != null) {
-            type = handleMatch(method, match, roleSet, type);
+            type = handleMatch(method, match, constraintSet, type);
         }
         int qsPos = -1;
         boolean extension = false;
@@ -66,7 +65,7 @@ public class SecurityPathMatches {
                 final String part = path.substring(0, i);
                 match = exactPathRoleInformation.get(part);
                 if (match != null) {
-                    type = handleMatch(method, match, roleSet, type);
+                    type = handleMatch(method, match, constraintSet, type);
                 }
                 qsPos = i;
                 extension = false;
@@ -75,7 +74,7 @@ public class SecurityPathMatches {
                 final String part = path.substring(0, i);
                 match = prefixPathRoleInformation.get(part);
                 if (match != null) {
-                    type = handleMatch(method, match, roleSet, type);
+                    type = handleMatch(method, match, constraintSet, type);
                 }
             } else if (c == '.') {
                 if (!extension) {
@@ -88,41 +87,31 @@ public class SecurityPathMatches {
                     }
                     match = extensionRoleInformation.get(ext);
                     if (match != null) {
-                        type = handleMatch(method, match, roleSet, type);
+                        type = handleMatch(method, match, constraintSet, type);
                     }
                 }
             }
         }
-        return new SecurityPathMatch(type, roleSet);
+        return new SecurityPathMatch(type, constraintSet);
     }
 
-    private TransportGuaranteeType handleMatch(final String method, final PathSecurityInformation exact, final List<Set<String>> roleSet, TransportGuaranteeType type) {
+    private TransportGuaranteeType handleMatch(final String method, final PathSecurityInformation exact, final List<SingleConstraintMatch> constraintSet, TransportGuaranteeType type) {
         List<SecurityInformation> roles = exact.defaultRequiredRoles;
         for (SecurityInformation role : roles) {
             type = transport(type, role.transportGuaranteeType);
-            if (!role.roles.isEmpty() ||
-                    role.emptyRoleSemantic == ServletSecurity.EmptyRoleSemantic.DENY) {
-                roleSet.add(role.roles);
-            }
+            constraintSet.add(new SingleConstraintMatch(role.emptyRoleSemantic, role.roles));
         }
         List<SecurityInformation> methodInfo = exact.perMethodRequiredRoles.get(method);
         if (methodInfo != null) {
             for (SecurityInformation role : methodInfo) {
                 type = transport(type, role.transportGuaranteeType);
-                if (!role.roles.isEmpty() ||
-                        role.emptyRoleSemantic == ServletSecurity.EmptyRoleSemantic.DENY) {
-                    roleSet.add(role.roles);
-                }
+                constraintSet.add(new SingleConstraintMatch(role.emptyRoleSemantic, role.roles));
             }
         }
         for (ExcludedMethodRoles excluded : exact.excludedMethodRoles) {
             if (!excluded.methods.contains(method)) {
                 type = transport(type, excluded.securityInformation.transportGuaranteeType);
-
-                if (!excluded.securityInformation.roles.isEmpty() ||
-                        excluded.securityInformation.emptyRoleSemantic == ServletSecurity.EmptyRoleSemantic.DENY) {
-                    roleSet.add(excluded.securityInformation.roles);
-                }
+                constraintSet.add(new SingleConstraintMatch(excluded.securityInformation.emptyRoleSemantic, excluded.securityInformation.roles));
             }
         }
         return type;
@@ -237,9 +226,9 @@ public class SecurityPathMatches {
     private static final class SecurityInformation {
         final Set<String> roles;
         final TransportGuaranteeType transportGuaranteeType;
-        final ServletSecurity.EmptyRoleSemantic emptyRoleSemantic;
+        final SecurityInfo.EmptyRoleSemantic emptyRoleSemantic;
 
-        private SecurityInformation(final Set<String> roles, final TransportGuaranteeType transportGuaranteeType, final ServletSecurity.EmptyRoleSemantic emptyRoleSemantic) {
+        private SecurityInformation(final Set<String> roles, final TransportGuaranteeType transportGuaranteeType, final SecurityInfo.EmptyRoleSemantic emptyRoleSemantic) {
             this.emptyRoleSemantic = emptyRoleSemantic;
             this.roles = new HashSet<String>(roles);
             this.transportGuaranteeType = transportGuaranteeType;

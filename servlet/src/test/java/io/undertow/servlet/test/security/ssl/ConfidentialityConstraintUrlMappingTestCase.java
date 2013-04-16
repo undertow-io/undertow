@@ -22,6 +22,7 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.SecurityConstraint;
+import io.undertow.servlet.api.SecurityInfo.EmptyRoleSemantic;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.TransportGuaranteeType;
@@ -37,8 +38,6 @@ import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
 
 import java.io.IOException;
-
-import javax.servlet.annotation.ServletSecurity.EmptyRoleSemantic;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;

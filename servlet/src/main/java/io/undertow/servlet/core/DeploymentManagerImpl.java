@@ -50,6 +50,7 @@ import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.LoginConfig;
 import io.undertow.servlet.api.MimeMapping;
 import io.undertow.servlet.api.SecurityConstraint;
+import io.undertow.servlet.api.SecurityInfo.EmptyRoleSemantic;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletContainerInitializerInfo;
 import io.undertow.servlet.api.ServletInfo;
@@ -93,7 +94,6 @@ import javax.servlet.Servlet;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import javax.servlet.annotation.ServletSecurity;
 
 /**
  * The deployment manager. This manager is responsible for controlling the lifecycle of a servlet deployment.
@@ -257,7 +257,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
                     for (HttpMethodSecurityInfo method : securityInfo.getHttpMethodSecurityInfo()) {
                         methods.add(method.getMethod());
-                        if (method.getRolesAllowed().isEmpty() && method.getEmptyRoleSemantic() == ServletSecurity.EmptyRoleSemantic.PERMIT) {
+                        if (method.getRolesAllowed().isEmpty() && method.getEmptyRoleSemantic() == EmptyRoleSemantic.PERMIT) {
                             //this is an implict allow
                             continue;
                         }
