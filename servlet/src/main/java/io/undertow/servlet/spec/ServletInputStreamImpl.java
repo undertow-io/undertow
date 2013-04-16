@@ -17,6 +17,7 @@ import org.xnio.Pooled;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSourceChannel;
 
+import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
@@ -167,6 +168,16 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     @Override
     public void close() throws IOException {
+        if (anyAreSet(state, FLAG_CLOSED)) {
+            return;
+        }
+        while (allAreClear(state, FLAG_FINISHED)) {
+            readIntoBuffer();
+            if(pooled != null) {
+                pooled.free();
+                pooled = null;
+            }
+        }
         if(pooled != null) {
             pooled.free();
             pooled = null;
