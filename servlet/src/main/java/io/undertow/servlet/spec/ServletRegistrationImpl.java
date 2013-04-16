@@ -27,11 +27,14 @@ import javax.servlet.HttpMethodConstraintElement;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletRegistration;
 import javax.servlet.ServletSecurityElement;
+import javax.servlet.annotation.ServletSecurity;
 
 import io.undertow.UndertowMessages;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.HttpMethodSecurityInfo;
 import io.undertow.servlet.api.SecurityConstraint;
+import io.undertow.servlet.api.SecurityInfo;
+import io.undertow.servlet.api.SecurityInfo.EmptyRoleSemantic;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.TransportGuaranteeType;
@@ -79,17 +82,28 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
         ServletSecurityInfo info = new ServletSecurityInfo();
         servletInfo.setServletSecurityInfo(info);
         info.setTransportGuaranteeType(constraint.getTransportGuarantee() == CONFIDENTIAL ? TransportGuaranteeType.CONFIDENTIAL : TransportGuaranteeType.NONE)
-                .setEmptyRoleSemantic(constraint.getEmptyRoleSemantic())
+                .setEmptyRoleSemantic(emptyRoleSemantic(constraint.getEmptyRoleSemantic()))
                 .addRolesAllowed(constraint.getRolesAllowed());
 
         for (final HttpMethodConstraintElement methodConstraint : constraint.getHttpMethodConstraints()) {
             info.addHttpMethodSecurityInfo(new HttpMethodSecurityInfo()
                     .setTransportGuaranteeType(methodConstraint.getTransportGuarantee() == CONFIDENTIAL ? TransportGuaranteeType.CONFIDENTIAL : TransportGuaranteeType.NONE)
                     .setMethod(methodConstraint.getMethodName())
-                    .setEmptyRoleSemantic(methodConstraint.getEmptyRoleSemantic())
+                    .setEmptyRoleSemantic(emptyRoleSemantic(methodConstraint.getEmptyRoleSemantic()))
                     .addRolesAllowed(methodConstraint.getRolesAllowed()));
         }
         return ret;
+    }
+
+    private SecurityInfo.EmptyRoleSemantic emptyRoleSemantic(final ServletSecurity.EmptyRoleSemantic emptyRoleSemantic) {
+        switch (emptyRoleSemantic) {
+            case PERMIT:
+                return EmptyRoleSemantic.PERMIT;
+            case DENY:
+                return EmptyRoleSemantic.DENY;
+            default:
+                return null;
+        }
     }
 
     @Override

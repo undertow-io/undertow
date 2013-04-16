@@ -48,7 +48,7 @@ public class ServletIdentityManager implements IdentityManager {
 
     @Override
     public Account verify(Account account) {
-        // Just re-use the exising account.
+        // Just re-use the existing account.
         return account;
     }
 
