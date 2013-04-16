@@ -26,9 +26,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Executor;
@@ -98,7 +96,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final HeaderMap requestHeaders = new HeaderMap();
     private final HeaderMap responseHeaders = new HeaderMap();
 
-    private final List<ExchangeCompletionListener> exchangeCompleteListeners = new ArrayList<>(2);
+    private int exchangeCompletionListenersCount = 0;
+    private ExchangeCompletionListener[] exchangeCompleteListeners = new ExchangeCompletionListener[2];
     private final Deque<DefaultResponseListener> defaultResponseListeners = new ArrayDeque<DefaultResponseListener>(1);
 
     private Map<String, Deque<String>> queryParameters;
@@ -542,7 +541,19 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void upgradeChannel(final ExchangeCompletionListener upgradeCompleteListener) {
         setResponseCode(101);
-        exchangeCompleteListeners.add(0, upgradeCompleteListener);
+        final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
+        ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
+        if(exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
+            ExchangeCompletionListener[] old = exchangeCompleteListeners;
+            this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
+            System.arraycopy(old, 0, exchangeCompleteListeners, 1, exchangeCompletionListenersCount);
+            exchangeCompleteListeners[0] = upgradeCompleteListener;
+        } else {
+            for(int i = exchangeCompletionListenersCount - 1; i >=0; --i) {
+                exchangeCompleteListeners[i+1] = exchangeCompleteListeners[i];
+            }
+            exchangeCompleteListeners[0] = upgradeCompleteListener;
+        }
     }
 
     /**
@@ -559,11 +570,30 @@ public final class HttpServerExchange extends AbstractAttachable {
         final HeaderMap headers = getResponseHeaders();
         headers.add(Headers.UPGRADE, productName);
         headers.add(Headers.CONNECTION, Headers.UPGRADE_STRING);
-        exchangeCompleteListeners.add(0, upgradeCompleteListener);
+        final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
+        ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
+        if(exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
+            ExchangeCompletionListener[] old = exchangeCompleteListeners;
+            this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
+            System.arraycopy(old, 0, exchangeCompleteListeners, 1, exchangeCompletionListenersCount);
+            exchangeCompleteListeners[0] = upgradeCompleteListener;
+        } else {
+            for(int i = exchangeCompletionListenersCount - 1; i >=0; --i) {
+                exchangeCompleteListeners[i+1] = exchangeCompleteListeners[i];
+            }
+            exchangeCompleteListeners[0] = upgradeCompleteListener;
+        }
     }
 
     public void addExchangeCompleteListener(final ExchangeCompletionListener listener) {
-        exchangeCompleteListeners.add(listener);
+        final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
+        ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
+        if(exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
+            ExchangeCompletionListener[] old = exchangeCompleteListeners;
+            this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
+            System.arraycopy(old, 0, exchangeCompleteListeners, 0, exchangeCompletionListenersCount);
+        }
+        exchangeCompleteListeners[exchangeCompletionListenersCount] = listener;
     }
 
     public void addDefaultResponseListener(final DefaultResponseListener listener) {
@@ -696,9 +726,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     private void invokeExchangeCompleteListeners() {
-        if (!exchangeCompleteListeners.isEmpty()) {
-            int i = exchangeCompleteListeners.size() - 1;
-            ExchangeCompletionListener next = exchangeCompleteListeners.get(i);
+        if (exchangeCompletionListenersCount > 0) {
+            int i = exchangeCompletionListenersCount- 1;
+            ExchangeCompletionListener next = exchangeCompleteListeners[i];
             next.exchangeEvent(this, new ExchangeCompleteNextListener(exchangeCompleteListeners, this, i));
         }
     }
@@ -1105,11 +1135,11 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {
-        private final List<ExchangeCompletionListener> list;
+        private final ExchangeCompletionListener[] list;
         private final HttpServerExchange exchange;
         private int i;
 
-        public ExchangeCompleteNextListener(final List<ExchangeCompletionListener> list, final HttpServerExchange exchange, int i) {
+        public ExchangeCompleteNextListener(final ExchangeCompletionListener[] list, final HttpServerExchange exchange, int i) {
             this.list = list;
             this.exchange = exchange;
             this.i = i;
@@ -1118,7 +1148,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public void proceed() {
             if (--i >= 0) {
-                final ExchangeCompletionListener next = list.get(i);
+                final ExchangeCompletionListener next = list[i];
                 next.exchangeEvent(exchange, this);
             }
         }
