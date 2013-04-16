@@ -31,7 +31,7 @@
     <groupId>io.undertow</groupId>
     <artifactId>undertow-build-config</artifactId>
     <name>Undertow Build Configuration</name>
-    <version>1.0.0.Alpha9-SNAPSHOT</version>
+    <version>1.0.0.Alpha9</version>
 
 
 </project>
