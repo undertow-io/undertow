@@ -39,14 +39,13 @@ import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.util.ImmediateConduitFactory;
 import io.undertow.util.Protocols;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.SecureHashMap;
+import io.undertow.util.WrapperConduitFactory;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -60,6 +59,8 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
@@ -680,21 +681,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (wrappers == null) {
             return null;
         }
-
-
-        ConduitFactory<StreamSourceConduit> factory = new ImmediateConduitFactory<StreamSourceConduit>(connection.getChannel().getSourceChannel().getConduit());
-        for (int i = 0; i < requestWrapperCount; ++i) {
-            final ConduitWrapper<StreamSourceConduit> wrapper = wrappers[i];
-            final ConduitFactory oldFactory = factory;
-            factory = new ConduitFactory<StreamSourceConduit>() {
-                @Override
-                public StreamSourceConduit create() {
-                    return wrapper.wrap(oldFactory, HttpServerExchange.this);
-                }
-            };
-        }
-        connection.getChannel().getSourceChannel().setConduit(factory.create());
-        return requestChannel = new ReadDispatchChannel(connection.getChannel().getSourceChannel());
+        final ConduitStreamSourceChannel sourceChannel = connection.getChannel().getSourceChannel();
+        final WrapperConduitFactory<StreamSourceConduit> factory = new WrapperConduitFactory<>(wrappers, requestWrapperCount, sourceChannel.getConduit(), this);
+        sourceChannel.setConduit(factory.create());
+        return requestChannel = new ReadDispatchChannel(sourceChannel);
     }
 
     public boolean isRequestChannelAvailable() {
@@ -810,20 +800,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (wrappers == null) {
             return null;
         }
-
-        ConduitFactory<StreamSinkConduit> factory = new ImmediateConduitFactory<>(connection.getChannel().getSinkChannel().getConduit());
-        for (int i = 0; i < responseWrapperCount; ++i) {
-            final ConduitWrapper<StreamSinkConduit> wrapper = wrappers[i];
-            final ConduitFactory oldFactory = factory;
-            factory = new ConduitFactory<StreamSinkConduit>() {
-                @Override
-                public StreamSinkConduit create() {
-                    return wrapper.wrap(oldFactory, HttpServerExchange.this);
-                }
-            };
-        }
-        connection.getChannel().getSinkChannel().setConduit(factory.create());
-        this.responseChannel = new WriteDispatchChannel(connection.getChannel().getSinkChannel());
+        final ConduitStreamSinkChannel sinkChannel = connection.getChannel().getSinkChannel();
+        final WrapperConduitFactory<StreamSinkConduit> factory = new WrapperConduitFactory<>(wrappers, responseWrapperCount, sinkChannel.getConduit(), this);
+        sinkChannel.setConduit(factory.create());
+        this.responseChannel = new WriteDispatchChannel(sinkChannel);
         this.startResponse();
         return responseChannel;
     }
