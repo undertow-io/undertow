@@ -532,27 +532,14 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         Deque<String> params = queryParameters.get(name);
         if (params == null) {
             if (exchange.getRequestMethod().equals(Methods.POST)) {
-                if (parsedFormData == null) {
-                    if (readStarted) {
+                final FormData parsedFormData = parseFormData();
+                if (parsedFormData != null) {
+                    FormData.FormValue res = parsedFormData.getFirst(name);
+                    if (res == null) {
                         return null;
+                    } else {
+                        return res.getValue();
                     }
-                    readStarted = true;
-                    final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-                    if (parser == null) {
-                        return null;
-                    }
-                    try {
-                        parsedFormData = parser.parseBlocking();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-
-                FormData.FormValue res = parsedFormData.getFirst(name);
-                if (res == null) {
-                    return null;
-                } else {
-                    return res.getValue();
                 }
             }
             return null;
@@ -570,17 +557,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public Enumeration<String> getParameterNames() {
         final Set<String> parameterNames = new HashSet<String>(queryParameters.keySet());
         if (exchange.getRequestMethod().equals(Methods.POST)) {
-            readStarted = true;
-            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-            if (parser != null) {
-                try {
-                    FormData formData = parser.parseBlocking();
-                    Iterator<String> it = formData.iterator();
-                    while (it.hasNext()) {
-                        parameterNames.add(it.next());
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+            final FormData parsedFormData = parseFormData();
+            if (parsedFormData != null) {
+                Iterator<String> it = parsedFormData.iterator();
+                while (it.hasNext()) {
+                    parameterNames.add(it.next());
                 }
             }
         }
@@ -601,21 +582,15 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             }
         }
         if (exchange.getRequestMethod().equals(Methods.POST)) {
-            readStarted = true;
-            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-            if (parser != null) {
-                try {
-                    Deque<FormData.FormValue> res = parser.parseBlocking().get(name);
-                    if (res == null) {
-                        return null;
-                    } else {
-                        for (FormData.FormValue value : res) {
-                            ret.add(value.getValue());
-                        }
+            final FormData parsedFormData = parseFormData();
+            if (parsedFormData != null) {
+                Deque<FormData.FormValue> res = parsedFormData.get(name);
+                if (res == null) {
+                    return null;
+                } else {
+                    for (FormData.FormValue value : res) {
+                        ret.add(value.getValue());
                     }
-
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
                 }
             }
         }
@@ -632,39 +607,53 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             ret.put(entry.getKey(), entry.getValue().toArray(new String[entry.getValue().size()]));
         }
         if (exchange.getRequestMethod().equals(Methods.POST)) {
-            readStarted = true;
-            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-            if (parser != null) {
-                try {
-                    FormData formData = parser.parseBlocking();
-                    Iterator<String> it = formData.iterator();
-                    while (it.hasNext()) {
-                        final String name = it.next();
-                        Deque<FormData.FormValue> val = formData.get(name);
-                        if (ret.containsKey(name)) {
-                            String[] existing = ret.get(name);
-                            String[] array = new String[val.size() + existing.length];
-                            System.arraycopy(existing, 0, array, 0, existing.length);
-                            int i = existing.length;
-                            for (final FormData.FormValue v : val) {
-                                array[i++] = v.getValue();
-                            }
-                            ret.put(name, array);
-                        } else {
-                            String[] array = new String[val.size()];
-                            int i = 0;
-                            for (final FormData.FormValue v : val) {
-                                array[i++] = v.getValue();
-                            }
-                            ret.put(name, array);
+
+            final FormData parsedFormData = parseFormData();
+            if (parsedFormData != null) {
+                Iterator<String> it = parsedFormData.iterator();
+                while (it.hasNext()) {
+                    final String name = it.next();
+                    Deque<FormData.FormValue> val = parsedFormData.get(name);
+                    if (ret.containsKey(name)) {
+                        String[] existing = ret.get(name);
+                        String[] array = new String[val.size() + existing.length];
+                        System.arraycopy(existing, 0, array, 0, existing.length);
+                        int i = existing.length;
+                        for (final FormData.FormValue v : val) {
+                            array[i++] = v.getValue();
                         }
+                        ret.put(name, array);
+                    } else {
+                        String[] array = new String[val.size()];
+                        int i = 0;
+                        for (final FormData.FormValue v : val) {
+                            array[i++] = v.getValue();
+                        }
+                        ret.put(name, array);
                     }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
                 }
             }
         }
         return ret;
+    }
+
+    private FormData parseFormData() {
+        if (parsedFormData == null) {
+            if (readStarted) {
+                return null;
+            }
+            readStarted = true;
+            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+            if (parser == null) {
+                return null;
+            }
+            try {
+                return parsedFormData = parser.parseBlocking();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return parsedFormData;
     }
 
     @Override
