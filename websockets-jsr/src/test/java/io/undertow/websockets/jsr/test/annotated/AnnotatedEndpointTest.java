@@ -70,8 +70,10 @@ public class AnnotatedEndpointTest {
                 .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
 
         deployment.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 1000));
-        deployment.addEndpoint(AnnotatedTestEndpoint.class);
+        deployment.addEndpoint(MessageEndpoint.class);
         deployment.addEndpoint(AnnotatedClientEndpoint.class);
+        deployment.addEndpoint(IncrementEndpoint.class);
+        deployment.addEndpoint(EncodingEndpoint.class);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -107,5 +109,31 @@ public class AnnotatedEndpointTest {
 
         session.close();
         Assert.assertEquals("CLOSED", AnnotatedClientEndpoint.message());
+    }
+
+
+    @org.junit.Test
+    public void testImplicitIntegerConversion() throws Exception {
+        final byte[] payload = "12".getBytes();
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
+
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/increment"));
+        client.connect();
+        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "13".getBytes(), latch));
+        latch.get();
+        client.destroy();
+    }
+
+
+    @org.junit.Test
+    public void testEncodingAndDecoding() throws Exception {
+        final byte[] payload = "hello".getBytes();
+        final ConcreteIoFuture latch = new ConcreteIoFuture();
+
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/encoding/Stuart"));
+        client.connect();
+        client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
+        latch.get();
+        client.destroy();
     }
 }

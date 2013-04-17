@@ -25,6 +25,8 @@ import java.io.Writer;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,9 +34,11 @@ import java.util.Map;
 import javax.websocket.Decoder;
 import javax.websocket.DeploymentException;
 import javax.websocket.Encoder;
+import javax.websocket.EndpointConfig;
 
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
 
 /**
  * Factory class that produces encoding instances for an endpoint. This also provides static
@@ -59,7 +63,7 @@ public class EncodingFactory {
     }
 
     public boolean canEncodeText(final Class<?> type) {
-        if(isPrimitiveOrBoxed(type)) {
+        if (isPrimitiveOrBoxed(type)) {
             return true;
         }
         return textEncoders.containsKey(type);
@@ -67,7 +71,7 @@ public class EncodingFactory {
 
 
     public boolean canDecodeText(final Class<?> type) {
-        if(isPrimitiveOrBoxed(type)) {
+        if (isPrimitiveOrBoxed(type)) {
             return true;
         }
         return textDecoders.containsKey(type);
@@ -81,6 +85,59 @@ public class EncodingFactory {
 
     public boolean canDecodeDinary(final Class<?> type) {
         return textDecoders.containsKey(type);
+    }
+
+    public Encoding createEncoding(final EndpointConfig endpointConfig) {
+        try {
+            Map<Class<?>, List<InstanceHandle<? extends Encoder>>> binaryEncoders = this.binaryEncoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Encoder>>>emptyMap() :  new HashMap<Class<?>, List<InstanceHandle<? extends Encoder>>>();
+            Map<Class<?>, List<InstanceHandle<? extends Decoder>>> binaryDecoders = this.binaryDecoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Decoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Decoder>>>();
+            Map<Class<?>, List<InstanceHandle<? extends Encoder>>> textEncoders = this.textEncoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Encoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Encoder>>>();
+            Map<Class<?>, List<InstanceHandle<? extends Decoder>>> textDecoders = this.textDecoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Decoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Decoder>>>();
+
+            for (Map.Entry<Class<?>, List<InstanceFactory<? extends Encoder>>> entry : this.binaryEncoders.entrySet()) {
+                final List<InstanceHandle<? extends Encoder>> val = new ArrayList<>(entry.getValue().size());
+                binaryEncoders.put(entry.getKey(), val);
+                for (InstanceFactory<? extends Encoder> factory : entry.getValue()) {
+                    InstanceHandle<? extends Encoder> instance = factory.createInstance();
+                    instance.getInstance().init(endpointConfig);
+                    val.add(instance);
+                }
+            }
+            for (Map.Entry<Class<?>, List<InstanceFactory<? extends Decoder>>> entry : this.binaryDecoders.entrySet()) {
+                final List<InstanceHandle<? extends Decoder>> val = new ArrayList<>(entry.getValue().size());
+                binaryDecoders.put(entry.getKey(), val);
+                for (InstanceFactory<? extends Decoder> factory : entry.getValue()) {
+                    InstanceHandle<? extends Decoder> instance = factory.createInstance();
+                    instance.getInstance().init(endpointConfig);
+                    val.add(instance);
+                }
+            }
+            for (Map.Entry<Class<?>, List<InstanceFactory<? extends Encoder>>> entry : this.textEncoders.entrySet()) {
+                final List<InstanceHandle<? extends Encoder>> val = new ArrayList<>(entry.getValue().size());
+                textEncoders.put(entry.getKey(), val);
+                for (InstanceFactory<? extends Encoder> factory : entry.getValue()) {
+                    InstanceHandle<? extends Encoder> instance = factory.createInstance();
+                    instance.getInstance().init(endpointConfig);
+                    val.add(instance);
+                }
+            }
+            for (Map.Entry<Class<?>, List<InstanceFactory<? extends Decoder>>> entry : this.textDecoders.entrySet()) {
+                final List<InstanceHandle<? extends Decoder>> val = new ArrayList<>(entry.getValue().size());
+                textDecoders.put(entry.getKey(), val);
+                for (InstanceFactory<? extends Decoder> factory : entry.getValue()) {
+                    InstanceHandle<? extends Decoder> instance = factory.createInstance();
+                    instance.getInstance().init(endpointConfig);
+                    val.add(instance);
+                }
+            }
+            return new Encoding(binaryEncoders, binaryDecoders, textEncoders, textDecoders);
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static EncodingFactory createFactory(final ClassIntrospecter classIntrospecter, final Class<? extends Decoder>[] decoders, final Class<? extends Encoder>[] encoders) throws DeploymentException {
+        return createFactory(classIntrospecter, Arrays.asList(decoders), Arrays.asList(encoders));
     }
 
     public static EncodingFactory createFactory(final ClassIntrospecter classIntrospecter, final List<Class<? extends Decoder>> decoders, final List<Class<? extends Encoder>> encoders) throws DeploymentException {
@@ -191,14 +248,14 @@ public class EncodingFactory {
                     method.getParameterTypes().length == 1 + otherParameters.length &&
                     method.getReturnType() == returnType) {
                 boolean ok = true;
-                for (int i = 0; i < method.getParameterTypes().length; ++i) {
-                    if (method.getParameterTypes()[i] != otherParameters[i + 1]) {
+                for (int i = 1; i < method.getParameterTypes().length; ++i) {
+                    if (method.getParameterTypes()[i] != otherParameters[i - 1]) {
                         ok = false;
                         break;
                     }
                 }
                 if (ok) {
-                    return method.getReturnType();
+                    return method.getParameterTypes()[0];
                 }
             }
         }
@@ -206,7 +263,7 @@ public class EncodingFactory {
     }
 
 
-    private static boolean isPrimitiveOrBoxed(final Class<?> clazz) {
+    static boolean isPrimitiveOrBoxed(final Class<?> clazz) {
         return clazz.isPrimitive() ||
                 clazz == Boolean.class ||
                 clazz == Byte.class ||

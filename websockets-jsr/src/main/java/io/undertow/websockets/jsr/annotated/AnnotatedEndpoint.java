@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javax.websocket.CloseReason;
+import javax.websocket.DecodeException;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.PongMessage;
@@ -18,6 +19,7 @@ import io.undertow.websockets.api.FragmentedFrameHandler;
 import io.undertow.websockets.api.WebSocketFrameHeader;
 import io.undertow.websockets.api.WebSocketSession;
 import io.undertow.websockets.jsr.DefaultPongMessage;
+import io.undertow.websockets.jsr.JsrWebSocketMessages;
 import io.undertow.websockets.jsr.UTF8Output;
 import io.undertow.websockets.jsr.UndertowSession;
 import org.xnio.Buffers;
@@ -50,7 +52,7 @@ public class AnnotatedEndpoint extends Endpoint {
     public void onOpen(final Session session, final EndpointConfig endpointConfiguration) {
 
         UndertowSession s = (UndertowSession) session;
-        s.setFrameHandler(new AnnotatedEndpointFrameHandler(session));
+        s.setFrameHandler(new AnnotatedEndpointFrameHandler((UndertowSession)session));
 
         if (webSocketOpen != null) {
             final Map<Class<?>, Object> params = new HashMap<>();
@@ -85,7 +87,7 @@ public class AnnotatedEndpoint extends Endpoint {
 
     private class AnnotatedEndpointFrameHandler implements FragmentedFrameHandler {
 
-        private final Session session;
+        private final UndertowSession session;
         private UTF8Output assembledTextFrame;
         private ByteArrayOutputStream assembledBinaryFrame;
         private final SendHandler errorReportingSendHandler = new SendHandler() {
@@ -97,7 +99,7 @@ public class AnnotatedEndpoint extends Endpoint {
             }
         };
 
-        public AnnotatedEndpointFrameHandler(final Session session) {
+        public AnnotatedEndpointFrameHandler(final UndertowSession session) {
             this.session = session;
         }
 
@@ -163,16 +165,32 @@ public class AnnotatedEndpoint extends Endpoint {
 
         @Override
         public void onTextFrame(final WebSocketSession s, final WebSocketFrameHeader header, final ByteBuffer... payload) {
+            if (textMessage == null) {
+                onError(s, JsrWebSocketMessages.MESSAGES.receivedTextFrameButNoMethod());
+                return;
+            }
             if (assembledTextFrame == null) {
                 assembledTextFrame = new UTF8Output();
             }
             UTF8Output builder = assembledTextFrame;
             builder.write(payload);
-            if (header.isLastFragement() || textMessage.hasParameterType(boolean.class)) {
+            if (header.isLastFragement() || (textMessage.hasParameterType(boolean.class) && !textMessage.isDecoderRequired())) {
+                Object messageObject;
+                if (textMessage.isDecoderRequired()) {
+                    try {
+                        messageObject = session.getEncoding().decodeText(textMessage.getMessageType(), builder.extract());
+                    } catch (DecodeException e) {
+                        onError(s, e);
+                        return;
+                    }
+                } else {
+                    messageObject = builder.extract();
+                }
+
                 final Map<Class<?>, Object> params = new HashMap<>();
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
-                params.put(String.class, builder.extract());
+                params.put(textMessage.getMessageType(), messageObject);
                 params.put(boolean.class, true);
                 Object result = textMessage.invoke(instance.getInstance(), params);
                 assembledTextFrame = null;
@@ -189,7 +207,6 @@ public class AnnotatedEndpoint extends Endpoint {
                 } else if (result instanceof ByteBuffer) {
                     session.getAsyncRemote().sendBinary((ByteBuffer) result, errorReportingSendHandler);
                 } else {
-                    //TODO: how do we send primities? text or binary
                     session.getAsyncRemote().sendObject(result, errorReportingSendHandler);
                 }
             }
@@ -198,11 +215,14 @@ public class AnnotatedEndpoint extends Endpoint {
         @Override
         public void onBinaryFrame(final WebSocketSession s, final WebSocketFrameHeader header, final ByteBuffer... payload) {
             //TODO: this could be more efficent
-
-            boolean allowPartial = textMessage.hasParameterType(boolean.class);
+            if (binaryMessage == null) {
+                onError(s, JsrWebSocketMessages.MESSAGES.receivedBinaryFrameButNoMethod());
+                return;
+            }
+            boolean allowPartial = binaryMessage.hasParameterType(boolean.class);
             //if they take a byte buffer and allow partial frames this is the most efficent path
             //we can also take this path for a non-fragmented frame with a single buffer in the payload
-            if (textMessage.hasParameterType(ByteBuffer.class) && (allowPartial || (payload.length == 1 && header.isLastFragement() && assembledBinaryFrame == null))) {
+            if (binaryMessage.getMessageType() == ByteBuffer.class && (allowPartial || (payload.length == 1 && header.isLastFragement() && assembledBinaryFrame == null))) {
                 final Map<Class<?>, Object> params = new HashMap<>();
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
@@ -211,7 +231,7 @@ public class AnnotatedEndpoint extends Endpoint {
 
                     params.put(ByteBuffer.class, payload);
                     params.put(boolean.class, header.isLastFragement() && i == payload.length - 1);
-                    result = textMessage.invoke(instance.getInstance(), params);
+                    result = binaryMessage.invoke(instance.getInstance(), params);
                     sendResult(result);
                 }
             } else {
@@ -224,13 +244,20 @@ public class AnnotatedEndpoint extends Endpoint {
                         builder.write(buf.get());
                     }
                 }
-                if (header.isLastFragement() || textMessage.hasParameterType(boolean.class)) {
+                if (header.isLastFragement() || binaryMessage.hasParameterType(boolean.class)) {
                     final Map<Class<?>, Object> params = new HashMap<>();
                     params.put(Session.class, session);
                     params.put(Map.class, session.getPathParameters());
-                    if (binaryMessage.hasParameterType(ByteBuffer.class)) {
+                    if (binaryMessage.isDecoderRequired()) {
+                        try {
+                            params.put(binaryMessage.getMessageType(), session.getEncoding().decodeBinary(binaryMessage.getMessageType(), assembledBinaryFrame.toByteArray()));
+                        } catch (DecodeException e) {
+                            onError(s, e);
+                            return;
+                        }
+                    } else if (binaryMessage.getMessageType() == ByteBuffer.class) {
                         params.put(ByteBuffer.class, ByteBuffer.wrap(assembledBinaryFrame.toByteArray()));
-                    } else if (binaryMessage.hasParameterType(byte[].class)) {
+                    } else if (binaryMessage.getMessageType() == byte[].class) {
                         params.put(byte[].class, assembledBinaryFrame.toByteArray());
                     } else {
                         //decoders

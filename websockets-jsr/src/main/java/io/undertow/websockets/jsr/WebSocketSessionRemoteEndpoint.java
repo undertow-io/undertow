@@ -41,10 +41,12 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
     private final EndpointConfig config;
     private final Async async = new AsyncWebSocketSessionRemoteEndpoint();
     private final Basic basic = new BasicWebSocketSessionRemoteEndpoint();
+    private final Encoding encoding;
 
-    public WebSocketSessionRemoteEndpoint(WebSocketChannelSession session, EndpointConfig config) {
+    public WebSocketSessionRemoteEndpoint(WebSocketChannelSession session, EndpointConfig config, final Encoding encoding) {
         this.session = session;
         this.config = config;
+        this.encoding = encoding;
     }
 
     public Async getAsync() {
@@ -130,36 +132,15 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         private void sendObjectImpl(final Object o, final SendCallback callback) {
             try {
-                /*
-                for (Encoder encoder : config.getEncoders()) {
-                    Class<?> type = ClassUtils.getEncoderType(encoder.getClass());
-                    if (type.isInstance(o)) {
-                        if (encoder instanceof Encoder.Binary) {
-                            session.sendBinary(((Encoder.Binary) encoder).encode(o), callback);
-                            return;
-                        }
-                        if (encoder instanceof Encoder.BinaryStream) {
-                            final ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                            ((Encoder.BinaryStream) encoder).encode(o, stream);
-                            session.sendBinary(ByteBuffer.wrap(stream.toByteArray()), callback);
-                            return;
-                        }
-                        if (encoder instanceof Encoder.Text) {
-                            session.sendText(((Encoder.Text) encoder).encode(o), callback);
-                            return;
-                        }
-                        if (encoder instanceof Encoder.TextStream) {
-                            final CharArrayWriter writer = new CharArrayWriter();
-                            ((Encoder.TextStream) encoder).encode(o, writer);
-                            session.sendText(new String(writer.toCharArray()), callback);
-                            return;
-                        }
-                    }
+                if (encoding.canEncodeText(o.getClass())) {
+                    session.sendText(encoding.encodeText(o), callback);
+                } else if (encoding.canEncodeBinary(o.getClass())) {
+                    session.sendBinary(encoding.encodeBinary(o), callback);
+                } else {
+                    // TODO: Replace on bug is fixed
+                    // https://issues.jboss.org/browse/LOGTOOL-64
+                    throw new EncodeException(o, "No suitable encoder found");
                 }
-                */
-                // TODO: Replace on bug is fixed
-                // https://issues.jboss.org/browse/LOGTOOL-64
-                throw new EncodeException(o, "No suitable encoder found");
             } catch (EncodeException e) {
                 throw new RuntimeException(e);
             }
@@ -276,34 +257,15 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         private void sendObjectImpl(final Object o) throws IOException {
             try {
-                /*for (Encoder encoder : config.getEncoders()) {
-                    Class<?> type = ClassUtils.getEncoderType(encoder.getClass());
-                    if (type.isInstance(o)) {
-                        if (encoder instanceof Encoder.Binary) {
-                            session.sendBinary(((Encoder.Binary) encoder).encode(o));
-                            return;
-                        }
-                        if (encoder instanceof Encoder.BinaryStream) {
-                            final ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                            ((Encoder.BinaryStream) encoder).encode(o, stream);
-                            session.sendBinary(ByteBuffer.wrap(stream.toByteArray()));
-                            return;
-                        }
-                        if (encoder instanceof Encoder.Text) {
-                            session.sendText(((Encoder.Text) encoder).encode(o));
-                            return;
-                        }
-                        if (encoder instanceof Encoder.TextStream) {
-                            final CharArrayWriter writer = new CharArrayWriter();
-                            ((Encoder.TextStream) encoder).encode(o, writer);
-                            session.sendText(new String(writer.toCharArray()));
-                            return;
-                        }
-                    }
-                }*/
-                // TODO: Replace on bug is fixed
-                // https://issues.jboss.org/browse/LOGTOOL-64
-                throw new EncodeException(o, "No suitable encoder found");
+                if (encoding.canEncodeText(o.getClass())) {
+                    session.sendText(encoding.encodeText(o));
+                } else if (encoding.canEncodeBinary(o.getClass())) {
+                    session.sendBinary(encoding.encodeBinary(o));
+                } else {
+                    // TODO: Replace on bug is fixed
+                    // https://issues.jboss.org/browse/LOGTOOL-64
+                    throw new EncodeException(o, "No suitable encoder found");
+                }
             } catch (EncodeException e) {
                 throw new RuntimeException(e);
             }

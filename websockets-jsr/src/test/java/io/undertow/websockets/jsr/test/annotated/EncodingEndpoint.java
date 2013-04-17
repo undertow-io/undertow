@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2012 Red Hat, Inc., and individual contributors
+ * Copyright 2013 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,12 +25,12 @@ import javax.websocket.server.ServerEndpoint;
 /**
  * @author Stuart Douglas
  */
-@ServerEndpoint("/chat/{user}")
-public class AnnotatedTestEndpoint {
+@ServerEndpoint(value = "/encoding/{user}", encoders = EncodableObject.Encoder.class, decoders = EncodableObject.Decoder.class)
+public class EncodingEndpoint {
 
     @OnMessage
-    public String handleMessage(final String message, @PathParam("user") String user) {
-        return message + " " + user;
+    public EncodableObject handleMessage(final EncodableObject message, @PathParam("user") String user) {
+        return new EncodableObject(message.getValue() + " " + user);
     }
 
 }

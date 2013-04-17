@@ -56,15 +56,17 @@ public final class UndertowSession implements Session {
     private final URI requestUri;
     private final Map<String, String> pathParameters;
     private final InstanceHandle<Endpoint> endpoint;
+    private final Encoding encoding;
 
-    public UndertowSession(WebSocketChannelSession session, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfig config) {
+    public UndertowSession(WebSocketChannelSession session, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfig config, final Encoding encoding) {
         this.session = session;
+        this.encoding = encoding;
         container = handler.getContainer();
         this.user = user;
         this.requestUri = requestUri;
         this.requestParameterMap = Collections.unmodifiableMap(requestParameterMap);
         this.pathParameters = Collections.unmodifiableMap(pathParameters);
-        remote = new WebSocketSessionRemoteEndpoint(session, config);
+        remote = new WebSocketSessionRemoteEndpoint(session, config, encoding);
         session.setFrameHandler(new WholeFrameHandler(this, endpoint.getInstance()));
         this.endpoint = endpoint;
         session.getChannel().getCloseSetter().set(new ChannelListener<Channel>() {
@@ -165,6 +167,7 @@ public final class UndertowSession implements Session {
 
     /**
      * sets the frame handler. This should only be used for annotated endpoints.
+     *
      * @param handler The handler
      */
     public void setFrameHandler(final FrameHandler handler) {
@@ -213,11 +216,15 @@ public final class UndertowSession implements Session {
 
     @Override
     public void close(CloseReason closeReason) throws IOException {
-        endpoint.getInstance().onClose(this, closeReason);
-        if (closeReason == null) {
-            session.sendClose(null);
-        } else {
-            session.sendClose(new io.undertow.websockets.api.CloseReason(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()));
+        try {
+            endpoint.getInstance().onClose(this, closeReason);
+            if (closeReason == null) {
+                session.sendClose(null);
+            } else {
+                session.sendClose(new io.undertow.websockets.api.CloseReason(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()));
+            }
+        } finally {
+            close0();
         }
     }
 
@@ -292,6 +299,14 @@ public final class UndertowSession implements Session {
     }
 
     void close0() {
-        endpoint.release();
+        try {
+            endpoint.release();
+        } finally {
+            encoding.close();
+        }
+    }
+
+    public Encoding getEncoding() {
+        return encoding;
     }
 }

@@ -119,7 +119,7 @@ public class ServerWebSocketContainer implements ServerContainer {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
         }
         Endpoint instance = config.getFactory().createInstanceForExisting(annotatedEndpointInstance);
-        return connectToServer(instance, config.getConfig(), path);
+        return connectToServerInternal(instance, config, path);
     }
 
     @Override
@@ -130,7 +130,7 @@ public class ServerWebSocketContainer implements ServerContainer {
         }
         try {
             InstanceHandle<Endpoint> instance = config.getFactory().createInstance();
-            return connectToServer(instance.getInstance(), config.getConfig(), uri);
+            return connectToServerInternal(instance.getInstance(), config, uri);
         } catch (InstantiationException e) {
             throw new RuntimeException(e);
         }
@@ -138,9 +138,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     @Override
     public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
-
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
-
         IoFuture<WebSocketChannel> session = WebSocketClient.connect(httpClient, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
@@ -148,12 +146,13 @@ public class ServerWebSocketContainer implements ServerContainer {
         WebSocketChannelSession wss = new WebSocketChannelSession(channel, sessionIdGenerator.nextId(), false);
 
         WebSocketRecieveListeners.startRecieving(wss, channel, false);
-
-        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec);
+        EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
+        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, encodingFactory.createEncoding(cec));
         endpointInstance.onOpen(undertowSession, cec);
 
         return undertowSession;
     }
+
 
     @Override
     public Session connectToServer(final Class<? extends Endpoint> endpointClass, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
@@ -163,6 +162,22 @@ public class ServerWebSocketContainer implements ServerContainer {
         } catch (InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public Session connectToServerInternal(final Endpoint endpointInstance, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
+        //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(httpClient, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
+        WebSocketChannel channel = session.get();
+        EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
+
+        WebSocketChannelSession wss = new WebSocketChannelSession(channel, sessionIdGenerator.nextId(), false);
+
+        WebSocketRecieveListeners.startRecieving(wss, channel, false);
+
+        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), cec.getEncodingFactory().createEncoding(cec.getConfig()));
+        endpointInstance.onOpen(undertowSession, cec.getConfig());
+
+        return undertowSession;
     }
 
     @Override
@@ -222,7 +237,9 @@ public class ServerWebSocketContainer implements ServerContainer {
                     throw JsrWebSocketMessages.MESSAGES.multipleEndpointsWithOverlappingPaths(template, existing);
                 }
                 seenPaths.add(template);
-                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint));
+
+                EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, serverEndpoint.decoders(), serverEndpoint.encoders());
+                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory);
 
                 ServerEndpointConfig config = ServerEndpointConfig.Builder.create(endpoint, serverEndpoint.value())
                         .decoders(Arrays.asList(serverEndpoint.decoders()))
@@ -231,10 +248,12 @@ public class ServerWebSocketContainer implements ServerContainer {
                         .configurator(new ServerInstanceFactoryConfigurator(factory))
                         .build();
 
-                ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, factory, template);
+
+                ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, factory, template, encodingFactory);
                 configuredServerEndpoints.add(confguredServerEndpoint);
             } else if (clientEndpoint != null) {
-                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint));
+                EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, clientEndpoint.decoders(), clientEndpoint.encoders());
+                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory);
 
                 ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
                         .decoders(Arrays.asList(clientEndpoint.decoders()))
@@ -243,7 +262,7 @@ public class ServerWebSocketContainer implements ServerContainer {
                         .configurator(clientEndpoint.configurator().newInstance())
                         .build();
 
-                ConfiguredClientEndpoint configuredClientEndpoint = new ConfiguredClientEndpoint(config, factory);
+                ConfiguredClientEndpoint configuredClientEndpoint = new ConfiguredClientEndpoint(config, factory, encodingFactory);
                 clientEndpoints.put(endpoint, configuredClientEndpoint);
             } else {
                 throw JsrWebSocketMessages.MESSAGES.classWasNotAnnotated(endpoint);
@@ -271,7 +290,8 @@ public class ServerWebSocketContainer implements ServerContainer {
             throw JsrWebSocketMessages.MESSAGES.multipleEndpointsWithOverlappingPaths(template, existing);
         }
         seenPaths.add(template);
-        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template);
+        EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, endpoint.getDecoders(), endpoint.getEncoders());
+        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template, encodingFactory);
         configuredServerEndpoints.add(confguredServerEndpoint);
     }
 

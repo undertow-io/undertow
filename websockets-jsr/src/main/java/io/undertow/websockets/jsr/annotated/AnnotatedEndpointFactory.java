@@ -23,6 +23,7 @@ import javax.websocket.server.PathParam;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
+import io.undertow.websockets.jsr.EncodingFactory;
 import io.undertow.websockets.jsr.JsrWebSocketMessages;
 
 /**
@@ -54,7 +55,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     }
 
 
-    public static AnnotatedEndpointFactory create(final Class<?> endpointClass, final InstanceFactory<?> underlyingInstance) throws DeploymentException {
+    public static AnnotatedEndpointFactory create(final Class<?> endpointClass, final InstanceFactory<?> underlyingInstance, final EncodingFactory encodingFactory) throws DeploymentException {
         final Set<Class<? extends Annotation>> found = new HashSet<>();
         BoundMethod OnOpen = null;
         BoundMethod OnClose = null;
@@ -70,8 +71,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                         throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnOpen.class);
                     }
                     found.add(OnOpen.class);
-                    OnOpen = new BoundMethod(method,
-                            new BoundSingleParameter(method, Session.class, true),
+                    OnOpen = new BoundMethod(method, null, false, new BoundSingleParameter(method, Session.class, true),
                             new BoundSingleParameter(method, EndpointConfig.class, true),
                             new BoundPathParameters(pathParams(method)));
                 }
@@ -80,8 +80,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                         throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnClose.class);
                     }
                     found.add(OnClose.class);
-                    OnClose = new BoundMethod(method,
-                            new BoundSingleParameter(method, Session.class, true),
+                    OnClose = new BoundMethod(method, null, false, new BoundSingleParameter(method, Session.class, true),
                             new BoundPathParameters(pathParams(method)));
                 }
                 if (method.isAnnotationPresent(OnError.class)) {
@@ -89,8 +88,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                         throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnError.class);
                     }
                     found.add(OnError.class);
-                    OnError = new BoundMethod(method,
-                            new BoundSingleParameter(method, Session.class, true),
+                    OnError = new BoundMethod(method, null, false, new BoundSingleParameter(method, Session.class, true),
                             new BoundSingleParameter(method, Throwable.class, false),
                             new BoundPathParameters(pathParams(method)));
                 }
@@ -104,8 +102,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             if (binaryMessage != null) {
                                 throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
-                            binaryMessage = new BoundMethod(method,
-                                    new BoundSingleParameter(method, Session.class, true),
+                            binaryMessage = new BoundMethod(method, byte[].class, false, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(method, byte[].class, false),
                                     new BoundPathParameters(pathParams(method)));
@@ -115,8 +112,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             if (binaryMessage != null) {
                                 throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
-                            binaryMessage = new BoundMethod(method,
-                                    new BoundSingleParameter(method, Session.class, true),
+                            binaryMessage = new BoundMethod(method, ByteBuffer.class, false, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(method, ByteBuffer.class, false),
                                     new BoundPathParameters(pathParams(method)));
@@ -127,8 +123,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             if (textMessage != null) {
                                 throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
-                            textMessage = new BoundMethod(method,
-                                    new BoundSingleParameter(method, Session.class, true),
+                            textMessage = new BoundMethod(method, String.class, false, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(method, String.class, false),
                                     new BoundPathParameters(pathParams(method)));
@@ -139,17 +134,36 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             if (pongMessage != null) {
                                 throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
-                            pongMessage = new BoundMethod(method,
-                                    new BoundSingleParameter(method, Session.class, true),
+                            pongMessage = new BoundMethod(method, PongMessage.class, false, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, PongMessage.class, false),
                                     new BoundPathParameters(pathParams(method)));
                             messageHandled = true;
                             break;
-
                         }
                     }
                     if (!messageHandled) {
-                        throw new DeploymentException("TODO: decoders");
+                        //ok, now we need to look through again for encodable / decodable values
+                        //we can't do this on the first pass, as we can't decide if a boolean is the payload
+                        //or an indicator that the frame is complete
+                        for (int i = 0; i < method.getParameterTypes().length; ++i) {
+                            final Class<?> param = method.getParameterTypes()[i];
+                            if (encodingFactory.canDecodeText(param)) {
+                                if (textMessage != null) {
+                                    throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
+                                }
+                                textMessage = new BoundMethod(method, param, true, new BoundSingleParameter(method, Session.class, true),
+                                        new BoundSingleParameter(method, boolean.class, true),
+                                        new BoundSingleParameter(method, param, false),
+                                        new BoundPathParameters(pathParams(method)));
+                                messageHandled = true;
+                                break;
+                            } else if (encodingFactory.canDecodeDinary(param)) {
+
+                            }
+                        }
+                    }
+                    if (!messageHandled) {
+                        throw JsrWebSocketMessages.MESSAGES.couldNotFindMessageParameter(method);
                     }
                 }
             }
@@ -183,7 +197,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     @Override
     public InstanceHandle<Endpoint> createInstance() throws InstantiationException {
         final InstanceHandle<?> instance = underlyingFactory.createInstance();
-        final AnnotatedEndpoint endpoint = new AnnotatedEndpoint(instance, OnOpen, OnClose, OnError, textMessage,  binaryMessage, pongMessage);
+        final AnnotatedEndpoint endpoint = new AnnotatedEndpoint(instance, OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
         return new InstanceHandle<Endpoint>() {
             @Override
             public Endpoint getInstance() {
@@ -198,7 +212,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
     }
 
     public Endpoint createInstanceForExisting(final Object instance) {
-        return new AnnotatedEndpoint(new ImmediateInstanceHandle<Object>(instance), OnOpen, OnClose, OnError, textMessage,  binaryMessage, pongMessage);
+        return new AnnotatedEndpoint(new ImmediateInstanceHandle<Object>(instance), OnOpen, OnClose, OnError, textMessage, binaryMessage, pongMessage);
     }
 
 
@@ -215,13 +229,13 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
             int pos = -1;
             for (int i = 0; i < method.getParameterTypes().length; ++i) {
                 boolean pathParam = false;
-                for(Annotation annotation : method.getParameterAnnotations()[i]) {
-                    if(annotation.annotationType().equals(PathParam.class)) {
+                for (Annotation annotation : method.getParameterAnnotations()[i]) {
+                    if (annotation.annotationType().equals(PathParam.class)) {
                         pathParam = true;
                         break;
                     }
                 }
-                if(pathParam) {
+                if (pathParam) {
                     continue;
                 }
                 if (method.getParameterTypes()[i].equals(type)) {
@@ -249,7 +263,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
 
         public void populate(final Object[] params, final Map<Class<?>, Object> value) {
-            if(position == -1) {
+            if (position == -1) {
                 return;
             }
             params[position] = value.get(type);

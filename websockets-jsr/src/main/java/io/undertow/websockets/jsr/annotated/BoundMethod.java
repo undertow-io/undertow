@@ -20,9 +20,13 @@ final class BoundMethod {
     private final Method method;
     private final List<BoundParameter> parameters = new ArrayList<>();
     private final Set<Class> paramTypes = new HashSet<>();
+    private final Class<?> messageType;
+    private final boolean decoderRequired;
 
-    public BoundMethod(final Method method, BoundParameter... params) throws DeploymentException {
+    public BoundMethod(final Method method, final Class<?> messageType, final boolean decoderRequired, BoundParameter... params) throws DeploymentException {
         this.method = method;
+        this.messageType = messageType;
+        this.decoderRequired = decoderRequired;
         final Set<Integer> allParams = new HashSet<>();
         for (int i = 0; i < method.getParameterTypes().length; ++i) {
             allParams.add(i);
@@ -44,7 +48,7 @@ final class BoundMethod {
         }
         try {
             return method.invoke(instance, params);
-        } catch (IllegalAccessException|InvocationTargetException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }
@@ -53,4 +57,11 @@ final class BoundMethod {
         return paramTypes.contains(type);
     }
 
+    public Class<?> getMessageType() {
+        return messageType;
+    }
+
+    public boolean isDecoderRequired() {
+        return decoderRequired;
+    }
 }

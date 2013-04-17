@@ -120,4 +120,16 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3027, value = "Class %s was not annotated with @ClientEndpoint or @ServerEndpoint")
     DeploymentException classWasNotAnnotated(Class<?> endpoint);
+
+    @Message(id = 3028, value = "Could not find decoder for type %s on method %s")
+    DeploymentException couldNotFindDecoderForType(Class<?> param, Method method);
+
+    @Message(id = 3029, value = "Could not find message parameter on method %s")
+    DeploymentException couldNotFindMessageParameter(Method method);
+
+    @Message(id = 3030, value = "Received a text frame however endpoint does not have a method capable of handling it")
+    RuntimeException receivedTextFrameButNoMethod();
+
+    @Message(id = 3031, value = "Received a binary frame however endpont does not have a method capable of handling it")
+    RuntimeException receivedBinaryFrameButNoMethod();
 }
