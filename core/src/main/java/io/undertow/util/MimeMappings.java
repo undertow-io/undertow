@@ -125,6 +125,7 @@ public class MimeMappings {
         /* Add XML related MIMEs */
 
         defaultMappings.put("xml", "text/xml");
+        defaultMappings.put("xhtml", "application/xhtml+xml");
         defaultMappings.put("xsl", "text/xml");
         defaultMappings.put("svg", "image/svg+xml");
         defaultMappings.put("svgz", "image/svg+xml");
