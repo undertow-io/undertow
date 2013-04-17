@@ -3,17 +3,12 @@ package io.undertow.servlet.test.websocket;
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javax.servlet.Servlet;
 
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.streams.ServletOutputStreamTestCase;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.websockets.WebSocketServlet;
 import io.undertow.test.utils.AjpIgnore;
@@ -51,7 +46,7 @@ public class WebSocketServletTest {
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
-        ServletInfo s1 = new ServletInfo("websocket", WebSocketServlet.class,
+        DeploymentUtils.setupServlet(new ServletInfo("websocket", WebSocketServlet.class,
                 new ImmediateInstanceFactory<Servlet>(new WebSocketServlet(new WebSocketConnectionCallback() {
                     @Override
                     public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
@@ -103,25 +98,10 @@ public class WebSocketServletTest {
                         channel.resumeReceives();
                     }
                 })))
-                .addMapping("/*");
+                .addMapping("/*"));
 
-        DeploymentInfo builder = new DeploymentInfo()
-                .setClassLoader(ServletOutputStreamTestCase.class.getClassLoader())
-                .setContextPath("/servletContext")
-                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
-                .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(s1);
-
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
-
-        DefaultServer.setRootHandler(manager.start());
-
-
-        final AtomicReference<String> result = new AtomicReference<String>();
         final ConcreteIoFuture latch = new ConcreteIoFuture();
-        WebSocketTestClient client = new WebSocketTestClient(org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/servletContext"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.copiedBuffer("hello", CharsetUtil.US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(CharsetUtil.US_ASCII), latch));
         latch.get();

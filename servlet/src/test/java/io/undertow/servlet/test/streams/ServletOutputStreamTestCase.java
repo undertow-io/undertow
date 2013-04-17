@@ -22,13 +22,8 @@ import java.io.IOException;
 
 import javax.servlet.ServletException;
 
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
@@ -54,33 +49,14 @@ public class ServletOutputStreamTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
-
-        final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance();
-
-        ServletInfo s1 = new ServletInfo(BLOCKING_SERVLET, BlockingOutputStreamServlet.class)
-                .addMapping("/" + BLOCKING_SERVLET);
-
-        ServletInfo s2 = new ServletInfo(ASYNC_SERVLET, AsyncOutputStreamServlet.class)
-                .addMapping("/" + ASYNC_SERVLET)
-                .setAsyncSupported(true);
-
-        ServletInfo s3 = new ServletInfo(CONTENT_LENGTH_SERVLET, ContentLengthCloseFlushServlet.class)
-                .addMapping("/" + CONTENT_LENGTH_SERVLET);
-
-        DeploymentInfo builder = new DeploymentInfo()
-                .setClassLoader(ServletOutputStreamTestCase.class.getClassLoader())
-                .setContextPath("/servletContext")
-                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
-                .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(s1, s2, s3);
-
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
-        root.addPath(builder.getContextPath(), manager.start());
-
-        DefaultServer.setRootHandler(root);
+        DeploymentUtils.setupServlet(
+                new ServletInfo(BLOCKING_SERVLET, BlockingOutputStreamServlet.class)
+                        .addMapping("/" + BLOCKING_SERVLET),
+                new ServletInfo(ASYNC_SERVLET, AsyncOutputStreamServlet.class)
+                        .addMapping("/" + ASYNC_SERVLET)
+                        .setAsyncSupported(true),
+                new ServletInfo(CONTENT_LENGTH_SERVLET, ContentLengthCloseFlushServlet.class)
+                        .addMapping("/" + CONTENT_LENGTH_SERVLET));
     }
 
 

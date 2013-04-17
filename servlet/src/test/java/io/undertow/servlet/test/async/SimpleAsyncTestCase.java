@@ -22,20 +22,14 @@ import java.io.IOException;
 
 import javax.servlet.ServletException;
 
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.servlet.test.util.MessageServlet;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -51,38 +45,19 @@ public class SimpleAsyncTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
+        DeploymentUtils.setupServlet(
+                new ServletInfo("messageServlet", MessageServlet.class)
+                        .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
+                        .setAsyncSupported(true)
+                        .addMapping("/message"),
+                new ServletInfo("asyncServlet", AsyncServlet.class)
+                        .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
+                        .setAsyncSupported(true)
+                        .addMapping("/async"),
+                new ServletInfo("asyncServlet2", AnotherAsyncServlet.class)
+                        .setAsyncSupported(true)
+                        .addMapping("/async2"));
 
-        final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance();
-
-        ServletInfo m = new ServletInfo("messageServlet", MessageServlet.class)
-                .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
-                .setAsyncSupported(true)
-                .addMapping("/message");
-
-
-        ServletInfo a = new ServletInfo("asyncServlet", AsyncServlet.class)
-                .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
-                .setAsyncSupported(true)
-                .addMapping("/async");
-
-        ServletInfo a2 = new ServletInfo("asyncServlet2", AnotherAsyncServlet.class)
-        .setAsyncSupported(true)
-        .addMapping("/async2");
-
-        DeploymentInfo builder = new DeploymentInfo()
-                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
-                .setContextPath("/servletContext")
-                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
-                .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(m, a, a2);
-
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
-        root.addPath(builder.getContextPath(), manager.start());
-
-        DefaultServer.setRootHandler(root);
     }
 
     @Test

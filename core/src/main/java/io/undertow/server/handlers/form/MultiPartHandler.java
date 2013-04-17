@@ -58,6 +58,13 @@ public class MultiPartHandler implements HttpHandler {
 
     private String defaultEncoding = "UTF-8";
 
+    public MultiPartHandler(final HttpHandler next) {
+        this.next = next;
+    }
+
+    public MultiPartHandler() {
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);

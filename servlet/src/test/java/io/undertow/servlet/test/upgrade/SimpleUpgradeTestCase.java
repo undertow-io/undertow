@@ -25,14 +25,8 @@ import java.net.Socket;
 
 import javax.servlet.ServletException;
 
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.SimpleServletTestCase;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.test.utils.AjpIgnore;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.TestHttpClient;
@@ -52,27 +46,11 @@ public class SimpleUpgradeTestCase {
     @BeforeClass
     public static void setup() throws ServletException {
 
-        final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance();
-
-        ServletInfo a1 = new ServletInfo("upgradeServlet", UpgradeServlet.class)
-                .addMapping("/upgrade");
-
-        ServletInfo a2 = new ServletInfo("upgradeAsyncServlet", AsyncUpgradeServlet.class)
-                .addMapping("/asyncupgrade");
-        DeploymentInfo builder = new DeploymentInfo()
-                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
-                .setContextPath("/servletContext")
-                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
-                .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(a1, a2);
-
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
-        root.addPath(builder.getContextPath(), manager.start());
-
-        DefaultServer.setRootHandler(root);
+        DeploymentUtils.setupServlet(
+                new ServletInfo("upgradeServlet", UpgradeServlet.class)
+                        .addMapping("/upgrade"),
+                new ServletInfo("upgradeAsyncServlet", AsyncUpgradeServlet.class)
+                        .addMapping("/asyncupgrade"));
     }
 
     @Test

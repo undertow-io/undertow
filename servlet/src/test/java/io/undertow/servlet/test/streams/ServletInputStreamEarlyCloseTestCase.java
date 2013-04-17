@@ -20,13 +20,8 @@ package io.undertow.servlet.test.streams;
 
 import javax.servlet.ServletException;
 
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
@@ -50,26 +45,9 @@ public class ServletInputStreamEarlyCloseTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
-
-        final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance();
-
-        ServletInfo s1 = new ServletInfo(SERVLET, EarlyCloseServlet.class)
-                .addMapping("/" + SERVLET);
-
-        DeploymentInfo builder = new DeploymentInfo()
-                .setClassLoader(ServletInputStreamEarlyCloseTestCase.class.getClassLoader())
-                .setContextPath("/servletContext")
-                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
-                .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(s1);
-
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
-        root.addPath(builder.getContextPath(), manager.start());
-
-        DefaultServer.setRootHandler(root);
+        DeploymentUtils.setupServlet(
+                new ServletInfo(SERVLET, EarlyCloseServlet.class)
+                        .addMapping("/" + SERVLET));
     }
 
     @Test

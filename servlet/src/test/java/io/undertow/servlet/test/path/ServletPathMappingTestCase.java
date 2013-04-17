@@ -22,18 +22,13 @@ import java.io.IOException;
 
 import javax.servlet.ServletException;
 
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.util.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.util.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,44 +43,22 @@ public class ServletPathMappingTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
+        DeploymentUtils.setupServlet(
+                new ServletInfo("/a/*", PathMappingServlet.class)
+                        .addMapping("/a/*"),
+                new ServletInfo("/aa", PathMappingServlet.class)
+                        .addMapping("/aa"),
+                new ServletInfo("/aa/*", PathMappingServlet.class)
+                        .addMapping("/aa/*"),
+                new ServletInfo("/a/b/*", PathMappingServlet.class)
+                        .addMapping("/a/b/*"),
+                new ServletInfo("/", PathMappingServlet.class)
+                        .addMapping("/"),
+                new ServletInfo("*.jsp", PathMappingServlet.class)
+                        .addMapping("*.jsp"),
+                new ServletInfo("contextRoot", PathMappingServlet.class)
+                        .addMapping(""));
 
-        final PathHandler root = new PathHandler();
-        final ServletContainer container = ServletContainer.Factory.newInstance();
-
-        ServletInfo aStar = new ServletInfo("/a/*", PathMappingServlet.class)
-                .addMapping("/a/*");
-
-        ServletInfo aa = new ServletInfo("/aa", PathMappingServlet.class)
-                .addMapping("/aa");
-
-        ServletInfo aaStar = new ServletInfo("/aa/*", PathMappingServlet.class)
-                .addMapping("/aa/*");
-
-        ServletInfo ab = new ServletInfo("/a/b/*", PathMappingServlet.class)
-                .addMapping("/a/b/*");
-
-        ServletInfo d = new ServletInfo("/", PathMappingServlet.class)
-                .addMapping("/");
-
-        ServletInfo jsp = new ServletInfo("*.jsp", PathMappingServlet.class)
-                .addMapping("*.jsp");
-
-        ServletInfo cr = new ServletInfo("contextRoot", PathMappingServlet.class)
-                .addMapping("");
-
-        DeploymentInfo builder = new DeploymentInfo()
-                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
-                .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
-                .setContextPath("/servletContext")
-                .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
-                .addServlets(aStar, aa, aaStar, ab, d, cr, jsp);
-
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
-        root.addPath(builder.getContextPath(), manager.start());
-
-        DefaultServer.setRootHandler(root);
     }
 
     @Test
