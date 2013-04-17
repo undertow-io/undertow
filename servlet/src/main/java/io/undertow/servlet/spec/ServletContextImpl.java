@@ -220,6 +220,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getRealPath(final String path) {
+        if (path==null){
+            return null;
+        }
         File resource = deploymentInfo.getResourceLoader().getResource(path);
         if(resource == null) {
             return null;
