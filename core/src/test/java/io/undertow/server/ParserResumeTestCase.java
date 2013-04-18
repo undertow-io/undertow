@@ -55,7 +55,7 @@ public class ParserResumeTestCase {
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(1);
         while (context.state != ParseState.PARSE_COMPLETE) {
-            HttpParser.INSTANCE.handle(buffer, context, result);
+            HttpRequestParser.INSTANCE.handle(buffer, context, result);
             buffer.limit(buffer.limit() + 1);
         }
         runAssertions(result, context);
@@ -66,9 +66,9 @@ public class ParserResumeTestCase {
         HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(split);
-        HttpParser.INSTANCE.handle(buffer, context, result);
+        HttpRequestParser.INSTANCE.handle(buffer, context, result);
         buffer.limit(buffer.capacity());
-        HttpParser.INSTANCE.handle(buffer, context, result);
+        HttpRequestParser.INSTANCE.handle(buffer, context, result);
         runAssertions(result, context);
         Assert.assertEquals(4, buffer.remaining());
     }

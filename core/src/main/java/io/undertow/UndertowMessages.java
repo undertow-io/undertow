@@ -149,4 +149,7 @@ public interface UndertowMessages {
 
     @Message(id = 41, value = "Channel is closed")
     ClosedChannelException channelIsClosed();
+
+    @Message(id = 42, value = "Could not decode trailers in HTTP request")
+    IOException couldNotDecodeTrailers();
 }

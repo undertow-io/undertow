@@ -19,7 +19,7 @@
 package io.undertow.util;
 
 /**
- * NOTE: if you add a new header here you must also add it to {@link io.undertow.server.HttpParser}
+ * NOTE: if you add a new header here you must also add it to {@link io.undertow.server.HttpRequestParser}
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */

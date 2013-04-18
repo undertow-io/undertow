@@ -141,14 +141,14 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 VIA_STRING,
                 WARNING_STRING
         })
-public abstract class HttpParser {
+public abstract class HttpRequestParser {
 
-    public static final HttpParser INSTANCE;
+    public static final HttpRequestParser INSTANCE;
 
     static {
         try {
-            final Class<?> cls = HttpParser.class.getClassLoader().loadClass(HttpParser.class.getName() + "$$generated");
-            INSTANCE = (HttpParser) cls.newInstance();
+            final Class<?> cls = HttpRequestParser.class.getClassLoader().loadClass(HttpRequestParser.class.getName() + "$$generated");
+            INSTANCE = (HttpRequestParser) cls.newInstance();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

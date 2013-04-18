@@ -121,7 +121,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                 } else {
                     buffer.flip();
                 }
-                HttpParser.INSTANCE.handle(buffer, state, httpServerExchange);
+                HttpRequestParser.INSTANCE.handle(buffer, state, httpServerExchange);
                 if (buffer.hasRemaining()) {
                     free = false;
                     connection.setExtraBytes(pooled);
