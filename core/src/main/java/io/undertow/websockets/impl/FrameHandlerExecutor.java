@@ -31,6 +31,7 @@ final class FrameHandlerExecutor implements Executor {
     private final XnioWorker worker;
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>();
 
+    private boolean running = false;
     private final Runnable requestRunnable = new Runnable() {
 
         @Override
@@ -38,6 +39,7 @@ final class FrameHandlerExecutor implements Executor {
             for (;;) {
                 final Runnable task;
                 synchronized (tasks) {
+                    running = true;
                     task = tasks.poll();
                 }
                 if (task != null) {
@@ -45,6 +47,7 @@ final class FrameHandlerExecutor implements Executor {
                 }
                 synchronized (tasks) {
                     if (tasks.isEmpty()) {
+                        running = false;
                         break;
                     }
                 }
@@ -58,14 +61,12 @@ final class FrameHandlerExecutor implements Executor {
 
     @Override
     public void execute(Runnable command) {
-        boolean needsExecution;
 
         synchronized (tasks) {
-            needsExecution = tasks.isEmpty();
             tasks.add(command);
-        }
-        if (needsExecution) {
-            worker.execute(requestRunnable);
+            if (!running) {
+                worker.execute(requestRunnable);
+            }
         }
     }
 }

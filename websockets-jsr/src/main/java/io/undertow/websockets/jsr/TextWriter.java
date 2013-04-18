@@ -50,13 +50,15 @@ final class TextWriter extends Writer {
             buffer.put(cbuf, off, len);
             send(false, false);
         } else {
-            int left = len - remaining;
-            while (left > 0) {
-                buffer.put(cbuf, off, remaining);
+            int left = len;
+            do {
+                int toWrite = Math.min(remaining, left);
+                buffer.put(cbuf, off, toWrite);
+                off += toWrite;
+                left -= toWrite;
                 send(false, false);
                 remaining = buffer.remaining();
-                left -= remaining;
-            }
+            } while (left > 0);
         }
     }
 

@@ -55,12 +55,9 @@ final class UTF8Checker implements ChannelFunction {
             12, 12, 12, 12, 12, 12};
 
     private int state = UTF8_ACCEPT;
-    private int codep;
 
     private void checkUTF8(int b) throws UnsupportedEncodingException {
         byte type = TYPES[b & 0xFF];
-
-        codep = state != UTF8_ACCEPT ? b & 0x3f | codep << 6 : 0xff >> type & b;
 
         state = STATES[state + type];
 

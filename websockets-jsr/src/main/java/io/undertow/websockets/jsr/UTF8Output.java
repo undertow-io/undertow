@@ -28,7 +28,7 @@ import org.xnio.Buffers;
 public final class UTF8Output {
     private static final int UTF8_ACCEPT = 0;
 
-    private static final byte[] TYPES = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    private static final byte[] TYPES = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -37,14 +37,14 @@ public final class UTF8Output {
             7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8,
             8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             2, 2, 10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 11, 6, 6, 6, 5, 8, 8, 8, 8, 8,
-            8, 8, 8, 8, 8, 8 };
+            8, 8, 8, 8, 8, 8};
 
-    private static final byte[] STATES = { 0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12,
+    private static final byte[] STATES = {0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12,
             12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12,
             12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
             12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 36,
             12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12,
-            12, 12, 12, 12, 12, 12 };
+            12, 12, 12, 12, 12, 12};
 
     @SuppressWarnings("RedundantFieldInitialization")
     private int state = UTF8_ACCEPT;
@@ -53,19 +53,19 @@ public final class UTF8Output {
     private final StringBuilder stringBuilder;
 
     public UTF8Output(ByteBuffer... payload) {
-        stringBuilder = new StringBuilder((int)Buffers.remaining(payload));
+        stringBuilder = new StringBuilder((int) Buffers.remaining(payload));
         write(payload);
     }
 
     public void write(ByteBuffer... bytes) {
-        for (ByteBuffer buf: bytes) {
-            while(buf.hasRemaining()) {
+        for (ByteBuffer buf : bytes) {
+            while (buf.hasRemaining()) {
                 write(buf.get());
             }
         }
     }
 
-    private void write(int b) {
+    private void write(byte b) {
         byte type = TYPES[b & 0xFF];
 
         codep = state != UTF8_ACCEPT ? b & 0x3f | codep << 6 : 0xff >> type & b;
@@ -73,7 +73,9 @@ public final class UTF8Output {
         state = STATES[state + type];
 
         if (state == UTF8_ACCEPT) {
-            stringBuilder.append((char) codep);
+                for (char c : Character.toChars(codep)) {
+                    stringBuilder.append(c);
+                }
         }
     }
 
@@ -84,5 +86,9 @@ public final class UTF8Output {
         String text = stringBuilder.toString();
         stringBuilder.setLength(0);
         return text;
+    }
+
+    public boolean hasData() {
+        return stringBuilder.length() != 0;
     }
 }

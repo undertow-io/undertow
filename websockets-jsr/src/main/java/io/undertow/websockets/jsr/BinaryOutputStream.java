@@ -15,13 +15,13 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.api.FragmentedBinaryFrameSender;
-import org.xnio.Pool;
-import org.xnio.Pooled;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+
+import io.undertow.websockets.api.FragmentedBinaryFrameSender;
+import org.xnio.Pool;
+import org.xnio.Pooled;
 
 /**
  * {@link OutputStream} implementation which buffers all the data until {@link #close()} is called and then will
@@ -33,6 +33,7 @@ final class BinaryOutputStream extends OutputStream {
     private final FragmentedBinaryFrameSender sender;
     private final Pooled<ByteBuffer> pooled;
     private boolean closed;
+
     BinaryOutputStream(FragmentedBinaryFrameSender sender, Pool<ByteBuffer> pool) {
         this.sender = sender;
         pooled = pool.allocate();
@@ -48,13 +49,15 @@ final class BinaryOutputStream extends OutputStream {
             buffer.put(b, off, len);
             send(false, false);
         } else {
-            int left = len - remaining;
-            while (left > 0) {
-                buffer.put(b, off, remaining);
+            int left = len;
+            do {
+                int toWrite = Math.min(remaining, left);
+                buffer.put(b, off, toWrite);
+                off += toWrite;
+                left -= toWrite;
                 send(false, false);
                 remaining = buffer.remaining();
-                left -= remaining;
-            }
+            } while (left > 0);
         }
     }
 

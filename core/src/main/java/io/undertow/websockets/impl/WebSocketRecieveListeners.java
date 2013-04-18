@@ -161,6 +161,9 @@ public class WebSocketRecieveListeners {
 
         @Override
         public void handleEvent(StreamSourceChannel ch) {
+            if(!ch.isOpen()) {
+                return;
+            }
             StreamSourceFrameChannel streamSourceFrameChannel = (StreamSourceFrameChannel) ch;
             WebSocketFrameType type = streamSourceFrameChannel.getType();
 
@@ -199,6 +202,9 @@ public class WebSocketRecieveListeners {
                                         public void handleEvent(WebSocketChannel webSocketChannel) {
                                             boolean free = true;
                                             try {
+                                                if(FragmentedFrameChannelListener.this.pooled != null) {
+                                                    throw new IllegalStateException();
+                                                }
                                                 StreamSourceFrameChannel frame = webSocketChannel.receive();
                                                 if (frame != null) {
                                                     // suspend receives we will resume once ready
@@ -207,10 +213,7 @@ public class WebSocketRecieveListeners {
                                                     frame.getReadSetter().set(FragmentedFrameChannelListener.this);
 
                                                     // wake up reads to trigger a read operation now
-                                                    // TODO: Think about if this a really good idea
                                                     frame.wakeupReads();
-                                                } else {
-                                                    webSocketChannel.resumeReceives();
                                                 }
                                                 free = false;
 
@@ -226,15 +229,18 @@ public class WebSocketRecieveListeners {
                                 } else {
                                     session.getChannel().getReceiveSetter().set(delegateListener);
                                 }
+                                session.getChannel().suspendReceives();
 
                                 WebSocketFrameHeader header = new DefaultWebSocketFrameHeader(streamSourceFrameChannel.getType(), streamSourceFrameChannel.getRsv(), streamSourceFrameChannel.isFinalFragment());
 
                                 if (pooledList != null) {
                                     pooledList.add(pooled);
-                                    notifyHandler(session, handler, type, header, pooledList.toArray(new Pooled[0]));
+                                    notifyHandler(session, handler, type, header, pooledList.toArray(new Pooled[pooledList.size()]));
                                 } else {
                                     notifyHandler(session, handler, type, header, pooled);
                                 }
+                                this.pooled = null;
+                                this.pooledList = null;
                                 free = false;
                                 return;
                             }
@@ -300,7 +306,9 @@ public class WebSocketRecieveListeners {
                 }
 
             } finally {
-                free0();
+                for (Pooled<ByteBuffer> p : pooled) {
+                    p.free();
+                }
             }
 
             // resume the receives

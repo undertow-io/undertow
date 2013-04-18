@@ -30,11 +30,11 @@ final class BoundMethod {
         final Set<Integer> allParams = new HashSet<>();
         for (int i = 0; i < method.getParameterTypes().length; ++i) {
             allParams.add(i);
+            paramTypes.add(method.getParameterTypes()[i]);
         }
         for (BoundParameter param : params) {
             parameters.add(param);
             allParams.removeAll(param.positions());
-            paramTypes.add(param.getType());
         }
         if (!allParams.isEmpty()) {
             throw JsrWebSocketMessages.MESSAGES.invalidParamers(method, allParams);

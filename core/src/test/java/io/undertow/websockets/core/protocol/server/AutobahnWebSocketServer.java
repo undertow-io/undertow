@@ -31,10 +31,10 @@ import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 
+import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
-import org.xnio.channels.ConnectedStreamChannel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -82,7 +82,7 @@ import java.net.InetSocketAddress;
 public class AutobahnWebSocketServer {
     private HttpOpenListener openListener;
     private XnioWorker worker;
-    private AcceptingChannel<? extends ConnectedStreamChannel> server;
+    private AcceptingChannel<StreamConnection> server;
     private Xnio xnio;
     private final int port;
 
@@ -112,7 +112,7 @@ public class AutobahnWebSocketServer {
                     .getMap();
             openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192), 8192);
             ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
-            server = worker.createStreamServer(new InetSocketAddress(port), acceptListener, serverOptions);
+            server = worker.createStreamConnectionServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
 
             setRootHandler(getRootHandler());

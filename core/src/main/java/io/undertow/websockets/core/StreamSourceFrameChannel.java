@@ -242,7 +242,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     }
 
     protected final void queueListener(final ChannelListener<StreamSourceFrameChannel> listener) {
-        getReadThread().execute(new Runnable() {
+        getIoThread().execute(new Runnable() {
             @Override
             public void run() {
                 WebSocketLogger.REQUEST_LOGGER.debugf("Invoking directly queued read listener");

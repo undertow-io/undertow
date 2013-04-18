@@ -174,7 +174,7 @@ public class AnnotatedEndpoint extends Endpoint {
             }
             UTF8Output builder = assembledTextFrame;
             builder.write(payload);
-            if (header.isLastFragement() || (textMessage.hasParameterType(boolean.class) && !textMessage.isDecoderRequired())) {
+            if (header.isLastFragement() || (textMessage.hasParameterType(boolean.class) && !textMessage.isDecoderRequired() && builder.hasData())) {
                 Object messageObject;
                 if (textMessage.isDecoderRequired()) {
                     try {
@@ -191,7 +191,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 params.put(textMessage.getMessageType(), messageObject);
-                params.put(boolean.class, true);
+                params.put(boolean.class, header.isLastFragement());
                 Object result = textMessage.invoke(instance.getInstance(), params);
                 assembledTextFrame = null;
                 sendResult(result);
