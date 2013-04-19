@@ -193,7 +193,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
         } else {
             if (! Headers.IDENTITY.equals(transferEncoding)) {
                 headers.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
-                conduit = new ChunkedStreamSinkConduit(conduit, false, ! keepAlive, sendCompletedListener(request));
+                conduit = new ChunkedStreamSinkConduit(conduit, false, ! keepAlive, sendCompletedListener(request), this);
             } else {
                 if(contentLength == -1L) {
                     conduit = new FinishableStreamSinkConduit(conduit, sendCompletedListener(request));

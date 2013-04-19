@@ -25,6 +25,10 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowMessages;
+import io.undertow.util.Attachable;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
@@ -40,16 +44,27 @@ import static org.xnio.Bits.anyAreSet;
  */
 public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
+    /**
+     * Trails that are to be attached to the end of the HTTP response. Note that it is the callers responsibility
+     * to make sure the client understands trailers (i.e. they have provided a TE header), and to set the 'Trailers:'
+     * header appropriately.
+     *
+     * This attachment must be set before the {@link #terminateWrites()} method is called.
+     */
+    public static final AttachmentKey<HeaderMap> TRAILERS = AttachmentKey.create(HeaderMap.class);
+
     private final ConduitListener<? super ChunkedStreamSinkConduit> finishListener;
     private final int config;
 
-    private static final byte[] LAST_CHUNK = "0\r\n\r\n".getBytes();
+    private static final byte[] LAST_CHUNK = "0\r\n".getBytes();
     public static final byte[] CRLF = "\r\n".getBytes();
 
+    private final Attachable attachable;
     private int state;
     private int chunkleft = 0;
 
     private final ByteBuffer chunkingBuffer = ByteBuffer.allocate(14); //14 is the most
+    private ByteBuffer trailerBuffer;
 
 
     private static final int CONF_FLAG_CONFIGURABLE = 1 << 0;
@@ -70,10 +85,12 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
      * @param configurable   {@code true} to allow configuration of the next channel, {@code false} otherwise
      * @param passClose      {@code true} to close the underlying channel when this channel is closed, {@code false} otherwise
      * @param finishListener
+     * @param attachable
      */
-    public ChunkedStreamSinkConduit(final StreamSinkConduit next, final boolean configurable, final boolean passClose, final ConduitListener<? super ChunkedStreamSinkConduit> finishListener) {
+    public ChunkedStreamSinkConduit(final StreamSinkConduit next, final boolean configurable, final boolean passClose, final ConduitListener<? super ChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
         super(next);
         this.finishListener = finishListener;
+        this.attachable = attachable;
         config = (configurable ? CONF_FLAG_CONFIGURABLE : 0) | (passClose ? CONF_FLAG_PASS_CLOSE : 0);
     }
 
@@ -163,8 +180,13 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             if (anyAreSet(state, FLAG_NEXT_SHUTDWON)) {
                 return next.flush();
             } else {
+                if(trailerBuffer == null) {
                 next.write(chunkingBuffer);
-                if (!chunkingBuffer.hasRemaining()) {
+                } else {
+                    next.write(new ByteBuffer[]{chunkingBuffer, trailerBuffer}, 0, 2);
+                }
+                if (!chunkingBuffer.hasRemaining() && (trailerBuffer == null || !trailerBuffer.hasRemaining())) {
+                    trailerBuffer = null;
                     try {
                         if(anyAreSet(config, CONF_FLAG_PASS_CLOSE)) {
                             next.terminateWrites();
@@ -194,7 +216,25 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         if(anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK)) {
             chunkingBuffer.put(CRLF);
         }
+
         chunkingBuffer.put(LAST_CHUNK);
+        HeaderMap trailers = attachable.getAttachment(TRAILERS);
+        if(trailers != null && trailers.size() != 0) {
+            StringBuilder sb = new StringBuilder();
+            for(HeaderValues trailer : trailers) {
+                for(String val : trailer) {
+                    sb.append(trailer.getHeaderName().toString());
+                    sb.append(": ");
+                    sb.append(val);
+                    sb.append("\r\n");
+                }
+            }
+            sb.append("\r\n");
+            //TODO: we should really use a pooled buffer here, but this generally only be a tiny buffer that is rarely used
+            trailerBuffer = ByteBuffer.wrap(sb.toString().getBytes("US-ASCII"));
+        } else {
+            chunkingBuffer.put(CRLF);
+        }
         chunkingBuffer.flip();
         state |= FLAG_WRITES_SHUTDOWN;
     }

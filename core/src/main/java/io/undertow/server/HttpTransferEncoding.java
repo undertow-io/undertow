@@ -207,7 +207,7 @@ public class HttpTransferEncoding {
                     }
                 } else if (!transferEncoding.equals(Headers.IDENTITY)) {
                     final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
-                    wrappedConduit = new ChunkedStreamSinkConduit(channel, true, !stillPersistent, finishListener);
+                    wrappedConduit = new ChunkedStreamSinkConduit(channel, true, !stillPersistent, finishListener, exchange);
                 } else if (contentLengthHeader != null) {
                     final long contentLength;
                     try {
