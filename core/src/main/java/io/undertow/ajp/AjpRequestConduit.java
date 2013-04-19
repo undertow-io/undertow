@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.conduits.ConduitListener;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
@@ -51,6 +52,7 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
      */
     private final ByteBuffer headerBuffer = ByteBuffer.allocateDirect(HEADER_LENGTH);
 
+    private final ConduitListener<? super AjpRequestConduit> finishListener;
 
     /**
      * The total amount of remaining data. If this is unknown it is -1.
@@ -80,10 +82,11 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
      */
     private static final long STATE_MASK = longBitMask(0, 60);
 
-    public AjpRequestConduit(final StreamSourceConduit delegate, AjpResponseConduit ajpResponseConduit, Long size) {
+    public AjpRequestConduit(final StreamSourceConduit delegate, AjpResponseConduit ajpResponseConduit, Long size, ConduitListener<? super AjpRequestConduit> finishListener) {
         super(delegate);
         this.ajpResponseConduit = ajpResponseConduit;
         this.size = size;
+        this.finishListener = finishListener;
         if (size == null) {
             state = STATE_SEND_REQUIRED;
             remaining = -1;
@@ -149,6 +152,9 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
         long remaining = this.remaining;
         if (remaining == 0) {
             this.state = STATE_FINISHED;
+            if(finishListener != null) {
+                finishListener.handleEvent(this);
+            }
             return -1;
         }
         long chunkRemaining;
@@ -172,6 +178,10 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
                 if(chunkRemaining == 0) {
                     this.remaining = 0;
                     this.state = STATE_FINISHED;
+
+                    if(finishListener != null) {
+                        finishListener.handleEvent(this);
+                    }
                     return -1;
                 }
             }
@@ -191,6 +201,10 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
             }
             if (remaining == 0) {
                 this.state = STATE_FINISHED;
+
+                if(finishListener != null) {
+                    finishListener.handleEvent(this);
+                }
             } else if (chunkRemaining == 0) {
                 headerBuffer.clear();
                 this.state = STATE_SEND_REQUIRED;
@@ -217,5 +231,4 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
             next.awaitReadable(time, timeUnit);
         }
     }
-
 }

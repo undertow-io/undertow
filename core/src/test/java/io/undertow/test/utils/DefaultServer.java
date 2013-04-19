@@ -39,6 +39,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.ajp.AjpOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
@@ -91,6 +92,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final char[] STORE_PASSWORD = "password".toCharArray();
 
     private static final boolean ajp = Boolean.getBoolean("ajp");
+
+    private static final DelegatingHandler rootHandler = new DelegatingHandler();
 
     private static KeyStore loadKeyStore(final String name) throws IOException {
         final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(name);
@@ -209,6 +212,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     acceptListener = ChannelListeners.openListenerAdapter(openListener);
                     server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
                 }
+                openListener.setRootHandler(rootHandler);
                 server.resumeAccepts();
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -237,13 +241,13 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     /**
      * Sets the root handler for the default web server
      *
-     * @param rootHandler The handler to use
+     * @param handler The handler to use
      */
-    public static void setRootHandler(HttpHandler rootHandler) {
+    public static void setRootHandler(HttpHandler handler) {
         if(ajp) {
-            openListener.setRootHandler(rootHandler);
+            rootHandler.next = handler;
         } else {
-            openListener.setRootHandler(rootHandler);
+            rootHandler.next = handler;
         }
     }
 
@@ -342,5 +346,21 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     public static boolean isAjp() {
         return ajp;
+    }
+
+    /**
+     * The root handler is tied to the connection, and AJP can re-use connections for different tests, so we
+     * use a delegating handler to chance the next handler after the root.
+     *
+     * TODO: should we re-read the root handler for every request?
+     */
+    private static final class DelegatingHandler implements HttpHandler {
+
+        volatile HttpHandler next;
+
+        @Override
+        public void handleRequest(HttpServerExchange exchange) throws Exception {
+            next.handleRequest(exchange);
+        }
     }
 }

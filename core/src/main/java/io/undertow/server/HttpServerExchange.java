@@ -956,7 +956,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Force the codec to treat the response as fully written.  Should only be invoked by handlers which downgrade
      * the socket or implement a transfer coding.
      */
-    void terminateResponse() {
+    public void terminateResponse() {
         int oldVal = state;
         if (allAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
             // idempotent

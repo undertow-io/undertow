@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
+import io.undertow.conduits.ConduitListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -84,6 +85,9 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
 
     private final HttpServerExchange exchange;
 
+    private final ConduitListener<? super AjpResponseConduit> finishListener;
+
+
 
     /**
      * An AJP request channel that wants access to the underlying sink channel.
@@ -117,10 +121,11 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         HEADER_MAP = Collections.unmodifiableMap(headers);
     }
 
-    AjpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final HttpServerExchange exchange) {
+    AjpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final HttpServerExchange exchange, ConduitListener<? super AjpResponseConduit> finishListener) {
         super(next);
         this.pool = pool;
         this.exchange = exchange;
+        this.finishListener = finishListener;
         state = FLAG_START;
     }
 
@@ -396,7 +401,12 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         try {
             int state = this.state;
             if (allAreSet(state, FLAG_SHUTDOWN) && allAreClear(state, FLAG_DELEGATE_SHUTDOWN)) {
-                next.terminateWrites();
+                if(!exchange.isPersistent()) {
+                    next.terminateWrites();
+                }
+                if(finishListener != null) {
+                    finishListener.handleEvent(this);
+                }
                 stateUpdater.set(this, state | FLAG_DELEGATE_SHUTDOWN);
             }
             return next.flush();
@@ -436,7 +446,12 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         if (allAreClear(oldState, FLAG_START) &&
                 readBodyChunkBuffer == null &&
                 packetHeaderAndDataBuffer == null) {
-            next.terminateWrites();
+            if(!exchange.isPersistent()) {
+                next.terminateWrites();
+            }
+            if(finishListener != null) {
+                finishListener.handleEvent(this);
+            }
             newState |= FLAG_DELEGATE_SHUTDOWN;
             while (stateUpdater.compareAndSet(this, oldState, newState)) {
                 oldState = state;
