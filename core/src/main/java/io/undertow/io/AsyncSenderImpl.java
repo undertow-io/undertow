@@ -1,4 +1,4 @@
-package io.undertow.server;
+package io.undertow.io;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -6,8 +6,7 @@ import java.nio.channels.Channel;
 import java.nio.charset.Charset;
 
 import io.undertow.UndertowMessages;
-import io.undertow.io.IoCallback;
-import io.undertow.io.Sender;
+import io.undertow.server.HttpServerExchange;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -16,14 +15,14 @@ import org.xnio.channels.StreamSinkChannel;
 /**
  * @author Stuart Douglas
  */
-class SenderImpl implements Sender {
+public class AsyncSenderImpl implements Sender {
 
     private static final Charset utf8 = Charset.forName("UTF-8");
 
     private final StreamSinkChannel streamSinkChannel;
     private final HttpServerExchange exchange;
 
-    SenderImpl(final StreamSinkChannel streamSinkChannel, final HttpServerExchange exchange) {
+    public AsyncSenderImpl(final StreamSinkChannel streamSinkChannel, final HttpServerExchange exchange) {
         this.streamSinkChannel = streamSinkChannel;
         this.exchange = exchange;
     }
@@ -53,10 +52,10 @@ class SenderImpl implements Sender {
                                     }
                                 } while (buffer.hasRemaining());
                                 streamSinkChannel.suspendWrites();
-                                callback.onComplete(exchange, SenderImpl.this);
+                                callback.onComplete(exchange, AsyncSenderImpl.this);
                             } catch (IOException e) {
                                 streamSinkChannel.suspendWrites();
-                                callback.onException(exchange, SenderImpl.this, e);
+                                callback.onException(exchange, AsyncSenderImpl.this, e);
                             }
                         }
                     });
@@ -104,9 +103,9 @@ class SenderImpl implements Sender {
                                         return;
                                     }
                                 } while (written < total);
-                                callback.onComplete(exchange, SenderImpl.this);
+                                callback.onComplete(exchange, AsyncSenderImpl.this);
                             } catch (IOException e) {
-                                callback.onException(exchange, SenderImpl.this, e);
+                                callback.onException(exchange, AsyncSenderImpl.this, e);
                             }
                         }
                     });
@@ -140,12 +139,12 @@ class SenderImpl implements Sender {
                         new ChannelListener<StreamSinkChannel>() {
                             @Override
                             public void handleEvent(final StreamSinkChannel channel) {
-                                callback.onComplete(exchange, SenderImpl.this);
+                                callback.onComplete(exchange, AsyncSenderImpl.this);
                             }
                         }, new ChannelExceptionHandler<StreamSinkChannel>() {
                             @Override
                             public void handleException(final StreamSinkChannel channel, final IOException exception) {
-                                callback.onException(exchange, SenderImpl.this, exception);
+                                callback.onException(exchange, AsyncSenderImpl.this, exception);
                             }
                         }
                 ));

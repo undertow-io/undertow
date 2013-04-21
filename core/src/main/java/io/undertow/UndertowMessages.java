@@ -152,4 +152,7 @@ public interface UndertowMessages {
 
     @Message(id = 42, value = "Could not decode trailers in HTTP request")
     IOException couldNotDecodeTrailers();
+
+    @Message(id = 43, value = "Data is already being sent. You must wait for the completion callback to be be invoked before calling send() again")
+    IllegalStateException dataAlreadyQueued();
 }

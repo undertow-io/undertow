@@ -14,12 +14,23 @@ public class DefaultIoCallback implements IoCallback {
 
     @Override
     public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-        exchange.endExchange();
+        sender.close(new IoCallback() {
+            @Override
+            public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                exchange.endExchange();
+            }
+
+            @Override
+            public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                exchange.endExchange();
+            }
+        });
     }
 
     @Override
     public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
         try {
+            exchange.setPersistent(false);
             exchange.endExchange();
         } finally {
             IoUtils.safeClose(exchange.getConnection());

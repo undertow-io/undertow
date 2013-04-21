@@ -71,7 +71,6 @@ public class UndertowOutputStream extends OutputStream {
         }
     }
 
-
     /**
      * {@inheritDoc}
      */

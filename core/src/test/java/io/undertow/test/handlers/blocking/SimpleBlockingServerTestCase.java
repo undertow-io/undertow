@@ -18,9 +18,16 @@
 
 package io.undertow.test.handlers.blocking;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
-import io.undertow.server.HttpHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.Methods;
@@ -33,11 +40,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 /**
  * @author Stuart Douglas
@@ -63,16 +65,41 @@ public class SimpleBlockingServerTestCase {
                         final ByteArrayOutputStream b = new ByteArrayOutputStream();
                         int r = 0;
                         final OutputStream outputStream = exchange.getOutputStream();
-                        final InputStream inputStream =  exchange.getInputStream();
+                        final InputStream inputStream = exchange.getInputStream();
                         while ((r = inputStream.read(buffer)) > 0) {
-                            b.write(buffer, 0 , r);
+                            b.write(buffer, 0, r);
                         }
                         outputStream.write(b.toByteArray());
                         outputStream.close();
                     } else {
-                        final OutputStream outputStream = exchange.getOutputStream();
-                        outputStream.write(message.getBytes());
-                        outputStream.close();
+                        if (exchange.getQueryParameters().containsKey("useFragmentedSender")) {
+                            //we send it byte at a time
+                            exchange.getResponseSender().send("", new IoCallback() {
+                                int i = 0;
+
+                                @Override
+                                public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                                    if (i == message.length()) {
+                                        sender.close();
+                                        exchange.endExchange();
+                                    } else {
+                                        sender.send("" + message.charAt(i++), this);
+                                    }
+                                }
+
+                                @Override
+                                public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                                    exchange.endExchange();
+                                }
+                            });
+
+                        } else if (exchange.getQueryParameters().containsKey("useSender")) {
+                            exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
+                        } else {
+                            final OutputStream outputStream = exchange.getOutputStream();
+                            outputStream.write(message.getBytes());
+                            outputStream.close();
+                        }
                     }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -109,6 +136,19 @@ public class SimpleBlockingServerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertTrue(message.equals(HttpClientUtils.readResponse(result)));
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?useSender");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            String resultBody = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(message.equals(resultBody));
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?useFragmentedSender");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            resultBody = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(message.equals(resultBody));
+
         } finally {
             client.getConnectionManager().shutdown();
         }

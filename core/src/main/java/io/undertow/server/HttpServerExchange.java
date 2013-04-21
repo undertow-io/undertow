@@ -34,6 +34,8 @@ import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.io.AsyncSenderImpl;
+import io.undertow.io.BlockingSenderImpl;
 import io.undertow.io.Sender;
 import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
@@ -809,18 +811,23 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the response sender.  This is effectively a wrapper around the response channel, so all the semantics of
+     * Get the response sender.  For non-blocking exchanges is effectively a wrapper around the response channel, so all the semantics of
      * {@link #getResponseChannel()} apply.
+     *
+     * For blocking exchanges this will return a sender that uses the underlying output stream.
      *
      * @return the response sender, or {@code null} if another party already acquired the channel or the sender
      * @see #getResponseChannel()
      */
     public Sender getResponseSender() {
+        if(blockingHttpExchange != null) {
+            return blockingHttpExchange.getSender();
+        }
         StreamSinkChannel channel = getResponseChannel();
         if (channel == null) {
             return null;
         }
-        return new SenderImpl(channel, this);
+        return new AsyncSenderImpl(channel, this);
     }
 
     /**
@@ -996,6 +1003,16 @@ public final class HttpServerExchange extends AbstractAttachable {
         //so the client should not actually send any data
         //TODO: how
         if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
+            if(blockingHttpExchange != null) {
+                try {
+                    //TODO: can we end up in this situation in a IO thread?
+                    blockingHttpExchange.getInputStream().close();
+                } catch (IOException e) {
+                    UndertowLogger.REQUEST_LOGGER.debug("Exception draining request stream", e);
+                    IoUtils.safeClose(connection.getChannel());
+                }
+            }
+
             //not really sure what the best thing to do here is
             //for now we are just going to drain the channel
             if (requestChannel == null) {
@@ -1052,6 +1069,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private void closeAndFlushResponse() {
         try {
+            if(blockingHttpExchange != null) {
+                blockingHttpExchange.getOutputStream().close();
+            }
             if (isResponseChannelAvailable()) {
                 getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                 getResponseChannel();
@@ -1138,6 +1158,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         private InputStream inputStream;
         private OutputStream outputStream;
+        private Sender sender;
         private final HttpServerExchange exchange;
 
         DefaultBlockingHttpExchange(final HttpServerExchange exchange) {
@@ -1156,6 +1177,14 @@ public final class HttpServerExchange extends AbstractAttachable {
                 outputStream = new UndertowOutputStream(exchange);
             }
             return outputStream;
+        }
+
+        @Override
+        public Sender getSender() {
+            if(sender == null) {
+                sender = new BlockingSenderImpl(exchange, getOutputStream());
+            }
+            return sender;
         }
     }
 
