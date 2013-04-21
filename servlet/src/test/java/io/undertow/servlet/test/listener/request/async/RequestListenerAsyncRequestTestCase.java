@@ -89,7 +89,7 @@ public class RequestListenerAsyncRequestTestCase {
 
     @Test
     public void testSimpleHttpServlet() throws IOException {
-        TestListener.RESULTS.clear();
+        TestListener.init(4);
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async");
@@ -98,7 +98,7 @@ public class RequestListenerAsyncRequestTestCase {
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(HELLO_WORLD, response);
 
-            Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST", "created ASYNC", "destroyed ASYNC"}, TestListener.RESULTS.toArray());
+            Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST", "created ASYNC", "destroyed ASYNC"}, TestListener.results().toArray());
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -107,7 +107,7 @@ public class RequestListenerAsyncRequestTestCase {
 
     @Test
     public void testSimpleAsyncHttpServletWithoutDispatch() throws IOException {
-        TestListener.RESULTS.clear();
+        TestListener.init(2);
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async2");
@@ -115,7 +115,7 @@ public class RequestListenerAsyncRequestTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(AnotherAsyncServlet.class.getSimpleName(), response);
-            Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST"}, TestListener.RESULTS.toArray());
+            Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST"}, TestListener.results().toArray());
         } finally {
             client.getConnectionManager().shutdown();
         }

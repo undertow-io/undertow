@@ -21,6 +21,8 @@ package io.undertow.servlet.test.listener.request.async;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletRequestEvent;
 import javax.servlet.ServletRequestListener;
@@ -28,9 +30,16 @@ import javax.servlet.ServletRequestListener;
 /**
  * @author Stuart Douglas
  */
-public class TestListener implements ServletRequestListener{
+public class TestListener implements ServletRequestListener {
 
-    public static final List<String> RESULTS = Collections.synchronizedList(new ArrayList<String>());
+    private static final List<String> RESULTS = Collections.synchronizedList(new ArrayList<String>());
+
+    private static volatile CountDownLatch latch;
+
+    public static void init(int count) {
+        RESULTS.clear();
+        latch = new CountDownLatch(count);
+    }
 
     @Override
     public void requestDestroyed(final ServletRequestEvent sre) {
@@ -40,5 +49,14 @@ public class TestListener implements ServletRequestListener{
     @Override
     public void requestInitialized(final ServletRequestEvent sre) {
         RESULTS.add("created " + sre.getServletRequest().getDispatcherType());
+    }
+
+    public static List<String> results() {
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return RESULTS;
     }
 }

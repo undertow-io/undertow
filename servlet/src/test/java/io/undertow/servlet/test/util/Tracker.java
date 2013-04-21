@@ -17,6 +17,7 @@
 package io.undertow.servlet.test.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -27,7 +28,7 @@ import java.util.List;
  */
 public class Tracker {
 
-    private static final List<String> actions = new ArrayList<String>();
+    private static final List<String> actions = Collections.synchronizedList(new ArrayList<String>());
 
     public static void addAction(String action) {
         actions.add(action);
