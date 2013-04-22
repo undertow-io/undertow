@@ -49,13 +49,13 @@ public class DirectBufferCache {
     private final ConcurrentDirectDeque<CacheEntry> accessQueue;
     private final int sliceSize;
 
-    public DirectBufferCache(int sliceSize, int max) {
-        this(sliceSize, max, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR);
+    public DirectBufferCache(int sliceSize, int slicesPerPage, int max) {
+        this(sliceSize, slicesPerPage, max, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR);
     }
-    public DirectBufferCache(int sliceSize, int max, final BufferAllocator<ByteBuffer> bufferAllocator) {
+    public DirectBufferCache(int sliceSize, int slicesPerPage, int maxMemory, final BufferAllocator<ByteBuffer> bufferAllocator) {
         this.sliceSize = sliceSize;
-        this.pool = new LimitedBufferSlicePool(bufferAllocator, sliceSize, max, 1);
-        this.cache = new SecureHashMap<Object, CacheEntry>(16);
+        this.pool = new LimitedBufferSlicePool(bufferAllocator, sliceSize, sliceSize * slicesPerPage, maxMemory / (sliceSize * slicesPerPage));
+        this.cache = new SecureHashMap<>(16);
         this.accessQueue = ConcurrentDirectDeque.newInstance();
     }
 

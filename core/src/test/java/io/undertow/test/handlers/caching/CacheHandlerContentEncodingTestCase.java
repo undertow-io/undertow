@@ -56,7 +56,7 @@ public class CacheHandlerContentEncodingTestCase {
                 }
             }
         };
-        final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(100, 10000), messageHandler);
+        final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(100, 10, 10000), messageHandler);
         final EncodingHandler handler = new EncodingHandler(cacheHandler);
         handler.addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, new Predicate<HttpServerExchange>() {
             @Override

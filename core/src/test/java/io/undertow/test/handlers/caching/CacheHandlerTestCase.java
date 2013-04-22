@@ -46,7 +46,7 @@ public class CacheHandlerTestCase {
                 }
             }
         };
-        final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(100, 100), messageHandler);
+        final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(100, 10, 1000), messageHandler);
         DefaultServer.setRootHandler(cacheHandler);
     }
 

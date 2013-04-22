@@ -205,7 +205,7 @@ public class Undertow {
         //TODO: multipart
 
         if (cacheSize > 0) {
-            root = new CacheHandler(new DirectBufferCache(1024, cacheSize * 1024 * 1024), root);
+            root = new CacheHandler(new DirectBufferCache(1024, 1024 * 1024, cacheSize * 1024 * 1024), root);
         }
 
         return root;

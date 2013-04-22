@@ -64,7 +64,7 @@ public class FileHandlerStressTestCase {
             final ResourceHandler handler = new ResourceHandler()
                     .setResourceManager(new FileResourceManager(rootPath));
 
-            final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(1024, 10480), handler);
+            final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(1024, 10, 10480), handler);
             final PathHandler path = new PathHandler();
             path.addPath("/path", cacheHandler);
             final CanonicalPathHandler root = new CanonicalPathHandler();
