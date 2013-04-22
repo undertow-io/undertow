@@ -129,6 +129,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
             pooled = bufferPool.allocate();
             if (listener == null) {
+
                 int res = Channels.readBlocking(channel, pooled.getResource());
                 pooled.getResource().flip();
                 if (res == -1) {
@@ -154,14 +155,50 @@ public class ServletInputStreamImpl extends ServletInputStream {
         }
     }
 
+    private void readIntoBufferNonBlocking() throws IOException {
+            if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
+                pooled = bufferPool.allocate();
+                if (listener == null) {
+                    int res = channel.read(pooled.getResource());
+                    if(res == 0) {
+                        pooled.free();
+                        return;
+                    }
+                    pooled.getResource().flip();
+                    if (res == -1) {
+                        state |= FLAG_FINISHED;
+                        pooled.free();
+                        pooled = null;
+                    }
+                } else {
+                    if (anyAreClear(state, FLAG_READY)) {
+                        throw UndertowServletMessages.MESSAGES.streamNotReady();
+                    }
+                    int res = channel.read(pooled.getResource());
+                    pooled.getResource().flip();
+                    if (res == -1) {
+                        state |= FLAG_FINISHED;
+                        pooled.free();
+                        pooled = null;
+                    } else if (res == 0) {
+                        state &= ~FLAG_READY;
+                        //we don't free the buffer, that will be done on next read
+                    }
+                }
+            }
+        }
+
     @Override
     public int available() throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
-        readIntoBuffer();
+        readIntoBufferNonBlocking();
         if (anyAreSet(state, FLAG_FINISHED)) {
             return -1;
+        }
+        if(pooled == null) {
+            return 0;
         }
         return pooled.getResource().remaining();
     }
