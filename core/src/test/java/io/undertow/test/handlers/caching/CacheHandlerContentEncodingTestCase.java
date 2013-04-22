@@ -8,7 +8,6 @@ import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.CacheHandler;
-import io.undertow.server.handlers.cache.CachedHttpRequest;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.cache.ResponseCache;
 import io.undertow.server.handlers.encoding.DeflateEncodingProvider;
@@ -57,7 +56,7 @@ public class CacheHandlerContentEncodingTestCase {
                 }
             }
         };
-        final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache<CachedHttpRequest>(100, 10000), messageHandler);
+        final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(100, 10000), messageHandler);
         final EncodingHandler handler = new EncodingHandler(cacheHandler);
         handler.addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, new Predicate<HttpServerExchange>() {
             @Override

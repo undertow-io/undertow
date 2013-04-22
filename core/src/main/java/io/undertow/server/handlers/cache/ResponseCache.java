@@ -43,11 +43,11 @@ public class ResponseCache {
 
     public static final AttachmentKey<ResponseCache> ATTACHMENT_KEY = AttachmentKey.create(ResponseCache.class);
 
-    private final DirectBufferCache<CachedHttpRequest> cache;
+    private final DirectBufferCache cache;
     private final HttpServerExchange exchange;
     private boolean responseCachable;
 
-    public ResponseCache(final DirectBufferCache<CachedHttpRequest> cache, final HttpServerExchange exchange) {
+    public ResponseCache(final DirectBufferCache cache, final HttpServerExchange exchange) {
         this.cache = cache;
         this.exchange = exchange;
     }
@@ -81,7 +81,7 @@ public class ResponseCache {
      */
     public boolean tryServeResponse(boolean markCacheable) {
         final CachedHttpRequest key = new CachedHttpRequest(exchange);
-        DirectBufferCache.CacheEntry<CachedHttpRequest> entry = cache.get(key);
+        DirectBufferCache.CacheEntry entry = cache.get(key);
 
         //we only cache get and head requests
         if (!exchange.getRequestMethod().equals(GET) &&
@@ -100,7 +100,7 @@ public class ResponseCache {
             return false;
         }
 
-        CachedHttpRequest existingKey = entry.key();
+        CachedHttpRequest existingKey = (CachedHttpRequest) entry.key();
         //if any of the header matches fail we just return
         //we don't can the request, as it is possible the underlying handler
         //may have additional etags

@@ -8,12 +8,12 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.List;
 
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
 import org.xnio.IoUtils;
-import org.xnio.channels.Channels;
-import org.xnio.channels.StreamSinkChannel;
 
 /**
  * @author Stuart Douglas
@@ -73,20 +73,63 @@ public class URLResource implements Resource {
 
     @Override
     public void serve(final HttpServerExchange exchange) {
-        InputStream in = null;
-        try {
-            in = connection.getInputStream();
-            final StreamSinkChannel responseChannel = exchange.getResponseChannel();
-            byte[] buffer = new byte[1024];
-            int read = 0;
-            while ((read = in.read(buffer)) != -1) {
-                Channels.writeBlocking(responseChannel, ByteBuffer.wrap(buffer, 0, read));
+
+        class ServerTask implements Runnable, IoCallback {
+
+            private InputStream inputStream;
+            private byte[] buffer;
+            private Sender sender;
+
+            @Override
+            public void run() {
+                if (inputStream == null) {
+                    try {
+                        inputStream = url.openStream();
+                    } catch (IOException e) {
+                        exchange.setResponseCode(500);
+                        return;
+                    }
+                    buffer = new byte[1024];//TODO: we should be pooling these
+                    sender = exchange.getResponseSender();
+                }
+                try {
+                    int res = inputStream.read(buffer);
+                    if (res == -1) {
+                        //we are done, just return
+                        sender.close();
+                        return;
+                    }
+                    sender.send(ByteBuffer.wrap(buffer, 0, res), this);
+                } catch (IOException e) {
+                    onException(exchange, sender, e);
+                }
+
             }
-        } catch (IOException e) {
-            exchange.setResponseCode(500);
-        } finally {
-            IoUtils.safeClose(in);
-            exchange.endExchange();
+
+            @Override
+            public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                if (exchange.isInIoThread()) {
+                    exchange.dispatch(this);
+                } else {
+                    run();
+                }
+            }
+
+            @Override
+            public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                IoUtils.safeClose(inputStream);
+                if (!exchange.isResponseStarted()) {
+                    exchange.setResponseCode(500);
+                }
+                exchange.endExchange();
+            }
+        }
+
+        ServerTask serveTask = new ServerTask();
+        if (exchange.isInIoThread()) {
+            exchange.dispatch(serveTask);
+        } else {
+            serveTask.run();
         }
     }
 
@@ -98,5 +141,10 @@ public class URLResource implements Resource {
     @Override
     public Resource getIndexResource(List<String> possible) {
         return null;
+    }
+
+    @Override
+    public String getCacheKey() {
+        return url.toString();
     }
 }

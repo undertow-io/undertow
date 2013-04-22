@@ -28,7 +28,6 @@ import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.cache.CacheHandler;
-import io.undertow.server.handlers.cache.CachedHttpRequest;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.error.SimpleErrorPageHandler;
 import io.undertow.server.handlers.form.FormEncodedDataHandler;
@@ -206,7 +205,7 @@ public class Undertow {
         //TODO: multipart
 
         if (cacheSize > 0) {
-            root = new CacheHandler(new DirectBufferCache<CachedHttpRequest>(1024, cacheSize * 1024 * 1024), root);
+            root = new CacheHandler(new DirectBufferCache(1024, cacheSize * 1024 * 1024), root);
         }
 
         return root;

@@ -20,15 +20,15 @@ import static io.undertow.util.Headers.CONTENT_LENGTH;
  */
 public class CacheHandler implements HttpHandler {
 
-    private final DirectBufferCache<CachedHttpRequest> cache;
+    private final DirectBufferCache cache;
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
-    public CacheHandler(final DirectBufferCache<CachedHttpRequest> cache, final HttpHandler next) {
+    public CacheHandler(final DirectBufferCache cache, final HttpHandler next) {
         this.cache = cache;
         this.next = next;
     }
 
-    public CacheHandler(final DirectBufferCache<CachedHttpRequest> cache) {
+    public CacheHandler(final DirectBufferCache cache) {
         this.cache = cache;
     }
 

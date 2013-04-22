@@ -20,7 +20,7 @@ package io.undertow.server.handlers.resource;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.channels.Channel;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
@@ -31,15 +31,15 @@ import java.util.Date;
 import java.util.List;
 
 import io.undertow.UndertowLogger;
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
 import org.jboss.logging.Logger;
-import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
-import org.xnio.channels.Channels;
-import org.xnio.channels.StreamSinkChannel;
+import org.xnio.Pooled;
 
 /**
  * A file resource
@@ -105,46 +105,71 @@ public class FileResource implements Resource {
 
     @Override
     public void serve(final HttpServerExchange exchange) {
-        //TODO: should be using async IO here as much as possible
-        final FileChannel fileChannel;
-        try {
-            try {
-                fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file.toFile(), FileAccess.READ_ONLY);
-            } catch (FileNotFoundException e) {
-                exchange.setResponseCode(404);
-                exchange.endExchange();
-                return;
+
+        class ServerTask implements Runnable, IoCallback {
+
+            private FileChannel fileChannel;
+            private Pooled<ByteBuffer> pooled;
+            private Sender sender;
+
+            @Override
+            public void run() {
+                if (fileChannel == null) {
+                    try {
+                        fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file.toFile(), FileAccess.READ_ONLY);
+                    } catch (FileNotFoundException e) {
+                        exchange.setResponseCode(404);
+                        return;
+                    } catch (IOException e) {
+                        exchange.setResponseCode(500);
+                        return;
+                    }
+                    pooled = exchange.getConnection().getBufferPool().allocate();
+                    sender = exchange.getResponseSender();
+                }
+                ByteBuffer buffer = pooled.getResource();
+                try {
+                    int res = fileChannel.read(buffer);
+                    if (res == -1) {
+                        //we are done, just return
+                        sender.close();
+                        return;
+                    }
+                    buffer.flip();
+                    sender.send(buffer, this);
+                } catch (IOException e) {
+                    onException(exchange, sender, e);
+                }
+
             }
-        } catch (IOException e) {
-            UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file, e);
-            exchange.setResponseCode(500);
-            exchange.endExchange();
-            return;
+
+            @Override
+            public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                if (exchange.isInIoThread()) {
+                    exchange.dispatch(this);
+                } else {
+                    run();
+                }
+            }
+
+            @Override
+            public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                if (pooled != null) {
+                    pooled.free();
+                }
+                IoUtils.safeClose(fileChannel);
+                if (!exchange.isResponseStarted()) {
+                    exchange.setResponseCode(500);
+                }
+                exchange.endExchange();
+            }
         }
 
-        final StreamSinkChannel response = exchange.getResponseChannel();
-        response.getCloseSetter().set(new ChannelListener<Channel>() {
-            public void handleEvent(final Channel channel) {
-                IoUtils.safeClose(fileChannel);
-            }
-        });
-
-
-        try {
-            log.tracef("Serving file %s (blocking)", fileChannel);
-            Channels.transferBlocking(response, fileChannel, 0, Files.size(file));
-            log.tracef("Finished serving %s, shutting down (blocking)", fileChannel);
-            response.shutdownWrites();
-            log.tracef("Finished serving %s, flushing (blocking)", fileChannel);
-            Channels.flushBlocking(response);
-            log.tracef("Finished serving %s (complete)", fileChannel);
-            exchange.endExchange();
-        } catch (IOException ignored) {
-            log.tracef("Failed to serve %s: %s", fileChannel, ignored);
-            exchange.endExchange();
-            IoUtils.safeClose(response);
-        } finally {
-            IoUtils.safeClose(fileChannel);
+        ServerTask serveTask = new ServerTask();
+        if (exchange.isInIoThread()) {
+            exchange.dispatch(serveTask);
+        } else {
+            serveTask.run();
         }
     }
 
@@ -166,5 +191,10 @@ public class FileResource implements Resource {
             }
         }
         return null;
+    }
+
+    @Override
+    public String getCacheKey() {
+        return file.toString();
     }
 }

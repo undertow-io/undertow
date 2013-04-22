@@ -27,7 +27,7 @@ public class ResponseCachingStreamSinkConduit extends AbstractStreamSinkConduit<
      * @param cacheEntry
      * @param length
      */
-    protected ResponseCachingStreamSinkConduit(final StreamSinkConduit next, final DirectBufferCache.CacheEntry cacheEntry, final long length) {
+    public ResponseCachingStreamSinkConduit(final StreamSinkConduit next, final DirectBufferCache.CacheEntry cacheEntry, final long length) {
         super(next);
         this.cacheEntry = cacheEntry;
         this.length = length;

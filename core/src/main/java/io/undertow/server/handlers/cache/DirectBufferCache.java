@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2012 Red Hat, Inc., and individual contributors
+ * Copyright 2013 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,12 +41,12 @@ import org.xnio.BufferAllocator;
  *
  * @author Jason T. Greene
  */
-public class DirectBufferCache<K> {
+public class DirectBufferCache {
     private static final int SAMPLE_INTERVAL = 5;
 
     private final LimitedBufferSlicePool pool;
-    private final SecureHashMap<K, CacheEntry<K>> cache;
-    private final ConcurrentDirectDeque<CacheEntry<K>> accessQueue;
+    private final SecureHashMap<Object, CacheEntry> cache;
+    private final ConcurrentDirectDeque<CacheEntry> accessQueue;
     private final int sliceSize;
 
     public DirectBufferCache(int sliceSize, int max) {
@@ -55,14 +55,14 @@ public class DirectBufferCache<K> {
     public DirectBufferCache(int sliceSize, int max, final BufferAllocator<ByteBuffer> bufferAllocator) {
         this.sliceSize = sliceSize;
         this.pool = new LimitedBufferSlicePool(bufferAllocator, sliceSize, max, 1);
-        this.cache = new SecureHashMap<K, CacheEntry<K>>(16);
+        this.cache = new SecureHashMap<Object, CacheEntry>(16);
         this.accessQueue = ConcurrentDirectDeque.newInstance();
     }
 
-    public CacheEntry add(K key, int size) {
-        CacheEntry<K> value = cache.get(key);
+    public CacheEntry add(Object key, int size) {
+        CacheEntry value = cache.get(key);
         if (value == null) {
-            value = new CacheEntry<K>(key, size, this);
+            value = new CacheEntry(key, size, this);
             CacheEntry result = cache.putIfAbsent(key, value);
             if (result != null) {
                 value = result;
@@ -74,8 +74,8 @@ public class DirectBufferCache<K> {
         return value;
     }
 
-    public CacheEntry<K> get(K key) {
-        CacheEntry<K> cacheEntry = cache.get(key);
+    public CacheEntry get(Object key) {
+        CacheEntry cacheEntry = cache.get(key);
         if (cacheEntry == null) {
             return null;
         }
@@ -86,7 +86,7 @@ public class DirectBufferCache<K> {
             if (! cacheEntry.allocate()) {
                 // Try and make room
                 int reclaimSize = cacheEntry.size();
-                for (CacheEntry<K> oldest : accessQueue) {
+                for (CacheEntry oldest : accessQueue) {
                     if (oldest == cacheEntry) {
                         continue;
                     }
@@ -110,7 +110,7 @@ public class DirectBufferCache<K> {
         return cacheEntry;
     }
 
-    private void bumpAccess(CacheEntry<K> cacheEntry) {
+    private void bumpAccess(CacheEntry cacheEntry) {
         Object prevToken = cacheEntry.claimToken();
         if (prevToken != Boolean.FALSE) {
             if (prevToken != null) {
@@ -131,8 +131,8 @@ public class DirectBufferCache<K> {
     }
 
 
-    public void remove(K key) {
-        CacheEntry<K> remove = cache.remove(key);
+    public void remove(Object key) {
+        CacheEntry remove = cache.remove(key);
         if (remove != null) {
             Object old = remove.clearToken();
             if (old != null) {
@@ -142,7 +142,7 @@ public class DirectBufferCache<K> {
         }
     }
 
-    public static final class CacheEntry<K> {
+    public static final class CacheEntry {
         private static final PooledByteBuffer[] EMPTY_BUFFERS = new PooledByteBuffer[0];
         private static final PooledByteBuffer[] INIT_BUFFERS = new PooledByteBuffer[0];
         private static final Object CLAIM_TOKEN = new Object();
@@ -154,16 +154,16 @@ public class DirectBufferCache<K> {
         private static final AtomicReferenceFieldUpdater<CacheEntry, PooledByteBuffer[]> bufsUpdater = AtomicReferenceFieldUpdater.newUpdater(CacheEntry.class, PooledByteBuffer[].class, "buffers");
         private static final AtomicReferenceFieldUpdater<CacheEntry, Object> tokenUpdator = AtomicReferenceFieldUpdater.newUpdater(CacheEntry.class, Object.class, "accessToken");
 
-        private final K key;
+        private final Object key;
         private final int size;
-        private final DirectBufferCache<K> cache;
+        private final DirectBufferCache cache;
         private volatile PooledByteBuffer[] buffers = INIT_BUFFERS;
         private volatile int refs = 1;
         private volatile int hits = 1;
         private volatile Object accessToken;
         private volatile int enabled;
 
-        private CacheEntry(K key, int size, DirectBufferCache cache) {
+        private CacheEntry(Object key, int size, DirectBufferCache cache) {
             this.key = key;
             this.size = size;
             this.cache = cache;
@@ -188,7 +188,7 @@ public class DirectBufferCache<K> {
             }
         }
 
-        public K key() {
+        public Object key() {
             return key;
         }
 

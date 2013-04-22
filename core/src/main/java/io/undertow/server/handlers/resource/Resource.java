@@ -67,4 +67,10 @@ public interface Resource {
     Long getContentLength();
 
     Resource getIndexResource(List<String> possible);
+
+    /**
+     *
+     * @return A string that uniquely identifies this resource
+     */
+    String getCacheKey();
 }
