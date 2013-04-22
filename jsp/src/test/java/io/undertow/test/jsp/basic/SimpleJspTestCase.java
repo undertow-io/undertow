@@ -68,7 +68,7 @@ public class SimpleJspTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(new TestResourceLoader(SimpleJspTestCase.class))
+                .setResourceManager(new TestResourceLoader(SimpleJspTestCase.class))
                 .addServlet(JspServletBuilder.createServlet("Default Jsp Servlet", "*.jsp"));
         JspServletBuilder.setupDeployment(builder, new HashMap<String, JspPropertyGroup>(), new HashMap<String, TagLibraryInfo>(), new HackInstanceManager());
 

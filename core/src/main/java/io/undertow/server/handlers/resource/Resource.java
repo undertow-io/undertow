@@ -1,5 +1,7 @@
 package io.undertow.server.handlers.resource;
 
+import java.net.URL;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 
@@ -73,4 +75,16 @@ public interface Resource {
      * @return A string that uniquely identifies this resource
      */
     String getCacheKey();
+
+    /**
+     *
+     * @return The underlying file that matches the resource. This may return null if the resource does not map to a file
+     */
+    Path getFile();
+
+    /**
+     *
+     * @return The URL of the resource
+     */
+    URL getUrl();
 }

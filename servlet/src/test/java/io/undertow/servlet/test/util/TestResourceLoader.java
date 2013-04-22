@@ -18,39 +18,15 @@
 
 package io.undertow.servlet.test.util;
 
-import java.io.File;
-import java.net.URL;
-
-import io.undertow.servlet.api.ResourceLoader;
+import io.undertow.server.handlers.resource.ClassPathResourceManager;
 
 /**
  * @author Stuart Douglas
  */
-public class TestResourceLoader implements ResourceLoader {
-
-    public static final ResourceLoader NOOP_RESOURCE_LOADER  = new ResourceLoader() {
-        @Override
-        public File getResource(final String resource) {
-            return null;
-        }
-    };
-
-    public final Class<?> testClass;
+public class TestResourceLoader extends ClassPathResourceManager {
 
     public TestResourceLoader(final Class<?> testClass) {
-        this.testClass = testClass;
-    }
-
-    @Override
-    public File getResource(String resource) {
-        if (resource.startsWith("/")) {
-            resource = resource.substring(1);
-        }
-        URL url = testClass.getResource(resource);
-        if(url == null) {
-            return null;
-        }
-        return new File(url.getFile());
+        super(testClass.getClassLoader(), testClass.getPackage().getName().replace(".", "/"));
     }
 
 }

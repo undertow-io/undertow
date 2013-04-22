@@ -20,6 +20,8 @@ package io.undertow.server.handlers.resource;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.DirectoryIteratorException;
@@ -197,4 +199,19 @@ public class FileResource implements Resource {
     public String getCacheKey() {
         return file.toString();
     }
+
+    @Override
+    public Path getFile() {
+        return file;
+    }
+
+    @Override
+    public URL getUrl() {
+        try {
+            return file.toUri().toURL();
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

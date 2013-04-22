@@ -13,7 +13,6 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
@@ -45,7 +44,6 @@ public class ChangeSessionIdTestCase {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .addListener(new ListenerInfo(ChangeSessionIdListener.class))
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .addServlet(s);
 
         DeploymentManager manager = container.addDeployment(builder);

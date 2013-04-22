@@ -52,7 +52,7 @@ public class WelcomeFileAsyncPathTestCase extends AbstractWelcomeFileTestCase {
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(new TestResourceLoader(WelcomeFileAsyncPathTestCase.class))
+                .setResourceManager(new TestResourceLoader(WelcomeFileAsyncPathTestCase.class))
                 .addWelcomePages("doesnotexist.html", "index.html", "default");
 
         builder.addServlet(new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)

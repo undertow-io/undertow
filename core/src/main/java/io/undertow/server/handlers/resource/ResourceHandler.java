@@ -162,7 +162,7 @@ public class ResourceHandler implements HttpHandler {
                     exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, DateUtils.toDateString(lastModified));
                 }
                 if (etag != null) {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, etag.toString());
+                    exchange.getResponseHeaders().put(Headers.ETAG, etag.toString());
                 }
                 Long contentLength = resource.getContentLength();
                 if (contentLength != null) {

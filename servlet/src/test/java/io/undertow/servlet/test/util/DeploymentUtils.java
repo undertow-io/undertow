@@ -56,7 +56,6 @@ public class DeploymentUtils {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .addServlets(servlets);
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

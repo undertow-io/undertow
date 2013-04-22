@@ -2,9 +2,13 @@ package io.undertow.server.handlers.resource;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.List;
 
@@ -53,6 +57,10 @@ public class URLResource implements Resource {
 
     @Override
     public boolean isDirectory() {
+        Path file = getFile();
+        if(file != null) {
+            return Files.isDirectory(file);
+        }
         return false;
     }
 
@@ -146,5 +154,22 @@ public class URLResource implements Resource {
     @Override
     public String getCacheKey() {
         return url.toString();
+    }
+
+    @Override
+    public Path getFile() {
+        if(url.getProtocol().equals("file")) {
+            try {
+                return Paths.get(url.toURI());
+            } catch (URISyntaxException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public URL getUrl() {
+        return url;
     }
 }

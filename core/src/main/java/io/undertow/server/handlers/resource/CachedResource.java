@@ -19,7 +19,9 @@
 package io.undertow.server.handlers.resource;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 
@@ -28,7 +30,6 @@ import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.cache.CachedHttpRequest;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.cache.LimitedBufferSlicePool;
 import io.undertow.server.handlers.cache.ResponseCachingStreamSinkConduit;
@@ -116,8 +117,7 @@ public class CachedResource implements Resource {
                 @Override
                 public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
 
-                    final CachedHttpRequest key = new CachedHttpRequest(exchange);
-                    final DirectBufferCache.CacheEntry entry = dataCache.add(key, length.intValue());
+                    final DirectBufferCache.CacheEntry entry = dataCache.add(cacheKey, length.intValue());
 
                     if (entry == null || entry.buffers().length == 0 || !entry.claimEnable()) {
                         return factory.create();
@@ -177,6 +177,16 @@ public class CachedResource implements Resource {
     @Override
     public String getCacheKey() {
         return cacheKey;
+    }
+
+    @Override
+    public Path getFile() {
+        return underlyingResource.getFile();
+    }
+
+    @Override
+    public URL getUrl() {
+        return underlyingResource.getUrl();
     }
 
 

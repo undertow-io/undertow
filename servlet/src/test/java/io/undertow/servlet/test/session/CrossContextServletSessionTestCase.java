@@ -33,7 +33,6 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import org.apache.http.HttpResponse;
@@ -80,7 +79,6 @@ public class CrossContextServletSessionTestCase {
                 .setContextPath("/" + name)
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName( name + ".war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .addServlets(s, forward);
 
         DeploymentManager manager = container.addDeployment(builder);

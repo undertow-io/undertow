@@ -64,7 +64,7 @@ public class DispatcherIncludeTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(new TestResourceLoader(DispatcherIncludeTestCase.class))
+                .setResourceManager(new TestResourceLoader(DispatcherIncludeTestCase.class))
                 .addServlet(
                         new ServletInfo("include", MessageServlet.class)
                                 .addInitParam(MessageServlet.MESSAGE, "included")

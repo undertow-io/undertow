@@ -270,7 +270,6 @@ public class DirectBufferCache {
                     this.buffers = INIT_BUFFERS;
                     return false;
                 }
-
                 buffers[i] = allocate;
             }
 

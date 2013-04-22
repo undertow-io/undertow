@@ -44,11 +44,13 @@ public class TestListener implements ServletRequestListener {
     @Override
     public void requestDestroyed(final ServletRequestEvent sre) {
         RESULTS.add("destroyed " + sre.getServletRequest().getDispatcherType());
+        latch.countDown();
     }
 
     @Override
     public void requestInitialized(final ServletRequestEvent sre) {
         RESULTS.add("created " + sre.getServletRequest().getDispatcherType());
+        latch.countDown();
     }
 
     public static List<String> results() {

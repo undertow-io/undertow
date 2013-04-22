@@ -47,7 +47,7 @@ public class ServletPrintWriter {
         return error;
     }
 
-    private void doWrite(final CharBuffer cb) {
+    public void write(final CharBuffer cb) {
         ByteBuffer buffer = outputStream.underlyingBuffer();
         try {
             if (!buffer.hasRemaining()) {
@@ -68,122 +68,122 @@ public class ServletPrintWriter {
 
     public void write(final int c) {
         final CharBuffer cb = CharBuffer.wrap(Character.toString((char)c));
-        doWrite(cb);
+        write(cb);
     }
 
     public void write(final char[] buf, final int off, final int len) {
         final CharBuffer cb = CharBuffer.wrap(buf, off, len);
-        doWrite(cb);
+        write(cb);
     }
 
     public void write(final char[] buf) {
         final CharBuffer cb = CharBuffer.wrap(buf);
-        doWrite(cb);
+        write(cb);
     }
 
     public void write(final String s, final int off, final int len) {
         final CharBuffer cb = CharBuffer.wrap(s, off, len);
-        doWrite(cb);
+        write(cb);
     }
 
     public void write(final String s) {
         final CharBuffer cb = CharBuffer.wrap(s);
-        doWrite(cb);
+        write(cb);
     }
 
     public void print(final boolean b) {
         final CharBuffer cb = CharBuffer.wrap(Boolean.toString(b));
-        doWrite(cb);
+        write(cb);
     }
 
     public void print(final char c) {
         final CharBuffer cb = CharBuffer.wrap(Character.toString(c));
-        doWrite(cb);
+        write(cb);
     }
 
     public void print(final int i) {
         final CharBuffer cb = CharBuffer.wrap(Integer.toString(i));
-        doWrite(cb);
+        write(cb);
     }
 
     public void print(final long l) {
         final CharBuffer cb = CharBuffer.wrap(Long.toString(l));
-        doWrite(cb);
+        write(cb);
     }
 
     public void print(final float f) {
         final CharBuffer cb = CharBuffer.wrap(Float.toString(f));
-        doWrite(cb);
+        write(cb);
     }
 
     public void print(final double d) {
         final CharBuffer cb = CharBuffer.wrap(Double.toString(d));
-        doWrite(cb);
+        write(cb);
     }
 
     public void print(final char[] s) {
         final CharBuffer cb = CharBuffer.wrap(s);
-        doWrite(cb);
+        write(cb);
     }
 
     public void print(final String s) {
         final CharBuffer cb = CharBuffer.wrap(s);
-        doWrite(cb);
+        write(cb);
     }
 
     public void print(final Object obj) {
         final CharBuffer cb = CharBuffer.wrap(obj == null ? "null" : obj.toString());
-        doWrite(cb);
+        write(cb);
     }
 
     public void println() {
         final CharBuffer cb = CharBuffer.wrap("\n");
-        doWrite(cb);
+        write(cb);
     }
 
     public void println(final boolean b) {
         final CharBuffer cb = CharBuffer.wrap(Boolean.toString(b) + "\n");
-        doWrite(cb);
+        write(cb);
     }
 
     public void println(final char c) {
         final CharBuffer cb = CharBuffer.wrap(Character.toString(c) + "\n");
-        doWrite(cb);
+        write(cb);
     }
 
     public void println(final int i) {
         final CharBuffer cb = CharBuffer.wrap(Integer.toString(i) + "\n");
-        doWrite(cb);
+        write(cb);
     }
 
     public void println(final long l) {
         final CharBuffer cb = CharBuffer.wrap(Long.toString(l) + "\n");
-        doWrite(cb);
+        write(cb);
     }
 
     public void println(final float f) {
         final CharBuffer cb = CharBuffer.wrap(Float.toString(f) + "\n");
-        doWrite(cb);
+        write(cb);
     }
 
     public void println(final double d) {
         final CharBuffer cb = CharBuffer.wrap(Double.toString(d) + "\n");
-        doWrite(cb);
+        write(cb);
     }
 
     public void println(final char[] s) {
         final CharBuffer cb = CharBuffer.wrap(s + "\n");
-        doWrite(cb);
+        write(cb);
     }
 
     public void println(final String s) {
         final CharBuffer cb = CharBuffer.wrap(s + "\n");
-        doWrite(cb);
+        write(cb);
     }
 
     public void println(final Object obj) {
         final CharBuffer cb = CharBuffer.wrap(obj == null ? "null\n" : (obj.toString() + "\n"));
-        doWrite(cb);
+        write(cb);
     }
 
     public void printf(final String format, final Object... args) {

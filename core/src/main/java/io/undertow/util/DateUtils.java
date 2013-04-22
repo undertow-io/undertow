@@ -128,6 +128,28 @@ public class DateUtils {
         }
         return lastModified.after(modDate);
     }
+
+    /**
+     * Handles the if-modified-since header. returns true if the request should proceed, false otherwise
+     *
+     * @param modifiedSince the modified since date
+     * @param lastModified  The last modified date
+     * @return
+     */
+    public static boolean handleIfModifiedSince(final String modifiedSince, final Date lastModified) {
+        if (lastModified == null) {
+            return true;
+        }
+        if (modifiedSince == null) {
+            return true;
+        }
+        Date modDate = parseDate(modifiedSince);
+        if (modDate == null) {
+            return true;
+        }
+        return lastModified.after(modDate);
+    }
+
     /**
      * Handles the if-unmodified-since header. returns true if the request should proceed, false otherwise
      *
@@ -149,6 +171,28 @@ public class DateUtils {
         }
         return lastModified.before(modDate);
     }
+
+    /**
+     * Handles the if-unmodified-since header. returns true if the request should proceed, false otherwise
+     *
+     * @param modifiedSince the if unmodified since date
+     * @param lastModified  The last modified date
+     * @return
+     */
+    public static boolean handleIfUnmodifiedSince(final String modifiedSince, final Date lastModified) {
+        if (lastModified == null) {
+            return true;
+        }
+        if (modifiedSince == null) {
+            return true;
+        }
+        Date modDate = parseDate(modifiedSince);
+        if (modDate == null) {
+            return true;
+        }
+        return lastModified.after(modDate);
+    }
+
     private DateUtils() {
 
     }

@@ -35,7 +35,6 @@ import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
@@ -90,8 +89,7 @@ public class FilterPathMappingTestCase {
         builder.setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
-                .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER);
+                .setDeploymentName("servletContext.war");
 
         final DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -135,8 +133,7 @@ public class FilterPathMappingTestCase {
         builder.setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
-                .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER);
+                .setDeploymentName("servletContext.war");
 
         final DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

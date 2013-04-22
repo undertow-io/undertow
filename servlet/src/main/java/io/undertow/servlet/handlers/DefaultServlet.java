@@ -18,28 +18,28 @@
 
 package io.undertow.servlet.handlers;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.io.Reader;
+import java.util.Date;
 import java.util.List;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.undertow.server.handlers.resource.Resource;
+import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
-import org.xnio.IoUtils;
+import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.util.DateUtils;
+import io.undertow.util.ETag;
+import io.undertow.util.ETagUtils;
+import io.undertow.util.Headers;
+import io.undertow.util.Methods;
 
 /**
  * Default servlet responsible for serving up resources. This is both a handler and a servlet. If no filters
@@ -63,6 +63,7 @@ public class DefaultServlet extends HttpServlet {
 
     private final Deployment deployment;
     private final DefaultServletConfig config;
+    private final ResourceManager resourceManager;
 
     private final List<String> welcomePages;
 
@@ -70,6 +71,7 @@ public class DefaultServlet extends HttpServlet {
         this.deployment = deployment;
         this.config = config;
         this.welcomePages = welcomePages;
+        this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
     }
 
     @Override
@@ -79,7 +81,7 @@ public class DefaultServlet extends HttpServlet {
             resp.sendError(404);
             return;
         }
-        final File resource = deployment.getDeploymentInfo().getResourceLoader().getResource(path);
+        final Resource resource = resourceManager.getResource(path);
         if (resource == null) {
             if (req.getDispatcherType() == DispatcherType.INCLUDE) {
                 //servlet 9.3
@@ -89,9 +91,9 @@ public class DefaultServlet extends HttpServlet {
             }
             return;
         } else if (resource.isDirectory()) {
-            handleWelcomePage(req, resp, resource);
+            handleWelcomePage(req, resp, path);
         } else {
-            serveFileBlocking(resp, resource);
+            serveFileBlocking(req, resp, resource);
         }
     }
 
@@ -100,7 +102,6 @@ public class DefaultServlet extends HttpServlet {
         /*
          * Where a servlet has received a POST request we still require the capability to include static content.
          */
-        DispatcherType dispatchType = req.getDispatcherType();
         switch (req.getDispatcherType()) {
             case INCLUDE:
             case FORWARD:
@@ -111,41 +112,44 @@ public class DefaultServlet extends HttpServlet {
         }
     }
 
-    private void serveFileBlocking(final HttpServletResponse resp, final File resource) throws IOException {
-        ServletOutputStream out = null;
-        PrintWriter writer = null;
-        InputStream in = new BufferedInputStream(new FileInputStream(resource));
-
-        // Trying to retrieve the servlet output stream
-        try {
-            out = resp.getOutputStream();
-        } catch (IllegalStateException e) {
-            //todo: only allow this for text files
-            writer = resp.getWriter();
+    private void serveFileBlocking(final HttpServletRequest req, final HttpServletResponse resp, final Resource resource) throws IOException {
+        final ETag etag = resource.getETag();
+        final Date lastModified = resource.getLastModified();
+        if (!ETagUtils.handleIfMatch(req.getHeader(Headers.IF_MATCH_STRING), etag, false) ||
+                !DateUtils.handleIfUnmodifiedSince(req.getHeader(Headers.IF_UNMODIFIED_SINCE_STRING), lastModified)) {
+            resp.setStatus(412);
+            return;
         }
-        try {
-            if (out != null) {
-                int read;
-                final byte[] buffer = new byte[1024];
-                while ((read = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, read);
-                }
-            } else {
-                Reader reader = new InputStreamReader(in);
-                int read;
-                final char[] buffer = new char[1024];
-                while ((read = reader.read(buffer)) != -1) {
-                    writer.write(buffer, 0, read);
-                }
-            }
-
-        } finally {
-            IoUtils.safeClose(in);
+        if (!ETagUtils.handleIfNoneMatch(req.getHeader(Headers.IF_NONE_MATCH_STRING), etag, true) ||
+                !DateUtils.handleIfModifiedSince(req.getHeader(Headers.IF_MODIFIED_SINCE_STRING), lastModified)) {
+            resp.setStatus(304);
+            return;
+        }
+        //todo: handle range requests
+        //we are going to proceed. Set the appropriate headers
+        final String contentType = deployment.getServletContext().getMimeType(resource.getName());
+        if (contentType != null) {
+            resp.setHeader(Headers.CONTENT_TYPE_STRING, contentType);
+        } else {
+            resp.setHeader(Headers.CONTENT_TYPE_STRING, "application/octet-stream");
+        }
+        if (lastModified != null) {
+            resp.setHeader(Headers.LAST_MODIFIED_STRING, DateUtils.toDateString(lastModified));
+        }
+        if (etag != null) {
+            resp.setHeader(Headers.ETAG_STRING, etag.toString());
+        }
+        Long contentLength = resource.getContentLength();
+        if (contentLength != null) {
+            resp.setContentLengthLong(contentLength);
+        }
+        if (!req.getMethod().equals(Methods.HEAD_STRING)) {
+            resource.serve(HttpServletRequestImpl.getRequestImpl(req).getExchange());
         }
     }
 
-    private void handleWelcomePage(final HttpServletRequest req, final HttpServletResponse resp, final File resource) throws IOException, ServletException {
-        String welcomePage = findWelcomeFile(resource);
+    private void handleWelcomePage(final HttpServletRequest req, final HttpServletResponse resp, final String oldPath) throws IOException, ServletException {
+        String welcomePage = findWelcomeFile(oldPath);
 
         String pathInfo = req.getPathInfo();
         if (pathInfo == null) {
@@ -164,11 +168,16 @@ public class DefaultServlet extends HttpServlet {
         }
     }
 
-    private String findWelcomeFile(final File resource) {
+    private String findWelcomeFile(final String path) {
+        String realPath = path.endsWith("/") ? path : path + "/";
         for (String i : welcomePages) {
-            final File res = new File(resource + File.separator + i);
-            if (res.exists()) {
-                return i;
+            try {
+                Resource resource = resourceManager.getResource(realPath + i);
+                if (resource != null) {
+                    return i;
+                }
+            } catch (IOException e) {
+
             }
         }
         return null;

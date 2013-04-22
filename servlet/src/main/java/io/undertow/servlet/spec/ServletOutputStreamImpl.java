@@ -210,7 +210,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     void updateWritten(final int len) throws IOException {
         this.written += len;
         if (contentLength != null && this.written >= contentLength) {
-            flush();
             close();
         }
     }
@@ -337,6 +336,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         buffer.flip();
         if (channel == null) {
             channel = servletResponse.getExchange().getResponseChannel();
+        }
+        if(!buffer.hasRemaining()) {
+            return;
         }
         Channels.writeBlocking(channel, buffer);
         buffer.clear();

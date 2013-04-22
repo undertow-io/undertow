@@ -16,14 +16,18 @@
  * limitations under the License.
  */
 
-package io.undertow.io;
+package io.undertow.servlet.core;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 
 import io.undertow.UndertowMessages;
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.IoUtils;
 
@@ -32,20 +36,21 @@ import org.xnio.IoUtils;
  *
  * @author Stuart Douglas
  */
-public class BlockingSenderImpl implements Sender {
+public class BlockingWriterSenderImpl implements Sender {
 
-    private static final Charset utf8 = Charset.forName("UTF-8");
     public static final int BUFFER_SIZE = 128;
 
+    private final CharsetDecoder charsetDecoder;
     private final HttpServerExchange exchange;
-    private final OutputStream outputStream;
+    private final PrintWriter writer;
     private boolean inCall;
-    private ByteBuffer[] next;
+    private String next;
     private IoCallback queuedCallback;
 
-    public BlockingSenderImpl(final HttpServerExchange exchange, final OutputStream outputStream) {
+    public BlockingWriterSenderImpl(final HttpServerExchange exchange, final PrintWriter writer, final String charset) {
         this.exchange = exchange;
-        this.outputStream = outputStream;
+        this.writer = writer;
+        this.charsetDecoder = Charset.forName(charset).newDecoder();
     }
 
     @Override
@@ -77,14 +82,15 @@ public class BlockingSenderImpl implements Sender {
     @Override
     public void send(final String data, final IoCallback callback) {
         if (inCall) {
-            queue(new ByteBuffer[]{ByteBuffer.wrap(data.getBytes(utf8))}, callback);
+            queue(data, callback);
             return;
         }
-        try {
-            outputStream.write(data.getBytes(utf8));
+        writer.write(data);
+
+        if (writer.checkError()) {
+            callback.onException(exchange, this, new IOException());
+        } else {
             invokeOnComplete(callback);
-        } catch (IOException e) {
-            callback.onException(exchange, this, e);
         }
     }
 
@@ -94,50 +100,39 @@ public class BlockingSenderImpl implements Sender {
             queue(new ByteBuffer[]{ByteBuffer.wrap(data.getBytes(charset))}, callback);
             return;
         }
-        try {
-            outputStream.write(data.getBytes(charset));
+        writer.write(data);
+        if (writer.checkError()) {
+            callback.onException(exchange, this, new IOException());
+        } else {
             invokeOnComplete(callback);
-        } catch (IOException e) {
-            callback.onException(exchange, this, e);
         }
     }
 
     @Override
     public void close(final IoCallback callback) {
-        try {
-            outputStream.close();
-            invokeOnComplete(callback);
-        } catch (IOException e) {
-            callback.onException(exchange, this, e);
-        }
+        writer.close();
+        invokeOnComplete(callback);
     }
 
     @Override
     public void close() {
-        IoUtils.safeClose(outputStream);
+        IoUtils.safeClose(writer);
     }
 
 
     private boolean writeBuffer(final ByteBuffer buffer, final IoCallback callback) {
-        if (buffer.hasArray()) {
-            try {
-                outputStream.write(buffer.array(), buffer.arrayOffset(), buffer.remaining());
-            } catch (IOException e) {
-                callback.onException(exchange, this, e);
-                return false;
-            }
-        } else {
-            byte[] b = new byte[BUFFER_SIZE];
-            while (buffer.hasRemaining()) {
-                int toRead = Math.min(buffer.remaining(), BUFFER_SIZE);
-                buffer.get(b, 0, toRead);
-                try {
-                    outputStream.write(b, 0, toRead);
-                } catch (IOException e) {
-                    callback.onException(exchange, this, e);
-                    return false;
-                }
-            }
+        StringBuilder builder = new StringBuilder();
+        try {
+            builder.append(charsetDecoder.decode(buffer));
+        } catch (CharacterCodingException e) {
+            callback.onException(exchange, this, e);
+            return false;
+        }
+        String data = builder.toString();
+        writer.write(data);
+        if (writer.checkError()) {
+            callback.onException(exchange, this, new IOException());
+            return false;
         }
         return true;
     }
@@ -151,18 +146,20 @@ public class BlockingSenderImpl implements Sender {
             inCall = false;
         }
         while (next != null) {
-            ByteBuffer[] next = this.next;
+            String next = this.next;
             IoCallback queuedCallback = this.queuedCallback;
             this.next = null;
             this.queuedCallback = null;
-            for (ByteBuffer buffer : next) {
-                writeBuffer(buffer, queuedCallback);
-            }
-            inCall = true;
-            try {
-                queuedCallback.onComplete(exchange, this);
-            } finally {
-                inCall = false;
+            writer.write(next);
+            if (writer.checkError()) {
+                queuedCallback.onException(exchange, this, new IOException());
+            } else {
+                inCall = true;
+                try {
+                    queuedCallback.onComplete(exchange, this);
+                } finally {
+                    inCall = false;
+                }
             }
         }
     }
@@ -172,8 +169,26 @@ public class BlockingSenderImpl implements Sender {
         if (next != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
-        next = byteBuffers;
+        StringBuilder builder = new StringBuilder();
+        for (ByteBuffer buffer : byteBuffers) {
+            try {
+                builder.append(charsetDecoder.decode(buffer));
+            } catch (CharacterCodingException e) {
+                ioCallback.onException(exchange, this, e);
+                return;
+            }
+        }
+        this.next = builder.toString();
         queuedCallback = ioCallback;
+    }
+
+    private void queue(final String data, final IoCallback callback) {
+        //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitly
+        if (next != null) {
+            throw UndertowMessages.MESSAGES.dataAlreadyQueued();
+        }
+        next = data;
+        queuedCallback = callback;
     }
 
 }

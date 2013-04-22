@@ -53,7 +53,7 @@ public class WelcomeFileBlockingPathTestCase extends AbstractWelcomeFileTestCase
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(new TestResourceLoader(WelcomeFileBlockingPathTestCase.class))
+                .setResourceManager(new TestResourceLoader(WelcomeFileBlockingPathTestCase.class))
                 .addWelcomePages("doesnotexist.html", "index.html", "default");
 
         builder.addServlet(new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)

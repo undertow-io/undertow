@@ -21,4 +21,10 @@ public interface ResourceManager {
      */
     Resource getResource(final String path) throws IOException;
 
+    ResourceManager EMPTY_RESOURCE_MANAGER = new ResourceManager() {
+        @Override
+        public Resource getResource(final String path){
+            return null;
+        }
+    };
 }

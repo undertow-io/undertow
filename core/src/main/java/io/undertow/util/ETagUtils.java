@@ -16,7 +16,6 @@ public class ETagUtils {
     private static final char W = 'W';
     private static final char SLASH = '/';
 
-
     /**
      * Handles the if-match header. returns true if the request should proceed, false otherwise
      *
@@ -36,7 +35,28 @@ public class ETagUtils {
      * @return
      */
     public static boolean handleIfMatch(final HttpServerExchange exchange, final List<ETag> etags, boolean allowWeak) {
-        final String ifMatch = exchange.getRequestHeaders().getFirst(Headers.IF_MATCH);
+        return handleIfMatch(exchange.getRequestHeaders().getFirst(Headers.IF_MATCH), etags, allowWeak);
+    }
+
+    /**
+     * Handles the if-match header. returns true if the request should proceed, false otherwise
+     *
+     * @param ifMatch The if match header
+     * @param etags   The etags
+     * @return
+     */
+    public static boolean handleIfMatch(final String ifMatch, final ETag etag, boolean allowWeak) {
+        return handleIfMatch(ifMatch, Collections.singletonList(etag), allowWeak);
+    }
+
+    /**
+     * Handles the if-match header. returns true if the request should proceed, false otherwise
+     *
+     * @param ifMatch The ifMatch header
+     * @param etags   The etags
+     * @return
+     */
+    public static boolean handleIfMatch(final String ifMatch, final List<ETag> etags, boolean allowWeak) {
         if (ifMatch == null) {
             return true;
         }
@@ -49,7 +69,7 @@ public class ETagUtils {
                 continue;
             }
             for (ETag tag : etags) {
-                if(tag != null) {
+                if (tag != null) {
                     if (tag.isWeak() && !allowWeak) {
                         continue;
                     }
@@ -61,6 +81,7 @@ public class ETagUtils {
         }
         return false;
     }
+
 
     /**
      * Handles the if-none-match header. returns true if the request should proceed, false otherwise
@@ -81,11 +102,32 @@ public class ETagUtils {
      * @return
      */
     public static boolean handleIfNoneMatch(final HttpServerExchange exchange, final List<ETag> etags, boolean allowWeak) {
-        final String ifMatch = exchange.getRequestHeaders().getFirst(Headers.IF_NONE_MATCH);
-        if (ifMatch == null) {
+        return handleIfNoneMatch(exchange.getRequestHeaders().getFirst(Headers.IF_NONE_MATCH), etags, allowWeak);
+    }
+
+    /**
+     * Handles the if-none-match header. returns true if the request should proceed, false otherwise
+     *
+     * @param ifNoneMatch the header
+     * @param etags       The etags
+     * @return
+     */
+    public static boolean handleIfNoneMatch(final String ifNoneMatch, final ETag etag, boolean allowWeak) {
+        return handleIfNoneMatch(ifNoneMatch, Collections.singletonList(etag), allowWeak);
+    }
+
+    /**
+     * Handles the if-none-match header. returns true if the request should proceed, false otherwise
+     *
+     * @param ifNoneMatch the header
+     * @param etags       The etags
+     * @return
+     */
+    public static boolean handleIfNoneMatch(final String ifNoneMatch, final List<ETag> etags, boolean allowWeak) {
+        if (ifNoneMatch == null) {
             return true;
         }
-        List<ETag> parts = parseETagList(ifMatch);
+        List<ETag> parts = parseETagList(ifNoneMatch);
         for (ETag part : parts) {
             if (part.getTag().equals("*")) {
                 return false;
@@ -94,7 +136,7 @@ public class ETagUtils {
                 continue;
             }
             for (ETag tag : etags) {
-                if(tag != null) {
+                if (tag != null) {
                     if (tag.isWeak() && !allowWeak) {
                         continue;
                     }

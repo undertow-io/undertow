@@ -31,7 +31,6 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -57,7 +56,6 @@ public class ListenerTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .addServlet(
                         new ServletInfo("servlet", MessageServlet.class)
                                 .addMapping("/aa")

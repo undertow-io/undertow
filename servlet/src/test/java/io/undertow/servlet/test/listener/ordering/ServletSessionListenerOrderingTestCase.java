@@ -32,7 +32,6 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.servlet.test.util.Tracker;
 import io.undertow.test.utils.DefaultServer;
 import org.apache.http.HttpResponse;
@@ -65,7 +64,6 @@ public class ServletSessionListenerOrderingTestCase {
                 .setContextPath("/listener")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("listener.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .addListener(new ListenerInfo(FirstListener.class))
                 .addListener(new ListenerInfo(SecondListener.class))
                 .addServlet(

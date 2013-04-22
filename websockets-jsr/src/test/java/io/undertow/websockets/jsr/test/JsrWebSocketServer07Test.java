@@ -44,7 +44,6 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
@@ -610,7 +609,6 @@ public class JsrWebSocketServer07Test {
                 .setDeploymentName("websocket.war")
                 .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
                 .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST)
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .addServletContextAttribute(javax.websocket.server.ServerContainer.class.getName(), deployment);
 
         final PathHandler root = new PathHandler();

@@ -33,7 +33,6 @@ import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.FlexBase64;
@@ -79,7 +78,6 @@ public class EmptyRoleSemanticTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .setIdentityManager(identityManager)
                 .setLoginConfig(new LoginConfig("BASIC", "Test Realm"))
                 .addServlet(s);

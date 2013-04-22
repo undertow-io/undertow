@@ -21,7 +21,6 @@ import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.security.SendUsernameServlet;
 import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
 import io.undertow.util.TestHttpClient;
@@ -76,7 +75,6 @@ public class ServletFormAuthTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(TestResourceLoader.NOOP_RESOURCE_LOADER)
                 .setIdentityManager(identityManager)
                 .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
                 .addServlets(s, s1);

@@ -36,6 +36,7 @@ import javax.servlet.descriptor.JspConfigDescriptor;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
+import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletMessages;
@@ -52,7 +53,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile String displayName;
     private volatile String contextPath;
     private volatile ClassLoader classLoader;
-    private volatile ResourceLoader resourceLoader = ResourceLoader.EMPTY_RESOURCE_LOADER;
+    private volatile ResourceManager resourceManager = ResourceManager.EMPTY_RESOURCE_MANAGER;
     private volatile ClassIntrospecter classIntrospecter = DefaultClassIntrospector.INSTANCE;
     private volatile int majorVersion = 3;
     private volatile int minorVersion;
@@ -110,8 +111,8 @@ public class DeploymentInfo implements Cloneable {
         if (classLoader == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("classLoader");
         }
-        if (resourceLoader == null) {
-            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("resourceLoader");
+        if (resourceManager == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("resourceManager");
         }
         if (classIntrospecter == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("classIntrospecter");
@@ -160,12 +161,12 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public ResourceLoader getResourceLoader() {
-        return resourceLoader;
+    public ResourceManager getResourceManager() {
+        return resourceManager;
     }
 
-    public DeploymentInfo setResourceLoader(final ResourceLoader resourceLoader) {
-        this.resourceLoader = resourceLoader;
+    public DeploymentInfo setResourceManager(final ResourceManager resourceManager) {
+        this.resourceManager = resourceManager;
         return this;
     }
 
@@ -583,7 +584,7 @@ public class DeploymentInfo implements Cloneable {
         final DeploymentInfo info = new DeploymentInfo()
                 .setClassLoader(classLoader)
                 .setContextPath(contextPath)
-                .setResourceLoader(resourceLoader)
+                .setResourceManager(resourceManager)
                 .setMajorVersion(majorVersion)
                 .setMinorVersion(minorVersion)
                 .setDeploymentName(deploymentName)

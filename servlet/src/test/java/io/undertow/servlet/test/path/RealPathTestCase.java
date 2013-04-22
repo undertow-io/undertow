@@ -60,7 +60,7 @@ public class RealPathTestCase {
                 .setClassLoader(RealPathTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceLoader(new TestResourceLoader(RealPathTestCase.class))
+                .setResourceManager(new TestResourceLoader(RealPathTestCase.class))
                 .addServlets(realPathServlet);
 
         DeploymentManager manager = container.addDeployment(builder);

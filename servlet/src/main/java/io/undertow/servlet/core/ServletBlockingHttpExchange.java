@@ -48,8 +48,17 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
 
     @Override
     public Sender getSender() {
-        if(sender == null) {
-            sender = new BlockingSenderImpl(exchange, getOutputStream());
+        if (sender == null) {
+            try {
+                sender = new BlockingSenderImpl(exchange, getOutputStream());
+            } catch (IllegalStateException e) {
+                ServletResponse response = exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+                try {
+                    sender = new BlockingWriterSenderImpl(exchange, response.getWriter(), response.getCharacterEncoding());
+                } catch (IOException e1) {
+                    throw new RuntimeException(e1);
+                }
+            }
         }
         return sender;
     }

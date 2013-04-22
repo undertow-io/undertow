@@ -19,12 +19,13 @@
 package io.undertow.servlet.spec;
 
 import java.io.BufferedInputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.HashMap;
@@ -46,6 +47,7 @@ import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.Version;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.resource.Resource;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletLogger;
@@ -130,19 +132,21 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Set<String> getResourcePaths(final String path) {
-        final File resource = deploymentInfo.getResourceLoader().getResource(path);
+        final Resource resource;
+        try {
+            resource = deploymentInfo.getResourceManager().getResource(path);
+        } catch (IOException e) {
+            return null;
+        }
         if (resource == null || !resource.isDirectory()) {
             return null;
         }
-        final String first;
-        if (path.charAt(path.length() - 1) == '/') {
-            first = path;
-        } else {
-            first = path + '/';
-        }
         final Set<String> resources = new HashSet<String>();
-        for (String res : resource.list()) {
-            resources.add(first + res);
+        for (Resource res : resource.list()) {
+            Path file = res.getFile();
+            if(file != null) {
+                resources.add(file.toString());
+            }
         }
         return resources;
     }
@@ -152,23 +156,39 @@ public class ServletContextImpl implements ServletContext {
         if (!path.startsWith("/")) {
             throw UndertowServletMessages.MESSAGES.pathMustStartWithSlash(path);
         }
-        File resource = deploymentInfo.getResourceLoader().getResource(path);
+        Resource resource = null;
+        try {
+            resource = deploymentInfo.getResourceManager().getResource(path);
+        } catch (IOException e) {
+            return null;
+        }
         if (resource == null) {
             return null;
         }
-        return resource.toURL();
+        return resource.getUrl();
     }
 
     @Override
     public InputStream getResourceAsStream(final String path) {
-        File resource = deploymentInfo.getResourceLoader().getResource(path);
+        Resource resource = null;
+        try {
+            resource = deploymentInfo.getResourceManager().getResource(path);
+        } catch (IOException e) {
+            return null;
+        }
         if (resource == null) {
             return null;
         }
         try {
-            return new BufferedInputStream(new FileInputStream(resource));
+            if(resource.getFile() != null) {
+                return new BufferedInputStream(new FileInputStream(resource.getFile().toFile()));
+            } else {
+                return new BufferedInputStream(resource.getUrl().openStream());
+            }
         } catch (FileNotFoundException e) {
             //should never happen, as the resource loader should return null in this case
+            return null;
+        } catch (IOException e) {
             return null;
         }
     }
@@ -223,11 +243,20 @@ public class ServletContextImpl implements ServletContext {
         if (path==null){
             return null;
         }
-        File resource = deploymentInfo.getResourceLoader().getResource(path);
+        Resource resource = null;
+        try {
+            resource = deploymentInfo.getResourceManager().getResource(path);
+        } catch (IOException e) {
+            return null;
+        }
         if(resource == null) {
             return null;
         }
-        return resource.getAbsolutePath();
+        Path file = resource.getFile();
+        if(file == null) {
+            return null;
+        }
+        return file.toAbsolutePath().toString();
     }
 
     @Override
