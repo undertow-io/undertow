@@ -42,7 +42,7 @@ public class UndertowInputStream extends InputStream {
         if (read == -1) {
             return -1;
         }
-        return b[0];
+        return b[0] & 0xff;
     }
 
     @Override
