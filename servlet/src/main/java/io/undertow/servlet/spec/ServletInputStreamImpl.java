@@ -15,6 +15,7 @@ import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.Channels;
+import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import static org.xnio.Bits.allAreClear;
@@ -49,7 +50,11 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     public ServletInputStreamImpl(final HttpServletRequestImpl request) {
         this.request = request;
-        this.channel = request.getExchange().getRequestChannel();
+        if(request.getExchange().isRequestChannelAvailable()) {
+            this.channel = request.getExchange().getRequestChannel();
+        } else {
+            this.channel = new EmptyStreamSourceChannel(request.getExchange().getIoThread());
+        }
         this.bufferPool = request.getExchange().getConnection().getBufferPool();
     }
 

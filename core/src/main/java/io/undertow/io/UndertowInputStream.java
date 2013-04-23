@@ -10,6 +10,7 @@ import org.xnio.Buffers;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.Channels;
+import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
@@ -27,7 +28,11 @@ public class UndertowInputStream extends InputStream {
 
     public UndertowInputStream(final HttpServerExchange exchange) {
         this.bufferPool = exchange.getConnection().getBufferPool();
-        this.channel = exchange.getRequestChannel();
+        if (exchange.isRequestChannelAvailable()) {
+            this.channel = exchange.getRequestChannel();
+        } else {
+            this.channel = new EmptyStreamSourceChannel(exchange.getIoThread());
+        }
     }
 
     @Override
@@ -94,11 +99,15 @@ public class UndertowInputStream extends InputStream {
 
     @Override
     public void close() throws IOException {
-        if (pooled != null) {
-            pooled.free();
-            pooled = null;
+        if(closed) {
+            return;
         }
-        channel.shutdownReads();
-        closed = true;
+        while (!closed) {
+            readIntoBuffer();
+            if(pooled != null) {
+                pooled.free();
+                pooled = null;
+            }
+        }
     }
 }

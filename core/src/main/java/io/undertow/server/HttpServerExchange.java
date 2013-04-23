@@ -1130,7 +1130,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         log.tracef("Starting to write response for %s", this);
     }
 
-    public XnioExecutor getIoThread() {
+    public XnioIoThread getIoThread() {
         return connection.getIoThread();
     }
 
