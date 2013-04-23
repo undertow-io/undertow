@@ -162,6 +162,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     int res = channel.read(pooled.getResource());
                     if(res == 0) {
                         pooled.free();
+                        pooled = null;
                         return;
                     }
                     pooled.getResource().flip();
