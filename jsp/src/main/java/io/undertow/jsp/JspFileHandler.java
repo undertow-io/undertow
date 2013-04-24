@@ -4,7 +4,7 @@ import javax.servlet.ServletRequest;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpHandler;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.servlet.handlers.ServletAttachments;
 import org.apache.jasper.Constants;
 
 /**
@@ -24,7 +24,7 @@ public class JspFileHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+        ServletRequest request = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletRequest();
         Object old = request.getAttribute(Constants.JSP_FILE);
         try {
             request.setAttribute(Constants.JSP_FILE, jspFile);

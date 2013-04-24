@@ -73,12 +73,14 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
-        exchange.putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
-        exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
+        final ServletAttachments servletAttachments = new ServletAttachments();
+        servletAttachments.setServletRequest(request);
+        servletAttachments.setServletResponse(response);
+        exchange.putAttachment(ServletAttachments.ATTACHMENT_KEY, servletAttachments);
 
         try {
             exchange.startBlocking(new ServletBlockingHttpExchange(exchange));
-            exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, info);
+            exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).setServletPathMatch(info);
             dispatchRequest(exchange, info, request, response, DispatcherType.REQUEST);
         } catch (Throwable t) {
             UndertowLogger.REQUEST_LOGGER.errorf(t, "Internal error handling servlet request %s", exchange.getRequestURI());
@@ -87,22 +89,25 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     }
 
     public void dispatchToPath(final HttpServerExchange exchange, final ServletPathMatch pathInfo, final DispatcherType dispatcherType) throws Exception {
-        HttpServletRequestImpl req = HttpServletRequestImpl.getRequestImpl(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
-        HttpServletResponseImpl resp = HttpServletResponseImpl.getResponseImpl(exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
-        exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, pathInfo);
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        HttpServletRequestImpl req = HttpServletRequestImpl.getRequestImpl(servletAttachments.getServletRequest());
+        HttpServletResponseImpl resp = HttpServletResponseImpl.getResponseImpl(servletAttachments.getServletResponse());
+        servletAttachments.setServletPathMatch(pathInfo);
         dispatchRequest(exchange, pathInfo, req, resp, dispatcherType);
     }
 
     @Override
     public void dispatchToServlet(final HttpServerExchange exchange, final ServletChain servletchain, final DispatcherType dispatcherType) throws Exception {
-        HttpServletRequestImpl req = HttpServletRequestImpl.getRequestImpl(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
-        HttpServletResponseImpl resp = HttpServletResponseImpl.getResponseImpl(exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY));
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        HttpServletRequestImpl req = HttpServletRequestImpl.getRequestImpl(servletAttachments.getServletRequest());
+        HttpServletResponseImpl resp = HttpServletResponseImpl.getResponseImpl(servletAttachments.getServletResponse());
         dispatchRequest(exchange, servletchain, req, resp, dispatcherType);
     }
 
     public void dispatchRequest(final HttpServerExchange exchange, final ServletChain servletChain, final HttpServletRequestImpl request, final HttpServletResponseImpl response, final DispatcherType dispatcherType) throws Exception {
-        exchange.putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, dispatcherType);
-        exchange.putAttachment(ServletAttachments.CURRENT_SERVLET, servletChain);
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        servletAttachments.setDispatcherType(dispatcherType);
+        servletAttachments.setCurrentServlet(servletChain);
         if (dispatcherType == DispatcherType.REQUEST || dispatcherType == DispatcherType.ASYNC) {
             handleFirstRequest(exchange, servletChain, request, response);
         } else {
@@ -127,7 +132,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             }
             //
         } catch (Throwable t) {
-            if(request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
+            if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
                 exchange.unDispatch();
                 request.getAsyncContextInternal().handleError(t);
             } else {

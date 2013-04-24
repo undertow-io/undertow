@@ -32,7 +32,7 @@ public class ServletDispatchingHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        ServletChain info = exchange.getAttachment(ServletAttachments.CURRENT_SERVLET);
+        ServletChain info = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getCurrentServlet();
         info.getHandler().handleRequest(exchange);
     }
 

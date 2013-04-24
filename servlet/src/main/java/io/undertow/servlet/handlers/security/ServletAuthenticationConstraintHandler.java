@@ -40,7 +40,7 @@ public class ServletAuthenticationConstraintHandler extends AuthenticationConstr
 
     @Override
     protected boolean isAuthenticationRequired(final HttpServerExchange exchange) {
-        List<SingleConstraintMatch> constraints = exchange.getAttachmentList(ServletAttachments.REQUIRED_CONSTRAINTS);
+        List<SingleConstraintMatch> constraints = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getRequiredConstrains();
 
         /*
          * Even once this is set to true the reason we allow the loop to continue is in case an empty role with a semantic of

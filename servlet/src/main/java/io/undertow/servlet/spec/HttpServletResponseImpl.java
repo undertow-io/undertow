@@ -38,7 +38,6 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletAttachments;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
@@ -49,8 +48,6 @@ import io.undertow.util.HttpString;
  * @author Stuart Douglas
  */
 public final class HttpServletResponseImpl implements HttpServletResponse {
-
-    public static final AttachmentKey<ServletResponse> ATTACHMENT_KEY = AttachmentKey.create(ServletResponse.class);
 
     private final HttpServerExchange exchange;
     private volatile ServletContextImpl servletContext;
@@ -125,8 +122,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
         if (location != null) {
             RequestDispatcherImpl requestDispatcher = new RequestDispatcherImpl(location, servletContext);
+            final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
             try {
-                requestDispatcher.error(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), exchange.getAttachment(ServletAttachments.CURRENT_SERVLET).getManagedServlet().getServletInfo().getName(), msg);
+                requestDispatcher.error(servletAttachments.getServletRequest(), servletAttachments.getServletResponse(), exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getCurrentServlet().getManagedServlet().getServletInfo().getName(), msg);
             } catch (ServletException e) {
                 throw new RuntimeException(e);
             }
@@ -363,7 +361,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                     this.charset = type.substring(pos + "charset=".length(), i);
                 }
                 int charsetStart = pos;
-                while (type.charAt(--charsetStart) != ';' && charsetStart >0) {}
+                while (type.charAt(--charsetStart) != ';' && charsetStart > 0) {
+                }
                 StringBuilder contentTypeBuilder = new StringBuilder();
                 contentTypeBuilder.append(type.substring(0, charsetStart));
                 if (i != type.length()) {
@@ -377,7 +376,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                 if (c == ' ' || c == '\t') {
                     continue;
                 }
-                if(c == ';') {
+                if (c == ';') {
                     contentType = contentType.substring(0, i);
                 }
                 break;

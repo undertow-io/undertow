@@ -74,7 +74,6 @@ import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
@@ -91,9 +90,6 @@ import org.xnio.LocalSocketAddress;
  * @author Stuart Douglas
  */
 public final class HttpServletRequestImpl implements HttpServletRequest {
-
-    public static final AttachmentKey<ServletRequest> ATTACHMENT_KEY = AttachmentKey.create(ServletRequest.class);
-    public static final AttachmentKey<DispatcherType> DISPATCHER_TYPE_ATTACHMENT_KEY = AttachmentKey.create(DispatcherType.class);
 
     private static final Charset DEFAULT_CHARSET = Charset.forName("ISO-8859-1");
 
@@ -223,7 +219,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getPathInfo() {
-        ServletPathMatch match = exchange.getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
+        ServletPathMatch match = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletPathMatch();
         if (match != null) {
             return match.getRemaining();
         }
@@ -260,7 +256,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             return false;
         }
 
-        final ServletChain servlet = exchange.getAttachment(ServletAttachments.CURRENT_SERVLET);
+        final ServletChain servlet = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getCurrentServlet();
         //TODO: a more efficient imple
         for (SecurityRoleRef ref : servlet.getManagedServlet().getServletInfo().getSecurityRoleRefs()) {
             if (ref.getRole().equals(role)) {
@@ -311,7 +307,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getServletPath() {
-        ServletPathMatch match = exchange.getAttachment(ServletAttachments.SERVLET_PATH_MATCH);
+        ServletPathMatch match = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletPathMatch();
         if (match != null) {
             return match.getMatched();
         }
@@ -830,7 +826,8 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
         asyncStarted = true;
-        return asyncContext = new AsyncContextImpl(exchange, exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY), exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY), asyncContext);
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        return asyncContext = new AsyncContextImpl(exchange, servletAttachments.getServletRequest(), servletAttachments.getServletResponse(), asyncContext);
     }
 
     @Override
@@ -869,7 +866,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public DispatcherType getDispatcherType() {
-        return exchange.getAttachment(DISPATCHER_TYPE_ATTACHMENT_KEY);
+        return exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getDispatcherType();
     }
 
 

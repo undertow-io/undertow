@@ -11,8 +11,7 @@ import io.undertow.io.BlockingSenderImpl;
 import io.undertow.io.Sender;
 import io.undertow.server.BlockingHttpExchange;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
-import io.undertow.servlet.spec.HttpServletResponseImpl;
+import io.undertow.servlet.handlers.ServletAttachments;
 
 /**
  * @author Stuart Douglas
@@ -28,7 +27,7 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
 
     @Override
     public InputStream getInputStream() {
-        ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
+        ServletRequest request = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletRequest();
         try {
             return request.getInputStream();
         } catch (IOException e) {
@@ -38,7 +37,7 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
 
     @Override
     public OutputStream getOutputStream() {
-        ServletResponse response = exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        ServletResponse response = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletResponse();
         try {
             return response.getOutputStream();
         } catch (IOException e) {
@@ -52,7 +51,7 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
             try {
                 sender = new BlockingSenderImpl(exchange, getOutputStream());
             } catch (IllegalStateException e) {
-                ServletResponse response = exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+                ServletResponse response = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletResponse();
                 try {
                     sender = new BlockingWriterSenderImpl(exchange, response.getWriter(), response.getCharacterEncoding());
                 } catch (IOException e1) {

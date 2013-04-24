@@ -12,8 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
-import io.undertow.servlet.spec.HttpServletResponseImpl;
+import io.undertow.servlet.handlers.ServletAttachments;
 
 /**
  * Servlet handler for FORM authentication. Instead of using a redirect it
@@ -32,8 +31,9 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     @Override
     protected Integer servePage(final HttpServerExchange exchange, final String location) {
-        ServletRequest req = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        ServletResponse resp = exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        ServletRequest req = servletAttachments.getServletRequest();
+        ServletResponse resp = servletAttachments.getServletResponse();
         RequestDispatcher disp = req.getRequestDispatcher(location);
         try {
             disp.forward(req, resp);
@@ -47,8 +47,9 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     @Override
     protected void storeInitialLocation(final HttpServerExchange exchange) {
-        HttpServletRequest req = (HttpServletRequest) exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        HttpServletResponse resp = (HttpServletResponse) exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        HttpServletRequest req = (HttpServletRequest) servletAttachments.getServletRequest();
+        HttpServletResponse resp = (HttpServletResponse) servletAttachments.getServletResponse();
         final Cookie cookie = new Cookie(LOCATION_COOKIE, req.getContextPath() + req.getServletPath() + (req.getPathInfo() == null ? "" : req.getPathInfo()));
         cookie.setPath(req.getServletContext().getContextPath());
         resp.addCookie(cookie);
@@ -56,8 +57,9 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     @Override
     protected void handleRedirectBack(final HttpServerExchange exchange) {
-        HttpServletRequest req = (HttpServletRequest) exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        HttpServletResponse resp = (HttpServletResponse) exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        HttpServletRequest req = (HttpServletRequest) servletAttachments.getServletRequest();
+        HttpServletResponse resp = (HttpServletResponse) servletAttachments.getServletResponse();
         Cookie[] cookies = req.getCookies();
         for (Cookie cookie : cookies) {
             if (cookie.getName().equals(LOCATION_COOKIE)) {

@@ -33,8 +33,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.spec.AsyncContextImpl;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
-import io.undertow.servlet.spec.HttpServletResponseImpl;
 
 /**
  * @author Stuart Douglas
@@ -65,9 +63,10 @@ public class FilterHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        ServletResponse response = exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
-        DispatcherType dispatcher = exchange.getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY);
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        ServletRequest request = servletAttachments.getServletRequest();
+        ServletResponse response = servletAttachments.getServletResponse();
+        DispatcherType dispatcher = servletAttachments.getDispatcherType();
         Boolean supported = asyncSupported.get(dispatcher);
         if(supported != null && ! supported) {
             exchange.putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, false    );
@@ -98,11 +97,12 @@ public class FilterHandler implements HttpHandler {
         @Override
         public void doFilter(final ServletRequest request, final ServletResponse response) throws IOException, ServletException {
 
-            final ServletRequest oldReq = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-            final ServletResponse oldResp = exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+            final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+            final ServletRequest oldReq = servletAttachments.getServletRequest();
+            final ServletResponse oldResp = servletAttachments.getServletResponse();
             try {
-                exchange.putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, request);
-                exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, response);
+                servletAttachments.setServletRequest(request);
+                servletAttachments.setServletResponse(response);
                 int index = location++;
                 if (index >= filters.size()) {
                     next.handleRequest(exchange);
@@ -119,8 +119,8 @@ public class FilterHandler implements HttpHandler {
                 throw new RuntimeException(e);
             } finally {
                 location--;
-                exchange.putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, oldReq);
-                exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, oldResp);
+                servletAttachments.setServletRequest(oldReq);
+                servletAttachments.setServletResponse(oldResp);
             }
         }
     }

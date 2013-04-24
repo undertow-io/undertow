@@ -4,7 +4,6 @@ import javax.servlet.DispatcherType;
 
 import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
 
 /**
  * Predicate that returns true if the dispatcher type matches the specified type.
@@ -29,6 +28,6 @@ public class DispatcherTypePredicate implements Predicate<HttpServerExchange> {
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        return value.getAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY) == dispatcherType;
+        return value.getAttachment(ServletAttachments.ATTACHMENT_KEY).getDispatcherType() == dispatcherType;
     }
 }

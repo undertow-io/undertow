@@ -28,6 +28,7 @@ import io.undertow.io.BufferWritableOutputStream;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
+import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.util.Headers;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
@@ -568,7 +569,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (listener != null) {
             throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
         }
-        final HttpServletRequestImpl servletRequest = HttpServletRequestImpl.getRequestImpl(this.servletResponse.getExchange().getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
+        final HttpServletRequestImpl servletRequest = HttpServletRequestImpl.getRequestImpl(this.servletResponse.getExchange().getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletRequest());
         if (!servletRequest.isAsyncStarted()) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }

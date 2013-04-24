@@ -9,7 +9,7 @@ import javax.servlet.ServletRequest;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.servlet.handlers.ServletAttachments;
 
 /**
  * Handler that associates SSL metadata with request
@@ -102,8 +102,8 @@ public class SSLInformationAssociationHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        ServletRequest request = exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY);
-        SSLSession ssl = exchange.getConnection().getSslSession();
+        ServletRequest request = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletRequest();
+                SSLSession ssl = exchange.getConnection().getSslSession();
         if (ssl != null) {
             request.setAttribute("javax.servlet.request.cipher_suite", ssl.getCipherSuite());
             request.setAttribute("javax.servlet.request.key_size", getKeyLenght(ssl.getCipherSuite()));

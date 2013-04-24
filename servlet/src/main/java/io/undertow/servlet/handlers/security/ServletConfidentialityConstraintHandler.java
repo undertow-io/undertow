@@ -43,7 +43,7 @@ public class ServletConfidentialityConstraintHandler extends SinglePortConfident
 
     @Override
     protected boolean confidentialityRequired(HttpServerExchange exchange) {
-        TransportGuaranteeType transportGuarantee = exchange.getAttachment(ServletAttachments.TRANSPORT_GUARANTEE_TYPE);
+        TransportGuaranteeType transportGuarantee = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getTransportGuarenteeType();
 
         // TODO - We may be able to add more flexibility here especially with authentication mechanisms such as Digest for
         // INTEGRAL - for now just use SSL.

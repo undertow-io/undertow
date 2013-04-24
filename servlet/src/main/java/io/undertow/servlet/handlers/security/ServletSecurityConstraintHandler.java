@@ -43,14 +43,15 @@ public class ServletSecurityConstraintHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
         SecurityPathMatch securityMatch = securityPathMatches.getSecurityInfo(path, exchange.getRequestMethod().toString());
-        List<SingleConstraintMatch> list = exchange.getAttachment(ServletAttachments.REQUIRED_CONSTRAINTS);
-        if(list == null) {
-            exchange.putAttachment(ServletAttachments.REQUIRED_CONSTRAINTS, list = new ArrayList<SingleConstraintMatch>());
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        List<SingleConstraintMatch> list = servletAttachments.getRequiredConstrains();
+        if (list == null) {
+            servletAttachments.setRequiredConstrains(list = new ArrayList<>());
         }
         list.addAll(securityMatch.getRequiredConstraints());
-        TransportGuaranteeType type = exchange.getAttachment(ServletAttachments.TRANSPORT_GUARANTEE_TYPE);
-        if(type == null || type.ordinal() < securityMatch.getTransportGuaranteeType().ordinal()) {
-            exchange.putAttachment(ServletAttachments.TRANSPORT_GUARANTEE_TYPE, securityMatch.getTransportGuaranteeType());
+        TransportGuaranteeType type = servletAttachments.getTransportGuarenteeType();
+        if (type == null || type.ordinal() < securityMatch.getTransportGuaranteeType().ordinal()) {
+            servletAttachments.setTransportGuarenteeType(securityMatch.getTransportGuaranteeType());
         }
         HttpHandlers.executeHandler(next, exchange);
     }

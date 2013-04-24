@@ -141,11 +141,12 @@ public class AsyncContextImpl implements AsyncContext {
         }
 
         final HttpServerExchange exchange = requestImpl.getExchange();
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
 
-        exchange.putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.ASYNC);
+        servletAttachments.setDispatcherType(DispatcherType.ASYNC);
 
-        exchange.putAttachment(HttpServletRequestImpl.ATTACHMENT_KEY, servletRequest);
-        exchange.putAttachment(HttpServletResponseImpl.ATTACHMENT_KEY, servletResponse);
+        servletAttachments.setServletRequest(servletRequest);
+        servletAttachments.setServletResponse(servletResponse);
 
         dispatchAsyncRequest(deployment.getServletDispatcher(), handler, exchange);
     }
@@ -176,7 +177,7 @@ public class AsyncContextImpl implements AsyncContext {
         HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(servletResponse);
         final HttpServerExchange exchange = requestImpl.getExchange();
 
-        exchange.putAttachment(HttpServletRequestImpl.DISPATCHER_TYPE_ATTACHMENT_KEY, DispatcherType.ASYNC);
+        exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).setDispatcherType( DispatcherType.ASYNC);
 
         requestImpl.setAttribute(ASYNC_REQUEST_URI, requestImpl.getRequestURI());
         requestImpl.setAttribute(ASYNC_CONTEXT_PATH, requestImpl.getContextPath());
@@ -219,7 +220,7 @@ public class AsyncContextImpl implements AsyncContext {
 
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         ServletPathMatch info = deployment.getServletPaths().getServletHandlerByPath(newServletPath);
-        requestImpl.getExchange().putAttachment(ServletAttachments.SERVLET_PATH_MATCH, info);
+        requestImpl.getExchange().getAttachment(ServletAttachments.ATTACHMENT_KEY).setServletPathMatch(info);
 
         dispatchAsyncRequest(deployment.getServletDispatcher(), info, exchange);
     }

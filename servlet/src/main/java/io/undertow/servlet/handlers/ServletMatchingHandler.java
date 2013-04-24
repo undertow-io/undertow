@@ -40,8 +40,9 @@ public class ServletMatchingHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
         ServletPathMatch info = paths.getServletHandlerByPath(path);
-        exchange.putAttachment(ServletAttachments.SERVLET_PATH_MATCH, info);
-        exchange.putAttachment(ServletAttachments.CURRENT_SERVLET, info);
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        servletAttachments.setServletPathMatch(info);
+        servletAttachments.setCurrentServlet(info);
         next.handleRequest(exchange);
     }
 

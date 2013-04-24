@@ -24,7 +24,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.handlers.ServletAttachments;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
-import io.undertow.servlet.spec.HttpServletResponseImpl;
 
 import java.util.List;
 import java.util.Set;
@@ -48,9 +47,10 @@ public class ServletSecurityRoleHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        List<SingleConstraintMatch> constraints = exchange.getAttachmentList(ServletAttachments.REQUIRED_CONSTRAINTS);
+        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        List<SingleConstraintMatch> constraints = servletAttachments.getRequiredConstrains();
         SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        HttpServletRequest request = HttpServletRequestImpl.getRequestImpl(exchange.getAttachment(HttpServletRequestImpl.ATTACHMENT_KEY));
+        HttpServletRequest request = HttpServletRequestImpl.getRequestImpl(servletAttachments.getServletRequest());
         if (request.getDispatcherType() != DispatcherType.REQUEST) {
             next.handleRequest(exchange);
         } else if (constraints == null || constraints.isEmpty()) {
@@ -75,7 +75,7 @@ public class ServletSecurityRoleHandler implements HttpHandler {
                     }
                 }
                 if (!found) {
-                    HttpServletResponse response = (HttpServletResponse) exchange.getAttachment(HttpServletResponseImpl.ATTACHMENT_KEY);
+                    HttpServletResponse response = (HttpServletResponse) servletAttachments.getServletResponse();
                     response.sendError(403);
                     return;
                 }
