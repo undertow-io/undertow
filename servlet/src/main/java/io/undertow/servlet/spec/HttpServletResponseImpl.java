@@ -38,11 +38,12 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletAttachments;
-import io.undertow.util.AttachmentList;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+
+import static io.undertow.server.handlers.Cookie.RESPONSE_COOKIES;
 
 /**
  * @author Stuart Douglas
@@ -80,8 +81,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude) {
             return;
         }
-        final AttachmentList<io.undertow.server.handlers.Cookie> cookies = exchange.getAttachment(io.undertow.server.handlers.Cookie.RESPONSE_COOKIES);
-        cookies.add(new ServletCookieAdaptor(cookie));
+        exchange.addToAttachmentList(RESPONSE_COOKIES, new ServletCookieAdaptor(cookie));
     }
 
     @Override

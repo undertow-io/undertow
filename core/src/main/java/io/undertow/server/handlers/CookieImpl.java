@@ -22,7 +22,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -62,11 +61,7 @@ public class CookieImpl implements Cookie {
     }
 
     public static void addResponseCookie(final HttpServerExchange exchange, final Cookie cookie) {
-        List<Cookie> cookies = exchange.getAttachment(RESPONSE_COOKIES);
-        if(cookies == null) {
-            throw UndertowMessages.MESSAGES.cookieHandlerNotPresent();
-        }
-        cookies.add(cookie);
+        exchange.addToAttachmentList(RESPONSE_COOKIES, cookie);
     }
 
 
