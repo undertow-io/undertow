@@ -124,6 +124,7 @@ public class BlockingSenderImpl implements Sender {
             //fast path, if the stream can take a buffer directly just write to it
             try {
                 ((BufferWritableOutputStream) outputStream).write(buffers);
+                return true;
             } catch (IOException e) {
                 callback.onException(exchange, this, e);
                 return false;
