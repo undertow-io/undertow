@@ -122,6 +122,10 @@ public class CachedResource implements Resource {
 
 
         final DirectBufferCache dataCache = cachingResourceManager.getDataCache();
+        if(dataCache == null) {
+            underlyingResource.serve(exchange);
+            return;
+        }
         DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
         //it is not cached yet, install a wrapper to grab the data
         if (existing == null || !existing.enabled() || !existing.reference()) {
