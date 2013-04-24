@@ -31,7 +31,6 @@ import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.ConduitFactory;
-import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import org.xnio.conduits.StreamSinkConduit;
@@ -57,7 +56,7 @@ public class CookieHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
 
         final Map<String, Cookie> cookies = parseCookies(exchange);
-        exchange.putAttachment(Cookie.REQUEST_COOKIES, new CopyOnWriteMap<String, Cookie>(cookies));
+        exchange.putAttachment(Cookie.REQUEST_COOKIES, cookies);
         exchange.putAttachment(Cookie.RESPONSE_COOKIES, new AttachmentList<Cookie>(Cookie.class));
         exchange.addResponseWrapper(CookieConduitWrapper.INSTANCE);
         HttpHandlers.executeHandler(next, exchange);
