@@ -36,6 +36,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
 import org.jboss.logging.Logger;
@@ -62,8 +63,17 @@ public class FileResource implements Resource {
         try {
             return new Date(Files.getLastModifiedTime(file).toMillis());
         } catch (IOException e) {
-            return new Date(0);
+            return null;
         }
+    }
+
+    @Override
+    public String getLastModifiedString() {
+        final Date lastModified = getLastModified();
+        if(lastModified == null) {
+            return null;
+        }
+        return DateUtils.toDateString(lastModified);
     }
 
     @Override

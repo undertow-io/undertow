@@ -34,6 +34,7 @@ import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.cache.LimitedBufferSlicePool;
 import io.undertow.server.handlers.cache.ResponseCachingStreamSinkConduit;
 import io.undertow.util.ConduitFactory;
+import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
 import org.xnio.conduits.StreamSinkConduit;
@@ -50,6 +51,7 @@ public class CachedResource implements Resource {
     private final Long contentLength;
     private final boolean directory;
     private final Date lastModifiedDate;
+    private final String lastModifiedDateString;
     private final ETag eTag;
     private final String name;
 
@@ -59,6 +61,11 @@ public class CachedResource implements Resource {
         this.contentLength = underlyingResource.getContentLength();
         this.directory = underlyingResource.isDirectory();
         this.lastModifiedDate = underlyingResource.getLastModified();
+        if(lastModifiedDate != null) {
+            this.lastModifiedDateString = DateUtils.toDateString(lastModifiedDate);
+        } else {
+            this.lastModifiedDateString = null;
+        }
         this.eTag = underlyingResource.getETag();
         this.name = underlyingResource.getName();
         if (this.directory && !path.endsWith("/")) {
@@ -72,6 +79,11 @@ public class CachedResource implements Resource {
     @Override
     public Date getLastModified() {
         return lastModifiedDate;
+    }
+
+    @Override
+    public String getLastModifiedString() {
+        return lastModifiedDateString;
     }
 
     @Override

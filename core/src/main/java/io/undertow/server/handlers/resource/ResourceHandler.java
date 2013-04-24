@@ -159,7 +159,7 @@ public class ResourceHandler implements HttpHandler {
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/octet-stream");
                 }
                 if (lastModified != null) {
-                    exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, DateUtils.toDateString(lastModified));
+                    exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, resource.getLastModifiedString());
                 }
                 if (etag != null) {
                     exchange.getResponseHeaders().put(Headers.ETAG, etag.toString());

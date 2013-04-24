@@ -15,6 +15,7 @@ import java.util.List;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
 import org.xnio.IoUtils;
@@ -35,6 +36,11 @@ public class URLResource implements Resource {
     @Override
     public Date getLastModified() {
         return new Date(connection.getLastModified());
+    }
+
+    @Override
+    public String getLastModifiedString() {
+        return DateUtils.toDateString(getLastModified());
     }
 
     @Override

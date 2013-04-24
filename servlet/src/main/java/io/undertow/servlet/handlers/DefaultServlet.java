@@ -134,7 +134,7 @@ public class DefaultServlet extends HttpServlet {
             resp.setHeader(Headers.CONTENT_TYPE_STRING, "application/octet-stream");
         }
         if (lastModified != null) {
-            resp.setHeader(Headers.LAST_MODIFIED_STRING, DateUtils.toDateString(lastModified));
+            resp.setHeader(Headers.LAST_MODIFIED_STRING, resource.getLastModifiedString());
         }
         if (etag != null) {
             resp.setHeader(Headers.ETAG_STRING, etag.toString());

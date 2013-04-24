@@ -25,6 +25,12 @@ public interface Resource {
 
     /**
      *
+     * @return A string representation of the last modified date, or null if this cannot be determined
+     */
+    String getLastModifiedString();
+
+    /**
+     *
      * @return The resources etags
      */
     ETag getETag();
