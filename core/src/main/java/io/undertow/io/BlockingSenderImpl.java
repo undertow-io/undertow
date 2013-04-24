@@ -66,10 +66,8 @@ public class BlockingSenderImpl implements Sender {
             queue(buffer, callback);
             return;
         }
-        for (ByteBuffer b : buffer) {
-            if (!writeBuffer(b, callback)) {
-                return;
-            }
+        if (!writeBuffer(buffer, callback)) {
+            return;
         }
         invokeOnComplete(callback);
     }
@@ -117,25 +115,39 @@ public class BlockingSenderImpl implements Sender {
         IoUtils.safeClose(outputStream);
     }
 
-
     private boolean writeBuffer(final ByteBuffer buffer, final IoCallback callback) {
-        if (buffer.hasArray()) {
+        return writeBuffer(new ByteBuffer[]{buffer}, callback);
+    }
+
+    private boolean writeBuffer(final ByteBuffer[] buffers, final IoCallback callback) {
+        if (outputStream instanceof BufferWritableOutputStream) {
+            //fast path, if the stream can take a buffer directly just write to it
             try {
-                outputStream.write(buffer.array(), buffer.arrayOffset(), buffer.remaining());
+                ((BufferWritableOutputStream) outputStream).write(buffers);
             } catch (IOException e) {
                 callback.onException(exchange, this, e);
                 return false;
             }
-        } else {
-            byte[] b = new byte[BUFFER_SIZE];
-            while (buffer.hasRemaining()) {
-                int toRead = Math.min(buffer.remaining(), BUFFER_SIZE);
-                buffer.get(b, 0, toRead);
+        }
+        for (ByteBuffer buffer : buffers) {
+            if (buffer.hasArray()) {
                 try {
-                    outputStream.write(b, 0, toRead);
+                    outputStream.write(buffer.array(), buffer.arrayOffset(), buffer.remaining());
                 } catch (IOException e) {
                     callback.onException(exchange, this, e);
                     return false;
+                }
+            } else {
+                byte[] b = new byte[BUFFER_SIZE];
+                while (buffer.hasRemaining()) {
+                    int toRead = Math.min(buffer.remaining(), BUFFER_SIZE);
+                    buffer.get(b, 0, toRead);
+                    try {
+                        outputStream.write(b, 0, toRead);
+                    } catch (IOException e) {
+                        callback.onException(exchange, this, e);
+                        return false;
+                    }
                 }
             }
         }

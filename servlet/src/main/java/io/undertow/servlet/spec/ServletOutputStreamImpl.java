@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 
+import io.undertow.io.BufferWritableOutputStream;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
@@ -58,7 +59,7 @@ import static org.xnio.Bits.anyAreSet;
  *
  * @author Stuart Douglas
  */
-public class ServletOutputStreamImpl extends ServletOutputStream {
+public class ServletOutputStreamImpl extends ServletOutputStream implements BufferWritableOutputStream {
 
     private final HttpServletResponseImpl servletResponse;
     private Pooled<ByteBuffer> pooledBuffer;
@@ -93,7 +94,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     /**
      * Construct a new instance.  No write timeout is configured.
      *
-     * @param channelFactory the channel to wrap
      */
     public ServletOutputStreamImpl(Long contentLength, final HttpServletResponseImpl servletResponse) {
         this.servletResponse = servletResponse;
@@ -105,7 +105,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     /**
      * Construct a new instance.  No write timeout is configured.
      *
-     * @param channelFactory the channel to wrap
      */
     public ServletOutputStreamImpl(Long contentLength, final HttpServletResponseImpl servletResponse, int bufferSize) {
         this.servletResponse = servletResponse;
@@ -140,9 +139,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         }
 
         if (listener == null) {
-            if (len < 1) {
-                return;
-            }
             int written = 0;
             ByteBuffer buffer = buffer();
             while (written < len) {
@@ -184,16 +180,12 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                         written += res;
                         if (res == 0) {
                             //write it out with a listener
-                            if (userBuffer != null) {
-                                //but we need to copy any extra data
-                                final ByteBuffer copy = ByteBuffer.allocate(userBuffer.remaining());
-                                copy.put(userBuffer);
-                                copy.flip();
+                            //but we need to copy any extra data
+                            final ByteBuffer copy = ByteBuffer.allocate(userBuffer.remaining());
+                            copy.put(userBuffer);
+                            copy.flip();
 
-                                this.buffersToWrite = new ByteBuffer[]{buffer, copy};
-                            } else {
-                                buffersToWrite = bufs;
-                            }
+                            this.buffersToWrite = new ByteBuffer[]{buffer, copy};
                             state &= ~FLAG_READY;
                             resumeWrites();
                             return;
@@ -205,6 +197,100 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                 updateWrittenAsync(len);
             }
         }
+    }
+
+
+    @Override
+    public void write(ByteBuffer[] buffers) throws IOException {
+        if (anyAreSet(state, FLAG_CLOSED)) {
+            throw UndertowServletMessages.MESSAGES.streamIsClosed();
+        }
+        int len = 0;
+        for(ByteBuffer buf : buffers){
+            len += buf.remaining();
+        }
+        if (len <1) {
+            return;
+        }
+
+        if (listener == null) {
+            //if we have received the exact amount of content write it out in one go
+            //this is a common case when writing directly from a buffer cache.
+            if(this.written == 0 && contentLength != null && len == contentLength) {
+                if (channel == null) {
+                    channel = servletResponse.getExchange().getResponseChannel();
+                }
+                Channels.writeBlocking(channel, buffers, 0, buffers.length);
+                state |= FLAG_WRITE_STARTED;
+            } else {
+                ByteBuffer buffer = buffer();
+                if(len < buffer.remaining()) {
+                    Buffers.copy(buffer, buffers, 0, buffers.length);
+                } else {
+                    if (channel == null) {
+                        channel = servletResponse.getExchange().getResponseChannel();
+                    }
+                    if(buffer.position() == 0) {
+                        Channels.writeBlocking(channel, buffers, 0, buffers.length);
+                    } else {
+                        final ByteBuffer[] newBuffers = new ByteBuffer[buffers.length +1];
+                        buffer.flip();
+                        newBuffers[0] = buffer;
+                        System.arraycopy(buffers, 0 ,newBuffers, 1, buffers.length);
+                        Channels.writeBlocking(channel, newBuffers, 0, newBuffers.length);
+                        buffer.clear();
+                    }
+                    state |= FLAG_WRITE_STARTED;
+                }
+            }
+
+            updateWritten(len);
+        } else {
+            if (anyAreClear(state, FLAG_READY)) {
+                throw UndertowServletMessages.MESSAGES.streamNotReady();
+            }
+            //even though we are in async mode we are still buffering
+            try {
+                ByteBuffer buffer = buffer();
+                if (buffer.remaining() > len) {
+                    Buffers.copy(buffer, buffers, 0, buffers.length);
+                } else {
+                    final ByteBuffer[] bufs = new ByteBuffer[buffers.length + 1];
+                    buffer.flip();
+                    bufs[0] = buffer;
+                    System.arraycopy(buffers, 0, bufs, 1, buffers.length);
+                    long toWrite = Buffers.remaining(bufs);
+                    long res;
+                    long written = 0;
+                    createChannel();
+                    state |= FLAG_WRITE_STARTED;
+                    do {
+                        res = channel.write(bufs);
+                        written += res;
+                        if (res == 0) {
+                            //write it out with a listener
+                            //but we need to copy any extra data
+                            //TODO: should really allocate from the pool here
+                            final ByteBuffer copy = ByteBuffer.allocate((int) Buffers.remaining(buffers));
+                            Buffers.copy(copy, buffers, 0, buffers.length);
+                            copy.flip();
+                            this.buffersToWrite = new ByteBuffer[]{buffer, copy};
+                            state &= ~FLAG_READY;
+                            resumeWrites();
+                            return;
+                        }
+                    } while (written < toWrite);
+                    buffer.clear();
+                }
+            } finally {
+                updateWrittenAsync(len);
+            }
+        }
+    }
+
+    @Override
+    public void write(ByteBuffer byteBuffer) throws IOException {
+        write(new ByteBuffer[]{byteBuffer});
     }
 
     void updateWritten(final int len) throws IOException {
@@ -496,6 +582,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         //we resume from an async task, after the request has been dispatched
         internalListener.handleEvent(underlyingConnectionChannel);
     }
+
 
     private class WriteChannelListener implements ChannelListener<StreamSinkChannel> {
 
