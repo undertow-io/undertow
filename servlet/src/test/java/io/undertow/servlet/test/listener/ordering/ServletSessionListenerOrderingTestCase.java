@@ -30,6 +30,7 @@ import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.util.EmptyServlet;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.Tracker;
@@ -66,10 +67,8 @@ public class ServletSessionListenerOrderingTestCase {
                 .setDeploymentName("listener.war")
                 .addListener(new ListenerInfo(FirstListener.class))
                 .addListener(new ListenerInfo(SecondListener.class))
-                .addServlet(
-                        new ServletInfo("message", MessageServlet.class)
-                        .addMapping("/*")
-                        .addInitParam(MessageServlet.MESSAGE, "foo"));
+                .addServlet(new ServletInfo("message", EmptyServlet.class)
+                        .addMapping("/*"));
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
