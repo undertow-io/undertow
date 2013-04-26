@@ -1,18 +1,20 @@
 package io.undertow.predicate;
 
+import io.undertow.server.HttpServerExchange;
+
 /**
  * @author Stuart Douglas
  */
-class FalsePredicate<T> implements Predicate<T> {
+class FalsePredicate implements Predicate {
 
     public static final FalsePredicate INSTANCE = new FalsePredicate();
 
-    public static <T> FalsePredicate<T> instance() {
+    public static FalsePredicate instance() {
         return INSTANCE;
     }
 
     @Override
-    public boolean resolve(final T value) {
+    public boolean resolve(final HttpServerExchange value) {
         return false;
     }
 }

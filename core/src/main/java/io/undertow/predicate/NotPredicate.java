@@ -1,18 +1,20 @@
 package io.undertow.predicate;
 
+import io.undertow.server.HttpServerExchange;
+
 /**
  * @author Stuart Douglas
  */
-class NotPredicate<T> implements Predicate<T>{
+class NotPredicate implements Predicate {
 
-    private final Predicate<T> predicate;
+    private final Predicate predicate;
 
-    public NotPredicate(final Predicate<T> predicate) {
+    public NotPredicate(final Predicate predicate) {
         this.predicate = predicate;
     }
 
     @Override
-    public boolean resolve(final T value) {
+    public boolean resolve(final HttpServerExchange value) {
         return !predicate.resolve(value);
     }
 }

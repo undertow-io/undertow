@@ -9,7 +9,7 @@ import io.undertow.util.Headers;
  *
  * @author Stuart Douglas
  */
-class MinContentSizePredicate implements Predicate<HttpServerExchange> {
+class MinContentSizePredicate implements Predicate {
 
     private final long minSize;
 

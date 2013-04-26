@@ -10,11 +10,11 @@ import io.undertow.server.HttpServerExchange;
  */
 public class PredicateHandler implements HttpHandler {
 
-    private volatile Predicate<HttpServerExchange> predicate;
+    private volatile Predicate predicate;
     private volatile HttpHandler trueHandler;
     private volatile HttpHandler falseHandler;
 
-    public PredicateHandler(final Predicate<HttpServerExchange> predicate, final HttpHandler trueHandler, final HttpHandler falseHandler) {
+    public PredicateHandler(final Predicate predicate, final HttpHandler trueHandler, final HttpHandler falseHandler) {
         this.predicate = predicate;
         this.trueHandler = trueHandler;
         this.falseHandler = falseHandler;
@@ -26,11 +26,11 @@ public class PredicateHandler implements HttpHandler {
         HttpHandlers.executeHandler(next, exchange);
     }
 
-    public Predicate<HttpServerExchange> getPredicate() {
+    public Predicate getPredicate() {
         return predicate;
     }
 
-    public PredicateHandler setPredicate(final Predicate<HttpServerExchange> predicate) {
+    public PredicateHandler setPredicate(final Predicate predicate) {
         this.predicate = predicate;
         return this;
     }

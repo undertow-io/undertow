@@ -1,18 +1,20 @@
 package io.undertow.predicate;
 
+import io.undertow.server.HttpServerExchange;
+
 /**
  * @author Stuart Douglas
  */
-class TruePredicate<T> implements Predicate<T> {
+class TruePredicate implements Predicate {
 
     public static final TruePredicate INSTANCE = new TruePredicate();
 
-    public static <T> TruePredicate<T> instance() {
+    public static TruePredicate instance() {
         return INSTANCE;
     }
 
     @Override
-    public boolean resolve(final T value) {
+    public boolean resolve(final HttpServerExchange value) {
         return true;
     }
 }

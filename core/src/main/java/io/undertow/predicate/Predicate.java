@@ -1,5 +1,7 @@
 package io.undertow.predicate;
 
+import io.undertow.server.HttpServerExchange;
+
 /**
  * A predicate.
  *
@@ -8,8 +10,8 @@ package io.undertow.predicate;
  *
  * @author Stuart Douglas
  */
-public interface Predicate<T> {
+public interface Predicate {
 
-    boolean resolve(final T value);
+    boolean resolve(final HttpServerExchange value);
 
 }

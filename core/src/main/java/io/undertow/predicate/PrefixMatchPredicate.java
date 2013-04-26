@@ -5,7 +5,7 @@ import io.undertow.server.HttpServerExchange;
 /**
  * @author Stuart Douglas
  */
-class PrefixMatchPredicate implements Predicate<HttpServerExchange> {
+class PrefixMatchPredicate implements Predicate {
 
     private final String slashPath;
     private final String path;

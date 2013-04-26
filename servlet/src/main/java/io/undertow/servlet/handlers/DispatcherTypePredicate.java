@@ -11,7 +11,7 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author Stuart Douglas
  */
-public class DispatcherTypePredicate implements Predicate<HttpServerExchange> {
+public class DispatcherTypePredicate implements Predicate {
 
     public static final DispatcherTypePredicate FORWARD = new DispatcherTypePredicate(DispatcherType.FORWARD);
     public static final DispatcherTypePredicate INCLUDE = new DispatcherTypePredicate(DispatcherType.INCLUDE);

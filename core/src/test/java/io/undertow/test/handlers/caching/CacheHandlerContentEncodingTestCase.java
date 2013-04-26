@@ -58,7 +58,7 @@ public class CacheHandlerContentEncodingTestCase {
         };
         final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(100, 10, 10000), messageHandler);
         final EncodingHandler handler = new EncodingHandler(cacheHandler);
-        handler.addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, new Predicate<HttpServerExchange>() {
+        handler.addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, new Predicate() {
             @Override
             public boolean resolve(final HttpServerExchange value) {
                 return value.getRequestHeaders().contains(ACTUALLY_DEFLATE);

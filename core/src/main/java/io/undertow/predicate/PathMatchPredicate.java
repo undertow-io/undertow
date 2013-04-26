@@ -1,11 +1,15 @@
 package io.undertow.predicate;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.server.HttpServerExchange;
 
 /**
  * @author Stuart Douglas
  */
-class PathMatchPredicate implements Predicate<HttpServerExchange> {
+class PathMatchPredicate implements Predicate {
 
     private final String slashPath;
     private final String path;
@@ -27,6 +31,35 @@ class PathMatchPredicate implements Predicate<HttpServerExchange> {
             return relativePath.equals(slashPath);
         } else {
             return relativePath.equals(path);
+        }
+    }
+
+    public static class Builder implements PredicateBuilder {
+
+        @Override
+        public String name() {
+            return "path";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Collections.<String, Class<?>>singletonMap("path", String.class);
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Collections.singleton("path");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "path";
+        }
+
+        @Override
+        public Predicate build(final Map<String, Object> config) {
+            String path = (String) config.get("path");
+            return new PathMatchPredicate(path);
         }
     }
 }

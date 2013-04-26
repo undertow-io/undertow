@@ -5,7 +5,7 @@ import io.undertow.server.HttpServerExchange;
 /**
  * @author Stuart Douglas
  */
-class SuffixMatchPredicate implements Predicate<HttpServerExchange> {
+class SuffixMatchPredicate implements Predicate {
 
     private final String suffix;
 

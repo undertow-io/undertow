@@ -33,8 +33,8 @@ public class ResourceHandler implements HttpHandler {
      * The mime mappings that are used to determine the content type.
      */
     private volatile MimeMappings mimeMappings = MimeMappings.DEFAULT;
-    private volatile Predicate<HttpServerExchange> cachable = Predicates.truePredicate();
-    private volatile Predicate<HttpServerExchange> allowed = Predicates.truePredicate();
+    private volatile Predicate cachable = Predicates.truePredicate();
+    private volatile Predicate allowed = Predicates.truePredicate();
     private volatile ResourceManager resourceManager;
     /**
      * If this is set this will be the maximum time the client will cache the resource.
@@ -208,20 +208,20 @@ public class ResourceHandler implements HttpHandler {
         return this;
     }
 
-    public Predicate<HttpServerExchange> getCachable() {
+    public Predicate getCachable() {
         return cachable;
     }
 
-    public ResourceHandler setCachable(final Predicate<HttpServerExchange> cachable) {
+    public ResourceHandler setCachable(final Predicate cachable) {
         this.cachable = cachable;
         return this;
     }
 
-    public Predicate<HttpServerExchange> getAllowed() {
+    public Predicate getAllowed() {
         return allowed;
     }
 
-    public ResourceHandler setAllowed(final Predicate<HttpServerExchange> allowed) {
+    public ResourceHandler setAllowed(final Predicate allowed) {
         this.allowed = allowed;
         return this;
     }

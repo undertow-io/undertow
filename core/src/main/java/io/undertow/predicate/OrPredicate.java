@@ -1,19 +1,21 @@
 package io.undertow.predicate;
 
+import io.undertow.server.HttpServerExchange;
+
 /**
  * @author Stuart Douglas
  */
-class OrPredicate<T> implements Predicate<T> {
+class OrPredicate implements Predicate {
 
-    private final Predicate<T>[] predicates;
+    private final Predicate[] predicates;
 
-    public OrPredicate(final Predicate<T>... predicates) {
+    public OrPredicate(final Predicate... predicates) {
         this.predicates = predicates;
     }
 
     @Override
-    public boolean resolve(final T value) {
-        for (final Predicate<T> predicate : predicates) {
+    public boolean resolve(final HttpServerExchange value) {
+        for (final Predicate predicate : predicates) {
             if (predicate.resolve(value)) {
                 return true;
             }

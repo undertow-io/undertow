@@ -138,7 +138,7 @@ public class EncodingHandler implements HttpHandler {
         return this;
     }
 
-    public synchronized EncodingHandler addEncodingHandler(final String encoding, final ContentEncodingProvider encoder, int priority, final Predicate<HttpServerExchange> enabledPredicate) {
+    public synchronized EncodingHandler addEncodingHandler(final String encoding, final ContentEncodingProvider encoder, int priority, final Predicate enabledPredicate) {
         this.encodingMap.put(encoding, new EncodingMapping(encoding, encoder, priority, enabledPredicate));
         return this;
     }

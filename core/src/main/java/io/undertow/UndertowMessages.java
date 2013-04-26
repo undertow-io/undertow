@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 
+import io.undertow.predicate.PredicateBuilder;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
@@ -155,4 +156,10 @@ public interface UndertowMessages {
 
     @Message(id = 43, value = "Data is already being sent. You must wait for the completion callback to be be invoked before calling send() again")
     IllegalStateException dataAlreadyQueued();
+
+    @Message(id = 44, value = "More than one predicate with name %s. Builder class %s and %s")
+    IllegalStateException moreThanOnePredicateWithName(String name, Class<? extends PredicateBuilder> aClass, Class<? extends PredicateBuilder> existing);
+
+    @Message(id = 45, value = "Error parsing predicate string %s:%n%s")
+    IllegalArgumentException errorParsingPredicateString(String reason, String s);
 }
