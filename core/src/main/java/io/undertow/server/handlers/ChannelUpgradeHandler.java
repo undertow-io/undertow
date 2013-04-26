@@ -132,28 +132,29 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         if (upgradeStrings != null && exchange.getRequestMethod().equals(Methods.GET)) {
             for (String string : upgradeStrings) {
                 final List<Holder> holders = handlers.get(string);
-                for (Holder holder : holders) {
-                    final ChannelListener<? super StreamConnection> listener = holder.listener;
-                    if (holder.handshake != null) {
-                        if (!holder.handshake.handleUpgrade(exchange)) {
-                            //handshake did not match, try again
-                            continue;
+                if (holders != null) {
+                    for (Holder holder : holders) {
+                        final ChannelListener<? super StreamConnection> listener = holder.listener;
+                        if (holder.handshake != null) {
+                            if (!holder.handshake.handleUpgrade(exchange)) {
+                                //handshake did not match, try again
+                                continue;
+                            }
                         }
-                    }
 
-                    exchange.upgradeChannel(string, new ExchangeCompletionListener() {
-                        @Override
-                        public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-                            ChannelListeners.invokeChannelListener(exchange.getConnection().getChannel(), listener);
-                        }
-                    });
-                    exchange.endExchange();
-                    return;
+                        exchange.upgradeChannel(string, new ExchangeCompletionListener() {
+                            @Override
+                            public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+                                ChannelListeners.invokeChannelListener(exchange.getConnection().getChannel(), listener);
+                            }
+                        });
+                        exchange.endExchange();
+                        return;
+                    }
                 }
             }
         }
-        final HttpHandler handler = nonUpgradeHandler;
-        HttpHandlers.executeHandler(handler, exchange);
+        nonUpgradeHandler.handleRequest(exchange);
     }
 
 
