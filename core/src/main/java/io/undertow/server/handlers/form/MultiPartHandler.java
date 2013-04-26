@@ -70,6 +70,11 @@ public class MultiPartHandler implements HttpHandler {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (mimeType != null && mimeType.startsWith(MULTIPART_FORM_DATA)) {
             String boundary = Headers.extractTokenFromHeader(mimeType, "boundary");
+            if(boundary == null) {
+                UndertowLogger.REQUEST_LOGGER.couldNotDetectBoundary(mimeType);
+                next.handleRequest(exchange);
+                return;
+            }
             final MultiPartUploadHandler multiPartUploadHandler = new MultiPartUploadHandler(exchange, boundary, defaultEncoding);
             exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, multiPartUploadHandler);
         }
