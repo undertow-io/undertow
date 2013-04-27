@@ -8,12 +8,10 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.ConduitWrapper;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.ConduitFactory;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -161,14 +159,9 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
      *
      * @return The channel wrapper
      */
-    public ConduitWrapper<StreamSinkConduit> getChannelWrapper() {
-        return new ConduitWrapper<StreamSinkConduit>() {
-            @Override
-            public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
-                exchange.addExchangeCompleteListener(completionListener);
-                return PipelingBufferingStreamSinkConduit.this;
-            }
-        };
+    public void setupPipelineBuffer(final HttpServerExchange exchange) {
+        exchange.addExchangeCompleteListener(completionListener);
+        exchange.getConnection().getChannel().getSinkChannel().setConduit(this);
     }
 
     private boolean flushBuffer() throws IOException {

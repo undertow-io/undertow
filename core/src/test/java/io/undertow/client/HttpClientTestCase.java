@@ -235,7 +235,6 @@ public class HttpClientTestCase {
 
     @Test
     public void testHttpPipeline() throws Exception {
-        // TODO this test doesn't really do much, since the server is not pipelining anyway
         final OptionMap options = OptionMap.create(HttpClientOptions.HTTP_PIPELINING, true);
         //
         DefaultServer.setRootHandler(SIMPLE_MESSAGE_HANDLER);

@@ -59,6 +59,7 @@ import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.Channels;
+import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
@@ -151,10 +152,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     private String queryString = "";
 
     private int requestWrapperCount = 0;
-    private ConduitWrapper<StreamSourceConduit>[] requestWrappers = new ConduitWrapper[2];
+    private ConduitWrapper<StreamSourceConduit>[] requestWrappers; //we don't allocate these by default, as for get requests they are not used
 
     private int responseWrapperCount = 0;
-    private ConduitWrapper<StreamSinkConduit>[] responseWrappers = new ConduitWrapper[4];
+    private ConduitWrapper<StreamSinkConduit>[] responseWrappers = new ConduitWrapper[4]; //these are allocated by default, as they are always used
 
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
     private static final int FLAG_RESPONSE_SENT = 1 << 10;
@@ -678,19 +679,24 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the channel for the inbound request, or {@code null} if another party already acquired the channel
      */
     public StreamSourceChannel getRequestChannel() {
-        final ConduitWrapper<StreamSourceConduit>[] wrappers = this.requestWrappers;
-        this.requestWrappers = null;
-        if (wrappers == null) {
+        if(requestChannel != null) {
             return null;
         }
+        if (anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
+            return requestChannel = new ReadDispatchChannel(new EmptyStreamSourceChannel(getIoThread()));
+        }
+        final ConduitWrapper<StreamSourceConduit>[] wrappers = this.requestWrappers;
         final ConduitStreamSourceChannel sourceChannel = connection.getChannel().getSourceChannel();
-        final WrapperConduitFactory<StreamSourceConduit> factory = new WrapperConduitFactory<>(wrappers, requestWrapperCount, sourceChannel.getConduit(), this);
-        sourceChannel.setConduit(factory.create());
+        if (wrappers != null) {
+            this.requestWrappers = null;
+            final WrapperConduitFactory<StreamSourceConduit> factory = new WrapperConduitFactory<>(wrappers, requestWrapperCount, sourceChannel.getConduit(), this);
+            sourceChannel.setConduit(factory.create());
+        }
         return requestChannel = new ReadDispatchChannel(sourceChannel);
     }
 
     public boolean isRequestChannelAvailable() {
-        return requestWrappers != null;
+        return requestChannel == null;
     }
 
     /**
@@ -862,10 +868,12 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void addRequestWrapper(final ConduitWrapper<StreamSourceConduit> wrapper) {
         ConduitWrapper<StreamSourceConduit>[] wrappers = requestWrappers;
-        if (wrappers == null) {
+        if (requestChannel != null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
-        if (wrappers.length == requestWrapperCount) {
+        if(wrappers == null) {
+            wrappers = requestWrappers = new ConduitWrapper[2];
+        } else if (wrappers.length == requestWrapperCount) {
             requestWrappers = new ConduitWrapper[wrappers.length + 2];
             System.arraycopy(wrappers, 0, requestWrappers, 0, wrappers.length);
             wrappers = requestWrappers;

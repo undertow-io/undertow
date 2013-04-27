@@ -5,10 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerConnection;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConduitFactory;
 import org.xnio.Buffers;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
@@ -23,13 +20,6 @@ import org.xnio.conduits.StreamSourceConduit;
 public class ReadDataStreamSourceConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
 
     private final HttpServerConnection connection;
-
-    public static final ConduitWrapper<StreamSourceConduit> WRAPPER = new ConduitWrapper<StreamSourceConduit>() {
-        @Override
-        public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
-            return new ReadDataStreamSourceConduit(factory.create(), exchange.getConnection());
-        }
-    };
 
     public ReadDataStreamSourceConduit(final StreamSourceConduit next, final HttpServerConnection connection) {
         super(next);
