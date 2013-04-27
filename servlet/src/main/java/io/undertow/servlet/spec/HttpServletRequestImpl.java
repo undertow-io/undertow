@@ -113,7 +113,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public HttpServletRequestImpl(final HttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
         this.servletContext = servletContext;
-        this.queryParameters = exchange.getQueryParameters();
     }
 
     public HttpServerExchange getExchange() {
@@ -525,6 +524,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getParameter(final String name) {
+        if(queryParameters == null) {
+            queryParameters = exchange.getQueryParameters();
+        }
         Deque<String> params = queryParameters.get(name);
         if (params == null) {
             if (exchange.getRequestMethod().equals(Methods.POST)) {
@@ -551,6 +553,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Enumeration<String> getParameterNames() {
+        if (queryParameters == null) {
+            queryParameters = exchange.getQueryParameters();
+        }
         final Set<String> parameterNames = new HashSet<String>(queryParameters.keySet());
         if (exchange.getRequestMethod().equals(Methods.POST)) {
             final FormData parsedFormData = parseFormData();
@@ -566,6 +571,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String[] getParameterValues(final String name) {
+        if (queryParameters == null) {
+            queryParameters = exchange.getQueryParameters();
+        }
         final List<String> ret = new ArrayList<String>();
         Deque<String> params = queryParameters.get(name);
         if (params != null) {
@@ -598,6 +606,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Map<String, String[]> getParameterMap() {
+        if (queryParameters == null) {
+            queryParameters = exchange.getQueryParameters();
+        }
         final Map<String, String[]> ret = new HashMap<String, String[]>();
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
             ret.put(entry.getKey(), entry.getValue().toArray(new String[entry.getValue().size()]));
@@ -871,6 +882,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
 
     public Map<String, Deque<String>> getQueryParameters() {
+        if (queryParameters == null) {
+            queryParameters = exchange.getQueryParameters();
+        }
         return queryParameters;
     }
 
