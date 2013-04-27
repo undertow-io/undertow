@@ -295,11 +295,30 @@ public final class HeaderMap implements Iterable<HeaderValues> {
      * @return an opaque iterating cookie, or -1 if no iteration is possible
      */
     public long fastIterateNonEmpty() {
-        long cookie = fastIterate();
-        while (cookie != -1L && fiCurrent(cookie).isEmpty()) {
-            cookie = fiNext(cookie);
+        final Object[] table = this.table;
+        final int len = table.length;
+        int ri = 0;
+        int ci;
+        while (ri < len) {
+            final Object item = table[ri];
+            if (item != null) {
+                if (item instanceof HeaderValues && !((HeaderValues) item).isEmpty()) {
+                    return (long)ri << 32L;
+                } else {
+                    final HeaderValues[] row = (HeaderValues[]) item;
+                    ci = 0;
+                    final int rowLen = row.length;
+                    while (ci < rowLen) {
+                        if (row[ci] != null && !row[ci].isEmpty()) {
+                            return (long)ri << 32L | (ci & 0xffffffffL);
+                        }
+                        ci ++;
+                    }
+                }
+            }
+            ri++;
         }
-        return cookie;
+        return -1L;
     }
 
     /**
@@ -320,7 +339,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
             final int rowLen = row.length;
             if (++ci >= rowLen) {
                 ri ++; ci = 0;
-            } else if (row[ci] != null && !row[ci].isEmpty()) {
+            } else if (row[ci] != null) {
                 return (long)ri << 32L | (ci & 0xffffffffL);
             }
         } else {
@@ -328,13 +347,13 @@ public final class HeaderMap implements Iterable<HeaderValues> {
         }
         while (ri < len) {
             item = table[ri];
-            if (item instanceof HeaderValues && !((HeaderValues)item).isEmpty()) {
+            if (item instanceof HeaderValues) {
                 return (long)ri << 32L;
             } else if (item instanceof HeaderValues[]) {
                 final HeaderValues[] row = (HeaderValues[]) item;
                 final int rowLen = row.length;
                 while (ci < rowLen) {
-                    if (row[ci] != null && !row[ci].isEmpty()) {
+                    if (row[ci] != null) {
                         return (long)ri << 32L | (ci & 0xffffffffL);
                     }
                     ci ++;
@@ -354,7 +373,40 @@ public final class HeaderMap implements Iterable<HeaderValues> {
      */
     public long fiNextNonEmpty(long cookie) {
         if (cookie == -1L) return -1L;
-        return fiNext(cookie);
+        final Object[] table = this.table;
+        final int len = table.length;
+        int ri = (int) (cookie >> 32);
+        int ci = (int) cookie;
+        Object item = table[ri];
+        if (item instanceof HeaderValues[]) {
+            final HeaderValues[] row = (HeaderValues[]) item;
+            final int rowLen = row.length;
+            if (++ci >= rowLen) {
+                ri ++; ci = 0;
+            } else if (row[ci] != null && !row[ci].isEmpty()) {
+                return (long)ri << 32L | (ci & 0xffffffffL);
+            }
+        } else {
+            ri ++; ci = 0;
+        }
+        while (ri < len) {
+            item = table[ri];
+            if (item instanceof HeaderValues && !((HeaderValues) item).isEmpty()) {
+                return (long)ri << 32L;
+            } else if (item instanceof HeaderValues[]) {
+                final HeaderValues[] row = (HeaderValues[]) item;
+                final int rowLen = row.length;
+                while (ci < rowLen) {
+                    if (row[ci] != null && !row[ci].isEmpty()) {
+                        return (long)ri << 32L | (ci & 0xffffffffL);
+                    }
+                    ci ++;
+                }
+            }
+            ci = 0;
+            ri ++;
+        }
+        return -1L;
     }
 
     /**
