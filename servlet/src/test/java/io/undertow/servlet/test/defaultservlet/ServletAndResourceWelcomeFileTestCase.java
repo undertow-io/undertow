@@ -58,7 +58,7 @@ public class ServletAndResourceWelcomeFileTestCase {
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceManager(new TestResourceLoader(WelcomeFileBlockingPathTestCase.class))
+                .setResourceManager(new TestResourceLoader(ServletAndResourceWelcomeFileTestCase.class))
                 .addWelcomePages("doesnotexist.html", "index.html", "default");
 
         builder.addServlet(new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)

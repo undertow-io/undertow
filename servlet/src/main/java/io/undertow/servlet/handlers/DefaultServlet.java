@@ -30,8 +30,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.undertow.server.HttpHandlers;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.server.handlers.resource.ResourceManager;
+import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -40,6 +43,7 @@ import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.SameThreadExecutor;
 
 /**
  * Default servlet responsible for serving up resources. This is both a handler and a servlet. If no filters
@@ -157,15 +161,47 @@ public class DefaultServlet extends HttpServlet {
         }
         final String pathWithTraingSlash = pathInfo.endsWith("/") ? pathInfo : pathInfo + "/";
         if (welcomePage != null) {
-            req.getRequestDispatcher(pathWithTraingSlash + welcomePage + "?" + req.getQueryString()).forward(req, resp);
+            redirect(req, welcomePage);
         } else {
             String path = findWelcomeServlet(pathWithTraingSlash);
             if (path != null) {
-                req.getRequestDispatcher(pathWithTraingSlash + path + "?" + req.getQueryString()).forward(req, resp);
+                redirect(req, path);
             } else {
                 resp.sendError(404);
             }
         }
+    }
+
+    private void redirect(final HttpServletRequest req, final String pathAddition) {
+        //we need to redirect in a manner that is indistinguishable from a a direct request
+        //we can't just use a forward, as these do not have security applied, and
+        //also the filters that have been applied to the request would be different.
+        //instead we get the exchange and do a dispatch, and then redirect. This basically acts like
+        //two seperate servlet requests
+        final HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(req);
+        final HttpServerExchange exchange = requestImpl.getExchange();
+        if(!exchange.isRequestChannelAvailable()) {
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+        }
+        exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
+            @Override
+            public void run() {
+                String path = pathAddition;
+                if(!exchange.getRelativePath().endsWith("/")) {
+                    path = "/" + path;
+                }
+
+                exchange.getResponseHeaders().clear();
+                exchange.setResponseCode(200);
+
+                exchange.setRelativePath(exchange.getRelativePath() + path);
+                exchange.setCanonicalPath(exchange.getCanonicalPath() + path);
+                exchange.setRequestPath(exchange.getRequestPath() + path);
+                exchange.setRequestURI(exchange.getRequestURI() + path);
+                HttpHandlers.executeRootHandler(requestImpl.getServletContext().getDeployment().getServletHandler(), exchange, false);
+            }
+        });
+
     }
 
     private String findWelcomeFile(final String path) {

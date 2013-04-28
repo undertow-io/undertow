@@ -61,7 +61,7 @@ public class ServletFormAuthTestCase {
                         .addRoleAllowed("role1"))
                 .addMapping("/secured/*");
 
-        ServletInfo s1 = new ServletInfo("loginPAge", FormLoginServlet.class)
+        ServletInfo s1 = new ServletInfo("loginPage", FormLoginServlet.class)
                 .setServletSecurityInfo(new ServletSecurityInfo()
                         .addRoleAllowed("group1"))
                 .addMapping("/FormLoginServlet");
