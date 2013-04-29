@@ -73,10 +73,8 @@ public class HttpTransferEncoding {
         if (pipeliningBuffer != null) {
             pipeliningBuffer.setupPipelineBuffer(exchange);
         }
-        if(connection.getExtraBytes() != null) {
-            ConduitStreamSourceChannel sourceChannel = connection.getChannel().getSourceChannel();
-            sourceChannel.setConduit(new ReadDataStreamSourceConduit(sourceChannel.getConduit(), connection));
-        }
+        ConduitStreamSourceChannel sourceChannel = connection.getChannel().getSourceChannel();
+        sourceChannel.setConduit(new ReadDataStreamSourceConduit(sourceChannel.getConduit(), connection));
 
         boolean persistentConnection = persistentConnection(exchange, connectionHeader);
 

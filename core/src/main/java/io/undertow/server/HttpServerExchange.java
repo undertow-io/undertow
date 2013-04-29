@@ -756,7 +756,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 //TODO: this is horrible, but should not happen often
                 final byte[] data = new byte[ugBuffer.remaining() + buf.remaining()];
                 int first = ugBuffer.remaining();
-                ugBuffer.get(data);
+                ugBuffer.get(data, 0, ugBuffer.remaining());
                 buf.get(data, first, buf.remaining());
                 eb.free();
                 unget.free();
