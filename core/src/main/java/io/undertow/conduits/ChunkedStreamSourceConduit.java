@@ -193,84 +193,82 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                 return ret;
             }
 
-            if (chunkRemaining == 0) {
-                while (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
-                    while (buf.hasRemaining()) {
-                        byte b = buf.get();
+            while (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
+                while (buf.hasRemaining()) {
+                    byte b = buf.get();
+                    if (b == '\n') {
+                        newVal = newVal & ~FLAG_READING_NEWLINE | FLAG_READING_LENGTH;
+                        break;
+                    }
+                }
+                if (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
+                    buf.clear();
+                    int c = next.read(buf);
+                    buf.flip();
+                    if (c == -1) {
+                        //Channel is broken, not sure how best to report it
+                        throw new ClosedChannelException();
+                    } else if (c == 0) {
+                        return 0;
+                    }
+                }
+            }
+
+            while (anyAreSet(newVal, FLAG_READING_LENGTH)) {
+                while (buf.hasRemaining()) {
+                    byte b = buf.get();
+                    if ((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')) {
+                        chunkRemaining <<= 4; //shift it 4 bytes and then add the next value to the end
+                        chunkRemaining += Integer.parseInt("" + (char) b, 16);
+                    } else {
                         if (b == '\n') {
-                            newVal = newVal & ~FLAG_READING_NEWLINE | FLAG_READING_LENGTH;
-                            break;
-                        }
-                    }
-                    if (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
-                        buf.clear();
-                        int c = next.read(buf);
-                        buf.flip();
-                        if (c == -1) {
-                            //Channel is broken, not sure how best to report it
-                            throw new ClosedChannelException();
-                        } else if (c == 0) {
-                            return 0;
-                        }
-                    }
-                }
-
-                while (anyAreSet(newVal, FLAG_READING_LENGTH)) {
-                    while (buf.hasRemaining()) {
-                        byte b = buf.get();
-                        if ((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')) {
-                            chunkRemaining <<= 4; //shift it 4 bytes and then add the next value to the end
-                            chunkRemaining += Integer.parseInt("" + (char) b, 16);
+                            newVal = newVal & ~FLAG_READING_LENGTH;
                         } else {
-                            if (b == '\n') {
-                                newVal = newVal & ~FLAG_READING_LENGTH;
-                            } else {
-                                newVal = newVal & ~FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE;
-                            }
-                            break;
+                            newVal = newVal & ~FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE;
                         }
-                    }
-                    if (anyAreSet(newVal, FLAG_READING_LENGTH)) {
-                        buf.clear();
-                        int c = next.read(buf);
-                        buf.flip();
-                        if (c == -1) {
-                            //Channel is broken, not sure how best to report it
-                            throw new ClosedChannelException();
-                        } else if (c == 0) {
-                            return 0;
-                        }
+                        break;
                     }
                 }
-                while (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
-                    while (buf.hasRemaining()) {
-                        if (buf.get() == '\n') {
-                            newVal = newVal & ~FLAG_READING_TILL_END_OF_LINE;
-                            break;
-                        }
-                    }
-                    if (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
-                        buf.clear();
-                        int c = next.read(buf);
-                        buf.flip();
-                        if (c == -1) {
-                            //Channel is broken, not sure how best to report it
-                            throw new ClosedChannelException();
-                        } else if (c == 0) {
-                            return 0;
-                        }
+                if (anyAreSet(newVal, FLAG_READING_LENGTH)) {
+                    buf.clear();
+                    int c = next.read(buf);
+                    buf.flip();
+                    if (c == -1) {
+                        //Channel is broken, not sure how best to report it
+                        throw new ClosedChannelException();
+                    } else if (c == 0) {
+                        return 0;
                     }
                 }
+            }
+            while (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
+                while (buf.hasRemaining()) {
+                    if (buf.get() == '\n') {
+                        newVal = newVal & ~FLAG_READING_TILL_END_OF_LINE;
+                        break;
+                    }
+                }
+                if (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
+                    buf.clear();
+                    int c = next.read(buf);
+                    buf.flip();
+                    if (c == -1) {
+                        //Channel is broken, not sure how best to report it
+                        throw new ClosedChannelException();
+                    } else if (c == 0) {
+                        return 0;
+                    }
+                }
+            }
 
-                //we have our chunk size, check to make sure it was not the last chunk
-                if (allAreClear(newVal, FLAG_READING_NEWLINE | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE) && chunkRemaining == 0) {
-                    newVal |= FLAG_READING_AFTER_LAST;
-                    int ret = handleChunkedRequestEnd(buf);
-                    if (ret == -1) {
-                        newVal |= FLAG_FINISHED & ~FLAG_READING_AFTER_LAST;
-                    }
-                    return ret;
+            //we have our chunk size, check to make sure it was not the last chunk
+            if (allAreClear(newVal, FLAG_READING_NEWLINE | FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE) && chunkRemaining == 0) {
+                newVal |= FLAG_READING_AFTER_LAST;
+                int ret = handleChunkedRequestEnd(buf);
+                if (ret == -1) {
+                    newVal |= FLAG_FINISHED & ~FLAG_READING_AFTER_LAST;
                 }
+                return ret;
             }
 
             final int originalLimit = dst.limit();
@@ -360,7 +358,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             if (b == '\n') {
                 return -1;
             } else if (b != '\r') {
-                buffer.position(buffer.position() -1);
+                buffer.position(buffer.position() - 1);
                 trailerParser = new TrailerParser();
                 return trailerParser.handle(buffer);
             }
@@ -436,7 +434,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                     }
                 } else if (state == STATE_ENDING) {
                     if (b == '\n') {
-                        if(attachable != null) {
+                        if (attachable != null) {
                             attachable.putAttachment(TRAILERS, headerMap);
                         }
                         return -1;
