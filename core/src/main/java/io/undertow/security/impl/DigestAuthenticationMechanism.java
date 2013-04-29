@@ -137,14 +137,12 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                         // Some form of Digest authentication is going to occur so get the DigestContext set on the exchange.
                         exchange.putAttachment(DigestContext.ATTACHMENT_KEY, context);
 
-                        return runDigest(exchange, securityContext);
+                        return handleDigestHeader(exchange, securityContext);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
 
-                // By this point we had a header we should have been able to verify but for some reason
-                // it was not correctly structured.
                 // By this point we had a header we should have been able to verify but for some reason
                 // it was not correctly structured.
                 return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
@@ -155,14 +153,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
     }
 
-    @Override
-    public ChallengeResult sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext) {
-        sendChallengeHeaders(exchange);
-        return new ChallengeResult(true, UNAUTHORIZED);
-    }
-
-
-    public AuthenticationMechanismOutcome runDigest(HttpServerExchange exchange, final SecurityContext securityContext) {
+    public AuthenticationMechanismOutcome handleDigestHeader(HttpServerExchange exchange, final SecurityContext securityContext) {
         DigestContext context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
         Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
         // Step 1 - Verify the set of tokens received to ensure valid values.
@@ -435,8 +426,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         }
     }
 
-
-    public void sendChallengeHeaders(final HttpServerExchange exchange) {
+    @Override
+    public ChallengeResult sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext) {
         DigestContext context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
         boolean stale = context == null ? false : context.isStale();
 
@@ -468,8 +459,9 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         } else {
             responseHeader.add(WWW_AUTHENTICATE, theChallenge);
         }
-    }
 
+        return new ChallengeResult(true, UNAUTHORIZED);
+    }
 
     public void sendAuthenticationInfoHeader(final HttpServerExchange exchange) {
         DigestContext context = exchange.getAttachment(DigestContext.ATTACHMENT_KEY);
