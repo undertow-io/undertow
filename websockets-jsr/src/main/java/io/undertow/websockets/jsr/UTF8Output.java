@@ -47,7 +47,7 @@ public final class UTF8Output {
             12, 12, 12, 12, 12, 12};
 
     @SuppressWarnings("RedundantFieldInitialization")
-    private int state = UTF8_ACCEPT;
+    private byte state = UTF8_ACCEPT;
     private int codep;
 
     private final StringBuilder stringBuilder;
@@ -73,9 +73,9 @@ public final class UTF8Output {
         state = STATES[state + type];
 
         if (state == UTF8_ACCEPT) {
-                for (char c : Character.toChars(codep)) {
-                    stringBuilder.append(c);
-                }
+            for (char c : Character.toChars(codep)) {
+                stringBuilder.append(c);
+            }
         }
     }
 

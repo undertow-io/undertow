@@ -27,6 +27,9 @@ import io.undertow.util.HttpString;
  *
  * fields are not private to allow for efficient putfield / getfield access
  *
+ * Fields can mean different things depending on the current state. This means that names may
+ * not always reflect complete functionality.
+ *
  * @author Stuart Douglas
  */
 class ParseState {
@@ -34,11 +37,12 @@ class ParseState {
     //parsing states
     public static final int VERB = 0;
     public static final int PATH = 1;
-    public static final int VERSION = 2;
-    public static final int AFTER_VERSION = 3;
-    public static final int HEADER = 4;
-    public static final int HEADER_VALUE = 5;
-    public static final int PARSE_COMPLETE = 6;
+    public static final int QUERY_PARAMETERS = 2;
+    public static final int VERSION = 3;
+    public static final int AFTER_VERSION = 4;
+    public static final int HEADER = 5;
+    public static final int HEADER_VALUE = 6;
+    public static final int PARSE_COMPLETE = 7;
 
     /**
      * The actual state of request parsing
@@ -63,15 +67,15 @@ class ParseState {
 
     /**
      * If this state is a prefix match state then this holds the current position in the string.
+     *
      */
     int pos;
 
-    int queryParamPos;
-
     /**
-     * The end of the request string, and start of the query string
+     * If in a state that performs URL decoding the holds the current code point information.
      */
-    int requestEnd;
+    int urlDecodeCodePoint;
+    int urlDecodeState;
 
     /**
      * If this is in {@link #NO_STATE} then this holds the current token that has been read so far.
@@ -85,6 +89,7 @@ class ParseState {
      * {@link #HEADER_VALUE} to see if this was a continuation.
      *
      * In state {@link #HEADER_VALUE} if represents the last character that was seen.
+     *
      */
     byte leftOver;
 

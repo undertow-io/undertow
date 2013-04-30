@@ -18,10 +18,11 @@ public class RequestParserGenerator extends AbstractParserGenerator {
     //parsing states
     public static final int VERB = 0;
     public static final int PATH = 1;
-    public static final int VERSION = 2;
-    public static final int AFTER_VERSION = 3;
-    public static final int HEADER = 4;
-    public static final int HEADER_VALUE = 5;
+    public static final int QUERY_STRING = 2;
+    public static final int VERSION = 3;
+    public static final int AFTER_VERSION = 4;
+    public static final int HEADER = 5;
+    public static final int HEADER_VALUE = 6;
 
     public RequestParserGenerator() {
         super(PARSE_STATE_CLASS, HTTP_EXCHANGE_CLASS);

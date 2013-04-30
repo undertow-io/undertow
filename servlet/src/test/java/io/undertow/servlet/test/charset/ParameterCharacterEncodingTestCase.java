@@ -39,7 +39,7 @@ public class ParameterCharacterEncodingTestCase {
     }
 
     @Test
-    public void tstUrlCharacterEncoding() throws IOException {
+    public void testUrlCharacterEncoding() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
             String message = "abcčšž";

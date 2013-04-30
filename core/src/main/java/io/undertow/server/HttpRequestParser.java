@@ -143,6 +143,28 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
         })
 public abstract class HttpRequestParser {
 
+    //constants used for UTF-8 decoding
+    private static final int UTF8_ACCEPT = 0;
+
+    private static final byte[] TYPES = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8,
+            8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 10, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 3, 3, 11, 6, 6, 6, 5, 8, 8, 8, 8, 8,
+            8, 8, 8, 8, 8, 8};
+
+    private static final byte[] STATES = {0, 12, 24, 36, 60, 96, 84, 12, 12, 12, 48, 72, 12, 12,
+            12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 0, 12, 12, 12, 12, 12, 0, 12, 0, 12, 12,
+            12, 24, 12, 12, 12, 12, 12, 24, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12,
+            12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 24, 12, 12, 12, 12, 12, 12, 12, 12, 12, 36,
+            12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12,
+            12, 12, 12, 12, 12, 12};
+
+
     public static final HttpRequestParser INSTANCE;
 
     static {
@@ -157,6 +179,7 @@ public abstract class HttpRequestParser {
 
     public void handle(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) {
         if (currentState.state == ParseState.VERB) {
+            //fast path, we assume that it will parse fully so we avoid all the if statements
             handleHttpVerb(buffer, currentState, builder);
             handlePath(buffer, currentState, builder);
             handleHttpVersion(buffer, currentState, builder);
@@ -171,6 +194,13 @@ public abstract class HttpRequestParser {
         }
         if (currentState.state == ParseState.PATH) {
             handlePath(buffer, currentState, builder);
+            if (!buffer.hasRemaining()) {
+                return;
+            }
+        }
+
+        if (currentState.state == ParseState.QUERY_PARAMETERS) {
+            handleQueryParameters(buffer, currentState, builder);
             if (!buffer.hasRemaining()) {
                 return;
             }
@@ -219,11 +249,9 @@ public abstract class HttpRequestParser {
     private static final int FIRST_SLASH = 2;
     private static final int SECOND_SLASH = 3;
     private static final int HOST_DONE = 4;
-    private static final int QUERY_PARAM_NAME = 5;
-    private static final int QUERY_PARAM_VALUE = 6;
 
     /**
-     * Parses a path value. This is called from the generated  bytecode.
+     * Parses a path value
      *
      * @param buffer   The buffer
      * @param state    The current state
@@ -235,38 +263,29 @@ public abstract class HttpRequestParser {
         StringBuilder stringBuilder = state.stringBuilder;
         int parseState = state.parseState;
         int canonicalPathStart = state.pos;
-        int queryParamPos = state.queryParamPos;
-        int requestEnd = state.requestEnd;
-        String nextQueryParam = state.nextQueryParam;
+        int urlDecodeState = state.urlDecodeState;
+        int urlDecodeCurrentByte = (urlDecodeState & 0xFF00) >> 8;
+        urlDecodeState &= 0xFF;
+        int urlDecodeCodePoint = state.urlDecodeCodePoint;
+
         while (buffer.hasRemaining()) {
             final char next = (char) buffer.get();
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
-                    if (parseState < QUERY_PARAM_NAME) {
-                        exchange.setRequestURI(path);
-                        if (parseState < HOST_DONE) {
-                            exchange.setParsedRequestPath(path);
-                        } else {
-                            exchange.setParsedRequestPath(path.substring(canonicalPathStart));
-                        }
-                        exchange.setQueryString("");
+                    exchange.setRequestURI(path);
+                    if (parseState < HOST_DONE) {
+                        exchange.setParsedRequestPath(path);
                     } else {
-                        exchange.setQueryString(path.substring(requestEnd));
+                        exchange.setParsedRequestPath(path.substring(canonicalPathStart));
                     }
-                    if (parseState == QUERY_PARAM_NAME) {
-                        exchange.addQueryParam(stringBuilder.substring(queryParamPos), "");
-                    } else if (parseState == QUERY_PARAM_VALUE) {
-                        exchange.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
-                    }
+                    exchange.setQueryString("");
                     state.state = ParseState.VERSION;
                     state.stringBuilder.setLength(0);
                     state.parseState = 0;
                     state.pos = 0;
-                    state.nextHeader = null;
-                    state.queryParamPos = 0;
-                    state.requestEnd = 0;
-                    state.mapCount = 0;
+                    state.urlDecodeState = 0;
+                    state.urlDecodeCodePoint = 0;
                     return;
                 }
             } else if (next == '\r' || next == '\n') {
@@ -293,42 +312,167 @@ public abstract class HttpRequestParser {
                     } else {
                         exchange.setParsedRequestPath(path.substring(canonicalPathStart));
                     }
-                    parseState = QUERY_PARAM_NAME;
-                    queryParamPos = stringBuilder.length() + 1;
-                    requestEnd = queryParamPos;
-                } else if (next == '=' && parseState == QUERY_PARAM_NAME) {
-                    parseState = QUERY_PARAM_VALUE;
-                    nextQueryParam = stringBuilder.substring(queryParamPos);
-                    queryParamPos = stringBuilder.length() + 1;
-                } else if (next == '&' && parseState == QUERY_PARAM_NAME) {
-                    parseState = QUERY_PARAM_NAME;
-                    if (state.mapCount++ > 1000) {
-                        //todo: make configurable
-                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(1000);
-                    }
-                    exchange.addQueryParam(stringBuilder.substring(queryParamPos), "");
-                    nextQueryParam = null;
-                    queryParamPos = stringBuilder.length() + 1;
-                } else if (next == '&' && parseState == QUERY_PARAM_VALUE) {
-                    parseState = QUERY_PARAM_NAME;
-                    if (state.mapCount++ > 1000) {
-                        //todo: make configurable
-                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(1000);
-                    }
-                    exchange.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
-                    nextQueryParam = null;
-                    queryParamPos = stringBuilder.length() + 1;
+                    state.state = ParseState.QUERY_PARAMETERS;
+                    state.stringBuilder.setLength(0);
+                    state.parseState = 0;
+                    state.pos = 0;
+                    state.urlDecodeState = 0;
+                    state.urlDecodeCodePoint = 0;
+                    handleQueryParameters(buffer, state, exchange);
+                    return;
                 }
-                stringBuilder.append(next);
+                if (urlDecodeCurrentByte != 0) {
+                    if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F')) {
+                        if (urlDecodeCurrentByte == -1) {
+                            urlDecodeCurrentByte = Integer.parseInt("" + next, 16);
+                        } else {
+                            urlDecodeCurrentByte <<= 4;
+                            urlDecodeCurrentByte += Integer.parseInt("" + next, 16);
+                            byte type = TYPES[urlDecodeCurrentByte & 0xFF];
+
+                            urlDecodeCodePoint = urlDecodeState != UTF8_ACCEPT ? urlDecodeCurrentByte & 0x3f | urlDecodeCodePoint << 6 : 0xff >> type & urlDecodeCurrentByte;
+
+                            urlDecodeState = STATES[urlDecodeState + type];
+
+                            if (urlDecodeState == UTF8_ACCEPT) {
+                                for (char c : Character.toChars(urlDecodeCodePoint)) {
+                                    stringBuilder.append(c);
+                                }
+                                urlDecodeCurrentByte = 0;
+                            } else {
+                                urlDecodeCurrentByte = -1;
+                            }
+                        }
+                    } else if (next != '%') {
+                        throw UndertowMessages.MESSAGES.failedToParsePath();
+                    }
+                } else if (next == '%') {
+                    urlDecodeCurrentByte = -1;
+                    urlDecodeCodePoint = 0;
+                    urlDecodeState = 0;
+                } else if (next == '+') {
+                    stringBuilder.append(' ');
+                } else {
+                    stringBuilder.append(next);
+                }
             }
 
         }
         state.parseState = parseState;
         state.pos = canonicalPathStart;
-        state.nextQueryParam = nextQueryParam;
-        state.queryParamPos = queryParamPos;
-        state.requestEnd = requestEnd;
+        state.urlDecodeState = urlDecodeState & urlDecodeCurrentByte;
+        state.urlDecodeCodePoint = urlDecodeCodePoint;
     }
+
+
+    /**
+     * Parses a path value
+     *
+     * @param buffer   The buffer
+     * @param state    The current state
+     * @param exchange The exchange builder
+     * @return The number of bytes remaining
+     */
+    @SuppressWarnings("unused")
+    final void handleQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) {
+        StringBuilder stringBuilder = state.stringBuilder;
+        int queryParamPos = state.pos;
+        int mapCount = state.mapCount;
+        int urlDecodeState = state.urlDecodeState;
+        int urlDecodeCurrentByte = (urlDecodeState & 0xFF00) >> 8;
+        urlDecodeState &= 0xFF;
+        int urlDecodeCodePoint = state.urlDecodeCodePoint;
+        String nextQueryParam = state.nextQueryParam;
+
+        while (buffer.hasRemaining()) {
+            final char next = (char) buffer.get();
+            if (next == ' ' || next == '\t') {
+                final String queryString = stringBuilder.toString();
+                exchange.setQueryString(queryString);
+                if (nextQueryParam == null) {
+                    if (queryParamPos != stringBuilder.length()) {
+                        exchange.addQueryParam(stringBuilder.substring(queryParamPos), "");
+                    }
+                } else {
+                    exchange.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
+                }
+                state.state = ParseState.VERSION;
+                state.stringBuilder.setLength(0);
+                state.pos = 0;
+                state.nextQueryParam = null;
+                state.urlDecodeCodePoint = 0;
+                state.urlDecodeState = 0;
+                state.mapCount = 0;
+                return;
+            } else if (next == '\r' || next == '\n') {
+                UndertowLogger.REQUEST_LOGGER.debug("Failed to parser URI due to newline");
+                IoUtils.safeClose(exchange.getConnection());
+                throw UndertowMessages.MESSAGES.failedToParsePath();
+            } else {
+                if (next == '=' && nextQueryParam == null) {
+                    nextQueryParam = stringBuilder.substring(queryParamPos);
+                    queryParamPos = stringBuilder.length() + 1;
+                } else if (next == '&' && nextQueryParam == null) {
+                    if (mapCount++ > 1000) {
+                        //todo: make configurable
+                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(1000);
+                    }
+                    exchange.addQueryParam(stringBuilder.substring(queryParamPos), "");
+                    queryParamPos = stringBuilder.length() + 1;
+                } else if (next == '&') {
+                    if (mapCount++ > 1000) {
+                        //todo: make configurable
+                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(1000);
+                    }
+
+                    exchange.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
+                    queryParamPos = stringBuilder.length() + 1;
+                    nextQueryParam = null;
+                }
+                if (urlDecodeCurrentByte != 0) {
+                    if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F')) {
+                        if (urlDecodeCurrentByte == -1) {
+                            urlDecodeCurrentByte = Integer.parseInt("" + next, 16);
+                        } else {
+                            urlDecodeCurrentByte <<= 4;
+                            urlDecodeCurrentByte += Integer.parseInt("" + next, 16);
+                            byte type = TYPES[urlDecodeCurrentByte & 0xFF];
+
+                            urlDecodeCodePoint = urlDecodeState != UTF8_ACCEPT ? urlDecodeCurrentByte & 0x3f | urlDecodeCodePoint << 6 : 0xff >> type & urlDecodeCurrentByte;
+
+                            urlDecodeState = STATES[urlDecodeState + type];
+
+                            if (urlDecodeState == UTF8_ACCEPT) {
+                                for (char c : Character.toChars(urlDecodeCodePoint)) {
+                                    stringBuilder.append(c);
+                                }
+                                urlDecodeCurrentByte = 0;
+                            } else {
+                                urlDecodeCurrentByte = -1;
+                            }
+                        }
+                    } else if (next != '%') {
+                        throw UndertowMessages.MESSAGES.failedToParsePath();
+                    }
+                } else if (next == '%') {
+                    urlDecodeCurrentByte = -1;
+                    urlDecodeCodePoint = 0;
+                    urlDecodeState = 0;
+                } else if (next == '+') {
+                    stringBuilder.append(' ');
+                } else {
+                    stringBuilder.append(next);
+                }
+            }
+
+        }
+        state.pos = queryParamPos;
+        state.nextQueryParam = nextQueryParam;
+        state.urlDecodeState = urlDecodeState & urlDecodeCurrentByte;
+        state.urlDecodeCodePoint = urlDecodeCodePoint;
+        state.mapCount = 0;
+    }
+
 
     /**
      * The parse states for parsing heading values

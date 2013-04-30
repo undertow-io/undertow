@@ -27,8 +27,8 @@ import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -46,7 +46,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.SameThreadExecutor;
-import io.undertow.util.SecureHashMap;
 import io.undertow.util.WrapperConduitFactory;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
@@ -647,14 +646,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Map<String, Deque<String>> getQueryParameters() {
         if (queryParameters == null) {
-            queryParameters = new SecureHashMap<>(0);
+            queryParameters = new LinkedHashMap<>(0);
         }
         return queryParameters;
     }
 
     public void addQueryParam(final String name, final String param) {
         if (queryParameters == null) {
-            queryParameters = new TreeMap<>();
+            queryParameters = new LinkedHashMap<>();
         }
         Deque<String> list = queryParameters.get(name);
         if (list == null) {

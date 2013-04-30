@@ -542,13 +542,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             }
             return null;
         }
-        try {
-            //TODO: we need a better way to handle decoding the request paramters
-            //TODO: what charset should we be using to decode these parameters?
-            return URLDecoder.decode(params.getFirst(), characterEncoding == null ? "ISO-8859-1" : characterEncoding.name());
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+            return params.getFirst();
     }
 
     @Override
