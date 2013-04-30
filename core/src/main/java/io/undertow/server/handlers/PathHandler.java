@@ -77,24 +77,20 @@ public class PathHandler implements HttpHandler {
         HttpHandlers.executeHandler(defaultHandler, exchange);
     }
 
-    public HttpHandler getDefaultHandler() {
-        return defaultHandler;
-    }
-
-    public PathHandler setDefaultHandler(HttpHandler defaultHandler) {
-        HttpHandlers.handlerNotNull(defaultHandler);
-        this.defaultHandler = defaultHandler;
-        return this;
-    }
-
     /**
      * Adds a path and a handler for that path. If the path does not start
-     * with a / then one will be prepended
+     * with a / then one will be prepended.
+     *
+     * If / is specified as the path then it will replace the default handler.
      *
      * @param path    The path
      * @param handler The handler
      */
     public synchronized PathHandler addPath(final String path, final HttpHandler handler) {
+        if(path.equals("/")) {
+            this.defaultHandler = handler;
+            return this;
+        }
         if(path.length() > maxPathLength) {
             maxPathLength = path.length();
         }
@@ -114,6 +110,12 @@ public class PathHandler implements HttpHandler {
         if (path == null || path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
+
+        if(path.equals("/")) {
+            defaultHandler = ResponseCodeHandler.HANDLE_404;
+            return this;
+        }
+
         if (path.charAt(0) != '/') {
             paths.remove("/" + path);
         } else {
@@ -131,6 +133,7 @@ public class PathHandler implements HttpHandler {
 
     public synchronized PathHandler clearPaths() {
         paths.clear();
+        defaultHandler = ResponseCodeHandler.HANDLE_404;
         return this;
     }
 

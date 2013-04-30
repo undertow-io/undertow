@@ -180,7 +180,7 @@ public class Undertow {
         final NameVirtualHostHandler virtualHostHandler = new NameVirtualHostHandler();
         for (VirtualHost host : hosts) {
             final PathHandler paths = new PathHandler();
-            paths.setDefaultHandler(host.defaultHandler);
+            paths.addPath("/", host.defaultHandler);
             for (final Map.Entry<String, HttpHandler> entry : host.handlers.entrySet()) {
                 paths.addPath(entry.getKey(), entry.getValue());
             }

@@ -61,7 +61,7 @@ public class PathTestCase {
 
             handler.addPath("/path", sub);
             sub.addPath("/subpath", new RemainingPathHandler("/subpath"));
-            sub.setDefaultHandler(new RemainingPathHandler("/path"));
+            sub.addPath("/", new RemainingPathHandler("/path"));
 
             DefaultServer.setRootHandler(handler);
 
