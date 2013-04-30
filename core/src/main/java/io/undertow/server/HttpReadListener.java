@@ -24,6 +24,7 @@ import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -40,6 +41,8 @@ import static org.xnio.IoUtils.safeClose;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class HttpReadListener implements ChannelListener<StreamSourceChannel>, ExchangeCompletionListener, Runnable {
+
+    private static final String BAD_REQUEST = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 
     private final HttpServerConnection connection;
     private final ParseState state = new ParseState();
@@ -143,24 +146,23 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
-            try {
-                httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
-                this.httpServerExchange = null;
-                this.httpServerExchange = null;
-                HttpTransferEncoding.handleRequest(httpServerExchange, connection.getRootHandler());
-
-            } catch (Throwable t) {
-                //TODO: we should attempt to return a 500 status code in this situation
-                UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
-                IoUtils.safeClose(channel);
-                IoUtils.safeClose(connection);
-            }
+            httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
+            this.httpServerExchange = null;
+            HttpTransferEncoding.handleRequest(httpServerExchange, connection.getRootHandler());
         } catch (Exception e) {
-            UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
-            IoUtils.safeClose(connection.getChannel());
+            sendBadRequestAndClose(connection.getChannel());
         } finally {
             if (free) pooled.free();
         }
+    }
+
+    private void sendBadRequestAndClose(final StreamConnection channel) {
+        new StringWriteChannelListener(BAD_REQUEST) {
+            @Override
+            protected void writeDone(final StreamSinkChannel c) {
+                IoUtils.safeClose(channel);
+            }
+        }.setup(channel.getSinkChannel());
     }
 
 

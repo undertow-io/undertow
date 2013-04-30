@@ -23,14 +23,12 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.annotationprocessor.HttpParserConfig;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
-import org.xnio.IoUtils;
 
 import static io.undertow.util.Headers.ACCEPT_CHARSET_STRING;
 import static io.undertow.util.Headers.ACCEPT_ENCODING_STRING;
@@ -289,8 +287,6 @@ public abstract class HttpRequestParser {
                     return;
                 }
             } else if (next == '\r' || next == '\n') {
-                UndertowLogger.REQUEST_LOGGER.debug("Failed to parser URI due to newline");
-                IoUtils.safeClose(exchange.getConnection());
                 throw UndertowMessages.MESSAGES.failedToParsePath();
             } else {
                 if (next == ':' && parseState == START) {
@@ -405,8 +401,6 @@ public abstract class HttpRequestParser {
                 state.mapCount = 0;
                 return;
             } else if (next == '\r' || next == '\n') {
-                UndertowLogger.REQUEST_LOGGER.debug("Failed to parser URI due to newline");
-                IoUtils.safeClose(exchange.getConnection());
                 throw UndertowMessages.MESSAGES.failedToParsePath();
             } else {
                 if (next == '=' && nextQueryParam == null) {
