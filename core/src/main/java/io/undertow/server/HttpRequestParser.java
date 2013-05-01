@@ -18,17 +18,20 @@
 
 package io.undertow.server;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.annotationprocessor.HttpParserConfig;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
+import org.xnio.OptionMap;
 
 import static io.undertow.util.Headers.ACCEPT_CHARSET_STRING;
 import static io.undertow.util.Headers.ACCEPT_ENCODING_STRING;
@@ -162,13 +165,20 @@ public abstract class HttpRequestParser {
             12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12,
             12, 12, 12, 12, 12, 12};
 
+    private final int maxParameters;
+    private final int maxHeaders;
 
-    public static final HttpRequestParser INSTANCE;
+    public HttpRequestParser(OptionMap options) {
+        maxParameters = options.get(UndertowOptions.MAX_PARAMETERS, 1000);
+        maxHeaders = options.get(UndertowOptions.MAX_HEADERS, 200);
+    }
 
-    static {
+    public static final HttpRequestParser instance(final OptionMap options) {
         try {
             final Class<?> cls = HttpRequestParser.class.getClassLoader().loadClass(HttpRequestParser.class.getName() + "$$generated");
-            INSTANCE = (HttpRequestParser) cls.newInstance();
+
+            Constructor<?> ctor = cls.getConstructor(OptionMap.class);
+            return (HttpRequestParser) ctor.newInstance(options);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -407,16 +417,14 @@ public abstract class HttpRequestParser {
                     nextQueryParam = stringBuilder.substring(queryParamPos);
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && nextQueryParam == null) {
-                    if (mapCount++ > 1000) {
-                        //todo: make configurable
-                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(1000);
+                    if (mapCount++ > maxParameters) {
+                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
                     }
                     exchange.addQueryParam(stringBuilder.substring(queryParamPos), "");
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&') {
-                    if (mapCount++ > 1000) {
-                        //todo: make configurable
-                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(1000);
+                    if (mapCount++ > maxParameters) {
+                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
                     }
 
                     exchange.addQueryParam(nextQueryParam, stringBuilder.substring(queryParamPos));
@@ -492,9 +500,8 @@ public abstract class HttpRequestParser {
             stringBuilder = new StringBuilder();
             state.parseState = 0;
 
-            if (state.mapCount++ > 1000) {
-                //todo: make configurable
-                throw UndertowMessages.MESSAGES.tooManyHeaders(1000);
+            if (state.mapCount++ > maxHeaders) {
+                throw UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders);
             }
         }
 

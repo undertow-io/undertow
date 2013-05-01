@@ -42,6 +42,8 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
     private volatile OptionMap undertowOptions;
 
+    private volatile HttpRequestParser parser;
+
     public HttpOpenListener(final Pool<ByteBuffer> pool, final int bufferSize) {
         this(pool, OptionMap.EMPTY, bufferSize);
     }
@@ -50,6 +52,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
         this.bufferSize = bufferSize;
+        parser = HttpRequestParser.instance(undertowOptions);
     }
 
     public void handleEvent(final StreamConnection channel) {
@@ -57,7 +60,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        HttpReadListener readListener = new HttpReadListener(connection);
+        HttpReadListener readListener = new HttpReadListener(connection, parser);
         readListener.newRequest();
         channel.getSourceChannel().setReadListener(readListener);
         readListener.handleEvent(channel.getSourceChannel());
@@ -84,5 +87,6 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
+        this.parser = HttpRequestParser.instance(undertowOptions);
     }
 }

@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
@@ -101,7 +102,7 @@ public class FormEncodedDataHandler implements HttpHandler {
     private static final class FormEncodedDataParser implements ChannelListener<StreamSourceChannel>, FormDataParser {
 
         private final HttpServerExchange exchange;
-        private final FormData data = new FormData();
+        private final FormData data;
         private final StringBuilder builder = new StringBuilder();
         private String name = null;
         private String charset;
@@ -117,6 +118,7 @@ public class FormEncodedDataHandler implements HttpHandler {
         private FormEncodedDataParser(final String charset, final HttpServerExchange exchange) {
             this.exchange = exchange;
             this.charset = charset;
+            this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, 1000));
         }
 
         @Override

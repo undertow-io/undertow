@@ -45,7 +45,7 @@ public class ResponseParserGenerator extends AbstractParserGenerator {
 
 
     public ResponseParserGenerator() {
-        super(PARSE_STATE_CLASS, HTTP_RESPONSE_CLASS);
+        super(PARSE_STATE_CLASS, HTTP_RESPONSE_CLASS, "()V");
     }
 
 

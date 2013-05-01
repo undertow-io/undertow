@@ -46,14 +46,16 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
 
     private final HttpServerConnection connection;
     private final ParseState state = new ParseState();
+    private final HttpRequestParser parser;
 
     private HttpServerExchange httpServerExchange;
 
     private int read = 0;
     private final int maxRequestSize;
 
-    HttpReadListener(final HttpServerConnection connection) {
+    HttpReadListener(final HttpServerConnection connection, final HttpRequestParser parser) {
         this.connection = connection;
+        this.parser = parser;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
     }
 
@@ -124,7 +126,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                 } else {
                     buffer.flip();
                 }
-                HttpRequestParser.INSTANCE.handle(buffer, state, httpServerExchange);
+                parser.handle(buffer, state, httpServerExchange);
                 if (buffer.hasRemaining()) {
                     free = false;
                     connection.setExtraBytes(pooled);

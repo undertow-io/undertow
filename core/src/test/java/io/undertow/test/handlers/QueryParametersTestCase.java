@@ -90,6 +90,7 @@ public class QueryParametersTestCase {
             runTest(client, "{a=>b,value=>[bb,cc],s =>,t =>}", "/path?a=b&value=bb&value=cc&s%20&t%20");
             runTest(client, "{a=>b,value=>[bb,cc],s =>,t =>}", "/path?a=b&value=bb&value=cc&s%20&t%20&");
             runTest(client, "{a=>b,value=>[bb,cc],s =>,t =>,u=>}", "/path?a=b&value=bb&value=cc&s%20&t%20&u");
+            runTest(client, "{unicode=>Iñtërnâtiônàližætiøn}", "/path?unicode=Iñtërnâtiônàližætiøn");
 
 
         } finally {

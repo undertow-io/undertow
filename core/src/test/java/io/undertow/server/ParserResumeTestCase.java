@@ -25,6 +25,7 @@ import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import org.junit.Assert;
 import org.junit.Test;
+import org.xnio.OptionMap;
 
 /**
  * Tests that the parser can resume when it is given partial input
@@ -55,7 +56,7 @@ public class ParserResumeTestCase {
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(1);
         while (context.state != ParseState.PARSE_COMPLETE) {
-            HttpRequestParser.INSTANCE.handle(buffer, context, result);
+            HttpRequestParser.instance(OptionMap.EMPTY).handle(buffer, context, result);
             buffer.limit(buffer.limit() + 1);
         }
         runAssertions(result, context);
@@ -66,9 +67,9 @@ public class ParserResumeTestCase {
         HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(split);
-        HttpRequestParser.INSTANCE.handle(buffer, context, result);
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(buffer, context, result);
         buffer.limit(buffer.capacity());
-        HttpRequestParser.INSTANCE.handle(buffer, context, result);
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(buffer, context, result);
         runAssertions(result, context);
         Assert.assertEquals(4, buffer.remaining());
     }

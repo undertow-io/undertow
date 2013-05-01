@@ -162,4 +162,10 @@ public interface UndertowMessages {
 
     @Message(id = 45, value = "Error parsing predicate string %s:%n%s")
     IllegalArgumentException errorParsingPredicateString(String reason, String s);
+
+    @Message(id = 46, value = "The number of cookies sent exceeded the maximum of %s")
+    IllegalStateException tooManyCookies(int maxCookies);
+
+    @Message(id = 47, value = "The number of parameters exceeded the maximum of %s")
+    IllegalStateException tooManyParameters(int maxValues);
 }

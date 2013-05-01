@@ -47,11 +47,12 @@ import org.jboss.classfilewriter.util.DescriptorUtils;
 public abstract class AbstractParserGenerator {
 
     //class names
-    public final String parseStateClass;
-    public final String resultClass;
+    protected final String parseStateClass;
+    protected String resultClass;
+    protected final String constructorDescriptor;
 
-    public final String parseStateDescriptor;
-    public final String httpExchangeDescriptor;
+    private final String parseStateDescriptor;
+    private final String httpExchangeDescriptor;
 
     public static final String HTTP_STRING_CLASS = "io.undertow.util.HttpString";
     public static final String HTTP_STRING_DESCRIPTOR = DescriptorUtils.makeDescriptor(HTTP_STRING_CLASS);
@@ -80,20 +81,23 @@ public abstract class AbstractParserGenerator {
     public static final String HANDLE_HEADER_VALUE = "handleHeaderValue";
     public static final String CLASS_NAME_SUFFIX = "$$generated";
 
-    public AbstractParserGenerator(final String parseStateClass, final String resultClass) {
+    public AbstractParserGenerator(final String parseStateClass, final String resultClass, final String constructorDescriptor) {
         this.parseStateClass = parseStateClass;
         this.resultClass = resultClass;
         parseStateDescriptor = DescriptorUtils.makeDescriptor(parseStateClass);
         httpExchangeDescriptor = DescriptorUtils.makeDescriptor(resultClass);
+        this.constructorDescriptor = constructorDescriptor;
     }
 
     public byte[] createTokenizer(final String existingClassName, final String[] httpVerbs, String[] httpVersions, String[] standardHeaders) {
         final String className = existingClassName + CLASS_NAME_SUFFIX;
         final ClassFile file = new ClassFile(className, existingClassName);
 
-        final ClassMethod ctor = file.addMethod(AccessFlag.PUBLIC, "<init>", "V");
+
+        final ClassMethod ctor = file.addMethod(AccessFlag.PUBLIC, "<init>", "V", DescriptorUtils.parameterDescriptors(constructorDescriptor));
         ctor.getCodeAttribute().aload(0);
-        ctor.getCodeAttribute().invokespecial(existingClassName, "<init>", "()V");
+        ctor.getCodeAttribute().loadMethodParameters();
+        ctor.getCodeAttribute().invokespecial(existingClassName, "<init>", constructorDescriptor);
         ctor.getCodeAttribute().returnInstruction();
 
 
@@ -242,7 +246,6 @@ public abstract class AbstractParserGenerator {
         c.astore(STATE_CURRENT_VAR);
         c.getfield(parseStateClass, "currentBytes", "[B");
         c.astore(STATE_CURRENT_BYTES_VAR);
-
 
 
         //load the current state

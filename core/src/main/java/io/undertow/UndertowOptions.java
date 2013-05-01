@@ -53,10 +53,35 @@ public class UndertowOptions {
      */
     public static final Option<Boolean> BUFFER_PIPELINED_DATA = Option.simple(UndertowOptions.class, "BUFFER_PIPELINED_DATA", Boolean.class);
 
-    /*
+    /**
      * The idle timeout in milliseconds after which the channel will be closed.
      */
     public static final Option<Integer> IDLE_TIMEOUT = Option.simple(UndertowOptions.class, "IDLE_TIMEOUT", Integer.class);
+
+    /**
+     * The maximum number of parameters that will be parsed. This is used to protect against hash vulnerabilities.
+     *
+     * This applies to both query parameters, and to POST data, but is not cumulative (i.e. you can potentially have
+     * max parameters * 2 total parameters).
+     *
+     * Defaults to 1000
+     */
+    public static final Option<Integer> MAX_PARAMETERS = Option.simple(UndertowOptions.class, "MAX_PARAMETERS", Integer.class);
+
+    /**
+     * The maximum number of headers that will be parsed. This is used to protect against hash vulnerabilities.
+     *
+     * Defaults to 200
+     */
+    public static final Option<Integer> MAX_HEADERS = Option.simple(UndertowOptions.class, "MAX_HEADERS", Integer.class);
+
+
+    /**
+     * The maximum number of cookies that will be parsed. This is used to protect against hash vulnerabilities.
+     *
+     * Defaults to 200
+     */
+    public static final Option<Integer> MAX_COOKIES = Option.simple(UndertowOptions.class, "MAX_COOKIES", Integer.class);
 
     private UndertowOptions() {
 

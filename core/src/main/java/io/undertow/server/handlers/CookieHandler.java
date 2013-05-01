@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
@@ -68,22 +70,24 @@ public class CookieHandler implements HttpHandler {
         }
         final Map<String, Cookie> parsedCookies = new HashMap<String, Cookie>();
 
+        final int maxCookies = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200);
+
         for (String cookie : cookies) {
-            parseCookie(cookie, parsedCookies);
+            parseCookie(cookie, parsedCookies, maxCookies);
         }
         return parsedCookies;
     }
 
     /**
-     * TODO: handle version 1 cookies
      *
      * @param cookie        The cookie
      * @param parsedCookies The map of cookies
      */
-    private static void parseCookie(final String cookie, final Map<String, Cookie> parsedCookies) {
+    private static void parseCookie(final String cookie, final Map<String, Cookie> parsedCookies, int maxCookies) {
         int state = 0;
         String name = null;
         int start = 0;
+        int cookieCount = parsedCookies.size();
         final Map<String, String> cookies = new HashMap<String, String>();
         final Map<String, String> additional = new HashMap<String, String>();
         for (int i = 0; i < cookie.length(); ++i) {
@@ -109,6 +113,9 @@ public class CookieHandler implements HttpHandler {
                 case 2: {
                     if (c == ';') {
                         final String value = cookie.substring(start, i);
+                        if(++cookieCount == maxCookies) {
+                            throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
+                        }
                         if (name.startsWith("$")) {
                             additional.put(name, value);
                         } else {
@@ -125,6 +132,9 @@ public class CookieHandler implements HttpHandler {
                 case 3: {
                     if (c == '"') {
                         final String value = cookie.substring(start, i);
+                        if(++cookieCount == maxCookies) {
+                            throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
+                        }
                         if (name.startsWith("$")) {
                             additional.put(name, value);
                         } else {
@@ -139,6 +149,9 @@ public class CookieHandler implements HttpHandler {
         }
         if (state == 2) {
             final String value = cookie.substring(start);
+            if(++cookieCount == maxCookies) {
+                throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
+            }
             if (name.startsWith("$")) {
                 additional.put(name, value);
             } else {

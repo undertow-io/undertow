@@ -25,7 +25,7 @@ public class RequestParserGenerator extends AbstractParserGenerator {
     public static final int HEADER_VALUE = 6;
 
     public RequestParserGenerator() {
-        super(PARSE_STATE_CLASS, HTTP_EXCHANGE_CLASS);
+        super(PARSE_STATE_CLASS, HTTP_EXCHANGE_CLASS, "(Lorg/xnio/OptionMap;)V");
     }
 
     protected void createStateMachines(final String[] httpVerbs, final String[] httpVersions, final String[] standardHeaders, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter) {

@@ -21,12 +21,12 @@ package io.undertow.server.handlers.form;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 import io.undertow.UndertowMessages;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.SecureHashMap;
 
 /**
  * Representation of form data.
@@ -34,6 +34,113 @@ import io.undertow.util.SecureHashMap;
  * TODO: add representation of multipart data
  */
 public final class FormData implements Iterable<String> {
+
+    private final Map<String, Deque<FormValue>> values = new HashMap<>();
+
+    private final int maxValues;
+    private int valueCount = 0;
+
+    public FormData(final int maxValues) {
+        this.maxValues = maxValues;
+    }
+
+
+    public Iterator<String> iterator() {
+        return values.keySet().iterator();
+    }
+
+    public FormValue getFirst(String name) {
+        final Deque<FormValue> deque = values.get(name);
+        return deque == null ? null : deque.peekFirst();
+    }
+
+    public FormValue getLast(String name) {
+        final Deque<FormValue> deque = values.get(name);
+        return deque == null ? null : deque.peekLast();
+    }
+
+    public Deque<FormValue> get(String name) {
+        return values.get(name);
+    }
+
+    public void add(String name, String value) {
+        add(name, value, null);
+    }
+
+    public void add(String name, String value, final HeaderMap headers) {
+        Deque<FormValue> values = this.values.get(name);
+        if (values == null) {
+            this.values.put(name, values = new ArrayDeque<FormValue>(1));
+        }
+        values.add(new FormValueImpl(value, headers));
+        if (++valueCount > maxValues) {
+            throw UndertowMessages.MESSAGES.tooManyParameters(maxValues);
+        }
+    }
+
+    public void add(String name, File value, String fileName, final HeaderMap headers) {
+        Deque<FormValue> values = this.values.get(name);
+        if (values == null) {
+            this.values.put(name, values = new ArrayDeque<FormValue>(1));
+        }
+        values.add(new FormValueImpl(value, fileName, headers));
+        if (values.size() > maxValues) {
+            throw UndertowMessages.MESSAGES.tooManyParameters(maxValues);
+        }
+        if (++valueCount > maxValues) {
+            throw UndertowMessages.MESSAGES.tooManyParameters(maxValues);
+        }
+    }
+
+    public void put(String name, String value, final HeaderMap headers) {
+        Deque<FormValue> values = new ArrayDeque<FormValue>(1);
+        Deque<FormValue> old = this.values.put(name, values);
+        if (old != null) {
+            valueCount -= old.size();
+        }
+        values.add(new FormValueImpl(value, headers));
+
+        if (++valueCount > maxValues) {
+            throw UndertowMessages.MESSAGES.tooManyParameters(maxValues);
+        }
+    }
+
+    public Deque<FormValue> remove(String name) {
+        Deque<FormValue> old =  values.remove(name);
+        if (old != null) {
+            valueCount -= old.size();
+        }
+        return old;
+    }
+
+    public boolean contains(String name) {
+        final Deque<FormValue> value = values.get(name);
+        return value != null && !value.isEmpty();
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        final FormData strings = (FormData) o;
+
+        if (values != null ? !values.equals(strings.values) : strings.values != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return values != null ? values.hashCode() : 0;
+    }
+
+    @Override
+    public String toString() {
+        return "FormData{" +
+                "values=" + values +
+                '}';
+    }
 
 
     public interface FormValue {
@@ -58,7 +165,6 @@ public final class FormData implements Iterable<String> {
         File getFile();
 
         /**
-         *
          * @return The filename specified in the disposition header.
          */
         String getFileName();
@@ -123,83 +229,5 @@ public final class FormData implements Iterable<String> {
         public String getFileName() {
             return fileName;
         }
-    }
-
-    private final Map<String, Deque<FormValue>> values = new SecureHashMap<String, Deque<FormValue>>();
-
-    public Iterator<String> iterator() {
-        return values.keySet().iterator();
-    }
-
-    public FormValue getFirst(String name) {
-        final Deque<FormValue> deque = values.get(name);
-        return deque == null ? null : deque.peekFirst();
-    }
-
-    public FormValue getLast(String name) {
-        final Deque<FormValue> deque = values.get(name);
-        return deque == null ? null : deque.peekLast();
-    }
-
-    public Deque<FormValue> get(String name) {
-        return values.get(name);
-    }
-
-    public void add(String name, String value) {
-        add(name, value, null);
-    }
-    public void add(String name, String value, final HeaderMap headers) {
-        Deque<FormValue> values = this.values.get(name);
-        if (values == null) {
-            this.values.put(name, values = new ArrayDeque<FormValue>(1));
-        }
-        values.add(new FormValueImpl(value, headers));
-    }
-
-    public void add(String name, File value, String fileName, final HeaderMap headers) {
-        Deque<FormValue> values = this.values.get(name);
-        if (values == null) {
-            this.values.put(name, values = new ArrayDeque<FormValue>(1));
-        }
-        values.add(new FormValueImpl(value, fileName, headers));
-    }
-
-    public void put(String name, String value, final HeaderMap headers) {
-        Deque<FormValue> values = new ArrayDeque<FormValue>(1);
-        this.values.put(name, values);
-        values.add(new FormValueImpl(value, headers));
-    }
-
-    public Deque<FormValue> remove(String name) {
-        return values.remove(name);
-    }
-
-    public boolean contains(String name) {
-        final Deque<FormValue> value = values.get(name);
-        return value != null && !value.isEmpty();
-    }
-
-    @Override
-    public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        final FormData strings = (FormData) o;
-
-        if (values != null ? !values.equals(strings.values) : strings.values != null) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        return values != null ? values.hashCode() : 0;
-    }
-
-    @Override
-    public String toString() {
-        return "FormData{" +
-                "values=" + values +
-                '}';
     }
 }

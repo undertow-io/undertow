@@ -30,6 +30,7 @@ import java.util.concurrent.Executor;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
@@ -122,7 +123,7 @@ public class MultiPartHandler implements HttpHandler {
     private final class MultiPartUploadHandler implements FormDataParser, Runnable, MultipartParser.PartHandler {
 
         private final HttpServerExchange exchange;
-        private final FormData data = new FormData();
+        private final FormData data;
         private final String boundary;
         private final List<File> createdFiles = new ArrayList<File>();
         private String defaultEncoding;
@@ -142,6 +143,7 @@ public class MultiPartHandler implements HttpHandler {
             this.exchange = exchange;
             this.boundary = boundary;
             this.defaultEncoding = defaultEncoding;
+            this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, 1000));
         }
 
 
