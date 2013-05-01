@@ -98,10 +98,7 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
             Buffers.copy(buffer, srcs, offset, length);
             return put;
         } else {
-            int put = buffer.remaining();
-            Buffers.copy(put, buffer, srcs, offset, length);
-            flushBuffer();
-            return put;
+            return flushBufferWithUserData(srcs);
         }
     }
 
@@ -126,14 +123,53 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
             buffer.put(src);
             return put;
         } else {
-            int put = buffer.remaining();
-            int old = src.limit();
-            src.limit(src.position() + put);
-            buffer.put(src);
-            src.limit(old);
-            flushBuffer();
-            return put;
+            return (int) flushBufferWithUserData(new ByteBuffer[]{src});
         }
+    }
+
+    private long flushBufferWithUserData(final ByteBuffer[] byteBuffers) throws IOException {
+        final ByteBuffer byteBuffer = buffer.getResource();
+        if (byteBuffer.position() == 0) {
+            try {
+                return next.write(byteBuffers, 0, byteBuffers.length);
+            } finally {
+                buffer.free();
+                buffer = null;
+            }
+
+        }
+
+        if (!anyAreSet(state, FLUSHING)) {
+            state |= FLUSHING;
+            byteBuffer.flip();
+        }
+        int originalBufferedRemaining = byteBuffer.remaining();
+        long toWrite = originalBufferedRemaining;
+        ByteBuffer[] writeBufs = new ByteBuffer[byteBuffers.length + 1];
+        writeBufs[0] = byteBuffer;
+        for (int i = 0; i < byteBuffers.length; ++i) {
+            writeBufs[i + 1] = byteBuffers[i];
+            toWrite += byteBuffers[i].remaining();
+        }
+
+        long res = 0;
+        long written = 0;
+        do {
+            res = next.write(writeBufs, 0, writeBufs.length);
+            written += res;
+            if (res == 0) {
+                if(written > originalBufferedRemaining) {
+                    buffer.free();
+                    this.buffer = null;
+                    return written - originalBufferedRemaining;
+                }
+                return 0;
+            }
+        } while (written < toWrite);
+        buffer.free();
+        this.buffer = null;
+        state &= ~FLUSHING;
+        return written - originalBufferedRemaining;
     }
 
     /**
@@ -173,13 +209,11 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
             state |= FLUSHING;
             byteBuffer.flip();
         }
-        int res = 0;
-        do {
-            res = next.write(byteBuffer);
-            if (res == 0) {
+        while (byteBuffer.hasRemaining()) {
+            if (next.write(byteBuffer) == 0) {
                 return false;
             }
-        } while (byteBuffer.hasRemaining());
+        }
         if (!next.flush()) {
             return false;
         }
