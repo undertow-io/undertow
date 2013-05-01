@@ -165,12 +165,16 @@ public abstract class HttpRequestParser {
             12, 36, 12, 12, 12, 36, 12, 12, 12, 12, 12, 36, 12, 36, 12, 12, 12, 36, 12, 12, 12, 12,
             12, 12, 12, 12, 12, 12};
 
+    public static final int ASCII_MAX = 127;
+
     private final int maxParameters;
     private final int maxHeaders;
+    private final boolean allowEncodedSlash;
 
     public HttpRequestParser(OptionMap options) {
         maxParameters = options.get(UndertowOptions.MAX_PARAMETERS, 1000);
         maxHeaders = options.get(UndertowOptions.MAX_HEADERS, 200);
+        allowEncodedSlash = options.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
     }
 
     public static final HttpRequestParser instance(final OptionMap options) {
@@ -272,12 +276,12 @@ public abstract class HttpRequestParser {
         int parseState = state.parseState;
         int canonicalPathStart = state.pos;
         int urlDecodeState = state.urlDecodeState;
-        int urlDecodeCurrentByte = (urlDecodeState & 0xFF00) >> 8;
+        int urlDecodeCurrentByte = (urlDecodeState & 0xFFFF00) >> 8;
         urlDecodeState &= 0xFF;
         int urlDecodeCodePoint = state.urlDecodeCodePoint;
 
         while (buffer.hasRemaining()) {
-            final char next = (char) buffer.get();
+            char next = (char) buffer.get();
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
@@ -299,6 +303,67 @@ public abstract class HttpRequestParser {
             } else if (next == '\r' || next == '\n') {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
             } else {
+
+                //this code deals with decoding the URL
+                //if is unfortunatly a bit complex, as it needs to deal with
+                //multi byte unicode characters in the URL
+                //it also needs to deal with resuming in the middle of a multi byte character
+                //and encoded special characters (e.g. an encoded / or ?)
+
+                //first we deal with encoding
+                if (urlDecodeCurrentByte != 0) {
+                    //we are in the middle of an encoding sequence
+                    if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F')) {
+                        if (urlDecodeCurrentByte == 0xFFFF) {
+                            urlDecodeCurrentByte = Integer.parseInt("" + next, 16);
+                            continue;
+                        } else {
+                            urlDecodeCurrentByte <<= 4;
+                            urlDecodeCurrentByte += Integer.parseInt("" + next, 16);
+                            byte type = TYPES[urlDecodeCurrentByte & 0xFF];
+
+                            urlDecodeCodePoint = urlDecodeState != UTF8_ACCEPT ? urlDecodeCurrentByte & 0x3f | urlDecodeCodePoint << 6 : 0xff >> type & urlDecodeCurrentByte;
+
+                            urlDecodeState = STATES[urlDecodeState + type];
+
+                            if (urlDecodeState == UTF8_ACCEPT) {
+                                //we are done
+                                if (urlDecodeCodePoint > ASCII_MAX) {
+                                    //in this case we know we are not interested in the value
+                                    //just append it and continue looping
+                                    for (char c : Character.toChars(urlDecodeCodePoint)) {
+                                        stringBuilder.append(c);
+                                    }
+                                    urlDecodeCurrentByte = 0;
+                                    continue;
+                                } else {
+                                    //this may be a special character that we care about
+                                    next = (char) urlDecodeCodePoint;
+                                    urlDecodeCurrentByte = 0;
+                                    if (next == '/' && !allowEncodedSlash) {
+                                        stringBuilder.append("%2F");
+                                        continue;
+                                    }
+                                }
+                            } else {
+                                urlDecodeCurrentByte = 0xFFFF;
+                                continue;
+                            }
+                        }
+                    } else if (next != '%') {
+                        throw UndertowMessages.MESSAGES.failedToParsePath();
+                    } else {
+                        continue;
+                    }
+                } else if (next == '%') {
+                    urlDecodeCurrentByte = 0xFFFF; // to big to fit in a byte, used as a marker for it not being initialized
+                    urlDecodeCodePoint = 0;
+                    urlDecodeState = 0;
+                    continue;
+                } else if (next == '+') {
+                    next = ' ';
+                }
+
                 if (next == ':' && parseState == START) {
                     parseState = FIRST_COLON;
                 } else if (next == '/' && parseState == FIRST_COLON) {
@@ -327,46 +392,13 @@ public abstract class HttpRequestParser {
                     handleQueryParameters(buffer, state, exchange);
                     return;
                 }
-                if (urlDecodeCurrentByte != 0) {
-                    if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F')) {
-                        if (urlDecodeCurrentByte == -1) {
-                            urlDecodeCurrentByte = Integer.parseInt("" + next, 16);
-                        } else {
-                            urlDecodeCurrentByte <<= 4;
-                            urlDecodeCurrentByte += Integer.parseInt("" + next, 16);
-                            byte type = TYPES[urlDecodeCurrentByte & 0xFF];
-
-                            urlDecodeCodePoint = urlDecodeState != UTF8_ACCEPT ? urlDecodeCurrentByte & 0x3f | urlDecodeCodePoint << 6 : 0xff >> type & urlDecodeCurrentByte;
-
-                            urlDecodeState = STATES[urlDecodeState + type];
-
-                            if (urlDecodeState == UTF8_ACCEPT) {
-                                for (char c : Character.toChars(urlDecodeCodePoint)) {
-                                    stringBuilder.append(c);
-                                }
-                                urlDecodeCurrentByte = 0;
-                            } else {
-                                urlDecodeCurrentByte = -1;
-                            }
-                        }
-                    } else if (next != '%') {
-                        throw UndertowMessages.MESSAGES.failedToParsePath();
-                    }
-                } else if (next == '%') {
-                    urlDecodeCurrentByte = -1;
-                    urlDecodeCodePoint = 0;
-                    urlDecodeState = 0;
-                } else if (next == '+') {
-                    stringBuilder.append(' ');
-                } else {
-                    stringBuilder.append(next);
-                }
+                stringBuilder.append(next);
             }
 
         }
         state.parseState = parseState;
         state.pos = canonicalPathStart;
-        state.urlDecodeState = urlDecodeState & urlDecodeCurrentByte;
+        state.urlDecodeState = urlDecodeState | (urlDecodeCurrentByte << 8);
         state.urlDecodeCodePoint = urlDecodeCodePoint;
     }
 
@@ -385,13 +417,13 @@ public abstract class HttpRequestParser {
         int queryParamPos = state.pos;
         int mapCount = state.mapCount;
         int urlDecodeState = state.urlDecodeState;
-        int urlDecodeCurrentByte = (urlDecodeState & 0xFF00) >> 8;
+        int urlDecodeCurrentByte = (urlDecodeState & 0xFFFF00) >> 8;
         urlDecodeState &= 0xFF;
         int urlDecodeCodePoint = state.urlDecodeCodePoint;
         String nextQueryParam = state.nextQueryParam;
 
         while (buffer.hasRemaining()) {
-            final char next = (char) buffer.get();
+            char next = (char) buffer.get();
             if (next == ' ' || next == '\t') {
                 final String queryString = stringBuilder.toString();
                 exchange.setQueryString(queryString);
@@ -413,6 +445,62 @@ public abstract class HttpRequestParser {
             } else if (next == '\r' || next == '\n') {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
             } else {
+                //this code deals with decoding the query parameters
+                //if is unfortunatly a bit complex, as it needs to deal with
+                //multi byte unicode characters in the URL
+                //it also needs to deal with resuming in the middle of a multi byte character
+                //and encoded special characters (e.g. an encoded = or &)
+
+                //first we deal with encoding
+                if (urlDecodeCurrentByte != 0) {
+                    //we are in the middle of an encoding sequence
+                    if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F')) {
+                        if (urlDecodeCurrentByte == 0xFFFF) {
+                            urlDecodeCurrentByte = Integer.parseInt("" + next, 16);
+                            continue;
+                        } else {
+                            urlDecodeCurrentByte <<= 4;
+                            urlDecodeCurrentByte += Integer.parseInt("" + next, 16);
+                            byte type = TYPES[urlDecodeCurrentByte & 0xFF];
+
+                            urlDecodeCodePoint = urlDecodeState != UTF8_ACCEPT ? urlDecodeCurrentByte & 0x3f | urlDecodeCodePoint << 6 : 0xff >> type & urlDecodeCurrentByte;
+
+                            urlDecodeState = STATES[urlDecodeState + type];
+
+                            if (urlDecodeState == UTF8_ACCEPT) {
+                                //we are done
+                                if (urlDecodeCodePoint > ASCII_MAX) {
+                                    //in this case we know we are not interested in the value
+                                    //just append it and continue looping
+                                    for (char c : Character.toChars(urlDecodeCodePoint)) {
+                                        stringBuilder.append(c);
+                                    }
+                                    urlDecodeCurrentByte = 0;
+                                    continue;
+                                } else {
+                                    //this may be a special character that we care about
+                                    next = (char) urlDecodeCodePoint;
+                                    urlDecodeCurrentByte = 0;
+                                }
+                            } else {
+                                urlDecodeCurrentByte = 0xFFFF;
+                                continue;
+                            }
+                        }
+                    } else if (next != '%') {
+                        throw UndertowMessages.MESSAGES.failedToParsePath();
+                    } else {
+                        continue;
+                    }
+                } else if (next == '%') {
+                    urlDecodeCurrentByte = 0xFFFF; // to big to fit in a byte, used as a marker for it not being initialized
+                    urlDecodeCodePoint = 0;
+                    urlDecodeState = 0;
+                    continue;
+                } else if (next == '+') {
+                    next = ' ';
+                }
+                //at this point next may have been modified, if it was encoded
                 if (next == '=' && nextQueryParam == null) {
                     nextQueryParam = stringBuilder.substring(queryParamPos);
                     queryParamPos = stringBuilder.length() + 1;
@@ -431,46 +519,13 @@ public abstract class HttpRequestParser {
                     queryParamPos = stringBuilder.length() + 1;
                     nextQueryParam = null;
                 }
-                if (urlDecodeCurrentByte != 0) {
-                    if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F')) {
-                        if (urlDecodeCurrentByte == -1) {
-                            urlDecodeCurrentByte = Integer.parseInt("" + next, 16);
-                        } else {
-                            urlDecodeCurrentByte <<= 4;
-                            urlDecodeCurrentByte += Integer.parseInt("" + next, 16);
-                            byte type = TYPES[urlDecodeCurrentByte & 0xFF];
-
-                            urlDecodeCodePoint = urlDecodeState != UTF8_ACCEPT ? urlDecodeCurrentByte & 0x3f | urlDecodeCodePoint << 6 : 0xff >> type & urlDecodeCurrentByte;
-
-                            urlDecodeState = STATES[urlDecodeState + type];
-
-                            if (urlDecodeState == UTF8_ACCEPT) {
-                                for (char c : Character.toChars(urlDecodeCodePoint)) {
-                                    stringBuilder.append(c);
-                                }
-                                urlDecodeCurrentByte = 0;
-                            } else {
-                                urlDecodeCurrentByte = -1;
-                            }
-                        }
-                    } else if (next != '%') {
-                        throw UndertowMessages.MESSAGES.failedToParsePath();
-                    }
-                } else if (next == '%') {
-                    urlDecodeCurrentByte = -1;
-                    urlDecodeCodePoint = 0;
-                    urlDecodeState = 0;
-                } else if (next == '+') {
-                    stringBuilder.append(' ');
-                } else {
-                    stringBuilder.append(next);
-                }
+                stringBuilder.append(next);
             }
 
         }
         state.pos = queryParamPos;
         state.nextQueryParam = nextQueryParam;
-        state.urlDecodeState = urlDecodeState & urlDecodeCurrentByte;
+        state.urlDecodeState = urlDecodeState | (urlDecodeCurrentByte << 8);
         state.urlDecodeCodePoint = urlDecodeCodePoint;
         state.mapCount = 0;
     }

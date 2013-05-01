@@ -83,6 +83,18 @@ public class UndertowOptions {
      */
     public static final Option<Integer> MAX_COOKIES = Option.simple(UndertowOptions.class, "MAX_COOKIES", Integer.class);
 
+    /**
+     * If a request comes in with encoded / characters (i.e. %2F), will these be decoded.
+     *
+     * This can cause security problems if a front end proxy does not perform the same decoding, and as a result
+     * this is disabled by default.
+     *
+     * Defaults to false
+     *
+     * @see  http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-0450
+     */
+    public static final Option<Boolean> ALLOW_ENCODED_SLASH = Option.simple(UndertowOptions.class, "ALLOW_ENCODED_SLASH", Boolean.class);
+
     private UndertowOptions() {
 
     }

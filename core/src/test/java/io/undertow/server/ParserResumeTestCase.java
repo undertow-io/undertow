@@ -20,6 +20,7 @@ package io.undertow.server;
 
 import java.nio.ByteBuffer;
 
+import io.undertow.UndertowOptions;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
@@ -34,7 +35,9 @@ import org.xnio.OptionMap;
  */
 public class ParserResumeTestCase {
 
-    public static final String DATA = "POST http://www.somehost.net/apath?key1=value1&key2=value2 HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
+    public static final String DATA = "POST http://www.somehost.net/apath+with+spaces%20and%20I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n?key1=value1&key2=I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
+    public static final String ENCODED_DATA = "POST http%3a%2f%2Fwww.%73omehost.net/apath+with+spaces%20and%20I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n%3fkey1=value1%26key2=I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
+    public static final HttpRequestParser PARSER = HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
 
     @Test
     public void testMethodSplit() {
@@ -56,7 +59,33 @@ public class ParserResumeTestCase {
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(1);
         while (context.state != ParseState.PARSE_COMPLETE) {
-            HttpRequestParser.instance(OptionMap.EMPTY).handle(buffer, context, result);
+            PARSER.handle(buffer, context, result);
+            buffer.limit(buffer.limit() + 1);
+        }
+        runAssertions(result, context);
+    }
+
+    @Test
+    public void testMethodSplitWithEncoding() {
+        byte[] in = ENCODED_DATA.getBytes();
+        for (int i = 0; i < in.length - 4; ++i) {
+            try {
+                testResume(i, in);
+            } catch (Throwable e) {
+                throw new RuntimeException("Test failed at split " + i, e);
+            }
+        }
+    }
+
+    @Test
+    public void testOneCharacterAtATimeWithEncoding() {
+        byte[] in = ENCODED_DATA.getBytes();
+        final ParseState context = new ParseState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        ByteBuffer buffer = ByteBuffer.wrap(in);
+        buffer.limit(1);
+        while (context.state != ParseState.PARSE_COMPLETE) {
+            PARSER.handle(buffer, context, result);
             buffer.limit(buffer.limit() + 1);
         }
         runAssertions(result, context);
@@ -67,17 +96,17 @@ public class ParserResumeTestCase {
         HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(split);
-        HttpRequestParser.instance(OptionMap.EMPTY).handle(buffer, context, result);
+        PARSER.handle(buffer, context, result);
         buffer.limit(buffer.capacity());
-        HttpRequestParser.instance(OptionMap.EMPTY).handle(buffer, context, result);
+        PARSER.handle(buffer, context, result);
         runAssertions(result, context);
         Assert.assertEquals(4, buffer.remaining());
     }
 
     private void runAssertions(final HttpServerExchange result, final ParseState context) {
         Assert.assertSame(Methods.POST, result.getRequestMethod());
-        Assert.assertEquals("/apath", result.getRelativePath());
-        Assert.assertEquals("http://www.somehost.net/apath", result.getRequestURI());
+        Assert.assertEquals("/apath with spaces and Iñtërnâtiônàližætiøn", result.getRelativePath());
+        Assert.assertEquals("http://www.somehost.net/apath with spaces and Iñtërnâtiônàližætiøn", result.getRequestURI());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
 
         Assert.assertEquals("www.somehost.net", result.getRequestHeaders().getFirst(new HttpString("Host")));
@@ -87,9 +116,9 @@ public class ParserResumeTestCase {
         Assert.assertEquals(4, result.getRequestHeaders().getHeaderNames().size());
 
         Assert.assertEquals(ParseState.PARSE_COMPLETE, context.state);
-        Assert.assertEquals("key1=value1&key2=value2", result.getQueryString());
+        Assert.assertEquals("key1=value1&key2=Iñtërnâtiônàližætiøn", result.getQueryString());
         Assert.assertEquals("value1", result.getQueryParameters().get("key1").getFirst());
-        Assert.assertEquals("value2", result.getQueryParameters().get("key2").getFirst());
+        Assert.assertEquals("Iñtërnâtiônàližætiøn", result.getQueryParameters().get("key2").getFirst());
     }
 
 }

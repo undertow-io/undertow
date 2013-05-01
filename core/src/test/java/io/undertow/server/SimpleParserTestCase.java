@@ -20,6 +20,7 @@ package io.undertow.server;
 
 import java.nio.ByteBuffer;
 
+import io.undertow.UndertowOptions;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
@@ -39,6 +40,29 @@ import org.xnio.OptionMap;
  * @author Stuart Douglas
  */
 public class SimpleParserTestCase {
+
+
+    @Test
+    public void testEncodedSlashDisallowed() {
+        byte[] in = "GET /somepath%2FotherPath HTTP/1.1\r\n\r\n".getBytes();
+
+        final ParseState context = new ParseState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/somepath%2FotherPath", result.getRequestURI());
+    }
+
+    @Test
+    public void testEncodedSlashAllowed() {
+        byte[] in = "GET /somepath%2fotherPath HTTP/1.1\r\n\r\n".getBytes();
+
+        final ParseState context = new ParseState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/somepath/otherPath", result.getRequestURI());
+    }
 
 
     @Test
