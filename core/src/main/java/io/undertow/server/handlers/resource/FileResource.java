@@ -141,6 +141,7 @@ public class FileResource implements Resource {
                 }
                 ByteBuffer buffer = pooled.getResource();
                 try {
+                    buffer.clear();
                     int res = fileChannel.read(buffer);
                     if (res == -1) {
                         //we are done, just return

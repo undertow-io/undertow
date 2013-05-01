@@ -48,7 +48,6 @@ public final class HttpHandlers {
 
     public static void executeRootHandler(final HttpHandler handler, final HttpServerExchange exchange, boolean inIoThread) {
         try {
-            exchange.setInIoThread(inIoThread);
             exchange.setInCall(true);
             handler.handleRequest(exchange);
             exchange.setInCall(false);

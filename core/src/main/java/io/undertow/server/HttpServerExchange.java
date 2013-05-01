@@ -171,11 +171,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_DISPATCHED = 1 << 15;
 
     /**
-     * If this flag is set the request is in an IO thread.
-     */
-    private static final int FLAG_IN_IO_THREAD = 1 << 16;
-
-    /**
      * If this flag is set then the request is current being processed.
      */
     private static final int FLAG_IN_CALL = 1 << 17;
@@ -402,16 +397,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         return anyAreSet(state, FLAG_PERSISTENT);
     }
 
-    void setInIoThread(final boolean inIoThread) {
-        if (inIoThread) {
-            state |= FLAG_IN_IO_THREAD;
-        } else {
-            state &= ~FLAG_IN_IO_THREAD;
-        }
-    }
-
     public boolean isInIoThread() {
-        return anyAreSet(state, FLAG_IN_IO_THREAD);
+        return getIoThread() == Thread.currentThread();
     }
 
     public boolean isUpgrade() {
