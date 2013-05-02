@@ -232,7 +232,7 @@ public class CachedResource implements Resource {
         public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
             try {
                 cache.dereference();
-                if (exchange.isResponseStarted()) {
+                if (! exchange.isResponseStarted()) {
                     exchange.setResponseCode(500);
                 }
             } finally {
