@@ -236,9 +236,13 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
         return state & MASK_COUNT;
     }
 
-    private void exitWrite(long oldVal, long consumed) {
+    private void exitWrite(long oldVal, long consumed) throws IOException {
         long newVal = oldVal - consumed;
         state = newVal;
+        if(newVal == 0) {
+            terminateWrites();
+            flush();
+        }
     }
 
     private void exitFlush(long oldVal, boolean flushed) {
