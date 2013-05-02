@@ -280,28 +280,4 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
         return oldVal;
     }
 
-    private long enterClose() {
-        long oldVal, newVal;
-        oldVal = state;
-        if (anyAreSet(oldVal, FLAG_CLOSE_COMPLETE)) {
-            // no action necessary
-            return oldVal;
-        }
-        newVal = oldVal | FLAG_CLOSE_REQUESTED | FLAG_CLOSE_COMPLETE;
-        if (anyAreSet(oldVal, MASK_COUNT)) {
-            // error: channel not filled.  set both close flags.
-            newVal |= FLAG_CLOSE_REQUESTED | FLAG_CLOSE_COMPLETE;
-        }
-        state = newVal;
-        return oldVal;
-    }
-
-    private void exitClose(long oldVal) {
-        if (!anyAreSet(oldVal, FLAG_CLOSE_COMPLETE)) {
-            if(finishListener != null) {
-                finishListener.handleEvent(this);
-            }
-        }
-    }
-
 }

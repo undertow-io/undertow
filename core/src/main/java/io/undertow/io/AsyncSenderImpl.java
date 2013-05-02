@@ -7,6 +7,7 @@ import java.nio.charset.Charset;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
+import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -22,6 +23,33 @@ public class AsyncSenderImpl implements Sender {
     private final StreamSinkChannel streamSinkChannel;
     private final HttpServerExchange exchange;
 
+    private final ChannelListener<Channel> writeListener = new ChannelListener<Channel>() {
+        @Override
+        public void handleEvent(final Channel channel) {
+            try {
+                long toWrite = Buffers.remaining(buffer);
+                long written = 0;
+                while (written < toWrite) {
+                    long res = streamSinkChannel.write(buffer, 0, buffer.length);
+                    written += res;
+                    if (res == 0) {
+                        return;
+                    }
+                }
+                streamSinkChannel.suspendWrites();
+                callback.onComplete(exchange, AsyncSenderImpl.this);
+            } catch (IOException e) {
+                streamSinkChannel.suspendWrites();
+                callback.onException(exchange, AsyncSenderImpl.this, e);
+            }
+        }
+    };
+
+
+    private ByteBuffer[] buffer;
+    private IoCallback callback;
+
+
     public AsyncSenderImpl(final StreamSinkChannel streamSinkChannel, final HttpServerExchange exchange) {
         this.streamSinkChannel = streamSinkChannel;
         this.exchange = exchange;
@@ -35,30 +63,15 @@ public class AsyncSenderImpl implements Sender {
         }
         try {
             do {
-                if(buffer.remaining() == 0) {
+                if (buffer.remaining() == 0) {
                     callback.onComplete(exchange, this);
                     return;
                 }
                 int res = streamSinkChannel.write(buffer);
                 if (res == 0) {
-                    streamSinkChannel.getWriteSetter().set(new ChannelListener<Channel>() {
-                        @Override
-                        public void handleEvent(final Channel channel) {
-                            try {
-                                do {
-                                    int res = streamSinkChannel.write(buffer);
-                                    if (res == 0) {
-                                        return;
-                                    }
-                                } while (buffer.hasRemaining());
-                                streamSinkChannel.suspendWrites();
-                                callback.onComplete(exchange, AsyncSenderImpl.this);
-                            } catch (IOException e) {
-                                streamSinkChannel.suspendWrites();
-                                callback.onException(exchange, AsyncSenderImpl.this, e);
-                            }
-                        }
-                    });
+                    this.buffer = new ByteBuffer[]{buffer};
+                    this.callback = callback;
+                    streamSinkChannel.getWriteSetter().set(writeListener);
                     streamSinkChannel.resumeWrites();
                     return;
                 }
@@ -88,28 +101,9 @@ public class AsyncSenderImpl implements Sender {
                 long res = streamSinkChannel.write(buffer);
                 written += res;
                 if (res == 0) {
-                    final long finalWritten = written;
-                    streamSinkChannel.getWriteSetter().set(new ChannelListener<Channel>() {
-
-                        long written = finalWritten;
-
-                        @Override
-                        public void handleEvent(final Channel channel) {
-                            try {
-                                do {
-                                    long res = streamSinkChannel.write(buffer);
-                                    written += res;
-                                    if (res == 0) {
-                                        return;
-                                    }
-                                } while (written < total);
-                                streamSinkChannel.suspendWrites();
-                                callback.onComplete(exchange, AsyncSenderImpl.this);
-                            } catch (IOException e) {
-                                callback.onException(exchange, AsyncSenderImpl.this, e);
-                            }
-                        }
-                    });
+                    this.buffer = buffer;
+                    this.callback = callback;
+                    streamSinkChannel.getWriteSetter().set(writeListener);
                     streamSinkChannel.resumeWrites();
                     return;
                 }
