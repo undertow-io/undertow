@@ -139,19 +139,22 @@ public class FileResource implements Resource {
                     pooled = exchange.getConnection().getBufferPool().allocate();
                     sender = exchange.getResponseSender();
                 }
-                ByteBuffer buffer = pooled.getResource();
-                try {
-                    buffer.clear();
-                    int res = fileChannel.read(buffer);
-                    if (res == -1) {
-                        //we are done, just return
-                        sender.close();
-                        return;
+                if(pooled != null) {
+                    ByteBuffer buffer = pooled.getResource();
+                    try {
+                        buffer.clear();
+                        int res = fileChannel.read(buffer);
+                        if (res == -1) {
+                            //we are done, just return
+                            sender.close();
+                            pooled.free();
+                            return;
+                        }
+                        buffer.flip();
+                        sender.send(buffer, this);
+                    } catch (IOException e) {
+                        onException(exchange, sender, e);
                     }
-                    buffer.flip();
-                    sender.send(buffer, this);
-                } catch (IOException e) {
-                    onException(exchange, sender, e);
                 }
 
             }
@@ -169,6 +172,7 @@ public class FileResource implements Resource {
             public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
                 if (pooled != null) {
                     pooled.free();
+                    pooled = null;
                 }
                 IoUtils.safeClose(fileChannel);
                 if (!exchange.isResponseStarted()) {
