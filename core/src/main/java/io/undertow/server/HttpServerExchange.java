@@ -651,6 +651,15 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * Sets the response content length
+     *
+     * @param length The content length
+     */
+    public void setResponseContentLength(long length) {
+        responseHeaders.put(Headers.CONTENT_LENGTH, Long.toString(length));
+    }
+
+    /**
      * Returns a mutable map of very parameters.
      *
      * @return The query parameters
