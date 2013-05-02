@@ -108,11 +108,11 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * The actual response channel. May be null if it has not been created yet.
      */
-    private StreamSinkChannel responseChannel;
+    private WriteDispatchChannel responseChannel;
     /**
      * The actual request channel. May be null if it has not been created yet.
      */
-    private StreamSourceChannel requestChannel;
+    private ReadDispatchChannel requestChannel;
 
     private BlockingHttpExchange blockingHttpExchange;
 
@@ -736,6 +736,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             // idempotent
             return;
         }
+        if(requestChannel != null) {
+            requestChannel.requestDone();
+        }
         this.state = oldVal | FLAG_REQUEST_TERMINATED;
         if (anyAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
             invokeExchangeCompleteListeners();
@@ -996,6 +999,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             // idempotent
             return;
         }
+        responseChannel.responseDone();
         this.state = oldVal | FLAG_RESPONSE_TERMINATED;
         if (anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
             invokeExchangeCompleteListeners();
@@ -1419,6 +1423,14 @@ public final class HttpServerExchange extends AbstractAttachable {
                 delegate.resumeWrites();
             }
         }
+
+        public void responseDone() {
+            delegate.getCloseSetter().set(null);
+            delegate.getWriteSetter().set(null);
+            if(delegate.isWriteResumed()) {
+                delegate.suspendWrites();
+            }
+        }
     }
 
     /**
@@ -1594,6 +1606,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public XnioIoThread getIoThread() {
             return delegate.getIoThread();
+        }
+
+        public void requestDone() {
+            delegate.getReadSetter().set(null);
+            delegate.getCloseSetter().set(null);
+            if(delegate.isReadResumed()) {
+                delegate.suspendReads();
+            }
         }
     }
 }
