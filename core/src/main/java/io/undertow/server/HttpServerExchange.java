@@ -619,12 +619,12 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      *
-     * @return The content length of the request, or <code>null</code> if it has not been set
+     * @return The content length of the request, or <code>-1</code> if it has not been set
      */
-    public Long getRequestContentLength() {
+    public long getRequestContentLength() {
         String contentLengthString = requestHeaders.getFirst(Headers.CONTENT_LENGTH);
         if(contentLengthString == null) {
-            return null;
+            return -1;
         }
         return Long.parseLong(contentLengthString);
     }
@@ -640,12 +640,12 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      *
-     * @return The content length of the response, or <code>null</code> if it has not been set
+     * @return The content length of the response, or <code>-1</code> if it has not been set
      */
-    public Long getResponseContentLength() {
+    public long getResponseContentLength() {
         String contentLengthString = responseHeaders.getFirst(Headers.CONTENT_LENGTH);
         if(contentLengthString == null) {
-            return null;
+            return -1;
         }
         return Long.parseLong(contentLengthString);
     }
