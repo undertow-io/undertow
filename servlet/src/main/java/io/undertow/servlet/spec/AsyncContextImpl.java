@@ -40,6 +40,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
@@ -330,7 +331,7 @@ public class AsyncContextImpl implements AsyncContext {
             try {
                 ((HttpServletResponse)servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             } catch (IOException e) {
-                //ignore, not much we can do here
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             }
             if(!dispatched) {
                 complete();
@@ -388,7 +389,7 @@ public class AsyncContextImpl implements AsyncContext {
                         try {
                             ((HttpServletResponse)servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                         } catch (IOException e) {
-                            //ignore
+                            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         }
                         if(!dispatched) {
                             complete();

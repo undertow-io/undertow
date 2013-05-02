@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+import io.undertow.UndertowLogger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -61,6 +62,7 @@ public class StringWriteChannelListener implements ChannelListener<StreamSinkCha
                 writeDone(channel);
             }
         } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             IoUtils.safeClose(channel);
         }
     }
@@ -79,6 +81,7 @@ public class StringWriteChannelListener implements ChannelListener<StreamSinkCha
                 writeDone(channel);
             }
         } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             IoUtils.safeClose(channel);
         }
     }
@@ -100,10 +103,9 @@ public class StringWriteChannelListener implements ChannelListener<StreamSinkCha
                 }, ChannelListeners.closingChannelExceptionHandler()));
                 channel.resumeWrites();
 
-            } else {
-                IoUtils.safeClose(channel);
             }
         } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             IoUtils.safeClose(channel);
         }
     }

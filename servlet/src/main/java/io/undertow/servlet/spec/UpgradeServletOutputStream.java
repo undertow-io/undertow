@@ -196,7 +196,7 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
                         try {
                             listener.onWritePossible();
                         } catch (IOException e) {
-                            IoUtils.safeClose(channel);
+                            listener.onError(e);
                         }
                     }
                 });

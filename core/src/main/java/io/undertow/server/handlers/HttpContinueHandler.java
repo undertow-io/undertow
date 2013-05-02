@@ -44,7 +44,7 @@ public class HttpContinueHandler implements HttpHandler {
 
                     @Override
                     public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
-                        UndertowLogger.REQUEST_LOGGER.debugf("IOException writing HTTP/1.1 100 Continue response");
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                         exchange.endExchange();
                     }
                 });

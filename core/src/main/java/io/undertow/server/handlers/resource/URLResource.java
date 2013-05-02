@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.Date;
 import java.util.List;
 
+import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
@@ -131,6 +132,7 @@ public class URLResource implements Resource {
 
             @Override
             public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                 IoUtils.safeClose(inputStream);
                 if (!exchange.isResponseStarted()) {
                     exchange.setResponseCode(500);

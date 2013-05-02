@@ -2,6 +2,7 @@ package io.undertow.io;
 
 import java.io.IOException;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.IoUtils;
 
@@ -22,6 +23,7 @@ public class DefaultIoCallback implements IoCallback {
 
             @Override
             public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                 exchange.endExchange();
             }
         });

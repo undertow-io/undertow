@@ -3,6 +3,7 @@ package io.undertow.server.handlers.cache;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
@@ -194,6 +195,7 @@ public class ResponseCache {
 
         @Override
         public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
             cache.dereference();
             exchange.endExchange();
         }

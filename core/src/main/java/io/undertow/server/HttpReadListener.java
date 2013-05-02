@@ -82,9 +82,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                     try {
                         res = channel.read(buffer);
                     } catch (IOException e) {
-                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                            UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
-                        }
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         safeClose(channel);
                         return;
                     }
@@ -110,9 +108,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                             responseChannel.resumeWrites();
                         }
                     } catch (IOException e) {
-                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                            UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
-                        }
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         // fuck it, it's all ruined
                         IoUtils.safeClose(channel);
                         return;
@@ -152,13 +148,14 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
             this.httpServerExchange = null;
             HttpTransferEncoding.handleRequest(httpServerExchange, connection.getRootHandler());
         } catch (Exception e) {
-            sendBadRequestAndClose(connection.getChannel());
+            sendBadRequestAndClose(connection.getChannel(), e);
         } finally {
             if (free) pooled.free();
         }
     }
 
-    private void sendBadRequestAndClose(final StreamConnection channel) {
+    private void sendBadRequestAndClose(final StreamConnection channel, final Exception exception) {
+        UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(exception);
         new StringWriteChannelListener(BAD_REQUEST) {
             @Override
             protected void writeDone(final StreamSinkChannel c) {

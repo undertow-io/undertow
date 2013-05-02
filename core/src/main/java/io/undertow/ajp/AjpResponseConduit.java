@@ -495,7 +495,7 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         if (isWriteResumed()) {
                             next.wakeupWrites();
                         }
-                        UndertowLogger.REQUEST_LOGGER.debug("Error writing get request body chunk");
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     }
                 }
             });

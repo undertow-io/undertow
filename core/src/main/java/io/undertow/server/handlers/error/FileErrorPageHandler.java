@@ -93,12 +93,12 @@ public class FileErrorPageHandler implements HttpHandler {
                     try {
                         fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
                     } catch (FileNotFoundException e) {
-                        //TODO: how to handle this
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         exchange.endExchange();
                         return;
                     }
                 } catch (IOException e) {
-                    UndertowLogger.REQUEST_LOGGER.exceptionReadingFile(file.toPath(), e);
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     exchange.endExchange();
                     return;
                 }

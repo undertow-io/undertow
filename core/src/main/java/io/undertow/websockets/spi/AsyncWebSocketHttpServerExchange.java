@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.ExchangeCompletionListener;
@@ -119,6 +120,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
             @Override
             public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                 future.setException(exception);
 
             }

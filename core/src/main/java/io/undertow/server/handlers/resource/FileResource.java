@@ -170,6 +170,7 @@ public class FileResource implements Resource {
 
             @Override
             public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                 if (pooled != null) {
                     pooled.free();
                     pooled = null;

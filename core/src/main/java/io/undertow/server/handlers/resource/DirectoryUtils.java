@@ -5,6 +5,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 
+import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -120,6 +121,7 @@ public class DirectoryUtils {
         } catch (UnsupportedEncodingException e) {
             throw new IllegalStateException(e);
         } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             exchange.setResponseCode(500);
         }
 

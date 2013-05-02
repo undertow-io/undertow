@@ -1039,7 +1039,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                     //TODO: can we end up in this situation in a IO thread?
                     blockingHttpExchange.getInputStream().close();
                 } catch (IOException e) {
-                    UndertowLogger.REQUEST_LOGGER.debug("Exception draining request stream", e);
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     IoUtils.safeClose(connection.getChannel());
                 }
             }
@@ -1086,7 +1086,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                         break;
                     }
                 } catch (IOException e) {
-                    UndertowLogger.REQUEST_LOGGER.debug("Exception draining request stream", e);
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     IoUtils.safeClose(connection.getChannel());
                     break;
                 }
@@ -1127,7 +1127,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 responseChannel.resumeWrites();
             }
         } catch (IOException e) {
-            UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", e);
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             IoUtils.safeClose(connection.getChannel());
         }
     }

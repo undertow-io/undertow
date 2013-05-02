@@ -213,7 +213,6 @@ public class DefaultServlet extends HttpServlet {
                     return i;
                 }
             } catch (IOException e) {
-
             }
         }
         return null;

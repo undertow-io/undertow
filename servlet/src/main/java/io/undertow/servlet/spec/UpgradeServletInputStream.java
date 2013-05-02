@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 
+import io.undertow.UndertowLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -123,6 +124,7 @@ public class UpgradeServletInputStream extends ServletInputStream {
                     channel.suspendReads();
                     listener.onDataAvailable();
                 } catch (IOException e) {
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     IoUtils.safeClose(channel);
                 }
             }

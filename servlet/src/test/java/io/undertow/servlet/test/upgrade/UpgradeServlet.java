@@ -27,6 +27,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.WebConnection;
 
+import io.undertow.UndertowLogger;
+
 /**
  * Simple upgrade servlet. Because the apache http client does not handle upgrades we keep faking http
  * after we upgrade
@@ -59,7 +61,7 @@ public class UpgradeServlet extends HttpServlet {
                     message = builder.toString();
                 } while (!"exit\r\n\r\n".equals(message));
             } catch (IOException e) {
-                e.printStackTrace();
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
 
             }
         }

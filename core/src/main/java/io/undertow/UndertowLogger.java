@@ -41,7 +41,13 @@ public interface UndertowLogger extends BasicLogger {
 
     UndertowLogger ROOT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName());
     UndertowLogger CLIENT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, HttpClient.class.getPackage().getName());
+
     UndertowLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request");
+    /**
+     * Logger used for IO exceptions. Generally these should be suppressed, because they are of little interest, and it is easy for an
+     * attacker to fill up the logs by intentionally causing IO exceptions.
+     */
+    UndertowLogger REQUEST_IO_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.io");
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5001, value = "An exception occurred processing the request")
@@ -86,4 +92,13 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.WARN)
     @Message(id = 5012, value = "Could not find boundary in multipart request with ContentType: %s, multipart data will not be available")
     void couldNotDetectBoundary(String mimeType);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5013, value = "An IOException occurred")
+    void ioException(@Cause IOException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5014, value = "Failed to parse HTTP request")
+    void failedToParseRequest(@Cause Exception e);
 }
+

@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import io.undertow.UndertowLogger;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpHandler;
@@ -111,6 +112,7 @@ public class ResourceHandler implements HttpHandler {
                 try {
                     resource = resourceManager.getResource(exchange.getRelativePath());
                 } catch (IOException e) {
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     exchange.setResponseCode(500);
                     exchange.endExchange();
                     return;

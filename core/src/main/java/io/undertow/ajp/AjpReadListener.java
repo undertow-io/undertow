@@ -73,9 +73,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
                     try {
                         res = channel.read(buffer);
                     } catch (IOException e) {
-                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                            UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
-                        }
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         safeClose(channel);
                         return;
                     }
@@ -100,9 +98,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
                             responseChannel.resumeWrites();
                         }
                     } catch (IOException e) {
-                        if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                            UndertowLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
-                        }
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         // fuck it, it's all ruined
                         IoUtils.safeClose(channel);
                         return;
@@ -199,7 +195,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
                                         return;
                                     }
                                 } catch (IOException e) {
-                                    UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+                                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                                     IoUtils.safeClose(connection);
                                 }
                             } while (buffer.hasRemaining());
@@ -213,7 +209,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
             } while (buffer.hasRemaining());
             AjpReadListener.this.handleEvent(underlyingChannel.getSourceChannel());
         } catch (IOException e) {
-            UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             IoUtils.safeClose(connection);
         }
     }
