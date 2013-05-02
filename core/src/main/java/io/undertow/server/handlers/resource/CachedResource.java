@@ -61,7 +61,7 @@ public class CachedResource implements Resource {
         this.contentLength = underlyingResource.getContentLength();
         this.directory = underlyingResource.isDirectory();
         this.lastModifiedDate = underlyingResource.getLastModified();
-        if(lastModifiedDate != null) {
+        if (lastModifiedDate != null) {
             this.lastModifiedDateString = DateUtils.toDateString(lastModifiedDate);
         } else {
             this.lastModifiedDateString = null;
@@ -122,18 +122,24 @@ public class CachedResource implements Resource {
 
 
         final DirectBufferCache dataCache = cachingResourceManager.getDataCache();
-        if(dataCache == null) {
+        if (dataCache == null) {
             underlyingResource.serve(exchange);
             return;
         }
-        DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
+        final DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
         //it is not cached yet, install a wrapper to grab the data
         if (existing == null || !existing.enabled() || !existing.reference()) {
             exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
                 @Override
                 public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
 
-                    final DirectBufferCache.CacheEntry entry = dataCache.add(cacheKey, length.intValue());
+
+                    final DirectBufferCache.CacheEntry entry;
+                    if (existing == null) {
+                        entry = dataCache.add(cacheKey, length.intValue());
+                    } else {
+                        entry = existing;
+                    }
 
                     if (entry == null || entry.buffers().length == 0 || !entry.claimEnable()) {
                         return factory.create();
@@ -215,12 +221,23 @@ public class CachedResource implements Resource {
 
         @Override
         public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-            cache.dereference();
+            try {
+                cache.dereference();
+            } finally {
+                exchange.endExchange();
+            }
         }
 
         @Override
         public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
-            cache.dereference();
+            try {
+                cache.dereference();
+                if (exchange.isResponseStarted()) {
+                    exchange.setResponseCode(500);
+                }
+            } finally {
+                exchange.endExchange();
+            }
         }
     }
 }

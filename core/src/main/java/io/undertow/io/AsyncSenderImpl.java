@@ -103,6 +103,7 @@ public class AsyncSenderImpl implements Sender {
                                         return;
                                     }
                                 } while (written < total);
+                                streamSinkChannel.suspendWrites();
                                 callback.onComplete(exchange, AsyncSenderImpl.this);
                             } catch (IOException e) {
                                 callback.onException(exchange, AsyncSenderImpl.this, e);

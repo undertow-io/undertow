@@ -24,6 +24,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
+import org.xnio.Buffers;
 import org.xnio.channels.FixedLengthOverflowException;
 import org.xnio.channels.FixedLengthUnderflowException;
 import org.xnio.channels.StreamSourceChannel;
@@ -79,31 +80,20 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
 
 
     public int write(final ByteBuffer src) throws IOException {
+        long val = state;
+        final long remaining = val & MASK_COUNT;
         if (!src.hasRemaining()) {
             return 0;
         }
-        long val = state;
         if (allAreSet(val, FLAG_CLOSE_REQUESTED)) {
             throw new ClosedChannelException();
         }
-        if (allAreClear(val, MASK_COUNT)) {
+        if (src.remaining() > remaining) {
             throw new FixedLengthOverflowException();
         }
         int res = 0;
-        final long remaining = val & MASK_COUNT;
         try {
-            final int lim = src.limit();
-            final int pos = src.position();
-            if (lim - pos > remaining) {
-                src.limit((int) (remaining - (long) pos));
-                try {
-                    return res = next.write(src);
-                } finally {
-                    src.limit(lim);
-                }
-            } else {
-                return res = next.write(src);
-            }
+           return res = next.write(src);
         } finally {
             exitWrite(val, (long) res);
         }
@@ -120,40 +110,16 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
             return write(srcs[offset]);
         }
         long val = state;
+        final long remaining = val & MASK_COUNT;
         if (allAreSet(val, FLAG_CLOSE_REQUESTED)) {
             throw new ClosedChannelException();
         }
-        if (allAreClear(val, MASK_COUNT)) {
+        long toWrite = Buffers.remaining(srcs, offset, length);
+        if (toWrite > remaining) {
             throw new FixedLengthOverflowException();
         }
         long res = 0L;
         try {
-            if ((val & MASK_COUNT) == 0L) {
-                return -1L;
-            }
-            int lim;
-            // The total amount of buffer space discovered so far.
-            long t = 0L;
-            for (int i = 0; i < length; i++) {
-                final ByteBuffer buffer = srcs[i + offset];
-                // Grow the discovered buffer space by the remaining size of the current buffer.
-                // We want to capture the limit so we calculate "remaining" ourselves.
-                t += (lim = buffer.limit()) - buffer.position();
-                if (t > (val & MASK_COUNT)) {
-                    // only read up to this point, and trim the last buffer by the number of extra bytes
-                    buffer.limit(lim - (int) (t - (val & MASK_COUNT)));
-                    try {
-                        return res = next.write(srcs, offset, i + 1);
-                    } finally {
-                        // restore the original limit
-                        buffer.limit(lim);
-                    }
-                }
-            }
-            if (t == 0L) {
-                return 0L;
-            }
-            // the total buffer space is less than the remaining count.
             return res = next.write(srcs, offset, length);
         } finally {
             exitWrite(val, res);
