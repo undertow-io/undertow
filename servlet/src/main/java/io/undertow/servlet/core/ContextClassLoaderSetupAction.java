@@ -35,7 +35,7 @@ public class ContextClassLoaderSetupAction implements ThreadSetupAction {
     @Override
     public Handle setup(final HttpServerExchange exchange) {
         final ClassLoader old = SecurityActions.getContextClassLoader();
-        Thread.currentThread().setContextClassLoader(classLoader);
+        SecurityActions.setContextClassLoader(classLoader);
         return new Handle() {
             @Override
             public void tearDown() {
