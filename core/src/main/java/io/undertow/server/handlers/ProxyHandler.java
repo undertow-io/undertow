@@ -18,6 +18,12 @@
 
 package io.undertow.server.handlers;
 
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import io.undertow.UndertowLogger;
 import io.undertow.client.HttpClient;
 import io.undertow.client.HttpClientConnection;
 import io.undertow.client.HttpClientRequest;
@@ -28,14 +34,12 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
+import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
+import org.xnio.channels.StreamSinkChannel;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -68,25 +72,42 @@ public final class ProxyHandler implements HttpHandler {
             exchange.setResponseCode(response.getResponseCode());
             copyHeaders(outboundResponseHeaders, inboundResponseHeaders);
             try {
-                ChannelListeners.initiateTransfer(response.readReplyBody(), exchange.getResponseChannel(), exchange.getConnection().getBufferPool());
+                ChannelListeners.initiateTransfer(Long.MAX_VALUE, response.readReplyBody(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+
             } catch (IOException e) {
-                exchange.setResponseCode(500);
-                exchange.endExchange();
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                try {
+                    if (!exchange.isResponseStarted()) {
+                        exchange.setResponseCode(500);
+                    }
+                } finally {
+                    exchange.endExchange();
+                }
             }
         }
     };
 
     private final HttpClient client;
     private final SocketAddress destination;
-    private final IoFuture.HandlingNotifier<HttpClientConnection,HttpServerExchange> notifier = new IoFuture.HandlingNotifier<HttpClientConnection, HttpServerExchange>() {
+    private final IoFuture.HandlingNotifier<HttpClientConnection, HttpServerExchange> notifier = new IoFuture.HandlingNotifier<HttpClientConnection, HttpServerExchange>() {
         public void handleCancelled(final HttpServerExchange exchange) {
-            exchange.setResponseCode(500);
-            exchange.endExchange();
+            try {
+                if (!exchange.isResponseStarted()) {
+                    exchange.setResponseCode(500);
+                }
+            } finally {
+                exchange.endExchange();
+            }
         }
 
         public void handleFailed(final IOException exception, final HttpServerExchange exchange) {
-            exchange.setResponseCode(500);
-            exchange.endExchange();
+            try {
+                if (!exchange.isResponseStarted()) {
+                    exchange.setResponseCode(500);
+                }
+            } finally {
+                exchange.endExchange();
+            }
         }
 
         public void handleDone(final HttpClientConnection connection, final HttpServerExchange exchange) {
@@ -100,7 +121,7 @@ public final class ProxyHandler implements HttpHandler {
     /**
      * Construct a new instance.
      *
-     * @param client the pre-configured HTTP client to use
+     * @param client      the pre-configured HTTP client to use
      * @param destination the destination address to proxy traffic to
      */
     public ProxyHandler(final HttpClient client, final SocketAddress destination) {
@@ -110,30 +131,17 @@ public final class ProxyHandler implements HttpHandler {
 
     public void handleRequest(final HttpServerExchange exchange) {
         final HttpServerConnection serverConnection = exchange.getConnection();
-        HttpClientConnection clientConnection = serverConnection.getAttachment(proxyConnection);
+        final HttpClientConnection clientConnection = serverConnection.getAttachment(proxyConnection);
         if (clientConnection == null) {
-            client.connect(destination, OptionMap.EMPTY).addNotifier(notifier, exchange);
+            exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
+                @Override
+                public void run() {
+                    client.connect(destination, OptionMap.EMPTY).addNotifier(notifier, exchange);
+                }
+            });
             return;
         }
-        final HttpClientRequest request;
-        try {
-            request = clientConnection.createRequest(exchange.getRequestMethod(), new URI(exchange.getRequestURI()));
-        } catch (URISyntaxException e) {
-            exchange.setResponseCode(500);
-            exchange.endExchange();
-            return;
-        }
-        final HeaderMap inboundRequestHeaders = exchange.getRequestHeaders();
-        final HeaderMap outboundRequestHeaders = request.getRequestHeaders();
-        copyHeaders(outboundRequestHeaders, inboundRequestHeaders);
-        final long requestContentLength = exchange.getRequestContentLength();
-        if (requestContentLength == 0L) {
-            request.writeRequestBody(0L);
-        } else {
-            ChannelListeners.initiateTransfer(exchange.getRequestChannel(), request.writeRequestBody(requestContentLength), serverConnection.getBufferPool());
-        }
-        final IoFuture<HttpClientResponse> futureResponse = request.getResponse();
-        futureResponse.addNotifier(RESPONSE_NOTIFIER, exchange);
+        exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(clientConnection, exchange, serverConnection));
     }
 
     static void copyHeaders(final HeaderMap to, final HeaderMap from) {
@@ -145,4 +153,45 @@ public final class ProxyHandler implements HttpHandler {
             f = from.fiNextNonEmpty(f);
         }
     }
+
+
+    private static class ProxyAction implements Runnable {
+        private final HttpClientConnection clientConnection;
+        private final HttpServerExchange exchange;
+        private final HttpServerConnection serverConnection;
+
+        public ProxyAction(final HttpClientConnection clientConnection, final HttpServerExchange exchange, final HttpServerConnection serverConnection) {
+            this.clientConnection = clientConnection;
+            this.exchange = exchange;
+            this.serverConnection = serverConnection;
+        }
+
+        @Override
+        public void run() {
+            final HttpClientRequest request;
+            try {
+                String requestURI = exchange.getRequestURI();
+                if(exchange.getQueryString() != null) {
+                    requestURI += "?" + exchange.getQueryString();
+                }
+                request = clientConnection.createRequest(exchange.getRequestMethod(), new URI(requestURI));
+            } catch (URISyntaxException e) {
+                exchange.setResponseCode(500);
+                exchange.endExchange();
+                return;
+            }
+            final HeaderMap inboundRequestHeaders = exchange.getRequestHeaders();
+            final HeaderMap outboundRequestHeaders = request.getRequestHeaders();
+            copyHeaders(outboundRequestHeaders, inboundRequestHeaders);
+            final long requestContentLength = exchange.getRequestContentLength();
+            if (requestContentLength == 0L || requestContentLength == -1L) {
+                request.writeRequestBody(0L);
+            } else {
+                ChannelListeners.initiateTransfer(exchange.getRequestChannel(), request.writeRequestBody(requestContentLength), serverConnection.getBufferPool());
+            }
+            final IoFuture<HttpClientResponse> futureResponse = request.getResponse();
+            futureResponse.addNotifier(RESPONSE_NOTIFIER, exchange);
+        }
+    }
+
 }

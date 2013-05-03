@@ -37,6 +37,7 @@
     <properties>
         <test.level>INFO</test.level>
         <ajp>false</ajp>
+        <proxy>false</proxy>
     </properties>
 
     <dependencies>
@@ -150,6 +151,7 @@
                     <runOrder>reversealphabetical</runOrder>
                     <systemPropertyVariables>
                         <ajp>${ajp}</ajp>
+                        <proxy>${proxy}</proxy>
                         <default.server.address>localhost</default.server.address>
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>

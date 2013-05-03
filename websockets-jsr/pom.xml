@@ -37,6 +37,7 @@
     <properties>
         <test.level>INFO</test.level>
         <serverPort>7777</serverPort>
+        <proxy>false</proxy>
     </properties>
 
     <dependencies>
@@ -121,6 +122,7 @@
                     <enableAssertions>true</enableAssertions>
                     <runOrder>reversealphabetical</runOrder>
                     <systemPropertyVariables>
+                        <proxy>${proxy}</proxy>
                         <default.server.address>localhost</default.server.address>
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
