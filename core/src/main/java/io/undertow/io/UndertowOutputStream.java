@@ -49,7 +49,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
     private StreamSinkChannel channel;
     private int state;
     private int written;
-    private final Integer contentLength;
+    private final long contentLength;
 
     private static final int FLAG_CLOSED = 1;
     private static final int FLAG_WRITE_STARTED = 1 << 1;
@@ -57,16 +57,11 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
     /**
      * Construct a new instance.  No write timeout is configured.
      *
-     * @param exchange
+     * @param exchange The exchange
      */
     public UndertowOutputStream(HttpServerExchange exchange) {
         this.exchange = exchange;
-        final String cl = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
-        if (cl != null) {
-            contentLength = Integer.parseInt(cl);
-        } else {
-            contentLength = null;
-        }
+        this.contentLength = exchange.getResponseContentLength();
     }
 
     /**
@@ -93,26 +88,40 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
-        int written = 0;
+        //if this is the last of the content
         ByteBuffer buffer = buffer();
-        while (written < len) {
-            if (buffer.remaining() >= (len - written)) {
-                buffer.put(b, off + written, len - written);
-                if (buffer.remaining() == 0) {
-                    writeBuffer();
-                }
-                updateWritten(len);
-                return;
-            } else {
-                int remaining = buffer.remaining();
-                buffer.put(b, off + written, remaining);
-                writeBuffer();
-                written += remaining;
+        if (len == contentLength - written || buffer.remaining() < len) {
+            writeBufferBlocking(ByteBuffer.wrap(b, off, len));
+        } else {
+            buffer.put(b, off, len);
+            if (buffer.remaining() == 0) {
+                writeBufferBlocking(null);
             }
         }
         updateWritten(len);
     }
 
+
+    private void writeBufferBlocking(final ByteBuffer extraData) throws IOException {
+        if (channel == null) {
+            channel = exchange.getResponseChannel();
+        }
+        if (buffer == null) {
+            //only happens when writing extra data
+            Channels.writeBlocking(channel, extraData);
+        } else {
+            buffer.flip();
+            if (extraData == null) {
+                if (buffer.hasRemaining()) {
+                    Channels.writeBlocking(channel, buffer);
+                }
+            } else {
+                Channels.writeBlocking(channel, new ByteBuffer[]{buffer, extraData}, 0, 2);
+            }
+            buffer.clear();
+        }
+        state |= FLAG_WRITE_STARTED;
+    }
 
     @Override
     public void write(ByteBuffer[] buffers) throws IOException {
@@ -129,7 +138,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
 
         //if we have received the exact amount of content write it out in one go
         //this is a common case when writing directly from a buffer cache.
-        if (this.written == 0 && contentLength != null && len == contentLength) {
+        if (this.written == 0 && len == contentLength) {
             if (channel == null) {
                 channel = exchange.getResponseChannel();
             }
@@ -166,7 +175,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
 
     void updateWritten(final int len) throws IOException {
         this.written += len;
-        if (contentLength != null && this.written >= contentLength) {
+        if (contentLength != -1 && this.written >= contentLength) {
             flush();
             close();
         }

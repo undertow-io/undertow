@@ -57,7 +57,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private ResponseState responseState = ResponseState.NONE;
     private PrintWriter writer;
     private Integer bufferSize;
-    private Long contentLength;
+    private long contentLength = -1;
     private boolean insideInclude = false;
     private Locale locale;
     private boolean responseDone = false;

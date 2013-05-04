@@ -69,7 +69,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     private StreamSinkChannel channel;
     private long written;
     private int state;
-    private final Long contentLength;
+    private final long contentLength;
     private AsyncContextImpl asyncContext;
 
     private WriteListener listener;
@@ -94,9 +94,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     /**
      * Construct a new instance.  No write timeout is configured.
-     *
      */
-    public ServletOutputStreamImpl(Long contentLength, final HttpServletResponseImpl servletResponse) {
+    public ServletOutputStreamImpl(long contentLength, final HttpServletResponseImpl servletResponse) {
         this.servletResponse = servletResponse;
         this.contentLength = contentLength;
         this.underlyingConnectionChannel = servletResponse.getExchange().getConnection().getChannel().getSinkChannel();
@@ -105,7 +104,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     /**
      * Construct a new instance.  No write timeout is configured.
-     *
      */
     public ServletOutputStreamImpl(Long contentLength, final HttpServletResponseImpl servletResponse, int bufferSize) {
         this.servletResponse = servletResponse;
@@ -135,26 +133,19 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
-        if (len <1) {
+        if (len < 1) {
             return;
         }
 
         if (listener == null) {
-            int written = 0;
             ByteBuffer buffer = buffer();
-            while (written < len) {
-                if (buffer.remaining() >= (len - written)) {
-                    buffer.put(b, off + written, len - written);
-                    if (buffer.remaining() == 0) {
-                        writeBufferBlocking();
-                    }
-                    updateWritten(len);
-                    return;
-                } else {
-                    int remaining = buffer.remaining();
-                    buffer.put(b, off + written, remaining);
-                    writeBufferBlocking();
-                    written += remaining;
+            //if this is the last of the content
+            if (len == contentLength - written || buffer.remaining() < len) {
+                writeBufferBlocking( ByteBuffer.wrap(b, off, len));
+            } else {
+                buffer.put(b, off, len);
+                if (buffer.remaining() == 0) {
+                    writeBufferBlocking(null);
                 }
             }
             updateWritten(len);
@@ -207,17 +198,17 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
         int len = 0;
-        for(ByteBuffer buf : buffers){
+        for (ByteBuffer buf : buffers) {
             len += buf.remaining();
         }
-        if (len <1) {
+        if (len < 1) {
             return;
         }
 
         if (listener == null) {
             //if we have received the exact amount of content write it out in one go
             //this is a common case when writing directly from a buffer cache.
-            if(this.written == 0 && contentLength != null && len == contentLength) {
+            if (this.written == 0 && len == contentLength) {
                 if (channel == null) {
                     channel = servletResponse.getExchange().getResponseChannel();
                 }
@@ -225,19 +216,19 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 state |= FLAG_WRITE_STARTED;
             } else {
                 ByteBuffer buffer = buffer();
-                if(len < buffer.remaining()) {
+                if (len < buffer.remaining()) {
                     Buffers.copy(buffer, buffers, 0, buffers.length);
                 } else {
                     if (channel == null) {
                         channel = servletResponse.getExchange().getResponseChannel();
                     }
-                    if(buffer.position() == 0) {
+                    if (buffer.position() == 0) {
                         Channels.writeBlocking(channel, buffers, 0, buffers.length);
                     } else {
-                        final ByteBuffer[] newBuffers = new ByteBuffer[buffers.length +1];
+                        final ByteBuffer[] newBuffers = new ByteBuffer[buffers.length + 1];
                         buffer.flip();
                         newBuffers[0] = buffer;
-                        System.arraycopy(buffers, 0 ,newBuffers, 1, buffers.length);
+                        System.arraycopy(buffers, 0, newBuffers, 1, buffers.length);
                         Channels.writeBlocking(channel, newBuffers, 0, newBuffers.length);
                         buffer.clear();
                     }
@@ -296,14 +287,14 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     void updateWritten(final int len) throws IOException {
         this.written += len;
-        if (contentLength != null && this.written >= contentLength) {
+        if (contentLength != -1 && this.written >= contentLength) {
             close();
         }
     }
 
     void updateWrittenAsync(final int len) throws IOException {
         this.written += len;
-        if (contentLength != null && this.written >= contentLength) {
+        if (contentLength != -1 && this.written >= contentLength) {
             state |= FLAG_CLOSED;
             if (flushBufferAsync()) {
                 channel.shutdownWrites();
@@ -386,7 +377,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 return;
             }
             if (buffer != null && buffer.position() != 0) {
-                writeBufferBlocking();
+                writeBufferBlocking(null);
             }
             if (channel == null) {
                 channel = servletResponse.getExchange().getResponseChannel();
@@ -419,16 +410,24 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
     }
 
-    private void writeBufferBlocking() throws IOException {
-        buffer.flip();
+    private void writeBufferBlocking(final ByteBuffer extraData) throws IOException {
         if (channel == null) {
             channel = servletResponse.getExchange().getResponseChannel();
         }
-        if(!buffer.hasRemaining()) {
-            return;
+        if(buffer == null) {
+            //only happens when writing extra data
+            Channels.writeBlocking(channel, extraData);
+        } else {
+            buffer.flip();
+            if(extraData == null) {
+                if (buffer.hasRemaining()) {
+                    Channels.writeBlocking(channel, buffer);
+                }
+            } else {
+                Channels.writeBlocking(channel, new ByteBuffer[] {buffer, extraData}, 0, 2);
+            }
+            buffer.clear();
         }
-        Channels.writeBlocking(channel, buffer);
-        buffer.clear();
         state |= FLAG_WRITE_STARTED;
     }
 
@@ -449,7 +448,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             }
             try {
                 if (buffer != null) {
-                    writeBufferBlocking();
+                    writeBufferBlocking(null);
                 }
                 if (channel == null) {
                     channel = servletResponse.getExchange().getResponseChannel();
