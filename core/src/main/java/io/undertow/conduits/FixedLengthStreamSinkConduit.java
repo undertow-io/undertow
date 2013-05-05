@@ -93,7 +93,7 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
         }
         int res = 0;
         try {
-           return res = next.write(src);
+            return res = next.write(src);
         } finally {
             exitWrite(val, (long) res);
         }
@@ -208,9 +208,7 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
             try {
                 throw new FixedLengthUnderflowException((val & MASK_COUNT) + " bytes remaining");
             } finally {
-                if (allAreSet(config, CONF_FLAG_PASS_CLOSE)) {
-                    next.truncateWrites();
-                }
+                next.truncateWrites();
             }
         } else if (allAreSet(config, CONF_FLAG_PASS_CLOSE)) {
             next.terminateWrites();
@@ -246,16 +244,16 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
         boolean callFinish = false;
         if (anyAreSet(oldVal, FLAG_CLOSE_REQUESTED) && flushed) {
             newVal |= FLAG_CLOSE_COMPLETE;
-        }
 
-        if (flushed && !anyAreSet(oldVal, FLAG_FINISHED_CALLED)) {
-            newVal |= FLAG_FINISHED_CALLED;
-            callFinish = true;
-        }
-        state = newVal;
-        if (callFinish && (newVal & MASK_COUNT) == 0L) {
-            if(finishListener != null) {
-                finishListener.handleEvent(this);
+            if (!anyAreSet(oldVal, FLAG_FINISHED_CALLED) && (newVal & MASK_COUNT) == 0L) {
+                newVal |= FLAG_FINISHED_CALLED;
+                callFinish = true;
+            }
+            state = newVal;
+            if (callFinish) {
+                if (finishListener != null) {
+                    finishListener.handleEvent(this);
+                }
             }
         }
     }
