@@ -1,5 +1,6 @@
 package io.undertow.server;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -21,7 +22,10 @@ public interface BlockingHttpExchange {
     InputStream getInputStream();
 
     /**
-     * Returns the output stream that is in use for this exchange
+     * Returns the output stream that is in use for this exchange.
+     *
+     * In some circumstances this may not be available, such as if a writer
+     * is being used for a servlet response
      *
      * @return The output stream
      */
@@ -34,4 +38,8 @@ public interface BlockingHttpExchange {
      */
     Sender getSender();
 
+    /**
+     * Closes both the input and output streams
+     */
+    void close() throws IOException;
 }

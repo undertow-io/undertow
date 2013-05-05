@@ -517,9 +517,21 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (reader != null) {
             throw UndertowServletMessages.MESSAGES.getReaderAlreadyCalled();
         }
-        servletInputStream = new ServletInputStreamImpl(this);
+        if(servletInputStream == null) {
+            servletInputStream = new ServletInputStreamImpl(this);
+        }
         readStarted = true;
         return servletInputStream;
+    }
+
+    public void closeAndDrainRequest() throws IOException {
+        if(reader != null) {
+            reader.close();
+        }
+        if(servletInputStream == null) {
+            servletInputStream = new ServletInputStreamImpl(this);
+        }
+        servletInputStream.close();
     }
 
     @Override

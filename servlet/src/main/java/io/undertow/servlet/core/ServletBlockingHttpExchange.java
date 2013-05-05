@@ -12,6 +12,8 @@ import io.undertow.io.Sender;
 import io.undertow.server.BlockingHttpExchange;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.servlet.spec.HttpServletResponseImpl;
 
 /**
  * @author Stuart Douglas
@@ -60,5 +62,16 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
             }
         }
         return sender;
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (!exchange.isComplete()) {
+            ServletAttachments attachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+            HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(attachments.getServletRequest());
+            request.closeAndDrainRequest();
+            HttpServletResponseImpl response = HttpServletResponseImpl.getResponseImpl(attachments.getServletResponse());
+            response.closeStreamAndWriter();
+        }
     }
 }

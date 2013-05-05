@@ -1030,19 +1030,20 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
 
+        if(blockingHttpExchange != null) {
+            try {
+                //TODO: can we end up in this situation in a IO thread?
+                blockingHttpExchange.close();
+            } catch (IOException e) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                IoUtils.safeClose(connection.getChannel());
+            }
+        }
+
         //417 means that we are rejecting the request
         //so the client should not actually send any data
         //TODO: how
         if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
-            if(blockingHttpExchange != null) {
-                try {
-                    //TODO: can we end up in this situation in a IO thread?
-                    blockingHttpExchange.getInputStream().close();
-                } catch (IOException e) {
-                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                    IoUtils.safeClose(connection.getChannel());
-                }
-            }
 
             //not really sure what the best thing to do here is
             //for now we are just going to drain the channel
@@ -1100,9 +1101,6 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private void closeAndFlushResponse() {
         try {
-            if(blockingHttpExchange != null) {
-                blockingHttpExchange.getOutputStream().close();
-            }
             if (isResponseChannelAvailable()) {
                 getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                 getResponseChannel();
@@ -1216,6 +1214,12 @@ public final class HttpServerExchange extends AbstractAttachable {
                 sender = new BlockingSenderImpl(exchange, getOutputStream());
             }
             return sender;
+        }
+
+        @Override
+        public void close() throws IOException {
+            getInputStream().close();
+            getOutputStream().close();
         }
     }
 
