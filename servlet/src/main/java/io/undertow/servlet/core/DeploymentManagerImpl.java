@@ -444,9 +444,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
             } else {
                 FilterHandler handler;
                 if (targetServlet != null) {
-                    handler = new FilterHandler(noExtension, targetServlet);
+                    handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), targetServlet);
                 } else {
-                    handler = new FilterHandler(noExtension, defaultServlet);
+                    handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), defaultServlet);
                 }
                 initialHandler = servletChain(handler, targetServlet == null ? defaultServlet.getManagedServlet() : targetServlet.getManagedServlet());
             }
@@ -465,7 +465,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     }
                     HttpHandler handler = pathServlet;
                     if (!entry.getValue().isEmpty()) {
-                        handler = new FilterHandler(entry.getValue(), handler);
+                        handler = new FilterHandler(entry.getValue(), deploymentInfo.isAllowNonStandardWrappers(), handler);
                     }
                     builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet()));
                 }
@@ -491,7 +491,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             if (filters.isEmpty()) {
                 builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), entry.getValue().getManagedServlet()));
             } else {
-                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filters, entry.getValue()), entry.getValue().getManagedServlet()));
+                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filters, deploymentInfo.isAllowNonStandardWrappers(), entry.getValue()), entry.getValue().getManagedServlet()));
             }
         }
 

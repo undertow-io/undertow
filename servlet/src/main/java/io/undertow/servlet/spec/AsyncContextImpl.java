@@ -88,12 +88,12 @@ public class AsyncContextImpl implements AsyncContext {
     private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<>();
     private boolean processingAsyncTask = false;
 
-    public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse, final AsyncContextImpl previousAsyncContext) {
+    public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse, final ServletRequestContext servletRequestContext, final AsyncContextImpl previousAsyncContext) {
         this.exchange = exchange;
         this.servletRequest = servletRequest;
         this.servletResponse = servletResponse;
+        this.servletRequestContext = servletRequestContext;
         this.previousAsyncContext = previousAsyncContext;
-        this.servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         initiatingThread = Thread.currentThread();
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override

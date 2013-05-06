@@ -30,9 +30,11 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
+import javax.servlet.ServletRequestWrapper;
 import javax.servlet.ServletResponse;
+import javax.servlet.ServletResponseWrapper;
 
-import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
@@ -71,13 +73,22 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
     @Override
     public void forward(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
-        final ServletRequestContext attachments = ServletRequestContext.current();
-        final HttpServletRequestImpl requestImpl = attachments.getOriginalRequest();
-        final HttpServletResponseImpl responseImpl = attachments.getOriginalResponse();
-        final HttpServerExchange exchange = requestImpl.getExchange();
+        final ServletRequestContext servletRequestContext = ServletRequestContext.current();
+        final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
+        final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
+        if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {
+            if (servletRequestContext.getOriginalRequest() != request) {
+                if (!(request instanceof ServletRequestWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
+                }
+            }
+            if (servletRequestContext.getOriginalResponse() != response) {
+                if (!(response instanceof ServletResponseWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
+                }
+            }
+        }
         response.resetBuffer();
-
-        ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
 
         final ServletRequest oldRequest = servletRequestContext.getServletRequest();
         final ServletResponse oldResponse = servletRequestContext.getServletResponse();
@@ -121,9 +132,9 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 servletRequestContext.setServletRequest(request);
                 servletRequestContext.setServletResponse(response);
                 if (named) {
-                    servletContext.getDeployment().getServletDispatcher().dispatchToServlet(exchange, chain, DispatcherType.FORWARD);
+                    servletContext.getDeployment().getServletDispatcher().dispatchToServlet(requestImpl.getExchange(), chain, DispatcherType.FORWARD);
                 } else {
-                    servletContext.getDeployment().getServletDispatcher().dispatchToPath(exchange, pathMatch, DispatcherType.FORWARD);
+                    servletContext.getDeployment().getServletDispatcher().dispatchToPath(requestImpl.getExchange(), pathMatch, DispatcherType.FORWARD);
                 }
 
                 if (response instanceof HttpServletResponseImpl) {
@@ -180,13 +191,22 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
     @Override
     public void include(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
+        final ServletRequestContext servletRequestContext = ServletRequestContext.current();
+        final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
+        final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
+        if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {
+            if (servletRequestContext.getOriginalRequest() != request) {
+                if (!(request instanceof ServletRequestWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
+                }
+            }
+            if (servletRequestContext.getOriginalResponse() != response) {
+                if (!(response instanceof ServletResponseWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
+                }
+            }
+        }
 
-        final ServletRequestContext attachments = ServletRequestContext.current();
-        final HttpServletRequestImpl requestImpl = attachments.getOriginalRequest();
-        final HttpServletResponseImpl responseImpl = attachments.getOriginalResponse();
-        final HttpServerExchange exchange = requestImpl.getExchange();
-
-        ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         final ServletRequest oldRequest = servletRequestContext.getServletRequest();
         final ServletResponse oldResponse = servletRequestContext.getServletResponse();
 
@@ -232,7 +252,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             try {
                 servletRequestContext.setServletRequest(request);
                 servletRequestContext.setServletResponse(response);
-                servletContext.getDeployment().getServletDispatcher().dispatchToServlet(exchange, chain, DispatcherType.INCLUDE);
+                servletContext.getDeployment().getServletDispatcher().dispatchToServlet(requestImpl.getExchange(), chain, DispatcherType.INCLUDE);
             } catch (ServletException e) {
                 throw e;
             } catch (IOException e) {
@@ -272,15 +292,23 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
 
     private void error(final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception, final String message) throws ServletException, IOException {
-
-        final ServletRequestContext attachments = ServletRequestContext.current();
-        final HttpServletRequestImpl requestImpl = attachments.getOriginalRequest();
-        final HttpServletResponseImpl responseImpl = attachments.getOriginalResponse();
-        final HttpServerExchange exchange = requestImpl.getExchange();
+        final ServletRequestContext servletRequestContext = ServletRequestContext.current();
+        final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
+        final HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
+        if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {
+            if (servletRequestContext.getOriginalRequest() != request) {
+                if (!(request instanceof ServletRequestWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
+                }
+            }
+            if (servletRequestContext.getOriginalResponse() != response) {
+                if (!(response instanceof ServletResponseWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
+                }
+            }
+        }
         response.resetBuffer();
 
-
-        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         final ServletRequest oldRequest = servletRequestContext.getServletRequest();
         final ServletResponse oldResponse = servletRequestContext.getServletResponse();
         servletRequestContext.setDispatcherType(DispatcherType.ERROR);
@@ -294,7 +322,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             request.setAttribute(ERROR_EXCEPTION_TYPE, exception.getClass());
         }
         request.setAttribute(ERROR_MESSAGE, message);
-        request.setAttribute(ERROR_STATUS_CODE, exchange.getResponseCode());
+        request.setAttribute(ERROR_STATUS_CODE, responseImpl.getStatus());
 
         String newQueryString = "";
         int qsPos = path.indexOf("?");
@@ -336,7 +364,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             try {
                 servletRequestContext.setServletRequest(request);
                 servletRequestContext.setServletResponse(response);
-                servletContext.getDeployment().getServletDispatcher().dispatchToPath(exchange, pathMatch, DispatcherType.ERROR);
+                servletContext.getDeployment().getServletDispatcher().dispatchToPath(requestImpl.getExchange(), pathMatch, DispatcherType.ERROR);
             } catch (ServletException e) {
                 throw e;
             } catch (IOException e) {

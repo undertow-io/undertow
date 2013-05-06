@@ -66,6 +66,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile LoginConfig loginConfig;
     private volatile IdentityManager identityManager;
     private volatile ConfidentialPortManager confidentialPortManager;
+    private volatile boolean allowNonStandardWrappers = false;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -176,6 +177,15 @@ public class DeploymentInfo implements Cloneable {
 
     public DeploymentInfo setClassIntrospecter(final ClassIntrospecter classIntrospecter) {
         this.classIntrospecter = classIntrospecter;
+        return this;
+    }
+
+    public boolean isAllowNonStandardWrappers() {
+        return allowNonStandardWrappers;
+    }
+
+    public DeploymentInfo setAllowNonStandardWrappers(final boolean allowNonStandardWrappers) {
+        this.allowNonStandardWrappers = allowNonStandardWrappers;
         return this;
     }
 
@@ -624,6 +634,7 @@ public class DeploymentInfo implements Cloneable {
         info.dispatchedHandlerChainWrappers.addAll(dispatchedHandlerChainWrappers);
         info.securityRoles.addAll(securityRoles);
         info.notificationReceivers.addAll(notificationReceivers);
+        info.setAllowNonStandardWrappers(allowNonStandardWrappers);
         return info;
     }
 

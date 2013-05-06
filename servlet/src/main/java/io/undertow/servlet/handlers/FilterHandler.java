@@ -27,10 +27,13 @@ import javax.servlet.DispatcherType;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
+import javax.servlet.ServletRequestWrapper;
 import javax.servlet.ServletResponse;
+import javax.servlet.ServletResponseWrapper;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.spec.AsyncContextImpl;
 
@@ -41,10 +44,12 @@ public class FilterHandler implements HttpHandler {
 
     private final Map<DispatcherType, List<ManagedFilter>> filters;
     private final Map<DispatcherType, Boolean> asyncSupported;
+    private final boolean allowNonStandardWrappers;
 
     private final HttpHandler next;
 
-    public FilterHandler(final Map<DispatcherType, List<ManagedFilter>> filters, final HttpHandler next) {
+    public FilterHandler(final Map<DispatcherType, List<ManagedFilter>> filters, final boolean allowNonStandardWrappers, final HttpHandler next) {
+        this.allowNonStandardWrappers = allowNonStandardWrappers;
         this.next = next;
         this.filters = new HashMap<DispatcherType, List<ManagedFilter>>(filters);
         Map<DispatcherType, Boolean> asyncSupported = new HashMap<DispatcherType, Boolean>();
@@ -76,7 +81,7 @@ public class FilterHandler implements HttpHandler {
         if(filters == null) {
             next.handleRequest(exchange);
         } else {
-            final FilterChainImpl filterChain = new FilterChainImpl(exchange, filters, next);
+            final FilterChainImpl filterChain = new FilterChainImpl(exchange, filters, next, allowNonStandardWrappers);
             filterChain.doFilter(request, response);
         }
     }
@@ -87,20 +92,37 @@ public class FilterHandler implements HttpHandler {
         final HttpServerExchange exchange;
         final List<ManagedFilter> filters;
         final HttpHandler next;
+        final boolean allowNonStandardWrappers;
 
-        private FilterChainImpl(final HttpServerExchange exchange, final List<ManagedFilter> filters, final HttpHandler next) {
+        private FilterChainImpl(final HttpServerExchange exchange, final List<ManagedFilter> filters, final HttpHandler next, final boolean allowNonStandardWrappers) {
             this.exchange = exchange;
             this.filters = filters;
             this.next = next;
+            this.allowNonStandardWrappers = allowNonStandardWrappers;
         }
 
         @Override
         public void doFilter(final ServletRequest request, final ServletResponse response) throws IOException, ServletException {
 
+
+
             final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
             final ServletRequest oldReq = servletRequestContext.getServletRequest();
             final ServletResponse oldResp = servletRequestContext.getServletResponse();
             try {
+
+                if(!allowNonStandardWrappers) {
+                    if(oldReq != request) {
+                        if(!(request instanceof ServletRequestWrapper)) {
+                            throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
+                        }
+                    }
+                    if(oldResp != response) {
+                        if(!(response instanceof ServletResponseWrapper)) {
+                            throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
+                        }
+                    }
+                }
                 servletRequestContext.setServletRequest(request);
                 servletRequestContext.setServletResponse(response);
                 int index = location++;

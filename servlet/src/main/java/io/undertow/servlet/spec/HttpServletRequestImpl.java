@@ -48,7 +48,9 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletRequest;
+import javax.servlet.ServletRequestWrapper;
 import javax.servlet.ServletResponse;
+import javax.servlet.ServletResponseWrapper;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -843,18 +845,31 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         asyncStarted = true;
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        return asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), asyncContext);
+        return asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), servletRequestContext, asyncContext);
     }
 
     @Override
     public AsyncContext startAsync(final ServletRequest servletRequest, final ServletResponse servletResponse) throws IllegalStateException {
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if (!servletContext.getDeployment().getDeploymentInfo().isAllowNonStandardWrappers()) {
+            if (servletRequestContext.getOriginalRequest() != servletRequest) {
+                if (!(servletRequest instanceof ServletRequestWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(servletRequest);
+                }
+            }
+            if (servletRequestContext.getOriginalResponse() != servletResponse) {
+                if (!(servletResponse instanceof ServletResponseWrapper)) {
+                    throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(servletResponse);
+                }
+            }
+        }
         if (!isAsyncSupported()) {
             throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
         } else if (asyncStarted) {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
         asyncStarted = true;
-        return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, asyncContext);
+        return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, servletRequestContext, asyncContext);
     }
 
     @Override
