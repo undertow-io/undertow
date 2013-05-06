@@ -267,6 +267,9 @@ public class InMemorySessionManager implements SessionManager {
 
         @Override
         public void invalidate(final HttpServerExchange exchange) {
+            if (cancelKey != null) {
+                cancelKey.remove();
+            }
             final InMemorySession sess = sessions.remove(sessionId);
             if (sess == null) {
                 throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
