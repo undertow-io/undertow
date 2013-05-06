@@ -12,7 +12,7 @@ import io.undertow.servlet.handlers.ServletPathMatch;
 public interface ServletDispatcher {
     /**
      * Dispatches a servlet request to the specified servlet path, changing the current path
-     * @see io.undertow.servlet.handlers.ServletAttachments#SERVLET_PATH_MATCH
+     * @see io.undertow.servlet.handlers.ServletRequestContext#SERVLET_PATH_MATCH
      */
     void dispatchToPath(final HttpServerExchange exchange, final ServletPathMatch pathMatch, final DispatcherType dispatcherType) throws Exception;
 

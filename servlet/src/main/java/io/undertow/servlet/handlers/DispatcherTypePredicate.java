@@ -28,6 +28,6 @@ public class DispatcherTypePredicate implements Predicate {
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        return value.getAttachment(ServletAttachments.ATTACHMENT_KEY).getDispatcherType() == dispatcherType;
+        return value.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getDispatcherType() == dispatcherType;
     }
 }

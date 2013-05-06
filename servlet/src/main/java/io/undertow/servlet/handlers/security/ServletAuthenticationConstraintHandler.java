@@ -23,7 +23,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.servlet.api.SecurityInfo.EmptyRoleSemantic;
-import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletRequestContext;
 
 /**
  * A simple handler that just sets the auth type to REQUIRED after iterating each of the {@link SingleConstraintMatch} instances
@@ -40,7 +40,7 @@ public class ServletAuthenticationConstraintHandler extends AuthenticationConstr
 
     @Override
     protected boolean isAuthenticationRequired(final HttpServerExchange exchange) {
-        List<SingleConstraintMatch> constraints = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getRequiredConstrains();
+        List<SingleConstraintMatch> constraints = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getRequiredConstrains();
 
         /*
          * Even once this is set to true the reason we allow the loop to continue is in case an empty role with a semantic of

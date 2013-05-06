@@ -36,7 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.spi.UpgradeCallback;
@@ -53,21 +53,23 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
 
     private final HttpServletRequest request;
     private final HttpServletResponse response;
+    private final HttpServerExchange exchange;
 
     public ServletWebSocketHttpExchange(final HttpServletRequest request, final HttpServletResponse response) {
         this.request = request;
         this.response = response;
+        this.exchange = ServletRequestContext.current().getOriginalRequest().getExchange();
     }
 
 
     @Override
     public <T> void putAttachment(final AttachmentKey<T> key, final T value) {
-        HttpServletRequestImpl.getRequestImpl(request).getExchange().putAttachment(key, value);
+        exchange.putAttachment(key, value);
     }
 
     @Override
     public <T> T getAttachment(final AttachmentKey<T> key) {
-        return HttpServletRequestImpl.getRequestImpl(request).getExchange().getAttachment(key);
+        return exchange.getAttachment(key);
     }
 
     @Override
@@ -132,8 +134,6 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
 
     @Override
     public void upgradeChannel(final UpgradeCallback upgradeCallback) {
-        HttpServletRequestImpl impl = HttpServletRequestImpl.getRequestImpl(request);
-        HttpServerExchange exchange = impl.getExchange();
         exchange.upgradeChannel(new ExchangeCompletionListener() {
             @Override
             public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
@@ -183,8 +183,6 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
 
     @Override
     public void close() {
-        HttpServletRequestImpl impl = HttpServletRequestImpl.getRequestImpl(request);
-        HttpServerExchange exchange = impl.getExchange();
         IoUtils.safeClose(exchange.getConnection());
     }
 
@@ -200,8 +198,6 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
 
     @Override
     public Pool<ByteBuffer> getBufferPool() {
-        HttpServletRequestImpl impl = HttpServletRequestImpl.getRequestImpl(request);
-        HttpServerExchange exchange = impl.getExchange();
         return exchange.getConnection().getBufferPool();
     }
 

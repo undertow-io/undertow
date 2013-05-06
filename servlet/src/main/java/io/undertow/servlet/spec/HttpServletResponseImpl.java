@@ -30,14 +30,12 @@ import java.util.Set;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletResponse;
-import javax.servlet.ServletResponseWrapper;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
@@ -122,9 +120,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
         if (location != null) {
             RequestDispatcherImpl requestDispatcher = new RequestDispatcherImpl(location, servletContext);
-            final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+            final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
             try {
-                requestDispatcher.error(servletAttachments.getServletRequest(), servletAttachments.getServletResponse(), exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getCurrentServlet().getManagedServlet().getServletInfo().getName(), msg);
+                requestDispatcher.error(servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet().getManagedServlet().getServletInfo().getName(), msg);
             } catch (ServletException e) {
                 throw new RuntimeException(e);
             }
@@ -519,18 +517,6 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     public void setServletContext(final ServletContextImpl servletContext) {
         this.servletContext = servletContext;
-    }
-
-    public static HttpServletResponseImpl getResponseImpl(final ServletResponse response) {
-        final HttpServletResponseImpl requestImpl;
-        if (response instanceof HttpServletResponseImpl) {
-            requestImpl = (HttpServletResponseImpl) response;
-        } else if (response instanceof ServletResponseWrapper) {
-            requestImpl = getResponseImpl(((ServletResponseWrapper) response).getResponse());
-        } else {
-            throw UndertowServletMessages.MESSAGES.responseWasNotOriginalOrWrapper(response);
-        }
-        return requestImpl;
     }
 
     public ServletContextImpl getServletContext() {

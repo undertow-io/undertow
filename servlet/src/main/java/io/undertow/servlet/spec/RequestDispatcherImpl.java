@@ -33,7 +33,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
 
@@ -71,15 +71,16 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
     @Override
     public void forward(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
-        HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(request);
-        final HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
+        final ServletRequestContext attachments = ServletRequestContext.current();
+        final HttpServletRequestImpl requestImpl = attachments.getOriginalRequest();
+        final HttpServletResponseImpl responseImpl = attachments.getOriginalResponse();
         final HttpServerExchange exchange = requestImpl.getExchange();
         response.resetBuffer();
 
-        ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
 
-        final ServletRequest oldRequest = servletAttachments.getServletRequest();
-        final ServletResponse oldResponse = servletAttachments.getServletResponse();
+        final ServletRequest oldRequest = servletRequestContext.getServletRequest();
+        final ServletResponse oldResponse = servletRequestContext.getServletResponse();
 
         Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
 
@@ -110,15 +111,15 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             requestImpl.getExchange().setQueryString(newQueryString);
             requestImpl.getExchange().setRequestPath(newRequestUri);
             requestImpl.getExchange().setRequestURI(newRequestUri);
-            requestImpl.getExchange().getAttachment(ServletAttachments.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
+            requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
             requestImpl.setServletContext(servletContext);
             responseImpl.setServletContext(servletContext);
         }
 
         try {
             try {
-                servletAttachments.setServletRequest(request);
-                servletAttachments.setServletResponse(response);
+                servletRequestContext.setServletRequest(request);
+                servletRequestContext.setServletResponse(response);
                 if (named) {
                     servletContext.getDeployment().getServletDispatcher().dispatchToServlet(exchange, chain, DispatcherType.FORWARD);
                 } else {
@@ -146,8 +147,8 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 throw new RuntimeException(e);
             }
         } finally {
-            servletAttachments.setServletRequest(oldRequest);
-            servletAttachments.setServletResponse(oldResponse);
+            servletRequestContext.setServletRequest(oldRequest);
+            servletRequestContext.setServletResponse(oldResponse);
         }
     }
 
@@ -180,13 +181,14 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     @Override
     public void include(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
 
-        HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(request);
-        final HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
+        final ServletRequestContext attachments = ServletRequestContext.current();
+        final HttpServletRequestImpl requestImpl = attachments.getOriginalRequest();
+        final HttpServletResponseImpl responseImpl = attachments.getOriginalResponse();
         final HttpServerExchange exchange = requestImpl.getExchange();
 
-        ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-        final ServletRequest oldRequest = servletAttachments.getServletRequest();
-        final ServletResponse oldResponse = servletAttachments.getServletResponse();
+        ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        final ServletRequest oldRequest = servletRequestContext.getServletRequest();
+        final ServletResponse oldResponse = servletRequestContext.getServletResponse();
 
         Object requestUri = null;
         Object contextPath = null;
@@ -228,8 +230,8 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             requestImpl.setServletContext(servletContext);
             responseImpl.setServletContext(servletContext);
             try {
-                servletAttachments.setServletRequest(request);
-                servletAttachments.setServletResponse(response);
+                servletRequestContext.setServletRequest(request);
+                servletRequestContext.setServletResponse(response);
                 servletContext.getDeployment().getServletDispatcher().dispatchToServlet(exchange, chain, DispatcherType.INCLUDE);
             } catch (ServletException e) {
                 throw e;
@@ -243,8 +245,8 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             requestImpl.setServletContext(oldContext);
             responseImpl.setServletContext(oldContext);
 
-            servletAttachments.setServletRequest(oldRequest);
-            servletAttachments.setServletResponse(oldResponse);
+            servletRequestContext.setServletRequest(oldRequest);
+            servletRequestContext.setServletResponse(oldResponse);
             if (!named) {
                 request.setAttribute(INCLUDE_REQUEST_URI, requestUri);
                 request.setAttribute(INCLUDE_CONTEXT_PATH, contextPath);
@@ -270,16 +272,18 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
 
     private void error(final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception, final String message) throws ServletException, IOException {
-        HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(request);
-        final HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
+
+        final ServletRequestContext attachments = ServletRequestContext.current();
+        final HttpServletRequestImpl requestImpl = attachments.getOriginalRequest();
+        final HttpServletResponseImpl responseImpl = attachments.getOriginalResponse();
         final HttpServerExchange exchange = requestImpl.getExchange();
         response.resetBuffer();
 
 
-        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-        final ServletRequest oldRequest = servletAttachments.getServletRequest();
-        final ServletResponse oldResponse = servletAttachments.getServletResponse();
-        servletAttachments.setDispatcherType(DispatcherType.ERROR);
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        final ServletRequest oldRequest = servletRequestContext.getServletRequest();
+        final ServletResponse oldResponse = servletRequestContext.getServletResponse();
+        servletRequestContext.setDispatcherType(DispatcherType.ERROR);
 
 
         //only update if this is the first forward
@@ -323,15 +327,15 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         requestImpl.getExchange().setQueryString(newQueryString);
         requestImpl.getExchange().setRequestPath(newRequestUri);
         requestImpl.getExchange().setRequestURI(newRequestUri);
-        requestImpl.getExchange().getAttachment(ServletAttachments.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
+        requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
         requestImpl.setServletContext(servletContext);
         responseImpl.setServletContext(servletContext);
 
 
         try {
             try {
-                servletAttachments.setServletRequest(request);
-                servletAttachments.setServletResponse(response);
+                servletRequestContext.setServletRequest(request);
+                servletRequestContext.setServletResponse(response);
                 servletContext.getDeployment().getServletDispatcher().dispatchToPath(exchange, pathMatch, DispatcherType.ERROR);
             } catch (ServletException e) {
                 throw e;
@@ -341,8 +345,8 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 throw new RuntimeException(e);
             }
         } finally {
-            servletAttachments.setServletRequest(oldRequest);
-            servletAttachments.setServletResponse(oldResponse);
+            servletRequestContext.setServletRequest(oldRequest);
+            servletRequestContext.setServletResponse(oldResponse);
         }
     }
 }

@@ -51,7 +51,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
-import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.SameThreadExecutor;
@@ -71,6 +71,7 @@ public class AsyncContextImpl implements AsyncContext {
     private final ServletRequest servletRequest;
     private final ServletResponse servletResponse;
     private final TimeoutTask timeoutTask = new TimeoutTask();
+    private final ServletRequestContext servletRequestContext;
 
     private AsyncContextImpl previousAsyncContext; //the previous async context
 
@@ -92,6 +93,7 @@ public class AsyncContextImpl implements AsyncContext {
         this.servletRequest = servletRequest;
         this.servletResponse = servletResponse;
         this.previousAsyncContext = previousAsyncContext;
+        this.servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         initiatingThread = Thread.currentThread();
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
@@ -132,7 +134,7 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public void dispatch() {
-        final HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(servletRequest);
+        final HttpServletRequestImpl requestImpl = this.servletRequestContext.getOriginalRequest();
         final ServletPathMatch handler;
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         if (servletRequest instanceof HttpServletRequest) {
@@ -142,12 +144,12 @@ public class AsyncContextImpl implements AsyncContext {
         }
 
         final HttpServerExchange exchange = requestImpl.getExchange();
-        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
 
-        servletAttachments.setDispatcherType(DispatcherType.ASYNC);
+        servletRequestContext.setDispatcherType(DispatcherType.ASYNC);
 
-        servletAttachments.setServletRequest(servletRequest);
-        servletAttachments.setServletResponse(servletResponse);
+        servletRequestContext.setServletRequest(servletRequest);
+        servletRequestContext.setServletResponse(servletResponse);
 
         dispatchAsyncRequest(deployment.getServletDispatcher(), handler, exchange);
     }
@@ -174,11 +176,11 @@ public class AsyncContextImpl implements AsyncContext {
     @Override
     public void dispatch(final ServletContext context, final String path) {
 
-        HttpServletRequestImpl requestImpl = HttpServletRequestImpl.getRequestImpl(servletRequest);
-        HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(servletResponse);
+        HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
+        HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
         final HttpServerExchange exchange = requestImpl.getExchange();
 
-        exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).setDispatcherType( DispatcherType.ASYNC);
+        exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).setDispatcherType( DispatcherType.ASYNC);
 
         requestImpl.setAttribute(ASYNC_REQUEST_URI, requestImpl.getRequestURI());
         requestImpl.setAttribute(ASYNC_CONTEXT_PATH, requestImpl.getContextPath());
@@ -221,7 +223,7 @@ public class AsyncContextImpl implements AsyncContext {
 
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         ServletPathMatch info = deployment.getServletPaths().getServletHandlerByPath(newServletPath);
-        requestImpl.getExchange().getAttachment(ServletAttachments.ATTACHMENT_KEY).setServletPathMatch(info);
+        requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(info);
 
         dispatchAsyncRequest(deployment.getServletDispatcher(), info, exchange);
     }
@@ -241,7 +243,7 @@ public class AsyncContextImpl implements AsyncContext {
             }
             exchange.unDispatch();
             dispatched = true;
-            HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
+            HttpServletRequestImpl request = servletRequestContext.getOriginalRequest();
             initialRequestDone();
             request.asyncRequestDispatched();
         } else {
@@ -250,7 +252,7 @@ public class AsyncContextImpl implements AsyncContext {
                 public void run() {
                     //we do not run the ServletRequestListeners here, as the request does not come into the scope
                     //of a web application, as defined by the javadoc on ServletRequestListener
-                    HttpServletResponseImpl response = HttpServletResponseImpl.getResponseImpl(servletResponse);
+                    HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
                     response.responseDone();
                 }
             });
@@ -260,7 +262,7 @@ public class AsyncContextImpl implements AsyncContext {
     @Override
     public void start(final Runnable run) {
         Executor executor = asyncExecutor();
-        final CompositeThreadSetupAction setup = HttpServletRequestImpl.getRequestImpl(servletRequest).getServletContext().getDeployment().getThreadSetupAction();
+        final CompositeThreadSetupAction setup = servletRequestContext.getOriginalRequest().getServletContext().getDeployment().getThreadSetupAction();
         executor.execute(new Runnable() {
             @Override
             public void run() {
@@ -362,7 +364,7 @@ public class AsyncContextImpl implements AsyncContext {
             throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
         }
         dispatched = true;
-        final HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(servletRequest);
+        final HttpServletRequestImpl request = servletRequestContext.getOriginalRequest();
         addAsyncTask(new Runnable() {
             @Override
             public void run() {

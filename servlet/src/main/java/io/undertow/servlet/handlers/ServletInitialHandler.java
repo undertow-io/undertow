@@ -20,7 +20,8 @@ package io.undertow.servlet.handlers;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
-
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -73,15 +74,13 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
-        final ServletAttachments servletAttachments = new ServletAttachments();
-        servletAttachments.setServletRequest(request);
-        servletAttachments.setServletResponse(response);
-        exchange.putAttachment(ServletAttachments.ATTACHMENT_KEY, servletAttachments);
+        final ServletRequestContext servletRequestContext = new ServletRequestContext(request, response);
+        exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
 
         try {
             exchange.startBlocking(new ServletBlockingHttpExchange(exchange));
-            servletAttachments.setServletPathMatch(info);
-            dispatchRequest(exchange, servletAttachments, info, request, response, DispatcherType.REQUEST);
+            servletRequestContext.setServletPathMatch(info);
+            dispatchRequest(exchange, servletRequestContext, info, DispatcherType.REQUEST);
         } catch (Throwable t) {
             UndertowLogger.REQUEST_LOGGER.errorf(t, "Internal error handling servlet request %s", exchange.getRequestURI());
             exchange.endExchange();
@@ -89,81 +88,80 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     }
 
     public void dispatchToPath(final HttpServerExchange exchange, final ServletPathMatch pathInfo, final DispatcherType dispatcherType) throws Exception {
-        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-        HttpServletRequestImpl req = HttpServletRequestImpl.getRequestImpl(servletAttachments.getServletRequest());
-        HttpServletResponseImpl resp = HttpServletResponseImpl.getResponseImpl(servletAttachments.getServletResponse());
-        servletAttachments.setServletPathMatch(pathInfo);
-        dispatchRequest(exchange, servletAttachments, pathInfo, req, resp, dispatcherType);
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        servletRequestContext.setServletPathMatch(pathInfo);
+        dispatchRequest(exchange, servletRequestContext, pathInfo, dispatcherType);
     }
 
     @Override
     public void dispatchToServlet(final HttpServerExchange exchange, final ServletChain servletchain, final DispatcherType dispatcherType) throws Exception {
-        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-        HttpServletRequestImpl req = HttpServletRequestImpl.getRequestImpl(servletAttachments.getServletRequest());
-        HttpServletResponseImpl resp = HttpServletResponseImpl.getResponseImpl(servletAttachments.getServletResponse());
-        dispatchRequest(exchange, servletAttachments, servletchain, req, resp, dispatcherType);
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        dispatchRequest(exchange, servletRequestContext, servletchain, dispatcherType);
     }
 
-    private void dispatchRequest(final HttpServerExchange exchange, final ServletAttachments servletAttachments, final ServletChain servletChain, final HttpServletRequestImpl request, final HttpServletResponseImpl response, final DispatcherType dispatcherType) throws Exception {
-        servletAttachments.setDispatcherType(dispatcherType);
-        servletAttachments.setCurrentServlet(servletChain);
+    private void dispatchRequest(final HttpServerExchange exchange, final ServletRequestContext servletRequestContext, final ServletChain servletChain, final DispatcherType dispatcherType) throws Exception {
+        servletRequestContext.setDispatcherType(dispatcherType);
+        servletRequestContext.setCurrentServlet(servletChain);
         if (dispatcherType == DispatcherType.REQUEST || dispatcherType == DispatcherType.ASYNC) {
-            handleFirstRequest(exchange, servletChain, request, response);
+            handleFirstRequest(exchange, servletChain, servletRequestContext, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse());
         } else {
             next.handleRequest(exchange);
         }
     }
 
-    public void handleFirstRequest(final HttpServerExchange exchange, final ServletChain servletChain, final HttpServletRequestImpl request, final HttpServletResponseImpl response) throws Exception {
-
-        ThreadSetupAction.Handle handle = setupAction.setup(exchange);
+    public void handleFirstRequest(final HttpServerExchange exchange, final ServletChain servletChain, final ServletRequestContext servletRequestContext, final ServletRequest request, final ServletResponse response) throws Exception {
         try {
+            ServletRequestContext.setCurrentRequestContext(servletRequestContext);
+            ThreadSetupAction.Handle handle = setupAction.setup(exchange);
+            try {
+                listeners.requestInitialized(request);
+                next.handleRequest(exchange);
 
-            listeners.requestInitialized(request);
-            next.handleRequest(exchange);
-
-            if (!exchange.isResponseStarted() && exchange.getResponseCode() >= 400 && !exchange.isDispatched()) {
-                String location = servletContext.getDeployment().getErrorPages().getErrorLocation(exchange.getResponseCode());
-                if (location != null) {
-                    RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
-                    dispatcher.error(request, response, servletChain.getManagedServlet().getServletInfo().getName());
-                }
-            }
-            //
-        } catch (Throwable t) {
-            if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
-                exchange.unDispatch();
-                request.getAsyncContextInternal().handleError(t);
-            } else {
-                if (!exchange.isResponseStarted()) {
-                    exchange.setResponseCode(500);
-                    exchange.getResponseHeaders().clear();
-                    String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
-                    if (location == null && t instanceof ServletException) {
-                        location = servletContext.getDeployment().getErrorPages().getErrorLocation(t.getCause());
-                    }
+                if (!exchange.isResponseStarted() && exchange.getResponseCode() >= 400 && !exchange.isDispatched()) {
+                    String location = servletContext.getDeployment().getErrorPages().getErrorLocation(exchange.getResponseCode());
                     if (location != null) {
                         RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
-                        try {
-                            dispatcher.error(request, response, servletChain.getManagedServlet().getServletInfo().getName(), t);
-                        } catch (Exception e) {
-                            UndertowLogger.REQUEST_LOGGER.errorf(e, "Exception while generating error page %s", location);
-                        }
-                    } else {
-                        UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", exchange);
+                        dispatcher.error(request, response, servletChain.getManagedServlet().getServletInfo().getName());
                     }
                 }
+                //
+            } catch (Throwable t) {
+                if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
+                    exchange.unDispatch();
+                    servletRequestContext.getOriginalRequest().getAsyncContextInternal().handleError(t);
+                } else {
+                    if (!exchange.isResponseStarted()) {
+                        exchange.setResponseCode(500);
+                        exchange.getResponseHeaders().clear();
+                        String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
+                        if (location == null && t instanceof ServletException) {
+                            location = servletContext.getDeployment().getErrorPages().getErrorLocation(t.getCause());
+                        }
+                        if (location != null) {
+                            RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
+                            try {
+                                dispatcher.error(request, response, servletChain.getManagedServlet().getServletInfo().getName(), t);
+                            } catch (Exception e) {
+                                UndertowLogger.REQUEST_LOGGER.errorf(e, "Exception while generating error page %s", location);
+                            }
+                        } else {
+                            UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", exchange);
+                        }
+                    }
+                }
+            } finally {
+                handle.tearDown();
+            }
+
+            servletContext.getDeployment().getApplicationListeners().requestDestroyed(request);
+            if (!exchange.isDispatched()) {
+                servletRequestContext.getOriginalResponse().responseDone();
+                //this request is done, so we close any parser that may have been used
+                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+                IoUtils.safeClose(parser);
             }
         } finally {
-            handle.tearDown();
-        }
-
-        request.getServletContext().getDeployment().getApplicationListeners().requestDestroyed(request);
-        if (!exchange.isDispatched()) {
-            response.responseDone();
-            //this request is done, so we close any parser that may have been used
-            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-            IoUtils.safeClose(parser);
+            ServletRequestContext.clearCurrentServletAttachments();
         }
     }
 

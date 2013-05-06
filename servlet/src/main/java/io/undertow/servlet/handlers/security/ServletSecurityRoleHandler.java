@@ -22,14 +22,13 @@ import io.undertow.security.idm.Account;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.SecurityInfo;
-import io.undertow.servlet.handlers.ServletAttachments;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.servlet.handlers.ServletRequestContext;
 
 import java.util.List;
 import java.util.Set;
 
 import javax.servlet.DispatcherType;
-import javax.servlet.http.HttpServletRequest;
+import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
@@ -47,10 +46,10 @@ public class ServletSecurityRoleHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-        List<SingleConstraintMatch> constraints = servletAttachments.getRequiredConstrains();
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        List<SingleConstraintMatch> constraints = servletRequestContext.getRequiredConstrains();
         SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
-        HttpServletRequest request = HttpServletRequestImpl.getRequestImpl(servletAttachments.getServletRequest());
+        ServletRequest request = servletRequestContext.getServletRequest();
         if (request.getDispatcherType() != DispatcherType.REQUEST) {
             next.handleRequest(exchange);
         } else if (constraints == null || constraints.isEmpty()) {
@@ -75,7 +74,7 @@ public class ServletSecurityRoleHandler implements HttpHandler {
                     }
                 }
                 if (!found) {
-                    HttpServletResponse response = (HttpServletResponse) servletAttachments.getServletResponse();
+                    HttpServletResponse response = (HttpServletResponse) servletRequestContext.getServletResponse();
                     response.sendError(403);
                     return;
                 }

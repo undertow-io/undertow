@@ -25,7 +25,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.ConfidentialPortManager;
 import io.undertow.servlet.api.TransportGuaranteeType;
-import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletRequestContext;
 
 /**
  * Servlet specific extension to {@see SinglePortConfidentialityHandler}
@@ -43,7 +43,7 @@ public class ServletConfidentialityConstraintHandler extends SinglePortConfident
 
     @Override
     protected boolean confidentialityRequired(HttpServerExchange exchange) {
-        TransportGuaranteeType transportGuarantee = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getTransportGuarenteeType();
+        TransportGuaranteeType transportGuarantee = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getTransportGuarenteeType();
 
         // TODO - We may be able to add more flexibility here especially with authentication mechanisms such as Digest for
         // INTEGRAL - for now just use SSL.

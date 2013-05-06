@@ -78,9 +78,9 @@ public class ServletHandler implements HttpHandler {
         if(!asyncSupported) {
             exchange.putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, false);
         }
-        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-        ServletRequest request = servletAttachments.getServletRequest();
-        ServletResponse response = servletAttachments.getServletResponse();
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        ServletRequest request = servletRequestContext.getServletRequest();
+        ServletResponse response = servletRequestContext.getServletResponse();
         InstanceHandle<? extends Servlet> servlet = null;
         try {
             servlet = managedServlet.getServlet();

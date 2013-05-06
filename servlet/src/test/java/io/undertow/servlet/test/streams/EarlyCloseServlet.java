@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.HttpServerConnection;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.test.utils.DefaultServer;
 import org.junit.runner.RunWith;
@@ -41,7 +42,7 @@ public class EarlyCloseServlet extends HttpServlet {
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         req.getInputStream().close();
-        HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(req);
+        HttpServletRequestImpl request = ServletRequestContext.current().getOriginalRequest();
         if(connection == null) {
             connection = request.getExchange().getConnection();
         } else {

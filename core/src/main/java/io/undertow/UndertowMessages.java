@@ -168,4 +168,7 @@ public interface UndertowMessages {
 
     @Message(id = 47, value = "The number of parameters exceeded the maximum of %s")
     IllegalStateException tooManyParameters(int maxValues);
+
+    @Message(id = 48, value = "No request is currently active")
+    IllegalStateException noRequestActive();
 }

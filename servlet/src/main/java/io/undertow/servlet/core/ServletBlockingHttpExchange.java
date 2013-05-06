@@ -11,7 +11,7 @@ import io.undertow.io.BlockingSenderImpl;
 import io.undertow.io.Sender;
 import io.undertow.server.BlockingHttpExchange;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 
@@ -29,7 +29,7 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
 
     @Override
     public InputStream getInputStream() {
-        ServletRequest request = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletRequest();
+        ServletRequest request = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletRequest();
         try {
             return request.getInputStream();
         } catch (IOException e) {
@@ -39,7 +39,7 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
 
     @Override
     public OutputStream getOutputStream() {
-        ServletResponse response = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletResponse();
+        ServletResponse response = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletResponse();
         try {
             return response.getOutputStream();
         } catch (IOException e) {
@@ -53,7 +53,7 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
             try {
                 sender = new BlockingSenderImpl(exchange, getOutputStream());
             } catch (IllegalStateException e) {
-                ServletResponse response = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletResponse();
+                ServletResponse response = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletResponse();
                 try {
                     sender = new BlockingWriterSenderImpl(exchange, response.getWriter(), response.getCharacterEncoding());
                 } catch (IOException e1) {
@@ -67,10 +67,10 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
     @Override
     public void close() throws IOException {
         if (!exchange.isComplete()) {
-            ServletAttachments attachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-            HttpServletRequestImpl request = HttpServletRequestImpl.getRequestImpl(attachments.getServletRequest());
+            ServletRequestContext attachments = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+            HttpServletRequestImpl request = attachments.getOriginalRequest();
             request.closeAndDrainRequest();
-            HttpServletResponseImpl response = HttpServletResponseImpl.getResponseImpl(attachments.getServletResponse());
+            HttpServletResponseImpl response = attachments.getOriginalResponse();
             response.closeStreamAndWriter();
         }
     }

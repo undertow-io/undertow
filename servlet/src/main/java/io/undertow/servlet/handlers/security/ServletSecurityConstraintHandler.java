@@ -21,7 +21,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.TransportGuaranteeType;
-import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletRequestContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,15 +43,15 @@ public class ServletSecurityConstraintHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
         SecurityPathMatch securityMatch = securityPathMatches.getSecurityInfo(path, exchange.getRequestMethod().toString());
-        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-        List<SingleConstraintMatch> list = servletAttachments.getRequiredConstrains();
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        List<SingleConstraintMatch> list = servletRequestContext.getRequiredConstrains();
         if (list == null) {
-            servletAttachments.setRequiredConstrains(list = new ArrayList<>());
+            servletRequestContext.setRequiredConstrains(list = new ArrayList<>());
         }
         list.addAll(securityMatch.getRequiredConstraints());
-        TransportGuaranteeType type = servletAttachments.getTransportGuarenteeType();
+        TransportGuaranteeType type = servletRequestContext.getTransportGuarenteeType();
         if (type == null || type.ordinal() < securityMatch.getTransportGuaranteeType().ordinal()) {
-            servletAttachments.setTransportGuarenteeType(securityMatch.getTransportGuaranteeType());
+            servletRequestContext.setTransportGuarenteeType(securityMatch.getTransportGuaranteeType());
         }
         HttpHandlers.executeHandler(next, exchange);
     }

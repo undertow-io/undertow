@@ -48,7 +48,6 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletRequest;
-import javax.servlet.ServletRequestWrapper;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -69,7 +68,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.SecurityRoleRef;
 import io.undertow.servlet.core.ServletUpgradeListener;
-import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.util.EmptyEnumeration;
@@ -218,7 +217,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getPathInfo() {
-        ServletPathMatch match = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletPathMatch();
+        ServletPathMatch match = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
         if (match != null) {
             return match.getRemaining();
         }
@@ -255,7 +254,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             return false;
         }
 
-        final ServletChain servlet = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getCurrentServlet();
+        final ServletChain servlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet();
         //TODO: a more efficient imple
         for (SecurityRoleRef ref : servlet.getManagedServlet().getServletInfo().getSecurityRoleRefs()) {
             if (ref.getRole().equals(role)) {
@@ -306,7 +305,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getServletPath() {
-        ServletPathMatch match = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletPathMatch();
+        ServletPathMatch match = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
         if (match != null) {
             return match.getMatched();
         }
@@ -364,7 +363,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             }
         } else {
             // Not authenticated and response already sent.
-            HttpServletResponseImpl responseImpl = HttpServletResponseImpl.getResponseImpl(response);
+            HttpServletResponseImpl responseImpl = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalResponse();
             responseImpl.closeStreamAndWriter();
             return false;
         }
@@ -843,8 +842,8 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
         asyncStarted = true;
-        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-        return asyncContext = new AsyncContextImpl(exchange, servletAttachments.getServletRequest(), servletAttachments.getServletResponse(), asyncContext);
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        return asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), asyncContext);
     }
 
     @Override
@@ -883,7 +882,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public DispatcherType getDispatcherType() {
-        return exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY).getDispatcherType();
+        return exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getDispatcherType();
     }
 
 
@@ -904,17 +903,5 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     void asyncRequestDispatched() {
         asyncStarted = false;
-    }
-
-    public static HttpServletRequestImpl getRequestImpl(final ServletRequest request) {
-        final HttpServletRequestImpl requestImpl;
-        if (request instanceof HttpServletRequestImpl) {
-            requestImpl = (HttpServletRequestImpl) request;
-        } else if (request instanceof ServletRequestWrapper) {
-            requestImpl = getRequestImpl(((ServletRequestWrapper) request).getRequest());
-        } else {
-            throw UndertowServletMessages.MESSAGES.requestWasNotOriginalOrWrapper(request);
-        }
-        return requestImpl;
     }
 }

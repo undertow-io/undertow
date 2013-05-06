@@ -22,13 +22,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import javax.servlet.ServletOutputStream;
+import javax.servlet.ServletRequest;
 import javax.servlet.WriteListener;
 
 import io.undertow.io.BufferWritableOutputStream;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
-import io.undertow.servlet.handlers.ServletAttachments;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.Headers;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
@@ -568,11 +569,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (listener != null) {
             throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
         }
-        final HttpServletRequestImpl servletRequest = HttpServletRequestImpl.getRequestImpl(this.servletResponse.getExchange().getAttachment(ServletAttachments.ATTACHMENT_KEY).getServletRequest());
+        final ServletRequest servletRequest = this.servletResponse.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletRequest();
         if (!servletRequest.isAsyncStarted()) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }
-        asyncContext = servletRequest.getAsyncContext();
+        asyncContext = (AsyncContextImpl) servletRequest.getAsyncContext();
         listener = writeListener;
         //we register the write listener on the underlying connection
         //so we don't have to force the creation of the response channel

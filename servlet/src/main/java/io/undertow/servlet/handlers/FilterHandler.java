@@ -63,10 +63,10 @@ public class FilterHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-        ServletRequest request = servletAttachments.getServletRequest();
-        ServletResponse response = servletAttachments.getServletResponse();
-        DispatcherType dispatcher = servletAttachments.getDispatcherType();
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        ServletRequest request = servletRequestContext.getServletRequest();
+        ServletResponse response = servletRequestContext.getServletResponse();
+        DispatcherType dispatcher = servletRequestContext.getDispatcherType();
         Boolean supported = asyncSupported.get(dispatcher);
         if(supported != null && ! supported) {
             exchange.putAttachment(AsyncContextImpl.ASYNC_SUPPORTED, false    );
@@ -97,12 +97,12 @@ public class FilterHandler implements HttpHandler {
         @Override
         public void doFilter(final ServletRequest request, final ServletResponse response) throws IOException, ServletException {
 
-            final ServletAttachments servletAttachments = exchange.getAttachment(ServletAttachments.ATTACHMENT_KEY);
-            final ServletRequest oldReq = servletAttachments.getServletRequest();
-            final ServletResponse oldResp = servletAttachments.getServletResponse();
+            final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+            final ServletRequest oldReq = servletRequestContext.getServletRequest();
+            final ServletResponse oldResp = servletRequestContext.getServletResponse();
             try {
-                servletAttachments.setServletRequest(request);
-                servletAttachments.setServletResponse(response);
+                servletRequestContext.setServletRequest(request);
+                servletRequestContext.setServletResponse(response);
                 int index = location++;
                 if (index >= filters.size()) {
                     next.handleRequest(exchange);
@@ -119,8 +119,8 @@ public class FilterHandler implements HttpHandler {
                 throw new RuntimeException(e);
             } finally {
                 location--;
-                servletAttachments.setServletRequest(oldReq);
-                servletAttachments.setServletResponse(oldResp);
+                servletRequestContext.setServletRequest(oldReq);
+                servletRequestContext.setServletResponse(oldResp);
             }
         }
     }
