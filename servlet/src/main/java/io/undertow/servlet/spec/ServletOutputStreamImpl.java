@@ -425,7 +425,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     Channels.writeBlocking(channel, buffer);
                 }
             } else {
-                Channels.writeBlocking(channel, new ByteBuffer[] {buffer, extraData}, 0, 2);
+                if(buffer.hasRemaining()) {
+                    Channels.writeBlocking(channel, new ByteBuffer[] {buffer, extraData}, 0, 2);
+                } else {
+                    Channels.writeBlocking(channel, extraData);
+                }
             }
             buffer.clear();
         }
