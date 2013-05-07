@@ -37,9 +37,8 @@ import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.handlers.resource.ResourceManager;
-import io.undertow.server.session.InMemorySessionManager;
-import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.core.InMemorySessionManagerFactory;
 import io.undertow.servlet.util.DefaultClassIntrospector;
 
 /**
@@ -62,7 +61,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile File tempDir;
     private volatile JspConfigDescriptor jspConfigDescriptor;
     private volatile DefaultServletConfig defaultServletConfig;
-    private volatile SessionManager sessionManager = new InMemorySessionManager();
+    private volatile SessionManagerFactory sessionManagerFactory = new InMemorySessionManagerFactory();
     private volatile LoginConfig loginConfig;
     private volatile IdentityManager identityManager;
     private volatile ConfidentialPortManager confidentialPortManager;
@@ -488,12 +487,12 @@ public class DeploymentInfo implements Cloneable {
         return localeCharsetMapping;
     }
 
-    public SessionManager getSessionManager() {
-        return sessionManager;
+    public SessionManagerFactory getSessionManagerFactory() {
+        return sessionManagerFactory;
     }
 
-    public DeploymentInfo setSessionManager(final SessionManager sessionManager) {
-        this.sessionManager = sessionManager;
+    public DeploymentInfo setSessionManagerFactory(final SessionManagerFactory sessionManagerFactory) {
+        this.sessionManagerFactory = sessionManagerFactory;
         return this;
     }
 
@@ -624,7 +623,7 @@ public class DeploymentInfo implements Cloneable {
         info.jspConfigDescriptor = jspConfigDescriptor;
         info.defaultServletConfig = defaultServletConfig;
         info.localeCharsetMapping.putAll(localeCharsetMapping);
-        info.sessionManager = sessionManager;
+        info.sessionManagerFactory = sessionManagerFactory;
         info.loginConfig = loginConfig;
         info.identityManager = identityManager;
         info.confidentialPortManager = confidentialPortManager;

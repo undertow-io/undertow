@@ -21,6 +21,7 @@ package io.undertow.servlet.api;
 import java.util.Map;
 
 import io.undertow.server.HttpHandler;
+import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ErrorPages;
@@ -49,4 +50,6 @@ public interface Deployment {
     Map<String, String> getMimeExtensionMappings();
 
     ServletDispatcher getServletDispatcher();
+
+    SessionManager getSessionManager();
 }
