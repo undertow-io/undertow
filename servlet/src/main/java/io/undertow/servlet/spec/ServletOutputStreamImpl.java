@@ -34,6 +34,7 @@ import io.undertow.util.Headers;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
+import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
@@ -90,6 +91,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     private static final int FLAG_DELEGATE_SHUTDOWN = 1 << 3;
     private static final int FLAG_IN_CALLBACK = 1 << 4;
 
+    private static final int MAX_BUFFERS_TO_ALLOCATE = 10;
+
     private final StreamSinkChannel underlyingConnectionChannel;
     private CompositeThreadSetupAction threadSetupAction;
 
@@ -140,13 +143,83 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
         if (listener == null) {
             ByteBuffer buffer = buffer();
-            //if this is the last of the content
-            if (len == contentLength - written || buffer.remaining() < len) {
-                writeBufferBlocking( ByteBuffer.wrap(b, off, len));
+            if (buffer.remaining() < len) {
+
+                //so what we have will not fit.
+                //We allocate multiple buffers up to MAX_BUFFERS_TO_ALLOCATE
+                //and put it in them
+                //if it still dopes not fit we loop, re-using these buffers
+
+                StreamSinkChannel channel = this.channel;
+                if (channel == null) {
+                    this.channel = channel = servletResponse.getExchange().getResponseChannel();
+                }
+                final Pool<ByteBuffer> bufferPool = servletResponse.getExchange().getConnection().getBufferPool();
+                ByteBuffer[] buffers = new ByteBuffer[MAX_BUFFERS_TO_ALLOCATE + 1];
+                Pooled[] pooledBuffers = new Pooled[MAX_BUFFERS_TO_ALLOCATE];
+                try {
+                    buffers[0] = buffer;
+                    int currentOffset = off;
+                    int rem = buffer.remaining();
+                    buffer.put(b, currentOffset, rem);
+                    buffer.flip();
+                    currentOffset += rem;
+                    int bufferCount = 1;
+                    for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE; ++i) {
+                        Pooled<ByteBuffer> pooled = bufferPool.allocate();
+                        pooledBuffers[bufferCount - 1] = pooled;
+                        buffers[bufferCount++] = pooled.getResource();
+                        ByteBuffer cb = pooled.getResource();
+                        int toWrite = len - currentOffset;
+                        if (toWrite > cb.remaining()) {
+                            rem = cb.remaining();
+                            cb.put(b, currentOffset, rem);
+                            cb.flip();
+                            currentOffset += rem;
+                        } else {
+                            cb.put(b, currentOffset, len - currentOffset);
+                            currentOffset = len;
+                            cb.flip();
+                            break;
+                        }
+                    }
+                    Channels.writeBlocking(channel, buffers, 0, bufferCount);
+                    while (currentOffset < len) {
+                        //ok, it did not fit, loop and loop and loop until it is done
+                        bufferCount = 0;
+                        for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE + 1; ++i) {
+                            ByteBuffer cb = buffers[i];
+                            cb.clear();
+                            bufferCount++;
+                            int toWrite = len - currentOffset;
+                            if (toWrite > cb.remaining()) {
+                                rem = cb.remaining();
+                                cb.put(b, currentOffset, rem);
+                                cb.flip();
+                                currentOffset += rem;
+                            } else {
+                                cb.put(b, currentOffset, len - currentOffset);
+                                currentOffset = len;
+                                cb.flip();
+                                break;
+                            }
+                        }
+                        Channels.writeBlocking(channel, buffers, 0, bufferCount);
+                    }
+                    buffer.clear();
+                } finally {
+                    for (int i = 0; i < pooledBuffers.length; ++i) {
+                        Pooled p = pooledBuffers[i];
+                        if (p == null) {
+                            break;
+                        }
+                        p.free();
+                    }
+                }
             } else {
                 buffer.put(b, off, len);
                 if (buffer.remaining() == 0) {
-                    writeBufferBlocking(null);
+                    writeBufferBlocking();
                 }
             }
             updateWritten(len);
@@ -378,7 +451,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 return;
             }
             if (buffer != null && buffer.position() != 0) {
-                writeBufferBlocking(null);
+                writeBufferBlocking();
             }
             if (channel == null) {
                 channel = servletResponse.getExchange().getResponseChannel();
@@ -411,28 +484,15 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
     }
 
-    private void writeBufferBlocking(final ByteBuffer extraData) throws IOException {
+    private void writeBufferBlocking() throws IOException {
         if (channel == null) {
             channel = servletResponse.getExchange().getResponseChannel();
         }
-        if(buffer == null) {
-            //only happens when writing extra data
-            Channels.writeBlocking(channel, extraData);
-        } else {
-            buffer.flip();
-            if(extraData == null) {
-                if (buffer.hasRemaining()) {
-                    Channels.writeBlocking(channel, buffer);
-                }
-            } else {
-                if(buffer.hasRemaining()) {
-                    Channels.writeBlocking(channel, new ByteBuffer[] {buffer, extraData}, 0, 2);
-                } else {
-                    Channels.writeBlocking(channel, extraData);
-                }
-            }
-            buffer.clear();
+        buffer.flip();
+        if (buffer.hasRemaining()) {
+            Channels.writeBlocking(channel, buffer);
         }
+        buffer.clear();
         state |= FLAG_WRITE_STARTED;
     }
 
@@ -453,7 +513,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             }
             try {
                 if (buffer != null) {
-                    writeBufferBlocking(null);
+                    writeBufferBlocking();
                 }
                 if (channel == null) {
                     channel = servletResponse.getExchange().getResponseChannel();
