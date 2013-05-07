@@ -92,7 +92,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     private static final int FLAG_IN_CALLBACK = 1 << 4;
 
     //TODO: should this be configurable?
-    private static final int MAX_BUFFERS_TO_ALLOCATE = 10;
+    private static final int MAX_BUFFERS_TO_ALLOCATE = 6;
 
     private final StreamSinkChannel underlyingConnectionChannel;
     private CompositeThreadSetupAction threadSetupAction;
