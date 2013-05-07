@@ -134,6 +134,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
         deployment.setServletContext(servletContext);
+        deployment.setSessionManager(deploymentInfo.getSessionManagerFactory().createSessionManager(deployment));
 
         final List<ThreadSetupAction> setup = new ArrayList<ThreadSetupAction>();
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
@@ -564,7 +565,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     public HttpHandler start() throws ServletException {
         ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
-            deployment.getDeploymentInfo().getSessionManager().start();
+            deployment.getSessionManager().start();
             for (Lifecycle object : deployment.getLifecycleObjects()) {
                 object.start();
             }
@@ -626,7 +627,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             executor = null;
             asyncExecutor = null;
         }
-        deployment.getDeploymentInfo().getSessionManager().stop();
+        deployment.getSessionManager().stop();
         state = State.DEPLOYED;
     }
 

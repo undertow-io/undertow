@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.undertow.server.HttpHandler;
+import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletDispatcher;
@@ -53,7 +54,7 @@ public class DeploymentImpl implements Deployment {
     private volatile CompositeThreadSetupAction threadSetupAction;
     private volatile ErrorPages errorPages;
     private volatile Map<String, String> mimeExtensionMappings;
-
+    private volatile SessionManager sessionManager;
 
     public DeploymentImpl(final DeploymentInfo deploymentInfo) {
         this.deploymentInfo = deploymentInfo;
@@ -99,6 +100,10 @@ public class DeploymentImpl implements Deployment {
         lifecycleObjects.addAll(Arrays.asList(objects));
     }
 
+    void setSessionManager(final SessionManager sessionManager) {
+        this.sessionManager = sessionManager;
+    }
+
     public List<Lifecycle> getLifecycleObjects() {
         return Collections.unmodifiableList(lifecycleObjects);
     }
@@ -140,5 +145,10 @@ public class DeploymentImpl implements Deployment {
     @Override
     public ServletDispatcher getServletDispatcher() {
         return servletHandler;
+    }
+
+    @Override
+    public SessionManager getSessionManager() {
+        return sessionManager;
     }
 }

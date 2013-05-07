@@ -518,7 +518,7 @@ public class ServletContextImpl implements ServletContext {
             httpSession = null;
         }
         if (httpSession == null) {
-            final SessionManager sessionManager = deploymentInfo.getSessionManager();
+            final SessionManager sessionManager = deployment.getSessionManager();
             Session session = sessionManager.getSession(exchange, c);
             if (session != null) {
                 httpSession = new HttpSessionImpl(session, this, getDeployment().getApplicationListeners(), exchange, false);
