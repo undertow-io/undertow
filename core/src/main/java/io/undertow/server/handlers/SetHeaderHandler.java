@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.test.utils;
+package io.undertow.server.handlers;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -30,14 +30,22 @@ public class SetHeaderHandler implements HttpHandler {
     private final String header;
     private final String value;
 
+    private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
+
     public SetHeaderHandler(final String header, final String value) {
         this.header = header;
         this.value = value;
     }
 
+    public SetHeaderHandler(final HttpHandler next, final String header, final String value) {
+        this.next = next;
+        this.value = value;
+        this.header = header;
+    }
+
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.getResponseHeaders().put(new HttpString(header), value);
-        exchange.endExchange();
+        next.handleRequest(exchange);
     }
 }

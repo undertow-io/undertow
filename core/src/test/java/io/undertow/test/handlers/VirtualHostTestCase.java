@@ -3,9 +3,10 @@ package io.undertow.test.handlers;
 import java.io.IOException;
 
 import io.undertow.server.handlers.NameVirtualHostHandler;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.test.utils.DefaultServer;
 import io.undertow.test.utils.HttpClientUtils;
-import io.undertow.test.utils.SetHeaderHandler;
+import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.util.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -29,8 +30,8 @@ public class VirtualHostTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             final NameVirtualHostHandler handler = new NameVirtualHostHandler()
-                    .addHost("localhost", new SetHeaderHandler("myHost", "localhost"))
-                    .setDefaultHandler(new SetHeaderHandler("myHost", "default"));
+                    .addHost("localhost", new SetHeaderHandler(ResponseCodeHandler.HANDLE_200, "myHost", "localhost"))
+                    .setDefaultHandler(new SetHeaderHandler(ResponseCodeHandler.HANDLE_200, "myHost", "default"));
 
 
             DefaultServer.setRootHandler(handler);

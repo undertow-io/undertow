@@ -20,8 +20,9 @@ package io.undertow.test.handlers;
 
 import java.io.IOException;
 
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.test.utils.DefaultServer;
-import io.undertow.test.utils.SetHeaderHandler;
+import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.util.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -42,7 +43,7 @@ public class SimpleNonBlockingServerTestCase {
 
     @BeforeClass
     public static void setup() {
-        DefaultServer.setRootHandler(new SetHeaderHandler("MyHeader", "MyValue"));
+        DefaultServer.setRootHandler(new SetHeaderHandler(ResponseCodeHandler.HANDLE_200, "MyHeader", "MyValue"));
     }
 
     @Test
