@@ -21,6 +21,8 @@ package io.undertow.servlet.core;
 import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
 import static javax.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
 import static javax.servlet.http.HttpServletRequest.FORM_AUTH;
+
+import io.undertow.predicate.Predicates;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
@@ -170,7 +172,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
             wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getInnerHandlerChainWrappers());
             HttpHandler securityHandler  = setupSecurityHandlers(wrappedHandlers);
             wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, securityHandler, wrappedHandlers);
-            wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
+
+            HttpHandler outerHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
+            wrappedHandlers = new PredicateHandler(Predicates.or(DispatcherTypePredicate.REQUEST, DispatcherTypePredicate.ASYNC), outerHandlers, wrappedHandlers);
+
             final ServletInitialHandler servletInitialHandler = new ServletInitialHandler(matches, wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
             deployment.setServletHandler(servletInitialHandler);
         } catch (Exception e) {

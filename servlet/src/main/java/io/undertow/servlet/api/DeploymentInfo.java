@@ -542,6 +542,13 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableSet(securityRoles);
     }
 
+    /**
+     * Adds an outer handler wrapper. This handler will be run after the servlet initial handler,
+     * but before any other handlers. These are only run on REQUEST and ASYNC invocations, they
+     * are not invoked on a FORWARD or INCLUDE.
+     *
+     * @param wrapper The wrapper
+     */
     public DeploymentInfo addOuterHandlerChainWrapper(final HandlerWrapper wrapper) {
         outerHandlerChainWrappers.add(wrapper);
         return this;
