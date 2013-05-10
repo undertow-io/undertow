@@ -95,8 +95,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final String CLIENT_TRUST_STORE = "client.truststore";
     private static final char[] STORE_PASSWORD = "password".toCharArray();
 
-    private static final boolean ajp = Boolean.getBoolean("ajp");
-    private static final boolean proxy = Boolean.getBoolean("proxy");
+    private static final boolean ajp = Boolean.getBoolean("test.ajp");
+    private static final boolean proxy = Boolean.getBoolean("test.proxy");
 
     private static final DelegatingHandler rootHandler = new DelegatingHandler();
 

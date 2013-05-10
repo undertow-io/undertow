@@ -37,6 +37,7 @@ import io.undertow.util.HeaderMap;
  */
 public final class HttpClientResponse extends AbstractAttachable {
 
+    private final HttpClientRequest request;
     private final String reason;
     private final int responseCode;
     private final HeaderMap headers;
@@ -44,7 +45,9 @@ public final class HttpClientResponse extends AbstractAttachable {
     private final HttpString protocol;
     private final StreamSourceChannel sourceChannel;
 
-    protected HttpClientResponse(final PendingHttpRequest responseBuilder, final long contentLength, final StreamSourceChannel sourceChannel) {
+
+    protected HttpClientResponse(final PendingHttpRequest responseBuilder, final HttpClientRequest request, final long contentLength, final StreamSourceChannel sourceChannel) {
+        this.request = request;
         this.protocol = responseBuilder.getProtocol();
         this.reason = responseBuilder.getReasonPhrase();
         this.responseCode = responseBuilder.getStatusCode();
@@ -99,6 +102,14 @@ public final class HttpClientResponse extends AbstractAttachable {
      */
     public String getReasonPhrase() {
         return reason;
+    }
+
+    /**
+     *
+     * @return The client request
+     */
+    public HttpClientRequest getRequest() {
+        return request;
     }
 
     @Override

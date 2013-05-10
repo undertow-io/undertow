@@ -242,7 +242,7 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
     private void exitFlush(long oldVal, boolean flushed) {
         long newVal = oldVal;
         boolean callFinish = false;
-        if (anyAreSet(oldVal, FLAG_CLOSE_REQUESTED) && flushed) {
+        if ((anyAreSet(oldVal, FLAG_CLOSE_REQUESTED) || (newVal & MASK_COUNT) == 0L) && flushed) {
             newVal |= FLAG_CLOSE_COMPLETE;
 
             if (!anyAreSet(oldVal, FLAG_FINISHED_CALLED) && (newVal & MASK_COUNT) == 0L) {

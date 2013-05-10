@@ -1489,7 +1489,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         public void awaitReadable() throws IOException {
             if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
+                return;
             }
             delegate.awaitReadable();
         }
@@ -1502,9 +1502,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
 
         public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
-
             if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
+                return -1;
             }
             return delegate.transferTo(count, throughBuffer, target);
         }

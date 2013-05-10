@@ -186,7 +186,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
         final PendingHttpRequest request = new PendingHttpRequest(this, connection, keepAlive, hasContent, expectContinue, pipelineNext, responseFuture);
         // Create the channel and wrappers
         StreamSinkConduit conduit = new StreamSinkChannelWrappingConduit(underlyingChannel);
-        conduit = new HttpRequestConduit(conduit, connection.getBufferPool(), this);
+        conduit = new HttpRequestConduit(conduit, connection.getBufferPool(), request);
         if(! hasContent) {
             headers.put(Headers.CONTENT_LENGTH, 0L);
             conduit = new FixedLengthStreamSinkConduit(conduit, 0L, false, ! keepAlive, sendCompletedListener(request));

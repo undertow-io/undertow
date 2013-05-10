@@ -31,6 +31,9 @@ import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
 
 /**
+ *
+ * A HTTP client, intended for use in Undertow. This is not intended to be a general purpose HTTP client.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public abstract class HttpClient implements Closeable {

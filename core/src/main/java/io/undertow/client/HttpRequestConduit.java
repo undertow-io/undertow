@@ -56,7 +56,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     private Iterator<String> valueIterator;
     private int charIndex;
     private Pooled<ByteBuffer> pooledBuffer;
-    private final HttpClientRequestImpl request;
+    private final PendingHttpRequest request;
 
     private static final int STATE_BODY = 0; // Message body, normal pass-through operation
     private static final int STATE_START = 1; // No headers written yet
@@ -73,7 +73,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     private static final int MASK_STATE         = 0x0000000F;
     private static final int FLAG_SHUTDOWN      = 0x00000010;
 
-    HttpRequestConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final HttpClientRequestImpl request) {
+    HttpRequestConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final PendingHttpRequest request) {
         super(next);
         this.pool = pool;
         this.request = request;
@@ -95,6 +95,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         if (state == STATE_START) {
             pooledBuffer = pool.allocate();
         }
+        HttpClientRequestImpl request = (HttpClientRequestImpl) this.request.getRequest();
         ByteBuffer buffer = pooledBuffer.getResource();
         Iterator<HttpString> nameIterator = this.nameIterator;
         Iterator<String> valueIterator = this.valueIterator;

@@ -301,7 +301,7 @@ public final class PendingHttpRequest {
         }
         // Create the http response
         final StreamSourceChannel responseChannel = new ConduitStreamSourceChannel(channel, conduit);
-        final HttpClientResponse response = new HttpClientResponse(this, contentLength, responseChannel);
+        final HttpClientResponse response = new HttpClientResponse(this, request, contentLength, responseChannel);
         result.setResult(response);
 
         // If there is no content to read, complete the request right away

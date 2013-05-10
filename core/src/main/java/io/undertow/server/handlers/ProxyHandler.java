@@ -28,6 +28,8 @@ import io.undertow.client.HttpClient;
 import io.undertow.client.HttpClientConnection;
 import io.undertow.client.HttpClientRequest;
 import io.undertow.client.HttpClientResponse;
+import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
@@ -38,7 +40,10 @@ import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoFuture;
+import org.xnio.IoUtils;
 import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 
 import static org.xnio.IoUtils.safeClose;
@@ -71,9 +76,31 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap outboundResponseHeaders = exchange.getResponseHeaders();
             exchange.setResponseCode(response.getResponseCode());
             copyHeaders(outboundResponseHeaders, inboundResponseHeaders);
+
+            if (exchange.isUpgrade()) {
+                exchange.upgradeChannel(new ExchangeCompletionListener() {
+                    @Override
+                    public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+                        ConnectedStreamChannel clientChannel = null;
+                        try {
+                            clientChannel = response.getRequest().getConnection().performUpgrade();
+                            exchange.getConnection().resetChannel();
+
+                            StreamConnection streamConnection = exchange.getConnection().getChannel();
+                            if(exchange.getConnection().getExtraBytes() != null) {
+                                streamConnection.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(streamConnection.getSourceChannel().getConduit(), exchange.getConnection()));
+                            }
+                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, clientChannel, streamConnection.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, streamConnection.getSourceChannel(), clientChannel, ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+
+                        } catch (IOException e) {
+                            IoUtils.safeClose();
+                        }
+                    }
+                });
+            }
             try {
                 ChannelListeners.initiateTransfer(Long.MAX_VALUE, response.readReplyBody(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
-
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                 try {
@@ -171,7 +198,7 @@ public final class ProxyHandler implements HttpHandler {
             final HttpClientRequest request;
             try {
                 String requestURI = exchange.getRequestURI();
-                if(exchange.getQueryString() != null) {
+                if (exchange.getQueryString() != null) {
                     requestURI += "?" + exchange.getQueryString();
                 }
                 request = clientConnection.createRequest(exchange.getRequestMethod(), new URI(requestURI));
@@ -187,7 +214,7 @@ public final class ProxyHandler implements HttpHandler {
             if (requestContentLength == 0L || requestContentLength == -1L) {
                 request.writeRequestBody(0L);
             } else {
-                ChannelListeners.initiateTransfer(exchange.getRequestChannel(), request.writeRequestBody(requestContentLength), serverConnection.getBufferPool());
+                ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), request.writeRequestBody(requestContentLength), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
             }
             final IoFuture<HttpClientResponse> futureResponse = request.getResponse();
             futureResponse.addNotifier(RESPONSE_NOTIFIER, exchange);
