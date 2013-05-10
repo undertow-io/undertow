@@ -28,7 +28,6 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 
 import io.undertow.util.HttpString;
-import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
@@ -78,21 +77,9 @@ public abstract class HttpClientConnection extends AbstractAttachable implements
      * @return the future channel
      * @throws IOException
      */
-    public abstract IoFuture<ConnectedStreamChannel> performUpgrade(final UpgradeHandshake request, final OptionMap optionMap) throws IOException;
-
-    /**
-     * Upgrade this HTTP connection to a raw socket
-     *
-     * @param handshake The handshake class
-     * @param optionMap the channel options
-     * @param callback the callback
-     * @return the future channel
-     * @throws IOException
-     */
-    public abstract void performUpgrade(final UpgradeHandshake handshake, final OptionMap optionMap, HttpClientCallback<ConnectedStreamChannel> callback) throws IOException;
-
+    public abstract ConnectedStreamChannel performUpgrade() throws IOException;
 
     abstract OptionMap getOptions();
-    abstract Pool<ByteBuffer> getBufferPool();
+    public abstract Pool<ByteBuffer> getBufferPool();
 
 }

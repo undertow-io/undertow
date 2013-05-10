@@ -8,13 +8,15 @@ import java.nio.ByteBuffer;
 import io.undertow.client.HttpClient;
 import io.undertow.client.HttpClientCallback;
 import io.undertow.client.HttpClientConnection;
+import io.undertow.client.HttpClientRequest;
+import io.undertow.client.HttpClientResponse;
 import io.undertow.util.ConcreteIoFuture;
+import io.undertow.util.Methods;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
-import org.xnio.channels.ConnectedStreamChannel;
 
 /**
  * The Web socket client.
@@ -45,23 +47,24 @@ public class WebSocketClient {
         client.connect(address, optionMap, new HttpClientCallback<HttpClientConnection>() {
             @Override
             public void completed(final HttpClientConnection connection) {
-                try {
-                    final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(WebSocketVersion.V13, uri);
-                    connection.performUpgrade(handshake, OptionMap.EMPTY, new HttpClientCallback<ConnectedStreamChannel>() {
-                        @Override
-                        public void completed(final ConnectedStreamChannel result) {
-                            WebSocketChannel webSocketChannel = handshake.createChannel(result, uri.toString(), bufferPool);
-                            callback.completed(webSocketChannel);
-                        }
-
-                        @Override
-                        public void failed(final IOException e) {
+                final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(WebSocketVersion.V13, uri);
+                HttpClientRequest request = connection.createRequest(Methods.GET, uri);
+                handshake.setupRequest(request);
+                request.writeRequest(new HttpClientCallback<HttpClientResponse>() {
+                    @Override
+                    public void completed(final HttpClientResponse result) {
+                        try {
+                            handshake.verifyResponse(uri, result, connection, callback);
+                        } catch (IOException e) {
                             callback.failed(e);
                         }
-                    });
-                } catch (IOException e) {
-                    callback.failed(e);
-                }
+                    }
+
+                    @Override
+                    public void failed(final IOException e) {
+                        callback.failed(e);
+                    }
+                });
             }
 
             @Override

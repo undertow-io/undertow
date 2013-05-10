@@ -25,11 +25,9 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.HttpString;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
@@ -44,7 +42,6 @@ import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 
 import static io.undertow.client.UndertowClientMessages.MESSAGES;
-import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreSet;
 import static org.xnio.IoUtils.safeClose;
@@ -95,7 +92,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         return underlyingChannel;
     }
 
-    Pool<ByteBuffer> getBufferPool() {
+    public Pool<ByteBuffer> getBufferPool() {
         return bufferPool;
     }
 
@@ -165,7 +162,7 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
     }
 
     @Override
-    public void performUpgrade(final UpgradeHandshake handshake, OptionMap optionMap, final HttpClientCallback<ConnectedStreamChannel> callback) {
+    public ConnectedStreamChannel performUpgrade() throws IOException {
 
         // Upgrade the connection
         // Set the upgraded flag already to prevent new requests after this one
@@ -173,67 +170,13 @@ class HttpClientConnectionImpl extends HttpClientConnection implements Connected
         do {
             oldState = state;
             if (allAreSet(oldState, UPGRADED | CLOSE_REQ | CLOSED)) {
-                return;
+                throw new IOException(UndertowClientMessages.MESSAGES.connectionClosed());
             }
             newState = oldState | UPGRADED;
         } while (!stateUpdater.compareAndSet(this, oldState, newState));
-
-        // Get the response
-        HttpClientRequest request = handshake.createRequest(this);
-        request.writeRequest(new HttpClientCallback<HttpClientResponse>() {
-            @Override
-            public void completed(final HttpClientResponse response) {
-                if (response.getResponseCode() == 101) {
-                    // return the upgraded channel
-                    try {
-                        handshake.validateResponse(HttpClientConnectionImpl.this, response);
-                        final AssembledConnectedStreamChannel channel = new AssembledConnectedStreamChannel(readChannel, underlyingChannel);
-                        callback.completed(channel);
-                    } catch (IOException e) {
-                        callback.failed(e);
-                    }
-                } else {
-                    final String result = response.getReasonPhrase();
-                    callback.failed(new IOException(MESSAGES.failedToUpgradeChannel(response.getResponseCode(), result)));
-                }
-            }
-
-            @Override
-            public void failed(final IOException e) {
-                try {
-                    callback.failed(e);
-                } finally {
-                    // Clear the upgraded flag
-                    int oldState, newState;
-                    do {
-                        oldState = state;
-                        if (allAreClear(oldState, UPGRADED)) {
-                            break;
-                        }
-                        newState = oldState & UPGRADED;
-                    } while (!stateUpdater.compareAndSet(HttpClientConnectionImpl.this, oldState, newState));
-                }
-
-            }
-        });
+        return new AssembledConnectedStreamChannel(readChannel, underlyingChannel);
     }
 
-    @Override
-    public IoFuture<ConnectedStreamChannel> performUpgrade(UpgradeHandshake request, OptionMap optionMap) {
-        final ConcreteIoFuture<ConnectedStreamChannel> future = new ConcreteIoFuture<>();
-        performUpgrade(request, optionMap, new HttpClientCallback<ConnectedStreamChannel>() {
-            @Override
-            public void completed(final ConnectedStreamChannel result) {
-                future.setResult(result);
-            }
-
-            @Override
-            public void failed(final IOException e) {
-                future.setException(e);
-            }
-        });
-        return future;
-    }
 
     /**
      * Create a http client request.
