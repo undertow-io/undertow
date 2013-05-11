@@ -113,7 +113,7 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
             }
             return res = next.transferTo(min(count, val), throughBuffer, target);
         } finally {
-            exitRead(res == -1L ? val & MASK_COUNT : res);
+            exitRead(res == -1L ? val & MASK_COUNT : res + throughBuffer.remaining());
         }
     }
 
