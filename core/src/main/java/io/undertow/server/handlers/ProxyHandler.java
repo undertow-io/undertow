@@ -31,6 +31,8 @@ import io.undertow.client.HttpClientConnection;
 import io.undertow.client.HttpClientRequest;
 import io.undertow.client.HttpClientResponse;
 import io.undertow.client.HttpContinueNotification;
+import io.undertow.conduits.ChunkedStreamSinkConduit;
+import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
@@ -39,6 +41,7 @@ import io.undertow.server.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
@@ -96,8 +99,8 @@ public final class ProxyHandler implements HttpHandler {
                             if(exchange.getConnection().getExtraBytes() != null) {
                                 streamConnection.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(streamConnection.getSourceChannel().getConduit(), exchange.getConnection()));
                             }
-                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, clientChannel, streamConnection.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
-                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, streamConnection.getSourceChannel(), clientChannel, ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, clientChannel, streamConnection.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, streamConnection.getSourceChannel(), clientChannel, ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
 
                         } catch (IOException e) {
                             IoUtils.safeClose();
@@ -106,7 +109,7 @@ public final class ProxyHandler implements HttpHandler {
                 });
             }
             try {
-                ChannelListeners.initiateTransfer(Long.MAX_VALUE, response.readReplyBody(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+                ChannelListeners.initiateTransfer(Long.MAX_VALUE, response.readReplyBody(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(response.getRequest(), exchange), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                 try {
@@ -247,11 +250,40 @@ public final class ProxyHandler implements HttpHandler {
             if (requestContentLength == 0L || requestContentLength == -1L) {
                 request.writeRequestBody(0L);
             } else {
-                ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), request.writeRequestBody(requestContentLength), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+                ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), request.writeRequestBody(requestContentLength), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, request), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
             }
             final IoFuture<HttpClientResponse> futureResponse = request.getResponse();
             futureResponse.addNotifier(RESPONSE_NOTIFIER, exchange);
         }
     }
 
+    private static final class HTTPTrailerChannelListener implements ChannelListener<StreamSinkChannel> {
+
+        private final Attachable source;
+        private final Attachable target;
+
+        private HTTPTrailerChannelListener(final Attachable source, final Attachable target) {
+            this.source = source;
+            this.target = target;
+        }
+
+        @Override
+        public void handleEvent(final StreamSinkChannel channel) {
+            HeaderMap trailers = source.getAttachment(ChunkedStreamSourceConduit.TRAILERS);
+            if(trailers != null) {
+                target.putAttachment(ChunkedStreamSinkConduit.TRAILERS, trailers);
+            }
+            try {
+                channel.shutdownWrites();
+                if(!channel.flush()) {
+                    channel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, ChannelListeners.<StreamSinkChannel>closingChannelExceptionHandler()));
+                    channel.resumeWrites();
+                }
+            } catch (IOException e) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                IoUtils.safeClose(channel);
+            }
+
+        }
+    }
 }

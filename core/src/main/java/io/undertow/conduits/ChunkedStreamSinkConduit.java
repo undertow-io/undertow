@@ -181,7 +181,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                 return next.flush();
             } else {
                 if(trailerBuffer == null) {
-                next.write(chunkingBuffer);
+                    next.write(chunkingBuffer);
                 } else {
                     next.write(new ByteBuffer[]{chunkingBuffer, trailerBuffer}, 0, 2);
                 }

@@ -24,6 +24,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 
 import io.undertow.UndertowMessages;
+import io.undertow.client.HttpClientRequest;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
@@ -78,7 +79,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
     private static final long MASK_COUNT = longBitMask(0, 56);
 
-    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamChannel channel, final Pool<ByteBuffer> pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final long maxLength) {
+    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamChannel channel, final Pool<ByteBuffer> pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final long maxLength, final HttpClientRequest request) {
         this(next, new BufferWrapper() {
             @Override
             public Pooled<ByteBuffer> allocate() {
@@ -89,7 +90,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             public void pushBack(Pooled<ByteBuffer> pooled) {
                 channel.unget(pooled);
             }
-        }, finishListener, maxLength, null);
+        }, finishListener, maxLength, request);
     }
 
     public ChunkedStreamSourceConduit(final StreamSourceConduit next, final HttpServerExchange exchange, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final long maxLength) {
