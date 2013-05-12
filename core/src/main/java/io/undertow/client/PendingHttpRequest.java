@@ -271,10 +271,11 @@ public final class PendingHttpRequest {
         final boolean http11 = Protocols.HTTP_1_1.equals(getProtocol());
 
         boolean closeConnection;
+        String connectionHeader = headers.getFirst(Headers.CONNECTION);
         if(http11) {
-            closeConnection = Headers.CLOSE.equals(new HttpString(headers.getFirst(Headers.CONNECTION)));
+            closeConnection = connectionHeader == null ? false : Headers.CLOSE.equals(new HttpString(connectionHeader));
         } else if (Protocols.HTTP_1_0.equals(getProtocol())) {
-            closeConnection = ! Headers.KEEP_ALIVE.equals(new HttpString(headers.getFirst(Headers.CONNECTION)));
+            closeConnection = connectionHeader == null ? true : ! Headers.KEEP_ALIVE.equals(new HttpString(connectionHeader));
         } else {
             closeConnection = true;
         }

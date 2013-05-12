@@ -45,6 +45,7 @@ import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
+import io.undertow.util.Methods;
 import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -207,8 +208,9 @@ public final class ProxyHandler implements HttpHandler {
             final HttpClientRequest request;
             try {
                 String requestURI = exchange.getRequestURI();
-                if (exchange.getQueryString() != null) {
-                    requestURI += "?" + exchange.getQueryString();
+                String qs = exchange.getQueryString();
+                if (qs != null && !qs.isEmpty()) {
+                    requestURI += "?" + qs;
                 }
                 request = clientConnection.createRequest(exchange.getRequestMethod(), new URI(URLEncoder.encode(requestURI, "UTF-8")));
             } catch (URISyntaxException e) {
@@ -247,7 +249,7 @@ public final class ProxyHandler implements HttpHandler {
 
 
 
-            if (requestContentLength == 0L || requestContentLength == -1L) {
+            if (requestContentLength == 0L || exchange.getRequestMethod().equals(Methods.GET)) {
                 request.writeRequestBody(0L);
             } else {
                 ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), request.writeRequestBody(requestContentLength), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, request), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
