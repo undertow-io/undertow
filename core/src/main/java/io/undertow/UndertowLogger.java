@@ -43,6 +43,7 @@ public interface UndertowLogger extends BasicLogger {
     UndertowLogger CLIENT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, HttpClient.class.getPackage().getName());
 
     UndertowLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request");
+    UndertowLogger REQUEST_DUMPER_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.dump");
     /**
      * Logger used for IO exceptions. Generally these should be suppressed, because they are of little interest, and it is easy for an
      * attacker to fill up the logs by intentionally causing IO exceptions.

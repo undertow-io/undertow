@@ -82,7 +82,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.LocaleUtils;
 import io.undertow.util.Methods;
-import io.undertow.util.QValueParser;
 import org.xnio.LocalSocketAddress;
 
 /**
@@ -682,6 +681,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getServerName() {
+        String host = exchange.getRequestHeaders().getFirst(Headers.HOST);
+        if(host != null) {
+            return host;
+        }
         return exchange.getDestinationAddress().getHostName();
     }
 
@@ -753,26 +756,14 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Locale getLocale() {
-        return Locale.getDefault();
+        return getLocales().nextElement();
     }
 
     @Override
     public Enumeration<Locale> getLocales() {
         final List<String> acceptLanguage = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
-        if (acceptLanguage == null || acceptLanguage.isEmpty()) {
-            return new IteratorEnumeration<Locale>(Collections.singleton(Locale.getDefault()).iterator());
-        }
-        final List<Locale> ret = new ArrayList<Locale>();
-        final List<List<QValueParser.QValueResult>> parsedResults = QValueParser.parse(acceptLanguage);
-        for (List<QValueParser.QValueResult> qvalueResult : parsedResults) {
-            for (QValueParser.QValueResult res : qvalueResult) {
-                if (!res.isQValueZero()) {
-                    Locale e = LocaleUtils.getLocaleFromString(res.getValue());
-                    ret.add(e);
-                }
-            }
-        }
-        return new IteratorEnumeration<Locale>(ret.iterator());
+        List<Locale> ret = LocaleUtils.getLocalesFromHeader(acceptLanguage);
+        return new IteratorEnumeration<>(ret.iterator());
     }
 
     @Override

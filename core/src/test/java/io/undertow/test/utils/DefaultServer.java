@@ -43,6 +43,7 @@ import io.undertow.server.HttpOpenListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
 import io.undertow.server.handlers.ProxyHandler;
+import io.undertow.server.handlers.RequestDumplingHandler;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
@@ -97,6 +98,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static final boolean ajp = Boolean.getBoolean("test.ajp");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
+    private static final boolean dump = Boolean.getBoolean("test.dump");
 
     private static final DelegatingHandler rootHandler = new DelegatingHandler();
 
@@ -261,8 +263,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @param handler The handler to use
      */
     public static void setRootHandler(HttpHandler handler) {
-        if (ajp) {
-            rootHandler.next = handler;
+        if (dump) {
+            rootHandler.next = new RequestDumplingHandler(handler);
         } else {
             rootHandler.next = handler;
         }

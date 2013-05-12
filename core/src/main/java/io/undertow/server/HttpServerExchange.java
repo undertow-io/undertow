@@ -677,7 +677,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         Deque<String> list = queryParameters.get(name);
         if (list == null) {
-            queryParameters.put(name, list = new ArrayDeque<String>());
+            queryParameters.put(name, list = new ArrayDeque<String>(2));
         }
         list.add(param);
     }

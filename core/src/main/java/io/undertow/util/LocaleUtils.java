@@ -18,6 +18,9 @@
 
 package io.undertow.util;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -30,12 +33,33 @@ public class LocaleUtils {
             return null;
         }
         final String[] parts = localeString.split("-");
-        if(parts.length == 1) {
+        if (parts.length == 1) {
             return new Locale(localeString, "");
-        } else if(parts.length == 2) {
+        } else if (parts.length == 2) {
             return new Locale(parts[0], parts[1]);
         } else {
             return new Locale(parts[0], parts[1], parts[2]);
         }
+    }
+
+    public static List<Locale> getLocalesFromHeader(final String acceptLanguage) {
+        return getLocalesFromHeader(Collections.singletonList(acceptLanguage));
+    }
+
+    public static List<Locale> getLocalesFromHeader(final List<String> acceptLanguage) {
+        if (acceptLanguage == null || acceptLanguage.isEmpty()) {
+            return Collections.singletonList(Locale.getDefault());
+        }
+        final List<Locale> ret = new ArrayList<Locale>();
+        final List<List<QValueParser.QValueResult>> parsedResults = QValueParser.parse(acceptLanguage);
+        for (List<QValueParser.QValueResult> qvalueResult : parsedResults) {
+            for (QValueParser.QValueResult res : qvalueResult) {
+                if (!res.isQValueZero()) {
+                    Locale e = LocaleUtils.getLocaleFromString(res.getValue());
+                    ret.add(e);
+                }
+            }
+        }
+        return ret;
     }
 }
