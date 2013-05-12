@@ -44,6 +44,7 @@ public final class PendingHttpRequest {
     private final HttpClientRequestImpl request;
     private final HttpClientConnectionImpl connection;
     private final Result<HttpClientResponse> result;
+    private final HttpContinueNotification continueHandler;
 
     private volatile int state = INITIAL;
     private static final AtomicIntegerFieldUpdater<PendingHttpRequest> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(PendingHttpRequest.class, "state");
@@ -61,12 +62,13 @@ public final class PendingHttpRequest {
 
     PendingHttpRequest(final HttpClientRequestImpl request, final HttpClientConnectionImpl connection,
                        final boolean keepAlive, boolean hasContent, boolean expectContinue,
-                       final boolean pipeline, final Result<HttpClientResponse> result) {
+                       final boolean pipeline, final Result<HttpClientResponse> result, final HttpContinueNotification handler) {
 
         this.request = request;
         this.connection = connection;
         this.pipeline = pipeline;
         this.result = result;
+        continueHandler = handler;
         if(! keepAlive) {
             state = state | SHUTDOWN_WRITES;
         }
@@ -238,14 +240,30 @@ public final class PendingHttpRequest {
 
         // Handle http continue
         if(statusCode == 100) {
-            // open request gate
-            request.openGate();
-            // Clear the parse state
-            parseState.state = ResponseParseState.VERSION;
-            parseState.stringBuilder.setLength(0);
-            parseState.pos = 0;
-            // Now go on and process the actual response
-            connection.doReadResponse(this);
+            if(continueHandler != null) {
+                continueHandler.handleContinue(new HttpContinueNotification.ContinueContext() {
+                    @Override
+                    public void done() {
+                        // open request gate
+                        request.openGate();
+                        // Clear the parse state
+                        parseState.state = ResponseParseState.VERSION;
+                        parseState.stringBuilder.setLength(0);
+                        parseState.pos = 0;
+                        // Now go on and process the actual response
+                        connection.doReadResponse(PendingHttpRequest.this);
+                    }
+                });
+            } else {
+                // open request gate
+                request.openGate();
+                // Clear the parse state
+                parseState.state = ResponseParseState.VERSION;
+                parseState.stringBuilder.setLength(0);
+                parseState.pos = 0;
+                // Now go on and process the actual response
+                connection.doReadResponse(this);
+            }
             return;
         }
 

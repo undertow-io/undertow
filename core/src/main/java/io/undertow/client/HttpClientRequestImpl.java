@@ -67,6 +67,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
 
     private volatile StreamSinkChannel conduitChannel;
     private volatile GatedStreamSinkChannel requestChannel;
+    private volatile HttpContinueNotification continueHandler;
 
     private static final Set<HttpString> idempotentMethods = new HashSet<>();
     static {
@@ -183,7 +184,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
         }
         // Create the pending request
         final boolean pipelineNext = pipeline && idempotentMethods.contains(method);
-        final PendingHttpRequest request = new PendingHttpRequest(this, connection, keepAlive, hasContent, expectContinue, pipelineNext, responseFuture);
+        final PendingHttpRequest request = new PendingHttpRequest(this, connection, keepAlive, hasContent, expectContinue, pipelineNext, responseFuture, continueHandler);
         // Create the channel and wrappers
         StreamSinkConduit conduit = new StreamSinkChannelWrappingConduit(underlyingChannel);
         conduit = new HttpRequestConduit(conduit, connection.getBufferPool(), request);
@@ -307,6 +308,11 @@ class HttpClientRequestImpl extends HttpClientRequest {
                 headers.put(Headers.HOST, "");
             }
         }
+    }
+
+    @Override
+    public void setContinueHandler(final HttpContinueNotification handler) {
+        this.continueHandler = handler;
     }
 
     @Override

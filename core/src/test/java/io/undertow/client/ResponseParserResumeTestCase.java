@@ -50,7 +50,7 @@ public class ResponseParserResumeTestCase {
     public void testOneCharacterAtATime() {
         byte[] in = DATA.getBytes();
         final ResponseParseState context = new ResponseParseState();
-        PendingHttpRequest result = new PendingHttpRequest(null, null, false, false, false, false, null);
+        PendingHttpRequest result = new PendingHttpRequest(null, null, false, false, false, false, null, null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(1);
         while (context.state != ResponseParseState.PARSE_COMPLETE) {
@@ -62,7 +62,7 @@ public class ResponseParserResumeTestCase {
 
     private void testResume(final int split, byte[] in) {
         final ResponseParseState context = new ResponseParseState();
-        PendingHttpRequest result = new PendingHttpRequest(null, null, false, false, false, false, null);
+        PendingHttpRequest result = new PendingHttpRequest(null, null, false, false, false, false, null, null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(split);
         HttpResponseParser.INSTANCE.handle(buffer, context, result);

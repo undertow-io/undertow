@@ -141,4 +141,5 @@ public abstract class HttpClientRequest extends AbstractAttachable {
         return channel;
     }
 
+    public abstract void setContinueHandler(final HttpContinueNotification handler);
 }

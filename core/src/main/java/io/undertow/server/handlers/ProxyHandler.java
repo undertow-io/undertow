@@ -19,17 +19,23 @@
 package io.undertow.server.handlers;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 
 import io.undertow.UndertowLogger;
 import io.undertow.client.HttpClient;
 import io.undertow.client.HttpClientConnection;
 import io.undertow.client.HttpClientRequest;
 import io.undertow.client.HttpClientResponse;
+import io.undertow.client.HttpContinueNotification;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
 import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
@@ -201,8 +207,13 @@ public final class ProxyHandler implements HttpHandler {
                 if (exchange.getQueryString() != null) {
                     requestURI += "?" + exchange.getQueryString();
                 }
-                request = clientConnection.createRequest(exchange.getRequestMethod(), new URI(requestURI));
+                request = clientConnection.createRequest(exchange.getRequestMethod(), new URI(URLEncoder.encode(requestURI, "UTF-8")));
             } catch (URISyntaxException e) {
+                exchange.setResponseCode(500);
+                exchange.endExchange();
+                return;
+            } catch (UnsupportedEncodingException e) {
+                //will never hapen
                 exchange.setResponseCode(500);
                 exchange.endExchange();
                 return;
@@ -211,6 +222,28 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap outboundRequestHeaders = request.getRequestHeaders();
             copyHeaders(outboundRequestHeaders, inboundRequestHeaders);
             final long requestContentLength = exchange.getRequestContentLength();
+
+            if(HttpContinue.requiresContinueResponse(exchange)) {
+                request.setContinueHandler(new HttpContinueNotification() {
+                    @Override
+                    public void handleContinue(final ContinueContext context) {
+                        HttpContinue.sendContinueResponse(exchange, new IoCallback() {
+                            @Override
+                            public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                                context.done();
+                            }
+
+                            @Override
+                            public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                                context.done();
+                            }
+                        });
+                    }
+                });
+            }
+
+
+
             if (requestContentLength == 0L || requestContentLength == -1L) {
                 request.writeRequestBody(0L);
             } else {
