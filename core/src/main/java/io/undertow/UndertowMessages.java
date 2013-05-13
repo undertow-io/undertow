@@ -66,8 +66,7 @@ public interface UndertowMessages {
     @Message(id = 11, value = "Session manager must not be null")
     IllegalStateException sessionManagerMustNotBeNull();
 
-    @Message(id = 12, value = "Session manager was not attached to the request. Make sure that the SessionAttachmentHander"
-            + "is installed in the handler chain")
+    @Message(id = 12, value = "Session manager was not attached to the request. Make sure that the SessionAttachmentHander is installed in the handler chain")
     IllegalStateException sessionManagerNotFound();
 
     @Message(id = 13, value = "Argument %s cannot be null")
@@ -158,8 +157,7 @@ public interface UndertowMessages {
     IllegalStateException dataAlreadyQueued();
 
     @Message(id = 44, value = "More than one predicate with name %s. Builder class %s and %s")
-    IllegalStateException moreThanOnePredicateWithName(String name, Class<? extends PredicateBuilder> aClass,
-            Class<? extends PredicateBuilder> existing);
+    IllegalStateException moreThanOnePredicateWithName(String name, Class<? extends PredicateBuilder> aClass, Class<? extends PredicateBuilder> existing);
 
     @Message(id = 45, value = "Error parsing predicate string %s:%n%s")
     IllegalArgumentException errorParsingPredicateString(String reason, String s);

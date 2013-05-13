@@ -33,6 +33,7 @@ import java.util.concurrent.Executor;
 import javax.servlet.DispatcherType;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
@@ -67,6 +68,8 @@ public class DeploymentInfo implements Cloneable {
     private volatile ConfidentialPortManager confidentialPortManager;
     private volatile boolean allowNonStandardWrappers = false;
     private volatile int defaultSessionTimeout = 60 * 30;
+    private volatile boolean ignoreStandardAuthenticationMechanism = false;
+    private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -194,11 +197,48 @@ public class DeploymentInfo implements Cloneable {
     }
 
     /**
-     *
      * @param defaultSessionTimeout The default session timeout, in seconds
      */
     public void setDefaultSessionTimeout(final int defaultSessionTimeout) {
         this.defaultSessionTimeout = defaultSessionTimeout;
+    }
+
+    /**
+     * @return <code>true</code> If the authentication mechanism specified in web.xml should not be used
+     */
+    public boolean isIgnoreStandardAuthenticationMechanism() {
+        return ignoreStandardAuthenticationMechanism;
+    }
+
+    /**
+     * @param ignoreStandardAuthenticationMechanism
+     *         If the authentication mechanism specified in web.xml should be ignored
+     */
+    public DeploymentInfo setIgnoreStandardAuthenticationMechanism(final boolean ignoreStandardAuthenticationMechanism) {
+        this.ignoreStandardAuthenticationMechanism = ignoreStandardAuthenticationMechanism;
+        return this;
+    }
+
+
+    public DeploymentInfo addAuthenticationMechanism(final AuthenticationMechanism mechanism) {
+        additionalAuthenticationMechanisms.add(mechanism);
+        return this;
+    }
+
+
+    public DeploymentInfo addAuthenticationMechanisms(final AuthenticationMechanism... mechanisms) {
+        additionalAuthenticationMechanisms.addAll(Arrays.asList(mechanisms));
+        return this;
+    }
+
+
+    public DeploymentInfo addAuthenticationMechanisms(final Collection<AuthenticationMechanism> mechanisms) {
+        additionalAuthenticationMechanisms.addAll(mechanisms);
+        return this;
+    }
+
+    public List<AuthenticationMechanism> getAdditionalAuthenticationMechanisms() {
+        return Collections.unmodifiableList(additionalAuthenticationMechanisms);
     }
 
     public DeploymentInfo addServlet(final ServletInfo servlet) {
@@ -655,6 +695,8 @@ public class DeploymentInfo implements Cloneable {
         info.notificationReceivers.addAll(notificationReceivers);
         info.allowNonStandardWrappers = allowNonStandardWrappers;
         info.defaultSessionTimeout = defaultSessionTimeout;
+        info.ignoreStandardAuthenticationMechanism = ignoreStandardAuthenticationMechanism;
+        info.additionalAuthenticationMechanisms.addAll(additionalAuthenticationMechanisms);
         return info;
     }
 

@@ -28,7 +28,6 @@ import io.undertow.servlet.api.LoginConfig;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
-import io.undertow.servlet.core.DeploymentManagerImpl;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.security.SendUsernameServlet;
 import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
@@ -98,11 +97,11 @@ public class ServletCustomAuthTestCase {
                 .setDeploymentName("servletContext.war")
                 .setIdentityManager(identityManager)
                 .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
-                .addServlets(s, s1);
+                .addServlets(s, s1)
+                .setIgnoreStandardAuthenticationMechanism(true)
+                .addAuthenticationMechanism(new CustomAuthenticationMechanism("FORM", "/FormLoginServlet", "/error.html"));
 
         DeploymentManager manager = container.addDeployment(builder);
-        CustomAuthenticationMechanism customAuthMechanism = new CustomAuthenticationMechanism("FORM", "/FormLoginServlet", "/error.html");
-        ((DeploymentManagerImpl)manager).authMechanismOverride(customAuthMechanism);//Override authentication mechanism
         manager.deploy();
         path.addPath(builder.getContextPath(), manager.start());
 
