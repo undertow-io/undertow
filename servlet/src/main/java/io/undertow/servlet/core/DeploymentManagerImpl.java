@@ -119,10 +119,23 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private volatile InstanceHandle<Executor> executor;
     private volatile InstanceHandle<Executor> asyncExecutor;
 
+    private AuthenticationMechanism overrideauthMechanism;
+
 
     public DeploymentManagerImpl(final DeploymentInfo deployment, final ServletContainer servletContainer) {
         this.originalDeployment = deployment;
         this.servletContainer = servletContainer;
+    }
+
+    /**
+     * Allow the deployment to override the {@link AuthenticationMechanism} used by
+     * the servlet spec login config
+     * @param authMechanism
+     * @return
+     */
+    public DeploymentManagerImpl authMechanismOverride(AuthenticationMechanism authMechanism){
+        this.overrideauthMechanism = authMechanism;
+        return this;
     }
 
     @Override
@@ -218,16 +231,24 @@ public class DeploymentManagerImpl implements DeploymentManager {
             authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism());
 
             mechName = loginConfig.getAuthMethod();
-            if (mechName.equalsIgnoreCase(BASIC_AUTH)) {
-                // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be comparable using '=='
-                authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH));
-            } else if (mechName.equalsIgnoreCase(FORM_AUTH)) {
-                // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be comparable using '=='
-                authenticationMechanisms.add(new ServletFormAuthenticationMechanism(FORM_AUTH, loginConfig.getLoginPage(), loginConfig.getErrorPage()));
-            } else if (mechName.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
-                authenticationMechanisms.add(new ClientCertAuthenticationMechanism(CLIENT_CERT_AUTH));
+            if (overrideauthMechanism == null) {
+                if (mechName.equalsIgnoreCase(BASIC_AUTH)) {
+                    // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
+                    // comparable using '=='
+                    authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH));
+                } else if (mechName.equalsIgnoreCase(FORM_AUTH)) {
+                    // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
+                    // comparable using '=='
+                    authenticationMechanisms.add(new ServletFormAuthenticationMechanism(FORM_AUTH, loginConfig.getLoginPage(),
+                            loginConfig.getErrorPage()));
+                } else if (mechName.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
+                    authenticationMechanisms.add(new ClientCertAuthenticationMechanism(CLIENT_CERT_AUTH));
+                } else {
+                    // NYI
+                }
             } else {
-                //NYI
+                // Deployment has an authentication mechanism for override
+                authenticationMechanisms.add(overrideauthMechanism);
             }
             current = new AuthenticationMechanismsHandler(current, authenticationMechanisms);
         } else {
