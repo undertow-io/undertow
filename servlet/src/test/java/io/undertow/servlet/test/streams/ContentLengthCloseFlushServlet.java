@@ -16,7 +16,7 @@ public class ContentLengthCloseFlushServlet extends HttpServlet {
     private boolean completed = false;
 
     @Override
-    protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+    protected synchronized void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         if (completed) {
             resp.getWriter().write("OK");
         } else {
