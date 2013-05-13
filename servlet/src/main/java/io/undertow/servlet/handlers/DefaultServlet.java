@@ -148,7 +148,7 @@ public class DefaultServlet extends HttpServlet {
             resp.setContentLengthLong(contentLength);
         }
         if (!req.getMethod().equals(Methods.HEAD_STRING)) {
-            resource.serve(ServletRequestContext.current().getOriginalRequest().getExchange());
+            resource.serve(ServletRequestContext.requireCurrent().getOriginalRequest().getExchange());
         }
     }
 
@@ -178,7 +178,7 @@ public class DefaultServlet extends HttpServlet {
         //also the filters that have been applied to the request would be different.
         //instead we get the exchange and do a dispatch, and then redirect. This basically acts like
         //two seperate servlet requests
-        final HttpServletRequestImpl requestImpl = ServletRequestContext.current().getOriginalRequest();
+        final HttpServletRequestImpl requestImpl = ServletRequestContext.requireCurrent().getOriginalRequest();
         final HttpServerExchange exchange = requestImpl.getExchange();
         if(!exchange.isRequestChannelAvailable()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();

@@ -38,12 +38,16 @@ public class ServletRequestContext {
         CURRENT.remove();
     }
 
-    public static ServletRequestContext current() {
+    public static ServletRequestContext requireCurrent() {
         ServletRequestContext attachments = CURRENT.get();
         if(attachments == null) {
             throw UndertowMessages.MESSAGES.noRequestActive();
         }
         return attachments;
+    }
+
+    public static ServletRequestContext current() {
+        return CURRENT.get();
     }
 
     public static final AttachmentKey<ServletRequestContext> ATTACHMENT_KEY = AttachmentKey.create(ServletRequestContext.class);

@@ -42,7 +42,7 @@ public class EarlyCloseServlet extends HttpServlet {
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         req.getInputStream().close();
-        HttpServletRequestImpl request = ServletRequestContext.current().getOriginalRequest();
+        HttpServletRequestImpl request = ServletRequestContext.requireCurrent().getOriginalRequest();
         if(connection == null) {
             connection = request.getExchange().getConnection();
         } else {

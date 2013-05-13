@@ -58,7 +58,7 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
     public ServletWebSocketHttpExchange(final HttpServletRequest request, final HttpServletResponse response) {
         this.request = request;
         this.response = response;
-        this.exchange = ServletRequestContext.current().getOriginalRequest().getExchange();
+        this.exchange = ServletRequestContext.requireCurrent().getOriginalRequest().getExchange();
     }
 
 
