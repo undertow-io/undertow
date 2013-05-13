@@ -362,9 +362,7 @@ public abstract class HttpRequestParser {
                     continue;
                 } else if (next == '+') {
                     next = ' ';
-                }
-
-                if (next == ':' && parseState == START) {
+                } else if (next == ':' && parseState == START) {
                     parseState = FIRST_COLON;
                 } else if (next == '/' && parseState == FIRST_COLON) {
                     parseState = FIRST_SLASH;
@@ -392,6 +390,8 @@ public abstract class HttpRequestParser {
                     handleQueryParameters(buffer, state, exchange);
                     return;
                 }
+
+
                 stringBuilder.append(next);
             }
 
@@ -499,9 +499,7 @@ public abstract class HttpRequestParser {
                     continue;
                 } else if (next == '+') {
                     next = ' ';
-                }
-                //at this point next may have been modified, if it was encoded
-                if (next == '=' && nextQueryParam == null) {
+                } else if (next == '=' && nextQueryParam == null) {
                     nextQueryParam = stringBuilder.substring(queryParamPos);
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && nextQueryParam == null) {

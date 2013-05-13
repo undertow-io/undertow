@@ -36,7 +36,6 @@ import org.xnio.OptionMap;
 public class ParserResumeTestCase {
 
     public static final String DATA = "POST http://www.somehost.net/apath+with+spaces%20and%20I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n?key1=value1&key2=I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
-    public static final String ENCODED_DATA = "POST http%3a%2f%2Fwww.%73omehost.net/apath+with+spaces%20and%20I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n%3fkey1=value1%26key2=I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
     public static final HttpRequestParser PARSER = HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
 
     @Test
@@ -54,32 +53,6 @@ public class ParserResumeTestCase {
     @Test
     public void testOneCharacterAtATime() {
         byte[] in = DATA.getBytes();
-        final ParseState context = new ParseState();
-        HttpServerExchange result = new HttpServerExchange(null);
-        ByteBuffer buffer = ByteBuffer.wrap(in);
-        buffer.limit(1);
-        while (context.state != ParseState.PARSE_COMPLETE) {
-            PARSER.handle(buffer, context, result);
-            buffer.limit(buffer.limit() + 1);
-        }
-        runAssertions(result, context);
-    }
-
-    @Test
-    public void testMethodSplitWithEncoding() {
-        byte[] in = ENCODED_DATA.getBytes();
-        for (int i = 0; i < in.length - 4; ++i) {
-            try {
-                testResume(i, in);
-            } catch (Throwable e) {
-                throw new RuntimeException("Test failed at split " + i, e);
-            }
-        }
-    }
-
-    @Test
-    public void testOneCharacterAtATimeWithEncoding() {
-        byte[] in = ENCODED_DATA.getBytes();
         final ParseState context = new ParseState();
         HttpServerExchange result = new HttpServerExchange(null);
         ByteBuffer buffer = ByteBuffer.wrap(in);
