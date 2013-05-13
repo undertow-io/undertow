@@ -23,14 +23,11 @@ import java.util.Set;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpSessionBindingEvent;
-import javax.servlet.http.HttpSessionBindingListener;
 import javax.servlet.http.HttpSessionContext;
 
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.core.ApplicationListeners;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.IteratorEnumeration;
 
 /**
@@ -40,17 +37,33 @@ public class HttpSessionImpl implements HttpSession {
 
     private final Session session;
     private final ServletContext servletContext;
-    private final ApplicationListeners applicationListeners;
-    private final HttpServerExchange exchange;
     private final boolean newSession;
     private volatile boolean invalid;
 
-    public HttpSessionImpl(final Session session, final ServletContext servletContext, final ApplicationListeners applicationListeners, final HttpServerExchange exchange, final boolean newSession) {
+    private HttpSessionImpl(final Session session, final ServletContext servletContext, final boolean newSession) {
         this.session = session;
         this.servletContext = servletContext;
-        this.applicationListeners = applicationListeners;
-        this.exchange = exchange;
         this.newSession = newSession;
+    }
+
+    public static HttpSessionImpl forSession(final Session session, final ServletContext servletContext, final boolean newSession) {
+        ServletRequestContext current = ServletRequestContext.current();
+        if (current == null) {
+            return new HttpSessionImpl(session, servletContext, newSession);
+        } else {
+            HttpSessionImpl httpSession = current.getSession();
+            if (httpSession == null) {
+                httpSession = new HttpSessionImpl(session, servletContext, newSession);
+                current.setSession(httpSession);
+            } else {
+                if(httpSession.session != session) {
+                    //in some rare cases it may be that there are two different service contexts involved in the one request
+                    //in this case we just return a new session rather than using the thread local version
+                    httpSession = new HttpSessionImpl(session, servletContext, newSession);
+                }
+            }
+            return httpSession;
+        }
     }
 
     @Override
@@ -119,18 +132,7 @@ public class HttpSessionImpl implements HttpSession {
         if (value == null) {
             removeAttribute(name);
         } else {
-            Object old = session.setAttribute(name, value);
-            if (old == null) {
-                applicationListeners.httpSessionAttributeAdded(this, name, value);
-            } else if (old != value) {
-                if (old instanceof HttpSessionBindingListener) {
-                    ((HttpSessionBindingListener) old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
-                }
-                applicationListeners.httpSessionAttributeReplaced(this, name, old);
-            }
-            if (value instanceof HttpSessionBindingListener) {
-                ((HttpSessionBindingListener) value).valueBound(new HttpSessionBindingEvent(this, name, value));
-            }
+            session.setAttribute(name, value);
         }
     }
 
@@ -141,13 +143,7 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public void removeAttribute(final String name) {
-        Object old = session.removeAttribute(name);
-        if (old != null) {
-            applicationListeners.httpSessionAttributeRemoved(this, name, old);
-            if (old instanceof HttpSessionBindingListener) {
-                ((HttpSessionBindingListener) old).valueUnbound(new HttpSessionBindingEvent(this, name, old));
-            }
-        }
+        session.removeAttribute(name);
     }
 
     @Override
@@ -158,8 +154,12 @@ public class HttpSessionImpl implements HttpSession {
     @Override
     public void invalidate() {
         invalid = true;
-        applicationListeners.sessionDestroyed(this);
-        session.invalidate(exchange);
+        ServletRequestContext current = ServletRequestContext.current();
+        if (current == null) {
+            session.invalidate(null);
+        } else {
+            session.invalidate(current.getOriginalRequest().getExchange());
+        }
     }
 
     @Override

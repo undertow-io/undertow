@@ -7,6 +7,7 @@ import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.security.SingleConstraintMatch;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
+import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.util.AttachmentKey;
 
 import javax.servlet.DispatcherType;
@@ -58,6 +59,7 @@ public class ServletRequestContext {
 
     private List<SingleConstraintMatch> requiredConstrains;
     private TransportGuaranteeType transportGuarenteeType;
+    private HttpSessionImpl session;
 
     public ServletRequestContext(final HttpServletRequestImpl originalRequest, final HttpServletResponseImpl originalResponse) {
         this.originalRequest = originalRequest;
@@ -128,5 +130,13 @@ public class ServletRequestContext {
 
     public HttpServletResponseImpl getOriginalResponse() {
         return originalResponse;
+    }
+
+    public HttpSessionImpl getSession() {
+        return session;
+    }
+
+    public void setSession(final HttpSessionImpl session) {
+        this.session = session;
     }
 }

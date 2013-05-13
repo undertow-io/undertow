@@ -159,6 +159,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 }
             }
 
+            deployment.getSessionManager().registerSessionListener(new SessionListenerBridge(listeners, servletContext));
+
             initializeErrorPages(deployment, deploymentInfo);
             initializeMimeMappings(deployment, deploymentInfo);
             initializeTempDir(servletContext, deploymentInfo);

@@ -18,10 +18,9 @@
 
 package io.undertow.server.session;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
@@ -44,7 +43,7 @@ public class InMemorySessionManager implements SessionManager {
 
     private final ConcurrentMap<String, InMemorySession> sessions = new SecureHashMap<>();
 
-    private volatile List<SessionListener> listeners = Collections.emptyList();
+    private final SessionListeners sessionListeners = new SessionListeners();
 
     /**
      * 30 minute default
@@ -58,6 +57,9 @@ public class InMemorySessionManager implements SessionManager {
 
     @Override
     public void stop() {
+        for (Map.Entry<String, InMemorySession> session : sessions.entrySet()) {
+            sessionListeners.sessionDestroyed(session.getValue().session, null, SessionListener.SessionDestroyedReason.UNDEPLOY);
+        }
         sessions.clear();
     }
 
@@ -78,9 +80,7 @@ public class InMemorySessionManager implements SessionManager {
         final SessionImpl session = new SessionImpl(sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker());
         InMemorySession im = new InMemorySession(session, defaultSessionTimeout);
         sessions.put(sessionID, im);
-        for (SessionListener listener : listeners) {
-            listener.sessionCreated(session, serverExchange);
-        }
+        sessionListeners.sessionCreated(session, serverExchange);
         config.setSessionId(serverExchange, session.getId());
         im.lastAccessed = System.currentTimeMillis();
         session.bumpTimeout();
@@ -104,16 +104,12 @@ public class InMemorySessionManager implements SessionManager {
 
     @Override
     public synchronized void registerSessionListener(final SessionListener listener) {
-        final List<SessionListener> listeners = new ArrayList<SessionListener>(this.listeners);
-        listeners.add(listener);
-        this.listeners = Collections.unmodifiableList(listeners);
+        sessionListeners.addSessionListener(listener);
     }
 
     @Override
     public synchronized void removeSessionListener(final SessionListener listener) {
-        final List<SessionListener> listeners = new ArrayList<SessionListener>(this.listeners);
-        listeners.remove(listener);
-        this.listeners = Collections.unmodifiableList(listeners);
+        sessionListeners.removeSessionListener(listener);
     }
 
     @Override
@@ -140,7 +136,7 @@ public class InMemorySessionManager implements SessionManager {
                 worker.execute(new Runnable() {
                     @Override
                     public void run() {
-                        invalidate(null);
+                        invalidate(null, SessionListener.SessionDestroyedReason.TIMEOUT);
                     }
                 });
             }
@@ -240,12 +236,10 @@ public class InMemorySessionManager implements SessionManager {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             final Object existing = sess.attributes.put(name, value);
-            for (SessionListener listener : listeners) {
-                if (existing == null) {
-                    listener.attributeAdded(sess.session, name, value);
-                } else {
-                    listener.attributeUpdated(sess.session, name, value);
-                }
+            if (existing == null) {
+                sessionListeners.attributeAdded(sess.session, name, value);
+            } else {
+                sessionListeners.attributeUpdated(sess.session, name, value, existing);
             }
             bumpTimeout();
             return existing;
@@ -258,25 +252,29 @@ public class InMemorySessionManager implements SessionManager {
                 throw UndertowMessages.MESSAGES.sessionNotFound(sessionId);
             }
             final Object existing = sess.attributes.remove(name);
-            for (SessionListener listener : listeners) {
-                listener.attributeRemoved(sess.session, name);
-            }
+            sessionListeners.attributeRemoved(sess.session, name, existing);
             bumpTimeout();
             return existing;
         }
 
         @Override
         public void invalidate(final HttpServerExchange exchange) {
+            invalidate(exchange, SessionListener.SessionDestroyedReason.INVALIDATED);
+        }
+
+        void invalidate(final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {
             if (cancelKey != null) {
                 cancelKey.remove();
             }
-            final InMemorySession sess = sessions.remove(sessionId);
+            InMemorySession sess = sessions.get(sessionId);
             if (sess == null) {
-                throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
+                if (reason == SessionListener.SessionDestroyedReason.INVALIDATED) {
+                    throw UndertowMessages.MESSAGES.sessionAlreadyInvalidated();
+                }
+                return;
             }
-            for (SessionListener listener : listeners) {
-                listener.sessionDestroyed(sess.session, exchange, false);
-            }
+            sessionListeners.sessionDestroyed(sess.session, exchange, reason);
+            sessions.remove(sessionId);
             if (exchange != null) {
                 sessionCookieConfig.clearSession(exchange, this.getId());
             }
@@ -314,7 +312,7 @@ public class InMemorySessionManager implements SessionManager {
             this.maxInactiveInterval = maxInactiveInterval;
         }
 
-        final ConcurrentMap<String, Object> attributes = new SecureHashMap<String, Object>();
+        final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<>();
         volatile long lastAccessed;
         final long creationTime;
         volatile int maxInactiveInterval;

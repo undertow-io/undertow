@@ -160,4 +160,5 @@ public interface UndertowServletMessages {
 
     @Message(id = 10038, value = "No web socket handler was provided to the web socket servlet")
     ServletException noWebSocketHandler();
+
 }

@@ -42,11 +42,17 @@ public interface SessionListener {
      * @param exchange The {@link HttpServerExchange} that destroyed the session, or null if the session timed out
      * @param expired If the session expired
      */
-    void sessionDestroyed(final Session session,  final HttpServerExchange exchange, final boolean expired);
+    void sessionDestroyed(final Session session,  final HttpServerExchange exchange, SessionDestroyedReason reason);
 
     void attributeAdded(final Session session, final String name, final Object value);
 
-    void attributeUpdated(final Session session, final String name, final Object newValue);
+    void attributeUpdated(final Session session, final String name, final Object newValue, final Object oldValue);
 
-    void attributeRemoved(final Session session, final String name);
+    void attributeRemoved(final Session session, final String name,final Object oldValue);
+
+    enum SessionDestroyedReason {
+        INVALIDATED,
+        TIMEOUT,
+        UNDEPLOY,
+    }
 }
