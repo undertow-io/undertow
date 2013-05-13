@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import io.undertow.UndertowMessages;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome;
 import io.undertow.security.api.AuthenticationMechanism.ChallengeResult;
@@ -276,6 +277,10 @@ public class SecurityContextImpl implements SecurityContext {
             if (mechanismIterator.hasNext()) {
                 final AuthenticationMechanism mechanism = mechanismIterator.next();
                 AuthenticationMechanismOutcome outcome = mechanism.authenticate(exchange, SecurityContextImpl.this);
+
+                if (outcome == null) {
+                    throw UndertowMessages.MESSAGES.authMechanismOutcomeNull();
+                }
 
                 switch (outcome) {
                     case AUTHENTICATED:
