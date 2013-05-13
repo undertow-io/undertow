@@ -137,6 +137,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
         deployment.setServletContext(servletContext);
         deployment.setSessionManager(deploymentInfo.getSessionManagerFactory().createSessionManager(deployment));
+        deployment.getSessionManager().setDefaultSessionTimeout(deploymentInfo.getDefaultSessionTimeout());
 
         final List<ThreadSetupAction> setup = new ArrayList<ThreadSetupAction>();
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));

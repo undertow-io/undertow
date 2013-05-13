@@ -66,6 +66,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile IdentityManager identityManager;
     private volatile ConfidentialPortManager confidentialPortManager;
     private volatile boolean allowNonStandardWrappers = false;
+    private volatile int defaultSessionTimeout = 60 * 30;
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -186,6 +187,18 @@ public class DeploymentInfo implements Cloneable {
     public DeploymentInfo setAllowNonStandardWrappers(final boolean allowNonStandardWrappers) {
         this.allowNonStandardWrappers = allowNonStandardWrappers;
         return this;
+    }
+
+    public int getDefaultSessionTimeout() {
+        return defaultSessionTimeout;
+    }
+
+    /**
+     *
+     * @param defaultSessionTimeout The default session timeout, in seconds
+     */
+    public void setDefaultSessionTimeout(final int defaultSessionTimeout) {
+        this.defaultSessionTimeout = defaultSessionTimeout;
     }
 
     public DeploymentInfo addServlet(final ServletInfo servlet) {
@@ -640,7 +653,8 @@ public class DeploymentInfo implements Cloneable {
         info.dispatchedHandlerChainWrappers.addAll(dispatchedHandlerChainWrappers);
         info.securityRoles.addAll(securityRoles);
         info.notificationReceivers.addAll(notificationReceivers);
-        info.setAllowNonStandardWrappers(allowNonStandardWrappers);
+        info.allowNonStandardWrappers = allowNonStandardWrappers;
+        info.defaultSessionTimeout = defaultSessionTimeout;
         return info;
     }
 
