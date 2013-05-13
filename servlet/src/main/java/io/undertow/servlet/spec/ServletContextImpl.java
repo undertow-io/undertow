@@ -527,7 +527,6 @@ public class ServletContextImpl implements ServletContext {
                 final Session newSession = sessionManager.createSession(exchange, c);
                 httpSession = HttpSessionImpl.forSession(newSession, this, true);
                 exchange.putAttachment(sessionAttachmentKey, httpSession);
-                getDeployment().getApplicationListeners().sessionCreated(httpSession);
             }
         }
         return httpSession;
