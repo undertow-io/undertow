@@ -38,6 +38,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.AttachmentHandler;
 import io.undertow.server.handlers.PredicateHandler;
+import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
@@ -88,6 +89,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
@@ -134,6 +136,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
 
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
+
+        handleExtensions(deploymentInfo, servletContext);
+
         deployment.setServletContext(servletContext);
         deployment.setSessionManager(deploymentInfo.getSessionManagerFactory().createSessionManager(deployment));
         deployment.getSessionManager().setDefaultSessionTimeout(deploymentInfo.getDefaultSessionTimeout());
@@ -186,6 +191,12 @@ public class DeploymentManagerImpl implements DeploymentManager {
             handle.tearDown();
         }
         state = State.DEPLOYED;
+    }
+
+    private void handleExtensions(final DeploymentInfo deploymentInfo, final ServletContextImpl servletContext) {
+        for(ServletExtension extension : ServiceLoader.load(ServletExtension.class, deploymentInfo.getClassLoader())) {
+            extension.handleDeployment(deploymentInfo, servletContext);
+        }
     }
 
     /**
