@@ -39,6 +39,21 @@ public class DateUtils {
 
     private static final String RFC1123_PATTERN = "EEE, dd MMM yyyy HH:mm:ss z";
 
+    /**
+     * Thread local cache of this date format. This is technically a small memory leak, however
+     * in practice it is fine, as it will only be used by server threads.
+     *
+     * This is the most common date format, which is why we cache it.
+     */
+    private static final ThreadLocal<SimpleDateFormat> RFC1123_PATTERN_FORMAT = new ThreadLocal<SimpleDateFormat>() {
+        @Override
+        protected SimpleDateFormat initialValue() {
+            SimpleDateFormat df =  new SimpleDateFormat(RFC1123_PATTERN, LOCALE_US);
+            df.setTimeZone(GMT_ZONE);
+            return df;
+        }
+    };
+
     private static final String RFC1036_PATTERN = "EEEEEEEEE, dd-MMM-yy HH:mm:ss z";
 
     private static final String ASCITIME_PATTERN = "EEE MMM d HH:mm:ss yyyyy";
@@ -53,9 +68,7 @@ public class DateUtils {
      * @return The RFC-1123 formatted date
      */
     public static String toDateString(final Date date) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat(RFC1123_PATTERN, LOCALE_US);
-        dateFormat.setTimeZone(GMT_ZONE);
-        return dateFormat.format(date);
+        return RFC1123_PATTERN_FORMAT.get().format(date);
     }
 
 
@@ -73,8 +86,7 @@ public class DateUtils {
      */
     public static Date parseDate(final String date) {
         ParsePosition pp = new ParsePosition(0);
-        SimpleDateFormat dateFormat = new SimpleDateFormat(RFC1123_PATTERN, LOCALE_US);
-        dateFormat.setTimeZone(GMT_ZONE);
+        SimpleDateFormat dateFormat = RFC1123_PATTERN_FORMAT.get();
         Date val = dateFormat.parse(date, pp);
         if (val != null && pp.getIndex() == date.length()) {
             return val;
