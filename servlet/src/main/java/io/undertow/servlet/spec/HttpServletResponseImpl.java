@@ -262,11 +262,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public String getContentType() {
         if (contentType != null) {
-            if (charsetSet) {
-                return contentType + ";charset=" + getCharacterEncoding();
-            } else {
-                return contentType;
-            }
+            return contentType + ";charset=" + getCharacterEncoding();
         }
         return null;
     }
