@@ -266,7 +266,11 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 ha1 = lookupOrCreateSessionHA1(parsedHeader);
             } else {
                 // This is the most simple form of a hash involving the username, realm and password.
-                ha1 = createHA1(userName.getBytes(UTF_8), account, digest, securityContext);
+                ha1 = createHA1(userName.getBytes(UTF_8), account, digest, algorithm);
+                if(ha1 == null) {
+                    //the underlying account could not provide the necessary information for DIGEST auth
+                    return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
+                }
             }
             context.setHa1(ha1);
         } catch (AuthenticationException e) {
@@ -337,9 +341,13 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     private byte[] createHA1(final byte[] userName, final Account account, final MessageDigest digest,
-                             final SecurityContext securityContext) throws AuthenticationException {
+                             final DigestAlgorithm digestAlgorithm) throws AuthenticationException {
         if (plainTextPasswords) {
-            byte[] password = new String(securityContext.getIdentityManager().getPassword(account)).getBytes(UTF_8);
+            char[] attribute = (char[]) account.getAttribute(Account.PLAINTEXT_PASSWORD_ATTRIBUTE);
+            if(attribute == null) {
+                return null;
+            }
+            byte[] password = new String(attribute).getBytes(UTF_8);
 
             try {
                 digest.update(userName);
@@ -353,7 +361,10 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 digest.reset();
             }
         } else {
-            byte[] preHashed = securityContext.getIdentityManager().getHash(account);
+            byte[] preHashed = (byte[])account.getAttribute(Account.DIGEST_HA1_HASH_ATTRIBUTE_PREFIX + digestAlgorithm.getToken());
+            if(preHashed == null) {
+                return null;
+            }
             return HexConverter.convertToHexBytes(preHashed);
         }
     }

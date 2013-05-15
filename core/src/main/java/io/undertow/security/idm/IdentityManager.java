@@ -69,23 +69,4 @@ public interface IdentityManager {
      */
     Account getAccount(final String id);
 
-    /**
-     * Return the password for an account. This is an optional method, as is only used for digest auth where the original
-     * password is needed to compute the digest.
-     *
-     * This is an optional method. It is recommended that passwords be stored in a hashed format, so for most identity managers
-     * it will not be possible nor desirable to implement this method.
-     *
-     * @param account the account
-     * @return The accounts password
-     */
-    char[] getPassword(final Account account);
-
-    /**
-     * Return the pre-prepared hash for the account.
-     * @param account - The account the hash is required for.
-     * @return The pre-prepared MD5 hash.
-     */
-    byte[] getHash(final Account account);
-
 }

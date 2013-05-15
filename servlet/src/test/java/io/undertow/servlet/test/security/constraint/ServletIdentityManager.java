@@ -83,16 +83,6 @@ public class ServletIdentityManager implements IdentityManager {
         return users.get(id);
     }
 
-    @Override
-    public char[] getPassword(final Account account) {
-        return null;
-    }
-
-    @Override
-    public byte[] getHash(Account account) {
-        return null;
-    }
-
     private static class UserAccount implements Account {
         // In no way whatsoever should a class like this be considered a good idea for a real IdentityManager implementation,
         // this is for testing only.
@@ -117,6 +107,16 @@ public class ServletIdentityManager implements IdentityManager {
         @Override
         public boolean isUserInRole(String role) {
             return roles.contains(role);
+        }
+
+        @Override
+        public Set<String> getRoles() {
+            return roles;
+        }
+
+        @Override
+        public Object getAttribute(final String attributeName) {
+            return null;
         }
     }
 

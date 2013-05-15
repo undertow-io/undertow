@@ -2,7 +2,9 @@ package io.undertow.examples.security.basic;
 
 import java.security.Principal;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
@@ -59,17 +61,6 @@ class MapIdentityManager implements IdentityManager {
     }
 
     @Override
-    public char[] getPassword(final Account account) {
-        return users.get(account.getPrincipal().getName());
-    }
-
-    @Override
-    public byte[] getHash(Account account) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
     public Account getAccount(final String id) {
         if (users.containsKey(id)) {
             return new Account() {
@@ -90,6 +81,19 @@ class MapIdentityManager implements IdentityManager {
                 @Override
                 public boolean isUserInRole(String role) {
                     return false;
+                }
+
+                @Override
+                public Set<String> getRoles() {
+                    return Collections.emptySet();
+                }
+
+                @Override
+                public Object getAttribute(final String attributeName) {
+                    if(attributeName.equals(PLAINTEXT_PASSWORD_ATTRIBUTE)) {
+                        return users.get(id);
+                    }
+                    return null;
                 }
 
             };

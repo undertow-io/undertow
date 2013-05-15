@@ -108,6 +108,16 @@ public abstract class AuthenticationTestBase {
                                 return false;
                             }
 
+                            @Override
+                            public Set<String> getRoles() {
+                                return Collections.emptySet();
+                            }
+
+                            @Override
+                            public Object getAttribute(final String attributeName) {
+                                return null;
+                            }
+
                         };
                     }
 
@@ -124,11 +134,6 @@ public abstract class AuthenticationTestBase {
                     return Arrays.equals(password, expectedPassword);
                 }
                 return false;
-            }
-
-            @Override
-            public char[] getPassword(final Account account) {
-                return passwordUsers.get(account.getPrincipal().getName());
             }
 
             @Override
@@ -154,13 +159,21 @@ public abstract class AuthenticationTestBase {
                             return false;
                         }
 
+                        @Override
+                        public Set<String> getRoles() {
+                            return Collections.emptySet();
+                        }
+
+                        @Override
+                        public Object getAttribute(final String attributeName) {
+                            if(attributeName.equals(PLAINTEXT_PASSWORD_ATTRIBUTE)) {
+                                return passwordUsers.get(id);
+                            }
+                            return null;
+                        }
+
                     };
                 }
-                return null;
-            }
-
-            @Override
-            public byte[] getHash(Account account) {
                 return null;
             }
 
