@@ -22,6 +22,9 @@ public class AsyncSenderImpl implements Sender {
 
     private final StreamSinkChannel streamSinkChannel;
     private final HttpServerExchange exchange;
+    private ByteBuffer[] buffer;
+    private IoCallback callback;
+    private boolean inCallback;
 
     private final ChannelListener<Channel> writeListener = new ChannelListener<Channel>() {
         @Override
@@ -37,17 +40,13 @@ public class AsyncSenderImpl implements Sender {
                     }
                 }
                 streamSinkChannel.suspendWrites();
-                callback.onComplete(exchange, AsyncSenderImpl.this);
+                invokeOnComplete();
             } catch (IOException e) {
                 streamSinkChannel.suspendWrites();
                 callback.onException(exchange, AsyncSenderImpl.this, e);
             }
         }
     };
-
-
-    private ByteBuffer[] buffer;
-    private IoCallback callback;
 
 
     public AsyncSenderImpl(final StreamSinkChannel streamSinkChannel, final HttpServerExchange exchange) {
@@ -60,6 +59,14 @@ public class AsyncSenderImpl implements Sender {
     public void send(final ByteBuffer buffer, final IoCallback callback) {
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
+        }
+        if (this.buffer != null) {
+            throw UndertowMessages.MESSAGES.dataAlreadyQueued();
+        }
+        this.callback = callback;
+        if (inCallback) {
+            this.buffer = new ByteBuffer[]{buffer};
+            return;
         }
         try {
             do {
@@ -76,7 +83,7 @@ public class AsyncSenderImpl implements Sender {
                     return;
                 }
             } while (buffer.hasRemaining());
-            callback.onComplete(exchange, this);
+            invokeOnComplete();
 
         } catch (IOException e) {
             callback.onException(exchange, this, e);
@@ -88,11 +95,16 @@ public class AsyncSenderImpl implements Sender {
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
-
-        long t = 0;
-        for (ByteBuffer l : buffer) {
-            t += l.remaining();
+        if (this.buffer != null) {
+            throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
+        this.callback = callback;
+        if (inCallback) {
+            this.buffer = buffer;
+            return;
+        }
+
+        long t = Buffers.remaining(buffer);
         final long total = t;
         long written = 0;
 
@@ -108,7 +120,7 @@ public class AsyncSenderImpl implements Sender {
                     return;
                 }
             } while (written < total);
-            callback.onComplete(exchange, this);
+            invokeOnComplete();
 
         } catch (IOException e) {
             callback.onException(exchange, this, e);
@@ -159,5 +171,47 @@ public class AsyncSenderImpl implements Sender {
     @Override
     public void close() {
         close(null);
+    }
+
+    /**
+     * Invokes the onComplete method. If send is called again in onComplete then
+     * we loop and write it out. This prevents possible stack overflows due to recursion
+     */
+    private void invokeOnComplete() {
+        for (; ; ) {
+            IoCallback callback = this.callback;
+            this.buffer = null;
+            this.callback = null;
+            inCallback = true;
+            try {
+                callback.onComplete(exchange, this);
+            } finally {
+                inCallback = false;
+            }
+
+            if (this.buffer != null) {
+                long t = Buffers.remaining(buffer);
+                final long total = t;
+                long written = 0;
+
+                try {
+                    do {
+                        long res = streamSinkChannel.write(buffer);
+                        written += res;
+                        if (res == 0) {
+                            streamSinkChannel.getWriteSetter().set(writeListener);
+                            streamSinkChannel.resumeWrites();
+                            return;
+                        }
+                    } while (written < total);
+                    //we loop and invoke onComplete again
+                } catch (IOException e) {
+                    callback.onException(exchange, this, e);
+                }
+            } else {
+                return;
+            }
+
+        }
     }
 }

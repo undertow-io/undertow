@@ -9,6 +9,8 @@ import java.nio.charset.Charset;
  * Note that all methods on this class are asynchronous, and may result in dispatch to an IO thread. After calling
  * a method on this class you should not perform any more work on the current exchange until the callback is invoked.
  *
+ * NOTE: implementers of this interface should be careful that they do not recursively call onComplete, which can
+ * lead to stack overflows if send is called many times.
  *
  *
  * TODO: Look at more closely aligning this with the web socket senders
