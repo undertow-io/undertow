@@ -51,6 +51,7 @@ public class SimpleParserTestCase {
         HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
         Assert.assertEquals("/somepath%2FotherPath", result.getRequestURI());
+        Assert.assertEquals("/somepath%2FotherPath", result.getRequestPath());
     }
 
     @Test
@@ -61,7 +62,8 @@ public class SimpleParserTestCase {
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
-        Assert.assertEquals("/somepath/otherPath", result.getRequestURI());
+        Assert.assertEquals("/somepath/otherPath", result.getRequestPath());
+        Assert.assertEquals("/somepath%2fotherPath", result.getRequestURI());
     }
 
 

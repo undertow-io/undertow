@@ -30,6 +30,8 @@ import io.undertow.util.HttpString;
  * Fields can mean different things depending on the current state. This means that names may
  * not always reflect complete functionality.
  *
+ * This class is re-used for requests on the same connection.
+ *
  * @author Stuart Douglas
  */
 class ParseState {
@@ -81,6 +83,14 @@ class ParseState {
      * If this is in {@link #NO_STATE} then this holds the current token that has been read so far.
      */
     final StringBuilder stringBuilder = new StringBuilder();
+
+    /**
+     * If the decoded URL does not match the non-decoded version this builder will contain the original URL. If this is
+     * null it means that the decoded and non-decoded versions are the same.
+     *
+     * TODO: we should probably re-use this string builder
+     */
+    StringBuilder encodedStringBuilder;
 
     /**
      * This has different meanings depending on the current state.

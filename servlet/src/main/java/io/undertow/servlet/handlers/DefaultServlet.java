@@ -195,7 +195,6 @@ public class DefaultServlet extends HttpServlet {
                 exchange.setResponseCode(200);
 
                 exchange.setRelativePath(exchange.getRelativePath() + path);
-                exchange.setCanonicalPath(exchange.getCanonicalPath() + path);
                 exchange.setRequestPath(exchange.getRequestPath() + path);
                 exchange.setRequestURI(exchange.getRequestURI() + path);
                 HttpHandlers.executeRootHandler(requestImpl.getServletContext().getDeployment().getServletHandler(), exchange, false);

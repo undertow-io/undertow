@@ -123,20 +123,34 @@ public final class HttpServerExchange extends AbstractAttachable {
     private int state = 200;
     private HttpString requestMethod;
     private String requestScheme;
+
     /**
-     * The original request URI. This will include the host name if it was specified by the client
+     * The original request URI. This will include the host name if it was specified by the client.
+     * <p/>
+     * This is not decoded in any way, and does not include the query string.
+     * <p/>
+     * Examples:
+     * GET http://localhost:8080/myFile.jsf?foo=bar HTTP/1.1 -> 'http://localhost:8080/myFile.jsf'
+     * POST /my+File.jsf?foo=bar HTTP/1.1 -> '/my+File.jsf'
      */
     private String requestURI;
+
     /**
-     * The original request path.
+     * The request path. This will be decoded by the server, and does not include the query string.
+     * <p/>
+     * This path is not canonicalised, so care must be taken to ensure that escape attacks are not possible.
+     * <p/>
+     * Examples:
+     * GET http://localhost:8080/b/../my+File.jsf?foo=bar HTTP/1.1 -> '/b/../my+File.jsf'
+     * POST /my+File.jsf?foo=bar HTTP/1.1 -> '/my File.jsf'
      */
     private String requestPath;
+
     /**
-     * The canonical version of the original path.
-     */
-    private String canonicalPath;
-    /**
-     * The remaining unresolved portion of the canonical path.
+     * The remaining unresolved portion of request path. If a {@link io.undertow.server.handlers.CanonicalPathHandler} is
+     * installed this will be canonicalised.
+     * <p/>
+     * Initially this will be equal to {@link #requestPath}, however it will be modified as handlers resolve the path.
      */
     private String relativePath;
 
@@ -157,21 +171,54 @@ public final class HttpServerExchange extends AbstractAttachable {
     private ConduitWrapper<StreamSinkConduit>[] responseWrappers = new ConduitWrapper[4]; //these are allocated by default, as they are always used
 
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
+
+    /**
+     * Flag that is set when the response sending begins
+     */
     private static final int FLAG_RESPONSE_SENT = 1 << 10;
+
+    /**
+     * Flag that is sent when the response has been fully written and flushed.
+     */
     private static final int FLAG_RESPONSE_TERMINATED = 1 << 11;
+
+    /**
+     * Flag that is set once the request has been fully read. For zero
+     * length requests this is set immediately.
+     */
     private static final int FLAG_REQUEST_TERMINATED = 1 << 12;
+
+    /**
+     * Flag that is set if this is a persistent connection, and the
+     * connection should be re-used.
+     */
     private static final int FLAG_PERSISTENT = 1 << 14;
 
     /**
      * If this flag is set it means that the request has been dispatched,
-     * and will not be ending when the call stack returns. This could be because
-     * it is being dispatched to a worker thread from an IO thread, or because
-     * resume(Reads/Writes) has been called.
+     * and will not be ending when the call stack returns.
+     * <p/>
+     * This could be because it is being dispatched to a worker thread from
+     * an IO thread, or because resume(Reads/Writes) has been called.
      */
     private static final int FLAG_DISPATCHED = 1 << 15;
 
     /**
-     * If this flag is set then the request is current being processed.
+     * Flag that is set if the {@link #requestURI} field contains the hostname.
+     */
+    private static final int FLAG_URI_CONTAINS_HOST = 1 << 16;
+
+    /**
+     * If this flag is set then the request is current running through a
+     * handler chain.
+     * <p/>
+     * This will be true most of the time, this only time this will return
+     * false is when performing async operations outside the scope of a call to
+     * {@link HttpHandlers#executeRootHandler(HttpHandler, HttpServerExchange, boolean)},
+     * such as when performing async IO.
+     * <p/>
+     * If this is true then when the call stack returns the exchange will either be dispatched,
+     * or the exchange will be ended.
      */
     private static final int FLAG_IN_CALL = 1 << 17;
 
@@ -261,11 +308,14 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Gets the request URI, including hostname, protocol etc if specified by the client.
+     * The original request URI. This will include the host name, protocol etc
+     * if it was specified by the client.
      * <p/>
-     * In most cases this will be equal to {@link #requestPath}
-     *
-     * @return The request URI
+     * This is not decoded in any way, and does not include the query string.
+     * <p/>
+     * Examples:
+     * GET http://localhost:8080/myFile.jsf?foo=bar HTTP/1.1 -> 'http://localhost:8080/myFile.jsf'
+     * POST /my+File.jsf?foo=bar HTTP/1.1 -> '/my+File.jsf'
      */
     public String getRequestURI() {
         return requestURI;
@@ -281,9 +331,27 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the request URI path.  This is the whole original request path.
+     * If a request was submitted to the server with a full URI instead of just a path this
+     * will return true. For example:
+     * <p/>
+     * GET http://localhost:8080/b/../my+File.jsf?foo=bar HTTP/1.1 -> true
+     * POST /my+File.jsf?foo=bar HTTP/1.1 -> false
      *
-     * @return the request URI path
+     * @return <code>true</code> If the request URI contains the host part of the URI
+     */
+    public boolean isHostIncludedInRequestURI() {
+        return anyAreSet(state, FLAG_URI_CONTAINS_HOST);
+    }
+
+
+    /**
+     * The request path. This will be decoded by the server, and does not include the query string.
+     * <p/>
+     * This path is not canonicalised, so care must be taken to ensure that escape attacks are not possible.
+     * <p/>
+     * Examples:
+     * GET http://localhost:8080/b/../my+File.jsf?foo=bar HTTP/1.1 -> '/b/../my+File.jsf'
+     * POST /my+File.jsf?foo=bar HTTP/1.1 -> '/my File.jsf'
      */
     public String getRequestPath() {
         return requestPath;
@@ -323,9 +391,13 @@ public final class HttpServerExchange extends AbstractAttachable {
      * internal method used by the parser to set both the request and relative
      * path fields
      */
-    void setParsedRequestPath(final String requestPath) {
+    void setParsedRequestPath(final boolean requestUriContainsHost, final String requestUri, final String requestPath) {
+        this.requestURI = requestUri;
         this.relativePath = requestPath;
         this.requestPath = requestPath;
+        if (requestUriContainsHost) {
+            state |= FLAG_URI_CONTAINS_HOST;
+        }
     }
 
     /**
@@ -346,24 +418,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         this.resolvedPath = resolvedPath;
     }
 
-    /**
-     * Get the canonical path.
-     *
-     * @return the canonical path
-     */
-    public String getCanonicalPath() {
-        return canonicalPath;
-    }
-
-    /**
-     * Set the canonical path.
-     *
-     * @param canonicalPath the canonical path
-     */
-    public void setCanonicalPath(final String canonicalPath) {
-        this.canonicalPath = canonicalPath;
-    }
-
     public String getQueryString() {
         return queryString;
     }
@@ -377,11 +431,15 @@ public final class HttpServerExchange extends AbstractAttachable {
      * but does not include query string.
      */
     public String getRequestURL() {
-        String host = getRequestHeaders().getFirst(Headers.HOST);
-        if (host == null) {
-            host = getDestinationAddress().getAddress().getHostAddress();
+        if (isHostIncludedInRequestURI()) {
+            return getRequestURI();
+        } else {
+            String host = getRequestHeaders().getFirst(Headers.HOST);
+            if (host == null) {
+                host = getDestinationAddress().getAddress().getHostAddress();
+            }
+            return getRequestScheme() + "://" + host + getRequestURI();
         }
-        return getRequestScheme() + "://" + host + getRequestURI();
     }
 
     /**
@@ -533,14 +591,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         setResponseCode(101);
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
         ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
-        if(exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
+        if (exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
             ExchangeCompletionListener[] old = exchangeCompleteListeners;
             this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
             System.arraycopy(old, 0, exchangeCompleteListeners, 1, exchangeCompletionListenersCount);
             exchangeCompleteListeners[0] = upgradeCompleteListener;
         } else {
-            for(int i = exchangeCompletionListenersCount - 1; i >=0; --i) {
-                exchangeCompleteListeners[i+1] = exchangeCompleteListeners[i];
+            for (int i = exchangeCompletionListenersCount - 1; i >= 0; --i) {
+                exchangeCompleteListeners[i + 1] = exchangeCompleteListeners[i];
             }
             exchangeCompleteListeners[0] = upgradeCompleteListener;
         }
@@ -562,14 +620,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         headers.add(Headers.CONNECTION, Headers.UPGRADE_STRING);
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
         ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
-        if(exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
+        if (exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
             ExchangeCompletionListener[] old = exchangeCompleteListeners;
             this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
             System.arraycopy(old, 0, exchangeCompleteListeners, 1, exchangeCompletionListenersCount);
             exchangeCompleteListeners[0] = upgradeCompleteListener;
         } else {
-            for(int i = exchangeCompletionListenersCount - 1; i >=0; --i) {
-                exchangeCompleteListeners[i+1] = exchangeCompleteListeners[i];
+            for (int i = exchangeCompletionListenersCount - 1; i >= 0; --i) {
+                exchangeCompleteListeners[i + 1] = exchangeCompleteListeners[i];
             }
             exchangeCompleteListeners[0] = upgradeCompleteListener;
         }
@@ -578,7 +636,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     public void addExchangeCompleteListener(final ExchangeCompletionListener listener) {
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
         ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
-        if(exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
+        if (exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
             ExchangeCompletionListener[] old = exchangeCompleteListeners;
             this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
             System.arraycopy(old, 0, exchangeCompleteListeners, 0, exchangeCompletionListenersCount);
@@ -618,12 +676,11 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return The content length of the request, or <code>-1</code> if it has not been set
      */
     public long getRequestContentLength() {
         String contentLengthString = requestHeaders.getFirst(Headers.CONTENT_LENGTH);
-        if(contentLengthString == null) {
+        if (contentLengthString == null) {
             return -1;
         }
         return Long.parseLong(contentLengthString);
@@ -639,12 +696,11 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return The content length of the response, or <code>-1</code> if it has not been set
      */
     public long getResponseContentLength() {
         String contentLengthString = responseHeaders.getFirst(Headers.CONTENT_LENGTH);
-        if(contentLengthString == null) {
+        if (contentLengthString == null) {
             return -1;
         }
         return Long.parseLong(contentLengthString);
@@ -698,7 +754,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the channel for the inbound request, or {@code null} if another party already acquired the channel
      */
     public StreamSourceChannel getRequestChannel() {
-        if(requestChannel != null) {
+        if (requestChannel != null) {
             return null;
         }
         if (anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
@@ -736,7 +792,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             // idempotent
             return;
         }
-        if(requestChannel != null) {
+        if (requestChannel != null) {
             requestChannel.requestDone();
         }
         this.state = oldVal | FLAG_REQUEST_TERMINATED;
@@ -747,7 +803,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private void invokeExchangeCompleteListeners() {
         if (exchangeCompletionListenersCount > 0) {
-            int i = exchangeCompletionListenersCount- 1;
+            int i = exchangeCompletionListenersCount - 1;
             ExchangeCompletionListener next = exchangeCompleteListeners[i];
             next.exchangeEvent(this, new ExchangeCompleteNextListener(exchangeCompleteListeners, this, i));
         }
@@ -841,14 +897,14 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Get the response sender.  For non-blocking exchanges is effectively a wrapper around the response channel, so all the semantics of
      * {@link #getResponseChannel()} apply.
-     *
+     * <p/>
      * For blocking exchanges this will return a sender that uses the underlying output stream.
      *
      * @return the response sender, or {@code null} if another party already acquired the channel or the sender
      * @see #getResponseChannel()
      */
     public Sender getResponseSender() {
-        if(blockingHttpExchange != null) {
+        if (blockingHttpExchange != null) {
             return blockingHttpExchange.getSender();
         }
         StreamSinkChannel channel = getResponseChannel();
@@ -893,7 +949,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (requestChannel != null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
-        if(wrappers == null) {
+        if (wrappers == null) {
             wrappers = requestWrappers = new ConduitWrapper[2];
         } else if (wrappers.length == requestWrapperCount) {
             requestWrappers = new ConduitWrapper[wrappers.length + 2];
@@ -1030,7 +1086,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
 
-        if(blockingHttpExchange != null) {
+        if (blockingHttpExchange != null) {
             try {
                 //TODO: can we end up in this situation in a IO thread?
                 blockingHttpExchange.close();
@@ -1210,7 +1266,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public Sender getSender() {
-            if(sender == null) {
+            if (sender == null) {
                 sender = new BlockingSenderImpl(exchange, getOutputStream());
             }
             return sender;
@@ -1225,13 +1281,12 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Channel implementation that is actually provided to clients of the exchange.
-     *
+     * <p/>
      * We do not provide the underlying conduit channel, as this is shared between requests, so we need to make sure that after this request
      * is done the the channel cannot affect the next request.
-     *
+     * <p/>
      * It also delays a wakeup/resumesWrites calls until the current call stack has returned, thus ensuring that only 1 thread is
      * active in the exchange at any one time.
-     *
      */
     private class WriteDispatchChannel implements StreamSinkChannel, Runnable {
 
@@ -1266,7 +1321,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void shutdownWrites() throws IOException {
-            if(allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
                 return;
             }
             delegate.shutdownWrites();
@@ -1431,7 +1486,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         public void responseDone() {
             delegate.getCloseSetter().set(null);
             delegate.getWriteSetter().set(null);
-            if(delegate.isWriteResumed()) {
+            if (delegate.isWriteResumed()) {
                 delegate.suspendWrites();
             }
         }
@@ -1441,10 +1496,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Channel implementation that is actually provided to clients of the exchange. We do not provide the underlying
      * conduit channel, as this will become the next requests conduit channel, so if a thread is still hanging onto this
      * exchange it can result in problems.
-     *
+     * <p/>
      * It also delays a readResume call until the current call stack has returned, thus ensuring that only 1 thread is
      * active in the exchange at any one time.
-     *
      */
     private final class ReadDispatchChannel implements StreamSourceChannel, Runnable {
 
@@ -1614,7 +1668,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         public void requestDone() {
             delegate.getReadSetter().set(null);
             delegate.getCloseSetter().set(null);
-            if(delegate.isReadResumed()) {
+            if (delegate.isReadResumed()) {
                 delegate.suspendReads();
             }
         }

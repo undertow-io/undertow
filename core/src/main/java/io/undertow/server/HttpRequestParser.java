@@ -279,17 +279,17 @@ public abstract class HttpRequestParser {
         int urlDecodeCurrentByte = (urlDecodeState & 0xFFFF00) >> 8;
         urlDecodeState &= 0xFF;
         int urlDecodeCodePoint = state.urlDecodeCodePoint;
+        StringBuilder encodedStringBuilder = state.encodedStringBuilder;
 
         while (buffer.hasRemaining()) {
             char next = (char) buffer.get();
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
-                    exchange.setRequestURI(path);
                     if (parseState < HOST_DONE) {
-                        exchange.setParsedRequestPath(path);
+                        exchange.setParsedRequestPath(false, encodedStringBuilder != null ? encodedStringBuilder.toString() : path, path);
                     } else {
-                        exchange.setParsedRequestPath(path.substring(canonicalPathStart));
+                        exchange.setParsedRequestPath(true, encodedStringBuilder != null ? encodedStringBuilder.toString() : path, path.substring(canonicalPathStart));
                     }
                     exchange.setQueryString("");
                     state.state = ParseState.VERSION;
@@ -298,12 +298,32 @@ public abstract class HttpRequestParser {
                     state.pos = 0;
                     state.urlDecodeState = 0;
                     state.urlDecodeCodePoint = 0;
+                    state.encodedStringBuilder = null;
                     return;
                 }
             } else if (next == '\r' || next == '\n') {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
+            } else if (next == '?' && (parseState == START || parseState == HOST_DONE)) {
+                final String path = stringBuilder.toString();
+                if (parseState < HOST_DONE) {
+                    exchange.setParsedRequestPath(false, encodedStringBuilder != null ? encodedStringBuilder.toString() : path, path);
+                } else {
+                    exchange.setParsedRequestPath(true, encodedStringBuilder != null ? encodedStringBuilder.toString() : path, path.substring(canonicalPathStart));
+                }
+                state.state = ParseState.QUERY_PARAMETERS;
+                state.stringBuilder.setLength(0);
+                state.parseState = 0;
+                state.pos = 0;
+                state.urlDecodeState = 0;
+                state.urlDecodeCodePoint = 0;
+                state.encodedStringBuilder = null;
+                handleQueryParameters(buffer, state, exchange);
+                return;
             } else {
 
+                if (encodedStringBuilder != null) {
+                    encodedStringBuilder.append(next);
+                }
                 //this code deals with decoding the URL
                 //if is unfortunatly a bit complex, as it needs to deal with
                 //multi byte unicode characters in the URL
@@ -356,11 +376,19 @@ public abstract class HttpRequestParser {
                         continue;
                     }
                 } else if (next == '%') {
+                    if (encodedStringBuilder == null) {
+                        encodedStringBuilder = new StringBuilder(stringBuilder.toString());
+                        encodedStringBuilder.append(next);
+                    }
                     urlDecodeCurrentByte = 0xFFFF; // to big to fit in a byte, used as a marker for it not being initialized
                     urlDecodeCodePoint = 0;
                     urlDecodeState = 0;
                     continue;
                 } else if (next == '+') {
+                    if (encodedStringBuilder == null) {
+                        encodedStringBuilder = new StringBuilder(stringBuilder.toString());
+                        encodedStringBuilder.append(next);
+                    }
                     next = ' ';
                 } else if (next == ':' && parseState == START) {
                     parseState = FIRST_COLON;
@@ -373,25 +401,7 @@ public abstract class HttpRequestParser {
                     canonicalPathStart = stringBuilder.length();
                 } else if (parseState == FIRST_COLON || parseState == FIRST_SLASH) {
                     parseState = START;
-                } else if (next == '?' && (parseState == START || parseState == HOST_DONE)) {
-                    final String path = stringBuilder.toString();
-                    exchange.setRequestURI(path);
-                    if (parseState < HOST_DONE) {
-                        exchange.setParsedRequestPath(path);
-                    } else {
-                        exchange.setParsedRequestPath(path.substring(canonicalPathStart));
-                    }
-                    state.state = ParseState.QUERY_PARAMETERS;
-                    state.stringBuilder.setLength(0);
-                    state.parseState = 0;
-                    state.pos = 0;
-                    state.urlDecodeState = 0;
-                    state.urlDecodeCodePoint = 0;
-                    handleQueryParameters(buffer, state, exchange);
-                    return;
                 }
-
-
                 stringBuilder.append(next);
             }
 
@@ -400,6 +410,7 @@ public abstract class HttpRequestParser {
         state.pos = canonicalPathStart;
         state.urlDecodeState = urlDecodeState | (urlDecodeCurrentByte << 8);
         state.urlDecodeCodePoint = urlDecodeCodePoint;
+        state.encodedStringBuilder = encodedStringBuilder;
     }
 
 
@@ -414,6 +425,7 @@ public abstract class HttpRequestParser {
     @SuppressWarnings("unused")
     final void handleQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) {
         StringBuilder stringBuilder = state.stringBuilder;
+        StringBuilder encodedStringBuilder = state.encodedStringBuilder;
         int queryParamPos = state.pos;
         int mapCount = state.mapCount;
         int urlDecodeState = state.urlDecodeState;
@@ -422,10 +434,22 @@ public abstract class HttpRequestParser {
         int urlDecodeCodePoint = state.urlDecodeCodePoint;
         String nextQueryParam = state.nextQueryParam;
 
+        //so this is a bit funky, because it not only deals with parsing, but
+        //also deals with URL decoding the query parameters as well, while also
+        //maintaining a non-decoded version to use as the query string
+        //In most cases these string will be the same, and as we do not want to
+        //build up two seperate strings we don't use encodedStringBuilder unless
+        //we encounter an encoded character
+
         while (buffer.hasRemaining()) {
             char next = (char) buffer.get();
             if (next == ' ' || next == '\t') {
-                final String queryString = stringBuilder.toString();
+                final String queryString;
+                if (encodedStringBuilder == null) {
+                    queryString = stringBuilder.toString();
+                } else {
+                    queryString = encodedStringBuilder.toString();
+                }
                 exchange.setQueryString(queryString);
                 if (nextQueryParam == null) {
                     if (queryParamPos != stringBuilder.length()) {
@@ -441,6 +465,7 @@ public abstract class HttpRequestParser {
                 state.urlDecodeCodePoint = 0;
                 state.urlDecodeState = 0;
                 state.mapCount = 0;
+                state.encodedStringBuilder = null;
                 return;
             } else if (next == '\r' || next == '\n') {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
@@ -450,6 +475,11 @@ public abstract class HttpRequestParser {
                 //multi byte unicode characters in the URL
                 //it also needs to deal with resuming in the middle of a multi byte character
                 //and encoded special characters (e.g. an encoded = or &)
+
+                if (encodedStringBuilder != null) {
+                    //we don't case about encoding
+                    encodedStringBuilder.append(next);
+                }
 
                 //first we deal with encoding
                 if (urlDecodeCurrentByte != 0) {
@@ -496,8 +526,16 @@ public abstract class HttpRequestParser {
                     urlDecodeCurrentByte = 0xFFFF; // to big to fit in a byte, used as a marker for it not being initialized
                     urlDecodeCodePoint = 0;
                     urlDecodeState = 0;
+                    if (encodedStringBuilder == null) {
+                        encodedStringBuilder = new StringBuilder(stringBuilder.toString());
+                        encodedStringBuilder.append(next);
+                    }
                     continue;
                 } else if (next == '+') {
+                    if (encodedStringBuilder == null) {
+                        encodedStringBuilder = new StringBuilder(stringBuilder.toString());
+                        encodedStringBuilder.append(next);
+                    }
                     next = ' ';
                 } else if (next == '=' && nextQueryParam == null) {
                     nextQueryParam = stringBuilder.substring(queryParamPos);
@@ -518,6 +556,7 @@ public abstract class HttpRequestParser {
                     nextQueryParam = null;
                 }
                 stringBuilder.append(next);
+
             }
 
         }
@@ -526,6 +565,7 @@ public abstract class HttpRequestParser {
         state.urlDecodeState = urlDecodeState | (urlDecodeCurrentByte << 8);
         state.urlDecodeCodePoint = urlDecodeCodePoint;
         state.mapCount = 0;
+        state.encodedStringBuilder = encodedStringBuilder;
     }
 
 

@@ -39,7 +39,6 @@ public class CanonicalPathHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        exchange.setCanonicalPath(CanonicalPathUtils.canonicalize(exchange.getRequestPath()));
         exchange.setRelativePath(CanonicalPathUtils.canonicalize(exchange.getRelativePath()));
         HttpHandlers.executeHandler(next, exchange);
     }

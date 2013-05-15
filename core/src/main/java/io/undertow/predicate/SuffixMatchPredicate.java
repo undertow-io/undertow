@@ -15,6 +15,6 @@ class SuffixMatchPredicate implements Predicate {
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        return value.getCanonicalPath().endsWith(suffix);
+        return value.getRelativePath().endsWith(suffix);
     }
 }
