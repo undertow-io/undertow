@@ -18,8 +18,9 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Collections;
 import java.util.Date;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 import io.undertow.server.HttpServerExchange;
@@ -56,12 +57,20 @@ public class CookieImpl implements Cookie {
         return  exchange.getAttachment(REQUEST_COOKIES);
     }
 
-    public static List<Cookie> getResponseCookies(final HttpServerExchange exchange) {
-        return exchange.getAttachment(RESPONSE_COOKIES);
+    public static Map<String, Cookie> getResponseCookies(final HttpServerExchange exchange) {
+        Map<String, Cookie> ret =  exchange.getAttachment(RESPONSE_COOKIES);
+        if(ret == null) {
+            return Collections.emptyMap();
+        }
+        return ret;
     }
 
     public static void addResponseCookie(final HttpServerExchange exchange, final Cookie cookie) {
-        exchange.addToAttachmentList(RESPONSE_COOKIES, cookie);
+        Map<String, Cookie> cookies =  exchange.getAttachment(RESPONSE_COOKIES);
+        if(cookies == null) {
+            exchange.putAttachment(RESPONSE_COOKIES, cookies = new HashMap<>());
+        }
+        cookies.put(cookie.getName(), cookie);
     }
 
 

@@ -19,11 +19,9 @@
 package io.undertow.server.handlers;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 
 import io.undertow.UndertowLogger;
 import io.undertow.client.HttpClient;
@@ -173,7 +171,7 @@ public final class ProxyHandler implements HttpHandler {
             exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
                 @Override
                 public void run() {
-                    client.connect(destination, OptionMap.EMPTY).addNotifier(notifier, exchange);
+                    client.connect(exchange.getIoThread(), destination, OptionMap.EMPTY).addNotifier(notifier, exchange);
                 }
             });
             return;
@@ -212,13 +210,8 @@ public final class ProxyHandler implements HttpHandler {
                 if (qs != null && !qs.isEmpty()) {
                     requestURI += "?" + qs;
                 }
-                request = clientConnection.createRequest(exchange.getRequestMethod(), new URI(URLEncoder.encode(requestURI, "UTF-8")));
+                request = clientConnection.createRequest(exchange.getRequestMethod(), new URI(requestURI));
             } catch (URISyntaxException e) {
-                exchange.setResponseCode(500);
-                exchange.endExchange();
-                return;
-            } catch (UnsupportedEncodingException e) {
-                //will never hapen
                 exchange.setResponseCode(500);
                 exchange.endExchange();
                 return;

@@ -2,7 +2,6 @@ package io.undertow.server.handlers;
 
 import java.util.Deque;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import io.undertow.UndertowLogger;
@@ -104,9 +103,9 @@ public class RequestDumplingHandler implements HttpHandler {
                 }
                 sb.append("     contentLength=" + exchange.getResponseContentLength() + "\n");
                 sb.append("       contentType=" + exchange.getResponseHeaders().getFirst(Headers.CONTENT_TYPE) + "\n");
-                List<Cookie> cookies = CookieImpl.getResponseCookies(exchange);
+                Map<String, Cookie> cookies = CookieImpl.getResponseCookies(exchange);
                 if (cookies != null) {
-                    for (Cookie cookie : cookies) {
+                    for (Cookie cookie : cookies.values()) {
                         sb.append("            cookie=" + cookie.getName() + "=" + cookie.getValue() + "; domain=" + cookie.getDomain() + "; path=" + cookie.getPath() + "\n");
                     }
                 }

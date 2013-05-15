@@ -22,7 +22,6 @@ import java.util.Date;
 import java.util.Map;
 
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.AttachmentList;
 
 /**
  * A HTTP cookie.
@@ -33,7 +32,7 @@ import io.undertow.util.AttachmentList;
 public interface Cookie {
 
     AttachmentKey<Map<String, Cookie>> REQUEST_COOKIES = AttachmentKey.create(Map.class);
-    AttachmentKey<AttachmentList<Cookie>> RESPONSE_COOKIES = AttachmentKey.createList(Cookie.class);
+    AttachmentKey<Map<String, Cookie>> RESPONSE_COOKIES = AttachmentKey.create(Map.class);
 
     String getName();
 

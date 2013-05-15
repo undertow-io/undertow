@@ -24,15 +24,20 @@ package io.undertow.client;
 
 import java.io.Closeable;
 import java.net.SocketAddress;
-import java.net.URI;
 
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
+import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 
 /**
  *
  * A HTTP client, intended for use in Undertow. This is not intended to be a general purpose HTTP client.
+ *
+ * This client is not thread safe as such, however it is designed to be used by multiple threads as long
+ * as only a single thread is active in the client at a time. The will generally be accomplished by tying the client
+ * to a single {@link io.undertow.server.HttpServerConnection}.
+ *
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
@@ -64,6 +69,16 @@ public abstract class HttpClient implements Closeable {
     /**
      * Connect to a remote HTTP server.
      *
+     * @param ioThread the IO thread to use for the connection
+     * @param destination the destination
+     * @param optionMap the connection options
+     * @return an HTTP client connection
+     */
+    public abstract IoFuture<HttpClientConnection> connect(final XnioIoThread ioThread, final SocketAddress destination, final OptionMap optionMap);
+
+    /**
+     * Connect to a remote HTTP server.
+     *
      * @param destination the destination
      * @param optionMap the connection options
      * @param completionHandler the operation result handler
@@ -74,14 +89,17 @@ public abstract class HttpClient implements Closeable {
     }
 
     /**
-     * Send a request, managing connections automatically.
+     * Connect to a remote HTTP server.
      *
-     * @param method the HTTP method to use (see {@link io.undertow.util.Methods})
-     * @param requestUri the URI to connect to
-     * @param optionMap the request options
-     * @return the future request
+     * @param ioThread the IO thread to use for the connection
+     * @param destination the destination
+     * @param optionMap the connection options
+     * @param completionHandler the operation result handler
      */
-    public abstract IoFuture<HttpClientRequest> sendRequest(final String method, final URI requestUri, final OptionMap optionMap);
+    public void connect(final XnioIoThread ioThread, final SocketAddress destination, final OptionMap optionMap, final HttpClientCallback<HttpClientConnection> completionHandler) {
+        final IoFuture<HttpClientConnection> connectionIoFuture = connect(ioThread, destination, optionMap);
+        HttpClientUtils.addCallback(connectionIoFuture, completionHandler);
+    }
 
     /**
      * Create a new {@link HttpClient} instance.

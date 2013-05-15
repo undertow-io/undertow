@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 
 import io.undertow.UndertowMessages;
@@ -280,13 +279,11 @@ public class CookieHandler implements HttpHandler {
         @Override
         public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
 
-            final List<Cookie> cookies = exchange.getAttachmentList(Cookie.RESPONSE_COOKIES);
-            if (!cookies.isEmpty()) {
-                ListIterator<Cookie> it = cookies.listIterator();
-                while (it.hasNext()) {
+            final Map<String, Cookie> cookies = exchange.getAttachment(Cookie.RESPONSE_COOKIES);
+            if (cookies != null) {
+                for(Map.Entry<String, Cookie> entry : cookies.entrySet()) {
                     StringBuilder builder = new StringBuilder();
-                    Cookie cookie = it.next();
-                    builder.append(getCookieString(cookie));
+                    builder.append(getCookieString(entry.getValue()));
                     exchange.getResponseHeaders().add(Headers.SET_COOKIE, builder.toString());
                 }
             }
