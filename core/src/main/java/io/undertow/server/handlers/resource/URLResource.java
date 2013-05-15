@@ -94,6 +94,7 @@ public class URLResource implements Resource {
             private InputStream inputStream;
             private byte[] buffer;
             private Sender sender;
+            private boolean repeat;
 
             @Override
             public void run() {
@@ -108,17 +109,24 @@ public class URLResource implements Resource {
                     sender = exchange.getResponseSender();
                 }
                 try {
-                    int res = inputStream.read(buffer);
-                    if (res == -1) {
-                        //we are done, just return
-                        sender.close();
-                        return;
+                    for (;;) {
+                        int res = inputStream.read(buffer);
+                        if (res == -1) {
+                            //we are done, just return
+                            sender.close();
+                            return;
+                        }
+                        sender.send(ByteBuffer.wrap(buffer, 0, res), this);
+                        // Is socket buffer full?
+                        if (!repeat) {
+                            return;
+                        }
+
+                        repeat = false;
                     }
-                    sender.send(ByteBuffer.wrap(buffer, 0, res), this);
                 } catch (IOException e) {
                     onException(exchange, sender, e);
                 }
-
             }
 
             @Override
@@ -126,7 +134,7 @@ public class URLResource implements Resource {
                 if (exchange.isInIoThread()) {
                     exchange.dispatch(this);
                 } else {
-                    run();
+                    repeat = true;
                 }
             }
 

@@ -123,6 +123,7 @@ public class FileResource implements Resource {
             private FileChannel fileChannel;
             private Pooled<ByteBuffer> pooled;
             private Sender sender;
+            private boolean repeat;
 
             @Override
             public void run() {
@@ -139,9 +140,9 @@ public class FileResource implements Resource {
                     pooled = exchange.getConnection().getBufferPool().allocate();
                     sender = exchange.getResponseSender();
                 }
-                if(pooled != null) {
-                    ByteBuffer buffer = pooled.getResource();
-                    try {
+                ByteBuffer buffer = pooled.getResource();
+                try {
+                    for (;;) {
                         buffer.clear();
                         int res = fileChannel.read(buffer);
                         if (res == -1) {
@@ -152,9 +153,15 @@ public class FileResource implements Resource {
                         }
                         buffer.flip();
                         sender.send(buffer, this);
-                    } catch (IOException e) {
-                        onException(exchange, sender, e);
+                        // Is socket buffer full?
+                        if (!repeat) {
+                            return;
+                        }
+
+                        repeat = false;
                     }
+                } catch (IOException e) {
+                    onException(exchange, sender, e);
                 }
 
             }
@@ -164,7 +171,7 @@ public class FileResource implements Resource {
                 if (exchange.isInIoThread()) {
                     exchange.dispatch(this);
                 } else {
-                    run();
+                    repeat = true;
                 }
             }
 
