@@ -296,7 +296,22 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRequestURI() {
-        return exchange.getRequestPath();
+        //we need the non-decoded string, which means we need to use exchange.getRequestURI()
+        if(exchange.isHostIncludedInRequestURI()) {
+            //we need to strip out the host part
+            String uri = exchange.getRequestURI();
+            int slashes =0;
+            for(int i = 0; i < uri.length(); ++i) {
+                if(uri.charAt(i) == '/') {
+                    if(++slashes == 3) {
+                        return uri.substring(i);
+                    }
+                }
+            }
+            return "/";
+        } else {
+            return exchange.getRequestURI();
+        }
     }
 
     @Override

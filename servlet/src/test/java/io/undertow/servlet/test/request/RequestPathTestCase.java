@@ -46,10 +46,10 @@ public class RequestPathTestCase {
 
     @Test
     public void testRequestPathEncoding() throws Exception {
-        runtest("/servletContext/somePath", "http://localhost:7777/servletContext/somePath\n/servletContext/somePath\n");
-        runtest("/servletContext/somePath?foo=bar", "http://localhost:7777/servletContext/somePath\n/servletContext/somePath\nfoo=bar");
-        runtest("/servletContext/somePath?foo=b+a+r", "http://localhost:7777/servletContext/somePath\n/servletContext/somePath\nfoo=b+a+r");
-        runtest("/servletContext/some+path?foo=b+a+r", "http://localhost:7777/servletContext/some+path\n/servletContext/some path\nfoo=b+a+r");
+        runtest("/servletContext/somePath", "/somePath\nhttp://localhost:7777/servletContext/somePath\n/servletContext/somePath\n");
+        runtest("/servletContext/somePath?foo=bar", "/somePath\nhttp://localhost:7777/servletContext/somePath\n/servletContext/somePath\nfoo=bar");
+        runtest("/servletContext/somePath?foo=b+a+r", "/somePath\nhttp://localhost:7777/servletContext/somePath\n/servletContext/somePath\nfoo=b+a+r");
+        runtest("/servletContext/some+path?foo=b+a+r", "/some path\nhttp://localhost:7777/servletContext/some+path\n/servletContext/some+path\nfoo=b+a+r");
     }
 
     private void runtest(String request, String expectedBody) throws Exception {

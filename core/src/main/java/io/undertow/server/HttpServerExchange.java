@@ -429,6 +429,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Reconstructs the complete URL as seen by the user. This includes scheme, host name etc,
      * but does not include query string.
+     *
+     * This is not decoded.
+     *
      */
     public String getRequestURL() {
         if (isHostIncludedInRequestURI()) {

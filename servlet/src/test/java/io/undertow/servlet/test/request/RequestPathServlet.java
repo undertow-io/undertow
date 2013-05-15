@@ -32,6 +32,7 @@ public class RequestPathServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+        resp.getWriter().write(req.getPathInfo() + "\n");
         resp.getWriter().write(req.getRequestURL().toString() + "\n");
         resp.getWriter().write(req.getRequestURI() + "\n");
         resp.getWriter().write(req.getQueryString());
