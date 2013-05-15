@@ -48,6 +48,9 @@ public class SessionListenerBridge implements SessionListener {
     public void attributeAdded(final Session session, final String name, final Object value) {
         final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, false);
         applicationListeners.httpSessionAttributeAdded(httpSession, name, value);
+        if (value instanceof HttpSessionBindingListener) {
+            ((HttpSessionBindingListener) value).valueBound(new HttpSessionBindingEvent(httpSession, name, value));
+        }
     }
 
     @Override
