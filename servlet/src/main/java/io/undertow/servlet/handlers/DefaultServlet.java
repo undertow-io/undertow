@@ -161,14 +161,30 @@ public class DefaultServlet extends HttpServlet {
         }
         final String pathWithTraingSlash = pathInfo.endsWith("/") ? pathInfo : pathInfo + "/";
         if (welcomePage != null) {
-            redirect(req, welcomePage);
+            if(!req.getRequestURI().endsWith("/")) {
+                redirectWithTrailingSlash(req, resp);
+            } else {
+                redirect(req, welcomePage);
+            }
         } else {
             String path = findWelcomeServlet(pathWithTraingSlash);
             if (path != null) {
-                redirect(req, path);
+                if(!req.getRequestURI().endsWith("/")) {
+                    redirectWithTrailingSlash(req, resp);
+                } else {
+                    redirect(req, path);
+                }
             } else {
                 resp.sendError(404);
             }
+        }
+    }
+
+    private void redirectWithTrailingSlash(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
+        if(req.getQueryString() != null) {
+            resp.sendRedirect(req.getRequestURI() + "/?" + req.getQueryString() );
+        } else {
+            resp.sendRedirect(req.getRequestURI() + "/" );
         }
     }
 

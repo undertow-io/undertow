@@ -134,6 +134,15 @@ public class ResourceHandler implements HttpHandler {
                             exchange.endExchange();
                             return;
                         }
+                    } else if(!exchange.getRequestPath().endsWith("/")) {
+                        exchange.setResponseCode(302);
+                        if(exchange.getQueryString() == null) {
+                            exchange.getResponseHeaders().put(Headers.LOCATION, exchange.getRequestURL() + "/?" + exchange.getQueryString());
+                        } else {
+                            exchange.getResponseHeaders().put(Headers.LOCATION, exchange.getRequestURL() + "/");
+                        }
+                        exchange.endExchange();
+                        return;
                     }
                     resource = indexResource;
                 }
