@@ -35,6 +35,6 @@ public class RequestPathServlet extends HttpServlet {
         resp.getWriter().write(req.getPathInfo() + "\n");
         resp.getWriter().write(req.getRequestURL().toString() + "\n");
         resp.getWriter().write(req.getRequestURI() + "\n");
-        resp.getWriter().write(req.getQueryString());
+        resp.getWriter().write(req.getQueryString() == null ? "" : req.getQueryString());
     }
 }

@@ -80,7 +80,7 @@ public class ServletAndResourceWelcomeFileTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString: servletPath:/index.html requestUri:/servletContext/index.html", response);
+            Assert.assertEquals("pathInfo:null queryString:null servletPath:/index.html requestUri:/servletContext/index.html", response);
 
         } finally {
             client.getConnectionManager().shutdown();
