@@ -114,7 +114,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private final ServletContainer servletContainer;
 
     /**
-     * Current delpoyment, this may be modified by SCI's
+     * Current deployment, this may be modified by SCI's
      */
     private volatile DeploymentImpl deployment;
     private volatile State state = State.UNDEPLOYED;
@@ -184,6 +184,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
             wrappedHandlers = new PredicateHandler(Predicates.or(DispatcherTypePredicate.REQUEST, DispatcherTypePredicate.ASYNC), outerHandlers, wrappedHandlers);
 
             final ServletInitialHandler servletInitialHandler = new ServletInitialHandler(matches, wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
+
+
+            HttpHandler initialHandler = wrapHandlers(servletInitialHandler, deployment.getDeploymentInfo().getInitialHandlerChainWrappers());
+
+            deployment.setInitialHandler(initialHandler);
             deployment.setServletHandler(servletInitialHandler);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -541,7 +546,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
         HttpHandler servletHandler = new ServletSecurityRoleHandler(next);
         servletHandler = new SSLInformationAssociationHandler(servletHandler);
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
-        servletHandler = wrapHandlers(servletHandler, deployment.getDeploymentInfo().getDispatchedHandlerChainWrappers());
         return new ServletChain(servletHandler, managedServlet);
     }
 
@@ -594,7 +598,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             for (Lifecycle object : deployment.getLifecycleObjects()) {
                 object.start();
             }
-            HttpHandler root = deployment.getServletHandler();
+            HttpHandler root = deployment.getHandler();
 
             //create the executor, if it exists
             if (deployment.getDeploymentInfo().getExecutorFactory() != null) {

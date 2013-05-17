@@ -39,7 +39,7 @@ public interface Deployment {
 
     ServletContextImpl getServletContext();
 
-    HttpHandler getServletHandler();
+    HttpHandler getHandler();
 
     ServletPathMatches getServletPaths();
 

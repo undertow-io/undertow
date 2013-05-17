@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.test;
+package io.undertow.servlet.test.listener.servletcontext;
 
 import java.io.IOException;
 
@@ -29,6 +29,7 @@ import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.test.utils.DefaultServer;
@@ -41,7 +42,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class ListenerTestCase {
+public class ServletContextListenerTestCase {
 
     static DeploymentManager manager;
 
@@ -60,7 +61,7 @@ public class ListenerTestCase {
                         new ServletInfo("servlet", MessageServlet.class)
                                 .addMapping("/aa")
                 )
-                .addListener(new ListenerInfo(TestListener.class));
+                .addListener(new ListenerInfo(ServletContextTestListener.class));
 
 
         manager = container.addDeployment(builder);
@@ -72,25 +73,25 @@ public class ListenerTestCase {
 
     @Test
     public void testServletContextInitialized() throws IOException {
-        Assert.assertNotNull(TestListener.servletContextInitializedEvent);
+        Assert.assertNotNull(ServletContextTestListener.servletContextInitializedEvent);
     }
 
     @Test
     public void testServletContextAttributeListener() throws IOException {
         ServletContextImpl sc = manager.getDeployment().getServletContext();
         sc.setAttribute("test", "1");
-        Assert.assertNotNull(TestListener.servletContextAttributeEvent);
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getName(), "test");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getValue(), "1");
+        Assert.assertNotNull(ServletContextTestListener.servletContextAttributeEvent);
+        Assert.assertEquals(ServletContextTestListener.servletContextAttributeEvent.getName(), "test");
+        Assert.assertEquals(ServletContextTestListener.servletContextAttributeEvent.getValue(), "1");
         sc.setAttribute("test", "2");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getName(), "test");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getValue(), "1");
+        Assert.assertEquals(ServletContextTestListener.servletContextAttributeEvent.getName(), "test");
+        Assert.assertEquals(ServletContextTestListener.servletContextAttributeEvent.getValue(), "1");
         sc.setAttribute("test", "3");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getName(), "test");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getValue(), "2");
+        Assert.assertEquals(ServletContextTestListener.servletContextAttributeEvent.getName(), "test");
+        Assert.assertEquals(ServletContextTestListener.servletContextAttributeEvent.getValue(), "2");
         sc.removeAttribute("test");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getName(), "test");
-        Assert.assertEquals(TestListener.servletContextAttributeEvent.getValue(), "3");
+        Assert.assertEquals(ServletContextTestListener.servletContextAttributeEvent.getName(), "test");
+        Assert.assertEquals(ServletContextTestListener.servletContextAttributeEvent.getValue(), "3");
     }
 
 

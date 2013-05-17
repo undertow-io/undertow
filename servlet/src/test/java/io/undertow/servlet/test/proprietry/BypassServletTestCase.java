@@ -1,27 +1,13 @@
-/*
- * JBoss, Home of Professional Open Source.
- * Copyright 2012 Red Hat, Inc., and individual contributors
- * as indicated by the @author tags.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package io.undertow.servlet.test.listener.request.async;
+package io.undertow.servlet.test.proprietry;
 
 import java.io.IOException;
 
 import javax.servlet.ServletException;
 
+import io.undertow.io.IoCallback;
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -46,9 +32,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class RequestListenerAsyncRequestTestCase {
-
-    public static final String HELLO_WORLD = "Hello World";
+public class BypassServletTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -56,28 +40,32 @@ public class RequestListenerAsyncRequestTestCase {
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
-        ServletInfo m = new ServletInfo("messageServlet", MessageServlet.class)
-                .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
-                .setAsyncSupported(true)
-                .addMapping("/message");
-
-
-        ServletInfo a = new ServletInfo("asyncServlet", AsyncServlet.class)
-                .addInitParam(MessageServlet.MESSAGE, HELLO_WORLD)
-                .setAsyncSupported(true)
-                .addMapping("/async");
-
-        ServletInfo a2 = new ServletInfo("asyncServlet2", AnotherAsyncServlet.class)
-        .setAsyncSupported(true)
-        .addMapping("/async2");
-
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .addServlets(m, a, a2)
-                .addListener(new ListenerInfo(TestListener.class));
+                .addServlet(
+                        new ServletInfo("servlet", MessageServlet.class)
+                                .addMapping("/")
+                                .addInitParam(MessageServlet.MESSAGE, "This is a servlet")
+                )
+                .addListener(new ListenerInfo(TestListener.class))
+                .addInitialHandlerChainWrapper(new HandlerWrapper() {
+                    @Override
+                    public HttpHandler wrap(final HttpHandler handler) {
+                        return new HttpHandler() {
+                            @Override
+                            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                                if (exchange.getRelativePath().equals("/async")) {
+                                    exchange.getResponseSender().send("This is not a servlet", IoCallback.END_EXCHANGE);
+                                } else {
+                                    handler.handleRequest(exchange);
+                                }
+                            }
+                        };
+                    }
+                });
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -86,38 +74,36 @@ public class RequestListenerAsyncRequestTestCase {
         DefaultServer.setRootHandler(root);
     }
 
-    @Test
-    public void testSimpleHttpServlet() throws IOException {
-        TestListener.init(4);
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
-
-            Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST", "created ASYNC", "destroyed ASYNC"}, TestListener.results().toArray());
-
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
-    }
 
     @Test
-    public void testSimpleAsyncHttpServletWithoutDispatch() throws IOException {
+    public void testServletRequest() throws IOException {
         TestListener.init(2);
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async2");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(AnotherAsyncServlet.class.getSimpleName(), response);
+            Assert.assertEquals("This is a servlet", response);
             Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST"}, TestListener.results().toArray());
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
 
+    @Test
+    public void testServletBypass() throws IOException {
+        TestListener.init(0);
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("This is not a servlet", response);
+            Assert.assertArrayEquals(new String[0], TestListener.results().toArray());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }

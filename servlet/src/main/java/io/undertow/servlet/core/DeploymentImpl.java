@@ -50,6 +50,7 @@ public class DeploymentImpl implements Deployment {
     private volatile ApplicationListeners applicationListeners;
     private volatile ServletContextImpl servletContext;
     private volatile ServletInitialHandler servletHandler;
+    private volatile HttpHandler initialHandler;
     private volatile ServletPathMatches servletPaths;
     private volatile CompositeThreadSetupAction threadSetupAction;
     private volatile ErrorPages errorPages;
@@ -84,8 +85,12 @@ public class DeploymentImpl implements Deployment {
     }
 
     @Override
-    public HttpHandler getServletHandler() {
-        return servletHandler;
+    public HttpHandler getHandler() {
+        return initialHandler;
+    }
+
+    public void setInitialHandler(final HttpHandler initialHandler) {
+        this.initialHandler = initialHandler;
     }
 
     void setServletHandler(final ServletInitialHandler servletHandler) {

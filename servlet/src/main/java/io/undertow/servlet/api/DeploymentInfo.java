@@ -88,6 +88,13 @@ public class DeploymentInfo implements Cloneable {
     private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
 
     /**
+     * Wrappers that are applied before the servlet initial handler, and before any servlet related object have been
+     * created. If a wrapper wants to bypass servlet entirely it should register itself here.
+     *
+     */
+    private final List<HandlerWrapper> initialHandlerChainWrappers = new ArrayList<>();
+
+    /**
      * Handler chain wrappers that are applied outside all other handlers, including security but after the initial
      * servlet handler.
      */
@@ -99,11 +106,6 @@ public class DeploymentInfo implements Cloneable {
      */
     private final List<HandlerWrapper> innerHandlerChainWrappers = new ArrayList<>();
 
-    /**
-     * Wrapper that is applied after the servlet request has been dispatched, but before any user code is run. This
-     * is run outside any wrappers applied via {@link ServletInfo#handlerChainWrappers}
-     */
-    private final List<HandlerWrapper> dispatchedHandlerChainWrappers = new ArrayList<>();
 
     public void validate() {
         if (deploymentName == null) {
@@ -620,13 +622,13 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(innerHandlerChainWrappers);
     }
 
-    public DeploymentInfo addDispatchedHandlerChainWrapper(final HandlerWrapper wrapper) {
-        dispatchedHandlerChainWrappers.add(wrapper);
+    public DeploymentInfo addInitialHandlerChainWrapper(final HandlerWrapper wrapper) {
+        initialHandlerChainWrappers.add(wrapper);
         return this;
     }
 
-    public List<HandlerWrapper> getDispatchedHandlerChainWrappers() {
-        return Collections.unmodifiableList(dispatchedHandlerChainWrappers);
+    public List<HandlerWrapper> getInitialHandlerChainWrappers() {
+        return Collections.unmodifiableList(initialHandlerChainWrappers);
     }
 
     public DeploymentInfo addNotificationReceiver(final NotificationReceiver notificationReceiver) {
@@ -690,7 +692,7 @@ public class DeploymentInfo implements Cloneable {
         info.securityConstraints.addAll(securityConstraints);
         info.outerHandlerChainWrappers.addAll(outerHandlerChainWrappers);
         info.innerHandlerChainWrappers.addAll(innerHandlerChainWrappers);
-        info.dispatchedHandlerChainWrappers.addAll(dispatchedHandlerChainWrappers);
+        info.initialHandlerChainWrappers.addAll(initialHandlerChainWrappers);
         info.securityRoles.addAll(securityRoles);
         info.notificationReceivers.addAll(notificationReceivers);
         info.allowNonStandardWrappers = allowNonStandardWrappers;

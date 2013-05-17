@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.test;
+package io.undertow.servlet.test.listener.servletcontext;
 
 import javax.servlet.ServletContextAttributeEvent;
 import javax.servlet.ServletContextAttributeListener;
@@ -30,7 +30,7 @@ import javax.servlet.ServletRequestListener;
 /**
  * @author Stuart Douglas
  */
-public class TestListener implements ServletContextAttributeListener, ServletContextListener, ServletRequestListener, ServletRequestAttributeListener {
+public class ServletContextTestListener implements ServletContextAttributeListener, ServletContextListener, ServletRequestListener, ServletRequestAttributeListener {
 
     public static ServletContextAttributeEvent servletContextAttributeEvent;
     public static ServletContextEvent servletContextInitializedEvent;

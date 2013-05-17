@@ -213,7 +213,7 @@ public class DefaultServlet extends HttpServlet {
                 exchange.setRelativePath(exchange.getRelativePath() + path);
                 exchange.setRequestPath(exchange.getRequestPath() + path);
                 exchange.setRequestURI(exchange.getRequestURI() + path);
-                HttpHandlers.executeRootHandler(requestImpl.getServletContext().getDeployment().getServletHandler(), exchange, false);
+                HttpHandlers.executeRootHandler(requestImpl.getServletContext().getDeployment().getHandler(), exchange, false);
             }
         });
 

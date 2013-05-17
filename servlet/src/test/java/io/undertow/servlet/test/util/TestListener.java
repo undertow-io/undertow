@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.servlet.test.listener.request.async;
+package io.undertow.servlet.test.util;
 
 import java.util.ArrayList;
 import java.util.Collections;
