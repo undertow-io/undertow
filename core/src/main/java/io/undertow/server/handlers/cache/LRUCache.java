@@ -18,10 +18,10 @@
 
 package io.undertow.server.handlers.cache;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import io.undertow.util.SecureHashMap;
 
 /**
  * A non-blocking cache where entries are indexed by a key.
@@ -42,7 +42,7 @@ public class LRUCache<K, V> {
      */
     private final int maxEntries;
 
-    private final SecureHashMap<K, CacheEntry<K, V>> cache;
+    private final ConcurrentMap<K, CacheEntry<K, V>> cache;
     private final ConcurrentDirectDeque<CacheEntry<K, V>> accessQueue;
     /**
      * How long an item can stay in the cache in milliseconds
@@ -51,7 +51,7 @@ public class LRUCache<K, V> {
 
     public LRUCache(int maxEntries, final int maxAge) {
         this.maxAge = maxAge;
-        this.cache = new SecureHashMap<K, CacheEntry<K, V>>(16);
+        this.cache = new ConcurrentHashMap<>(16);
         this.accessQueue = ConcurrentDirectDeque.newInstance();
         this.maxEntries = maxEntries;
     }
@@ -65,7 +65,7 @@ public class LRUCache<K, V> {
             } else {
                 expires = System.currentTimeMillis() + maxAge;
             }
-            value = new CacheEntry<>(key, newValue, this, expires);
+            value = new CacheEntry<>(key, newValue, expires);
             CacheEntry result = cache.putIfAbsent(key, value);
             if (result != null) {
                 value = result;
@@ -142,15 +142,13 @@ public class LRUCache<K, V> {
 
         private final K key;
         private volatile V value;
-        private final LRUCache<K, V> cache;
         private final long expires;
         private volatile int hits = 1;
         private volatile Object accessToken;
 
-        private CacheEntry(K key, V value, LRUCache cache, final long expires) {
+        private CacheEntry(K key, V value, final long expires) {
             this.key = key;
             this.value = value;
-            this.cache = cache;
             this.expires = expires;
         }
 
