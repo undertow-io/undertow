@@ -645,6 +645,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 executor = null;
                 asyncExecutor = null;
             }
+            deployment.getSessionManager().stop();
         } finally {
             handle.tearDown();
             if (executor != null) {
@@ -656,7 +657,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
             executor = null;
             asyncExecutor = null;
         }
-        deployment.getSessionManager().stop();
         state = State.DEPLOYED;
     }
 
