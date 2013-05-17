@@ -73,6 +73,16 @@ public class BlockingSenderImpl implements Sender {
     }
 
     @Override
+    public void send(final ByteBuffer buffer) {
+        send(buffer, IoCallback.END_EXCHANGE);
+    }
+
+    @Override
+    public void send(final ByteBuffer[] buffer) {
+        send(buffer, IoCallback.END_EXCHANGE);
+    }
+
+    @Override
     public void send(final String data, final IoCallback callback) {
         if (inCall) {
             queue(new ByteBuffer[]{ByteBuffer.wrap(data.getBytes(utf8))}, callback);
@@ -98,6 +108,16 @@ public class BlockingSenderImpl implements Sender {
         } catch (IOException e) {
             callback.onException(exchange, this, e);
         }
+    }
+
+    @Override
+    public void send(final String data) {
+        send(data, IoCallback.END_EXCHANGE);
+    }
+
+    @Override
+    public void send(final String data, final Charset charset) {
+        send(data, charset, IoCallback.END_EXCHANGE);
     }
 
     @Override

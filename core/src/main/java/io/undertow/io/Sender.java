@@ -36,6 +36,20 @@ public interface Sender {
     void send(final ByteBuffer[] buffer, final IoCallback callback);
 
     /**
+     * Write the given buffer using async IO, and ends the exchange when done
+     *
+     * @param buffer   The buffer to send.
+     */
+    void send(final ByteBuffer buffer);
+
+    /**
+     * Write the given buffers using async IO, and ends the exchange when done
+     *
+     * @param buffer   The buffers to send.
+     */
+    void send(final ByteBuffer[] buffer);
+
+    /**
      * Write the given String using async IO, and calls the given callback on completion or error.
      * <p/>
      * The CharSequence is encoded to UTF8
@@ -53,6 +67,26 @@ public interface Sender {
      * @param callback The callback
      */
     void send(final String data, final Charset charset, final IoCallback callback);
+
+
+    /**
+     * Write the given String using async IO, and ends the exchange when done
+     * <p/>
+     * The CharSequence is encoded to UTF8
+     *
+     * @param data     The data to send
+     * @param callback The callback
+     */
+    void send(final String data);
+
+    /**
+     * Write the given String using async IO, and ends the exchange when done
+     *
+     * @param data     The buffer to end.
+     * @param charset  The charset to use
+     * @param callback The callback
+     */
+    void send(final String data, final Charset charset);
 
     /**
      * Closes this sender asynchronously. The given callback is notified on completion

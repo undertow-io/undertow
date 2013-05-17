@@ -10,8 +10,13 @@ import org.xnio.IoUtils;
  * A default callback implementation that simply ends the exchange
  *
  * @author Stuart Douglas
+ * @see IoCallback#END_EXCHANGE
  */
 public class DefaultIoCallback implements IoCallback {
+
+    protected DefaultIoCallback() {
+
+    }
 
     @Override
     public void onComplete(final HttpServerExchange exchange, final Sender sender) {

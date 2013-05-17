@@ -18,7 +18,6 @@
 
 package io.undertow.client;
 
-import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -85,7 +84,7 @@ public class HttpClientTestCase {
         exchange.setResponseCode(200);
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
         final Sender sender = exchange.getResponseSender();
-        sender.send(message, IoCallback.END_EXCHANGE);
+        sender.send(message);
     }
 
     @BeforeClass

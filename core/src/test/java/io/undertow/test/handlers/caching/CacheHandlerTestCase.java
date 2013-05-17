@@ -3,7 +3,6 @@ package io.undertow.test.handlers.caching;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.undertow.io.IoCallback;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.CacheHandler;
@@ -42,7 +41,7 @@ public class CacheHandlerTestCase {
                 if(!cache.tryServeResponse()) {
                     final String data = "Response " + responseCount.incrementAndGet();
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, data.length() + "");
-                    exchange.getResponseSender().send(data, IoCallback.END_EXCHANGE);
+                    exchange.getResponseSender().send(data);
                 }
             }
         };

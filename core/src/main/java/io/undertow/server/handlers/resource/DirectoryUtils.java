@@ -6,7 +6,6 @@ import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 
 import io.undertow.UndertowLogger;
-import io.undertow.io.IoCallback;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
@@ -41,7 +40,7 @@ public class DirectoryUtils {
                 exchange.endExchange();
                 return true;
             }
-            exchange.getResponseSender().send(buffer, IoCallback.END_EXCHANGE);
+            exchange.getResponseSender().send(buffer);
 
             return true;
         }

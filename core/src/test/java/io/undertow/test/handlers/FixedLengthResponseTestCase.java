@@ -20,7 +20,6 @@ package io.undertow.test.handlers;
 
 import java.io.IOException;
 
-import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
@@ -60,12 +59,12 @@ public class FixedLengthResponseTestCase {
                     connection = exchange.getConnection();
                 } else if (!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()) {
                     Sender sender = exchange.getResponseSender();
-                    sender.send("Connection not persistent", IoCallback.END_EXCHANGE);
+                    sender.send("Connection not persistent");
                     return;
                 }
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
                 final Sender sender = exchange.getResponseSender();
-                sender.send(message, IoCallback.END_EXCHANGE);
+                sender.send(message);
             }
         });
     }

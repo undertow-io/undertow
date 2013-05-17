@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import io.undertow.io.IoCallback;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -60,7 +59,7 @@ public class ResumeWritesTestCase {
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.addResponseWrapper(new ReturnZeroWrapper());
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, HELLO_WORLD.length());
-                exchange.getResponseSender().send(HELLO_WORLD, IoCallback.END_EXCHANGE);
+                exchange.getResponseSender().send(HELLO_WORLD);
             }
         });
 
@@ -88,7 +87,7 @@ public class ResumeWritesTestCase {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.addResponseWrapper(new ReturnZeroWrapper());
-                exchange.getResponseSender().send(HELLO_WORLD, IoCallback.END_EXCHANGE);
+                exchange.getResponseSender().send(HELLO_WORLD);
             }
         });
 
@@ -117,7 +116,7 @@ public class ResumeWritesTestCase {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.addResponseWrapper(new ReturnZeroWrapper());
-                exchange.getResponseSender().send(HELLO_WORLD, IoCallback.END_EXCHANGE);
+                exchange.getResponseSender().send(HELLO_WORLD);
             }
         });
 

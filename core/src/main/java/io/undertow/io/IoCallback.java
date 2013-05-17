@@ -13,6 +13,9 @@ public interface IoCallback {
 
     void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception);
 
+    /**
+     * A default callback that simply ends the exchange.
+     */
     IoCallback END_EXCHANGE = new DefaultIoCallback();
 
 }

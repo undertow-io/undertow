@@ -25,6 +25,7 @@ public class AsyncSenderImpl implements Sender {
     private ByteBuffer[] buffer;
     private IoCallback callback;
     private boolean inCallback;
+    boolean doneWrite = false;
 
     private final ChannelListener<Channel> writeListener = new ChannelListener<Channel>() {
         @Override
@@ -63,6 +64,12 @@ public class AsyncSenderImpl implements Sender {
         if (this.buffer != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
+        if(!doneWrite && callback == IoCallback.END_EXCHANGE) {
+            if(exchange.getResponseContentLength() == -1) {
+                exchange.setResponseContentLength(buffer.remaining());
+            }
+        }
+        doneWrite = true;
         this.callback = callback;
         if (inCallback) {
             this.buffer = new ByteBuffer[]{buffer};
@@ -104,8 +111,16 @@ public class AsyncSenderImpl implements Sender {
             return;
         }
 
-        long t = Buffers.remaining(buffer);
-        final long total = t;
+        long totalToWrite = Buffers.remaining(buffer);
+
+        if (!doneWrite && callback == IoCallback.END_EXCHANGE) {
+            if (exchange.getResponseContentLength() == -1) {
+                exchange.setResponseContentLength(totalToWrite);
+            }
+        }
+        doneWrite = true;
+
+        final long total = totalToWrite;
         long written = 0;
 
         try {
@@ -128,6 +143,16 @@ public class AsyncSenderImpl implements Sender {
     }
 
     @Override
+    public void send(final ByteBuffer buffer) {
+        send(buffer, IoCallback.END_EXCHANGE);
+    }
+
+    @Override
+    public void send(final ByteBuffer[] buffer) {
+        send(buffer, IoCallback.END_EXCHANGE);
+    }
+
+    @Override
     public void send(final String data, final IoCallback callback) {
         send(ByteBuffer.wrap(data.getBytes(utf8)), callback);
     }
@@ -135,6 +160,16 @@ public class AsyncSenderImpl implements Sender {
     @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
         send(ByteBuffer.wrap(data.getBytes(charset)), callback);
+    }
+
+    @Override
+    public void send(final String data) {
+        send(data, IoCallback.END_EXCHANGE);
+    }
+
+    @Override
+    public void send(final String data, final Charset charset) {
+        send(data, charset, IoCallback.END_EXCHANGE);
     }
 
     @Override

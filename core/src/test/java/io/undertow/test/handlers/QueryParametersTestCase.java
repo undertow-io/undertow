@@ -23,7 +23,6 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.Map;
 
-import io.undertow.io.IoCallback;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.test.utils.DefaultServer;
@@ -75,7 +74,7 @@ public class QueryParametersTestCase {
 
                 }
                 sb.append("}");
-                exchange.getResponseSender().send(sb.toString(), IoCallback.END_EXCHANGE);
+                exchange.getResponseSender().send(sb.toString());
             }
         });
     }
