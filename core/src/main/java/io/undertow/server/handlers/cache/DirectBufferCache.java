@@ -48,21 +48,28 @@ public class DirectBufferCache {
     private final ConcurrentHashMap<Object, CacheEntry> cache;
     private final ConcurrentDirectDeque<CacheEntry> accessQueue;
     private final int sliceSize;
+    private final int maxAge;
 
-    public DirectBufferCache(int sliceSize, int slicesPerPage, int max) {
-        this(sliceSize, slicesPerPage, max, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR);
+    public DirectBufferCache(int sliceSize, int slicesPerPage, int maxMemory) {
+        this(sliceSize, slicesPerPage, maxMemory, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR);
     }
+
     public DirectBufferCache(int sliceSize, int slicesPerPage, int maxMemory, final BufferAllocator<ByteBuffer> bufferAllocator) {
+        this(sliceSize, slicesPerPage, maxMemory, bufferAllocator, -1);
+    }
+
+    public DirectBufferCache(int sliceSize, int slicesPerPage, int maxMemory, final BufferAllocator<ByteBuffer> bufferAllocator, int maxAge) {
         this.sliceSize = sliceSize;
         this.pool = new LimitedBufferSlicePool(bufferAllocator, sliceSize, sliceSize * slicesPerPage, maxMemory / (sliceSize * slicesPerPage));
         this.cache = new ConcurrentHashMap<>(16);
         this.accessQueue = ConcurrentDirectDeque.newInstance();
+        this.maxAge = maxAge;
     }
 
     public CacheEntry add(Object key, int size) {
         CacheEntry value = cache.get(key);
         if (value == null) {
-            value = new CacheEntry(key, size, this);
+            value = new CacheEntry(key, size, this, maxAge);
             CacheEntry result = cache.putIfAbsent(key, value);
             if (result != null) {
                 value = result;
@@ -80,7 +87,16 @@ public class DirectBufferCache {
             return null;
         }
 
+        long expires = cacheEntry.getExpires();
+        if(expires != -1) {
+            if(System.currentTimeMillis() > expires) {
+                remove(key);
+                return null;
+            }
+        }
+
         if (cacheEntry.hit() % SAMPLE_INTERVAL == 0) {
+
             bumpAccess(cacheEntry);
 
             if (! cacheEntry.allocate()) {
@@ -157,16 +173,19 @@ public class DirectBufferCache {
         private final Object key;
         private final int size;
         private final DirectBufferCache cache;
+        private final int maxAge;
         private volatile PooledByteBuffer[] buffers = INIT_BUFFERS;
         private volatile int refs = 1;
         private volatile int hits = 1;
         private volatile Object accessToken;
         private volatile int enabled;
+        private volatile long expires = -1;
 
-        private CacheEntry(Object key, int size, DirectBufferCache cache) {
+        private CacheEntry(Object key, int size, DirectBufferCache cache, final int maxAge) {
             this.key = key;
             this.size = size;
             this.cache = cache;
+            this.maxAge = maxAge;
         }
 
         public int size() {
@@ -197,6 +216,11 @@ public class DirectBufferCache {
         }
 
         public void enable() {
+            if(maxAge == -1) {
+                this.expires = -1;
+            } else {
+                this.expires = System.currentTimeMillis() + maxAge;
+            }
             this.enabled = 2;
         }
 
@@ -306,5 +330,8 @@ public class DirectBufferCache {
             return old == CLAIM_TOKEN ? null : old;
         }
 
+        long getExpires() {
+            return expires;
+        }
     }
 }

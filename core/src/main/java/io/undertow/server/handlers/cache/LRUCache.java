@@ -44,8 +44,13 @@ public class LRUCache<K, V> {
 
     private final SecureHashMap<K, CacheEntry<K, V>> cache;
     private final ConcurrentDirectDeque<CacheEntry<K, V>> accessQueue;
+    /**
+     * How long an item can stay in the cache in milliseconds
+     */
+    private final int maxAge;
 
-    public LRUCache(int maxEntries) {
+    public LRUCache(int maxEntries, final int maxAge) {
+        this.maxAge = maxAge;
         this.cache = new SecureHashMap<K, CacheEntry<K, V>>(16);
         this.accessQueue = ConcurrentDirectDeque.newInstance();
         this.maxEntries = maxEntries;
@@ -54,7 +59,13 @@ public class LRUCache<K, V> {
     public void add(K key, V newValue) {
         CacheEntry<K, V> value = cache.get(key);
         if (value == null) {
-            value = new CacheEntry<>(key, newValue, this);
+            long expires;
+            if(maxEntries == -1) {
+                expires = -1;
+            } else {
+                expires = System.currentTimeMillis() + maxAge;
+            }
+            value = new CacheEntry<>(key, newValue, this, expires);
             CacheEntry result = cache.putIfAbsent(key, value);
             if (result != null) {
                 value = result;
@@ -75,6 +86,13 @@ public class LRUCache<K, V> {
         CacheEntry<K, V> cacheEntry = cache.get(key);
         if (cacheEntry == null) {
             return null;
+        }
+        long expires = cacheEntry.getExpires();
+        if(expires != -1) {
+            if(System.currentTimeMillis() > expires) {
+                remove(key);
+                return null;
+            }
         }
 
         if (cacheEntry.hit() % SAMPLE_INTERVAL == 0) {
@@ -125,13 +143,15 @@ public class LRUCache<K, V> {
         private final K key;
         private volatile V value;
         private final LRUCache<K, V> cache;
+        private final long expires;
         private volatile int hits = 1;
         private volatile Object accessToken;
 
-        private CacheEntry(K key, V value, LRUCache cache) {
+        private CacheEntry(K key, V value, LRUCache cache, final long expires) {
             this.key = key;
             this.value = value;
             this.cache = cache;
+            this.expires = expires;
         }
 
         public void setValue(final V value) {
@@ -179,5 +199,8 @@ public class LRUCache<K, V> {
             return old == CLAIM_TOKEN ? null : old;
         }
 
+        public long getExpires() {
+            return expires;
+        }
     }
 }

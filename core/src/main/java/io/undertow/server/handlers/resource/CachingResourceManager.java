@@ -50,11 +50,11 @@ public class CachingResourceManager implements ResourceManager {
      */
     private final LRUCache<String, Object> cache;
 
-    public CachingResourceManager(final int metadataCacheSize, final long maxFileSize, final DirectBufferCache dataCache, final ResourceManager underlyingResourceManager) {
+    public CachingResourceManager(final int metadataCacheSize, final long maxFileSize, final DirectBufferCache dataCache, final ResourceManager underlyingResourceManager, final int metadataCacheMaxAge) {
         this.maxFileSize = maxFileSize;
         this.underlyingResourceManager = underlyingResourceManager;
         this.dataCache = dataCache;
-        this.cache = new LRUCache<>(metadataCacheSize);
+        this.cache = new LRUCache<>(metadataCacheSize, metadataCacheMaxAge);
     }
 
     @Override
