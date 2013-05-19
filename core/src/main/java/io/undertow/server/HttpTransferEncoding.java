@@ -28,6 +28,7 @@ import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.FinishableStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
+import io.undertow.conduits.HeadStreamSinkConduit;
 import io.undertow.conduits.PipelingBufferingStreamSinkConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.util.ConduitFactory;
@@ -166,6 +167,9 @@ public class HttpTransferEncoding {
     private static ConduitWrapper<StreamSinkConduit> responseWrapper(final boolean requestLooksPersistent) {
         return new ConduitWrapper<StreamSinkConduit>() {
             public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
+                if(exchange.getRequestMethod().equals(Methods.HEAD)) {
+                    return new HeadStreamSinkConduit(factory.create(), terminateResponseListener(exchange));
+                }
                 final StreamSinkConduit channel = factory.create();
                 final HeaderMap responseHeaders = exchange.getResponseHeaders();
                 // test to see if we're still persistent

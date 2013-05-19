@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 
 /**
@@ -34,7 +35,11 @@ public class HttpClientUtils {
     }
 
     public static String readResponse(final HttpResponse response) throws IOException {
-        return readResponse(response.getEntity().getContent());
+        HttpEntity entity = response.getEntity();
+        if(entity == null) {
+            return "";
+        }
+        return readResponse(entity.getContent());
     }
 
     public static String readResponse(InputStream stream) throws IOException {

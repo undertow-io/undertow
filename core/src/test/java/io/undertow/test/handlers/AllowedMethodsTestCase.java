@@ -21,7 +21,6 @@ package io.undertow.test.handlers;
 import java.io.IOException;
 
 import io.undertow.server.handlers.AllowedMethodsHandler;
-import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.server.handlers.DisallowedMethodsHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.test.utils.DefaultServer;
@@ -43,10 +42,6 @@ import org.junit.runner.RunWith;
  */
 @RunWith(DefaultServer.class)
 public class AllowedMethodsTestCase {
-
-    private static final String HEADER = "selected";
-    private static final String MESSAGE = "My HTTP Request!";
-    private static BlockingHandler blockingHandler;
 
     @Test
     public void testAllowedMethods() throws IOException {

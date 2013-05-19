@@ -99,10 +99,6 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
         }
     }
 
-    public long write(final ByteBuffer[] srcs) throws IOException {
-        return write(srcs, 0, srcs.length);
-    }
-
     public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
         if (length == 0) {
             return 0L;
