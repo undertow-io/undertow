@@ -400,7 +400,7 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableMap(servletContextAttributes);
     }
 
-    public DeploymentInfo addWelcomePages(final String welcomePage) {
+    public DeploymentInfo addWelcomePage(final String welcomePage) {
         this.welcomePages.add(welcomePage);
         return this;
     }
