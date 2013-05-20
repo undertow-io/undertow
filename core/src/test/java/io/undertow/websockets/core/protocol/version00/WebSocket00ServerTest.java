@@ -17,8 +17,8 @@
  */
 package io.undertow.websockets.core.protocol.version00;
 
-import io.undertow.test.utils.AjpIgnore;
-import io.undertow.test.utils.DefaultServer;
+import io.undertow.testutils.AjpIgnore;
+import io.undertow.testutils.DefaultServer;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;

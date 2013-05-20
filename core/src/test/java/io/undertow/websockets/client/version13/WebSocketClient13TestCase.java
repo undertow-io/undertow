@@ -8,9 +8,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.undertow.client.HttpClient;
-import io.undertow.test.utils.AjpIgnore;
-import io.undertow.test.utils.DefaultServer;
-import io.undertow.test.utils.FileUtils;
+import io.undertow.testutils.AjpIgnore;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.FileUtils;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.StreamSinkFrameChannel;

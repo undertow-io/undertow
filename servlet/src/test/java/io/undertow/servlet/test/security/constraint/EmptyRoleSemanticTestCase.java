@@ -33,10 +33,10 @@ import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.test.utils.DefaultServer;
-import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.FlexBase64;
-import io.undertow.util.TestHttpClient;
+import io.undertow.testutils.TestHttpClient;
 
 import javax.servlet.ServletException;
 

@@ -34,13 +34,13 @@ import io.undertow.servlet.test.util.MessageFilter;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
-import io.undertow.test.utils.DefaultServer;
-import io.undertow.test.utils.HttpClientUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 
-import io.undertow.util.TestHttpClient;
+import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;

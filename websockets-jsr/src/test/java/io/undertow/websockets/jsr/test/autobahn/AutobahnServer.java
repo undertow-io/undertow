@@ -28,7 +28,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.test.utils.DefaultServer;
+import io.undertow.testutils.DefaultServer;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import org.xnio.BufferAllocator;

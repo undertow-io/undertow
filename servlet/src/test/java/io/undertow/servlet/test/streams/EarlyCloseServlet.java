@@ -28,7 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
-import io.undertow.test.utils.DefaultServer;
+import io.undertow.testutils.DefaultServer;
 import org.junit.runner.RunWith;
 
 /**

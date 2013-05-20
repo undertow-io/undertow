@@ -17,7 +17,7 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
-import io.undertow.test.utils.DefaultServer;
+import io.undertow.testutils.DefaultServer;
 import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;

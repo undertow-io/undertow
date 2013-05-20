@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.undertow.test.utils.FileUtils;
+import io.undertow.testutils.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.xnio.BufferAllocator;

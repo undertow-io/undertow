@@ -33,9 +33,9 @@ import io.undertow.servlet.test.security.SendUsernameServlet;
 import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
 import io.undertow.servlet.test.security.form.FormLoginServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.test.utils.DefaultServer;
-import io.undertow.test.utils.HttpClientUtils;
-import io.undertow.util.TestHttpClient;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
 
 import java.io.IOException;
 import java.util.ArrayList;

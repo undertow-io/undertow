@@ -30,7 +30,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
-import io.undertow.test.utils.DefaultServer;
+import io.undertow.testutils.DefaultServer;
 
 /**
  * @author Stuart Douglas

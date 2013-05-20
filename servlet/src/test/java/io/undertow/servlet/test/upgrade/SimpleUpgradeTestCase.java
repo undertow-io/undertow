@@ -27,9 +27,9 @@ import javax.servlet.ServletException;
 
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.test.utils.AjpIgnore;
-import io.undertow.test.utils.DefaultServer;
-import io.undertow.util.TestHttpClient;
+import io.undertow.testutils.AjpIgnore;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;

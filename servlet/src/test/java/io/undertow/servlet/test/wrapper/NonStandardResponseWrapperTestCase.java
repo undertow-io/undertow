@@ -22,9 +22,9 @@ import java.io.IOException;
 
 import javax.servlet.ServletException;
 
-import io.undertow.test.utils.DefaultServer;
-import io.undertow.test.utils.HttpClientUtils;
-import io.undertow.util.TestHttpClient;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;

@@ -31,10 +31,10 @@ import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.security.constraint.SendSchemeMessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestConfidentialPortManager;
-import io.undertow.test.utils.AjpIgnore;
-import io.undertow.test.utils.DefaultServer;
-import io.undertow.test.utils.HttpClientUtils;
-import io.undertow.util.TestHttpClient;
+import io.undertow.testutils.AjpIgnore;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
 
 import java.io.IOException;
 

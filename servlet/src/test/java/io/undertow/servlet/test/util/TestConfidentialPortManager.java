@@ -19,7 +19,7 @@ package io.undertow.servlet.test.util;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.ConfidentialPortManager;
-import io.undertow.test.utils.DefaultServer;
+import io.undertow.testutils.DefaultServer;
 
 /**
  * Implementation of {@see ConfidentialPortManager} for use within the test suite.
