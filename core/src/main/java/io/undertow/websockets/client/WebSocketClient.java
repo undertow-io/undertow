@@ -10,10 +10,10 @@ import io.undertow.client.HttpClientCallback;
 import io.undertow.client.HttpClientConnection;
 import io.undertow.client.HttpClientRequest;
 import io.undertow.client.HttpClientResponse;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.Methods;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
+import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -27,7 +27,7 @@ public class WebSocketClient {
 
 
     public static IoFuture<WebSocketChannel> connect(HttpClient client, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
-        final ConcreteIoFuture<WebSocketChannel> ioFuture = new ConcreteIoFuture<>();
+        final FutureResult<WebSocketChannel> ioFuture = new FutureResult<>();
         connect(client, bufferPool, optionMap, uri, version, new HttpClientCallback<WebSocketChannel>() {
             @Override
             public void completed(final WebSocketChannel result) {
@@ -39,7 +39,7 @@ public class WebSocketClient {
                 ioFuture.setException(e);
             }
         });
-        return ioFuture;
+        return ioFuture.getIoFuture();
     }
 
     public static void connect(HttpClient client, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, final HttpClientCallback<WebSocketChannel> callback) {

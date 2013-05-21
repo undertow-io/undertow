@@ -17,10 +17,10 @@
  */
 package io.undertow.websockets.utils;
 
-import io.undertow.util.ConcreteIoFuture;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.junit.Assert;
+import org.xnio.FutureResult;
 
 import java.io.IOException;
 /**
@@ -29,9 +29,9 @@ import java.io.IOException;
 public final class FrameChecker implements WebSocketTestClient.FrameListener {
     private final Class<? extends WebSocketFrame> clazz;
     private final byte[] expectedPayload;
-    private final ConcreteIoFuture latch;
+    private final FutureResult<?> latch;
 
-    public FrameChecker(Class<? extends WebSocketFrame> clazz, byte[] expectedPayload, ConcreteIoFuture<?> latch) {
+    public FrameChecker(Class<? extends WebSocketFrame> clazz, byte[] expectedPayload, FutureResult<?> latch) {
         this.clazz = clazz;
         this.expectedPayload = expectedPayload;
         this.latch = latch;

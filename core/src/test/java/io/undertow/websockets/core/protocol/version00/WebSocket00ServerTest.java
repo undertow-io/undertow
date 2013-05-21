@@ -19,7 +19,6 @@ package io.undertow.websockets.core.protocol.version00;
 
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
@@ -43,6 +42,7 @@ import org.junit.runner.RunWith;
 import org.junit.Test;
 
 import org.xnio.ChannelListener;
+import org.xnio.FutureResult;
 
 import java.io.IOException;
 import java.net.URI;
@@ -118,11 +118,11 @@ public class WebSocket00ServerTest {
         }));
 
         final AtomicReference<String> result = new AtomicReference<String>();
-        final ConcreteIoFuture<?> latch = new ConcreteIoFuture();
+        final FutureResult<?> latch = new FutureResult();
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.copiedBuffer("hello", CharsetUtil.US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(CharsetUtil.US_ASCII), latch));
-        latch.get();
+        latch.getIoFuture().get();
         client.destroy();
     }
 
@@ -169,13 +169,13 @@ public class WebSocket00ServerTest {
             }
         }));
 
-        final ConcreteIoFuture latch = new ConcreteIoFuture();
+        final FutureResult latch = new FutureResult();
         final byte[] payload = "payload".getBytes();
 
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.get();
+        latch.getIoFuture().get();
 
         client.destroy();
     }

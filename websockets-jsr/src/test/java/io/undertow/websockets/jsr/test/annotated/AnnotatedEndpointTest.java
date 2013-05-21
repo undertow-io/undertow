@@ -29,7 +29,6 @@ import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.utils.FrameChecker;
@@ -42,6 +41,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
+import org.xnio.FutureResult;
 import org.xnio.OptionMap;
 
 /**
@@ -88,12 +88,12 @@ public class AnnotatedEndpointTest {
     @org.junit.Test
     public void testStringOnMessage() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final ConcreteIoFuture latch = new ConcreteIoFuture();
+        final FutureResult latch = new FutureResult();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/chat/Stuart"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
-        latch.get();
+        latch.getIoFuture().get();
         client.destroy();
     }
 
@@ -113,12 +113,12 @@ public class AnnotatedEndpointTest {
     @org.junit.Test
     public void testImplicitIntegerConversion() throws Exception {
         final byte[] payload = "12".getBytes();
-        final ConcreteIoFuture latch = new ConcreteIoFuture();
+        final FutureResult latch = new FutureResult();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/increment"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "13".getBytes(), latch));
-        latch.get();
+        latch.getIoFuture().get();
         client.destroy();
     }
 
@@ -126,12 +126,12 @@ public class AnnotatedEndpointTest {
     @org.junit.Test
     public void testEncodingAndDecoding() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final ConcreteIoFuture latch = new ConcreteIoFuture();
+        final FutureResult latch = new FutureResult();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/encoding/Stuart"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
-        latch.get();
+        latch.getIoFuture().get();
         client.destroy();
     }
 }

@@ -15,11 +15,11 @@ import io.undertow.io.Sender;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import org.xnio.ChannelListener;
 import org.xnio.FinishedIoFuture;
+import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
@@ -111,7 +111,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
         if (sender == null) {
             this.sender = exchange.getResponseSender();
         }
-        final ConcreteIoFuture<Void> future = new ConcreteIoFuture<>();
+        final FutureResult<Void> future = new FutureResult<>();
         sender.send(data, new IoCallback() {
             @Override
             public void onComplete(final HttpServerExchange exchange, final Sender sender) {
@@ -125,7 +125,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
             }
         });
-        return future;
+        return future.getIoFuture();
     }
 
     @Override
@@ -142,7 +142,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
                     return new FinishedIoFuture<byte[]>(data.toByteArray());
                 } else if (res == 0) {
                     //callback
-                    final ConcreteIoFuture<byte[]> future = new ConcreteIoFuture<>();
+                    final FutureResult<byte[]> future = new FutureResult<>();
                     channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
                         @Override
                         public void handleEvent(final StreamSourceChannel channel) {
@@ -169,7 +169,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
                         }
                     });
                     channel.resumeReads();
-                    return future;
+                    return future.getIoFuture();
                 } else {
                     buffer.flip();
                     while (buffer.hasRemaining()) {
@@ -179,9 +179,9 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
                 }
 
             } catch (IOException e) {
-                final ConcreteIoFuture<byte[]> future = new ConcreteIoFuture<>();
+                final FutureResult<byte[]> future = new FutureResult<>();
                 future.setException(e);
-                return future;
+                return future.getIoFuture();
             }
         }
 

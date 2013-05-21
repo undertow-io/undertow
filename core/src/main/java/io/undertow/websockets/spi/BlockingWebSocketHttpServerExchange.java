@@ -7,8 +7,8 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConcreteIoFuture;
 import org.xnio.FinishedIoFuture;
+import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 
 /**
@@ -33,9 +33,9 @@ public class BlockingWebSocketHttpServerExchange extends AsyncWebSocketHttpServe
             }
             return new FinishedIoFuture<Void>(null);
         } catch (IOException e) {
-            final ConcreteIoFuture<Void> ioFuture = new ConcreteIoFuture<>();
+            final FutureResult<Void> ioFuture = new FutureResult<>();
             ioFuture.setException(e);
-            return ioFuture;
+            return ioFuture.getIoFuture();
         }
     }
 
@@ -50,9 +50,9 @@ public class BlockingWebSocketHttpServerExchange extends AsyncWebSocketHttpServe
             }
             return new FinishedIoFuture<byte[]>(data.toByteArray());
         } catch (IOException e) {
-            final ConcreteIoFuture<byte[]> ioFuture = new ConcreteIoFuture<>();
+            final FutureResult<byte[]> ioFuture = new FutureResult<>();
             ioFuture.setException(e);
-            return ioFuture;
+            return ioFuture.getIoFuture();
         }
     }
 }

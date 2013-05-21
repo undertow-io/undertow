@@ -13,7 +13,6 @@ import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.websockets.WebSocketServlet;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
@@ -29,6 +28,7 @@ import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.ChannelListener;
+import org.xnio.FutureResult;
 
 /**
  * @author Stuart Douglas
@@ -100,11 +100,11 @@ public class WebSocketServletTest {
                 })))
                 .addMapping("/*"));
 
-        final ConcreteIoFuture latch = new ConcreteIoFuture();
+        final FutureResult latch = new FutureResult<>();
         WebSocketTestClient client = new WebSocketTestClient(org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/servletContext"));
         client.connect();
         client.send(new TextWebSocketFrame(ChannelBuffers.copiedBuffer("hello", CharsetUtil.US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(CharsetUtil.US_ASCII), latch));
-        latch.get();
+        latch.getIoFuture().get();
         client.destroy();
     }
 }

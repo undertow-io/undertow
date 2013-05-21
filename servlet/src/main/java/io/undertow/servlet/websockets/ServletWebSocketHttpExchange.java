@@ -38,10 +38,10 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.ConcreteIoFuture;
 import io.undertow.websockets.spi.UpgradeCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.FinishedIoFuture;
+import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
@@ -151,9 +151,9 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
             }
             return new FinishedIoFuture<Void>(null);
         } catch (IOException e) {
-            final ConcreteIoFuture<Void> ioFuture = new ConcreteIoFuture<>();
+            final FutureResult<Void> ioFuture = new FutureResult<>();
             ioFuture.setException(e);
-            return ioFuture;
+            return ioFuture.getIoFuture();
         }
     }
 
@@ -169,9 +169,9 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
             }
             return new FinishedIoFuture<byte[]>(data.toByteArray());
         } catch (IOException e) {
-            final ConcreteIoFuture<byte[]> ioFuture = new ConcreteIoFuture<>();
+            final FutureResult<byte[]> ioFuture = new FutureResult<>();
             ioFuture.setException(e);
-            return ioFuture;
+            return ioFuture.getIoFuture();
         }
     }
 
