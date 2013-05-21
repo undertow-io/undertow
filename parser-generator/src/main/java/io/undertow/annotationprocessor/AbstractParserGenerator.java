@@ -654,7 +654,7 @@ public abstract class AbstractParserGenerator {
         c.branchEnd(builder.getDefaultBranchEnd().get());
         c.newInstruction(RuntimeException.class);
         c.dup();
-        c.ldc("Could not find state");
+        c.ldc("Invalid character");
         c.invokespecial(RuntimeException.class.getName(), "<init>", "(Ljava/lang/String;)V");
         c.athrow();
     }
