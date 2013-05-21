@@ -41,6 +41,12 @@ public class ErrorPage {
         this.exceptionType = null;
     }
 
+    public ErrorPage(final String location) {
+        this.location = location;
+        this.errorCode = null;
+        this.exceptionType = null;
+    }
+
     public String getLocation() {
         return location;
     }

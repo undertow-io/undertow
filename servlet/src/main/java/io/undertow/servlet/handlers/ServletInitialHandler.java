@@ -19,7 +19,6 @@
 package io.undertow.servlet.handlers;
 
 import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import io.undertow.UndertowLogger;
@@ -134,9 +133,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                         exchange.setResponseCode(500);
                         exchange.getResponseHeaders().clear();
                         String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
-                        if (location == null && t instanceof ServletException) {
-                            location = servletContext.getDeployment().getErrorPages().getErrorLocation(t.getCause());
-                        }
                         if (location != null) {
                             RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
                             try {

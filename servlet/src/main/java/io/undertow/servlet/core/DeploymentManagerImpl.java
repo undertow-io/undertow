@@ -333,15 +333,21 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private void initializeErrorPages(final DeploymentImpl deployment, final DeploymentInfo deploymentInfo) {
         final Map<Integer, String> codes = new HashMap<Integer, String>();
         final Map<Class<? extends Throwable>, String> exceptions = new HashMap<Class<? extends Throwable>, String>();
-
+        String defaultErrorPage = null;
         for (final ErrorPage page : deploymentInfo.getErrorPages()) {
             if (page.getExceptionType() != null) {
                 exceptions.put(page.getExceptionType(), page.getLocation());
-            } else {
+            } else if(page.getErrorCode() != null){
                 codes.put(page.getErrorCode(), page.getLocation());
+            } else {
+                if(defaultErrorPage != null) {
+                    throw UndertowServletMessages.MESSAGES.moreThanOneDefaultErrorPage(defaultErrorPage, page.getLocation());
+                } else {
+                    defaultErrorPage = page.getLocation();
+                }
             }
         }
-        deployment.setErrorPages(new ErrorPages(codes, exceptions));
+        deployment.setErrorPages(new ErrorPages(codes, exceptions, defaultErrorPage));
     }
 
     /**

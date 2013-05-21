@@ -163,4 +163,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10039, value = "Unknown authentication mechanism %s")
     RuntimeException unknownAuthenticationMechanism(String mechName);
+
+    @Message(id = 10040, value = "More than one default error page %s and %s")
+    IllegalStateException moreThanOneDefaultErrorPage(String defaultErrorPage, String location);
 }

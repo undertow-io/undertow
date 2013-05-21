@@ -20,9 +20,10 @@ package io.undertow.servlet.core;
 
 import java.util.Map;
 
+import javax.servlet.ServletException;
+
 /**
  * Class that maintains information about error page mappings.
- *
  *
  * @author Stuart Douglas
  */
@@ -30,28 +31,44 @@ public class ErrorPages {
 
     private final Map<Integer, String> errorCodeLocations;
     private final Map<Class<? extends Throwable>, String> exceptionMappings;
+    private final String defaultErrorPage;
 
-    public ErrorPages(final Map<Integer, String> errorCodeLocations, final Map<Class<? extends Throwable>, String> exceptionMappings) {
+    public ErrorPages(final Map<Integer, String> errorCodeLocations, final Map<Class<? extends Throwable>, String> exceptionMappings, final String defaultErrorPage) {
         this.errorCodeLocations = errorCodeLocations;
         this.exceptionMappings = exceptionMappings;
+        this.defaultErrorPage = defaultErrorPage;
     }
 
     public String getErrorLocation(final int code) {
-        return errorCodeLocations.get(code);
+        String location = errorCodeLocations.get(code);
+        if (location == null) {
+            return defaultErrorPage;
+        }
+        return location;
     }
 
     public String getErrorLocation(final Throwable exception) {
-        if(exception == null) {
+        if (exception == null) {
             return null;
         }
         //todo: this is kinda slow, but there is probably not a great deal that can be done about it
-        String e = null;
-        for(Class c = exception.getClass(); c != null && e == null; c = c.getSuperclass()) {
-            e = exceptionMappings.get(c);
+        String location = null;
+        for (Class c = exception.getClass(); c != null && location == null; c = c.getSuperclass()) {
+            location = exceptionMappings.get(c);
         }
-        return e;
+        if (location == null && exception instanceof ServletException) {
+            Throwable rootCause = ((ServletException) exception).getRootCause();
+            if (rootCause != null) {
+                for (Class c = rootCause.getClass(); c != null && location == null; c = c.getSuperclass()) {
+                    location = exceptionMappings.get(c);
+                }
+            }
+        }
+        if (location == null) {
+            location = defaultErrorPage;
+        }
+        return location;
     }
-
 
 
 }
