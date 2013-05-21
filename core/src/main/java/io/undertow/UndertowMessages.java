@@ -173,4 +173,7 @@ public interface UndertowMessages {
 
     @Message(id = 50, value = "AuthenticationMechanism Outcome is null")
     IllegalStateException authMechanismOutcomeNull();
+
+    @Message(id = 51, value = "Not a valid IP pattern %s")
+    IllegalArgumentException notAValidIpPattern(String peer);
 }

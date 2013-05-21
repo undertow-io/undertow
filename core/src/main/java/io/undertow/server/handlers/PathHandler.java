@@ -57,7 +57,7 @@ public class PathHandler implements HttpHandler {
         if (next != null) {
             exchange.setRelativePath(path.substring(pos));
             exchange.setResolvedPath(exchange.getResolvedPath() + part);
-            HttpHandlers.executeHandler(next, exchange);
+            next.handleRequest(exchange);
             return;
         }
 
@@ -69,12 +69,12 @@ public class PathHandler implements HttpHandler {
                 if (next != null) {
                     exchange.setRelativePath(path.substring(pos));
                     exchange.setResolvedPath(exchange.getResolvedPath() + part);
-                    HttpHandlers.executeHandler(next, exchange);
+                    next.handleRequest(exchange);
                     return;
                 }
             }
         }
-        HttpHandlers.executeHandler(defaultHandler, exchange);
+        defaultHandler.handleRequest(exchange);
     }
 
     /**
@@ -95,7 +95,7 @@ public class PathHandler implements HttpHandler {
             maxPathLength = path.length();
         }
         HttpHandlers.handlerNotNull(handler);
-        if (path == null || path.isEmpty()) {
+        if (path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
         if (path.charAt(0) != '/') {
