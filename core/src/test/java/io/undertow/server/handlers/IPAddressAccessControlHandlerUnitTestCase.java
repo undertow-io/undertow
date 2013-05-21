@@ -11,11 +11,11 @@ import org.junit.Test;
  *
  * @author Stuart Douglas
  */
-public class RemoteAccessControlHandlerUnitTestCase {
+public class IPAddressAccessControlHandlerUnitTestCase {
 
     @Test
     public void testIPv4ExactMatch() throws UnknownHostException {
-        RemoteAccessControlHandler handler = new RemoteAccessControlHandler()
+        IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
                 .setDefaultAllow(false)
                 .addAllow("127.0.0.1");
         Assert.assertTrue(handler.isAllowed(InetAddress.getByName("127.0.0.1")));
@@ -24,7 +24,7 @@ public class RemoteAccessControlHandlerUnitTestCase {
 
     @Test
     public void testIPv6ExactMatch() throws UnknownHostException {
-        RemoteAccessControlHandler handler = new RemoteAccessControlHandler()
+        IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
                 .setDefaultAllow(false)
                 .addAllow("FE45:00:00:000:0:AAA:FFFF:0045");
         Assert.assertTrue(handler.isAllowed(InetAddress.getByName("FE45:0:0:0:0:AAA:FFFF:45")));
@@ -34,7 +34,7 @@ public class RemoteAccessControlHandlerUnitTestCase {
 
     @Test
     public void testIPv4WildcardMatch() throws UnknownHostException {
-        RemoteAccessControlHandler handler = new RemoteAccessControlHandler()
+        IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
                 .setDefaultAllow(true)
                 .addAllow("127.0.0.1")
                 .addDeny("127.0.*.*");
@@ -45,7 +45,7 @@ public class RemoteAccessControlHandlerUnitTestCase {
 
     @Test
     public void testIPv6PrefixMatch() throws UnknownHostException {
-        RemoteAccessControlHandler handler = new RemoteAccessControlHandler()
+        IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
                 .setDefaultAllow(true)
                 .addAllow("FE45:00:00:000:0:AAA:FFFF:0045")
                 .addDeny("FE45:00:00:000:0:AAA:FFFF:*");
@@ -57,7 +57,7 @@ public class RemoteAccessControlHandlerUnitTestCase {
 
     @Test
     public void testIPv4SlashMatch() throws UnknownHostException {
-        RemoteAccessControlHandler handler = new RemoteAccessControlHandler()
+        IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
                 .setDefaultAllow(true)
                 .addAllow("127.0.0.1")
                 .addAllow("127.0.0.48/30")
@@ -78,7 +78,7 @@ public class RemoteAccessControlHandlerUnitTestCase {
 
     @Test
     public void testIPv6SlashMatch() throws UnknownHostException {
-        RemoteAccessControlHandler handler = new RemoteAccessControlHandler()
+        IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
                 .setDefaultAllow(true)
                 .addAllow("FE45:00:00:000:0:AAA:FFFF:0045")
                 .addAllow("FE45:00:00:000:0:AAA:FFFF:01F4/127")

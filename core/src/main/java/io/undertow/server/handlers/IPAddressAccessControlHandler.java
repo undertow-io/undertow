@@ -1,5 +1,7 @@
 package io.undertow.server.handlers;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -14,13 +16,11 @@ import io.undertow.util.StatusCodes;
 import org.xnio.Bits;
 
 /**
- * Handler that limits the peers that are allowed to connect.
- * <p/>
- * Note: a lot of methods on this class are package private for unit tests
+ * Handler that can accept or reject a request based on the IP address of the remote peer.
  *
  * @author Stuart Douglas
  */
-public class RemoteAccessControlHandler implements HttpHandler {
+public class IPAddressAccessControlHandler implements HttpHandler {
 
     /**
      * Standard IP address
@@ -54,13 +54,14 @@ public class RemoteAccessControlHandler implements HttpHandler {
 
     private volatile HttpHandler next;
     private volatile boolean defaultAllow = false;
-    private final List<PeerMatch> acl = new CopyOnWriteArrayList<>();
+    private final List<PeerMatch> ipv6acl = new CopyOnWriteArrayList<>();
+    private final List<PeerMatch> ipv4acl = new CopyOnWriteArrayList<>();
 
-    public RemoteAccessControlHandler(final HttpHandler next) {
+    public IPAddressAccessControlHandler(final HttpHandler next) {
         this.next = next;
     }
 
-    public RemoteAccessControlHandler() {
+    public IPAddressAccessControlHandler() {
         this.next = ResponseCodeHandler.HANDLE_404;
     }
 
@@ -76,9 +77,17 @@ public class RemoteAccessControlHandler implements HttpHandler {
     }
 
     boolean isAllowed(InetAddress address) {
-        for (PeerMatch rule : acl) {
-            if (rule.matches(address)) {
-                return !rule.isDeny();
+        if(address instanceof Inet4Address) {
+            for (PeerMatch rule : ipv4acl) {
+                if (rule.matches(address)) {
+                    return !rule.isDeny();
+                }
+            }
+        } else if(address instanceof Inet6Address) {
+            for (PeerMatch rule : ipv6acl) {
+                if (rule.matches(address)) {
+                    return !rule.isDeny();
+                }
             }
         }
         return defaultAllow;
@@ -88,7 +97,7 @@ public class RemoteAccessControlHandler implements HttpHandler {
         return defaultAllow;
     }
 
-    public RemoteAccessControlHandler setDefaultAllow(final boolean defaultAllow) {
+    public IPAddressAccessControlHandler setDefaultAllow(final boolean defaultAllow) {
         this.defaultAllow = defaultAllow;
         return this;
     }
@@ -97,7 +106,7 @@ public class RemoteAccessControlHandler implements HttpHandler {
         return next;
     }
 
-    public RemoteAccessControlHandler setNext(final HttpHandler next) {
+    public IPAddressAccessControlHandler setNext(final HttpHandler next) {
         this.next = next;
         return this;
     }
@@ -117,7 +126,7 @@ public class RemoteAccessControlHandler implements HttpHandler {
      *
      * @param peer The peer to add to the ACL
      */
-    public RemoteAccessControlHandler addAllow(final String peer) {
+    public IPAddressAccessControlHandler addAllow(final String peer) {
         return addRule(peer, false);
     }
 
@@ -135,16 +144,17 @@ public class RemoteAccessControlHandler implements HttpHandler {
      *
      * @param peer The peer to add to the ACL
      */
-    public RemoteAccessControlHandler addDeny(final String peer) {
+    public IPAddressAccessControlHandler addDeny(final String peer) {
         return addRule(peer, true);
     }
 
-    public RemoteAccessControlHandler clearRules() {
-        this.acl.clear();
+    public IPAddressAccessControlHandler clearRules() {
+        this.ipv4acl.clear();
+        this.ipv6acl.clear();
         return this;
     }
 
-    private RemoteAccessControlHandler addRule(final String peer, final boolean deny) {
+    private IPAddressAccessControlHandler addRule(final String peer, final boolean deny) {
         if (IP4_EXACT.matcher(peer).matches()) {
             addIpV4ExactMatch(peer, deny);
         } else if (IP4_WILDCARD.matcher(peer).matches()) {
@@ -189,7 +199,7 @@ public class RemoteAccessControlHandler implements HttpHandler {
                 break;
             }
         }
-        acl.add(new PrefixIpV6PeerMatch(deny, peer, mask, pattern));
+        ipv6acl.add(new PrefixIpV6PeerMatch(deny, peer, mask, pattern));
     }
 
     private void addIpV4SlashPrefix(final String peer, final boolean deny) {
@@ -204,7 +214,7 @@ public class RemoteAccessControlHandler implements HttpHandler {
             int no = Integer.parseInt(part);
             prefix |= no;
         }
-        acl.add(new PrefixIpV4PeerMatch(deny, peer, mask, prefix));
+        ipv4acl.add(new PrefixIpV4PeerMatch(deny, peer, mask, prefix));
     }
 
     private void addIpV6WildcardMatch(final String peer, final boolean deny) {
@@ -221,7 +231,7 @@ public class RemoteAccessControlHandler implements HttpHandler {
                 mask[i * 2 + 1] = (byte) (0xFF);
             }
         }
-        acl.add(new PrefixIpV6PeerMatch(deny, peer, mask, pattern));
+        ipv6acl.add(new PrefixIpV6PeerMatch(deny, peer, mask, pattern));
     }
 
     private void addIpV4WildcardMatch(final String peer, final boolean deny) {
@@ -238,7 +248,7 @@ public class RemoteAccessControlHandler implements HttpHandler {
                 prefix |= no;
             }
         }
-        acl.add(new PrefixIpV4PeerMatch(deny, peer, mask, prefix));
+        ipv4acl.add(new PrefixIpV4PeerMatch(deny, peer, mask, prefix));
     }
 
     private void addIpV6ExactMatch(final String peer, final boolean deny) {
@@ -250,13 +260,13 @@ public class RemoteAccessControlHandler implements HttpHandler {
             bytes[i * 2] = (byte) (val >> 8);
             bytes[i * 2 + 1] = (byte) (val & 0xFF);
         }
-        acl.add(new ExactIpV6PeerMatch(deny, peer, bytes));
+        ipv6acl.add(new ExactIpV6PeerMatch(deny, peer, bytes));
     }
 
     private void addIpV4ExactMatch(final String peer, final boolean deny) {
         String[] parts = peer.split("\\.");
         byte[] bytes = {(byte) Integer.parseInt(parts[0]), (byte) Integer.parseInt(parts[1]), (byte) Integer.parseInt(parts[2]), (byte) Integer.parseInt(parts[3])};
-        acl.add(new ExactIpV4PeerMatch(deny, peer, bytes));
+        ipv4acl.add(new ExactIpV4PeerMatch(deny, peer, bytes));
     }
 
 
