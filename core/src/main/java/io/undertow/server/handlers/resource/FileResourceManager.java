@@ -19,8 +19,10 @@
 package io.undertow.server.handlers.resource;
 
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 
 /**
@@ -54,10 +56,15 @@ public class FileResourceManager implements ResourceManager {
         if (p.startsWith("/")) {
             path = p.substring(1);
         }
-        Path file = base.resolve(path);
-        if (Files.exists(file)) {
-            return new FileResource(file);
-        } else {
+        try {
+            Path file = base.resolve(path);
+            if (Files.exists(file)) {
+                return new FileResource(file);
+            } else {
+                return null;
+            }
+        } catch (InvalidPathException e) {
+            UndertowLogger.REQUEST_LOGGER.debugf(e, "Invalid path %s");
             return null;
         }
     }
