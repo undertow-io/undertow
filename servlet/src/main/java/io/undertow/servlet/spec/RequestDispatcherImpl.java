@@ -307,7 +307,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 }
             }
         }
-        response.resetBuffer();
 
         final ServletRequest oldRequest = servletRequestContext.getServletRequest();
         final ServletResponse oldResponse = servletRequestContext.getServletResponse();
