@@ -129,12 +129,18 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
 
             if (state.prefix != AjpParser.FORWARD_REQUEST) {
                 if (state.prefix == AjpParser.CPING) {
+                    UndertowLogger.REQUEST_LOGGER.debug("Received CPING, sending CPONG");
                     handleCPing();
+                } else if (state.prefix == AjpParser.CPONG) {
+                    UndertowLogger.REQUEST_LOGGER.debug("Received CPONG, starting next request");
+                    state = new AjpParseState();
+                    channel.getReadSetter().set(this);
+                    channel.resumeReads();
                 } else {
                     UndertowLogger.REQUEST_LOGGER.ignoringAjpRequestWithPrefixCode(state.prefix);
                     IoUtils.safeClose(connection);
-                    return;
                 }
+                return;
             }
 
             // we remove ourselves as the read listener from the channel;
@@ -224,7 +230,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
         nextListener.proceed();
     }
 
-    private  StreamSourceConduit createSourceConduit(StreamSourceConduit underlyingConduit, AjpResponseConduit responseConduit, final HttpServerExchange exchange) {
+    private StreamSourceConduit createSourceConduit(StreamSourceConduit underlyingConduit, AjpResponseConduit responseConduit, final HttpServerExchange exchange) {
         ReadDataStreamSourceConduit conduit = new ReadDataStreamSourceConduit(underlyingConduit, exchange.getConnection());
 
         final HeaderMap requestHeaders = exchange.getRequestHeaders();

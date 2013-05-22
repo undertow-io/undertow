@@ -44,6 +44,7 @@ public class AjpParser {
     public static final AjpParser INSTANCE = new AjpParser();
 
     public static final int FORWARD_REQUEST = 2;
+    public static final int CPONG = 9;
     public static final int CPING = 10;
     public static final int SHUTDOWN = 7;
 
