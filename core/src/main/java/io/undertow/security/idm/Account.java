@@ -18,7 +18,6 @@
 package io.undertow.security.idm;
 
 import java.security.Principal;
-import java.util.Set;
 
 /**
  * Representation of an account, most likely a user account.
@@ -26,24 +25,6 @@ import java.util.Set;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 public interface Account {
-
-    /**
-     * Name of the plaintext password attribute, as used by digest authentication.
-     * <p/>
-     * This is expected to be a char array
-     */
-    String PLAINTEXT_PASSWORD_ATTRIBUTE = "PLAINTEXT_PASSWORD";
-
-    /**
-     * Prefix of the pre-computed hash attribute, as used by digest authentication.
-     *
-     * The full attribute name is computed by adding the algorithm name to the end of the
-     * the prefix, e.g. DIGEST_HA1_HASH_MD5
-     * <p/>
-     * This is expected to be a byte array
-     */
-    String DIGEST_HA1_HASH_ATTRIBUTE_PREFIX = "DIGEST_HA1_HASH_";
-
 
     Principal getPrincipal();
 
@@ -57,21 +38,6 @@ public interface Account {
      * @return <code>true</code> if the user has the specified role.
      */
     boolean isUserInRole(final String role);
-
-    /**
-     * Returns the set of all roles this user has
-     *
-     * @return A set of all roles this user has
-     */
-    Set<String> getRoles();
-
-    /**
-     * Gets an attribute of the account.
-     *
-     * @param attributeName The attribute name
-     * @return The attribute, or null if it is not present
-     */
-    Object getAttribute(final String attributeName);
 
     // TODO - Do we need a way to pass back to IDM that account is logging out? A few scenarios: -
     // 1 - Session expiration so cached account known to be logging out.

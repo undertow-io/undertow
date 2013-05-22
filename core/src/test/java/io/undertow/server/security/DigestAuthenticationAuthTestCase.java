@@ -25,8 +25,8 @@ import java.util.Random;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityNotification.EventType;
+import io.undertow.security.idm.DigestAlgorithm;
 import io.undertow.security.impl.AuthenticationInfoToken;
-import io.undertow.security.impl.DigestAlgorithm;
 import io.undertow.security.impl.DigestAuthenticationMechanism;
 import io.undertow.security.impl.DigestAuthorizationToken;
 import io.undertow.security.impl.DigestQop;
@@ -66,7 +66,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     @Override
     protected AuthenticationMechanism getTestMechanism() {
         return new DigestAuthenticationMechanism(Collections.singletonList(DigestAlgorithm.MD5),
-                Collections.singletonList(DigestQop.AUTH), REALM_NAME, "/", new SimpleNonceManager(), true);
+                Collections.singletonList(DigestQop.AUTH), REALM_NAME, "/", new SimpleNonceManager());
     }
 
     private String createNonce() {

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.security.impl;
+package io.undertow.security.idm;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -68,7 +68,6 @@ public enum DigestAlgorithm {
     }
 
     public MessageDigest getMessageDigest() throws NoSuchAlgorithmException {
-        // TODO - If we end up always Hex based then may use a wrapper here.
         return MessageDigest.getInstance(digestAlgorithm);
     }
 

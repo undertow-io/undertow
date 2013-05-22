@@ -16,27 +16,6 @@
  */
 package io.undertow.security.impl;
 
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.NonceManager;
-import io.undertow.security.api.SecurityContext;
-import io.undertow.security.idm.Account;
-import io.undertow.security.idm.IdentityManager;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-import io.undertow.util.HexConverter;
-
 import static io.undertow.UndertowLogger.REQUEST_LOGGER;
 import static io.undertow.UndertowMessages.MESSAGES;
 import static io.undertow.security.impl.DigestAuthorizationToken.parseHeader;
@@ -46,6 +25,28 @@ import static io.undertow.util.Headers.DIGEST;
 import static io.undertow.util.Headers.NEXT_NONCE;
 import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.UNAUTHORIZED;
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.NonceManager;
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
+import io.undertow.security.idm.DigestAlgorithm;
+import io.undertow.security.idm.DigestCredential;
+import io.undertow.security.idm.IdentityManager;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+import io.undertow.util.HexConverter;
+
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * {@link io.undertow.server.HttpHandler} to handle HTTP Digest authentication, both according to RFC-2617 and draft update to allow additional
@@ -84,29 +85,26 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     private final String qopString;
     private final String realmName; // TODO - Will offer choice once backing store API/SPI is in.
     private final String domain;
-    private final byte[] realmBytes;
     private final NonceManager nonceManager;
-    private final boolean plainTextPasswords; // TODO - May move hash validation to the IDM so this does not need to be known in advance.
 
     // Where do session keys fit? Do we just hang onto a session key or keep visiting the user store to check if the password
     // has changed?
     // Maybe even support registration of a session so it can be invalidated?
+    // 2013-05-29 - Session keys will be cached, where a cached key is used the IdentityManager is still given the
+    //              opportunity to check the Account is still valid.
 
     public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
-            final String realmName, final String domain, final NonceManager nonceManager, final boolean plainTextPasswords) {
-        this(supportedAlgorithms, supportedQops, realmName, domain, nonceManager, plainTextPasswords, DEFAULT_NAME);
+            final String realmName, final String domain, final NonceManager nonceManager) {
+        this(supportedAlgorithms, supportedQops, realmName, domain, nonceManager, DEFAULT_NAME);
     }
 
     public DigestAuthenticationMechanism(final List<DigestAlgorithm> supportedAlgorithms, final List<DigestQop> supportedQops,
-            final String realmName, final String domain, final NonceManager nonceManager, final boolean plainTextPasswords,
-            final String mechanismName) {
+            final String realmName, final String domain, final NonceManager nonceManager, final String mechanismName) {
         this.supportedAlgorithms = supportedAlgorithms;
         this.supportedQops = supportedQops;
         this.realmName = realmName;
         this.domain = domain;
-        this.realmBytes = realmName.getBytes(UTF_8);
         this.nonceManager = nonceManager;
-        this.plainTextPasswords = plainTextPasswords;
         this.mechanismName = mechanismName;
 
         if (supportedQops.size() > 0) {
@@ -133,6 +131,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     try {
                         DigestContext context = new DigestContext();
                         Map<DigestAuthorizationToken, String> parsedHeader = parseHeader(digestChallenge);
+                        context.setMethod(exchange.getRequestMethod().toString());
                         context.setParsedHeader(parsedHeader);
                         // Some form of Digest authentication is going to occur so get the DigestContext set on the exchange.
                         exchange.putAttachment(DigestContext.ATTACHMENT_KEY, context);
@@ -228,68 +227,37 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             // if MD5 is not supported.
             algorithm = DigestAlgorithm.MD5;
         }
-        MessageDigest digest = null;
-        // Step 2 - Based on the headers received verify that in theory the response is valid.
+
         try {
-            digest = algorithm.getMessageDigest();
-            context.setDigest(digest);
+            context.setAlgorithm(algorithm);
         } catch (NoSuchAlgorithmException e) {
-            // This is really not expected but the API makes us consider it.
+            /*
+             * This should not be possible in a properly configured installation.
+             */
             REQUEST_LOGGER.exceptionProcessingRequest(e);
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 
-        byte[] ha1;
-
-
         final String userName = parsedHeader.get(DigestAuthorizationToken.USERNAME);
         final IdentityManager identityManager = securityContext.getIdentityManager();
-        final Account account = identityManager.getAccount(userName);
+        final Account account;
+
+        if (algorithm.isSession()) {
+            /* This can follow one of the following: -
+             *   1 - New session so use DigestCredentialImpl with the IdentityManager to
+             *       create a new session key.
+             *   2 - Obtain the existing session key from the session store and validate it, just use
+             *       IdentityManager to validate account is still active and the current role assignment.
+             */
+            throw new IllegalStateException("Not yet implemented.");
+        } else {
+            final DigestCredential credential = new DigestCredentialImpl(context);
+            account = identityManager.verify(userName, credential);
+        }
+
         if (account == null) {
-            //the user does not exist.
-            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), mechanismName);
-            return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
-        }
-
-        // Step 2.1 Calculate H(A1)
-        try {
-            if (algorithm.isSession()) {
-                ha1 = lookupOrCreateSessionHA1(parsedHeader);
-            } else {
-                // This is the most simple form of a hash involving the username, realm and password.
-                ha1 = createHA1(userName.getBytes(UTF_8), account, digest, algorithm);
-                if(ha1 == null) {
-                    //the underlying account could not provide the necessary information for DIGEST auth
-                    return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
-                }
-            }
-            context.setHa1(ha1);
-        } catch (AuthenticationException e) {
-            // Most likely the user does not exist.
-            securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), mechanismName);
-            return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
-        }
-
-        byte[] ha2;
-        // Step 2.2 Calculate H(A2)
-        if (qop == null || qop.equals(DigestQop.AUTH)) {
-            ha2 = createHA2Auth(exchange, digest, parsedHeader);
-        } else {
-            ha2 = createHA2AuthInt();
-        }
-
-        byte[] requestDigest;
-        if (qop == null) {
-            requestDigest = createRFC2069RequestDigest(ha1, ha2, digest, parsedHeader);
-        } else {
-            requestDigest = createRFC2617RequestDigest(ha1, ha2, digest, parsedHeader);
-        }
-
-        byte[] providedResponse = parsedHeader.get(DigestAuthorizationToken.RESPONSE).getBytes(UTF_8);
-        if (MessageDigest.isEqual(requestDigest, providedResponse) == false) {
-            // TODO - We should look at still marking the nonce as used, a failure in authentication due to say a failure
-            // looking up the users password would leave it open to the packet being replayed.
-            REQUEST_LOGGER.authenticationFailed(parsedHeader.get(DigestAuthorizationToken.USERNAME), DIGEST.toString());
+            // Authentication has failed, this could either be caused by the user not-existing or it
+            // could be caused due to an invalid hash.
             securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), mechanismName);
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
@@ -317,6 +285,28 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         // TODO - Do QOP
     }
 
+    private boolean validateRequest(final DigestContext context, final byte[] ha1) {
+        byte[] ha2;
+        DigestQop qop = context.getQop();
+        // Step 2.2 Calculate H(A2)
+        if (qop == null || qop.equals(DigestQop.AUTH)) {
+            ha2 = createHA2Auth(context, context.getParsedHeader());
+        } else {
+            ha2 = createHA2AuthInt();
+        }
+
+        byte[] requestDigest;
+        if (qop == null) {
+            requestDigest = createRFC2069RequestDigest(ha1, ha2, context);
+        } else {
+            requestDigest = createRFC2617RequestDigest(ha1, ha2, context);
+        }
+
+        byte[] providedResponse = context.getParsedHeader().get(DigestAuthorizationToken.RESPONSE).getBytes(UTF_8);
+
+        return MessageDigest.isEqual(requestDigest, providedResponse);
+    }
+
     private boolean validateNonceUse(DigestContext context, Map<DigestAuthorizationToken, String> parsedHeader, final HttpServerExchange exchange) {
         String suppliedNonce = parsedHeader.get(DigestAuthorizationToken.NONCE);
         int nonceCount = -1;
@@ -331,44 +321,11 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         return (nonceManager.validateNonce(suppliedNonce, nonceCount, exchange));
     }
 
-    private byte[] createHA1(final byte[] userName, final Account account, final MessageDigest digest,
-                             final DigestAlgorithm digestAlgorithm) throws AuthenticationException {
-        if (plainTextPasswords) {
-            char[] attribute = (char[]) account.getAttribute(Account.PLAINTEXT_PASSWORD_ATTRIBUTE);
-            if(attribute == null) {
-                return null;
-            }
-            byte[] password = new String(attribute).getBytes(UTF_8);
-
-            try {
-                digest.update(userName);
-                digest.update(COLON);
-                digest.update(realmBytes);
-                digest.update(COLON);
-                digest.update(password);
-
-                return HexConverter.convertToHexBytes(digest.digest());
-            } finally {
-                digest.reset();
-            }
-        } else {
-            byte[] preHashed = (byte[])account.getAttribute(Account.DIGEST_HA1_HASH_ATTRIBUTE_PREFIX + digestAlgorithm.getToken());
-            if(preHashed == null) {
-                return null;
-            }
-            return HexConverter.convertToHexBytes(preHashed);
-        }
-    }
-
-    private byte[] lookupOrCreateSessionHA1(final Map<DigestAuthorizationToken, String> parsedHeader) {
-        // TODO - Implement method.
-        throw new IllegalStateException("Method not implemented.");
-    }
-
-    private byte[] createHA2Auth(final HttpServerExchange exchange, final MessageDigest digest, Map<DigestAuthorizationToken, String> parsedHeader) {
-        byte[] method = exchange.getRequestMethod().toString().getBytes(UTF_8);
+    private byte[] createHA2Auth(final DigestContext context, Map<DigestAuthorizationToken, String> parsedHeader) {
+        byte[] method = context.getMethod().getBytes(UTF_8);
         byte[] digestUri = parsedHeader.get(DigestAuthorizationToken.DIGEST_URI).getBytes(UTF_8);
 
+        MessageDigest digest = context.getDigest();
         try {
             digest.update(method);
             digest.update(COLON);
@@ -385,7 +342,10 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         throw new IllegalStateException("Method not implemented.");
     }
 
-    private byte[] createRFC2069RequestDigest(final byte[] ha1, final byte[] ha2, final MessageDigest digest, Map<DigestAuthorizationToken, String> parsedHeader) {
+    private byte[] createRFC2069RequestDigest(final byte[] ha1, final byte[] ha2, final DigestContext context) {
+        final MessageDigest digest = context.getDigest();
+        final Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
+
         byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
 
         try {
@@ -401,7 +361,10 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         }
     }
 
-    private byte[] createRFC2617RequestDigest(final byte[] ha1, final byte[] ha2, final MessageDigest digest, Map<DigestAuthorizationToken, String> parsedHeader) {
+    private byte[] createRFC2617RequestDigest(final byte[] ha1, final byte[] ha2, final DigestContext context) {
+        final MessageDigest digest = context.getDigest();
+        final Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
+
         byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
         byte[] nonceCount = parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT).getBytes(UTF_8);
         byte[] cnonce = parsedHeader.get(DigestAuthorizationToken.CNONCE).getBytes(UTF_8);
@@ -482,7 +445,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 } else {
                     ha2 = createHA2AuthInt();
                 }
-                String rspauth = createRFC2617RequestDigest(ha1, ha2, context);
+                String rspauth = new String(createRFC2617RequestDigest(ha1, ha2, context), UTF_8);
                 sb.append(",").append(Headers.RESPONSE_AUTH.toString()).append("=\"").append(rspauth).append("\"");
                 sb.append(",").append(Headers.CNONCE.toString()).append("=\"").append(parsedHeader.get(DigestAuthorizationToken.CNONCE)).append("\"");
                 sb.append(",").append(Headers.NONCE_COUNT.toString()).append("=").append(parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT));
@@ -509,58 +472,40 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         }
     }
 
-    // TODO - Get all digesting into a single wrapper of the MessageDigest.
-    private String createRFC2617RequestDigest(final byte[] ha1, final byte[] ha2, final DigestContext context) {
-        Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
-        byte[] nonce = parsedHeader.get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
-        byte[] nonceCount = parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT).getBytes(UTF_8);
-        byte[] cnonce = parsedHeader.get(DigestAuthorizationToken.CNONCE).getBytes(UTF_8);
-        byte[] qop = parsedHeader.get(DigestAuthorizationToken.MESSAGE_QOP).getBytes(UTF_8);
-        MessageDigest digest = context.getDigest();
-
-        try {
-            digest.update(ha1);
-            digest.update(COLON);
-            digest.update(nonce);
-            digest.update(COLON);
-            digest.update(nonceCount);
-            digest.update(COLON);
-            digest.update(cnonce);
-            digest.update(COLON);
-            digest.update(qop);
-            digest.update(COLON);
-            digest.update(ha2);
-
-            return HexConverter.convertToHexString(digest.digest());
-        } finally {
-            digest.reset();
-        }
-    }
-
     private static class DigestContext {
 
         static final AttachmentKey<DigestContext> ATTACHMENT_KEY = AttachmentKey.create(DigestContext.class);
 
+        private String method;
         private String nonce;
         private DigestQop qop;
         private byte[] ha1;
+        private DigestAlgorithm algorithm;
         private MessageDigest digest;
         private boolean stale = false;
         Map<DigestAuthorizationToken, String> parsedHeader;
 
-        public boolean isStale() {
+        String getMethod() {
+            return method;
+        }
+
+        void setMethod(String method) {
+            this.method = method;
+        }
+
+        boolean isStale() {
             return stale;
         }
 
-        public void markStale() {
+        void markStale() {
             this.stale = true;
         }
 
-        public String getNonce() {
+        String getNonce() {
             return nonce;
         }
 
-        public void setNonce(String nonce) {
+        void setNonce(String nonce) {
             this.nonce = nonce;
         }
 
@@ -580,12 +525,17 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             this.ha1 = ha1;
         }
 
-        MessageDigest getDigest() {
-            return digest;
+        DigestAlgorithm getAlgorithm() {
+            return algorithm;
         }
 
-        void setDigest(MessageDigest digest) {
-            this.digest = digest;
+        void setAlgorithm(DigestAlgorithm algorithm) throws NoSuchAlgorithmException {
+            this.algorithm = algorithm;
+            digest = algorithm.getMessageDigest();
+        }
+
+        MessageDigest getDigest()  {
+            return digest;
         }
 
         Map<DigestAuthorizationToken, String> getParsedHeader() {
@@ -594,6 +544,50 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
         void setParsedHeader(Map<DigestAuthorizationToken, String> parsedHeader) {
             this.parsedHeader = parsedHeader;
+        }
+
+    }
+
+    private class DigestCredentialImpl implements DigestCredential {
+
+        private final DigestContext context;
+
+        private DigestCredentialImpl(final DigestContext digestContext) {
+            this.context = digestContext;
+        }
+
+        @Override
+        public DigestAlgorithm getAlgorithm() {
+            return context.getAlgorithm();
+        }
+
+        @Override
+        public boolean verifyHA1(byte[] ha1) {
+            context.setHa1(ha1); // Cache for subsequent use.
+
+            return validateRequest(context, ha1);
+        }
+
+        @Override
+        public String getRealm() {
+            return realmName;
+        }
+
+        @Override
+        public byte[] getSessionData() {
+            if (context.getAlgorithm().isSession() == false) {
+                throw MESSAGES.noSessionData();
+            }
+
+            byte[] nonce = context.getParsedHeader().get(DigestAuthorizationToken.NONCE).getBytes(UTF_8);
+            byte[] cnonce = context.getParsedHeader().get(DigestAuthorizationToken.CNONCE).getBytes(UTF_8);
+
+            byte[] response = new byte[nonce.length + cnonce.length + 1];
+            System.arraycopy(nonce, 0, response, 0, nonce.length);
+            response[nonce.length] = ':';
+            System.arraycopy(cnonce, 0, response, nonce.length + 1, cnonce.length);
+
+            return response;
         }
 
     }

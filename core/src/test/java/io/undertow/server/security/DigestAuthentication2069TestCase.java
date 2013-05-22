@@ -23,10 +23,10 @@ import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import io.undertow.security.idm.DigestAlgorithm;
 import io.undertow.security.impl.AuthenticationInfoToken;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityNotification.EventType;
-import io.undertow.security.impl.DigestAlgorithm;
 import io.undertow.security.impl.DigestAuthenticationMechanism;
 import io.undertow.security.impl.DigestAuthorizationToken;
 import io.undertow.security.impl.DigestQop;
@@ -64,7 +64,7 @@ public class DigestAuthentication2069TestCase extends AuthenticationTestBase {
     protected AuthenticationMechanism getTestMechanism() {
         List<DigestQop> qopList = Collections.emptyList();
         return new DigestAuthenticationMechanism(Collections.singletonList(DigestAlgorithm.MD5), qopList, REALM_NAME, "/",
-                new SimpleNonceManager(), true);
+                new SimpleNonceManager());
     }
 
     /**
