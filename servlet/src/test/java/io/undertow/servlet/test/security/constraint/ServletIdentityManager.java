@@ -54,7 +54,7 @@ public class ServletIdentityManager implements IdentityManager {
 
     @Override
     public Account verify(String id, Credential credential) {
-        Account account = getAccount(id);
+        Account account = users.get(id);
         if (account != null && verifyCredential(account, credential)) {
             return account;
         }
@@ -76,11 +76,6 @@ public class ServletIdentityManager implements IdentityManager {
             return Arrays.equals(expectedPassword, suppliedPassword);
         }
         return false;
-    }
-
-    @Override
-    public Account getAccount(String id) {
-        return users.get(id);
     }
 
     private static class UserAccount implements Account {
@@ -109,15 +104,6 @@ public class ServletIdentityManager implements IdentityManager {
             return roles.contains(role);
         }
 
-        @Override
-        public Set<String> getRoles() {
-            return roles;
-        }
-
-        @Override
-        public Object getAttribute(final String attributeName) {
-            return null;
-        }
     }
 
 }

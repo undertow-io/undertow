@@ -30,6 +30,7 @@ import io.undertow.security.handlers.NotificationReceiverHandler;
 import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
+import io.undertow.security.idm.DigestCredential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.security.idm.X509CertificateCredential;
@@ -37,9 +38,13 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.HexConverter;
 import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
 
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,6 +66,8 @@ import org.junit.Test;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 public abstract class AuthenticationTestBase {
+
+    private static final Charset UTF_8 = Charset.forName("UTF-8");
 
     protected static final IdentityManager identityManager;
     protected static final AuditReceiver auditReceiver = new AuditReceiver();
@@ -108,16 +115,6 @@ public abstract class AuthenticationTestBase {
                                 return false;
                             }
 
-                            @Override
-                            public Set<String> getRoles() {
-                                return Collections.emptySet();
-                            }
-
-                            @Override
-                            public Object getAttribute(final String attributeName) {
-                                return null;
-                            }
-
                         };
                     }
 
@@ -132,12 +129,31 @@ public abstract class AuthenticationTestBase {
                     char[] expectedPassword = passwordUsers.get(account.getPrincipal().getName());
 
                     return Arrays.equals(password, expectedPassword);
+                } else if (credential instanceof DigestCredential) {
+                    DigestCredential digCred = (DigestCredential) credential;
+                    MessageDigest digest = null;
+                    try {
+                        digest = digCred.getAlgorithm().getMessageDigest();
+
+                        digest.update(account.getPrincipal().getName().getBytes(UTF_8));
+                        digest.update((byte) ':');
+                        digest.update(digCred.getRealm().getBytes(UTF_8));
+                        digest.update((byte) ':');
+                        char[] expectedPassword = passwordUsers.get(account.getPrincipal().getName());
+                        digest.update(new String(expectedPassword).getBytes(UTF_8));
+
+                        return digCred.verifyHA1(HexConverter.convertToHexBytes(digest.digest()));
+                    } catch (NoSuchAlgorithmException e) {
+                        throw new IllegalStateException("Unsupported Algorithm", e);
+                    } finally {
+                        digest.reset();
+                    }
+                } else {
+                    throw new IllegalArgumentException("Invalid Credential Type " + credential.getClass().getName());
                 }
-                return false;
             }
 
-            @Override
-            public Account getAccount(final String id) {
+            private Account getAccount(final String id) {
                 if (passwordUsers.containsKey(id)) {
                     return new Account() {
 
@@ -157,19 +173,6 @@ public abstract class AuthenticationTestBase {
                         @Override
                         public boolean isUserInRole(String role) {
                             return false;
-                        }
-
-                        @Override
-                        public Set<String> getRoles() {
-                            return Collections.emptySet();
-                        }
-
-                        @Override
-                        public Object getAttribute(final String attributeName) {
-                            if(attributeName.equals(PLAINTEXT_PASSWORD_ATTRIBUTE)) {
-                                return passwordUsers.get(id);
-                            }
-                            return null;
                         }
 
                     };

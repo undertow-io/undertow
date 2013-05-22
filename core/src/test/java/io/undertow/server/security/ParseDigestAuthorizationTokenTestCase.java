@@ -19,7 +19,7 @@ package io.undertow.server.security;
 
 import static org.junit.Assert.assertEquals;
 
-import io.undertow.security.impl.DigestAlgorithm;
+import io.undertow.security.idm.DigestAlgorithm;
 import io.undertow.security.impl.DigestAuthorizationToken;
 import io.undertow.security.impl.DigestQop;
 
