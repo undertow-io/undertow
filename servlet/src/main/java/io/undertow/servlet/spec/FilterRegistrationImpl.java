@@ -29,6 +29,7 @@ import java.util.Set;
 import javax.servlet.DispatcherType;
 import javax.servlet.FilterRegistration;
 
+import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.FilterMappingInfo;
@@ -39,15 +40,17 @@ import io.undertow.servlet.api.FilterMappingInfo;
 public class FilterRegistrationImpl implements FilterRegistration, FilterRegistration.Dynamic {
 
     private final FilterInfo filterInfo;
-    private final DeploymentInfo deploymentInfo;
+    private final Deployment deployment;
 
-    public FilterRegistrationImpl(final FilterInfo filterInfo, final DeploymentInfo deploymentInfo) {
+    public FilterRegistrationImpl(final FilterInfo filterInfo, final Deployment deployment) {
         this.filterInfo = filterInfo;
-        this.deploymentInfo = deploymentInfo;
+        this.deployment = deployment;
     }
 
     @Override
     public void addMappingForServletNames(final EnumSet<DispatcherType> dispatcherTypes, final boolean isMatchAfter, final String... servletNames) {
+        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
+
         for(final String servlet : servletNames){
             if(isMatchAfter) {
                 if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
@@ -67,10 +70,12 @@ public class FilterRegistrationImpl implements FilterRegistration, FilterRegistr
                 }
             }
         }
+        deployment.getServletPaths().invalidate();
     }
 
     @Override
     public Collection<String> getServletNameMappings() {
+        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
         final List<String> ret = new ArrayList<String>();
         for(final FilterMappingInfo mapping : deploymentInfo.getFilterMappings()) {
             if(mapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
@@ -84,6 +89,7 @@ public class FilterRegistrationImpl implements FilterRegistration, FilterRegistr
 
     @Override
     public void addMappingForUrlPatterns(final EnumSet<DispatcherType> dispatcherTypes, final boolean isMatchAfter, final String... urlPatterns) {
+        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
         for(final String url : urlPatterns){
             if(isMatchAfter) {
                 if(dispatcherTypes == null || dispatcherTypes.isEmpty()) {
@@ -103,10 +109,12 @@ public class FilterRegistrationImpl implements FilterRegistration, FilterRegistr
                 }
             }
         }
+        deployment.getServletPaths().invalidate();
     }
 
     @Override
     public Collection<String> getUrlPatternMappings() {
+        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
         final List<String> ret = new ArrayList<String>();
         for(final FilterMappingInfo mapping : deploymentInfo.getFilterMappings()) {
             if(mapping.getMappingType() == FilterMappingInfo.MappingType.URL) {

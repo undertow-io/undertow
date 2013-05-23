@@ -195,14 +195,14 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public RequestDispatcher getRequestDispatcher(final String path) {
-        return new RequestDispatcherImpl(path, deployment.getServletContext());
+        return new RequestDispatcherImpl(path, this);
     }
 
     @Override
     public RequestDispatcher getNamedDispatcher(final String name) {
         ServletChain chain = deployment.getServletPaths().getServletHandlerByName(name);
         if (chain != null) {
-            return new RequestDispatcherImpl(chain, deployment.getServletContext());
+            return new RequestDispatcherImpl(chain, this);
         } else {
             return null;
         }
@@ -327,7 +327,8 @@ public class ServletContextImpl implements ServletContext {
         try {
             ServletInfo servlet = new ServletInfo(servletName, (Class<? extends Servlet>) deploymentInfo.getClassLoader().loadClass(className));
             deploymentInfo.addServlet(servlet);
-            return new ServletRegistrationImpl(servlet, deploymentInfo);
+            deployment.getServlets().addServlet(servlet);
+            return new ServletRegistrationImpl(servlet, deployment);
         } catch (ClassNotFoundException e) {
             throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e);
         }
@@ -337,14 +338,16 @@ public class ServletContextImpl implements ServletContext {
     public ServletRegistration.Dynamic addServlet(final String servletName, final Servlet servlet) {
         ServletInfo s = new ServletInfo(servletName, servlet.getClass(), new ImmediateInstanceFactory<Servlet>(servlet));
         deploymentInfo.addServlet(s);
-        return new ServletRegistrationImpl(s, deploymentInfo);
+        deployment.getServlets().addServlet(s);
+        return new ServletRegistrationImpl(s, deployment);
     }
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final Class<? extends Servlet> servletClass) {
         ServletInfo servlet = new ServletInfo(servletName, servletClass);
         deploymentInfo.addServlet(servlet);
-        return new ServletRegistrationImpl(servlet, deploymentInfo);
+        deployment.getServlets().addServlet(servlet);
+        return new ServletRegistrationImpl(servlet, deployment);
     }
 
     @Override
@@ -361,14 +364,14 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public ServletRegistration getServletRegistration(final String servletName) {
         final ServletInfo servlet = deploymentInfo.getServlets().get(servletName);
-        return new ServletRegistrationImpl(servlet, deploymentInfo);
+        return new ServletRegistrationImpl(servlet, deployment);
     }
 
     @Override
     public Map<String, ? extends ServletRegistration> getServletRegistrations() {
         final Map<String, ServletRegistration> ret = new HashMap<String, ServletRegistration>();
         for (Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
-            ret.put(entry.getKey(), new ServletRegistrationImpl(entry.getValue(), deploymentInfo));
+            ret.put(entry.getKey(), new ServletRegistrationImpl(entry.getValue(), deployment));
         }
         return ret;
     }
@@ -378,7 +381,8 @@ public class ServletContextImpl implements ServletContext {
         try {
             FilterInfo filter = new FilterInfo(filterName, (Class<? extends Filter>) deploymentInfo.getClassLoader().loadClass(className));
             deploymentInfo.addFilter(filter);
-            return new FilterRegistrationImpl(filter, deploymentInfo);
+            deployment.getFilters().addFilter(filter);
+            return new FilterRegistrationImpl(filter, deployment);
         } catch (ClassNotFoundException e) {
             throw UndertowServletMessages.MESSAGES.cannotLoadClass(className, e);
         }
@@ -388,7 +392,8 @@ public class ServletContextImpl implements ServletContext {
     public FilterRegistration.Dynamic addFilter(final String filterName, final Filter filter) {
         FilterInfo f = new FilterInfo(filterName, filter.getClass(), new ImmediateInstanceFactory<Filter>(filter));
         deploymentInfo.addFilter(f);
-        return new FilterRegistrationImpl(f, deploymentInfo);
+        deployment.getFilters().addFilter(f);
+        return new FilterRegistrationImpl(f, deployment);
 
     }
 
@@ -396,7 +401,8 @@ public class ServletContextImpl implements ServletContext {
     public FilterRegistration.Dynamic addFilter(final String filterName, final Class<? extends Filter> filterClass) {
         FilterInfo filter = new FilterInfo(filterName, filterClass);
         deploymentInfo.addFilter(filter);
-        return new FilterRegistrationImpl(filter, deploymentInfo);
+        deployment.getFilters().addFilter(filter);
+        return new FilterRegistrationImpl(filter, deployment);
     }
 
     @Override
@@ -416,14 +422,14 @@ public class ServletContextImpl implements ServletContext {
         if (filterInfo == null) {
             return null;
         }
-        return new FilterRegistrationImpl(filterInfo, deploymentInfo);
+        return new FilterRegistrationImpl(filterInfo, deployment);
     }
 
     @Override
     public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
         final Map<String, FilterRegistration> ret = new HashMap<String, FilterRegistration>();
         for (Map.Entry<String, FilterInfo> entry : deploymentInfo.getFilters().entrySet()) {
-            ret.put(entry.getKey(), new FilterRegistrationImpl(entry.getValue(), deploymentInfo));
+            ret.put(entry.getKey(), new FilterRegistrationImpl(entry.getValue(), deployment));
         }
         return ret;
     }

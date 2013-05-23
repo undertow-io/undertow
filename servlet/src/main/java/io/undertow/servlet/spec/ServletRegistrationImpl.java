@@ -30,6 +30,7 @@ import javax.servlet.ServletSecurityElement;
 import javax.servlet.annotation.ServletSecurity;
 
 import io.undertow.UndertowMessages;
+import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.HttpMethodSecurityInfo;
 import io.undertow.servlet.api.SecurityConstraint;
@@ -48,11 +49,11 @@ import static javax.servlet.annotation.ServletSecurity.TransportGuarantee.CONFID
 public class ServletRegistrationImpl implements ServletRegistration, ServletRegistration.Dynamic {
 
     private final ServletInfo servletInfo;
-    private final DeploymentInfo deploymentInfo;
+    private final Deployment deployment;
 
-    public ServletRegistrationImpl(final ServletInfo servletInfo, final DeploymentInfo deploymentInfo) {
+    public ServletRegistrationImpl(final ServletInfo servletInfo, final Deployment deployment) {
         this.servletInfo = servletInfo;
-        this.deploymentInfo = deploymentInfo;
+        this.deployment = deployment;
     }
 
     @Override
@@ -65,6 +66,7 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
         if (constraint == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("constraint");
         }
+        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
 
         //this is not super efficient, but it does not really matter
         final Set<String> urlPatterns = new HashSet<String>();
@@ -123,6 +125,7 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
 
     @Override
     public Set<String> addMapping(final String... urlPatterns) {
+        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
         final Set<String> ret = new HashSet<String>();
         final Set<String> existing = new HashSet<String>();
         for (ServletInfo s : deploymentInfo.getServlets().values()) {
@@ -143,6 +146,7 @@ public class ServletRegistrationImpl implements ServletRegistration, ServletRegi
                 }
             }
         }
+        deployment.getServletPaths().invalidate();
         return ret;
     }
 

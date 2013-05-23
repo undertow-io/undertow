@@ -22,7 +22,9 @@ import java.util.Map;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.session.SessionManager;
+import io.undertow.servlet.core.Filters;
 import io.undertow.servlet.core.ApplicationListeners;
+import io.undertow.servlet.core.Servlets;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ErrorPages;
 import io.undertow.servlet.handlers.ServletPathMatches;
@@ -36,6 +38,10 @@ public interface Deployment {
     DeploymentInfo getDeploymentInfo();
 
     ApplicationListeners getApplicationListeners();
+
+    Servlets getServlets();
+
+    Filters getFilters();
 
     ServletContextImpl getServletContext();
 
@@ -52,4 +58,5 @@ public interface Deployment {
     ServletDispatcher getServletDispatcher();
 
     SessionManager getSessionManager();
+
 }

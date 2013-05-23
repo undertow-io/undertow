@@ -40,13 +40,11 @@ import io.undertow.server.handlers.AttachmentHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.FilterInfo;
-import io.undertow.servlet.api.FilterMappingInfo;
 import io.undertow.servlet.api.HttpMethodSecurityInfo;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ListenerInfo;
@@ -60,14 +58,9 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.WebResourceCollection;
-import io.undertow.servlet.handlers.DefaultServlet;
 import io.undertow.servlet.handlers.DispatcherTypePredicate;
-import io.undertow.servlet.handlers.FilterHandler;
-import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletDispatchingHandler;
-import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
-import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.handlers.security.CachedAuthenticatedSessionHandler;
 import io.undertow.servlet.handlers.security.SSLInformationAssociationHandler;
 import io.undertow.servlet.handlers.security.SecurityPathMatches;
@@ -75,17 +68,14 @@ import io.undertow.servlet.handlers.security.ServletAuthenticationConstraintHand
 import io.undertow.servlet.handlers.security.ServletConfidentialityConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.servlet.handlers.security.ServletSecurityConstraintHandler;
-import io.undertow.servlet.handlers.security.ServletSecurityRoleHandler;
 import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.util.MimeMappings;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -93,8 +83,6 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.Servlet;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -134,7 +122,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final DeploymentImpl deployment = new DeploymentImpl(deploymentInfo);
         this.deployment = deployment;
 
-
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
 
         handleExtensions(deploymentInfo, servletContext);
@@ -154,6 +141,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             final ApplicationListeners listeners = createListeners();
             deployment.setApplicationListeners(listeners);
+
+            //now create the servlets and filters that we know about. We can still get more later
+            createServletsAndFilters(deployment, deploymentInfo);
+
             //first run the SCI's
             for (final ServletContainerInitializerInfo sci : deploymentInfo.getServletContainerInitializers()) {
                 final InstanceHandle<? extends ServletContainerInitializer> instance = sci.getInstanceFactory().createInstance();
@@ -172,9 +163,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
             listeners.contextInitialized();
             //run
 
-            ServletPathMatches matches = setupServletChains(servletContext, threadSetupAction, listeners);
-            deployment.setServletPaths(matches);
-
             HttpHandler wrappedHandlers = ServletDispatchingHandler.INSTANCE;
             wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getInnerHandlerChainWrappers());
             HttpHandler securityHandler  = setupSecurityHandlers(wrappedHandlers);
@@ -183,19 +171,29 @@ public class DeploymentManagerImpl implements DeploymentManager {
             HttpHandler outerHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
             wrappedHandlers = new PredicateHandler(Predicates.or(DispatcherTypePredicate.REQUEST, DispatcherTypePredicate.ASYNC), outerHandlers, wrappedHandlers);
 
-            final ServletInitialHandler servletInitialHandler = new ServletInitialHandler(matches, wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
+            final ServletInitialHandler servletInitialHandler = new ServletInitialHandler(deployment.getServletPaths(), wrappedHandlers, deployment.getThreadSetupAction(), servletContext);
 
 
             HttpHandler initialHandler = wrapHandlers(servletInitialHandler, deployment.getDeploymentInfo().getInitialHandlerChainWrappers());
 
             deployment.setInitialHandler(initialHandler);
             deployment.setServletHandler(servletInitialHandler);
+            deployment.getServletPaths().invalidate(); //make sure we have a fresh set of servlet paths
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
             handle.tearDown();
         }
         state = State.DEPLOYED;
+    }
+
+    private void createServletsAndFilters(final DeploymentImpl deployment, final DeploymentInfo deploymentInfo) {
+        for(Map.Entry<String, ServletInfo> servlet : deploymentInfo.getServlets().entrySet()) {
+            deployment.getServlets().addServlet(servlet.getValue());
+        }
+        for(Map.Entry<String, FilterInfo> filter : deploymentInfo.getFilters().entrySet()) {
+            deployment.getFilters().addFilter(filter.getValue());
+        }
     }
 
     private void handleExtensions(final DeploymentInfo deploymentInfo, final ServletContextImpl servletContext) {
@@ -216,6 +214,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final LoginConfig loginConfig = deploymentInfo.getLoginConfig();
 
         HttpHandler current = initialHandler;
+        current = new SSLInformationAssociationHandler(current);
 
         final SecurityPathMatches securityPathMatches = buildSecurityConstraints();
         current = new AuthenticationCallHandler(current);
@@ -350,195 +349,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
         deployment.setErrorPages(new ErrorPages(codes, exceptions, defaultErrorPage));
     }
 
-    /**
-     * Sets up the handlers in the servlet chain. We setup a chain for every path + extension match possibility.
-     * (i.e. if there a m path mappings and n extension mappings we have n*m chains).
-     * <p/>
-     * If a chain consists of only the default servlet then we add it as an async handler, so that resources can be
-     * served up directly without using blocking operations.
-     * <p/>
-     * TODO: this logic is a bit convoluted at the moment, we should look at simplifying it
-     *
-     * @param servletContext
-     * @param threadSetupAction
-     * @param listeners
-     */
-    private ServletPathMatches setupServletChains(final ServletContextImpl servletContext, final CompositeThreadSetupAction threadSetupAction, final ApplicationListeners listeners) {
-        final List<Lifecycle> lifecycles = new ArrayList<Lifecycle>();
-        //create the default servlet
-        ServletChain defaultHandler = null;
-        ServletHandler defaultServlet = null;
-
-        final Map<String, ManagedFilter> managedFilterMap = new LinkedHashMap<String, ManagedFilter>();
-        final Map<String, ServletHandler> allServlets = new HashMap<String, ServletHandler>();
-        final Map<String, ServletHandler> extensionServlets = new HashMap<String, ServletHandler>();
-        final Map<String, ServletHandler> pathServlets = new HashMap<String, ServletHandler>();
-
-
-        final Set<String> pathMatches = new HashSet<String>();
-        final Set<String> extensionMatches = new HashSet<String>();
-
-        DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
-        for (Map.Entry<String, FilterInfo> entry : deploymentInfo.getFilters().entrySet()) {
-            final ManagedFilter mf = new ManagedFilter(entry.getValue(), servletContext);
-            managedFilterMap.put(entry.getValue().getName(), mf);
-            lifecycles.add(mf);
-        }
-
-        for (FilterMappingInfo mapping : deploymentInfo.getFilterMappings()) {
-            if (mapping.getMappingType() == FilterMappingInfo.MappingType.URL) {
-                String path = mapping.getMapping();
-                if (!path.startsWith("*.")) {
-                    pathMatches.add(path);
-                } else {
-                    extensionMatches.add(path.substring(2));
-                }
-            }
-        }
-
-        for (Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
-            ServletInfo servlet = entry.getValue();
-            final ManagedServlet managedServlet = new ManagedServlet(servlet, servletContext);
-            lifecycles.add(managedServlet);
-            final ServletHandler handler = new ServletHandler(managedServlet);
-            allServlets.put(entry.getKey(), handler);
-            for (String path : entry.getValue().getMappings()) {
-                if (path.equals("/")) {
-                    //the default servlet
-                    pathMatches.add("/*");
-                    if (pathServlets.containsKey("/*")) {
-                        throw UndertowServletMessages.MESSAGES.twoServletsWithSameMapping(path);
-                    }
-                    defaultServlet = handler;
-                    defaultHandler = servletChain(handler, managedServlet);
-                } else if (!path.startsWith("*.")) {
-                    pathMatches.add(path);
-                    if (pathServlets.containsKey(path)) {
-                        throw UndertowServletMessages.MESSAGES.twoServletsWithSameMapping(path);
-                    }
-                    pathServlets.put(path, handler);
-                } else {
-                    String ext = path.substring(2);
-                    extensionMatches.add(ext);
-                    extensionServlets.put(ext, handler);
-                }
-            }
-        }
-
-        if (defaultServlet == null) {
-            final DefaultServletConfig config = deploymentInfo.getDefaultServletConfig() == null ? new DefaultServletConfig() : deploymentInfo.getDefaultServletConfig();
-            DefaultServlet defaultInstance = new DefaultServlet(deployment, config, deploymentInfo.getWelcomePages());
-            final ManagedServlet managedDefaultServlet = new ManagedServlet(new ServletInfo("io.undertow.DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>(defaultInstance)), servletContext);
-            lifecycles.add(managedDefaultServlet);
-            pathMatches.add("/*");
-            defaultServlet = new ServletHandler(managedDefaultServlet);
-            defaultHandler = new ServletChain(defaultServlet, managedDefaultServlet);
-        }
-
-        final ServletPathMatches.Builder builder = ServletPathMatches.builder();
-
-        for (final String path : pathMatches) {
-            ServletHandler targetServlet = resolveServletForPath(path, pathServlets);
-
-            final Map<DispatcherType, List<ManagedFilter>> noExtension = new HashMap<DispatcherType, List<ManagedFilter>>();
-            final Map<String, Map<DispatcherType, List<ManagedFilter>>> extension = new HashMap<String, Map<DispatcherType, List<ManagedFilter>>>();
-            for (String ext : extensionMatches) {
-                extension.put(ext, new HashMap<DispatcherType, List<ManagedFilter>>());
-            }
-
-            for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
-                ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
-                if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
-                    if (targetServlet != null) {
-                        if (filterMapping.getMapping().equals(targetServlet.getManagedServlet().getServletInfo().getName())) {
-                            addToListMap(noExtension, filterMapping.getDispatcher(), filter);
-                            for (Map<DispatcherType, List<ManagedFilter>> l : extension.values()) {
-                                addToListMap(l, filterMapping.getDispatcher(), filter);
-                            }
-                        }
-                    }
-                } else {
-                    if (filterMapping.getMapping().isEmpty() || !filterMapping.getMapping().startsWith("*.")) {
-                        if (isFilterApplicable(path, filterMapping.getMapping())) {
-                            addToListMap(noExtension, filterMapping.getDispatcher(), filter);
-                            for (Map<DispatcherType, List<ManagedFilter>> l : extension.values()) {
-                                addToListMap(l, filterMapping.getDispatcher(), filter);
-                            }
-                        }
-                    } else {
-                        addToListMap(extension.get(filterMapping.getMapping().substring(2)), filterMapping.getDispatcher(), filter);
-                    }
-                }
-            }
-
-            final ServletChain initialHandler;
-            if (noExtension.isEmpty()) {
-                if (targetServlet != null) {
-                    initialHandler = servletChain(targetServlet, targetServlet.getManagedServlet());
-                } else {
-                    initialHandler = defaultHandler;
-                }
-            } else {
-                FilterHandler handler;
-                if (targetServlet != null) {
-                    handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), targetServlet);
-                } else {
-                    handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), defaultServlet);
-                }
-                initialHandler = servletChain(handler, targetServlet == null ? defaultServlet.getManagedServlet() : targetServlet.getManagedServlet());
-            }
-
-            if (path.endsWith("/*")) {
-                String prefix = path.substring(0, path.length() - 2);
-                builder.addPrefixMatch(prefix, initialHandler);
-
-                for (Map.Entry<String, Map<DispatcherType, List<ManagedFilter>>> entry : extension.entrySet()) {
-                    ServletHandler pathServlet = targetServlet;
-                    if (pathServlet == null) {
-                        pathServlet = extensionServlets.get(entry.getKey());
-                    }
-                    if (pathServlet == null) {
-                        pathServlet = defaultServlet;
-                    }
-                    HttpHandler handler = pathServlet;
-                    if (!entry.getValue().isEmpty()) {
-                        handler = new FilterHandler(entry.getValue(), deploymentInfo.isAllowNonStandardWrappers(), handler);
-                    }
-                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet()));
-                }
-            } else if (path.isEmpty()) {
-                builder.addExactMatch("/", initialHandler);
-            } else {
-                builder.addExactMatch(path, initialHandler);
-            }
-        }
-
-        //now setup name based mappings
-        //these are used for name based dispatch
-        for (Map.Entry<String, ServletHandler> entry : allServlets.entrySet()) {
-            final Map<DispatcherType, List<ManagedFilter>> filters = new HashMap<DispatcherType, List<ManagedFilter>>();
-            for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
-                ManagedFilter filter = managedFilterMap.get(filterMapping.getFilterName());
-                if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
-                    if (filterMapping.getMapping().equals(entry.getKey())) {
-                        addToListMap(filters, filterMapping.getDispatcher(), filter);
-                    }
-                }
-            }
-            if (filters.isEmpty()) {
-                builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), entry.getValue().getManagedServlet()));
-            } else {
-                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filters, deploymentInfo.isAllowNonStandardWrappers(), entry.getValue()), entry.getValue().getManagedServlet()));
-            }
-        }
-
-
-        builder.setDefaultServlet(defaultHandler);
-
-        deployment.addLifecycleObjects(lifecycles);
-        return builder.build();
-    }
-
 
     private ApplicationListeners createListeners() {
         final List<ManagedListener> managedListeners = new ArrayList<ManagedListener>();
@@ -548,52 +358,13 @@ public class DeploymentManagerImpl implements DeploymentManager {
         return new ApplicationListeners(managedListeners, deployment.getServletContext());
     }
 
-    private ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet) {
-        HttpHandler servletHandler = new ServletSecurityRoleHandler(next);
-        servletHandler = new SSLInformationAssociationHandler(servletHandler);
-        servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
-        return new ServletChain(servletHandler, managedServlet);
-    }
 
-    private HttpHandler wrapHandlers(final HttpHandler wrapee, final List<HandlerWrapper> wrappers) {
+    private static HttpHandler wrapHandlers(final HttpHandler wrapee, final List<HandlerWrapper> wrappers) {
         HttpHandler current = wrapee;
         for (HandlerWrapper wrapper : wrappers) {
             current = wrapper.wrap(current);
         }
         return current;
-    }
-
-    private ServletHandler resolveServletForPath(final String path, final Map<String, ServletHandler> pathServlets) {
-        if (pathServlets.containsKey(path)) {
-            return pathServlets.get(path);
-        }
-        String match = null;
-        ServletHandler servlet = null;
-        for (final Map.Entry<String, ServletHandler> entry : pathServlets.entrySet()) {
-            String key = entry.getKey();
-            if (key.endsWith("/*")) {
-                final String base = key.substring(0, key.length() - 2);
-                if (match == null || base.length() > match.length()) {
-                    if (path.startsWith(base)) {
-                        match = base;
-                        servlet = entry.getValue();
-                    }
-                }
-            }
-        }
-        return servlet;
-    }
-
-    private boolean isFilterApplicable(final String path, final String filterPath) {
-        if (path.isEmpty()) {
-            return filterPath.equals("/*") || filterPath.equals("/");
-        }
-        if (filterPath.endsWith("/*")) {
-            String baseFilterPath = filterPath.substring(0, filterPath.length() - 1);
-            return path.startsWith(baseFilterPath);
-        } else {
-            return filterPath.equals(path);
-        }
     }
 
     @Override
@@ -689,11 +460,4 @@ public class DeploymentManagerImpl implements DeploymentManager {
         return deployment;
     }
 
-    private static <K, V> void addToListMap(final Map<K, List<V>> map, final K key, final V value) {
-        List<V> list = map.get(key);
-        if (list == null) {
-            map.put(key, list = new ArrayList<V>());
-        }
-        list.add(value);
-    }
 }

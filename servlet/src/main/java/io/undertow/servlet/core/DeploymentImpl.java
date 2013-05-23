@@ -47,11 +47,13 @@ public class DeploymentImpl implements Deployment {
 
     private final DeploymentInfo deploymentInfo;
     private final List<Lifecycle> lifecycleObjects = new ArrayList<Lifecycle>();
+    private final ServletPathMatches servletPaths;
+    private final Servlets servlets;
+    private final Filters filters;
     private volatile ApplicationListeners applicationListeners;
     private volatile ServletContextImpl servletContext;
     private volatile ServletInitialHandler servletHandler;
     private volatile HttpHandler initialHandler;
-    private volatile ServletPathMatches servletPaths;
     private volatile CompositeThreadSetupAction threadSetupAction;
     private volatile ErrorPages errorPages;
     private volatile Map<String, String> mimeExtensionMappings;
@@ -59,6 +61,17 @@ public class DeploymentImpl implements Deployment {
 
     public DeploymentImpl(final DeploymentInfo deploymentInfo) {
         this.deploymentInfo = deploymentInfo;
+        servletPaths = new ServletPathMatches(this);
+        servlets = new Servlets(this, servletPaths);
+        filters = new Filters(this, servletPaths);
+    }
+
+    public Servlets getServlets() {
+        return servlets;
+    }
+
+    public Filters getFilters() {
+        return filters;
     }
 
     void setApplicationListeners(final ApplicationListeners applicationListeners) {
@@ -116,10 +129,6 @@ public class DeploymentImpl implements Deployment {
     @Override
     public ServletPathMatches getServletPaths() {
         return servletPaths;
-    }
-
-    void setServletPaths(final ServletPathMatches servletPaths) {
-        this.servletPaths = servletPaths;
     }
 
     public CompositeThreadSetupAction getThreadSetupAction() {
