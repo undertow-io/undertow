@@ -219,6 +219,7 @@ public final class SecureHashMap<K, V> extends AbstractMap<K, V> implements Conc
                     resize(table);
                     return nonexistent();
                 }
+                newSize = sizeUpdater.get(table);
             }
             // Success.
             return nonexistent();
