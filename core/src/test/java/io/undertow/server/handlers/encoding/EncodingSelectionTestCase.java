@@ -21,12 +21,12 @@ package io.undertow.server.handlers.encoding;
 import java.io.IOException;
 
 import io.undertow.predicate.Predicates;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.Headers;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -59,7 +59,12 @@ public class EncodingSelectionTestCase {
             final EncodingHandler handler = new EncodingHandler();
             handler.addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 50);
             handler.addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 100);
-            handler.setNext(ResponseCodeHandler.HANDLE_200);
+            handler.setNext(new HttpHandler() {
+                @Override
+                public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                    exchange.getResponseSender().send("hi"); //we need some content to encode
+                }
+            });
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
@@ -129,7 +134,12 @@ public class EncodingSelectionTestCase {
             final EncodingHandler handler = new EncodingHandler();
             handler.addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 100);
             handler.addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 50);
-            handler.setNext(ResponseCodeHandler.HANDLE_200);
+            handler.setNext(new HttpHandler() {
+                @Override
+                public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                    exchange.getResponseSender().send("hi"); //we need some content to encode
+                }
+            });
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
@@ -193,7 +203,12 @@ public class EncodingSelectionTestCase {
             final EncodingHandler handler = new EncodingHandler();
             handler.addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 100, Predicates.<HttpServerExchange>falsePredicate());
             handler.addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 50);
-            handler.setNext(ResponseCodeHandler.HANDLE_200);
+            handler.setNext(new HttpHandler() {
+                @Override
+                public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                    exchange.getResponseSender().send("hi"); //we need some content to encode
+                }
+            });
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");

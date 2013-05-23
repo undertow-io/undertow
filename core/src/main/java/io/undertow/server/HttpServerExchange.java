@@ -715,7 +715,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param length The content length
      */
     public void setResponseContentLength(long length) {
-        responseHeaders.put(Headers.CONTENT_LENGTH, Long.toString(length));
+        if(length == -1) {
+            responseHeaders.remove(Headers.CONTENT_LENGTH);
+        } else {
+            responseHeaders.put(Headers.CONTENT_LENGTH, Long.toString(length));
+        }
     }
 
     /**
