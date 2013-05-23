@@ -2,7 +2,6 @@ package io.undertow.io;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.charset.Charset;
 
 import io.undertow.UndertowMessages;
@@ -20,16 +19,15 @@ public class AsyncSenderImpl implements Sender {
 
     private static final Charset utf8 = Charset.forName("UTF-8");
 
-    private final StreamSinkChannel streamSinkChannel;
+    private StreamSinkChannel channel;
     private final HttpServerExchange exchange;
     private ByteBuffer[] buffer;
     private IoCallback callback;
     private boolean inCallback;
-    boolean doneWrite = false;
 
-    private final ChannelListener<Channel> writeListener = new ChannelListener<Channel>() {
+    private final ChannelListener<StreamSinkChannel> writeListener = new ChannelListener<StreamSinkChannel>() {
         @Override
-        public void handleEvent(final Channel channel) {
+        public void handleEvent(final StreamSinkChannel streamSinkChannel) {
             try {
                 long toWrite = Buffers.remaining(buffer);
                 long written = 0;
@@ -50,8 +48,7 @@ public class AsyncSenderImpl implements Sender {
     };
 
 
-    public AsyncSenderImpl(final StreamSinkChannel streamSinkChannel, final HttpServerExchange exchange) {
-        this.streamSinkChannel = streamSinkChannel;
+    public AsyncSenderImpl(final HttpServerExchange exchange) {
         this.exchange = exchange;
     }
 
@@ -64,12 +61,18 @@ public class AsyncSenderImpl implements Sender {
         if (this.buffer != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
-        if(!doneWrite && callback == IoCallback.END_EXCHANGE) {
-            if(exchange.getResponseContentLength() == -1) {
-                exchange.setResponseContentLength(buffer.remaining());
+        StreamSinkChannel channel = this.channel;
+        if (channel == null) {
+            if (callback == IoCallback.END_EXCHANGE) {
+                if (exchange.getResponseContentLength() == -1) {
+                    exchange.setResponseContentLength(buffer.remaining());
+                }
+            }
+            this.channel = channel = exchange.getResponseChannel();
+            if (channel == null) {
+                throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
             }
         }
-        doneWrite = true;
         this.callback = callback;
         if (inCallback) {
             this.buffer = new ByteBuffer[]{buffer};
@@ -81,12 +84,12 @@ public class AsyncSenderImpl implements Sender {
                     callback.onComplete(exchange, this);
                     return;
                 }
-                int res = streamSinkChannel.write(buffer);
+                int res = channel.write(buffer);
                 if (res == 0) {
                     this.buffer = new ByteBuffer[]{buffer};
                     this.callback = callback;
-                    streamSinkChannel.getWriteSetter().set(writeListener);
-                    streamSinkChannel.resumeWrites();
+                    channel.getWriteSetter().set(writeListener);
+                    channel.resumeWrites();
                     return;
                 }
             } while (buffer.hasRemaining());
@@ -113,25 +116,31 @@ public class AsyncSenderImpl implements Sender {
 
         long totalToWrite = Buffers.remaining(buffer);
 
-        if (!doneWrite && callback == IoCallback.END_EXCHANGE) {
-            if (exchange.getResponseContentLength() == -1) {
-                exchange.setResponseContentLength(totalToWrite);
+        StreamSinkChannel channel = this.channel;
+        if (channel == null) {
+            if (callback == IoCallback.END_EXCHANGE) {
+                if (exchange.getResponseContentLength() == -1) {
+                    exchange.setResponseContentLength(totalToWrite);
+                }
+            }
+            this.channel = channel = exchange.getResponseChannel();
+            if (channel == null) {
+                throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
             }
         }
-        doneWrite = true;
 
         final long total = totalToWrite;
         long written = 0;
 
         try {
             do {
-                long res = streamSinkChannel.write(buffer);
+                long res = channel.write(buffer);
                 written += res;
                 if (res == 0) {
                     this.buffer = buffer;
                     this.callback = callback;
-                    streamSinkChannel.getWriteSetter().set(writeListener);
-                    streamSinkChannel.resumeWrites();
+                    channel.getWriteSetter().set(writeListener);
+                    channel.resumeWrites();
                     return;
                 }
             } while (written < total);
@@ -175,9 +184,19 @@ public class AsyncSenderImpl implements Sender {
     @Override
     public void close(final IoCallback callback) {
         try {
-            streamSinkChannel.shutdownWrites();
-            if (!streamSinkChannel.flush()) {
-                streamSinkChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
+            StreamSinkChannel channel = this.channel;
+            if (channel == null) {
+                if (exchange.getResponseContentLength() == -1) {
+                    exchange.setResponseContentLength(0);
+                }
+                this.channel = channel = exchange.getResponseChannel();
+                if (channel == null) {
+                    throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
+                }
+            }
+            channel.shutdownWrites();
+            if (!channel.flush()) {
+                channel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
                         new ChannelListener<StreamSinkChannel>() {
                             @Override
                             public void handleEvent(final StreamSinkChannel channel) {
@@ -190,7 +209,7 @@ public class AsyncSenderImpl implements Sender {
                             }
                         }
                 ));
-                streamSinkChannel.resumeWrites();
+                channel.resumeWrites();
             } else {
                 if (callback != null) {
                     callback.onComplete(exchange, this);
@@ -224,6 +243,7 @@ public class AsyncSenderImpl implements Sender {
                 inCallback = false;
             }
 
+            StreamSinkChannel channel = this.channel;
             if (this.buffer != null) {
                 long t = Buffers.remaining(buffer);
                 final long total = t;
@@ -231,11 +251,11 @@ public class AsyncSenderImpl implements Sender {
 
                 try {
                     do {
-                        long res = streamSinkChannel.write(buffer);
+                        long res = channel.write(buffer);
                         written += res;
                         if (res == 0) {
-                            streamSinkChannel.getWriteSetter().set(writeListener);
-                            streamSinkChannel.resumeWrites();
+                            channel.getWriteSetter().set(writeListener);
+                            channel.resumeWrites();
                             return;
                         }
                     } while (written < total);

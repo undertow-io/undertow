@@ -170,6 +170,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     private int responseWrapperCount = 0;
     private ConduitWrapper<StreamSinkConduit>[] responseWrappers = new ConduitWrapper[4]; //these are allocated by default, as they are always used
 
+    private Sender sender;
+
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
 
     /**
@@ -883,7 +885,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      * {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()} is called on the channel with no content being written.
      * Once the channel is acquired, however, the response code and headers may not be modified.
      * <p/>
-     * Note that if you call {@link #getResponseSender()} first this method will return null
      *
      * @return the response channel, or {@code null} if another party already acquired the channel
      */
@@ -902,8 +903,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the response sender.  For non-blocking exchanges is effectively a wrapper around the response channel, so all the semantics of
-     * {@link #getResponseChannel()} apply.
+     * Get the response sender.
      * <p/>
      * For blocking exchanges this will return a sender that uses the underlying output stream.
      *
@@ -911,14 +911,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @see #getResponseChannel()
      */
     public Sender getResponseSender() {
+        if(sender != null) {
+            return sender;
+        }
+
         if (blockingHttpExchange != null) {
-            return blockingHttpExchange.getSender();
+            return sender = blockingHttpExchange.getSender();
         }
-        StreamSinkChannel channel = getResponseChannel();
-        if (channel == null) {
-            return null;
-        }
-        return new AsyncSenderImpl(channel, this);
+        return sender = new AsyncSenderImpl(this);
     }
 
     /**
