@@ -19,6 +19,8 @@ public class AjpOpenListener implements OpenListener {
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;
 
+    private volatile String scheme = "http";
+
     private volatile HttpHandler rootHandler;
 
     private volatile OptionMap undertowOptions;
@@ -39,7 +41,7 @@ public class AjpOpenListener implements OpenListener {
         }
 
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        AjpReadListener readListener = new AjpReadListener(connection);
+        AjpReadListener readListener = new AjpReadListener(connection, scheme);
         readListener.startRequest();
         channel.getSourceChannel().setReadListener(readListener);
         readListener.handleEvent(channel.getSourceChannel());
@@ -62,5 +64,13 @@ public class AjpOpenListener implements OpenListener {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
+    }
+
+    public String getScheme() {
+        return scheme;
+    }
+
+    public void setScheme(final String scheme) {
+        this.scheme = scheme;
     }
 }

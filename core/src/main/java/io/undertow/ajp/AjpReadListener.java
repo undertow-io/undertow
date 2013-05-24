@@ -37,17 +37,18 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
 
     private static final byte[] CPONG = {'A', 'B', 0, 0, 0, 1, 9}; //CPONG response data
 
+    private final HttpServerConnection connection;
+    private final String scheme;
     private AjpParseState state = new AjpParseState();
     private HttpServerExchange httpServerExchange;
-    private final HttpServerConnection connection;
 
     private volatile int read = 0;
     private final int maxRequestSize;
 
-    AjpReadListener(final HttpServerConnection connection) {
+    AjpReadListener(final HttpServerConnection connection, final String scheme) {
         this.connection = connection;
+        this.scheme = scheme;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
-
     }
 
     public void startRequest() {
@@ -55,6 +56,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
         state = new AjpParseState();
         httpServerExchange = new HttpServerExchange(connection);
         httpServerExchange.addExchangeCompleteListener(this);
+        httpServerExchange.setRequestScheme(scheme);
         read = 0;
     }
 
@@ -160,7 +162,6 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
             connection.getChannel().getSourceChannel().setConduit(createSourceConduit(connection.getChannel().getSourceChannel().getConduit(), responseConduit, httpServerExchange));
 
             try {
-                httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http"); //todo: determine if this is https
                 state = null;
                 this.httpServerExchange = null;
                 httpServerExchange.setPersistent(true);
