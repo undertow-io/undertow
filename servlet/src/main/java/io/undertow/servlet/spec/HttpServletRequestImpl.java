@@ -698,6 +698,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public String getServerName() {
         String host = exchange.getRequestHeaders().getFirst(Headers.HOST);
         if(host != null) {
+            if(host.contains(":")) {
+                String[] split = host.split(":");
+                return split[0];
+            }
             return host;
         }
         return exchange.getDestinationAddress().getHostName();
