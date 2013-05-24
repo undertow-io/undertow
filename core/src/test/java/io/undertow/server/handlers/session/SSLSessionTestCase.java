@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.server.session.inmemory;
+package io.undertow.server.handlers.session;
 
 import java.io.IOException;
 

@@ -404,6 +404,18 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
+    void setParsedRequestPath(final String requestPath) {
+        this.relativePath = requestPath;
+        this.requestPath = requestPath;
+    }
+
+    void setParsedRequestPath(final boolean requestUriContainsHost, final String requestUri) {
+        this.requestURI = requestUri;
+        if (requestUriContainsHost) {
+            state |= FLAG_URI_CONTAINS_HOST;
+        }
+    }
+
     /**
      * Get the resolved path.
      *

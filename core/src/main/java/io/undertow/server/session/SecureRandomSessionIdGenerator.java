@@ -36,7 +36,7 @@ public class SecureRandomSessionIdGenerator implements SessionIdGenerator {
 
     private volatile int length = 18;
 
-    private static final char[] SESSION_ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-_".toCharArray();
+    private static final char[] SESSION_ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".toCharArray();
 
     @Override
     public String createSessionId() {
