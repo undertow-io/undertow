@@ -75,7 +75,7 @@ public class ServletContextImpl implements ServletContext {
     private final ServletContainer servletContainer;
     private final Deployment deployment;
     private final DeploymentInfo deploymentInfo;
-    private final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<String, Object>();
+    private final ConcurrentMap<String, Object> attributes;
     private final SessionCookieConfigImpl sessionCookieConfig;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
 
@@ -84,6 +84,11 @@ public class ServletContextImpl implements ServletContext {
         this.deployment = deployment;
         this.deploymentInfo = deployment.getDeploymentInfo();
         sessionCookieConfig = new SessionCookieConfigImpl();
+        if(deploymentInfo.getServletContextAttributeBackingMap() == null) {
+            this.attributes = new ConcurrentHashMap<>();
+        } else {
+            this.attributes = deploymentInfo.getServletContextAttributeBackingMap();
+        }
         attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
     }
 

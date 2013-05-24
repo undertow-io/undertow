@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
 import javax.servlet.DispatcherType;
@@ -69,6 +70,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile boolean allowNonStandardWrappers = false;
     private volatile int defaultSessionTimeout = 60 * 30;
     private volatile boolean ignoreStandardAuthenticationMechanism = false;
+    private volatile ConcurrentMap<String, Object> servletContextAttributeBackingMap;
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -650,6 +652,23 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(notificationReceivers);
     }
 
+    public ConcurrentMap<String, Object> getServletContextAttributeBackingMap() {
+        return servletContextAttributeBackingMap;
+    }
+
+    /**
+     * Sets the map that will be used by the ServletContext implementation to store attributes.
+     *
+     * This should usuablly be null, in which case Undertow will create a new map. This is only
+     * used in situations where you want multiple deployments to share the same servlet context
+     * attributes.
+     *
+     * @param servletContextAttributeBackingMap The backing map
+     */
+    public void setServletContextAttributeBackingMap(final ConcurrentMap<String, Object> servletContextAttributeBackingMap) {
+        this.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -699,6 +718,7 @@ public class DeploymentInfo implements Cloneable {
         info.defaultSessionTimeout = defaultSessionTimeout;
         info.ignoreStandardAuthenticationMechanism = ignoreStandardAuthenticationMechanism;
         info.additionalAuthenticationMechanisms.addAll(additionalAuthenticationMechanisms);
+        info.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
         return info;
     }
 
