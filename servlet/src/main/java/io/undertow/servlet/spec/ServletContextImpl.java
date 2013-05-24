@@ -42,6 +42,7 @@ import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
+import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
@@ -84,6 +85,16 @@ public class ServletContextImpl implements ServletContext {
         this.deployment = deployment;
         this.deploymentInfo = deployment.getDeploymentInfo();
         sessionCookieConfig = new SessionCookieConfigImpl();
+        SessionCookieConfig sc = deploymentInfo.getSessionCookieConfig();
+        if(sc != null) {
+            sessionCookieConfig.setName(sc.getName());
+            sessionCookieConfig.setComment(sc.getComment());
+            sessionCookieConfig.setDomain(sc.getDomain());
+            sessionCookieConfig.setHttpOnly(sc.isHttpOnly());
+            sessionCookieConfig.setMaxAge(sc.getMaxAge());
+            sessionCookieConfig.setPath(sc.getPath());
+            sessionCookieConfig.setSecure(sc.isSecure());
+        }
         if(deploymentInfo.getServletContextAttributeBackingMap() == null) {
             this.attributes = new ConcurrentHashMap<>();
         } else {
