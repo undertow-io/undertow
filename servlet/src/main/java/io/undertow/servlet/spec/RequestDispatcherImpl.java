@@ -99,11 +99,11 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
             //only update if this is the first forward
             if (request.getAttribute(FORWARD_REQUEST_URI) == null) {
-                request.setAttribute(FORWARD_REQUEST_URI, requestImpl.getRequestURI());
-                request.setAttribute(FORWARD_CONTEXT_PATH, requestImpl.getContextPath());
-                request.setAttribute(FORWARD_SERVLET_PATH, requestImpl.getServletPath());
-                request.setAttribute(FORWARD_PATH_INFO, requestImpl.getPathInfo());
-                request.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
+                requestImpl.setAttribute(FORWARD_REQUEST_URI, requestImpl.getRequestURI());
+                requestImpl.setAttribute(FORWARD_CONTEXT_PATH, requestImpl.getContextPath());
+                requestImpl.setAttribute(FORWARD_SERVLET_PATH, requestImpl.getServletPath());
+                requestImpl.setAttribute(FORWARD_PATH_INFO, requestImpl.getPathInfo());
+                requestImpl.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
             }
 
             String newQueryString = "";
@@ -236,11 +236,11 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             Map<String, Deque<String>> newQueryParameters = createNewQueryParameters(queryParameters, newQueryString);
             requestImpl.setQueryParameters(newQueryParameters);
 
-            request.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
-            request.setAttribute(INCLUDE_CONTEXT_PATH, servletContext.getContextPath());
-            request.setAttribute(INCLUDE_SERVLET_PATH, pathMatch.getMatched());
-            request.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
-            request.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
+            requestImpl.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
+            requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, servletContext.getContextPath());
+            requestImpl.setAttribute(INCLUDE_SERVLET_PATH, pathMatch.getMatched());
+            requestImpl.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
+            requestImpl.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
         }
         boolean inInclude = responseImpl.isInsideInclude();
         responseImpl.setInsideInclude(true);
@@ -268,11 +268,11 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             servletRequestContext.setServletRequest(oldRequest);
             servletRequestContext.setServletResponse(oldResponse);
             if (!named) {
-                request.setAttribute(INCLUDE_REQUEST_URI, requestUri);
-                request.setAttribute(INCLUDE_CONTEXT_PATH, contextPath);
-                request.setAttribute(INCLUDE_SERVLET_PATH, servletPath);
-                request.setAttribute(INCLUDE_PATH_INFO, pathInfo);
-                request.setAttribute(INCLUDE_QUERY_STRING, queryString);
+                requestImpl.setAttribute(INCLUDE_REQUEST_URI, requestUri);
+                requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, contextPath);
+                requestImpl.setAttribute(INCLUDE_SERVLET_PATH, servletPath);
+                requestImpl.setAttribute(INCLUDE_PATH_INFO, pathInfo);
+                requestImpl.setAttribute(INCLUDE_QUERY_STRING, queryString);
                 requestImpl.setQueryParameters(queryParameters);
             }
         }
@@ -314,14 +314,14 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
 
         //only update if this is the first forward
-        request.setAttribute(ERROR_REQUEST_URI, requestImpl.getRequestURI());
-        request.setAttribute(ERROR_SERVLET_NAME, servletName);
+        requestImpl.setAttribute(ERROR_REQUEST_URI, requestImpl.getRequestURI());
+        requestImpl.setAttribute(ERROR_SERVLET_NAME, servletName);
         if (exception != null) {
-            request.setAttribute(ERROR_EXCEPTION, exception);
-            request.setAttribute(ERROR_EXCEPTION_TYPE, exception.getClass());
+            requestImpl.setAttribute(ERROR_EXCEPTION, exception);
+            requestImpl.setAttribute(ERROR_EXCEPTION_TYPE, exception.getClass());
         }
-        request.setAttribute(ERROR_MESSAGE, message);
-        request.setAttribute(ERROR_STATUS_CODE, responseImpl.getStatus());
+        requestImpl.setAttribute(ERROR_MESSAGE, message);
+        requestImpl.setAttribute(ERROR_STATUS_CODE, responseImpl.getStatus());
 
         String newQueryString = "";
         int qsPos = path.indexOf("?");
