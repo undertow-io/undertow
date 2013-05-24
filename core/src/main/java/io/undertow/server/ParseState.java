@@ -39,12 +39,13 @@ class ParseState {
     //parsing states
     public static final int VERB = 0;
     public static final int PATH = 1;
-    public static final int QUERY_PARAMETERS = 2;
-    public static final int VERSION = 3;
-    public static final int AFTER_VERSION = 4;
-    public static final int HEADER = 5;
-    public static final int HEADER_VALUE = 6;
-    public static final int PARSE_COMPLETE = 7;
+    public static final int PATH_PARAMETERS = 2;
+    public static final int QUERY_PARAMETERS = 3;
+    public static final int VERSION = 4;
+    public static final int AFTER_VERSION = 5;
+    public static final int HEADER = 6;
+    public static final int HEADER_VALUE = 7;
+    public static final int PARSE_COMPLETE = 8;
 
     /**
      * The actual state of request parsing

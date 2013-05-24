@@ -78,6 +78,7 @@ import static org.xnio.Bits.intBitMask;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class HttpServerExchange extends AbstractAttachable {
+
     // immutable state
 
     /**
@@ -104,6 +105,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private final Deque<DefaultResponseListener> defaultResponseListeners = new ArrayDeque<DefaultResponseListener>(1);
 
     private Map<String, Deque<String>> queryParameters;
+    private Map<String, Deque<String>> pathParameters;
 
     /**
      * The actual response channel. May be null if it has not been created yet.
@@ -725,7 +727,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Returns a mutable map of very parameters.
+     * Returns a mutable map of query parameters.
      *
      * @return The query parameters
      */
@@ -743,6 +745,30 @@ public final class HttpServerExchange extends AbstractAttachable {
         Deque<String> list = queryParameters.get(name);
         if (list == null) {
             queryParameters.put(name, list = new ArrayDeque<String>(2));
+        }
+        list.add(param);
+    }
+
+
+    /**
+     * Returns a mutable map of path parameters
+     *
+     * @return The path parameters
+     */
+    public Map<String, Deque<String>> getPathParameters() {
+        if (pathParameters == null) {
+            pathParameters = new TreeMap<>();
+        }
+        return pathParameters;
+    }
+
+    public void addPathParam(final String name, final String param) {
+        if (pathParameters == null) {
+            pathParameters = new TreeMap<>();
+        }
+        Deque<String> list = pathParameters.get(name);
+        if (list == null) {
+            pathParameters.put(name, list = new ArrayDeque<String>(2));
         }
         list.add(param);
     }
