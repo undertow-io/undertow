@@ -44,6 +44,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
 import io.undertow.server.handlers.ProxyHandler;
 import io.undertow.server.handlers.RequestDumplingHandler;
+import io.undertow.util.NetworkUtils;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
@@ -162,7 +163,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @return The base URL that can be used to make connections to this server
      */
     public static String getDefaultServerURL() {
-        return "http://" + getHostAddress(DEFAULT) + ":" + getHostPort(DEFAULT);
+        return "http://" + NetworkUtils.formatPossibleIpv6Address(getHostAddress(DEFAULT)) + ":" + getHostPort(DEFAULT);
     }
 
     public static InetSocketAddress getDefaultServerAddress() {
