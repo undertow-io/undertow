@@ -37,7 +37,6 @@ import org.jboss.classfilewriter.ClassMethod;
 import org.jboss.classfilewriter.code.BranchEnd;
 import org.jboss.classfilewriter.code.CodeAttribute;
 import org.jboss.classfilewriter.code.CodeLocation;
-import org.jboss.classfilewriter.code.LookupSwitchBuilder;
 import org.jboss.classfilewriter.code.TableSwitchBuilder;
 import org.jboss.classfilewriter.util.DescriptorUtils;
 
@@ -540,45 +539,28 @@ public abstract class AbstractParserGenerator {
         c.dup();
         final Set<AtomicReference<BranchEnd>> tokenEnds = new HashSet<AtomicReference<BranchEnd>>();
         final Map<State, AtomicReference<BranchEnd>> ends = new IdentityHashMap<State, AtomicReference<BranchEnd>>();
-        if (currentState.next.size() > 600) {
-            final LookupSwitchBuilder s = new LookupSwitchBuilder();
-            if (stateMachine.isHeader()) {
-                tokenEnds.add(s.add((byte) ':'));
-            }
-            tokenEnds.add(s.add((byte) ' '));
-            tokenEnds.add(s.add((byte) '\t'));
-            tokenEnds.add(s.add((byte) '\r'));
-            tokenEnds.add(s.add((byte) '\n'));
-            for (final State state : currentState.next.values()) {
-                ends.put(state, s.add(state.value));
-            }
-            c.lookupswitch(s);
-            final BranchEnd defaultSetup = s.getDefaultBranchEnd().get();
-            c.branchEnd(defaultSetup);
-        } else {
-            for (State state : currentState.next.values()) {
-                c.iconst(state.value);
-                ends.put(state, new AtomicReference<BranchEnd>(c.ifIcmpeq()));
-                c.dup();
-            }
-            if (stateMachine.isHeader()) {
-                c.iconst(':');
-                tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
-                c.dup();
-            }
-            c.iconst(' ');
-            tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
+        for (State state : currentState.next.values()) {
+            c.iconst(state.value);
+            ends.put(state, new AtomicReference<BranchEnd>(c.ifIcmpeq()));
             c.dup();
-            c.iconst('\t');
-            tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
-            c.dup();
-            c.iconst('\r');
-            tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
-            c.dup();
-            c.iconst('\n');
-            tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
-
         }
+        if (stateMachine.isHeader()) {
+            c.iconst(':');
+            tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
+            c.dup();
+        }
+        c.iconst(' ');
+        tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
+        c.dup();
+        c.iconst('\t');
+        tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
+        c.dup();
+        c.iconst('\r');
+        tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
+        c.dup();
+        c.iconst('\n');
+        tokenEnds.add(new AtomicReference<BranchEnd>(c.ifIcmpeq()));
+
 
         c.iconst(NO_STATE);
         c.istore(CURRENT_STATE_VAR);
@@ -612,8 +594,8 @@ public abstract class AbstractParserGenerator {
             }
             setupLocalVariables(c);
             handleReturnIfNoMoreBytes(c, returnIncompleteCode);
+            initialState.jumpTo(c);
         }
-        initialState.jumpTo(c);
 
         for (Map.Entry<State, AtomicReference<BranchEnd>> e : ends.entrySet()) {
             c.branchEnd(e.getValue().get());
