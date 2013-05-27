@@ -18,9 +18,6 @@
 
 package io.undertow.servlet.handlers;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.servlet.core.ManagedServlet;
-
 /**
  * @author Stuart Douglas
  */
@@ -29,13 +26,19 @@ public class ServletPathMatch extends ServletChain {
     private final String matched;
     private final String remaining;
 
-    public ServletPathMatch(final HttpHandler handler, final ManagedServlet managedServlet, final String matched, final String remaining) {
-        super(handler, managedServlet);
-        this.matched = matched;
-        if (remaining == null || remaining.equals("")) {
+    public ServletPathMatch(final ServletChain target, final String matched, final String remaining) {
+        super(target);
+        if (target.isDefaultServlet()) {
+            //the default servlet is always considered to have matched the full path.
+            this.matched = matched + (remaining == null ? "" : remaining);
             this.remaining = null;
         } else {
-            this.remaining = remaining;
+            this.matched = matched;
+            if (remaining == null || remaining.equals("")) {
+                this.remaining = null;
+            } else {
+                this.remaining = remaining;
+            }
         }
     }
 

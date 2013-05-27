@@ -34,7 +34,7 @@ public class PathMappingServlet extends HttpServlet {
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         PrintWriter writer = resp.getWriter();
-        writer.write(getServletName() + " - " + req.getPathInfo());
+        writer.write(getServletName()  + " - " + req.getServletPath() + " - " + req.getPathInfo());
         writer.close();
     }
 }

@@ -100,15 +100,15 @@ public class FilterPathMappingTestCase {
 
         TestHttpClient client = new TestHttpClient();
         try {
-            runTest(client, "aa", "/aa - null", "/*", "/aa");
-            runTest(client, "a/c", "/a/* - /c", "/*", "/a/*");
-            runTest(client, "a", "/a/* - null", "/*", "/a/*");
-            runTest(client, "aa/b", "/ - /aa/b", "/*");
-            runTest(client, "a/b/c/d", "/a/* - /b/c/d", "/*", "/a/*");
-            runTest(client, "defaultStuff", "/ - /defaultStuff", "/*");
-            runTest(client, "", "contextRoot - null", "/*", "contextRoot");
-            runTest(client, "yyyy.bop", "/ - null", "/*", "*.bop");
-            runTest(client, "a/yyyy.bop", "/a/* - /yyyy.bop", "/*", "*.bop", "/a/*");
+            runTest(client, "aa", "/aa - /aa - null", "/*", "/aa");
+            runTest(client, "a/c", "/a/* - /a - /c", "/*", "/a/*");
+            runTest(client, "a", "/a/* - /a - null", "/*", "/a/*");
+            runTest(client, "aa/b", "/ - /aa/b - null", "/*");
+            runTest(client, "a/b/c/d", "/a/* - /a - /b/c/d", "/*", "/a/*");
+            runTest(client, "defaultStuff", "/ - /defaultStuff - null", "/*");
+            runTest(client, "", "contextRoot - / - null", "/*", "contextRoot");
+            runTest(client, "yyyy.bop", "/ - /yyyy.bop - null", "/*", "*.bop");
+            runTest(client, "a/yyyy.bop", "/a/* - /a - /yyyy.bop", "/*", "*.bop", "/a/*");
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -144,7 +144,7 @@ public class FilterPathMappingTestCase {
 
         TestHttpClient client = new TestHttpClient();
         try {
-            runTest(client, "aa.jsp", "*.jsp - null", "/*");
+            runTest(client, "aa.jsp", "*.jsp - /aa.jsp - null", "/*");
 
         } finally {
             client.getConnectionManager().shutdown();

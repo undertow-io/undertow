@@ -155,11 +155,6 @@ public class DefaultServlet extends HttpServlet {
     private void handleWelcomePage(final HttpServletRequest req, final HttpServletResponse resp, final String oldPath) throws IOException, ServletException {
         String welcomePage = findWelcomeFile(oldPath);
 
-        String pathInfo = req.getPathInfo();
-        if (pathInfo == null) {
-            pathInfo = "/";
-        }
-        final String pathWithTraingSlash = pathInfo.endsWith("/") ? pathInfo : pathInfo + "/";
         if (welcomePage != null) {
             if(!req.getRequestURI().endsWith("/")) {
                 redirectWithTrailingSlash(req, resp);
@@ -167,6 +162,7 @@ public class DefaultServlet extends HttpServlet {
                 redirect(req, welcomePage);
             }
         } else {
+            final String pathWithTraingSlash = oldPath.endsWith("/") ? oldPath : oldPath + "/";
             String path = findWelcomeServlet(pathWithTraingSlash);
             if (path != null) {
                 if(!req.getRequestURI().endsWith("/")) {

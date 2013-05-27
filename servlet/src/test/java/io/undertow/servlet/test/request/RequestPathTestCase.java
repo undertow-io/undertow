@@ -18,10 +18,24 @@
 
 package io.undertow.servlet.test.request;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 
+import io.undertow.server.handlers.CookieHandler;
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.form.FormEncodedDataHandler;
+import io.undertow.server.handlers.form.MultiPartHandler;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.FilterInfo;
+import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.util.SetHeaderFilter;
+import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -40,29 +54,113 @@ public class RequestPathTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
-        DeploymentUtils.setupServlet(new ServletInfo("request", RequestPathServlet.class)
-                .addMapping("/*"));
+
+
+        final PathHandler pathHandler = new PathHandler();
+        final FormEncodedDataHandler formEncodedDataHandler = new FormEncodedDataHandler(pathHandler);
+        final MultiPartHandler multiPartHandler = new MultiPartHandler(formEncodedDataHandler);
+        CookieHandler cookieHandler = new CookieHandler(multiPartHandler);
+        final ServletContainer container = ServletContainer.Factory.newInstance();
+        DeploymentInfo builder = new DeploymentInfo()
+                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
+                .setContextPath("/servletContext")
+                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setDeploymentName("servletContext.war")
+                .addServlets(
+                        new ServletInfo("request", RequestPathServlet.class)
+                                .addMapping("/req/*"),
+                        new ServletInfo("DefaultServlet", RequestPathServlet.class)
+                                .addMapping("/"),
+                        new ServletInfo("ExactServlet", RequestPathServlet.class)
+                                .addMapping("/exact"),
+                        new ServletInfo("ExactTxtServlet", RequestPathServlet.class)
+                                .addMapping("/exact.txt"),
+                        new ServletInfo("HtmlServlet", RequestPathServlet.class)
+                                                        .addMapping("*.html")
+                )
+                .addFilters(new FilterInfo("header", SetHeaderFilter.class)
+                        .addInitParam("header", "Filter").addInitParam("value", "true"),
+                        new FilterInfo("all", SetHeaderFilter.class)
+                                .addInitParam("header", "all").addInitParam("value", "true"))
+                .addFilterUrlMapping("header", "*.txt", DispatcherType.REQUEST)
+                .addFilterUrlMapping("all", "/*", DispatcherType.REQUEST);
+        DeploymentManager manager = container.addDeployment(builder);
+        manager.deploy();
+        try {
+            pathHandler.addPath(builder.getContextPath(), manager.start());
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        DefaultServer.setRootHandler(cookieHandler);
+
     }
 
     @Test
-    public void testRequestPathEncoding() throws Exception {
-        runtest("/servletContext/somePath", "/somePath\nhttp://localhost:7777/servletContext/somePath\n/servletContext/somePath\n");
-        runtest("/servletContext/somePath?foo=bar", "/somePath\nhttp://localhost:7777/servletContext/somePath\n/servletContext/somePath\nfoo=bar");
-        runtest("/servletContext/somePath?foo=b+a+r", "/somePath\nhttp://localhost:7777/servletContext/somePath\n/servletContext/somePath\nfoo=b+a+r");
-        runtest("/servletContext/some+path?foo=b+a+r", "/some path\nhttp://localhost:7777/servletContext/some+path\n/servletContext/some+path\nfoo=b+a+r");
+    public void testRequestPaths() throws Exception {
+        //test default servlet mappings
+        runtest("/servletContext/somePath", false, "null", "/somePath", "http://localhost:7777/servletContext/somePath", "/servletContext/somePath", "");
+        runtest("/servletContext/somePath?foo=bar", false, "null", "/somePath", "http://localhost:7777/servletContext/somePath", "/servletContext/somePath", "foo=bar");
+        runtest("/servletContext/somePath?foo=b+a+r", false, "null", "/somePath", "http://localhost:7777/servletContext/somePath", "/servletContext/somePath", "foo=b+a+r");
+        runtest("/servletContext/some+path?foo=b+a+r", false, "null", "/some path", "http://localhost:7777/servletContext/some+path", "/servletContext/some+path", "foo=b+a+r");
+        runtest("/servletContext/somePath.txt", true, "null", "/somePath.txt", "http://localhost:7777/servletContext/somePath.txt", "/servletContext/somePath.txt", "");
+        runtest("/servletContext/somePath.txt?foo=bar", true, "null", "/somePath.txt", "http://localhost:7777/servletContext/somePath.txt", "/servletContext/somePath.txt", "foo=bar");
+
+        //test non-default mappings
+        runtest("/servletContext/req/somePath", false, "/somePath", "/req", "http://localhost:7777/servletContext/req/somePath", "/servletContext/req/somePath", "");
+        runtest("/servletContext/req/somePath?foo=bar", false, "/somePath", "/req", "http://localhost:7777/servletContext/req/somePath", "/servletContext/req/somePath", "foo=bar");
+        runtest("/servletContext/req/somePath?foo=b+a+r", false, "/somePath", "/req", "http://localhost:7777/servletContext/req/somePath", "/servletContext/req/somePath", "foo=b+a+r");
+        runtest("/servletContext/req/some+path?foo=b+a+r", false, "/some path", "/req", "http://localhost:7777/servletContext/req/some+path", "/servletContext/req/some+path", "foo=b+a+r");
+        runtest("/servletContext/req/somePath.txt", true, "/somePath.txt", "/req", "http://localhost:7777/servletContext/req/somePath.txt", "/servletContext/req/somePath.txt", "");
+        runtest("/servletContext/req/somePath.txt?foo=bar", true, "/somePath.txt", "/req", "http://localhost:7777/servletContext/req/somePath.txt", "/servletContext/req/somePath.txt", "foo=bar");
+
+        //test exact path mappings
+        runtest("/servletContext/exact", false, "null", "/exact", "http://localhost:7777/servletContext/exact", "/servletContext/exact", "");
+        runtest("/servletContext/exact?foo=bar", false, "null", "/exact", "http://localhost:7777/servletContext/exact", "/servletContext/exact", "foo=bar");
+
+        //test exact path mappings with a filer
+        runtest("/servletContext/exact.txt", true, "null", "/exact.txt", "http://localhost:7777/servletContext/exact.txt", "/servletContext/exact.txt", "");
+        runtest("/servletContext/exact.txt?foo=bar", true, "null", "/exact.txt", "http://localhost:7777/servletContext/exact.txt", "/servletContext/exact.txt", "foo=bar");
+
+        //test servlet extension matches
+        runtest("/servletContext/file.html", false, "null", "/file.html", "http://localhost:7777/servletContext/file.html", "/servletContext/file.html", "");
+        runtest("/servletContext/file.html?foo=bar", false, "null", "/file.html", "http://localhost:7777/servletContext/file.html", "/servletContext/file.html", "foo=bar");
     }
 
-    private void runtest(String request, String expectedBody) throws Exception {
+    private void runtest(String request, boolean filterHeader, String... expectedBody) throws Exception {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + request);
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(expectedBody, response);
+
+            Assert.assertArrayEquals(expectedBody, split(response));
+            Assert.assertEquals("true", result.getHeaders("all")[0].getValue());
+            if (filterHeader) {
+                Assert.assertEquals("true", result.getHeaders("Filter")[0].getValue());
+            } else {
+                Assert.assertEquals(0, result.getHeaders("Filter").length);
+            }
         } finally {
             client.getConnectionManager().shutdown();
         }
+    }
+
+    /**
+     * because String.split() is retarded
+     */
+    private static String[] split(String s) {
+        List<String> strings = new ArrayList<>();
+        int pos = 0;
+        for (int i = 0; i < s.length(); ++i) {
+            char c = s.charAt(i);
+            if (c == ',') {
+                strings.add(s.substring(pos, i));
+                pos = i + 1;
+            }
+        }
+        strings.add(s.substring(pos));
+        return strings.toArray(new String[strings.size()]);
     }
 
 }

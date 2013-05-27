@@ -19,11 +19,14 @@
 package io.undertow.servlet.test.request;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.junit.Assert;
 
 /**
  * @author Stuart Douglas
@@ -32,9 +35,15 @@ public class RequestPathServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        resp.getWriter().write(req.getPathInfo() + "\n");
-        resp.getWriter().write(req.getRequestURL().toString() + "\n");
-        resp.getWriter().write(req.getRequestURI() + "\n");
+        StringBuilder builtUri = new StringBuilder(req.getContextPath());
+        builtUri.append(req.getServletPath());
+        builtUri.append(req.getPathInfo() == null ? "" : req.getPathInfo());
+        Assert.assertEquals(URLDecoder.decode(req.getRequestURI(), "UTF-8"), builtUri.toString());
+
+        resp.getWriter().write(req.getPathInfo() + ",");
+        resp.getWriter().write(req.getServletPath() + ",");
+        resp.getWriter().write(req.getRequestURL().toString() + ",");
+        resp.getWriter().write(req.getRequestURI() + ",");
         resp.getWriter().write(req.getQueryString() == null ? "" : req.getQueryString());
     }
 }

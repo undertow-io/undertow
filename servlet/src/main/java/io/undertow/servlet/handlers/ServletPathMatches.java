@@ -50,6 +50,7 @@ import io.undertow.servlet.util.ImmediateInstanceFactory;
  */
 public class ServletPathMatches {
 
+    public static final String DEFAULT_SERVLET_NAME = "default";
     private final Deployment deployment;
 
     private volatile ServletPathMatchesData data;
@@ -60,7 +61,7 @@ public class ServletPathMatches {
 
 
     public ServletChain getServletHandlerByName(final String name) {
-       return getData().getServletHandlerByName(name);
+        return getData().getServletHandlerByName(name);
     }
 
     public ServletPathMatch getServletHandlerByExactPath(final String path) {
@@ -77,11 +78,11 @@ public class ServletPathMatches {
 
     private ServletPathMatchesData getData() {
         ServletPathMatchesData data = this.data;
-        if(data != null) {
+        if (data != null) {
             return data;
         }
         synchronized (this) {
-            if(this.data != null) {
+            if (this.data != null) {
                 return this.data;
             }
             return this.data = setupServletChains();
@@ -97,7 +98,6 @@ public class ServletPathMatches {
      * served up directly without using blocking operations.
      * <p/>
      * TODO: this logic is a bit convoluted at the moment, we should look at simplifying it
-     *
      */
     private ServletPathMatchesData setupServletChains() {
         //create the default servlet
@@ -114,6 +114,7 @@ public class ServletPathMatches {
 
         DeploymentInfo deploymentInfo = deployment.getDeploymentInfo();
 
+        //loop through all filter mappings, and add them to the set of known paths
         for (FilterMappingInfo mapping : deploymentInfo.getFilterMappings()) {
             if (mapping.getMappingType() == FilterMappingInfo.MappingType.URL) {
                 String path = mapping.getMapping();
@@ -125,25 +126,30 @@ public class ServletPathMatches {
             }
         }
 
+        //now loop through all servlets.
         for (Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
             ServletInfo servlet = entry.getValue();
+            //add the servlet to the deployment
             final ServletHandler handler = servlets.addServlet(servlet);
+            //add the servlet to the approprite path maps
             for (String path : entry.getValue().getMappings()) {
                 if (path.equals("/")) {
                     //the default servlet
                     pathMatches.add("/*");
-                    if (pathServlets.containsKey("/*")) {
+                    if (pathServlets.containsKey("/*") || defaultServlet != null) {
                         throw UndertowServletMessages.MESSAGES.twoServletsWithSameMapping(path);
                     }
                     defaultServlet = handler;
-                    defaultHandler = servletChain(handler, handler.getManagedServlet());
+                    defaultHandler = servletChain(handler, handler.getManagedServlet(), true);
                 } else if (!path.startsWith("*.")) {
+                    //either an exact or a /* based path match
                     pathMatches.add(path);
                     if (pathServlets.containsKey(path)) {
                         throw UndertowServletMessages.MESSAGES.twoServletsWithSameMapping(path);
                     }
                     pathServlets.put(path, handler);
                 } else {
+                    //an extension match based servlet
                     String ext = path.substring(2);
                     extensionMatches.add(ext);
                     extensionServlets.put(ext, handler);
@@ -152,25 +158,32 @@ public class ServletPathMatches {
         }
 
         if (defaultServlet == null) {
+            //no explicit default servlet was specified, so we create our own
             final DefaultServletConfig config = deploymentInfo.getDefaultServletConfig() == null ? new DefaultServletConfig() : deploymentInfo.getDefaultServletConfig();
             DefaultServlet defaultInstance = new DefaultServlet(deployment, config, deploymentInfo.getWelcomePages());
-            final ServletHandler managedDefaultServlet = servlets.addServlet(new ServletInfo("io.undertow.DefaultServlet", DefaultServlet.class, new ImmediateInstanceFactory<Servlet>(defaultInstance)));
+            final ServletHandler managedDefaultServlet = servlets.addServlet(new ServletInfo(DEFAULT_SERVLET_NAME, DefaultServlet.class, new ImmediateInstanceFactory<Servlet>(defaultInstance)));
             pathMatches.add("/*");
             defaultServlet = managedDefaultServlet;
-            defaultHandler = new ServletChain(defaultServlet, managedDefaultServlet.getManagedServlet());
+            defaultHandler = new ServletChain(defaultServlet, managedDefaultServlet.getManagedServlet(), true);
         }
 
         final ServletPathMatchesData.Builder builder = ServletPathMatchesData.builder();
 
+        //we now loop over every path in the application, and build up the patches based on this path
+        //these paths contain both /* and exact matches.
         for (final String path : pathMatches) {
+            //resolve the target servlet, will return null if this is the default servlet
             ServletHandler targetServlet = resolveServletForPath(path, pathServlets);
 
             final Map<DispatcherType, List<ManagedFilter>> noExtension = new HashMap<DispatcherType, List<ManagedFilter>>();
             final Map<String, Map<DispatcherType, List<ManagedFilter>>> extension = new HashMap<String, Map<DispatcherType, List<ManagedFilter>>>();
+            //initalize the extension map. This contains all the filers in the noExtension map, plus
+            //any filters that match the extension key
             for (String ext : extensionMatches) {
                 extension.put(ext, new HashMap<DispatcherType, List<ManagedFilter>>());
             }
 
+            //loop over all the filters, and add them to the appropriate map in the correct order
             for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
                 ManagedFilter filter = filters.getManagedFilter(filterMapping.getFilterName());
                 if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {
@@ -195,46 +208,47 @@ public class ServletPathMatches {
                     }
                 }
             }
-
-            final ServletChain initialHandler;
-            if (noExtension.isEmpty()) {
-                if (targetServlet != null) {
-                    initialHandler = servletChain(targetServlet, targetServlet.getManagedServlet());
-                } else {
-                    initialHandler = defaultHandler;
-                }
-            } else {
-                FilterHandler handler;
-                if (targetServlet != null) {
-                    handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), targetServlet);
-                } else {
-                    handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), defaultServlet);
-                }
-                initialHandler = servletChain(handler, targetServlet == null ? defaultServlet.getManagedServlet() : targetServlet.getManagedServlet());
-            }
-
+            //resolve any matches and add them to the builder
             if (path.endsWith("/*")) {
                 String prefix = path.substring(0, path.length() - 2);
-                builder.addPrefixMatch(prefix, initialHandler);
+                //add the default non-extension match
+                builder.addPrefixMatch(prefix, createHandler(defaultHandler, defaultServlet, deploymentInfo, targetServlet, noExtension));
 
+                //build up the chain for each non-extension match
                 for (Map.Entry<String, Map<DispatcherType, List<ManagedFilter>>> entry : extension.entrySet()) {
+                    boolean isDefaultServletMapping = false;
                     ServletHandler pathServlet = targetServlet;
                     if (pathServlet == null) {
                         pathServlet = extensionServlets.get(entry.getKey());
                     }
                     if (pathServlet == null) {
+                        isDefaultServletMapping = true;
                         pathServlet = defaultServlet;
                     }
                     HttpHandler handler = pathServlet;
                     if (!entry.getValue().isEmpty()) {
                         handler = new FilterHandler(entry.getValue(), deploymentInfo.isAllowNonStandardWrappers(), handler);
                     }
-                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet()));
+                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet(), isDefaultServletMapping));
                 }
             } else if (path.isEmpty()) {
-                builder.addExactMatch("/", initialHandler);
+                //the context root match
+                builder.addExactMatch("/", createHandler(defaultHandler, defaultServlet, deploymentInfo, targetServlet, noExtension));
             } else {
-                builder.addExactMatch(path, initialHandler);
+                //we need to check for an extension match, so paths like /exact.txt will have the correct filter applied
+                String lastSegment = path.substring(path.lastIndexOf('/'));
+                if (lastSegment.contains(".")) {
+                    String ext = lastSegment.substring(lastSegment.lastIndexOf('.') + 1);
+                    if (extension.containsKey(ext)) {
+                        Map<DispatcherType, List<ManagedFilter>> extMap = extension.get(ext);
+                        builder.addExactMatch(path, createHandler(defaultHandler, defaultServlet, deploymentInfo, targetServlet, extMap));
+                    } else {
+                        builder.addExactMatch(path, createHandler(defaultHandler, defaultServlet, deploymentInfo, targetServlet, noExtension));
+                    }
+                } else {
+                    builder.addExactMatch(path, createHandler(defaultHandler, defaultServlet, deploymentInfo, targetServlet, noExtension));
+                }
+
             }
         }
 
@@ -251,16 +265,33 @@ public class ServletPathMatches {
                 }
             }
             if (filtersByDispatcher.isEmpty()) {
-                builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), entry.getValue().getManagedServlet()));
+                builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), entry.getValue().getManagedServlet(), false));
             } else {
-                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filtersByDispatcher, deploymentInfo.isAllowNonStandardWrappers(), entry.getValue()), entry.getValue().getManagedServlet()));
+                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filtersByDispatcher, deploymentInfo.isAllowNonStandardWrappers(), entry.getValue()), entry.getValue().getManagedServlet(), false));
             }
         }
-
 
         builder.setDefaultServlet(defaultHandler);
 
         return builder.build();
+    }
+
+    private ServletChain createHandler(final ServletChain defaultHandler, final ServletHandler defaultServlet, final DeploymentInfo deploymentInfo, final ServletHandler targetServlet, final Map<DispatcherType, List<ManagedFilter>> noExtension) {
+        final ServletChain initialHandler;
+        if (noExtension.isEmpty()) {
+            if (targetServlet != null) {
+                initialHandler = servletChain(targetServlet, targetServlet.getManagedServlet(), false);
+            } else {
+                initialHandler = defaultHandler;
+            }
+        } else if (targetServlet != null) {
+            FilterHandler handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), targetServlet);
+            initialHandler = servletChain(handler, targetServlet.getManagedServlet(), false);
+        } else {
+            FilterHandler handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), defaultServlet);
+            initialHandler = servletChain(handler, defaultServlet.getManagedServlet(), true);
+        }
+        return initialHandler;
     }
 
     private static ServletHandler resolveServletForPath(final String path, final Map<String, ServletHandler> pathServlets) {
@@ -304,10 +335,10 @@ public class ServletPathMatches {
         list.add(value);
     }
 
-    private static ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet) {
+    private static ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet, final boolean defaultServlet) {
         HttpHandler servletHandler = new ServletSecurityRoleHandler(next);
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
-        return new ServletChain(servletHandler, managedServlet);
+        return new ServletChain(servletHandler, managedServlet, defaultServlet);
     }
 
     private static HttpHandler wrapHandlers(final HttpHandler wrapee, final List<HandlerWrapper> wrappers) {
