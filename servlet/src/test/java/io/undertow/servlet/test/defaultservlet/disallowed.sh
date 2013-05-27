@@ -1,0 +1,1 @@
+This is not a real shell script, but the default servlet will not serve it by default.

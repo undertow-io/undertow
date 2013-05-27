@@ -6,11 +6,14 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
+ * The default servlet config. By default this has quite a restrictive configuration, only allowing
+ * extensions in common use in the web to be served.
+ *
  * @author Stuart Douglas
  */
 public class DefaultServletConfig {
 
-    private static final String[] DEFAULT_ALLOWED_EXTENSIONS = {"js", "css", "png", "jpg", "gif", "html", "htm"};
+    private static final String[] DEFAULT_ALLOWED_EXTENSIONS = {"js", "css", "png", "jpg", "gif", "html", "htm", "txt", "pdf"};
     private static final String[] DEFAULT_DISALLOWED_EXTENSIONS = {"class", "jar", "war", "zip", "xml"};
 
     private final boolean defaultAllowed;
