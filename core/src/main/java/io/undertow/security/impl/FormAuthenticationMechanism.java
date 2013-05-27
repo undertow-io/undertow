@@ -159,12 +159,8 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
 
 
     static void sendRedirect(final HttpServerExchange exchange, final String location) {
-        String host = exchange.getRequestHeaders().getFirst(Headers.HOST);
-        if (host == null) {
-            host = exchange.getDestinationAddress().getAddress().getHostAddress();
-        }
         // TODO - String concatenation to construct URLS is extremely error prone - switch to a URI which will better handle this.
-        String loc = exchange.getRequestScheme() + "://" + host + location;
+        String loc = exchange.getRequestScheme() + "://" + exchange.getHostAndPort() + location;
         exchange.getResponseHeaders().put(Headers.LOCATION, loc);
     }
 }

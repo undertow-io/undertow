@@ -44,6 +44,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.WrapperConduitFactory;
@@ -453,12 +454,54 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (isHostIncludedInRequestURI()) {
             return getRequestURI();
         } else {
-            String host = getRequestHeaders().getFirst(Headers.HOST);
-            if (host == null) {
-                host = getDestinationAddress().getAddress().getHostAddress();
-            }
-            return getRequestScheme() + "://" + host + getRequestURI();
+            return getRequestScheme() + "://" + getHostAndPort() + getRequestURI();
         }
+    }
+
+    /**
+     * Return the host that this request was sent to, in general this will be the
+     * value of the Host header, minus the port specifier.
+     *
+     * If this resolves to an IPv6 address it will not be enclosed by square brackets.
+     * Care must be taken when constructing URLs based on this method to ensure IPv6 URLs
+     * are handled correctly.
+     *
+     * @return The host part of the destination address
+     */
+    public String getHostName() {
+        String host = requestHeaders.getFirst(Headers.HOST);
+        if (host == null) {
+            host = getDestinationAddress().getAddress().getHostAddress();
+        } else {
+            if (host.startsWith("[")) {
+                host = host.substring(1, host.indexOf(']'));
+            } else if (host.indexOf(':') != -1) {
+                host = host.substring(0, host.indexOf(':'));
+            }
+        }
+        return host;
+    }
+
+    /**
+     * Return the host, and also the port if this request was sent to a non-standard port. In general
+     * this will just be the value of the Host header.
+     *
+     * If this resolves to an IPv6 address it *will*  be enclosed by square brackets. The return
+     * value of this method is suitable for inclusion in a URL.
+     *
+     * @return The host and port part of the destination address
+     */
+    public String getHostAndPort() {
+        String host = requestHeaders.getFirst(Headers.HOST);
+        if (host == null) {
+            host = NetworkUtils.formatPossibleIpv6Address(getDestinationAddress().getAddress().getHostAddress());
+            int port = getDestinationAddress().getPort();
+            if (!((getRequestScheme().equals("http") && port == 80)
+                    || (getRequestScheme().equals("https") && port == 8080))) {
+                host = host + ":" + port;
+            }
+        }
+        return host;
     }
 
     /**

@@ -156,11 +156,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             }
             realPath = servletContext.getContextPath() + CanonicalPathUtils.canonicalize(current + location);
         }
-        String host = exchange.getRequestHeaders().getFirst(Headers.HOST);
-        if (host == null) {
-            host = exchange.getDestinationAddress().getAddress().getHostAddress();
-        }
-        String loc = exchange.getRequestScheme() + "://" + host + realPath;
+        String loc = exchange.getRequestScheme() + "://" + exchange.getHostAndPort() + realPath;
         exchange.getResponseHeaders().put(Headers.LOCATION, loc);
         responseDone();
     }
