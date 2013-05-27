@@ -7,6 +7,7 @@ import javax.servlet.http.HttpSessionBindingListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionListener;
+import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 
@@ -17,10 +18,12 @@ import io.undertow.servlet.spec.HttpSessionImpl;
  */
 public class SessionListenerBridge implements SessionListener {
 
+    private final ThreadSetupAction threadSetup;
     private final ApplicationListeners applicationListeners;
     private final ServletContext servletContext;
 
-    public SessionListenerBridge(final ApplicationListeners applicationListeners, final ServletContext servletContext) {
+    public SessionListenerBridge(final ThreadSetupAction threadSetup, final ApplicationListeners applicationListeners, final ServletContext servletContext) {
+        this.threadSetup = threadSetup;
         this.applicationListeners = applicationListeners;
         this.servletContext = servletContext;
     }
@@ -33,12 +36,19 @@ public class SessionListenerBridge implements SessionListener {
 
     @Override
     public void sessionDestroyed(final Session session, final HttpServerExchange exchange, final SessionDestroyedReason reason) {
+        ThreadSetupAction.Handle handle = null;
         try {
-        final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, false);
-        applicationListeners.sessionDestroyed(httpSession);
+            final HttpSessionImpl httpSession = HttpSessionImpl.forSession(session, servletContext, false);
+            if (reason == SessionDestroyedReason.TIMEOUT) {
+                handle = threadSetup.setup(exchange);
+            }
+            applicationListeners.sessionDestroyed(httpSession);
         } finally {
+            if (handle != null) {
+                handle.tearDown();
+            }
             ServletRequestContext current = ServletRequestContext.current();
-            if(current != null) {
+            if (current != null) {
                 current.setSession(null);
             }
         }
