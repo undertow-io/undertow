@@ -9,16 +9,16 @@ import io.undertow.servlet.core.ManagedServlet;
 public class ServletChain {
     private final HttpHandler handler;
     private final ManagedServlet managedServlet;
-    private final boolean defaultServlet;
+    private final String servletPath;
 
-    public ServletChain(final HttpHandler handler, final ManagedServlet managedServlet, final boolean defaultServlet) {
+    public ServletChain(final HttpHandler handler, final ManagedServlet managedServlet, final String servletPath) {
         this.handler = handler;
         this.managedServlet = managedServlet;
-        this.defaultServlet = defaultServlet;
+        this.servletPath = servletPath;
     }
 
     public ServletChain(final ServletChain other) {
-        this(other.getHandler(), other.getManagedServlet(), other.isDefaultServlet());
+        this(other.getHandler(), other.getManagedServlet(), other.getServletPath());
     }
     public HttpHandler getHandler() {
         return handler;
@@ -28,7 +28,11 @@ public class ServletChain {
         return managedServlet;
     }
 
-    public boolean isDefaultServlet() {
-        return defaultServlet;
+    /**
+     *
+     * @return The servlet path part
+     */
+    public String getServletPath() {
+        return servletPath;
     }
 }

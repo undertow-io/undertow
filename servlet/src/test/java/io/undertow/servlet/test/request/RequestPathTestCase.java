@@ -76,10 +76,11 @@ public class RequestPathTestCase {
                         new ServletInfo("ExactTxtServlet", RequestPathServlet.class)
                                 .addMapping("/exact.txt"),
                         new ServletInfo("HtmlServlet", RequestPathServlet.class)
-                                                        .addMapping("*.html")
+                                .addMapping("*.html")
                 )
-                .addFilters(new FilterInfo("header", SetHeaderFilter.class)
-                        .addInitParam("header", "Filter").addInitParam("value", "true"),
+                .addFilters(
+                        new FilterInfo("header", SetHeaderFilter.class)
+                                .addInitParam("header", "Filter").addInitParam("value", "true"),
                         new FilterInfo("all", SetHeaderFilter.class)
                                 .addInitParam("header", "all").addInitParam("value", "true"))
                 .addFilterUrlMapping("header", "*.txt", DispatcherType.REQUEST)

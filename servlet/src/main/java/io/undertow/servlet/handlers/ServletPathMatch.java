@@ -26,18 +26,18 @@ public class ServletPathMatch extends ServletChain {
     private final String matched;
     private final String remaining;
 
-    public ServletPathMatch(final ServletChain target, final String matched, final String remaining) {
+    public ServletPathMatch(final ServletChain target, final String uri) {
         super(target);
-        if (target.isDefaultServlet()) {
+        if (target.getServletPath() == null) {
             //the default servlet is always considered to have matched the full path.
-            this.matched = matched + (remaining == null ? "" : remaining);
+            this.matched = uri;
             this.remaining = null;
         } else {
-            this.matched = matched;
-            if (remaining == null || remaining.equals("")) {
-                this.remaining = null;
+            this.matched = target.getServletPath();
+            if(uri.length() == matched.length()) {
+                remaining = null;
             } else {
-                this.remaining = remaining;
+                remaining = uri.substring(matched.length());
             }
         }
     }

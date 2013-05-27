@@ -71,6 +71,12 @@ public class FilterPathMappingTestCase {
         builder.addServlet(new ServletInfo("contextRoot", PathMappingServlet.class)
                 .addMapping(""));
 
+        builder.addServlet(new ServletInfo("/myservlet/*", PathMappingServlet.class)
+                .addMapping("/myservlet/*"));
+
+        builder.addServlet(new ServletInfo("*.jsp", PathMappingServlet.class)
+                .addMapping("*.jsp"));
+
         builder.addFilter(new FilterInfo("/*", PathFilter.class));
         builder.addFilterUrlMapping("/*", "/*", DispatcherType.REQUEST);
 
@@ -82,6 +88,9 @@ public class FilterPathMappingTestCase {
 
         builder.addFilter(new FilterInfo("*.bop", PathFilter.class));
         builder.addFilterUrlMapping("*.bop", "*.bop", DispatcherType.REQUEST);
+
+        builder.addFilter(new FilterInfo("/myservlet/myfilter/*", PathFilter.class));
+        builder.addFilterUrlMapping("/myservlet/myfilter/*", "/myservlet/myfilter/*", DispatcherType.REQUEST);
 
         builder.addFilter(new FilterInfo("contextRoot", PathFilter.class));
         builder.addFilterServletNameMapping("contextRoot", "contextRoot", DispatcherType.REQUEST);
@@ -109,6 +118,9 @@ public class FilterPathMappingTestCase {
             runTest(client, "", "contextRoot - / - null", "/*", "contextRoot");
             runTest(client, "yyyy.bop", "/ - /yyyy.bop - null", "/*", "*.bop");
             runTest(client, "a/yyyy.bop", "/a/* - /a - /yyyy.bop", "/*", "*.bop", "/a/*");
+            runTest(client, "myservlet/myfilter/file.dat", "/myservlet/* - /myservlet - /myfilter/file.dat", "/*", "/myservlet/myfilter/*");
+            runTest(client, "myservlet/myfilter/file.jsp", "/myservlet/* - /myservlet - /myfilter/file.jsp", "/*", "/myservlet/myfilter/*");
+            runTest(client, "otherservlet/myfilter/file.jsp", "*.jsp - /otherservlet/myfilter/file.jsp - null", "/*");
 
         } finally {
             client.getConnectionManager().shutdown();

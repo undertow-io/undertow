@@ -115,6 +115,13 @@ public class ServletPathMappingTestCase {
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("*.jsp - /bob.jsp - null", response);
 
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/a/bob.jsp");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("/a/* - /a - /bob.jsp", response);
+
         } finally {
             client.getConnectionManager().shutdown();
         }
