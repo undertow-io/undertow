@@ -231,8 +231,8 @@ public class DefaultServlet extends HttpServlet {
 
     private String findWelcomeServlet(final String path) {
         for (String i : welcomePages) {
-            final ServletPathMatch handler = deployment.getServletPaths().getServletHandlerByExactPath(path + i);
-            if (handler != null) {
+            final ServletPathMatch handler = deployment.getServletPaths().getServletHandlerByPath(path + i);
+            if (handler != null && !handler.getManagedServlet().getServletInfo().getServletClass().equals(DefaultServlet.class)) {
                 return i;
             }
         }
