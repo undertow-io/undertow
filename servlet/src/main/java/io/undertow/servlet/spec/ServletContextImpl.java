@@ -380,6 +380,9 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public ServletRegistration getServletRegistration(final String servletName) {
         final ServletInfo servlet = deploymentInfo.getServlets().get(servletName);
+        if(servlet == null) {
+            return null;
+        }
         return new ServletRegistrationImpl(servlet, deployment);
     }
 
