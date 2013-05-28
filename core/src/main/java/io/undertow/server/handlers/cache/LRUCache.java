@@ -60,7 +60,7 @@ public class LRUCache<K, V> {
         CacheEntry<K, V> value = cache.get(key);
         if (value == null) {
             long expires;
-            if(maxEntries == -1) {
+            if(maxAge == -1) {
                 expires = -1;
             } else {
                 expires = System.currentTimeMillis() + maxAge;
