@@ -92,6 +92,9 @@ public class FilterPathMappingTestCase {
         builder.addFilter(new FilterInfo("/myservlet/myfilter/*", PathFilter.class));
         builder.addFilterUrlMapping("/myservlet/myfilter/*", "/myservlet/myfilter/*", DispatcherType.REQUEST);
 
+        builder.addFilter(new FilterInfo("/myfilter/*", PathFilter.class));
+        builder.addFilterUrlMapping("/myfilter/*", "/myfilter/*", DispatcherType.REQUEST);
+
         builder.addFilter(new FilterInfo("contextRoot", PathFilter.class));
         builder.addFilterServletNameMapping("contextRoot", "contextRoot", DispatcherType.REQUEST);
 
@@ -121,6 +124,7 @@ public class FilterPathMappingTestCase {
             runTest(client, "myservlet/myfilter/file.dat", "/myservlet/* - /myservlet - /myfilter/file.dat", "/*", "/myservlet/myfilter/*");
             runTest(client, "myservlet/myfilter/file.jsp", "/myservlet/* - /myservlet - /myfilter/file.jsp", "/*", "/myservlet/myfilter/*");
             runTest(client, "otherservlet/myfilter/file.jsp", "*.jsp - /otherservlet/myfilter/file.jsp - null", "/*");
+            runTest(client, "myfilter/file.jsp", "*.jsp - /myfilter/file.jsp - null", "/*", "/myfilter/*");
 
         } finally {
             client.getConnectionManager().shutdown();
