@@ -73,7 +73,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
-        final ServletRequestContext servletRequestContext = new ServletRequestContext(request, response);
+        final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), request, response);
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
 
         try {

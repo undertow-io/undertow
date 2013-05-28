@@ -3,6 +3,7 @@ package io.undertow.servlet.handlers;
 import java.util.List;
 
 import io.undertow.UndertowMessages;
+import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.security.SingleConstraintMatch;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -52,6 +53,7 @@ public class ServletRequestContext {
 
     public static final AttachmentKey<ServletRequestContext> ATTACHMENT_KEY = AttachmentKey.create(ServletRequestContext.class);
 
+    private final Deployment deployment;
     private final HttpServletRequestImpl originalRequest;
     private final HttpServletResponseImpl originalResponse;
     private ServletResponse servletResponse;
@@ -65,11 +67,16 @@ public class ServletRequestContext {
     private TransportGuaranteeType transportGuarenteeType;
     private HttpSessionImpl session;
 
-    public ServletRequestContext(final HttpServletRequestImpl originalRequest, final HttpServletResponseImpl originalResponse) {
+    public ServletRequestContext(final Deployment deployment, final HttpServletRequestImpl originalRequest, final HttpServletResponseImpl originalResponse) {
+        this.deployment = deployment;
         this.originalRequest = originalRequest;
         this.originalResponse = originalResponse;
         this.servletRequest = originalRequest;
         this.servletResponse = originalResponse;
+    }
+
+    public Deployment getDeployment() {
+        return deployment;
     }
 
     public ServletChain getCurrentServlet() {
