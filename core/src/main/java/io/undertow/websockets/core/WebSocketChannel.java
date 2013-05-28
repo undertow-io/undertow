@@ -76,7 +76,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     private final AtomicBoolean broken = new AtomicBoolean(false);
 
-    private boolean receivesSuspended;
+    private boolean receivesSuspended = true;
     private boolean closeFrameReceived;
     private final Set<String> subProtocols;
     private final boolean extensionsSupported;

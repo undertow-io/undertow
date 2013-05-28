@@ -229,6 +229,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
                 if (o.parts.size() == i) {
                     return base.compareTo(o.base);
                 }
+                return 1;
             } else if (o.parts.size() == i) {
                 //we have more parts, so should be checked first
                 return -1;
