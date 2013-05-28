@@ -35,7 +35,7 @@ import static org.xnio.IoUtils.safeClose;
 
 final class AjpReadListener implements ChannelListener<StreamSourceChannel>, ExchangeCompletionListener {
 
-    private static final byte[] CPONG = {'A', 'B', 0, 0, 0, 1, 9}; //CPONG response data
+    private static final byte[] CPONG = {'A', 'B', 0, 1, 9}; //CPONG response data
 
     private final HttpServerConnection connection;
     private final String scheme;
