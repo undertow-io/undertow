@@ -206,6 +206,10 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         return channel.isOpen();
     }
 
+    public boolean isCloseFrameReceived() {
+        return closeFrameReceived;
+    }
+
     @Override
     public SocketAddress getPeerAddress() {
         return connectedChannel.getPeerAddress();

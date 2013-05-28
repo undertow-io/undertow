@@ -24,6 +24,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.servlet.DispatcherType;
@@ -485,6 +486,7 @@ public class JsrWebSocketServer07Test {
 
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
+        final AtomicInteger closeCount = new AtomicInteger();
 
         class TestEndPoint extends Endpoint {
             @Override
@@ -494,6 +496,7 @@ public class JsrWebSocketServer07Test {
 
             @Override
             public void onClose(Session session, CloseReason closeReason) {
+                closeCount.incrementAndGet();
                 reason.set(closeReason);
             }
         }
@@ -509,6 +512,7 @@ public class JsrWebSocketServer07Test {
         latch.getIoFuture().get();
         Assert.assertEquals(code, reason.get().getCloseCode().getCode());
         Assert.assertEquals(reasonText, reason.get().getReasonPhrase());
+        Assert.assertEquals(1, closeCount.get());
         client.destroy();
     }
 

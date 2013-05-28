@@ -152,6 +152,12 @@ public interface WebSocketSession extends BinaryFrameSender, TextFrameSender, Pi
     boolean isOpen();
 
     /**
+     *
+     * @return {@code true} if a close frame has been recieved
+     */
+    boolean isCloseFrameReceived();
+
+    /**
      * Return the version of the user WebSocket protocol.
      */
     String getProtocolVersion();

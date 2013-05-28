@@ -279,6 +279,11 @@ public final class WebSocketChannelSession implements WebSocketSession {
     }
 
     @Override
+    public boolean isCloseFrameReceived() {
+        return channel.isCloseFrameReceived();
+    }
+
+    @Override
     public String getProtocolVersion() {
         return channel.getVersion().toHttpHeaderValue();
     }

@@ -26,6 +26,7 @@ import org.xnio.Buffers;
 import javax.websocket.Endpoint;
 import javax.websocket.MessageHandler;
 import javax.websocket.PongMessage;
+
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
@@ -64,13 +65,15 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
 
     @Override
     public final void onCloseFrame(WebSocketSession s, final CloseReason reason) {
-        endpoint.onClose(session, new javax.websocket.CloseReason(new javax.websocket.CloseReason.CloseCode() {
-            @Override
-            public int getCode() {
-                return reason.getStatusCode();
+        try {
+            if(reason == null) {
+                session.close();
+            } else {
+                session.close(new javax.websocket.CloseReason(javax.websocket.CloseReason.CloseCodes.getCloseCode(reason.getStatusCode()), reason.getReasonText()));
             }
-        }, reason.getReasonText()));
-        session.close0();
+        } catch (Throwable e) {
+            endpoint.onError(session, e);
+        }
     }
 
     /**

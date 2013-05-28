@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
@@ -57,6 +58,7 @@ public final class UndertowSession implements Session {
     private final Map<String, String> pathParameters;
     private final InstanceHandle<Endpoint> endpoint;
     private final Encoding encoding;
+    private final AtomicBoolean closed = new AtomicBoolean();
 
     public UndertowSession(WebSocketChannelSession session, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfig config, final Encoding encoding) {
         this.session = session;
@@ -216,15 +218,25 @@ public final class UndertowSession implements Session {
 
     @Override
     public void close(CloseReason closeReason) throws IOException {
-        try {
-            endpoint.getInstance().onClose(this, closeReason);
-            if (closeReason == null) {
-                session.sendClose(null);
-            } else {
-                session.sendClose(new io.undertow.websockets.api.CloseReason(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()));
+        if(closed.compareAndSet(false, true)) {
+            try {
+                if(closeReason == null) {
+                    endpoint.getInstance().onClose(this, new CloseReason(CloseReason.CloseCodes.NO_STATUS_CODE, null));
+                } else {
+                    endpoint.getInstance().onClose(this, closeReason);
+                }
+                if(!session.isCloseFrameReceived()) {
+                    //if we have already recieved a close frame then the close frame handler
+                    //will deal with sending back the reason message
+                    if (closeReason == null) {
+                        session.sendClose(null);
+                    } else {
+                        session.sendClose(new io.undertow.websockets.api.CloseReason(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()));
+                    }
+                }
+            } finally {
+                close0();
             }
-        } finally {
-            close0();
         }
     }
 
