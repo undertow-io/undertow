@@ -1,3 +1,4 @@
 io.undertow.predicate.PathMatchPredicate$Builder
 io.undertow.predicate.HasResponseHeaderPredicate$Builder
 io.undertow.predicate.HasRequestHeaderPredicate$Builder
+io.undertow.predicate.RequestHeaderContainsPredicate$Builder

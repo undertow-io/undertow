@@ -134,6 +134,16 @@ public class Predicates {
         return new HasRequestHeaderPredicate(headers, true);
     }
 
+    /**
+     * Returns true if the given request header is present and contains one
+     * @param header
+     * @param values
+     * @return
+     */
+    public static Predicate requestHeaderContains(final String header, final String ... values) {
+        return new RequestHeaderContainsPredicate(header, values);
+    }
+
     private Predicates() {
 
     }
