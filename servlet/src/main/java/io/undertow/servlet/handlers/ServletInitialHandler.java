@@ -125,17 +125,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             try {
                 listeners.requestInitialized(request);
                 next.handleRequest(exchange);
-
-                int responseCode = exchange.getResponseCode();
-                if (!exchange.isResponseStarted() && responseCode >= 400 && !exchange.isDispatched()) {
-                    String location = servletContext.getDeployment().getErrorPages().getErrorLocation(responseCode);
-                    if (location != null) {
-                        response.reset();                       //reset the response
-                        exchange.setResponseCode(responseCode); //the reset call cleared the response code
-                        RequestDispatcherImpl dispatcher = new RequestDispatcherImpl(location, servletContext);
-                        dispatcher.error(request, response, servletChain.getManagedServlet().getServletInfo().getName());
-                    }
-                }
                 //
             } catch (Throwable t) {
                 if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
