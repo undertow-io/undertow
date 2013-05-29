@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
@@ -55,6 +56,7 @@ public class ServletInfo implements Cloneable {
     private volatile String runAs;
     private volatile MultipartConfigElement multipartConfig;
     private volatile ServletSecurityInfo servletSecurityInfo;
+    private volatile Executor executor;
 
 
     public ServletInfo(final String name, final Class<? extends Servlet> servletClass) {
@@ -106,7 +108,8 @@ public class ServletInfo implements Cloneable {
                 .setEnabled(enabled)
                 .setAsyncSupported(asyncSupported)
                 .setRunAs(runAs)
-                .setMultipartConfig(multipartConfig);
+                .setMultipartConfig(multipartConfig)
+                .setExecutor(executor);
         info.mappings.addAll(mappings);
         info.initParams.putAll(initParams);
         info.securityRoleRefs.addAll(securityRoleRefs);
@@ -244,6 +247,15 @@ public class ServletInfo implements Cloneable {
 
     public ServletInfo setServletSecurityInfo(final ServletSecurityInfo servletSecurityInfo) {
         this.servletSecurityInfo = servletSecurityInfo;
+        return this;
+    }
+
+    public Executor getExecutor() {
+        return executor;
+    }
+
+    public ServletInfo setExecutor(final Executor executor) {
+        this.executor = executor;
         return this;
     }
 }

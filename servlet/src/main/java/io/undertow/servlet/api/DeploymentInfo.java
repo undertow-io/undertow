@@ -59,8 +59,8 @@ public class DeploymentInfo implements Cloneable {
     private volatile ClassIntrospecter classIntrospecter = DefaultClassIntrospector.INSTANCE;
     private volatile int majorVersion = 3;
     private volatile int minorVersion;
-    private volatile InstanceFactory<Executor> executorFactory;
-    private volatile InstanceFactory<Executor> asyncExecutorFactory;
+    private volatile Executor executor;
+    private volatile Executor asyncExecutor;
     private volatile File tempDir;
     private volatile JspConfigDescriptor jspConfigDescriptor;
     private volatile DefaultServletConfig defaultServletConfig;
@@ -481,35 +481,38 @@ public class DeploymentInfo implements Cloneable {
         return Collections.unmodifiableList(securityConstraints);
     }
 
-    public InstanceFactory<Executor> getExecutorFactory() {
-        return executorFactory;
+    public Executor getExecutor() {
+        return executor;
     }
 
     /**
-     * Sets the factory that is used to create the {@link java.util.concurrent.ExecutorService} that is used to run servlet
-     * invocations.
+     * Sets the executor that will be used to run servlet invocations. If this is null then the XNIO worker pool will be
+     * used.
+     *
+     * Individual servlets may use a different executor
      * <p/>
      * If this is null then the current executor is used, which is generally the XNIO worker pool
      *
-     * @param executorFactory The executor factory
+     * @param executor The executor
+     * @see ServletInfo#executor
      */
-    public void setExecutorFactory(final InstanceFactory<Executor> executorFactory) {
-        this.executorFactory = executorFactory;
+    public void setExecutor(final Executor executor) {
+        this.executor = executor;
     }
 
-    public InstanceFactory<Executor> getAsyncExecutorFactory() {
-        return asyncExecutorFactory;
+    public Executor getAsyncExecutor() {
+        return asyncExecutor;
     }
 
     /**
-     * Sets the factory that is used to create the {@link java.util.concurrent.ExecutorService} that is used to run async tasks.
+     * Sets the executor that is used to run async tasks.
      * <p/>
-     * If this is null then {@link #executorFactory} is used, if this is also null then the default is used
+     * If this is null then {@link #executor} is used, if this is also null then the default is used
      *
-     * @param asyncExecutorFactory The executor factory
+     * @param asyncExecutor The executor
      */
-    public void setAsyncExecutorFactory(final InstanceFactory<Executor> asyncExecutorFactory) {
-        this.asyncExecutorFactory = asyncExecutorFactory;
+    public void setAsyncExecutor(final Executor asyncExecutor) {
+        this.asyncExecutor = asyncExecutor;
     }
 
     public File getTempDir() {
@@ -708,8 +711,8 @@ public class DeploymentInfo implements Cloneable {
         info.welcomePages.addAll(welcomePages);
         info.errorPages.addAll(errorPages);
         info.mimeMappings.addAll(mimeMappings);
-        info.executorFactory = executorFactory;
-        info.asyncExecutorFactory = asyncExecutorFactory;
+        info.executor = executor;
+        info.asyncExecutor = asyncExecutor;
         info.tempDir = tempDir;
         info.jspConfigDescriptor = jspConfigDescriptor;
         info.defaultServletConfig = defaultServletConfig;

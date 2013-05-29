@@ -1,5 +1,7 @@
 package io.undertow.servlet.handlers;
 
+import java.util.concurrent.Executor;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.core.ManagedServlet;
 
@@ -10,11 +12,13 @@ public class ServletChain {
     private final HttpHandler handler;
     private final ManagedServlet managedServlet;
     private final String servletPath;
+    private final Executor executor;
 
     public ServletChain(final HttpHandler handler, final ManagedServlet managedServlet, final String servletPath) {
         this.handler = handler;
         this.managedServlet = managedServlet;
         this.servletPath = servletPath;
+        this.executor = managedServlet.getServletInfo().getExecutor();
     }
 
     public ServletChain(final ServletChain other) {
@@ -34,5 +38,9 @@ public class ServletChain {
      */
     public String getServletPath() {
         return servletPath;
+    }
+
+    public Executor getExecutor() {
+        return executor;
     }
 }

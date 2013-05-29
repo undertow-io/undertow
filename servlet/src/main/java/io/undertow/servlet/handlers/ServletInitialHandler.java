@@ -18,9 +18,12 @@
 
 package io.undertow.servlet.handlers;
 
+import java.util.concurrent.Executor;
+
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -65,10 +68,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        if (exchange.isInIoThread()) {
-            exchange.dispatch(this);
-            return;
-        }
         final String path = exchange.getRelativePath();
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
@@ -76,13 +75,24 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), request, response);
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
 
-        try {
-            exchange.startBlocking(new ServletBlockingHttpExchange(exchange));
-            servletRequestContext.setServletPathMatch(info);
+        exchange.startBlocking(new ServletBlockingHttpExchange(exchange));
+        servletRequestContext.setServletPathMatch(info);
+
+        Executor executor = info.getExecutor();
+        if(executor == null) {
+            executor = servletContext.getDeployment().getExecutor();
+        }
+
+        if (exchange.isInIoThread() || executor != null) {
+            //either the exchange has not been dispatched yet, or we need to use a special executor
+            exchange.dispatch(executor, new HttpHandler() {
+                @Override
+                public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                    dispatchRequest(exchange, servletRequestContext, info, DispatcherType.REQUEST);
+                }
+            });
+        } else {
             dispatchRequest(exchange, servletRequestContext, info, DispatcherType.REQUEST);
-        } catch (Throwable t) {
-            UndertowLogger.REQUEST_LOGGER.errorf(t, "Internal error handling servlet request %s", exchange.getRequestURI());
-            exchange.endExchange();
         }
     }
 

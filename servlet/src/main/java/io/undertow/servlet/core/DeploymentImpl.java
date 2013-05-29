@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.session.SessionManager;
@@ -50,6 +51,9 @@ public class DeploymentImpl implements Deployment {
     private final ServletPathMatches servletPaths;
     private final Servlets servlets;
     private final Filters filters;
+    private final Executor executor;
+    private final Executor asyncExecutor;
+
     private volatile ApplicationListeners applicationListeners;
     private volatile ServletContextImpl servletContext;
     private volatile ServletInitialHandler servletHandler;
@@ -61,6 +65,8 @@ public class DeploymentImpl implements Deployment {
 
     public DeploymentImpl(final DeploymentInfo deploymentInfo) {
         this.deploymentInfo = deploymentInfo;
+        this.executor = deploymentInfo.getExecutor();
+        this.asyncExecutor = deploymentInfo.getAsyncExecutor();
         servletPaths = new ServletPathMatches(this);
         servlets = new Servlets(this, servletPaths);
         filters = new Filters(this, servletPaths);
@@ -164,5 +170,15 @@ public class DeploymentImpl implements Deployment {
     @Override
     public SessionManager getSessionManager() {
         return sessionManager;
+    }
+
+    @Override
+    public Executor getExecutor() {
+        return executor;
+    }
+
+    @Override
+    public Executor getAsyncExecutor() {
+        return asyncExecutor;
     }
 }

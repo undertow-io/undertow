@@ -35,8 +35,6 @@ import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.AttachmentHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletMessages;
@@ -68,7 +66,6 @@ import io.undertow.servlet.handlers.security.ServletAuthenticationConstraintHand
 import io.undertow.servlet.handlers.security.ServletConfidentialityConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.servlet.handlers.security.ServletSecurityConstraintHandler;
-import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.MimeMappings;
 
@@ -81,7 +78,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.concurrent.Executor;
 
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
@@ -106,8 +102,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
      */
     private volatile DeploymentImpl deployment;
     private volatile State state = State.UNDEPLOYED;
-    private volatile InstanceHandle<Executor> executor;
-    private volatile InstanceHandle<Executor> asyncExecutor;
 
     public DeploymentManagerImpl(final DeploymentInfo deployment, final ServletContainer servletContainer) {
         this.originalDeployment = deployment;
@@ -377,26 +371,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
             }
             HttpHandler root = deployment.getHandler();
 
-            //create the executor, if it exists
-            if (deployment.getDeploymentInfo().getExecutorFactory() != null) {
-                try {
-                    executor = deployment.getDeploymentInfo().getExecutorFactory().createInstance();
-                    root = new AttachmentHandler<>(HttpServerExchange.DISPATCH_EXECUTOR, root, executor.getInstance());
-                } catch (InstantiationException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            if (deployment.getDeploymentInfo().getExecutorFactory() != null) {
-                if (deployment.getDeploymentInfo().getAsyncExecutorFactory() != null) {
-                    try {
-                        asyncExecutor = deployment.getDeploymentInfo().getAsyncExecutorFactory().createInstance();
-                        root = new AttachmentHandler<>(AsyncContextImpl.ASYNC_EXECUTOR, root, asyncExecutor.getInstance());
-                    } catch (InstantiationException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-
-            }
             state = State.STARTED;
             return root;
         } finally {
@@ -408,31 +382,12 @@ public class DeploymentManagerImpl implements DeploymentManager {
     public void stop() throws ServletException {
         ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
-            try {
-                for (Lifecycle object : deployment.getLifecycleObjects()) {
-                    object.stop();
-                }
-            } finally {
-                if (executor != null) {
-                    executor.release();
-                }
-                if (asyncExecutor != null) {
-                    asyncExecutor.release();
-                }
-                executor = null;
-                asyncExecutor = null;
+            for (Lifecycle object : deployment.getLifecycleObjects()) {
+                object.stop();
             }
             deployment.getSessionManager().stop();
         } finally {
             handle.tearDown();
-            if (executor != null) {
-                executor.release();
-            }
-            if (asyncExecutor != null) {
-                asyncExecutor.release();
-            }
-            executor = null;
-            asyncExecutor = null;
         }
         state = State.DEPLOYED;
     }

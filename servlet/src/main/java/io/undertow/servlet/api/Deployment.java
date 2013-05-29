@@ -19,6 +19,7 @@
 package io.undertow.servlet.api;
 
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.session.SessionManager;
@@ -31,6 +32,8 @@ import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.spec.ServletContextImpl;
 
 /**
+ * Runtime representation of a deployment.
+ *
  * @author Stuart Douglas
  */
 public interface Deployment {
@@ -57,6 +60,22 @@ public interface Deployment {
 
     ServletDispatcher getServletDispatcher();
 
+    /**
+     *
+     * @return The session manager
+     */
     SessionManager getSessionManager();
+
+    /**
+     *
+     * @return The executor used for servlet requests. May be null in which case the XNIO worker is used
+     */
+    Executor getExecutor();
+
+    /**
+     *
+     * @return The executor used for async request dispatches. May be null in which case the XNIO worker is used
+     */
+    Executor getAsyncExecutor();
 
 }
