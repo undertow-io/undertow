@@ -79,7 +79,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         servletRequestContext.setServletPathMatch(info);
 
         Executor executor = info.getExecutor();
-        if(executor == null) {
+        if (executor == null) {
             executor = servletContext.getDeployment().getExecutor();
         }
 
@@ -119,9 +119,10 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     }
 
     public void handleFirstRequest(final HttpServerExchange exchange, final ServletChain servletChain, final ServletRequestContext servletRequestContext, final ServletRequest request, final ServletResponse response) throws Exception {
+
+        ThreadSetupAction.Handle handle = setupAction.setup(exchange);
         try {
             ServletRequestContext.setCurrentRequestContext(servletRequestContext);
-            ThreadSetupAction.Handle handle = setupAction.setup(exchange);
             try {
                 listeners.requestInitialized(request);
                 next.handleRequest(exchange);
@@ -148,10 +149,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                         }
                     }
                 }
-            } finally {
-                handle.tearDown();
-            }
 
+            }
             servletContext.getDeployment().getApplicationListeners().requestDestroyed(request);
             if (!exchange.isDispatched()) {
                 servletRequestContext.getOriginalResponse().responseDone();
@@ -160,7 +159,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 IoUtils.safeClose(parser);
             }
         } finally {
-            ServletRequestContext.clearCurrentServletAttachments();
+            try {
+                handle.tearDown();
+            } finally {
+                ServletRequestContext.clearCurrentServletAttachments();
+            }
         }
     }
 
