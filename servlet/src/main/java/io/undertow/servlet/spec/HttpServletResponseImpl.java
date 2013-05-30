@@ -263,7 +263,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
-    public ServletOutputStream getOutputStream() throws IOException {
+    public ServletOutputStream getOutputStream() {
         if (responseState == ResponseState.WRITER) {
             throw UndertowServletMessages.MESSAGES.getWriterAlreadyCalled();
         }
@@ -487,14 +487,14 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (writer != null) {
             writer.close();
         }
-        if (servletOutputStream != null) {
-            try {
+        try {
+            if (servletOutputStream == null) {
+                getOutputStream().close();
+            } else {
                 servletOutputStream.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
             }
-        } else {
-            exchange.endExchange();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
