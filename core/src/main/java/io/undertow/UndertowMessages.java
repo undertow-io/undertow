@@ -179,4 +179,5 @@ public interface UndertowMessages {
 
     @Message(id = 52, value = "Session data requested when non session based authentication in use")
     IllegalStateException noSessionData();
+
 }

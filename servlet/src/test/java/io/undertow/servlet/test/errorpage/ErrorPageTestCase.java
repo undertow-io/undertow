@@ -48,34 +48,58 @@ public class ErrorPageTestCase {
     @BeforeClass
     public static void setup() throws IOException, ServletException {
 
-        DeploymentInfo builder = new DeploymentInfo();
-
-        final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
+        final PathHandler root = new PathHandler();
+        DefaultServer.setRootHandler(root);
 
-        builder.addServlet(new ServletInfo("error", ErrorServlet.class)
+        DeploymentInfo builder1 = new DeploymentInfo();
+
+        builder1.addServlet(new ServletInfo("error", ErrorServlet.class)
                 .addMapping("/error"));
 
-        builder.addServlet(new ServletInfo("path", PathServlet.class)
+        builder1.addServlet(new ServletInfo("path", PathServlet.class)
                 .addMapping("/*"));
 
-        builder.addErrorPage(new ErrorPage("/defaultErrorPage"));
-        builder.addErrorPage(new ErrorPage("/404", 404));
-        builder.addErrorPage(new ErrorPage("/500", 500));
-        builder.addErrorPage(new ErrorPage("/parentException", ParentException.class));
-        builder.addErrorPage(new ErrorPage("/childException", ChildException.class));
-        builder.addErrorPage(new ErrorPage("/runtimeException", RuntimeException.class));
+        builder1.addErrorPage(new ErrorPage("/defaultErrorPage"));
+        builder1.addErrorPage(new ErrorPage("/404", 404));
+        builder1.addErrorPage(new ErrorPage("/500", 500));
+        builder1.addErrorPage(new ErrorPage("/parentException", ParentException.class));
+        builder1.addErrorPage(new ErrorPage("/childException", ChildException.class));
+        builder1.addErrorPage(new ErrorPage("/runtimeException", RuntimeException.class));
 
-        builder.setClassIntrospecter(TestClassIntrospector.INSTANCE)
+        builder1.setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setClassLoader(ErrorPageTestCase.class.getClassLoader())
-                .setContextPath("/servletContext")
-                .setDeploymentName("servletContext.war");
+                .setContextPath("/servletContext1")
+                .setDeploymentName("servletContext1.war");
 
-        final DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
-        root.addPath(builder.getContextPath(), manager.start());
+        final DeploymentManager manager1 = container.addDeployment(builder1);
+        manager1.deploy();
+        root.addPath(builder1.getContextPath(), manager1.start());
 
-        DefaultServer.setRootHandler(root);
+
+        DeploymentInfo builder2 = new DeploymentInfo();
+
+        builder2.addServlet(new ServletInfo("error", ErrorServlet.class)
+                .addMapping("/error"));
+
+        builder2.addServlet(new ServletInfo("path", PathServlet.class)
+                .addMapping("/*"));
+
+        builder2.addErrorPage(new ErrorPage("/404", 404));
+        builder2.addErrorPage(new ErrorPage("/501", 501));
+        builder2.addErrorPage(new ErrorPage("/parentException", ParentException.class));
+        builder2.addErrorPage(new ErrorPage("/childException", ChildException.class));
+        builder2.addErrorPage(new ErrorPage("/runtimeException", RuntimeException.class));
+
+        builder2.setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setClassLoader(ErrorPageTestCase.class.getClassLoader())
+                .setContextPath("/servletContext2")
+                .setDeploymentName("servletContext2.war");
+
+        final DeploymentManager manager2 = container.addDeployment(builder2);
+        manager2.deploy();
+        root.addPath(builder2.getContextPath(), manager2.start());
+
     }
 
 
@@ -83,26 +107,46 @@ public class ErrorPageTestCase {
     public void testErrorPages() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            runTest(client, 404, null, "/404");
-            runTest(client, 500, null, "/500");
-            runTest(client, 501, null, "/defaultErrorPage");
-            runTest(client, null, ParentException.class, "/parentException");
-            runTest(client, null, ChildException.class, "/childException");
-            runTest(client, null, RuntimeException.class, "/runtimeException");
-            runTest(client, null, IllegalStateException.class, "/runtimeException");
-            runTest(client, null, Exception.class, "/defaultErrorPage");
-            runTest(client, null, IOException.class, "/defaultErrorPage");
-            runTest(client, null, ServletException.class, "/defaultErrorPage");
+            runTest(1, client, 404, null, "/404");
+            runTest(1, client, 500, null, "/500");
+            runTest(1, client, 501, null, "/defaultErrorPage");
+            runTest(1, client, null, ParentException.class, "/parentException");
+            runTest(1, client, null, ChildException.class, "/childException");
+            runTest(1, client, null, RuntimeException.class, "/runtimeException");
+            runTest(1, client, null, IllegalStateException.class, "/runtimeException");
+            runTest(1, client, null, Exception.class, "/defaultErrorPage");
+            runTest(1, client, null, IOException.class, "/defaultErrorPage");
+            runTest(1, client, null, ServletException.class, "/defaultErrorPage");
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
 
-    private void runTest(final TestHttpClient client, Integer statusCode, Class<?> exception, String expected) throws IOException {
+
+    @Test
+    public void testErrorPagesWithNoDefaultErrorPage() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            runTest(2, client, 404, null, "/404");
+            runTest(2, client, 501, null, "/501");
+            runTest(2, client, 500, null, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>");
+            runTest(2, client, null, ParentException.class, "/parentException");
+            runTest(2, client, null, ChildException.class, "/childException");
+            runTest(2, client, null, RuntimeException.class, "/runtimeException");
+            runTest(2, client, null, IllegalStateException.class, "/runtimeException");
+            runTest(2, client, null, Exception.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>");
+            runTest(2, client, null, IOException.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>");
+            runTest(2, client, null, ServletException.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>");
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    private void runTest(int deploymentNo, final TestHttpClient client, Integer statusCode, Class<?> exception, String expected) throws IOException {
         final HttpGet get;
         final HttpResponse result;
         final String response;
-        get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/error?" + (statusCode != null ? "statusCode=" + statusCode : "exception=" + exception.getName()));
+        get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext" + deploymentNo + "/error?" + (statusCode != null ? "statusCode=" + statusCode : "exception=" + exception.getName()));
         result = client.execute(get);
         Assert.assertEquals(statusCode == null ? 500 : statusCode, result.getStatusLine().getStatusCode());
         response = HttpClientUtils.readResponse(result);

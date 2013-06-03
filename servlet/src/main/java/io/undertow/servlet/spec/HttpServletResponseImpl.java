@@ -40,6 +40,7 @@ import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 
 
 /**
@@ -126,7 +127,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             }
         } else if (msg != null) {
             setContentType("text/html");
-            getWriter().write(msg);
+            getWriter().write("<html><head><title>Error</title></head><body>" + msg + "</body></html>");
             getWriter().close();
         }
         responseDone();
@@ -134,7 +135,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendError(final int sc) throws IOException {
-        sendError(sc, null);
+        sendError(sc, StatusCodes.getReason(sc));
     }
 
     @Override

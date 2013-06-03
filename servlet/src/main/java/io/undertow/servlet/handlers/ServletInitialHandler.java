@@ -23,6 +23,7 @@ import java.util.concurrent.Executor;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
@@ -144,6 +145,12 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                             }
                         } else {
                             UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", exchange);
+                            //TODO: we need a debug mode to generate a debug error page
+                            if(response instanceof HttpServletResponse) {
+                                ((HttpServletResponse) response).sendError(500);
+                            } else {
+                                servletRequestContext.getOriginalResponse().sendError(500);
+                            }
                         }
                     }
                 }
