@@ -25,7 +25,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -58,17 +57,16 @@ public class CrossContextServletSessionTestCase {
     public static void setup() throws ServletException {
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
-        final CookieHandler cookieHandler = new CookieHandler();
         final PathHandler path = new PathHandler();
-        DefaultServer.setRootHandler(cookieHandler);
+        DefaultServer.setRootHandler(path);
 
-        createDeployment("1", container, cookieHandler, path);
-        createDeployment("2", container, cookieHandler, path);
+        createDeployment("1", container, path);
+        createDeployment("2", container, path);
 
     }
 
-    private static void createDeployment(final String name, final ServletContainer container, final CookieHandler cookieHandler, final PathHandler path) throws ServletException {
-        cookieHandler.setNext(path);
+    private static void createDeployment(final String name, final ServletContainer container,  final PathHandler path) throws ServletException {
+
         ServletInfo s = new ServletInfo("servlet", SessionServlet.class)
                 .addMapping("/servlet");
         ServletInfo forward = new ServletInfo("forward", ForwardServlet.class)

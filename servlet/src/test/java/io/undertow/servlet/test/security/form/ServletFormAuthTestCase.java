@@ -7,8 +7,6 @@ import java.util.List;
 
 import javax.servlet.ServletException;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -82,8 +80,7 @@ public class ServletFormAuthTestCase {
         manager.deploy();
         path.addPath(builder.getContextPath(), manager.start());
 
-        HttpHandler current = new CookieHandler(path);
-        DefaultServer.setRootHandler(current);
+        DefaultServer.setRootHandler(path);
     }
 
     @Test

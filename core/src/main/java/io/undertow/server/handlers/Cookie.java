@@ -26,7 +26,7 @@ import io.undertow.util.AttachmentKey;
 /**
  * A HTTP cookie.
  *
- * @see CookieHandler
+ * @see io.undertow.server.ExchangeCookieUtils
  * @author Stuart Douglas
  */
 public interface Cookie {

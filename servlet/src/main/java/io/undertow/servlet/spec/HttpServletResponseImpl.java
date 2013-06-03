@@ -34,7 +34,6 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.CookieImpl;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.CanonicalPathUtils;
@@ -79,7 +78,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude) {
             return;
         }
-        CookieImpl.addResponseCookie(exchange, new ServletCookieAdaptor(cookie));
+        exchange.setResponseCookie(new ServletCookieAdaptor(cookie));
     }
 
     @Override

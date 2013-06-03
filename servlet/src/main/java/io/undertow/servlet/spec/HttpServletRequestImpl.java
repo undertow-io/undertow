@@ -61,7 +61,6 @@ import javax.servlet.http.Part;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
@@ -129,7 +128,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Cookie[] getCookies() {
         if (cookies == null) {
-            Map<String, io.undertow.server.handlers.Cookie> cookies = CookieImpl.getRequestCookies(exchange);
+            Map<String, io.undertow.server.handlers.Cookie> cookies = exchange.getRequestCookies();
             if (cookies.isEmpty()) {
                 return null;
             }

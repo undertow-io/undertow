@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import javax.servlet.ServletException;
 
-import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -31,9 +30,7 @@ public class ChangeSessionIdTestCase {
     @BeforeClass
     public static void setup() throws ServletException {
 
-        final CookieHandler cookieHandler = new CookieHandler();
         final PathHandler path = new PathHandler();
-        cookieHandler.setNext(path);
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
         ServletInfo s = new ServletInfo("servlet", ChangeSessionIdServlet.class)
@@ -49,7 +46,7 @@ public class ChangeSessionIdTestCase {
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         path.addPath(builder.getContextPath(), manager.start());
-        DefaultServer.setRootHandler(cookieHandler);
+        DefaultServer.setRootHandler(path);
     }
 
 

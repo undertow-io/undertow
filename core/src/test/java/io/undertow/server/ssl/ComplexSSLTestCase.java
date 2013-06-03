@@ -26,7 +26,6 @@ import java.security.GeneralSecurityException;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
-import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.error.SimpleErrorPageHandler;
@@ -58,7 +57,6 @@ public class ComplexSSLTestCase {
 
         final NameVirtualHostHandler virtualHostHandler = new NameVirtualHostHandler();
         HttpHandler root = virtualHostHandler;
-        root = new CookieHandler(root);
         root = new SimpleErrorPageHandler(root);
         root = new CanonicalPathHandler(root);
 

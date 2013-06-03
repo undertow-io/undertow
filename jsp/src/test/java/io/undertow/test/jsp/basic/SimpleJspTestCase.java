@@ -25,7 +25,6 @@ import javax.servlet.ServletException;
 
 import io.undertow.jsp.HackInstanceManager;
 import io.undertow.jsp.JspServletBuilder;
-import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -56,9 +55,7 @@ public class SimpleJspTestCase {
     @BeforeClass
     public static void setup() throws ServletException {
 
-        final CookieHandler cookieHandler = new CookieHandler();
         final PathHandler servletPath = new PathHandler();
-        cookieHandler.setNext(servletPath);
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
 
@@ -76,7 +73,7 @@ public class SimpleJspTestCase {
         manager.deploy();
         servletPath.addPath(builder.getContextPath(), manager.start());
 
-        DefaultServer.setRootHandler(cookieHandler);
+        DefaultServer.setRootHandler(servletPath);
         System.setProperty(KEY, "Hello JSP!");
     }
 

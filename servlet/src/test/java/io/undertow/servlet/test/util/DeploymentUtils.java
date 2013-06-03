@@ -20,7 +20,6 @@ package io.undertow.servlet.test.util;
 
 import javax.servlet.ServletException;
 
-import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -45,7 +44,6 @@ public class DeploymentUtils {
     public static Deployment setupServlet(final ServletInfo... servlets) {
 
         final PathHandler pathHandler = new PathHandler();
-        CookieHandler cookieHandler = new CookieHandler(pathHandler);
         final ServletContainer container = ServletContainer.Factory.newInstance();
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -60,7 +58,7 @@ public class DeploymentUtils {
         } catch (ServletException e) {
             throw new RuntimeException(e);
         }
-        DefaultServer.setRootHandler(cookieHandler);
+        DefaultServer.setRootHandler(pathHandler);
 
         return manager.getDeployment();
 

@@ -16,58 +16,44 @@
  * limitations under the License.
  */
 
-package io.undertow.server.handlers;
+package io.undertow.server;
 
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.server.ConduitWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConduitFactory;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
-import org.xnio.conduits.StreamSinkConduit;
 
 /**
+ * Utility class for dealing with cookies.
+ * <p/>
+ * This is intended for use by connector implementations.
+ *
  * @author Stuart Douglas
  */
-public class CookieHandler implements HttpHandler {
+public class ExchangeCookieUtils {
 
     public static final String DOMAIN = "$Domain";
     public static final String VERSION = "$Version";
     public static final String PATH = "$Path";
-    private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
 
-    public CookieHandler(final HttpHandler next) {
-        this.next = next;
+    private ExchangeCookieUtils() {
     }
 
-    public CookieHandler() {
-    }
-
-    @Override
-    public void handleRequest(final HttpServerExchange exchange) throws Exception {
-
-        final Map<String, Cookie> cookies = parseCookies(exchange);
-        exchange.putAttachment(Cookie.REQUEST_COOKIES, cookies);
-        exchange.addResponseWrapper(CookieConduitWrapper.INSTANCE);
-        next.handleRequest(exchange);
-    }
-
-    private static Map<String, Cookie> parseCookies(final HttpServerExchange exchange) {
+    public static Map<String, Cookie> parseRequestCookies(final HttpServerExchange exchange) {
         List<String> cookies = exchange.getRequestHeaders().get(Headers.COOKIE);
 
         if (cookies == null) {
-            return Collections.emptyMap();
+            return new TreeMap<String, Cookie>();
         }
-        final Map<String, Cookie> parsedCookies = new HashMap<String, Cookie>();
+        final Map<String, Cookie> parsedCookies = new TreeMap<String, Cookie>();
 
         final int maxCookies = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200);
 
@@ -78,7 +64,6 @@ public class CookieHandler implements HttpHandler {
     }
 
     /**
-     *
      * @param cookie        The cookie
      * @param parsedCookies The map of cookies
      */
@@ -112,7 +97,7 @@ public class CookieHandler implements HttpHandler {
                 case 2: {
                     if (c == ';') {
                         final String value = cookie.substring(start, i);
-                        if(++cookieCount == maxCookies) {
+                        if (++cookieCount == maxCookies) {
                             throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
                         }
                         if (name.startsWith("$")) {
@@ -131,7 +116,7 @@ public class CookieHandler implements HttpHandler {
                 case 3: {
                     if (c == '"') {
                         final String value = cookie.substring(start, i);
-                        if(++cookieCount == maxCookies) {
+                        if (++cookieCount == maxCookies) {
                             throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
                         }
                         if (name.startsWith("$")) {
@@ -148,7 +133,7 @@ public class CookieHandler implements HttpHandler {
         }
         if (state == 2) {
             final String value = cookie.substring(start);
-            if(++cookieCount == maxCookies) {
+            if (++cookieCount == maxCookies) {
                 throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
             }
             if (name.startsWith("$")) {
@@ -262,32 +247,14 @@ public class CookieHandler implements HttpHandler {
         return header.toString();
     }
 
-    public HttpHandler getNext() {
-        return next;
-    }
-
-    public CookieHandler setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
-        this.next = next;
-        return this;
-    }
-
-    private static class CookieConduitWrapper implements ConduitWrapper<StreamSinkConduit> {
-
-        public static final CookieConduitWrapper INSTANCE = new CookieConduitWrapper();
-
-        @Override
-        public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
-
-            final Map<String, Cookie> cookies = exchange.getAttachment(Cookie.RESPONSE_COOKIES);
-            if (cookies != null) {
-                for(Map.Entry<String, Cookie> entry : cookies.entrySet()) {
-                    StringBuilder builder = new StringBuilder();
-                    builder.append(getCookieString(entry.getValue()));
-                    exchange.getResponseHeaders().add(Headers.SET_COOKIE, builder.toString());
-                }
+    public static void flattenCookies(final HttpServerExchange exchange) {
+        Map<String, Cookie> cookies = exchange.getResponseCookiesInternal();
+        if (cookies != null) {
+            for (Map.Entry<String, Cookie> entry : cookies.entrySet()) {
+                StringBuilder builder = new StringBuilder();
+                builder.append(getCookieString(entry.getValue()));
+                exchange.getResponseHeaders().add(Headers.SET_COOKIE, builder.toString());
             }
-            return factory.create();
         }
     }
 }

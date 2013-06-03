@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
 import io.undertow.conduits.ConduitListener;
+import io.undertow.server.ExchangeCookieUtils;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -168,6 +169,10 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         //if currentDataBuffer is set then we just
         if (anyAreSet(oldState, FLAG_START)) {
             if (readBodyChunkBuffer == null) {
+
+                //merge the cookies into the header map
+                ExchangeCookieUtils.flattenCookies(exchange);
+
                 currentDataBuffer = pool.allocate();
                 final ByteBuffer buffer = currentDataBuffer.getResource();
                 packetHeaderAndDataBuffer = new ByteBuffer[1];

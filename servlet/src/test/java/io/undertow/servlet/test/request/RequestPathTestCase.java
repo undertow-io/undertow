@@ -24,7 +24,6 @@ import java.util.List;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 
-import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -55,7 +54,6 @@ public class RequestPathTestCase {
 
 
         final PathHandler pathHandler = new PathHandler();
-        CookieHandler cookieHandler = new CookieHandler(pathHandler);
         final ServletContainer container = ServletContainer.Factory.newInstance();
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -88,7 +86,7 @@ public class RequestPathTestCase {
         } catch (ServletException e) {
             throw new RuntimeException(e);
         }
-        DefaultServer.setRootHandler(cookieHandler);
+        DefaultServer.setRootHandler(pathHandler);
 
     }
 

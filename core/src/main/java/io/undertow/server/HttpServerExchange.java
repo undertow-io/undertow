@@ -39,6 +39,7 @@ import io.undertow.io.BlockingSenderImpl;
 import io.undertow.io.Sender;
 import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
+import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
@@ -107,6 +108,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private Map<String, Deque<String>> queryParameters;
     private Map<String, Deque<String>> pathParameters;
+
+    private Map<String, Cookie> requestCookies;
+    private Map<String, Cookie> responseCookies;
 
     /**
      * The actual response channel. May be null if it has not been created yet.
@@ -826,6 +830,47 @@ public final class HttpServerExchange extends AbstractAttachable {
             pathParameters.put(name, list = new ArrayDeque<String>(2));
         }
         list.add(param);
+    }
+
+    /**
+     *
+     * @return A mutable map of request cookies
+     */
+    public Map<String, Cookie> getRequestCookies() {
+        if(requestCookies == null) {
+            requestCookies = ExchangeCookieUtils.parseRequestCookies(this);
+        }
+        return requestCookies;
+    }
+
+    /**
+     * Sets a response cookie
+     * @param cookie The cookie
+     */
+    public void setResponseCookie(final Cookie cookie) {
+        if(responseCookies == null) {
+            responseCookies = new TreeMap<>(); //hashmap is slow to allocate in JDK7
+        }
+        responseCookies.put(cookie.getName(), cookie);
+    }
+
+    /**
+     * @return A mutable map of response cookies
+     */
+    public Map<String, Cookie> getResponseCookies() {
+        if (responseCookies == null) {
+            responseCookies = new TreeMap<>();
+        }
+        return responseCookies;
+    }
+
+    /**
+     * For internal use only
+     *
+     * @return The response cookies, or null if they have not been set yet
+     */
+    Map<String, Cookie> getResponseCookiesInternal() {
+        return responseCookies;
     }
 
     /**

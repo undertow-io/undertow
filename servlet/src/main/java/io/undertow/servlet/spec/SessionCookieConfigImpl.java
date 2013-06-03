@@ -60,7 +60,7 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
         if (maxAge > 0) {
             cookie.setMaxAge(maxAge);
         }
-        CookieImpl.addResponseCookie(exchange, cookie);
+        exchange.setResponseCookie(cookie);
     }
 
     @Override
@@ -71,12 +71,12 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
                 .setSecure(secure)
                 .setHttpOnly(httpOnly)
                 .setMaxAge(0);
-        CookieImpl.addResponseCookie(exchange, cookie);
+        exchange.setResponseCookie(cookie);
     }
 
     @Override
     public String findSessionId(final HttpServerExchange exchange) {
-        Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
+        Map<String, Cookie> cookies = exchange.getRequestCookies();
         if (cookies != null) {
             Cookie sessionId = cookies.get(name);
             if (sessionId != null) {

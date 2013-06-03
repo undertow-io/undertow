@@ -22,7 +22,6 @@ import java.util.List;
 
 import javax.servlet.ServletException;
 
-import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -54,9 +53,7 @@ public class ServletSessionListenerOrderingTestCase {
     @BeforeClass
     public static void setup() throws ServletException {
 
-        final CookieHandler cookieHandler = new CookieHandler();
         final PathHandler path = new PathHandler();
-        cookieHandler.setNext(path);
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
         DeploymentInfo builder = new DeploymentInfo()
@@ -73,7 +70,7 @@ public class ServletSessionListenerOrderingTestCase {
         manager.deploy();
         path.addPath(builder.getContextPath(), manager.start());
 
-        DefaultServer.setRootHandler(cookieHandler);
+        DefaultServer.setRootHandler(path);
     }
 
     @Test

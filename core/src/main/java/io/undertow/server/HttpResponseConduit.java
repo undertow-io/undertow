@@ -111,6 +111,10 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         } else if (state != STATE_START) {
             return processStatefulWrite(state, userData);
         }
+
+        //merge the cookies into the header map
+        ExchangeCookieUtils.flattenCookies(exchange);
+
         pooledBuffer = pool.allocate();
         ByteBuffer buffer = pooledBuffer.getResource();
 

@@ -24,7 +24,6 @@ import java.util.Map;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.PathParameterSessionConfig;
 import io.undertow.server.session.Session;
@@ -55,7 +54,6 @@ public class URLRewritingSessionTestCase {
 
     @BeforeClass
     public static void setup() {
-        final CookieHandler cookieHandler = new CookieHandler();
         final PathParameterSessionConfig sessionConfig = new PathParameterSessionConfig();
         final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(), sessionConfig);
         handler.setNext(new HttpHandler() {
@@ -81,8 +79,7 @@ public class URLRewritingSessionTestCase {
                 }
             }
         });
-        cookieHandler.setNext(handler);
-        DefaultServer.setRootHandler(cookieHandler);
+        DefaultServer.setRootHandler(handler);
     }
 
     @Test

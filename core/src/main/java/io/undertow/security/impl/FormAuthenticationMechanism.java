@@ -125,7 +125,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     protected void handleRedirectBack(final HttpServerExchange exchange) {
-        final Map<String, Cookie> cookies = CookieImpl.getRequestCookies(exchange);
+        final Map<String, Cookie> cookies = exchange.getRequestCookies();
         if (cookies != null && cookies.containsKey(LOCATION_COOKIE)) {
             final String location = cookies.get(LOCATION_COOKIE).getValue();
             exchange.addDefaultResponseListener(new DefaultResponseListener() {
@@ -139,7 +139,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
 
             final CookieImpl cookie = new CookieImpl(LOCATION_COOKIE);
             cookie.setMaxAge(0);
-            CookieImpl.addResponseCookie(exchange, cookie);
+            exchange.setResponseCookie(cookie);
         }
     }
 
@@ -159,7 +159,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     protected void storeInitialLocation(final HttpServerExchange exchange) {
-        CookieImpl.addResponseCookie(exchange, new CookieImpl(LOCATION_COOKIE, exchange.getRequestURI()));
+        exchange.setResponseCookie(new CookieImpl(LOCATION_COOKIE, exchange.getRequestURI()));
     }
 
     protected Integer servePage(final HttpServerExchange exchange, final String location) {
