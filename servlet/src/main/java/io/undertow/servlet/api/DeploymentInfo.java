@@ -39,6 +39,7 @@ import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HandlerWrapper;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.core.InMemorySessionManagerFactory;
@@ -73,6 +74,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile boolean ignoreStandardAuthenticationMechanism = false;
     private volatile ConcurrentMap<String, Object> servletContextAttributeBackingMap;
     private volatile SessionCookieConfig sessionCookieConfig;
+    private volatile FormParserFactory formParserFactory = FormParserFactory.builder().build();
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -207,6 +209,20 @@ public class DeploymentInfo implements Cloneable {
      */
     public void setDefaultSessionTimeout(final int defaultSessionTimeout) {
         this.defaultSessionTimeout = defaultSessionTimeout;
+    }
+
+    public FormParserFactory getFormParserFactory() {
+        return formParserFactory;
+    }
+
+    /**
+     * Sets the form parser factory. This allows the form parsers to be customised, e.g. setting a different
+     * temp directory for the multipart upload handler.
+     *
+     * @param formParserFactory The parser factory
+     */
+    public void setFormParserFactory(final FormParserFactory formParserFactory) {
+        this.formParserFactory = formParserFactory;
     }
 
     /**
@@ -714,6 +730,7 @@ public class DeploymentInfo implements Cloneable {
         info.executor = executor;
         info.asyncExecutor = asyncExecutor;
         info.tempDir = tempDir;
+        info.formParserFactory = formParserFactory;
         info.jspConfigDescriptor = jspConfigDescriptor;
         info.defaultServletConfig = defaultServletConfig;
         info.localeCharsetMapping.putAll(localeCharsetMapping);

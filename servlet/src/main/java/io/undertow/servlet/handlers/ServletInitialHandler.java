@@ -27,7 +27,6 @@ import javax.servlet.ServletResponse;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.ApplicationListeners;
@@ -37,7 +36,6 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
-import org.xnio.IoUtils;
 
 /**
  * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
@@ -154,9 +152,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             servletContext.getDeployment().getApplicationListeners().requestDestroyed(request);
             if (!exchange.isDispatched()) {
                 servletRequestContext.getOriginalResponse().responseDone();
-                //this request is done, so we close any parser that may have been used
-                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-                IoUtils.safeClose(parser);
             }
         } finally {
             try {

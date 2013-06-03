@@ -31,73 +31,68 @@ import java.util.concurrent.Executor;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.MultipartParser;
 import org.xnio.FileAccess;
+import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- * TODO: upload limits
  *
  * @author Stuart Douglas
  */
-public class MultiPartHandler implements HttpHandler {
+public class MultiPartParserDefinition implements FormParserFactory.ParserDefinition {
 
     public static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
-    private HttpHandler next = ResponseCodeHandler.HANDLE_404;
-
     private Executor executor;
 
-    private File tempFileLocation = new File(System.getProperty("java.io.tmpdir"));
+    private File tempFileLocation;
 
     private String defaultEncoding = "UTF-8";
 
-    public MultiPartHandler(final HttpHandler next) {
-        this.next = next;
+    public MultiPartParserDefinition() {
+        tempFileLocation = new File(System.getProperty("java.io.tmpdir"));
     }
 
-    public MultiPartHandler() {
+    public MultiPartParserDefinition(final File tempDir) {
+        tempFileLocation = tempDir;
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+    public FormDataParser create(final HttpServerExchange exchange) {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (mimeType != null && mimeType.startsWith(MULTIPART_FORM_DATA)) {
             String boundary = Headers.extractTokenFromHeader(mimeType, "boundary");
             if(boundary == null) {
-                UndertowLogger.REQUEST_LOGGER.couldNotDetectBoundary(mimeType);
-                next.handleRequest(exchange);
-                return;
+                UndertowLogger.REQUEST_LOGGER.debugf("Could not find boundary in multipart request with ContentType: %s, multipart data will not be available", mimeType);
+                return null;
             }
-            final MultiPartUploadHandler multiPartUploadHandler = new MultiPartUploadHandler(exchange, boundary, defaultEncoding);
-            exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, multiPartUploadHandler);
+            final MultiPartUploadHandler parser =  new MultiPartUploadHandler(exchange, boundary, defaultEncoding);
+            exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                @Override
+                public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+                    IoUtils.safeClose(parser);
+                    nextListener.proceed();
+                }
+            });
+            return parser;
+
         }
-        next.handleRequest(exchange);
-    }
-
-
-    public HttpHandler getNext() {
-        return next;
-    }
-
-    public MultiPartHandler setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
-        this.next = next;
-        return this;
+        return null;
     }
 
     public Executor getExecutor() {
         return executor;
     }
 
-    public MultiPartHandler setExecutor(final Executor executor) {
+    public MultiPartParserDefinition setExecutor(final Executor executor) {
         this.executor = executor;
         return this;
     }
@@ -106,7 +101,7 @@ public class MultiPartHandler implements HttpHandler {
         return tempFileLocation;
     }
 
-    public MultiPartHandler setTempFileLocation(File tempFileLocation) {
+    public MultiPartParserDefinition setTempFileLocation(File tempFileLocation) {
         this.tempFileLocation = tempFileLocation;
         return this;
     }
@@ -115,7 +110,7 @@ public class MultiPartHandler implements HttpHandler {
         return defaultEncoding;
     }
 
-    public MultiPartHandler setDefaultEncoding(final String defaultEncoding) {
+    public MultiPartParserDefinition setDefaultEncoding(final String defaultEncoding) {
         this.defaultEncoding = defaultEncoding;
         return this;
     }
@@ -128,8 +123,6 @@ public class MultiPartHandler implements HttpHandler {
         private final List<File> createdFiles = new ArrayList<File>();
         private String defaultEncoding;
 
-        //0=form data
-        int currentType = 0;
         private final ByteArrayOutputStream contentBytes = new ByteArrayOutputStream();
         private String currentName;
         private String fileName;

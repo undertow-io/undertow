@@ -48,11 +48,10 @@ public class MultipartFormDataParserTestCase {
 
     @BeforeClass
     public static void setup() {
-        final MultiPartHandler fd = new MultiPartHandler();
-        fd.setNext(new HttpHandler() {
+        HttpHandler fd = new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+                final FormDataParser parser = FormParserFactory.builder().build().createParser(exchange);
                 try {
                     FormData data = parser.parseBlocking();
                     exchange.setResponseCode(500);
@@ -74,7 +73,7 @@ public class MultipartFormDataParserTestCase {
                     IoUtils.safeClose(parser);
                 }
             }
-        });
+        };
         DefaultServer.setRootHandler(fd);
     }
 

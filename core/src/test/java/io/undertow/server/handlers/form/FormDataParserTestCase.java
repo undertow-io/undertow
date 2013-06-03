@@ -63,11 +63,11 @@ public class FormDataParserTestCase {
     @Parameterized.Parameters
     public static Collection<Object[]> handlerChains() {
         List<Object[]> ret = new ArrayList<Object[]>();
-        final FormEncodedDataHandler fd = new FormEncodedDataHandler();
-        fd.setNext(new HttpHandler() {
+        final FormParserFactory parserFactory = FormParserFactory.builder().build();
+        HttpHandler fd = new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+                final FormDataParser parser = parserFactory.createParser(exchange);
                 parser.parse(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -83,18 +83,16 @@ public class FormDataParserTestCase {
                 });
 
             }
-        });
+        };
         ret.add(new Object[]{fd});
         final BlockingHandler blocking = new BlockingHandler();
 
-        final FormEncodedDataHandler bf = new FormEncodedDataHandler();
-        bf.setNext(blocking);
         blocking.setRootHandler(new HttpHandler() {
 
 
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+                final FormDataParser parser = parserFactory.createParser(exchange);
                 try {
                     FormData data = parser.parseBlocking();
                     Iterator<String> it = data.iterator();
@@ -109,7 +107,7 @@ public class FormDataParserTestCase {
                 }
             }
         });
-        ret.add(new Object[]{bf});
+        ret.add(new Object[]{blocking});
         return ret;
 
     }
@@ -129,7 +127,7 @@ public class FormDataParserTestCase {
             final List<NameValuePair> data = new ArrayList<NameValuePair>();
             data.addAll(Arrays.asList(pairs));
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
-            post.setHeader(Headers.CONTENT_TYPE_STRING, FormEncodedDataHandler.APPLICATION_X_WWW_FORM_URLENCODED);
+            post.setHeader(Headers.CONTENT_TYPE_STRING, FormEncodedDataDefinition.APPLICATION_X_WWW_FORM_URLENCODED);
             post.setEntity(new UrlEncodedFormEntity(data));
             HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());

@@ -38,10 +38,19 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 public class EagerFormParsingHandler implements HttpHandler {
 
     private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
+    private final FormParserFactory formParserFactory;
+
+    public EagerFormParsingHandler(final FormParserFactory formParserFactory) {
+        this.formParserFactory = formParserFactory;
+    }
+
+    public EagerFormParsingHandler() {
+        this.formParserFactory = FormParserFactory.builder().build();
+    }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+        FormDataParser parser = formParserFactory.createParser(exchange);
         if (parser == null) {
             next.handleRequest(exchange);
             return;

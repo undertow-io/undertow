@@ -30,7 +30,6 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.cache.CacheHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.error.SimpleErrorPageHandler;
-import io.undertow.server.handlers.form.FormEncodedDataHandler;
 import io.undertow.websockets.api.WebSocketSessionHandler;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
@@ -200,7 +199,6 @@ public class Undertow {
 
         HttpHandler root = virtualHostHandler;
         root = new CookieHandler(root);
-        root = new FormEncodedDataHandler(root);
         root = new SimpleErrorPageHandler(root);
         //TODO: multipart
 

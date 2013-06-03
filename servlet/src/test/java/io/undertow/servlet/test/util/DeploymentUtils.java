@@ -22,8 +22,6 @@ import javax.servlet.ServletException;
 
 import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.form.FormEncodedDataHandler;
-import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -47,9 +45,7 @@ public class DeploymentUtils {
     public static Deployment setupServlet(final ServletInfo... servlets) {
 
         final PathHandler pathHandler = new PathHandler();
-        final FormEncodedDataHandler formEncodedDataHandler = new FormEncodedDataHandler(pathHandler);
-        final MultiPartHandler multiPartHandler = new MultiPartHandler(formEncodedDataHandler);
-        CookieHandler cookieHandler = new CookieHandler(multiPartHandler);
+        CookieHandler cookieHandler = new CookieHandler(pathHandler);
         final ServletContainer container = ServletContainer.Factory.newInstance();
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())

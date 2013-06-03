@@ -32,6 +32,7 @@ import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 
@@ -45,23 +46,32 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
 
     public static final String LOCATION_COOKIE = "FORM_AUTH_ORIGINAL_URL";
 
+    public static final String DEFAULT_POST_LOCATION = "/j_security_check";
+
     private final String name;
     private final String loginPage;
     private final String errorPage;
     private final String postLocation;
+    private final FormParserFactory formParserFactory;
 
     public FormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
-        this.name = name;
-        this.loginPage = loginPage;
-        this.errorPage = errorPage;
-        postLocation = "/j_security_check";
+        this(FormParserFactory.builder().build(), name, loginPage, errorPage);
     }
 
     public FormAuthenticationMechanism(final String name, final String loginPage, final String errorPage, final String postLocation) {
+        this(FormParserFactory.builder().build(), name, loginPage, errorPage, postLocation);
+    }
+
+    public FormAuthenticationMechanism(final FormParserFactory formParserFactory, final String name, final String loginPage, final String errorPage) {
+        this(formParserFactory, name, loginPage, errorPage, DEFAULT_POST_LOCATION);
+    }
+
+    public FormAuthenticationMechanism(final FormParserFactory formParserFactory, final String name, final String loginPage, final String errorPage, final String postLocation) {
         this.name = name;
         this.loginPage = loginPage;
         this.errorPage = errorPage;
         this.postLocation = postLocation;
+        this.formParserFactory = formParserFactory;
     }
 
     @Override
@@ -75,7 +85,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     public AuthenticationMechanismOutcome runFormAuth(final HttpServerExchange exchange, final SecurityContext securityContext) {
-        final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+        final FormDataParser parser = formParserFactory.createParser(exchange);
         if (parser == null) {
             UndertowLogger.REQUEST_LOGGER.debug("Could not authenticate as no form parser is present");
             // TODO - May need a better error signaling mechanism here to prevent repeated attempts.

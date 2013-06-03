@@ -13,6 +13,8 @@ import io.undertow.util.Headers;
 public class HelloWorldServer {
 
     public static void main(final String[] args) {
+        long s = System.currentTimeMillis();
+
         Undertow server = Undertow.builder()
                 .addListener(8080, "localhost")
                 .setDefaultHandler(new HttpHandler() {
@@ -23,6 +25,8 @@ public class HelloWorldServer {
                     }
                 }).build();
         server.start();
+        long f = System.currentTimeMillis();
+        System.out.print("Time was " + (f- s) + "ms\n");
     }
 
 }

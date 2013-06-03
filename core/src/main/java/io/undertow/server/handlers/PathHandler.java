@@ -47,6 +47,13 @@ public class PathHandler implements HttpHandler {
      */
     private volatile int maxPathLength = 0;
 
+    public PathHandler(final HttpHandler defaultHandler) {
+        this.defaultHandler = defaultHandler;
+    }
+
+    public PathHandler() {
+    }
+
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();

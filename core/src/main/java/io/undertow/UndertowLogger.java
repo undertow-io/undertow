@@ -90,10 +90,6 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5011, value = "Ignoring AJP request with prefix %s")
     void ignoringAjpRequestWithPrefixCode(byte prefix);
 
-    @LogMessage(level = Logger.Level.WARN)
-    @Message(id = 5012, value = "Could not find boundary in multipart request with ContentType: %s, multipart data will not be available")
-    void couldNotDetectBoundary(String mimeType);
-
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5013, value = "An IOException occurred")
     void ioException(@Cause IOException e);

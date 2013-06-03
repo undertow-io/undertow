@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.form.FormEncodedDataHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.LoginConfig;
@@ -106,7 +105,6 @@ public class ServletCustomAuthTestCase {
         path.addPath(builder.getContextPath(), manager.start());
 
         HttpHandler current = new CookieHandler(path);
-        current = new FormEncodedDataHandler(current);
         DefaultServer.setRootHandler(current);
     }
 

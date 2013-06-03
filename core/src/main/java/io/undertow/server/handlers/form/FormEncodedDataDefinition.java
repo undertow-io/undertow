@@ -28,7 +28,6 @@ import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -36,33 +35,22 @@ import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 
 /**
- * Handler for submitted form data. This handler takes effect for any request that has a mime type
+ * Parser defintion for form encoded data. This handler takes effect for any request that has a mime type
  * of application/x-www-form-urlencoded. The handler attaches a {@link FormDataParser} to the chain
  * that can parse the underlying form data asynchronously.
- * <p/>
- * Note that this handler is not suitable for use with a blocking handler chain. Blocking handlers
- * should install their own FormDataParser that uses streams.
- * <p/>
  *
  * @author Stuart Douglas
  */
-public class FormEncodedDataHandler implements HttpHandler {
+public class FormEncodedDataDefinition implements FormParserFactory.ParserDefinition {
 
     public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
-
-    private volatile HttpHandler next = ResponseCodeHandler.HANDLE_404;
-
     private String defaultEncoding = "UTF-8";
 
-    public FormEncodedDataHandler(final HttpHandler next) {
-        this.next = next;
-    }
-
-    public FormEncodedDataHandler() {
+    public FormEncodedDataDefinition() {
     }
 
     @Override
-    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+    public FormDataParser create(final HttpServerExchange exchange)  {
         String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
         if (mimeType != null && mimeType.startsWith(APPLICATION_X_WWW_FORM_URLENCODED)) {
 
@@ -74,27 +62,16 @@ public class FormEncodedDataHandler implements HttpHandler {
                     charset = cs;
                 }
             }
-
-            exchange.putAttachment(FormDataParser.ATTACHMENT_KEY, new FormEncodedDataParser(charset, exchange));
+            return new FormEncodedDataParser(charset, exchange);
         }
-        HttpHandlers.executeHandler(next, exchange);
-    }
-
-    public HttpHandler getNext() {
-        return next;
-    }
-
-    public FormEncodedDataHandler setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
-        this.next = next;
-        return this;
+        return null;
     }
 
     public String getDefaultEncoding() {
         return defaultEncoding;
     }
 
-    public FormEncodedDataHandler setDefaultEncoding(final String defaultEncoding) {
+    public FormEncodedDataDefinition setDefaultEncoding(final String defaultEncoding) {
         this.defaultEncoding = defaultEncoding;
         return this;
     }

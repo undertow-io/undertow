@@ -30,8 +30,6 @@ import io.undertow.server.handlers.CookieHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.error.SimpleErrorPageHandler;
-import io.undertow.server.handlers.form.FormEncodedDataHandler;
-import io.undertow.server.handlers.form.MultiPartHandler;
 import io.undertow.server.handlers.resource.FileResourceManager;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.file.FileHandlerTestCase;
@@ -61,14 +59,11 @@ public class ComplexSSLTestCase {
         final NameVirtualHostHandler virtualHostHandler = new NameVirtualHostHandler();
         HttpHandler root = virtualHostHandler;
         root = new CookieHandler(root);
-        root = new FormEncodedDataHandler(root);
         root = new SimpleErrorPageHandler(root);
         root = new CanonicalPathHandler(root);
 
-        MultiPartHandler hostHandler = new MultiPartHandler();
-        hostHandler.setNext(pathHandler);
-        virtualHostHandler.addHost("default-host", hostHandler);
-        virtualHostHandler.setDefaultHandler(hostHandler);
+        virtualHostHandler.addHost("default-host", pathHandler);
+        virtualHostHandler.setDefaultHandler(pathHandler);
 
         pathHandler.addPath("/", new ResourceHandler()
                 .setResourceManager(new FileResourceManager(rootPath))

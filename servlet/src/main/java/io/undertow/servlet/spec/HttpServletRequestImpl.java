@@ -64,7 +64,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
-import io.undertow.server.handlers.form.MultiPartHandler;
+import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
@@ -443,13 +443,15 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (parts == null) {
             final List<Part> parts = new ArrayList<Part>();
             String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
-            if (mimeType != null && mimeType.startsWith(MultiPartHandler.MULTIPART_FORM_DATA)) {
-                final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
-                final FormData value = parser.parseBlocking();
-                for (final String namedPart : value) {
-                    for (FormData.FormValue part : value.get(namedPart)) {
-                        //TODO: non-file parts?
-                        parts.add(new PartImpl(namedPart, part));
+            if (mimeType != null && mimeType.startsWith(MultiPartParserDefinition.MULTIPART_FORM_DATA)) {
+                final FormDataParser parser = servletContext.getFormParserFactory().createParser(exchange);
+                if(parser != null) {
+                    final FormData value = parser.parseBlocking();
+                    for (final String namedPart : value) {
+                        for (FormData.FormValue part : value.get(namedPart)) {
+                            //TODO: non-file parts?
+                            parts.add(new PartImpl(namedPart, part));
+                        }
                     }
                 }
             } else {
@@ -495,7 +497,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         try {
             characterEncoding = Charset.forName(env);
 
-            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+            final FormDataParser parser = servletContext.getFormParserFactory().createParser(exchange);
             if (parser != null) {
                 parser.setCharacterEncoding(env);
             }
@@ -671,7 +673,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 return null;
             }
             readStarted = true;
-            final FormDataParser parser = exchange.getAttachment(FormDataParser.ATTACHMENT_KEY);
+            final FormDataParser parser = servletContext.getFormParserFactory().createParser(exchange);
             if (parser == null) {
                 return null;
             }

@@ -34,8 +34,6 @@ import io.undertow.util.AttachmentKey;
  */
 public interface FormDataParser extends Closeable {
 
-    AttachmentKey<FormDataParser> ATTACHMENT_KEY = AttachmentKey.create(FormDataParser.class);
-
     /**
      * When the form data is parsed it will be attached under this key.
      */
