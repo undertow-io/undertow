@@ -23,9 +23,9 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Methods;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.core.protocol.version00.Hybi00Handshake;
@@ -46,12 +46,27 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
     private final WebSocketConnectionCallback callback;
 
     /**
+     * The handler that is invoked if there are no web socket headers
+     */
+    private final HttpHandler next;
+
+    /**
      * Create a new {@link WebSocketProtocolHandshakeHandler}
      *
      * @param callback The {@link WebSocketConnectionCallback} which will be executed once the handshake was
      *                 established
      */
     public WebSocketProtocolHandshakeHandler(final WebSocketConnectionCallback callback) {
+        this(callback, ResponseCodeHandler.HANDLE_404);
+    }
+
+    /**
+     * Create a new {@link WebSocketProtocolHandshakeHandler}
+     *
+     * @param callback The {@link WebSocketConnectionCallback} which will be executed once the handshake was
+     *                 established
+     */
+    public WebSocketProtocolHandshakeHandler(final WebSocketConnectionCallback callback, final  HttpHandler next) {
         this.callback = callback;
         Set<Handshake> handshakes = new HashSet<Handshake>();
         handshakes.add(new Hybi13Handshake());
@@ -59,8 +74,8 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
         handshakes.add(new Hybi07Handshake());
         handshakes.add(new Hybi00Handshake());
         this.handshakes = handshakes;
+        this.next = next;
     }
-
 
     /**
      * Create a new {@link WebSocketProtocolHandshakeHandler}
@@ -70,8 +85,19 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      *                   established
      */
     public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final WebSocketConnectionCallback callback) {
+        this(handshakes, callback, ResponseCodeHandler.HANDLE_404);
+    }
+    /**
+     * Create a new {@link WebSocketProtocolHandshakeHandler}
+     *
+     * @param handshakes The supported handshake methods
+     * @param callback   The {@link WebSocketConnectionCallback} which will be executed once the handshake was
+     *                   established
+     */
+    public WebSocketProtocolHandshakeHandler(Collection<Handshake> handshakes, final WebSocketConnectionCallback callback, final  HttpHandler next) {
         this.callback = callback;
         this.handshakes = new HashSet<Handshake>(handshakes);
+        this.next = next;
     }
 
     @Override
@@ -92,13 +118,9 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
         }
 
         if (handshaker == null) {
-            UndertowLogger.REQUEST_LOGGER.debug("Could not find hand shaker for web socket request");
-            exchange.setResponseCode(403);
-            exchange.endExchange();
-            return;
+            next.handleRequest(exchange);
+        } else {
+            handshaker.handshake(facade, callback);
         }
-
-        handshaker.handshake(facade, callback);
-
     }
 }

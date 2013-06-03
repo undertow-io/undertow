@@ -7,17 +7,19 @@ import java.util.List;
 
 import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
-import io.undertow.predicate.Predicates;
-import io.undertow.server.handlers.PredicateHandler;
-import io.undertow.server.handlers.RedirectHandler;
+import io.undertow.examples.websockets.WebSocketServer;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
-import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.websockets.api.AbstractAssembledFrameHandler;
 import io.undertow.websockets.api.CloseReason;
 import io.undertow.websockets.api.WebSocketFrameHeader;
 import io.undertow.websockets.api.WebSocketSession;
 import io.undertow.websockets.api.WebSocketSessionHandler;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
+
+import static io.undertow.Handlers.path;
+import static io.undertow.Handlers.redirect;
+import static io.undertow.Handlers.resource;
+import static io.undertow.Handlers.websocket;
 
 /**
  * @author Stuart Douglas
@@ -31,48 +33,42 @@ public class ChatServer {
 
         System.out.println("To see chat in action is to open two different browsers and point them at http://localhost:8080");
 
-
         Undertow server = Undertow.builder()
                 .addListener(8080, "localhost")
-                .addWebSocketHandler("/myapp", new WebSocketSessionHandler() {
-                    @Override
-                    public void onSession(final WebSocketSession session, WebSocketHttpExchange exchange) {
-                        synchronized (sessions) {
-                            sessions.add(session);
-                        }
-                        session.setFrameHandler(new AbstractAssembledFrameHandler() {
+                .setHandler(path()
+                        .addPath("/myapp", websocket(new WebSocketSessionHandler() {
                             @Override
-                            public void onTextFrame(final WebSocketSession session, final WebSocketFrameHeader header, final CharSequence payload) {
+                            public void onSession(final WebSocketSession session, WebSocketHttpExchange exchange) {
                                 synchronized (sessions) {
-                                    Iterator<WebSocketSession> it = sessions.iterator();
-                                    while (it.hasNext()) {
-                                        final WebSocketSession sess = it.next();
-                                        try {
-                                            sess.sendText(payload);
-                                        } catch (IOException e) {
-                                            it.remove();
+                                    sessions.add(session);
+                                }
+                                session.setFrameHandler(new AbstractAssembledFrameHandler() {
+                                    @Override
+                                    public void onTextFrame(final WebSocketSession session, final WebSocketFrameHeader header, final CharSequence payload) {
+                                        synchronized (sessions) {
+                                            Iterator<WebSocketSession> it = sessions.iterator();
+                                            while (it.hasNext()) {
+                                                final WebSocketSession sess = it.next();
+                                                try {
+                                                    sess.sendText(payload);
+                                                } catch (IOException e) {
+                                                    it.remove();
+                                                }
+                                            }
                                         }
                                     }
-                                }
-                            }
 
-                            @Override
-                            public void onCloseFrame(final WebSocketSession session, final CloseReason reason) {
-                                synchronized (sessions) {
-                                    sessions.remove(session);
-                                }
+                                    @Override
+                                    public void onCloseFrame(final WebSocketSession session, final CloseReason reason) {
+                                        synchronized (sessions) {
+                                            sessions.remove(session);
+                                        }
+                                    }
+                                });
                             }
-                        });
-                    }
-                })
-                .setDefaultHandler(
-                        //we use a predicate handler here. If the path is index.html we serve the page
-                        //otherwise we redirect to index.html
-                        new PredicateHandler(
-                                Predicates.path("/index.html"),
-                                new ResourceHandler()
-                                        .setResourceManager(new ClassPathResourceManager(ChatServer.class.getClassLoader(), ChatServer.class.getPackage())),
-                                new RedirectHandler("http://localhost:8080/index.html")))
+                        }))
+                        .addPath("index.html", resource(new ClassPathResourceManager(WebSocketServer.class.getClassLoader(), WebSocketServer.class.getPackage())))
+                        .addPath("/", redirect("http://localhost:8080/index.html")))
                 .build();
         server.start();
     }

@@ -17,7 +17,7 @@ public class HelloWorldServer {
 
         Undertow server = Undertow.builder()
                 .addListener(8080, "localhost")
-                .setDefaultHandler(new HttpHandler() {
+                .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
                         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");

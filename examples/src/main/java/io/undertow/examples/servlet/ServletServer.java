@@ -38,7 +38,7 @@ public class ServletServer {
 
             Undertow server = Undertow.builder()
                     .addListener(8080, "localhost")
-                    .setDefaultHandler(manager.start())
+                    .setHandler(manager.start())
                     .build();
             server.start();
         } catch (ServletException e) {
