@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.core;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 
 import io.undertow.server.HttpServerExchange;
@@ -28,31 +30,28 @@ import io.undertow.servlet.api.ThreadSetupAction;
  */
 public class CompositeThreadSetupAction implements ThreadSetupAction {
 
-    private final ThreadSetupAction[] actions;
+    private final List<ThreadSetupAction> actions;
 
     public CompositeThreadSetupAction(final List<ThreadSetupAction> actions) {
-        this.actions = actions.toArray(new ThreadSetupAction[actions.size()]);
+        this.actions = actions;
     }
 
     @Override
     public Handle setup(final HttpServerExchange exchange) {
-        final Handle[] handles = new Handle[actions.length];
+        final Deque<Handle> handles = new ArrayDeque<Handle>(this.actions.size());
         try {
-            for (int i = 0; i < handles.length; ++i) {
-                handles[i] = actions[i].setup(exchange);
+            for (ThreadSetupAction action : this.actions) {
+                handles.addFirst(action.setup(exchange));
             }
             return new Handle() {
                 @Override
                 public void tearDown() {
                     Throwable problem = null;
-                    for (int i = 0; i < handles.length; ++i) {
-                        Handle handle = handles[i];
-                        if (handle != null) {
-                            try {
-                                handle.tearDown();
-                            } catch (Throwable e) {
-                                problem = e;
-                            }
+                    for (Handle handle : handles) {
+                        try {
+                            handle.tearDown();
+                        } catch (Throwable e) {
+                            problem = e;
                         }
                     }
                     if (problem != null) {
