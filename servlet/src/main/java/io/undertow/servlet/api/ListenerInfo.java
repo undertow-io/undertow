@@ -25,6 +25,7 @@ import javax.servlet.ServletContextAttributeListener;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletRequestAttributeListener;
 import javax.servlet.ServletRequestListener;
+import javax.servlet.http.HttpSessionIdListener;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
@@ -39,7 +40,8 @@ public class ListenerInfo {
             ServletRequestListener.class,
             ServletRequestAttributeListener.class,
             javax.servlet.http.HttpSessionListener.class,
-            javax.servlet.http.HttpSessionAttributeListener.class};
+            javax.servlet.http.HttpSessionAttributeListener.class,
+            HttpSessionIdListener.class};
 
     private final Class<? extends EventListener> listenerClass;
     private final InstanceFactory<? extends EventListener> instanceFactory;
