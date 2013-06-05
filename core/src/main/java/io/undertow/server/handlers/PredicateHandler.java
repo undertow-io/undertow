@@ -2,7 +2,6 @@ package io.undertow.server.handlers;
 
 import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -23,7 +22,7 @@ public class PredicateHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         HttpHandler next = predicate.resolve(exchange) ? trueHandler : falseHandler;
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
     public Predicate getPredicate() {

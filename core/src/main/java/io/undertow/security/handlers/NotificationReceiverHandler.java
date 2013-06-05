@@ -23,7 +23,6 @@ import java.util.Collection;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -48,7 +47,7 @@ public class NotificationReceiverHandler implements HttpHandler {
             sc.registerNotificationReceiver(receiver);
         }
 
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
 }

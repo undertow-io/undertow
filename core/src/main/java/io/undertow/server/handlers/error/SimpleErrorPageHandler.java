@@ -73,7 +73,7 @@ public class SimpleErrorPageHandler implements HttpHandler {
                 return false;
             }
         });
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
     public HttpHandler getNext() {

@@ -18,7 +18,6 @@
 package io.undertow.servlet.handlers.security;
 
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.ServletRequestContext;
@@ -53,6 +52,6 @@ public class ServletSecurityConstraintHandler implements HttpHandler {
         if (type == null || type.ordinal() < securityMatch.getTransportGuaranteeType().ordinal()) {
             servletRequestContext.setTransportGuarenteeType(securityMatch.getTransportGuaranteeType());
         }
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 }

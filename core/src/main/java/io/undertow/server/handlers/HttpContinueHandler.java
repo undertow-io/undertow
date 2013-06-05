@@ -53,7 +53,7 @@ public class HttpContinueHandler implements HttpHandler {
                 HttpContinue.rejectExchange(exchange);
             }
         } else {
-            HttpHandlers.executeHandler(next, exchange);
+            next.handleRequest(exchange);
         }
     }
 

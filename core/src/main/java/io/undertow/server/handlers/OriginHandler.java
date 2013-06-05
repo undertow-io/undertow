@@ -54,7 +54,7 @@ public class OriginHandler implements HttpHandler {
                 if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                     UndertowLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to lack of Origin: header", exchange.getRequestPath());
                 }
-                HttpHandlers.executeHandler(originFailedHandler, exchange);
+                originFailedHandler.handleRequest(exchange);
                 return;
             }
         } else {
@@ -70,7 +70,7 @@ public class OriginHandler implements HttpHandler {
                     if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         UndertowLogger.REQUEST_LOGGER.debugf("Refusing request for %s due to Origin %s not being in the allowed origins list", exchange.getRequestPath(), header);
                     }
-                    HttpHandlers.executeHandler(originFailedHandler, exchange);
+                    originFailedHandler.handleRequest(exchange);
                     return;
                 }
             }
@@ -78,11 +78,11 @@ public class OriginHandler implements HttpHandler {
                 if (UndertowLogger.REQUEST_LOGGER.isDebugEnabled()) {
                     UndertowLogger.REQUEST_LOGGER.debugf("Refusing request for %s as none of the specified origins %s were in the allowed origins list", exchange.getRequestPath(), origin);
                 }
-                HttpHandlers.executeHandler(originFailedHandler, exchange);
+                originFailedHandler.handleRequest(exchange);
                 return;
             }
         }
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
     public synchronized OriginHandler addAllowedOrigin(final String origin) {

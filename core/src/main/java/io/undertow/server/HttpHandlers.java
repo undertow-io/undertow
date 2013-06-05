@@ -30,22 +30,6 @@ import io.undertow.UndertowMessages;
  */
 public final class HttpHandlers {
 
-    /**
-     * Safely execute a handler.  If the handler throws an exception before completing, this method will attempt
-     * to set a 500 status code and complete the request.
-     *
-     * @param handler  the handler to execute
-     * @param exchange the HTTP exchange for the request
-     */
-    @Deprecated
-    public static void executeHandler(final HttpHandler handler, final HttpServerExchange exchange) throws Exception {
-        if (handler == null) {
-            exchange.setResponseCode(404);
-            return;
-        }
-        handler.handleRequest(exchange);
-    }
-
     public static void executeRootHandler(final HttpHandler handler, final HttpServerExchange exchange, boolean inIoThread) {
         try {
             exchange.setInCall(true);

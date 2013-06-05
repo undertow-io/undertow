@@ -72,7 +72,7 @@ public class SessionAttachmentHandler implements HttpHandler {
         sessionManager.getSession(exchange, sessionConfig);
         final UpdateLastAccessTimeListener handler = new UpdateLastAccessTimeListener(sessionConfig, sessionManager);
         exchange.addExchangeCompleteListener(handler);
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
 
     }
 

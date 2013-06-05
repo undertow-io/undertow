@@ -55,7 +55,7 @@ public class AuthenticationMechanismsHandler implements HttpHandler {
                 sc.addAuthenticationMechanism(mechanism);
             }
         }
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
     public HttpHandler getNext() {

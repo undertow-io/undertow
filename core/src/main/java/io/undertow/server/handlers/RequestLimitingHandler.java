@@ -120,7 +120,7 @@ public final class RequestLimitingHandler implements HttpHandler {
             }
             newVal = oldVal + 1;
         } while (!stateUpdater.compareAndSet(this, oldVal, newVal));
-        HttpHandlers.executeHandler(nextHandler, exchange);
+        nextHandler.handleRequest(exchange);
     }
 
     /**

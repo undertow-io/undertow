@@ -22,8 +22,6 @@ import java.io.IOException;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpHandlers;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionAttachmentHandler;
@@ -70,7 +68,6 @@ public class SSLSessionTestCase {
                             Integer count = (Integer) session.getAttribute(COUNT);
                             exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());
                             session.setAttribute(COUNT, ++count);
-                            HttpHandlers.executeHandler(ResponseCodeHandler.HANDLE_200, exchange);
 
                         }
                     });

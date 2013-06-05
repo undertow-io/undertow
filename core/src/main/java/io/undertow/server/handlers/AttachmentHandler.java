@@ -47,7 +47,7 @@ public class AttachmentHandler<T> implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.putAttachment(key, instance);
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
     public T getInstance() {

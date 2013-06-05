@@ -22,7 +22,6 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.SecurityContextImpl;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -68,7 +67,7 @@ public class SecurityInitialHandler implements HttpHandler {
             newContext.setProgramaticMechName(programaticMechName);
         }
         exchange.putAttachment(SecurityContext.ATTACHMENT_KEY, newContext);
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
 }

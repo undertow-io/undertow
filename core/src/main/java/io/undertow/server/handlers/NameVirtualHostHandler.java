@@ -50,11 +50,11 @@ public class NameVirtualHostHandler implements HttpHandler {
             }
             final HttpHandler handler = hosts.get(host);
             if (handler != null) {
-                HttpHandlers.executeHandler(handler, exchange);
+                handler.handleRequest(exchange);
                 return;
             }
         }
-        HttpHandlers.executeHandler(defaultHandler, exchange);
+        defaultHandler.handleRequest(exchange);
     }
 
     public HttpHandler getDefaultHandler() {

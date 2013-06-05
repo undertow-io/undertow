@@ -70,10 +70,10 @@ public class EncodingHandler implements HttpHandler {
         HttpHandler nextHandler = this.next;
         if (res == null || res.isEmpty()) {
             if (nextHandler != null) {
-                HttpHandlers.executeHandler(nextHandler, exchange);
+                nextHandler.handleRequest(exchange);
             } else {
                 //we don't have an identity handler
-                HttpHandlers.executeHandler(noEncodingHandler, exchange);
+                noEncodingHandler.handleRequest(exchange);
             }
             return;
         }
@@ -102,10 +102,10 @@ public class EncodingHandler implements HttpHandler {
             if (isQValue0) {
                 if (resultingMappings.isEmpty()) {
                     if (includesIdentity) {
-                        HttpHandlers.executeHandler(noEncodingHandler, exchange);
+                        noEncodingHandler.handleRequest(exchange);
                         return;
                     } else {
-                        HttpHandlers.executeHandler(nextHandler, exchange);
+                        nextHandler.handleRequest(exchange);
                         return;
                     }
                 }
@@ -119,7 +119,7 @@ public class EncodingHandler implements HttpHandler {
             exchange.addResponseWrapper(contentEncoding);
             exchange.putAttachment(ContentEncoding.CONENT_ENCODING, contentEncoding);
         }
-        HttpHandlers.executeHandler(nextHandler, exchange);
+        nextHandler.handleRequest(exchange);
     }
 
 

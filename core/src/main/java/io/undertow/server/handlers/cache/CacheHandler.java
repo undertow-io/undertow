@@ -63,7 +63,7 @@ public class CacheHandler implements HttpHandler {
                 return new ResponseCachingStreamSinkConduit(factory.create(), entry, length);
             }
         });
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
     public HttpHandler getNext() {

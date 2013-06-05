@@ -20,7 +20,6 @@ package io.undertow.security.handlers;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpHandlers;
 
 /**
  * Handler responsible for checking the constraints for the current request and marking authentication as required if
@@ -49,7 +48,7 @@ public class AuthenticationConstraintHandler implements HttpHandler {
             context.setAuthenticationRequired();
         }
 
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
     /**

@@ -7,7 +7,6 @@ import javax.net.ssl.SSLSession;
 import javax.servlet.ServletRequest;
 
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
@@ -113,7 +112,7 @@ public class SSLInformationAssociationHandler implements HttpHandler {
                 request.setAttribute("javax.servlet.request.X509Certificate", certs);
             }
         }
-        HttpHandlers.executeHandler(next, exchange);
+        next.handleRequest(exchange);
     }
 
 }
