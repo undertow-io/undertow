@@ -63,6 +63,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.core.ManagedListener;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.util.EmptyEnumeration;
@@ -84,6 +85,7 @@ public class ServletContextImpl implements ServletContext {
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
     private volatile Set<SessionTrackingMode> sessionTrackingModes = Collections.singleton(SessionTrackingMode.COOKIE);
     private volatile boolean initialized = false;
+
 
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
@@ -354,6 +356,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final String className) {
+        ensureNotProgramaticListener();
         ensureNotInitialized();
         try {
             ServletInfo servlet = new ServletInfo(servletName, (Class<? extends Servlet>) deploymentInfo.getClassLoader().loadClass(className));
@@ -367,6 +370,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final Servlet servlet) {
+        ensureNotProgramaticListener();
         ensureNotInitialized();
         ServletInfo s = new ServletInfo(servletName, servlet.getClass(), new ImmediateInstanceFactory<Servlet>(servlet));
         deploymentInfo.addServlet(s);
@@ -376,6 +380,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final Class<? extends Servlet> servletClass) {
+        ensureNotProgramaticListener();
         ensureNotInitialized();
         ServletInfo servlet = new ServletInfo(servletName, servletClass);
         deploymentInfo.addServlet(servlet);
@@ -385,6 +390,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends Servlet> T createServlet(final Class<T> clazz) throws ServletException {
+        ensureNotProgramaticListener();
         try {
             return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (InstantiationException e) {
@@ -396,6 +402,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration getServletRegistration(final String servletName) {
+        ensureNotProgramaticListener();
         final ServletInfo servlet = deploymentInfo.getServlets().get(servletName);
         if(servlet == null) {
             return null;
@@ -405,6 +412,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Map<String, ? extends ServletRegistration> getServletRegistrations() {
+        ensureNotProgramaticListener();
         final Map<String, ServletRegistration> ret = new HashMap<String, ServletRegistration>();
         for (Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
             ret.put(entry.getKey(), new ServletRegistrationImpl(entry.getValue(), deployment));
@@ -414,6 +422,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(final String filterName, final String className) {
+        ensureNotProgramaticListener();
         ensureNotInitialized();
         try {
             FilterInfo filter = new FilterInfo(filterName, (Class<? extends Filter>) deploymentInfo.getClassLoader().loadClass(className));
@@ -427,6 +436,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(final String filterName, final Filter filter) {
+        ensureNotProgramaticListener();
         ensureNotInitialized();
         FilterInfo f = new FilterInfo(filterName, filter.getClass(), new ImmediateInstanceFactory<Filter>(filter));
         deploymentInfo.addFilter(f);
@@ -437,6 +447,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(final String filterName, final Class<? extends Filter> filterClass) {
+        ensureNotProgramaticListener();
         ensureNotInitialized();
         FilterInfo filter = new FilterInfo(filterName, filterClass);
         deploymentInfo.addFilter(filter);
@@ -446,6 +457,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends Filter> T createFilter(final Class<T> clazz) throws ServletException {
+        ensureNotProgramaticListener();
         try {
             return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (InstantiationException e) {
@@ -457,6 +469,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration getFilterRegistration(final String filterName) {
+        ensureNotProgramaticListener();
         final FilterInfo filterInfo = deploymentInfo.getFilters().get(filterName);
         if (filterInfo == null) {
             return null;
@@ -466,6 +479,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
+        ensureNotProgramaticListener();
         final Map<String, FilterRegistration> ret = new HashMap<String, FilterRegistration>();
         for (Map.Entry<String, FilterInfo> entry : deploymentInfo.getFilters().entrySet()) {
             ret.put(entry.getKey(), new FilterRegistrationImpl(entry.getValue(), deployment));
@@ -475,11 +489,13 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public SessionCookieConfigImpl getSessionCookieConfig() {
+        ensureNotProgramaticListener();
         return sessionCookieConfig;
     }
 
     @Override
     public void setSessionTrackingModes(final Set<SessionTrackingMode> sessionTrackingModes) {
+        ensureNotProgramaticListener();
         ensureNotInitialized();
         this.sessionTrackingModes = new HashSet<>(sessionTrackingModes);
         //TODO: actually make this work
@@ -487,16 +503,19 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
+        ensureNotProgramaticListener();
         return Collections.singleton(SessionTrackingMode.COOKIE);
     }
 
     @Override
     public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
+        ensureNotProgramaticListener();
         return Collections.unmodifiableSet(sessionTrackingModes);
     }
 
     @Override
     public void addListener(final String className) {
+        ensureNotProgramaticListener();
         ensureNotInitialized();
         try {
             Class<? extends EventListener> clazz = (Class<? extends EventListener>) deploymentInfo.getClassLoader().loadClass(className);
@@ -508,14 +527,16 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends EventListener> void addListener(final T t) {
+        ensureNotProgramaticListener();
         ensureNotInitialized();
         ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t));
         deploymentInfo.addListener(listener);
-        deployment.getApplicationListeners().addListener(new ManagedListener(listener));
+        deployment.getApplicationListeners().addListener(new ManagedListener(listener, true));
     }
 
     @Override
     public void addListener(final Class<? extends EventListener> listenerClass) {
+        ensureNotProgramaticListener();
         ensureNotInitialized();
         InstanceFactory<? extends EventListener> factory = null;
         try {
@@ -525,11 +546,12 @@ public class ServletContextImpl implements ServletContext {
         }
         final ListenerInfo listener = new ListenerInfo(listenerClass, factory);
         deploymentInfo.addListener(listener);
-        deployment.getApplicationListeners().addListener(new ManagedListener(listener));
+        deployment.getApplicationListeners().addListener(new ManagedListener(listener, true));
     }
 
     @Override
     public <T extends EventListener> T createListener(final Class<T> clazz) throws ServletException {
+        ensureNotProgramaticListener();
         try {
             return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (InstantiationException e) {
@@ -599,4 +621,9 @@ public class ServletContextImpl implements ServletContext {
         }
     }
 
+    private void ensureNotProgramaticListener() {
+        if(ApplicationListeners.isInProgramaticServletContextListenerInvocation()) {
+            throw UndertowServletMessages.MESSAGES.cannotCallFromProgramaticListener();
+        }
+    }
 }

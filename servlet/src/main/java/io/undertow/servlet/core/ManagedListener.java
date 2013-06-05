@@ -32,12 +32,14 @@ import io.undertow.servlet.api.ListenerInfo;
 public class ManagedListener implements Lifecycle {
 
     private final ListenerInfo listenerInfo;
+    private final boolean programatic;
 
     private volatile boolean started = false;
     private volatile InstanceHandle<? extends EventListener> handle;
 
-    public ManagedListener(final ListenerInfo listenerInfo) {
+    public ManagedListener(final ListenerInfo listenerInfo, final boolean programatic) {
         this.listenerInfo = listenerInfo;
+        this.programatic = programatic;
     }
 
     public synchronized void start() throws ServletException {
@@ -78,4 +80,7 @@ public class ManagedListener implements Lifecycle {
         return handle.getInstance();
     }
 
+    public boolean isProgramatic() {
+        return programatic;
+    }
 }

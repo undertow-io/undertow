@@ -52,6 +52,8 @@ import io.undertow.servlet.UndertowServletLogger;
  */
 public class ApplicationListeners implements Lifecycle {
 
+    private static final ThreadLocal<Boolean> IN_PROGRAMATIC_SC_LISTENER_INVOCATION = new ThreadLocal<>();
+
     private final ServletContext servletContext;
     private final List<ManagedListener> allListeners;
     private final List<ManagedListener> servletContextListeners;
@@ -122,9 +124,18 @@ public class ApplicationListeners implements Lifecycle {
     }
 
     public void contextInitialized() {
+        //new listeners can be added here, so we don't use an iterator
         final ServletContextEvent event = new ServletContextEvent(servletContext);
-        for (ManagedListener listener : servletContextListeners) {
-            this.<ServletContextListener>get(listener).contextInitialized(event);
+        for (int i = 0; i < servletContextListeners.size(); ++i) {
+            ManagedListener listener = servletContextListeners.get(i);
+            if(listener.isProgramatic()) {
+                IN_PROGRAMATIC_SC_LISTENER_INVOCATION.set(true);
+            }
+            try {
+                this.<ServletContextListener>get(listener).contextInitialized(event);
+            } finally {
+                IN_PROGRAMATIC_SC_LISTENER_INVOCATION.remove();
+            }
         }
     }
 
@@ -249,6 +260,11 @@ public class ApplicationListeners implements Lifecycle {
 
     private <T> ListIterator<T> getReturningListIterator(List<T> list) {
         return list.listIterator(list.size());
+    }
+
+    public static boolean isInProgramaticServletContextListenerInvocation() {
+        Boolean result = IN_PROGRAMATIC_SC_LISTENER_INVOCATION.get();
+        return result == null ? false : result;
     }
 
 }

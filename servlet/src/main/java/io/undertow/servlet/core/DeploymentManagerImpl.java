@@ -347,7 +347,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     private ApplicationListeners createListeners() {
         final List<ManagedListener> managedListeners = new ArrayList<ManagedListener>();
         for (final ListenerInfo listener : deployment.getDeploymentInfo().getListeners()) {
-            managedListeners.add(new ManagedListener(listener));
+            managedListeners.add(new ManagedListener(listener, false));
         }
         return new ApplicationListeners(managedListeners, deployment.getServletContext());
     }
