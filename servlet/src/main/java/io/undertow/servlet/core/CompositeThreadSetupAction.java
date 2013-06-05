@@ -39,7 +39,7 @@ public class CompositeThreadSetupAction implements ThreadSetupAction {
         final Handle[] handles = new Handle[actions.length];
         try {
             for (int i = 0; i < handles.length; ++i) {
-                handles[i] = actions[i].setup(exchange);
+                handles[handles.length - i - 1] = actions[i].setup(exchange); //add them in reverse order
             }
             return new Handle() {
                 @Override
