@@ -52,6 +52,15 @@ import io.undertow.servlet.UndertowServletLogger;
  */
 public class ApplicationListeners implements Lifecycle {
 
+
+    private static final Class[] LISTENER_CLASSES = {ServletContextListener.class,
+            ServletContextAttributeListener.class,
+            ServletRequestListener.class,
+            ServletRequestAttributeListener.class,
+            javax.servlet.http.HttpSessionListener.class,
+            javax.servlet.http.HttpSessionAttributeListener.class,
+            HttpSessionIdListener.class};
+
     private static final ThreadLocal<Boolean> IN_PROGRAMATIC_SC_LISTENER_INVOCATION = new ThreadLocal<>();
 
     private final ServletContext servletContext;
@@ -265,6 +274,15 @@ public class ApplicationListeners implements Lifecycle {
     public static boolean isInProgramaticServletContextListenerInvocation() {
         Boolean result = IN_PROGRAMATIC_SC_LISTENER_INVOCATION.get();
         return result == null ? false : result;
+    }
+
+    public static boolean isListenerClass(final Class<?> clazz) {
+        for (Class c : LISTENER_CLASSES) {
+            if (c.isAssignableFrom(clazz)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

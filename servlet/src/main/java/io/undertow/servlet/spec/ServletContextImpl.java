@@ -552,6 +552,9 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public <T extends EventListener> T createListener(final Class<T> clazz) throws ServletException {
         ensureNotProgramaticListener();
+        if(!ApplicationListeners.isListenerClass(clazz)) {
+            throw UndertowServletMessages.MESSAGES.listenerMustImplementListenerClass(clazz);
+        }
         try {
             return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (InstantiationException e) {

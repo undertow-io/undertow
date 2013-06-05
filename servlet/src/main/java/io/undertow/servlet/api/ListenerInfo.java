@@ -21,13 +21,8 @@ package io.undertow.servlet.api;
 import java.lang.reflect.Constructor;
 import java.util.EventListener;
 
-import javax.servlet.ServletContextAttributeListener;
-import javax.servlet.ServletContextListener;
-import javax.servlet.ServletRequestAttributeListener;
-import javax.servlet.ServletRequestListener;
-import javax.servlet.http.HttpSessionIdListener;
-
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
 
 /**
@@ -35,13 +30,6 @@ import io.undertow.servlet.util.ConstructorInstanceFactory;
  */
 public class ListenerInfo {
 
-    private static final Class[] LISTENER_CLASSES = {ServletContextListener.class,
-            ServletContextAttributeListener.class,
-            ServletRequestListener.class,
-            ServletRequestAttributeListener.class,
-            javax.servlet.http.HttpSessionListener.class,
-            javax.servlet.http.HttpSessionAttributeListener.class,
-            HttpSessionIdListener.class};
 
     private final Class<? extends EventListener> listenerClass;
     private final InstanceFactory<? extends EventListener> instanceFactory;
@@ -49,14 +37,7 @@ public class ListenerInfo {
     public ListenerInfo(final Class<? extends EventListener> listenerClass, final InstanceFactory<? extends EventListener> instanceFactory) {
         this.listenerClass = listenerClass;
         this.instanceFactory = instanceFactory;
-        boolean ok = false;
-        for (Class c : LISTENER_CLASSES) {
-            if (c.isAssignableFrom(listenerClass)) {
-                ok = true;
-                break;
-            }
-        }
-        if(!ok) {
+        if(!ApplicationListeners.isListenerClass(listenerClass)) {
             throw UndertowServletMessages.MESSAGES.listenerMustImplementListenerClass(listenerClass);
         }
     }
