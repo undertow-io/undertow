@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.HashMap;
@@ -81,6 +82,8 @@ public class ServletContextImpl implements ServletContext {
     private final SessionCookieConfigImpl sessionCookieConfig;
     private final FormParserFactory formParserFactory;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
+    private volatile Set<SessionTrackingMode> sessionTrackingModes = Collections.singleton(SessionTrackingMode.COOKIE);
+    private volatile boolean initialized = false;
 
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
@@ -104,6 +107,10 @@ public class ServletContextImpl implements ServletContext {
         }
         attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
         this.formParserFactory = deployment.getDeploymentInfo().getFormParserFactory();
+    }
+
+    public void initDone() {
+        initialized = true;
     }
 
     public FormParserFactory getFormParserFactory() {
@@ -131,7 +138,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public int getMinorVersion() {
-        return 0;
+        return 1;
     }
 
     @Override
@@ -347,6 +354,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final String className) {
+        ensureNotInitialized();
         try {
             ServletInfo servlet = new ServletInfo(servletName, (Class<? extends Servlet>) deploymentInfo.getClassLoader().loadClass(className));
             deploymentInfo.addServlet(servlet);
@@ -359,6 +367,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final Servlet servlet) {
+        ensureNotInitialized();
         ServletInfo s = new ServletInfo(servletName, servlet.getClass(), new ImmediateInstanceFactory<Servlet>(servlet));
         deploymentInfo.addServlet(s);
         deployment.getServlets().addServlet(s);
@@ -367,6 +376,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public ServletRegistration.Dynamic addServlet(final String servletName, final Class<? extends Servlet> servletClass) {
+        ensureNotInitialized();
         ServletInfo servlet = new ServletInfo(servletName, servletClass);
         deploymentInfo.addServlet(servlet);
         deployment.getServlets().addServlet(servlet);
@@ -404,6 +414,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(final String filterName, final String className) {
+        ensureNotInitialized();
         try {
             FilterInfo filter = new FilterInfo(filterName, (Class<? extends Filter>) deploymentInfo.getClassLoader().loadClass(className));
             deploymentInfo.addFilter(filter);
@@ -416,6 +427,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(final String filterName, final Filter filter) {
+        ensureNotInitialized();
         FilterInfo f = new FilterInfo(filterName, filter.getClass(), new ImmediateInstanceFactory<Filter>(filter));
         deploymentInfo.addFilter(f);
         deployment.getFilters().addFilter(f);
@@ -425,6 +437,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public FilterRegistration.Dynamic addFilter(final String filterName, final Class<? extends Filter> filterClass) {
+        ensureNotInitialized();
         FilterInfo filter = new FilterInfo(filterName, filterClass);
         deploymentInfo.addFilter(filter);
         deployment.getFilters().addFilter(filter);
@@ -467,21 +480,24 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void setSessionTrackingModes(final Set<SessionTrackingMode> sessionTrackingModes) {
-
+        ensureNotInitialized();
+        this.sessionTrackingModes = new HashSet<>(sessionTrackingModes);
+        //TODO: actually make this work
     }
 
     @Override
     public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
-        return null;
+        return Collections.singleton(SessionTrackingMode.COOKIE);
     }
 
     @Override
     public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
-        return null;
+        return Collections.unmodifiableSet(sessionTrackingModes);
     }
 
     @Override
     public void addListener(final String className) {
+        ensureNotInitialized();
         try {
             Class<? extends EventListener> clazz = (Class<? extends EventListener>) deploymentInfo.getClassLoader().loadClass(className);
             addListener(clazz);
@@ -492,6 +508,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends EventListener> void addListener(final T t) {
+        ensureNotInitialized();
         ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t));
         deploymentInfo.addListener(listener);
         deployment.getApplicationListeners().addListener(new ManagedListener(listener));
@@ -499,6 +516,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void addListener(final Class<? extends EventListener> listenerClass) {
+        ensureNotInitialized();
         InstanceFactory<? extends EventListener> factory = null;
         try {
             factory = deploymentInfo.getClassIntrospecter().createInstanceFactory(listenerClass);
@@ -573,6 +591,12 @@ public class ServletContextImpl implements ServletContext {
 
     public Deployment getDeployment() {
         return deployment;
+    }
+
+    private void ensureNotInitialized() {
+        if(initialized) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
     }
 
 }

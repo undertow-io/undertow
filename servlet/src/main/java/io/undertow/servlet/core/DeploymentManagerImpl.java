@@ -117,10 +117,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
         this.deployment = deployment;
 
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
-
+        deployment.setServletContext(servletContext);
         handleExtensions(deploymentInfo, servletContext);
 
-        deployment.setServletContext(servletContext);
         deployment.setSessionManager(deploymentInfo.getSessionManagerFactory().createSessionManager(deployment));
         deployment.getSessionManager().setDefaultSessionTimeout(deploymentInfo.getDefaultSessionTimeout());
 
@@ -173,6 +172,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
             deployment.setInitialHandler(initialHandler);
             deployment.setServletHandler(servletInitialHandler);
             deployment.getServletPaths().invalidate(); //make sure we have a fresh set of servlet paths
+            servletContext.initDone();
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {

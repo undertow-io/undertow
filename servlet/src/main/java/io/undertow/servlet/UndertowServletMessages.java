@@ -166,4 +166,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10040, value = "More than one default error page %s and %s")
     IllegalStateException moreThanOneDefaultErrorPage(String defaultErrorPage, String location);
+
+    @Message(id = 10041, value = "The servlet context has already been initialized, you can only call this method from a ServletContainerInitializer or a ServletContextListener.")
+    IllegalStateException servletContextAlreadyInitialized();
 }
