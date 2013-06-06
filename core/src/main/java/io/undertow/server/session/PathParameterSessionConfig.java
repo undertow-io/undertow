@@ -13,7 +13,15 @@ import io.undertow.server.HttpServerExchange;
  */
 public class PathParameterSessionConfig implements SessionConfig {
 
-    private String name = SessionCookieConfig.DEFAULT_SESSION_ID;
+    private final String name;
+
+    public PathParameterSessionConfig(final String name) {
+        this.name = name;
+    }
+
+    public PathParameterSessionConfig() {
+        this(SessionCookieConfig.DEFAULT_SESSION_ID);
+    }
 
     @Override
     public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
@@ -35,7 +43,7 @@ public class PathParameterSessionConfig implements SessionConfig {
     }
 
     @Override
-    public String rewriteUrl(final String originalUrl, final Session session) {
+    public String rewriteUrl(final String originalUrl, final String sessionId) {
         try {
             int pos = originalUrl.indexOf("?");
             if (pos != -1) {
@@ -43,7 +51,7 @@ public class PathParameterSessionConfig implements SessionConfig {
                         .append(";")
                         .append(name)
                         .append("=")
-                        .append(URLEncoder.encode(session.getId(), "UTF-8"))
+                        .append(URLEncoder.encode(sessionId, "UTF-8"))
                         .append(originalUrl.substring(pos))
                         .toString();
             } else {
@@ -51,7 +59,7 @@ public class PathParameterSessionConfig implements SessionConfig {
                         .append(";")
                         .append(name)
                         .append("=")
-                        .append(URLEncoder.encode(session.getId(), "UTF-8"))
+                        .append(URLEncoder.encode(sessionId, "UTF-8"))
                         .toString();
             }
         } catch (UnsupportedEncodingException e) {

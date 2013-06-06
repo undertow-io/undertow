@@ -89,22 +89,30 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String encodeURL(final String url) {
-        return url;
+        return encodeUrl(url);
     }
 
     @Override
     public String encodeRedirectURL(final String url) {
-        return url;
+        return encodeRedirectUrl(url);
     }
 
     @Override
     public String encodeUrl(final String url) {
-        return url;
+        HttpSessionImpl session = servletContext.getSession(exchange, false);
+        if(session == null) {
+            return url;
+        }
+        return servletContext.getSessionConfig().rewriteUrl(url, session.getId());
     }
 
     @Override
     public String encodeRedirectUrl(final String url) {
-        return url;
+        HttpSessionImpl session = servletContext.getSession(exchange, false);
+        if(session == null) {
+            return url;
+        }
+        return servletContext.getSessionConfig().rewriteUrl(url, session.getId());
     }
 
     @Override

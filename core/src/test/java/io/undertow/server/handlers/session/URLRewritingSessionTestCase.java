@@ -73,9 +73,9 @@ public class URLRewritingSessionTestCase {
                     exchange.getResponseHeaders().add(new HttpString(qp.getKey()), qp.getValue().getFirst());
                 }
                 if (exchange.getQueryString().isEmpty()) {
-                    exchange.getResponseSender().send(sessionConfig.rewriteUrl(DefaultServer.getDefaultServerURL() + "/notamatchingpath", session));
+                    exchange.getResponseSender().send(sessionConfig.rewriteUrl(DefaultServer.getDefaultServerURL() + "/notamatchingpath", session.getId()));
                 } else {
-                    exchange.getResponseSender().send(sessionConfig.rewriteUrl(DefaultServer.getDefaultServerURL() + "/notamatchingpath?" + exchange.getQueryString(), session));
+                    exchange.getResponseSender().send(sessionConfig.rewriteUrl(DefaultServer.getDefaultServerURL() + "/notamatchingpath?" + exchange.getQueryString(), session.getId()));
                 }
             }
         });

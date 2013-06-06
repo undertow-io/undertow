@@ -46,6 +46,6 @@ public interface SessionConfig {
      */
     String findSessionId(final HttpServerExchange exchange);
 
-    String rewriteUrl(final String originalUrl, final Session session);
+    String rewriteUrl(final String originalUrl, final String sessionId);
 
 }

@@ -25,7 +25,6 @@ import javax.servlet.SessionCookieConfig;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
-import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
 import io.undertow.servlet.UndertowServletMessages;
 
@@ -50,7 +49,7 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     }
 
     @Override
-    public String rewriteUrl(final String originalUrl, final Session session) {
+    public String rewriteUrl(final String originalUrl, final String sessionid) {
         return originalUrl;
     }
 

@@ -51,8 +51,11 @@ import io.undertow.Version;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.handlers.resource.Resource;
+import io.undertow.server.session.PathParameterSessionConfig;
 import io.undertow.server.session.Session;
+import io.undertow.server.session.SessionConfig;
 import io.undertow.server.session.SessionManager;
+import io.undertow.server.session.SslSessionConfig;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
@@ -85,6 +88,7 @@ public class ServletContextImpl implements ServletContext {
     private final FormParserFactory formParserFactory;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
     private volatile Set<SessionTrackingMode> sessionTrackingModes = Collections.singleton(SessionTrackingMode.COOKIE);
+    private volatile SessionConfig sessionConfig;
     private volatile boolean initialized = false;
 
 
@@ -117,6 +121,25 @@ public class ServletContextImpl implements ServletContext {
 
     public void initDone() {
         initialized = true;
+        Set<SessionTrackingMode> trackingMethods = sessionTrackingModes;
+        if(trackingMethods == null || trackingMethods.isEmpty()) {
+            sessionConfig = sessionCookieConfig;
+        } else {
+            SessionTrackingMode method = trackingMethods.iterator().next();
+            switch (method) {
+                case COOKIE:
+                    sessionConfig = sessionCookieConfig;
+                    break;
+                case SSL:
+                    //todo: should we allow cookie fallback?
+                    sessionConfig = new SslSessionConfig(sessionCookieConfig);
+                    break;
+                case URL:
+                    PathParameterSessionConfig config = new PathParameterSessionConfig(sessionCookieConfig.getName());
+                    sessionConfig = config;
+                    break;
+            }
+        }
     }
 
     public FormParserFactory getFormParserFactory() {
@@ -520,6 +543,9 @@ public class ServletContextImpl implements ServletContext {
     public void setSessionTrackingModes(final Set<SessionTrackingMode> sessionTrackingModes) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
+        if(sessionTrackingModes.size() > 1) {
+            throw UndertowServletMessages.MESSAGES.canOnlySetOneSessionTrackingMode();
+        }
         this.sessionTrackingModes = new HashSet<>(sessionTrackingModes);
         //TODO: actually make this work
     }
@@ -618,7 +644,7 @@ public class ServletContextImpl implements ServletContext {
      * @return
      */
     public HttpSessionImpl getSession(final HttpServerExchange exchange, boolean create) {
-        final SessionCookieConfigImpl c = getSessionCookieConfig();
+        final SessionConfig c = sessionConfig;
         HttpSessionImpl httpSession = exchange.getAttachment(sessionAttachmentKey);
         if (httpSession != null && httpSession.isInvalid()) {
             exchange.removeAttachment(sessionAttachmentKey);
@@ -664,5 +690,9 @@ public class ServletContextImpl implements ServletContext {
 
     boolean isInitialized() {
         return initialized;
+    }
+
+    SessionConfig getSessionConfig() {
+        return sessionConfig;
     }
 }

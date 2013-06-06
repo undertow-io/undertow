@@ -178,4 +178,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10044, value = "listener cannot be null")
     NullPointerException listenerCannotBeNull();
+
+    @Message(id = 10045, value = "Only one session tracking mode at a time is supported")
+    IllegalArgumentException canOnlySetOneSessionTrackingMode();
 }

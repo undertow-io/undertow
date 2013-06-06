@@ -79,7 +79,7 @@ public class SslSessionConfig implements SessionConfig {
     }
 
     @Override
-    public String rewriteUrl(final String originalUrl, final Session session) {
+    public String rewriteUrl(final String originalUrl, final String sessionId) {
         return originalUrl;
     }
 }
