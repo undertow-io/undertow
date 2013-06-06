@@ -19,9 +19,14 @@ package io.undertow.servlet.test.security.constraint;
 
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
+import io.undertow.security.idm.DigestCredential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
+import io.undertow.util.HexConverter;
 
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -36,6 +41,7 @@ import java.util.Set;
  */
 public class ServletIdentityManager implements IdentityManager {
 
+    private static final Charset UTF_8 = Charset.forName("UTF-8");
     private final Map<String, UserAccount> users = new HashMap<String, UserAccount>();
 
     public void addUser(final String name, final String password, final String... roles) {
@@ -69,11 +75,32 @@ public class ServletIdentityManager implements IdentityManager {
 
     private boolean verifyCredential(Account account, Credential credential) {
         // This approach should never be copied in a realm IdentityManager.
-        if (account instanceof UserAccount && credential instanceof PasswordCredential) {
-            char[] expectedPassword = ((UserAccount) account).password;
-            char[] suppliedPassword = ((PasswordCredential) credential).getPassword();
+        if (account instanceof UserAccount) {
+            if (credential instanceof PasswordCredential) {
+                char[] expectedPassword = ((UserAccount) account).password;
+                char[] suppliedPassword = ((PasswordCredential) credential).getPassword();
 
-            return Arrays.equals(expectedPassword, suppliedPassword);
+                return Arrays.equals(expectedPassword, suppliedPassword);
+            } else if (credential instanceof DigestCredential) {
+                DigestCredential digCred = (DigestCredential) credential;
+                MessageDigest digest = null;
+                try {
+                    digest = digCred.getAlgorithm().getMessageDigest();
+
+                    digest.update(account.getPrincipal().getName().getBytes(UTF_8));
+                    digest.update((byte) ':');
+                    digest.update(digCred.getRealm().getBytes(UTF_8));
+                    digest.update((byte) ':');
+                    char[] expectedPassword = ((UserAccount) account).password;
+                    digest.update(new String(expectedPassword).getBytes(UTF_8));
+
+                    return digCred.verifyHA1(HexConverter.convertToHexBytes(digest.digest()));
+                } catch (NoSuchAlgorithmException e) {
+                    throw new IllegalStateException("Unsupported Algorithm", e);
+                } finally {
+                    digest.reset();
+                }
+            }
         }
         return false;
     }

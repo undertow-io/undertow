@@ -28,7 +28,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.test.SimpleServletTestCase;
-import io.undertow.servlet.test.security.constraint.SendSchemeMessageServlet;
+import io.undertow.servlet.test.security.SendSchemeServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestConfidentialPortManager;
 import io.undertow.testutils.AjpIgnore;
@@ -63,7 +63,7 @@ public class ConfidentialityConstraintUrlMappingTestCase {
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
-        ServletInfo s = new ServletInfo("servlet", SendSchemeMessageServlet.class)
+        ServletInfo s = new ServletInfo("servlet", SendSchemeServlet.class)
                 .addMapping("/clear")
                 .addMapping("/integral")
                 .addMapping("/confidential");

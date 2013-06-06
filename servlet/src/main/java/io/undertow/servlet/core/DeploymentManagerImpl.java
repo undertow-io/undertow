@@ -20,6 +20,7 @@ package io.undertow.servlet.core;
 
 import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
 import static javax.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
+import static javax.servlet.http.HttpServletRequest.DIGEST_AUTH;
 import static javax.servlet.http.HttpServletRequest.FORM_AUTH;
 
 import io.undertow.predicate.Predicates;
@@ -33,6 +34,7 @@ import io.undertow.security.handlers.SecurityInitialHandler;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
+import io.undertow.security.impl.DigestAuthenticationMechanism;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PredicateHandler;
@@ -241,6 +243,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
                                 loginConfig.getErrorPage()));
                     } else if (mechName.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
                         authenticationMechanisms.add(new ClientCertAuthenticationMechanism(CLIENT_CERT_AUTH));
+                    } else if (mechName.equalsIgnoreCase(DIGEST_AUTH)) {
+                        authenticationMechanisms.add(new DigestAuthenticationMechanism(loginConfig.getRealmName(), deploymentInfo.getContextPath(), DIGEST_AUTH));
                     } else {
                         throw UndertowServletMessages.MESSAGES.unknownAuthenticationMechanism(mechName);
                     }
