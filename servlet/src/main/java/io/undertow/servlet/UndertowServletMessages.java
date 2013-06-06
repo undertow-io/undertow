@@ -172,4 +172,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10042, value = "This method cannot be called from a servlet context listener that has been added programatically")
     UnsupportedOperationException cannotCallFromProgramaticListener();
+
+    @Message(id = 10043, value = "Cannot add servlet context listener from a programatically added listener")
+    IllegalArgumentException cannotAddServletContextListener();
 }

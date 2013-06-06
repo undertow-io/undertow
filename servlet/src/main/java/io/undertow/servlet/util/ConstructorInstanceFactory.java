@@ -42,9 +42,13 @@ public class ConstructorInstanceFactory<T> implements InstanceFactory<T> {
             final T instance = constructor.newInstance();
             return new ImmediateInstanceHandle<T>(instance);
         } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            InstantiationException ite = new InstantiationException();
+            ite.initCause(e);
+            throw ite;
         } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
+            InstantiationException ite = new InstantiationException();
+            ite.initCause(e);
+            throw ite;
         }
     }
 }
