@@ -41,6 +41,7 @@ import io.undertow.util.HexConverter;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -118,6 +119,11 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         } else {
             qopString = null;
         }
+    }
+
+    public DigestAuthenticationMechanism(final String realmName, final String domain, final String mechanismName) {
+        this(Collections.singletonList(DigestAlgorithm.MD5), new ArrayList<DigestQop>(0), realmName, domain,
+                new SimpleNonceManager());
     }
 
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
