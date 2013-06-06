@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import javax.websocket.CloseReason;
 import javax.websocket.DeploymentException;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
@@ -81,6 +82,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                     }
                     found.add(OnClose.class);
                     OnClose = new BoundMethod(method, null, false, new BoundSingleParameter(method, Session.class, true),
+                            new BoundSingleParameter(method, CloseReason.class, true),
                             new BoundPathParameters(pathParams(method)));
                 }
                 if (method.isAnnotationPresent(OnError.class)) {
@@ -158,7 +160,15 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                                 messageHandled = true;
                                 break;
                             } else if (encodingFactory.canDecodeDinary(param)) {
-
+                                if (binaryMessage != null) {
+                                    throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
+                                }
+                                binaryMessage = new BoundMethod(method, param, true, new BoundSingleParameter(method, Session.class, true),
+                                        new BoundSingleParameter(method, boolean.class, true),
+                                        new BoundSingleParameter(method, param, false),
+                                        new BoundPathParameters(pathParams(method)));
+                                messageHandled = true;
+                                break;
                             }
                         }
                     }
