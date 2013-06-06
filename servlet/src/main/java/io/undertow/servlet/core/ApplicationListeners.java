@@ -290,24 +290,4 @@ public class ApplicationListeners implements Lifecycle {
         return false;
     }
 
-    /**
-     * Returns true if this provided listener class only implements ServletContextListener.
-     *
-     * If is assumed that {@link #isListenerClass(Class)} has already been called to verify the
-     * class is in fact a listener class.
-     *
-     * @param listenerClass A listener class.
-     * @return <code>true</code> If the provided listener class is only a servlet context listener
-     */
-    public static boolean isOnlyServletContextListener(final Class<?> listenerClass) {
-        for (Class c : LISTENER_CLASSES) {
-            if (c.equals(ServletContextListener.class)) {
-                continue;
-            }
-            if (c.isAssignableFrom(listenerClass)) {
-                return false;
-            }
-        }
-        return true;
-    }
 }

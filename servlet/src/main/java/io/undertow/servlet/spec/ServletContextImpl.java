@@ -578,8 +578,7 @@ public class ServletContextImpl implements ServletContext {
         ensureNotInitialized();
 
         if((ApplicationListeners.isInProgramaticServletContextListenerInvocation() &&
-                ServletContextListener.class.isAssignableFrom(t.getClass())) ||
-                ApplicationListeners.isOnlyServletContextListener(t.getClass())) {
+                ServletContextListener.class.isAssignableFrom(t.getClass()))) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
         ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t));
@@ -592,8 +591,7 @@ public class ServletContextImpl implements ServletContext {
         ensureNotProgramaticListener();
         ensureNotInitialized();
         if((ApplicationListeners.isInProgramaticServletContextListenerInvocation() &&
-                ServletContextListener.class.isAssignableFrom(listenerClass)) ||
-                ApplicationListeners.isOnlyServletContextListener(listenerClass)) {
+                ServletContextListener.class.isAssignableFrom(listenerClass))) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
         InstanceFactory<? extends EventListener> factory = null;
