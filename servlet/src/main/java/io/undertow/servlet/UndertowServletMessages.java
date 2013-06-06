@@ -175,4 +175,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10043, value = "Cannot add servlet context listener from a programatically added listener")
     IllegalArgumentException cannotAddServletContextListener();
+
+    @Message(id = 10044, value = "listener cannot be null")
+    NullPointerException listenerCannotBeNull();
 }

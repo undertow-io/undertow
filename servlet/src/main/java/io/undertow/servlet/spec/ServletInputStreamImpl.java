@@ -72,7 +72,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
     @Override
     public void setReadListener(final ReadListener readListener) {
         if (readListener == null) {
-            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("readListener");
+            throw UndertowServletMessages.MESSAGES.listenerCannotBeNull();
         }
         if (listener != null) {
             throw UndertowServletMessages.MESSAGES.listenerAlreadySet();

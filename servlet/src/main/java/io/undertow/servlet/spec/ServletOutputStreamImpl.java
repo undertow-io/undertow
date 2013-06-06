@@ -629,7 +629,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     @Override
     public void setWriteListener(final WriteListener writeListener) {
         if (writeListener == null) {
-            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("writeListener");
+            throw UndertowServletMessages.MESSAGES.listenerCannotBeNull();
         }
         if (listener != null) {
             throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
