@@ -817,8 +817,8 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public String getLocalAddr() {
         SocketAddress address = exchange.getConnection().getLocalAddress();
-        if (address instanceof InetSocketAddress) {
-            return ((InetSocketAddress) address).getHostName();
+         if (address instanceof InetSocketAddress) {
+            return ((InetSocketAddress) address).getAddress().getHostAddress();
         } else if (address instanceof LocalSocketAddress) {
             return ((LocalSocketAddress) address).getName();
         }
