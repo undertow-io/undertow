@@ -27,6 +27,7 @@ import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
+import io.undertow.servlet.UndertowServletMessages;
 
 /**
  * @author Stuart Douglas
@@ -35,6 +36,7 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
 
     public static final String DEFAULT_SESSION_ID = "JSESSIONID";
 
+    private final ServletContextImpl servletContext;
     private String name = DEFAULT_SESSION_ID;
     private String path = "/";
     private String domain;
@@ -43,6 +45,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     private int maxAge;
     private String comment;
 
+    public SessionCookieConfigImpl(final ServletContextImpl servletContext) {
+        this.servletContext = servletContext;
+    }
 
     @Override
     public String rewriteUrl(final String originalUrl, final Session session) {
@@ -91,6 +96,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     }
 
     public void setName(final String name) {
+        if(servletContext.isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
         this.name = name;
     }
 
@@ -99,6 +107,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     }
 
     public void setDomain(final String domain) {
+        if(servletContext.isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
         this.domain = domain;
     }
 
@@ -107,6 +118,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     }
 
     public void setPath(final String path) {
+        if(servletContext.isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
         this.path = path;
     }
 
@@ -115,6 +129,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     }
 
     public void setComment(final String comment) {
+        if(servletContext.isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
         this.comment = comment;
     }
 
@@ -123,6 +140,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     }
 
     public void setHttpOnly(final boolean httpOnly) {
+        if(servletContext.isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
         this.httpOnly = httpOnly;
     }
 
@@ -131,6 +151,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     }
 
     public void setSecure(final boolean secure) {
+        if(servletContext.isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
         this.secure = secure;
     }
 
@@ -139,6 +162,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     }
 
     public void setMaxAge(final int maxAge) {
+        if(servletContext.isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
         this.maxAge = maxAge;
     }
 }

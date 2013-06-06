@@ -44,7 +44,6 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
-import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
@@ -64,6 +63,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.ServletSessionConfig;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.core.ManagedListener;
 import io.undertow.servlet.handlers.ServletChain;
@@ -92,8 +92,8 @@ public class ServletContextImpl implements ServletContext {
         this.servletContainer = servletContainer;
         this.deployment = deployment;
         this.deploymentInfo = deployment.getDeploymentInfo();
-        sessionCookieConfig = new SessionCookieConfigImpl();
-        SessionCookieConfig sc = deploymentInfo.getSessionCookieConfig();
+        sessionCookieConfig = new SessionCookieConfigImpl(this);
+        ServletSessionConfig sc = deploymentInfo.getServletSessionConfig();
         if(sc != null) {
             sessionCookieConfig.setName(sc.getName());
             sessionCookieConfig.setComment(sc.getComment());
@@ -102,6 +102,9 @@ public class ServletContextImpl implements ServletContext {
             sessionCookieConfig.setMaxAge(sc.getMaxAge());
             sessionCookieConfig.setPath(sc.getPath());
             sessionCookieConfig.setSecure(sc.isSecure());
+            if(sc.getSessionTrackingModes() != null) {
+                sessionTrackingModes = new HashSet<>(sc.getSessionTrackingModes());
+            }
         }
         if(deploymentInfo.getServletContextAttributeBackingMap() == null) {
             this.attributes = new ConcurrentHashMap<>();
@@ -657,5 +660,9 @@ public class ServletContextImpl implements ServletContext {
         if(ApplicationListeners.isInProgramaticServletContextListenerInvocation()) {
             throw UndertowServletMessages.MESSAGES.cannotCallFromProgramaticListener();
         }
+    }
+
+    boolean isInitialized() {
+        return initialized;
     }
 }

@@ -32,7 +32,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
 import javax.servlet.DispatcherType;
-import javax.servlet.SessionCookieConfig;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.security.api.AuthenticationMechanism;
@@ -73,7 +72,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile int defaultSessionTimeout = 60 * 30;
     private volatile boolean ignoreStandardAuthenticationMechanism = false;
     private volatile ConcurrentMap<String, Object> servletContextAttributeBackingMap;
-    private volatile SessionCookieConfig sessionCookieConfig;
+    private volatile ServletSessionConfig servletSessionConfig;
     private volatile FormParserFactory formParserFactory = FormParserFactory.builder().build();
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
@@ -690,12 +689,12 @@ public class DeploymentInfo implements Cloneable {
         this.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
     }
 
-    public SessionCookieConfig getSessionCookieConfig() {
-        return sessionCookieConfig;
+    public ServletSessionConfig getServletSessionConfig() {
+        return servletSessionConfig;
     }
 
-    public void setSessionCookieConfig(final SessionCookieConfig sessionCookieConfig) {
-        this.sessionCookieConfig = sessionCookieConfig;
+    public void setServletSessionConfig(final ServletSessionConfig servletSessionConfig) {
+        this.servletSessionConfig = servletSessionConfig;
     }
 
     @Override
@@ -749,7 +748,7 @@ public class DeploymentInfo implements Cloneable {
         info.ignoreStandardAuthenticationMechanism = ignoreStandardAuthenticationMechanism;
         info.additionalAuthenticationMechanisms.addAll(additionalAuthenticationMechanisms);
         info.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
-        info.sessionCookieConfig = sessionCookieConfig;
+        info.servletSessionConfig = servletSessionConfig;
         return info;
     }
 

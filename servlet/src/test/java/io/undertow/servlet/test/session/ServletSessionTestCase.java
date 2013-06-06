@@ -20,11 +20,16 @@ package io.undertow.servlet.test.session;
 
 import java.io.IOException;
 
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.ListenerInfo;
+import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -41,13 +46,29 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class ServletSessionTestCase {
 
-    private static ServletContext servletContext;
 
     @BeforeClass
     public static void setup() throws ServletException {
-        servletContext = DeploymentUtils.setupServlet(
-                new ServletInfo("servlet", SessionServlet.class)
-                        .addMapping("/aa")).getServletContext();
+
+
+        final PathHandler pathHandler = new PathHandler();
+        final ServletContainer container = ServletContainer.Factory.newInstance();
+        DeploymentInfo builder = new DeploymentInfo()
+                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
+                .setContextPath("/servletContext")
+                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setDeploymentName("servletContext.war")
+                .addListener(new ListenerInfo(SessionCookieConfigListener.class))
+                .addServlets(new ServletInfo("servlet", SessionServlet.class)
+                        .addMapping("/aa"));
+        DeploymentManager manager = container.addDeployment(builder);
+        manager.deploy();
+        try {
+            pathHandler.addPath(builder.getContextPath(), manager.start());
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
+        }
+        DefaultServer.setRootHandler(pathHandler);
     }
 
 
@@ -80,7 +101,6 @@ public class ServletSessionTestCase {
 
     @Test
     public void testSessionCookieConfig() throws IOException {
-        servletContext.getSessionCookieConfig().setName("MySessionCookie");
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
