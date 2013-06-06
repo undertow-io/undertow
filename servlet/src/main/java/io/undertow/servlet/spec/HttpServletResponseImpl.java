@@ -112,6 +112,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (exchange.isResponseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
+        resetBuffer();
         writer = null;
         responseState = ResponseState.NONE;
         exchange.setResponseCode(sc);
