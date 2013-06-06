@@ -308,9 +308,7 @@ public class AsyncContextImpl implements AsyncContext {
         try {
             InstanceFactory<T> factory = ((ServletContextImpl) this.servletRequest.getServletContext()).getDeployment().getDeploymentInfo().getClassIntrospecter().createInstanceFactory(clazz);
             return factory.createInstance().getInstance();
-        } catch (NoSuchMethodException e) {
-            throw new ServletException(e);
-        } catch (InstantiationException e) {
+        } catch (Exception e) {
             throw new ServletException(e);
         }
     }
