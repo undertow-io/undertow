@@ -117,6 +117,11 @@ public class InMemorySessionManager implements SessionManager {
         defaultSessionTimeout = timeout;
     }
 
+    @Override
+    public int activeSessions() {
+        return sessions.size();
+    }
+
     /**
      * session implementation for the in memory session manager
      */
