@@ -30,7 +30,6 @@ import java.nio.charset.UnsupportedCharsetException;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Deque;
 import java.util.Enumeration;
@@ -432,7 +431,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             final InstanceHandle<T> instance = factory.createInstance();
             exchange.upgradeChannel(new ServletUpgradeListener<T>(instance));
             return instance.getInstance();
-        } catch (InstantiationException | NoSuchMethodException e) {
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
     }
@@ -471,9 +472,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Enumeration<String> getAttributeNames() {
         if (attributes == null) {
-            return Collections.emptyEnumeration();
+            return EmptyEnumeration.instance();
         }
-        return new IteratorEnumeration<>(attributes.keySet().iterator());
+        return new IteratorEnumeration<String>(attributes.keySet().iterator());
     }
 
     @Override
@@ -747,7 +748,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public void setAttribute(final String name, final Object object) {
         if (attributes == null) {
-            attributes = new HashMap<>();
+            attributes = new HashMap<String, Object>();
         }
         Object existing = attributes.put(name, object);
         if (existing != null) {
@@ -775,7 +776,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public Enumeration<Locale> getLocales() {
         final List<String> acceptLanguage = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
         List<Locale> ret = LocaleUtils.getLocalesFromHeader(acceptLanguage);
-        return new IteratorEnumeration<>(ret.iterator());
+        return new IteratorEnumeration<Locale>(ret.iterator());
     }
 
     @Override

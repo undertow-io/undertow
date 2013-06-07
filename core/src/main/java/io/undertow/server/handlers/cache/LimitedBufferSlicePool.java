@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Queue;
-import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -39,7 +39,7 @@ import org.xnio.BufferAllocator;
 public final class LimitedBufferSlicePool {
 
     private static final AtomicIntegerFieldUpdater regionUpdater = AtomicIntegerFieldUpdater.newUpdater(LimitedBufferSlicePool.class, "regionsUsed");
-    private final Queue<Slice> sliceQueue = new LinkedTransferQueue<>();
+    private final Queue<Slice> sliceQueue = new ConcurrentLinkedQueue<Slice>();
     private final BufferAllocator<ByteBuffer> allocator;
     private final int bufferSize;
     private final int buffersPerRegion;

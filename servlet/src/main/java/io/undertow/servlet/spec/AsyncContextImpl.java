@@ -88,7 +88,7 @@ public class AsyncContextImpl implements AsyncContext {
     private boolean initialRequestDone;
     private Thread initiatingThread;
 
-    private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<>();
+    private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<Runnable>();
     private boolean processingAsyncTask = false;
 
     public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse, final ServletRequestContext servletRequestContext, boolean requestSupplied, final AsyncContextImpl previousAsyncContext) {

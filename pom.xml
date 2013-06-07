@@ -51,8 +51,8 @@
 
     <properties>
         <!-- Build configuration -->
-        <maven.compiler.source>1.7</maven.compiler.source>
-        <maven.compiler.target>1.7</maven.compiler.target>
+        <maven.compiler.source>1.6</maven.compiler.source>
+        <maven.compiler.target>1.6</maven.compiler.target>
         <version.checkstyle.plugin>2.10</version.checkstyle.plugin>
         <version.surefire.plugin>2.11</version.surefire.plugin>
         <!--

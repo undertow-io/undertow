@@ -293,7 +293,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testBinaryWithByteBufferByFuture() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
+        final AtomicReference<Future<Void>> sendResult = new AtomicReference<Future<Void>>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
 
@@ -332,7 +332,7 @@ public class JsrWebSocketServer07Test {
     @org.junit.Test
     public void testTextByFuture() throws Exception {
         final byte[] payload = "payload".getBytes();
-        final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
+        final AtomicReference<Future<Void>> sendResult = new AtomicReference<Future<Void>>();
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
 

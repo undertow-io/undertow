@@ -105,8 +105,8 @@ public class ServletPathMatches {
         final Servlets servlets = deployment.getServlets();
         final Filters filters = deployment.getFilters();
 
-        final Map<String, ServletHandler> extensionServlets = new HashMap<>();
-        final Map<String, ServletHandler> pathServlets = new HashMap<>();
+        final Map<String, ServletHandler> extensionServlets = new HashMap<String, ServletHandler>();
+        final Map<String, ServletHandler> pathServlets = new HashMap<String, ServletHandler>();
 
         final Set<String> pathMatches = new HashSet<String>();
         final Set<String> extensionMatches = new HashSet<String>();

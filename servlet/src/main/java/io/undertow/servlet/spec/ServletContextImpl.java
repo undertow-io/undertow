@@ -19,13 +19,13 @@
 package io.undertow.servlet.spec;
 
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.EventListener;
@@ -107,11 +107,11 @@ public class ServletContextImpl implements ServletContext {
             sessionCookieConfig.setPath(sc.getPath());
             sessionCookieConfig.setSecure(sc.isSecure());
             if(sc.getSessionTrackingModes() != null) {
-                sessionTrackingModes = new HashSet<>(sc.getSessionTrackingModes());
+                sessionTrackingModes = new HashSet<SessionTrackingMode>(sc.getSessionTrackingModes());
             }
         }
         if(deploymentInfo.getServletContextAttributeBackingMap() == null) {
-            this.attributes = new ConcurrentHashMap<>();
+            this.attributes = new ConcurrentHashMap<String, Object>();
         } else {
             this.attributes = deploymentInfo.getServletContextAttributeBackingMap();
         }
@@ -202,7 +202,7 @@ public class ServletContextImpl implements ServletContext {
         }
         final Set<String> resources = new HashSet<String>();
         for (Resource res : resource.list()) {
-            Path file = res.getFile();
+            File file = res.getFile();
             if(file != null) {
                 resources.add(file.toString());
             }
@@ -240,7 +240,7 @@ public class ServletContextImpl implements ServletContext {
         }
         try {
             if(resource.getFile() != null) {
-                return new BufferedInputStream(new FileInputStream(resource.getFile().toFile()));
+                return new BufferedInputStream(new FileInputStream(resource.getFile()));
             } else {
                 return new BufferedInputStream(resource.getUrl().openStream());
             }
@@ -311,11 +311,11 @@ public class ServletContextImpl implements ServletContext {
         if(resource == null) {
             return null;
         }
-        Path file = resource.getFile();
+        File file = resource.getFile();
         if(file == null) {
             return null;
         }
-        return file.toAbsolutePath().toString();
+        return file.getAbsolutePath();
     }
 
     @Override
@@ -546,7 +546,7 @@ public class ServletContextImpl implements ServletContext {
         if(sessionTrackingModes.size() > 1) {
             throw UndertowServletMessages.MESSAGES.canOnlySetOneSessionTrackingMode();
         }
-        this.sessionTrackingModes = new HashSet<>(sessionTrackingModes);
+        this.sessionTrackingModes = new HashSet<SessionTrackingMode>(sessionTrackingModes);
         //TODO: actually make this work
     }
 

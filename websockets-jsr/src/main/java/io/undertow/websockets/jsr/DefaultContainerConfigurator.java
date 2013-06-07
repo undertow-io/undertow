@@ -47,7 +47,7 @@ public class DefaultContainerConfigurator extends ServerEndpointConfig.Configura
 
     @Override
     public List<Extension> getNegotiatedExtensions(final List<Extension> installed, final List<Extension> requested) {
-        final List<Extension> ret = new ArrayList<>();
+        final List<Extension> ret = new ArrayList<Extension>();
         for(Extension extension : installed) {
             for(Extension req : requested) {
                 if(extension.getName().equals(req.getName())) {

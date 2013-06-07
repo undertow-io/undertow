@@ -34,7 +34,7 @@ import javax.websocket.Session;
 @ClientEndpoint
 public class AnnotatedClientEndpoint {
 
-    private static final BlockingDeque<String> MESSAGES = new LinkedBlockingDeque<>();
+    private static final BlockingDeque<String> MESSAGES = new LinkedBlockingDeque<String>();
 
     public static String message() throws InterruptedException {
         return MESSAGES.pollFirst(3, TimeUnit.SECONDS);

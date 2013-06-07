@@ -21,12 +21,12 @@ public class AllowedMethodsHandler implements HttpHandler {
     private final HttpHandler next;
 
     public AllowedMethodsHandler(final HttpHandler next, final Set<HttpString> allowedMethods) {
-        this.allowedMethods = new HashSet<>(allowedMethods);
+        this.allowedMethods = new HashSet<HttpString>(allowedMethods);
         this.next = next;
     }
 
     public AllowedMethodsHandler(final HttpHandler next, final HttpString... allowedMethods) {
-        this.allowedMethods = new HashSet<>(Arrays.asList(allowedMethods));
+        this.allowedMethods = new HashSet<HttpString>(Arrays.asList(allowedMethods));
         this.next = next;
     }
 

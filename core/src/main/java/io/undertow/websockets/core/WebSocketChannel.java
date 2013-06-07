@@ -98,7 +98,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      */
     protected WebSocketChannel(final ConnectedStreamChannel connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, Set<String> subProtocols, final boolean client, boolean extensionsSupported) {
         this.client = client;
-        channel = new IdleTimeoutStreamChannel<>(connectedStreamChannel);
+        channel = new IdleTimeoutStreamChannel<ConnectedStreamChannel>(connectedStreamChannel);
         this.version = version;
         this.wsUrl = wsUrl;
         this.bufferPool = bufferPool;

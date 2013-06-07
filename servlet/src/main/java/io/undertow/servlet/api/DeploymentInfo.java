@@ -74,7 +74,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile ConcurrentMap<String, Object> servletContextAttributeBackingMap;
     private volatile ServletSessionConfig servletSessionConfig;
     private volatile FormParserFactory formParserFactory = FormParserFactory.builder().build();
-    private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<>();
+    private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
     private final List<FilterMappingInfo> filterServletNameMappings = new ArrayList<FilterMappingInfo>();
@@ -90,26 +90,26 @@ public class DeploymentInfo implements Cloneable {
     private final List<MimeMapping> mimeMappings = new ArrayList<MimeMapping>();
     private final List<SecurityConstraint> securityConstraints = new ArrayList<SecurityConstraint>();
     private final Set<String> securityRoles = new HashSet<String>();
-    private final List<NotificationReceiver> notificationReceivers = new ArrayList<>();
+    private final List<NotificationReceiver> notificationReceivers = new ArrayList<NotificationReceiver>();
 
     /**
      * Wrappers that are applied before the servlet initial handler, and before any servlet related object have been
      * created. If a wrapper wants to bypass servlet entirely it should register itself here.
      *
      */
-    private final List<HandlerWrapper> initialHandlerChainWrappers = new ArrayList<>();
+    private final List<HandlerWrapper> initialHandlerChainWrappers = new ArrayList<HandlerWrapper>();
 
     /**
      * Handler chain wrappers that are applied outside all other handlers, including security but after the initial
      * servlet handler.
      */
-    private final List<HandlerWrapper> outerHandlerChainWrappers = new ArrayList<>();
+    private final List<HandlerWrapper> outerHandlerChainWrappers = new ArrayList<HandlerWrapper>();
 
     /**
      * Handler chain wrappers that are applied just before the servlet request is dispatched. At this point the security
      * handlers have run, and any security information is attached to the request.
      */
-    private final List<HandlerWrapper> innerHandlerChainWrappers = new ArrayList<>();
+    private final List<HandlerWrapper> innerHandlerChainWrappers = new ArrayList<HandlerWrapper>();
 
 
     public void validate() {

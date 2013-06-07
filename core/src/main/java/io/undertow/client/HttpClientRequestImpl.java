@@ -69,7 +69,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
     private volatile GatedStreamSinkChannel requestChannel;
     private volatile HttpContinueNotification continueHandler;
 
-    private static final Set<HttpString> idempotentMethods = new HashSet<>();
+    private static final Set<HttpString> idempotentMethods = new HashSet<HttpString>();
     static {
         idempotentMethods.add(Methods.GET);
         idempotentMethods.add(Methods.HEAD);
@@ -297,7 +297,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
             }
             if(host == null) {
                 try {
-                    host = connection.getPeerAddress(InetSocketAddress.class).getHostString();
+                    host = connection.getPeerAddress(InetSocketAddress.class).getHostName();
                 } catch (Exception ignore)  {
                     //
                 }
@@ -319,5 +319,4 @@ class HttpClientRequestImpl extends HttpClientRequest {
     public String toString() {
         return "HttpClientRequestImpl{" + method + " " + target + " " + protocol + '}';
     }
-
 }

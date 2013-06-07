@@ -46,7 +46,7 @@ public class ServletInfo implements Cloneable {
     private final List<String> mappings = new ArrayList<String>();
     private final Map<String, String> initParams = new HashMap<String, String>();
     private final List<SecurityRoleRef> securityRoleRefs = new ArrayList<SecurityRoleRef>();
-    private final List<HandlerWrapper> handlerChainWrappers = new ArrayList<>();
+    private final List<HandlerWrapper> handlerChainWrappers = new ArrayList<HandlerWrapper>();
 
     private volatile InstanceFactory<? extends Servlet> instanceFactory;
     private volatile String jspFile;

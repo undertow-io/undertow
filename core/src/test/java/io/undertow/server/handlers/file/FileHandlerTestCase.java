@@ -18,10 +18,9 @@
 
 package io.undertow.server.handlers.file;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
@@ -47,7 +46,7 @@ public class FileHandlerTestCase {
     @Test
     public void testFileIsServed() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
-        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
         try {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()

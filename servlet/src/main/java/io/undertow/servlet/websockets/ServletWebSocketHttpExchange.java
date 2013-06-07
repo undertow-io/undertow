@@ -79,12 +79,12 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
 
     @Override
     public Map<String, List<String>> getRequestHeaders() {
-        Map<String, List<String>> headers = new HashMap<>();
+        Map<String, List<String>> headers = new HashMap<String, List<String>>();
         final Enumeration<String> headerNames = request.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             String header = headerNames.nextElement();
             final Enumeration<String> theHeaders = request.getHeaders(header);
-            final List<String> vals = new ArrayList<>();
+            final List<String> vals = new ArrayList<String>();
             headers.put(header, vals);
             while (theHeaders.hasMoreElements()) {
                 vals.add(theHeaders.nextElement());
@@ -101,7 +101,7 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
-        Map<String, List<String>> headers = new HashMap<>();
+        Map<String, List<String>> headers = new HashMap<String, List<String>>();
         final Collection<String> headerNames = response.getHeaderNames();
         for (String header : headerNames) {
             headers.put(header, new ArrayList<String>(response.getHeaders(header)));
@@ -151,7 +151,7 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
             }
             return new FinishedIoFuture<Void>(null);
         } catch (IOException e) {
-            final FutureResult<Void> ioFuture = new FutureResult<>();
+            final FutureResult<Void> ioFuture = new FutureResult<Void>();
             ioFuture.setException(e);
             return ioFuture.getIoFuture();
         }
@@ -169,7 +169,7 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
             }
             return new FinishedIoFuture<byte[]>(data.toByteArray());
         } catch (IOException e) {
-            final FutureResult<byte[]> ioFuture = new FutureResult<>();
+            final FutureResult<byte[]> ioFuture = new FutureResult<byte[]>();
             ioFuture.setException(e);
             return ioFuture.getIoFuture();
         }

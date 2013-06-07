@@ -35,7 +35,7 @@ import io.undertow.util.HeaderMap;
  */
 public final class FormData implements Iterable<String> {
 
-    private final Map<String, Deque<FormValue>> values = new HashMap<>();
+    private final Map<String, Deque<FormValue>> values = new HashMap<String, Deque<FormValue>>();
 
     private final int maxValues;
     private int valueCount = 0;

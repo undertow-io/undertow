@@ -85,7 +85,7 @@ public class ParameterCharacterEncodingTestCase {
             String charset = "UTF-8";
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext");
-            final List<NameValuePair> values = new ArrayList<>();
+            final List<NameValuePair> values = new ArrayList<NameValuePair>();
             values.add(new BasicNameValuePair("charset", charset));
             values.add(new BasicNameValuePair("message", message));
             UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
