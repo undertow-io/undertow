@@ -89,10 +89,14 @@ public interface SessionManager {
     void removeSessionListener(final SessionListener listener);
 
     /**
-     * Sets the defaul session timeout
+     * Sets the default session timeout
      * @param timeout the timeout
      */
     void setDefaultSessionTimeout(final int timeout);
 
-
+    /**
+     * Returns the number of active sessions managed by this session manager.
+     * @return the number of active sessions
+     */
+    int activeSessions();
 }
