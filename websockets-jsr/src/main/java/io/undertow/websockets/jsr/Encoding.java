@@ -77,8 +77,8 @@ public class Encoding implements Closeable {
     }
 
 
-    public boolean canDecodeDinary(final Class<?> type) {
-        return textDecoders.containsKey(type);
+    public boolean canDecodeBinary(final Class<?> type) {
+        return binaryDecoders.containsKey(type);
     }
 
 

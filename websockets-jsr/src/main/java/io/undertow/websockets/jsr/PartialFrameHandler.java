@@ -17,16 +17,22 @@
  */
 package io.undertow.websockets.jsr;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+
+import javax.websocket.DecodeException;
+import javax.websocket.Endpoint;
+import javax.websocket.MessageHandler;
+import javax.websocket.PongMessage;
+
 import io.undertow.websockets.api.FragmentedFrameHandler;
 import io.undertow.websockets.api.WebSocketFrameHeader;
 import io.undertow.websockets.api.WebSocketSession;
 import org.xnio.Buffers;
-
-import javax.websocket.Endpoint;
-import javax.websocket.MessageHandler;
-import javax.websocket.PongMessage;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 
 /**
  * {@link AbstractFrameHandler} subclass which will allow to use {@link MessageHandler.Partial} implementations
@@ -45,7 +51,7 @@ class PartialFrameHandler extends AbstractFrameHandler<MessageHandler> implement
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public void onTextFrame(WebSocketSession s, WebSocketFrameHeader header, ByteBuffer... payload) {
-        HandlerWrapper handler =  getHandler(FrameType.TEXT);
+        HandlerWrapper handler = getHandler(FrameType.TEXT);
         if (handler != null) {
 
             String text;
@@ -63,7 +69,18 @@ class PartialFrameHandler extends AbstractFrameHandler<MessageHandler> implement
                     utf8Output = null;
                 }
             }
-            ((MessageHandler.Partial) handler.getHandler()).onMessage(text, last);
+            if (handler.getMessageType() == String.class) {
+                ((MessageHandler.Partial) handler.getHandler()).onMessage(text, last);
+            } else if (handler.getMessageType() == Reader.class) {
+                ((MessageHandler.Partial) handler.getHandler()).onMessage(new StringReader(text), last);
+            } else {
+                try {
+                    Object object = getSession().getEncoding().decodeText(handler.getMessageType(), text);
+                    ((MessageHandler.Whole) handler.getHandler()).onMessage(object);
+                } catch (DecodeException e) {
+                    getEndpoint().onError(getSession(), e);
+                }
+            }
         }
     }
 
@@ -77,19 +94,34 @@ class PartialFrameHandler extends AbstractFrameHandler<MessageHandler> implement
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public void onBinaryFrame(WebSocketSession s, WebSocketFrameHeader header, ByteBuffer... payload) {
-        HandlerWrapper handler =  getHandler(FrameType.BYTE);
+        HandlerWrapper handler = getHandler(FrameType.BYTE);
         if (handler != null) {
             MessageHandler.Partial mHandler = (MessageHandler.Partial) handler.getHandler();
             if (handler.getMessageType() == ByteBuffer.class) {
                 mHandler.onMessage(toBuffer(payload), header.isLastFragement());
-            }
-            if (handler.getMessageType() == byte[].class) {
+            } else if (handler.getMessageType() == byte[].class) {
                 long size = Buffers.remaining(payload);
                 if (size == 0) {
                     mHandler.onMessage(EMPTY, header.isLastFragement());
                 } else {
                     byte[] data = toArray(payload);
                     mHandler.onMessage(data, header.isLastFragement());
+                }
+            } else if (handler.getMessageType() == InputStream.class) {
+                long size = Buffers.remaining(payload);
+                if (size == 0) {
+                    mHandler.onMessage(new ByteArrayInputStream(EMPTY), header.isLastFragement());
+                } else {
+                    byte[] data = toArray(payload);
+                    mHandler.onMessage(new ByteArrayInputStream(data), header.isLastFragement());
+                }
+            } else {
+                try {
+                    //TODO: can we decode partial frames? seems kinda silly
+                    Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
+                    mHandler.onMessage(object, header.isLastFragement());
+                } catch (DecodeException e) {
+                    getEndpoint().onError(getSession(), e);
                 }
             }
         }

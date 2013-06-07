@@ -17,21 +17,23 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.api.CloseReason;
-import io.undertow.websockets.api.FrameHandler;
-import io.undertow.websockets.api.WebSocketSession;
-import io.undertow.websockets.jsr.util.ClassUtils;
-import org.xnio.Buffers;
-
-import javax.websocket.Endpoint;
-import javax.websocket.MessageHandler;
-import javax.websocket.PongMessage;
-
+import java.io.InputStream;
+import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import javax.websocket.Endpoint;
+import javax.websocket.MessageHandler;
+import javax.websocket.PongMessage;
+
+import io.undertow.websockets.api.CloseReason;
+import io.undertow.websockets.api.FrameHandler;
+import io.undertow.websockets.api.WebSocketSession;
+import io.undertow.websockets.jsr.util.ClassUtils;
+import org.xnio.Buffers;
 
 /**
  * Abstract base class which can be used to map {@link MessageHandler}s into a {@link FrameHandler}.
@@ -66,7 +68,7 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
     @Override
     public final void onCloseFrame(WebSocketSession s, final CloseReason reason) {
         try {
-            if(reason == null) {
+            if (reason == null) {
                 session.close();
             } else {
                 session.close(new javax.websocket.CloseReason(javax.websocket.CloseReason.CloseCodes.getCloseCode(reason.getStatusCode()), reason.getReasonText()));
@@ -98,7 +100,7 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
             return Buffers.EMPTY_BYTE_BUFFER;
         }
         ByteBuffer buffer = ByteBuffer.allocate(size);
-        for (ByteBuffer buf: payload) {
+        for (ByteBuffer buf : payload) {
             buffer.put(buf);
         }
         buffer.flip();
@@ -114,31 +116,30 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
         }
         int size = (int) Buffers.remaining(payload);
         byte[] data = new byte[size];
-        for (ByteBuffer buf: payload) {
+        for (ByteBuffer buf : payload) {
             buf.get(data);
         }
         return data;
     }
 
-    private static Class<?> type(MessageHandler handler) {
+    private static Class<?> type(MessageHandler handler, final Encoding encoding) {
         Class<?> typeClazz = ClassUtils.getHandlerType(handler.getClass());
-        if (typeClazz != String.class && typeClazz != byte[].class && typeClazz != ByteBuffer.class && typeClazz != PongMessage.class) {
-            throw JsrWebSocketMessages.MESSAGES.unsupportedFrameType(typeClazz);
-        }
         return typeClazz;
     }
 
     public final void addHandler(E handler) {
-        Class<?> type = type(handler);
+        Class<?> type = ClassUtils.getHandlerType(handler.getClass());
         verify(type, handler);
-        FrameType frameType = getFrameType(type);
 
-        if (handlers.containsKey(frameType)) {
-            throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(frameType);
+
+        HandlerWrapper handlerWrapper = createHandlerWrapper(type, handler);
+
+
+        if (handlers.containsKey(handlerWrapper.getFrameType())) {
+            throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(handlerWrapper.getFrameType());
         } else {
-            HandlerWrapper wrapper = new HandlerWrapper(handler);
-            if (handlers.putIfAbsent(frameType, wrapper) != null) {
-                throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(frameType);
+            if (handlers.putIfAbsent(handlerWrapper.getFrameType(), handlerWrapper) != null) {
+                throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(handlerWrapper.getFrameType());
             }
         }
     }
@@ -146,15 +147,21 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
     /**
      * Return the {@link FrameType} for the given {@link Class}.
      */
-    protected static FrameType getFrameType(Class<?> type) {
-        if (type == byte[].class || type == ByteBuffer.class) {
-            return FrameType.BYTE;
+    protected HandlerWrapper createHandlerWrapper(Class<?> type, E handler) {
+        if (type == byte[].class || type == ByteBuffer.class || type == InputStream.class) {
+            return new HandlerWrapper(FrameType.BYTE, handler, type, false);
         }
-        if (type == String.class) {
-            return FrameType.TEXT;
+        if (type == String.class || type == Reader.class) {
+            return new HandlerWrapper(FrameType.TEXT, handler, type, false);
         }
         if (type == PongMessage.class) {
-            return FrameType.PONG;
+            return new HandlerWrapper(FrameType.PONG, handler, type, false);
+        }
+        Encoding encoding = session.getEncoding();
+        if (encoding.canDecodeText(type)) {
+            return new HandlerWrapper(FrameType.TEXT, handler, type, true);
+        } else if (encoding.canDecodeBinary(type)) {
+            return new HandlerWrapper(FrameType.BYTE, handler, type, true);
         }
         throw JsrWebSocketMessages.MESSAGES.unsupportedFrameType(type);
     }
@@ -167,8 +174,8 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
     }
 
     public final void removeHandler(E handler) {
-        Class<?> type = type(handler);
-        FrameType frameType = getFrameType(type);
+        Class<?> type = ClassUtils.getHandlerType(handler.getClass());
+        FrameType frameType = createHandlerWrapper(type, handler).getFrameType();
         HandlerWrapper wrapper = handlers.get(frameType);
         if (wrapper != null && wrapper.getMessageType() == type) {
             handlers.remove(frameType, wrapper);
@@ -180,7 +187,7 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
      */
     public final Set<MessageHandler> getHandlers() {
         Set<MessageHandler> msgHandlers = new HashSet<MessageHandler>();
-        for (HandlerWrapper handler: handlers.values()) {
+        for (HandlerWrapper handler : handlers.values()) {
             msgHandlers.add(handler.getHandler());
         }
         return msgHandlers;
@@ -195,13 +202,17 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
     }
 
     static final class HandlerWrapper {
+        private final FrameType frameType;
         private final MessageHandler handler;
         private final Class<?> msgType;
+        private final boolean decodingNeeded;
 
-        private HandlerWrapper(MessageHandler handler) {
-            msgType = type(handler);
+        private HandlerWrapper(final FrameType frameType, MessageHandler handler, final Class<?> msgType, final boolean decodingNeeded) {
+            this.frameType = frameType;
             this.handler = handler;
 
+            this.msgType = msgType;
+            this.decodingNeeded = decodingNeeded;
         }
 
         /**
@@ -217,5 +228,21 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
         public Class<?> getMessageType() {
             return msgType;
         }
+
+        FrameType getFrameType() {
+            return frameType;
+        }
+
+        boolean isDecodingNeeded() {
+            return decodingNeeded;
+        }
+    }
+
+    UndertowSession getSession() {
+        return session;
+    }
+
+    Endpoint getEndpoint() {
+        return endpoint;
     }
 }

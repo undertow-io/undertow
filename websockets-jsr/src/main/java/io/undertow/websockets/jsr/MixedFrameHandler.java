@@ -19,10 +19,17 @@ package io.undertow.websockets.jsr;
 
 import io.undertow.websockets.api.WebSocketFrameHeader;
 import io.undertow.websockets.api.WebSocketSession;
+import org.xnio.Buffers;
 
+import javax.websocket.DecodeException;
 import javax.websocket.Endpoint;
 import javax.websocket.MessageHandler;
 import javax.websocket.PongMessage;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,20 +56,17 @@ class MixedFrameHandler extends PartialFrameHandler {
         if (mHandler instanceof MessageHandler.Partial) {
             super.onTextFrame(s, header, payload);
         } else {
-            if (textFrame.isEmpty() && header.isLastFragement()) {
-                ((MessageHandler.Whole) mHandler).onMessage(toString(payload));
+            String message = payload.toString();
+            if (handler.getMessageType() == String.class) {
+                ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
+            } else if (handler.getMessageType() == Reader.class) {
+                ((MessageHandler.Whole) handler.getHandler()).onMessage(new StringReader(message));
             } else {
-                for (ByteBuffer buf: payload) {
-                    if (buf.hasRemaining()) {
-                        textFrame.add(buf);
-                    }
-                }
-                if (header.isLastFragement()) {
-                    try {
-                        ((MessageHandler.Whole) mHandler).onMessage(toString(textFrame.toArray(new ByteBuffer[0])));
-                    } finally {
-                        textFrame.clear();
-                    }
+                try {
+                    Object object = getSession().getEncoding().decodeText(handler.getMessageType(), message);
+                    ((MessageHandler.Whole) handler.getHandler()).onMessage(object);
+                } catch (DecodeException e) {
+                    getEndpoint().onError(getSession(), e);
                 }
             }
         }
@@ -75,24 +79,34 @@ class MixedFrameHandler extends PartialFrameHandler {
         if (handler == null) {
             return;
         }
-        MessageHandler mHandler = handler.getHandler();
-        if (mHandler instanceof MessageHandler.Partial) {
+        if (handler.getHandler() instanceof MessageHandler.Partial) {
             super.onBinaryFrame(s, header, payload);
         } else {
-            if (binaryFrame.isEmpty() && header.isLastFragement()) {
-                ((MessageHandler.Whole) mHandler).onMessage(toBuffer(payload));
-            } else {
-                for (ByteBuffer buf: payload) {
-                    if (buf.hasRemaining()) {
-                        binaryFrame.add(buf);
-                    }
+            MessageHandler.Whole mHandler = (MessageHandler.Whole) handler.getHandler();
+            if (handler.getMessageType() == ByteBuffer.class) {
+                mHandler.onMessage(toBuffer(payload));
+            } else if (handler.getMessageType() == byte[].class) {
+                long size = Buffers.remaining(payload);
+                if (size == 0) {
+                    mHandler.onMessage(EMPTY);
+                } else {
+                    byte[] data = toArray(payload);
+                    mHandler.onMessage(data);
                 }
-                if (header.isLastFragement()) {
-                    try {
-                        ((MessageHandler.Whole) mHandler).onMessage(toBuffer(binaryFrame.toArray(new ByteBuffer[0])));
-                    } finally {
-                        binaryFrame.clear();
-                    }
+            } else if (handler.getMessageType() == InputStream.class) {
+                long size = Buffers.remaining(payload);
+                if (size == 0) {
+                    mHandler.onMessage(new ByteArrayInputStream(EMPTY));
+                } else {
+                    byte[] data = toArray(payload);
+                    mHandler.onMessage(new ByteArrayInputStream(data));
+                }
+            } else {
+                try {
+                    Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
+                    mHandler.onMessage(object);
+                } catch (DecodeException e) {
+                    getEndpoint().onError(getSession(), e);
                 }
             }
         }

@@ -36,9 +36,9 @@ public final class ClassUtils {
      * Returns the frame type the {@link MessageHandler} handles.
      */
     public static Class<?> getHandlerType(Class<? extends MessageHandler> clazz) {
-        Method[] methods = clazz.getDeclaredMethods();
+        Method[] methods = clazz.getMethods();
         for (Method m : methods) {
-            if ("onMessage".equals(m.getName())) {
+            if ("onMessage".equals(m.getName()) && !m.isBridge()) {
                 return m.getParameterTypes()[0];
             }
         }
