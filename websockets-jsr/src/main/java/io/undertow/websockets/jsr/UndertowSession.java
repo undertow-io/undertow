@@ -20,6 +20,7 @@ import java.net.URI;
 import java.nio.channels.Channel;
 import java.security.Principal;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,11 +61,13 @@ public final class UndertowSession implements Session {
     private final InstanceHandle<Endpoint> endpoint;
     private final Encoding encoding;
     private final AtomicBoolean closed = new AtomicBoolean();
+    private final Set<Session> openSessions;
 
-    public UndertowSession(WebSocketChannelSession session, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString, final Encoding encoding) {
+    public UndertowSession(WebSocketChannelSession session, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString, final Encoding encoding, final Set<Session> openSessions) {
         this.session = session;
         this.queryString = queryString;
         this.encoding = encoding;
+        this.openSessions = openSessions;
         container = handler.getContainer();
         this.user = user;
         this.requestUri = requestUri;
@@ -304,7 +307,7 @@ public final class UndertowSession implements Session {
 
     @Override
     public Set<Session> getOpenSessions() {
-        return Collections.emptySet();
+        return new HashSet<>(openSessions);
     }
 
     @Override
@@ -313,6 +316,7 @@ public final class UndertowSession implements Session {
     }
 
     void close0() {
+        openSessions.remove(this);
         try {
             endpoint.release();
         } finally {

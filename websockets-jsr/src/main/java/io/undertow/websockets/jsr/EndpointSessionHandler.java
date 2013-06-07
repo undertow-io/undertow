@@ -68,7 +68,8 @@ public final class EndpointSessionHandler implements WebSocketSessionHandler {
                 instance = new ImmediateInstanceHandle<>((Endpoint) config.getEndpointConfiguration().getConfigurator().getEndpointInstance(config.getEndpointConfiguration().getEndpointClass()));
             }
 
-            UndertowSession session = new UndertowSession(channelSession, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), Collections.<String, List<String>>emptyMap(), this, null, instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()));
+            UndertowSession session = new UndertowSession(channelSession, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), Collections.<String, List<String>>emptyMap(), this, null, instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions());
+            config.getOpenSessions().add(session);
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());
             session.setMaxTextMessageBufferSize(getContainer().getDefaultMaxTextMessageBufferSize());
             //session.setTimeout(getContainer().getMaxSessionIdleTimeout());

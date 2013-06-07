@@ -1,6 +1,11 @@
 package io.undertow.websockets.jsr;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
+
 import javax.websocket.Endpoint;
+import javax.websocket.Session;
 import javax.websocket.server.ServerEndpointConfig;
 
 import io.undertow.servlet.api.InstanceFactory;
@@ -14,6 +19,7 @@ public class ConfiguredServerEndpoint {
     private final InstanceFactory<Endpoint> endpointFactory;
     private final PathTemplate pathTemplate;
     private final EncodingFactory encodingFactory;
+    private final Set<Session> openSessions = Collections.newSetFromMap(Collections.synchronizedMap(new WeakHashMap<Session, Boolean>()));
 
     public ConfiguredServerEndpoint(final ServerEndpointConfig endpointConfiguration, final InstanceFactory<Endpoint> endpointFactory, final PathTemplate pathTemplate, final EncodingFactory encodingFactory) {
         this.endpointConfiguration = endpointConfiguration;
@@ -36,5 +42,9 @@ public class ConfiguredServerEndpoint {
 
     public EncodingFactory getEncodingFactory() {
         return encodingFactory;
+    }
+
+    public Set<Session> getOpenSessions() {
+        return openSessions;
     }
 }

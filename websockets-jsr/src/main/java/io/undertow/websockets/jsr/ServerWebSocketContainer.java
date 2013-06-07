@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -147,7 +148,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
         WebSocketRecieveListeners.startRecieving(wss, channel, false);
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
-        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec));
+        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>());
         endpointInstance.onOpen(undertowSession, cec);
 
         return undertowSession;
@@ -174,7 +175,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
         WebSocketRecieveListeners.startRecieving(wss, channel, false);
 
-        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()));
+        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>());
         endpointInstance.onOpen(undertowSession, cec.getConfig());
 
         return undertowSession;
