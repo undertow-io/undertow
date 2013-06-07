@@ -1,6 +1,10 @@
 package io.undertow.websockets.jsr.annotated;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -183,6 +187,8 @@ public class AnnotatedEndpoint extends Endpoint {
                         onError(s, e);
                         return;
                     }
+                } else if(textMessage.getMessageType().equals(Reader.class)) {
+                    messageObject = new StringReader(builder.extract());
                 } else {
                     messageObject = builder.extract();
                 }
@@ -259,6 +265,8 @@ public class AnnotatedEndpoint extends Endpoint {
                         params.put(ByteBuffer.class, ByteBuffer.wrap(assembledBinaryFrame.toByteArray()));
                     } else if (binaryMessage.getMessageType() == byte[].class) {
                         params.put(byte[].class, assembledBinaryFrame.toByteArray());
+                    } else if (binaryMessage.getMessageType() == InputStream.class) {
+                        params.put(InputStream.class, new ByteArrayInputStream(assembledBinaryFrame.toByteArray()));
                     } else {
                         //decoders
                         throw new RuntimeException("decoders are not implemented yet");

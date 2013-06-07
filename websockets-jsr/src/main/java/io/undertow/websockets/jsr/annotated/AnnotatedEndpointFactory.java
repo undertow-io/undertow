@@ -1,5 +1,7 @@
 package io.undertow.websockets.jsr.annotated;
 
+import java.io.InputStream;
+import java.io.Reader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -114,9 +116,22 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             if (binaryMessage != null) {
                                 throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
                             }
-                            binaryMessage = new BoundMethod(method, ByteBuffer.class, false, new BoundSingleParameter(method, Session.class, true),
+                            binaryMessage = new BoundMethod(method, ByteBuffer.class, false,
+                                    new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(method, ByteBuffer.class, false),
+                                    new BoundPathParameters(pathParams(method)));
+                            messageHandled = true;
+                            break;
+
+                        } else if (param.equals(InputStream.class)) {
+                            if (binaryMessage != null) {
+                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
+                            }
+                            binaryMessage = new BoundMethod(method, InputStream.class, false,
+                                    new BoundSingleParameter(method, Session.class, true),
+                                    new BoundSingleParameter(method, boolean.class, true),
+                                    new BoundSingleParameter(method, InputStream.class, false),
                                     new BoundPathParameters(pathParams(method)));
                             messageHandled = true;
                             break;
@@ -128,6 +143,18 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
                             textMessage = new BoundMethod(method, String.class, false, new BoundSingleParameter(method, Session.class, true),
                                     new BoundSingleParameter(method, boolean.class, true),
                                     new BoundSingleParameter(method, String.class, false),
+                                    new BoundPathParameters(pathParams(method)));
+                            messageHandled = true;
+                            break;
+
+                        } else if (param.equals(Reader.class) && getPathParam(method, i) == null) {
+                            if (textMessage != null) {
+                                throw JsrWebSocketMessages.MESSAGES.moreThanOneAnnotation(OnMessage.class);
+                            }
+                            textMessage = new BoundMethod(method, String.class, false,
+                                    new BoundSingleParameter(method, Session.class, true),
+                                    new BoundSingleParameter(method, boolean.class, true),
+                                    new BoundSingleParameter(method, Reader.class, false),
                                     new BoundPathParameters(pathParams(method)));
                             messageHandled = true;
                             break;
