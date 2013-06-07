@@ -55,13 +55,15 @@ public final class UndertowSession implements Session {
     private final Map<String, Object> attrs = new ConcurrentHashMap<String, Object>();
     private final Map<String, List<String>> requestParameterMap;
     private final URI requestUri;
+    private final String queryString;
     private final Map<String, String> pathParameters;
     private final InstanceHandle<Endpoint> endpoint;
     private final Encoding encoding;
     private final AtomicBoolean closed = new AtomicBoolean();
 
-    public UndertowSession(WebSocketChannelSession session, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfig config, final Encoding encoding) {
+    public UndertowSession(WebSocketChannelSession session, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString, final Encoding encoding) {
         this.session = session;
+        this.queryString = queryString;
         this.encoding = encoding;
         container = handler.getContainer();
         this.user = user;
@@ -252,8 +254,7 @@ public final class UndertowSession implements Session {
 
     @Override
     public String getQueryString() {
-        String qs = requestUri.getQuery();
-        return qs == null ? "" : qs;
+        return queryString;
     }
 
     @Override
