@@ -179,7 +179,8 @@ public class PathTemplate implements Comparable<PathTemplate> {
                 }
                 ++cp;
                 if (cp == parts.size()) {
-                    return true;
+                    //this is a match if this is the last character
+                    return i == (path.length() - 1);
                 }
                 current = parts.get(cp);
                 stringStart = i + 1;

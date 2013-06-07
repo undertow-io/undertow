@@ -252,7 +252,8 @@ public final class UndertowSession implements Session {
 
     @Override
     public String getQueryString() {
-        return requestUri.getQuery();
+        String qs = requestUri.getQuery();
+        return qs == null ? "" : qs;
     }
 
     @Override

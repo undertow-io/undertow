@@ -229,7 +229,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 Object result = null;
                 for (int i = 0; i < payload.length; ++i) {
 
-                    params.put(ByteBuffer.class, payload);
+                    params.put(ByteBuffer.class, payload[i]);
                     params.put(boolean.class, header.isLastFragement() && i == payload.length - 1);
                     result = binaryMessage.invoke(instance.getInstance(), params);
                     sendResult(result);
