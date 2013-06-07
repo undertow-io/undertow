@@ -1,7 +1,7 @@
 package io.undertow.server.handlers.resource;
 
+import java.io.File;
 import java.net.URL;
-import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 
@@ -86,7 +86,7 @@ public interface Resource {
      *
      * @return The underlying file that matches the resource. This may return null if the resource does not map to a file
      */
-    Path getFile();
+    File getFile();
 
     /**
      *

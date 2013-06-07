@@ -13,7 +13,7 @@ import io.undertow.server.HttpServerExchange;
  */
 public class SessionListeners {
 
-    private final List<SessionListener> sessionListeners = new CopyOnWriteArrayList<>();
+    private final List<SessionListener> sessionListeners = new CopyOnWriteArrayList<SessionListener>();
 
     public void addSessionListener(final SessionListener listener) {
         this.sessionListeners.add(listener);

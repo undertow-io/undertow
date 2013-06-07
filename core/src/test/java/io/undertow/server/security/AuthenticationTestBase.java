@@ -262,7 +262,7 @@ public abstract class AuthenticationTestBase {
 
     protected static class AuditReceiver implements NotificationReceiver {
 
-        private final List<SecurityNotification> receivedNotifications = new ArrayList<>();
+        private final List<SecurityNotification> receivedNotifications = new ArrayList<SecurityNotification>();
 
         @Override
         public void handleNotification(SecurityNotification notification) {
@@ -271,7 +271,7 @@ public abstract class AuthenticationTestBase {
 
         public List<SecurityNotification> takeNotifications() {
             try {
-                return new ArrayList<>(receivedNotifications);
+                return new ArrayList<SecurityNotification>(receivedNotifications);
             } finally {
                 receivedNotifications.clear();
             }

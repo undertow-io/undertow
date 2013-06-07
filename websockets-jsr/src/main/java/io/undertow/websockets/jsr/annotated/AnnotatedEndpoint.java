@@ -59,7 +59,7 @@ public class AnnotatedEndpoint extends Endpoint {
         s.setFrameHandler(new AnnotatedEndpointFrameHandler((UndertowSession) session));
 
         if (webSocketOpen != null) {
-            final Map<Class<?>, Object> params = new HashMap<>();
+            final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
             params.put(Session.class, session);
             params.put(EndpointConfig.class, endpointConfiguration);
             params.put(Map.class, session.getPathParameters());
@@ -79,7 +79,7 @@ public class AnnotatedEndpoint extends Endpoint {
     @Override
     public void onClose(final Session session, final CloseReason closeReason) {
         if (webSocketClose != null) {
-            final Map<Class<?>, Object> params = new HashMap<>();
+            final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
             invokeMethod(params, webSocketClose, session);
@@ -89,7 +89,7 @@ public class AnnotatedEndpoint extends Endpoint {
     @Override
     public void onError(final Session session, final Throwable thr) {
         if (webSocketError != null) {
-            final Map<Class<?>, Object> params = new HashMap<>();
+            final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
             params.put(Session.class, session);
             params.put(Throwable.class, thr);
             params.put(Map.class, session.getPathParameters());
@@ -125,7 +125,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 return;
             }
             try {
-                final Map<Class<?>, Object> params = new HashMap<>();
+                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 invokeMethod(params, webSocketClose, session);
@@ -157,7 +157,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 message = DefaultPongMessage.create(data);
             }
             try {
-                final Map<Class<?>, Object> params = new HashMap<>();
+                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 params.put(PongMessage.class, message);
@@ -172,7 +172,7 @@ public class AnnotatedEndpoint extends Endpoint {
             if (webSocketError == null) {
                 return;
             }
-            final Map<Class<?>, Object> params = new HashMap<>();
+            final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
             params.put(Throwable.class, cause);
@@ -205,7 +205,7 @@ public class AnnotatedEndpoint extends Endpoint {
                     messageObject = builder.extract();
                 }
 
-                final Map<Class<?>, Object> params = new HashMap<>();
+                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 params.put(textMessage.getMessageType(), messageObject);
@@ -248,7 +248,7 @@ public class AnnotatedEndpoint extends Endpoint {
             //if they take a byte buffer and allow partial frames this is the most efficent path
             //we can also take this path for a non-fragmented frame with a single buffer in the payload
             if (binaryMessage.getMessageType() == ByteBuffer.class && (allowPartial || (payload.length == 1 && header.isLastFragement() && assembledBinaryFrame == null))) {
-                final Map<Class<?>, Object> params = new HashMap<>();
+                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 Object result = null;
@@ -275,7 +275,7 @@ public class AnnotatedEndpoint extends Endpoint {
                     }
                 }
                 if (header.isLastFragement() || binaryMessage.hasParameterType(boolean.class)) {
-                    final Map<Class<?>, Object> params = new HashMap<>();
+                    final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
                     params.put(Session.class, session);
                     params.put(Map.class, session.getPathParameters());
                     if (binaryMessage.isDecoderRequired()) {

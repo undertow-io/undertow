@@ -271,7 +271,7 @@ public final class ProxyHandler implements HttpHandler {
             try {
                 channel.shutdownWrites();
                 if(!channel.flush()) {
-                    channel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, ChannelListeners.<StreamSinkChannel>closingChannelExceptionHandler()));
+                    channel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, ChannelListeners.closingChannelExceptionHandler()));
                     channel.resumeWrites();
                 }
             } catch (IOException e) {

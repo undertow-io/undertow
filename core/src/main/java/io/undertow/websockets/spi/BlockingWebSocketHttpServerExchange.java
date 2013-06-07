@@ -33,7 +33,7 @@ public class BlockingWebSocketHttpServerExchange extends AsyncWebSocketHttpServe
             }
             return new FinishedIoFuture<Void>(null);
         } catch (IOException e) {
-            final FutureResult<Void> ioFuture = new FutureResult<>();
+            final FutureResult<Void> ioFuture = new FutureResult<Void>();
             ioFuture.setException(e);
             return ioFuture.getIoFuture();
         }
@@ -50,7 +50,7 @@ public class BlockingWebSocketHttpServerExchange extends AsyncWebSocketHttpServe
             }
             return new FinishedIoFuture<byte[]>(data.toByteArray());
         } catch (IOException e) {
-            final FutureResult<byte[]> ioFuture = new FutureResult<>();
+            final FutureResult<byte[]> ioFuture = new FutureResult<byte[]>();
             ioFuture.setException(e);
             return ioFuture.getIoFuture();
         }

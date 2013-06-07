@@ -792,14 +792,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Map<String, Deque<String>> getQueryParameters() {
         if (queryParameters == null) {
-            queryParameters = new TreeMap<>();
+            queryParameters = new TreeMap<String, Deque<String>>();
         }
         return queryParameters;
     }
 
     public void addQueryParam(final String name, final String param) {
         if (queryParameters == null) {
-            queryParameters = new TreeMap<>();
+            queryParameters = new TreeMap<String, Deque<String>>();
         }
         Deque<String> list = queryParameters.get(name);
         if (list == null) {
@@ -816,14 +816,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Map<String, Deque<String>> getPathParameters() {
         if (pathParameters == null) {
-            pathParameters = new TreeMap<>();
+            pathParameters = new TreeMap<String, Deque<String>>();
         }
         return pathParameters;
     }
 
     public void addPathParam(final String name, final String param) {
         if (pathParameters == null) {
-            pathParameters = new TreeMap<>();
+            pathParameters = new TreeMap<String, Deque<String>>();
         }
         Deque<String> list = pathParameters.get(name);
         if (list == null) {
@@ -849,7 +849,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void setResponseCookie(final Cookie cookie) {
         if(responseCookies == null) {
-            responseCookies = new TreeMap<>(); //hashmap is slow to allocate in JDK7
+            responseCookies = new TreeMap<String, Cookie>(); //hashmap is slow to allocate in JDK7
         }
         responseCookies.put(cookie.getName(), cookie);
     }
@@ -859,7 +859,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Map<String, Cookie> getResponseCookies() {
         if (responseCookies == null) {
-            responseCookies = new TreeMap<>();
+            responseCookies = new TreeMap<String, Cookie>();
         }
         return responseCookies;
     }
@@ -899,7 +899,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         final ConduitStreamSourceChannel sourceChannel = connection.getChannel().getSourceChannel();
         if (wrappers != null) {
             this.requestWrappers = null;
-            final WrapperConduitFactory<StreamSourceConduit> factory = new WrapperConduitFactory<>(wrappers, requestWrapperCount, sourceChannel.getConduit(), this);
+            final WrapperConduitFactory<StreamSourceConduit> factory = new WrapperConduitFactory<StreamSourceConduit>(wrappers, requestWrapperCount, sourceChannel.getConduit(), this);
             sourceChannel.setConduit(factory.create());
         }
         return requestChannel = new ReadDispatchChannel(sourceChannel);
@@ -1021,7 +1021,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             return null;
         }
         final ConduitStreamSinkChannel sinkChannel = connection.getChannel().getSinkChannel();
-        final WrapperConduitFactory<StreamSinkConduit> factory = new WrapperConduitFactory<>(wrappers, responseWrapperCount, sinkChannel.getConduit(), this);
+        final WrapperConduitFactory<StreamSinkConduit> factory = new WrapperConduitFactory<StreamSinkConduit>(wrappers, responseWrapperCount, sinkChannel.getConduit(), this);
         sinkChannel.setConduit(factory.create());
         this.responseChannel = new WriteDispatchChannel(sinkChannel);
         this.startResponse();

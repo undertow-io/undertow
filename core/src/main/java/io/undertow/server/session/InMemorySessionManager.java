@@ -41,7 +41,7 @@ public class InMemorySessionManager implements SessionManager {
 
     private volatile SessionIdGenerator sessionIdGenerator = new SecureRandomSessionIdGenerator();
 
-    private final ConcurrentMap<String, InMemorySession> sessions = new SecureHashMap<>();
+    private final ConcurrentMap<String, InMemorySession> sessions = new SecureHashMap<String, InMemorySession>();
 
     private final SessionListeners sessionListeners = new SessionListeners();
 
@@ -312,7 +312,7 @@ public class InMemorySessionManager implements SessionManager {
             this.maxInactiveInterval = maxInactiveInterval;
         }
 
-        final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<>();
+        final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<String, Object>();
         volatile long lastAccessed;
         final long creationTime;
         volatile int maxInactiveInterval;

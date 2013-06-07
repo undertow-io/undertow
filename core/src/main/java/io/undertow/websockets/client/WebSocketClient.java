@@ -27,7 +27,7 @@ public class WebSocketClient {
 
 
     public static IoFuture<WebSocketChannel> connect(HttpClient client, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
-        final FutureResult<WebSocketChannel> ioFuture = new FutureResult<>();
+        final FutureResult<WebSocketChannel> ioFuture = new FutureResult<WebSocketChannel>();
         connect(client, bufferPool, optionMap, uri, version, new HttpClientCallback<WebSocketChannel>() {
             @Override
             public void completed(final WebSocketChannel result) {

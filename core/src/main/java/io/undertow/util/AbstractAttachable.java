@@ -32,7 +32,7 @@ import io.undertow.UndertowMessages;
  */
 public abstract class AbstractAttachable implements Attachable {
 
-    private final Map<AttachmentKey<?>, Object> attachments = new IdentityHashMap<>(5);
+    private final Map<AttachmentKey<?>, Object> attachments = new IdentityHashMap<AttachmentKey<?>, Object>(5);
 
     /**
      * {@inheritDoc}

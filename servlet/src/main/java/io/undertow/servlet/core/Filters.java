@@ -14,7 +14,7 @@ import io.undertow.util.CopyOnWriteMap;
  */
 public class Filters {
 
-    private final Map<String, ManagedFilter> managedFilterMap = new CopyOnWriteMap<>();
+    private final Map<String, ManagedFilter> managedFilterMap = new CopyOnWriteMap<String, ManagedFilter>();
     private final DeploymentImpl deployment;
     private final ServletPathMatches servletPathMatches;
 
@@ -36,7 +36,7 @@ public class Filters {
     }
 
     public Map<String, ManagedFilter> getFilters() {
-        return new HashMap<>(managedFilterMap);
+        return new HashMap<String, ManagedFilter>(managedFilterMap);
     }
 
 }

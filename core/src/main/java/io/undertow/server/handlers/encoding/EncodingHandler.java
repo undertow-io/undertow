@@ -77,7 +77,7 @@ public class EncodingHandler implements HttpHandler {
             }
             return;
         }
-        final List<EncodingMapping> resultingMappings = new ArrayList<>();
+        final List<EncodingMapping> resultingMappings = new ArrayList<EncodingMapping>();
         final List<List<QValueParser.QValueResult>> found = QValueParser.parse(res);
         for (List<QValueParser.QValueResult> result : found) {
             List<EncodingMapping> available = new ArrayList<EncodingMapping>();
@@ -88,7 +88,7 @@ public class EncodingHandler implements HttpHandler {
                 EncodingMapping encoding;
                 if (value.getValue().equals("*")) {
                     includesIdentity = true;
-                    encoding = new EncodingMapping(IDENTITY, ContentEncodingProvider.IDENTITY, 0, Predicates.<HttpServerExchange>truePredicate());
+                    encoding = new EncodingMapping(IDENTITY, ContentEncodingProvider.IDENTITY, 0, Predicates.truePredicate());
                 } else {
                     encoding = encodingMap.get(value.getValue());
                 }
@@ -134,7 +134,7 @@ public class EncodingHandler implements HttpHandler {
     }
 
     public synchronized EncodingHandler addEncodingHandler(final String encoding, final ContentEncodingProvider encoder, int priority) {
-        addEncodingHandler(encoding, encoder, priority, Predicates.<HttpServerExchange>truePredicate());
+        addEncodingHandler(encoding, encoder, priority, Predicates.truePredicate());
         return this;
     }
 

@@ -70,7 +70,7 @@ class HttpClientImpl extends HttpClient {
 
     @Override
     public IoFuture<HttpClientConnection> connect(final XnioIoThread ioThread, final SocketAddress destination, final OptionMap optionMap) {
-        final FutureResult<HttpClientConnection> result = new FutureResult<>();
+        final FutureResult<HttpClientConnection> result = new FutureResult<HttpClientConnection>();
         result.addCancelHandler(new Cancellable() {
             @Override
             public Cancellable cancel() {

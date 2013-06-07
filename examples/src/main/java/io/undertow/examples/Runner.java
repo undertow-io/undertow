@@ -29,7 +29,7 @@ public class Runner {
         if (url == null) {
             throw new RuntimeException("Could not locate examples package");
         }
-        final Map<String, Class> examples = new HashMap<>();
+        final Map<String, Class> examples = new HashMap<String, Class>();
         //hackz to discover all the example classes on the class path
         ZipInputStream in = null;
         try {
@@ -52,7 +52,7 @@ public class Runner {
                 entry = in.getNextEntry();
             }
 
-            final List<String> names = new ArrayList<>(examples.keySet());
+            final List<String> names = new ArrayList<String>(examples.keySet());
             Collections.sort(names);
             System.out.println("Welcome to the Undertow Examples");
             System.out.println("Please select an example:");

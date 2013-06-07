@@ -18,9 +18,7 @@
 
 package io.undertow.server.handlers.resource;
 
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
+import java.io.File;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -30,20 +28,20 @@ import io.undertow.UndertowMessages;
  */
 public class FileResourceManager implements ResourceManager {
 
-    private volatile Path base;
+    private volatile File base;
 
-    public FileResourceManager(final Path base) {
+    public FileResourceManager(final File base) {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         this.base = base;
     }
 
-    public Path getBase() {
+    public File getBase() {
         return base;
     }
 
-    public FileResourceManager setBase(final Path base) {
+    public FileResourceManager setBase(final File base) {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
@@ -57,13 +55,13 @@ public class FileResourceManager implements ResourceManager {
             path = p.substring(1);
         }
         try {
-            Path file = base.resolve(path);
-            if (Files.exists(file)) {
+            File file = new File(base, p);
+            if (file.exists()) {
                 return new FileResource(file);
             } else {
                 return null;
             }
-        } catch (InvalidPathException e) {
+        } catch (Exception e) {
             UndertowLogger.REQUEST_LOGGER.debugf(e, "Invalid path %s");
             return null;
         }

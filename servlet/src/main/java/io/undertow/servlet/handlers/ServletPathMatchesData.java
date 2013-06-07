@@ -41,7 +41,7 @@ class ServletPathMatchesData {
         this.prefixMatches = prefixMatches;
         this.nameMatches = nameMatches;
         this.defaultServlet = defaultServlet;
-        Map<String, ServletPathMatch> newExactPathMatches = new HashMap<>();
+        Map<String, ServletPathMatch> newExactPathMatches = new HashMap<String, ServletPathMatch>();
         for (Map.Entry<String, ServletChain> entry : exactPathMatches.entrySet()) {
             newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey()));
         }
@@ -109,11 +109,11 @@ class ServletPathMatchesData {
 
     public static final class Builder {
 
-        private final Map<String, ServletChain> exactPathMatches = new HashMap<>();
+        private final Map<String, ServletChain> exactPathMatches = new HashMap<String, ServletChain>();
 
-        private final Map<String, PathMatch> prefixMatches = new HashMap<>();
+        private final Map<String, PathMatch> prefixMatches = new HashMap<String, PathMatch>();
 
-        private final Map<String, ServletChain> nameMatches = new HashMap<>();
+        private final Map<String, ServletChain> nameMatches = new HashMap<String, ServletChain>();
 
         private ServletChain defaultServlet;
 
@@ -158,7 +158,7 @@ class ServletPathMatchesData {
 
     private static class PathMatch {
 
-        private final Map<String, ServletChain> extensionMatches = new HashMap<>();
+        private final Map<String, ServletChain> extensionMatches = new HashMap<String, ServletChain>();
         private volatile ServletChain defaultHandler;
 
         public PathMatch(final ServletChain defaultHandler) {
