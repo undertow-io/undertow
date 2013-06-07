@@ -56,16 +56,24 @@ public class AnnotatedEndpoint extends Endpoint {
     public void onOpen(final Session session, final EndpointConfig endpointConfiguration) {
 
         UndertowSession s = (UndertowSession) session;
-        s.setFrameHandler(new AnnotatedEndpointFrameHandler((UndertowSession)session));
+        s.setFrameHandler(new AnnotatedEndpointFrameHandler((UndertowSession) session));
 
         if (webSocketOpen != null) {
             final Map<Class<?>, Object> params = new HashMap<>();
             params.put(Session.class, session);
             params.put(EndpointConfig.class, endpointConfiguration);
             params.put(Map.class, session.getPathParameters());
-            webSocketOpen.invoke(instance.getInstance(), params);
+            invokeMethod(params, webSocketOpen, session);
         }
 
+    }
+
+    private void invokeMethod(final Map<Class<?>, Object> params, final BoundMethod method, final Session session) {
+        try {
+            method.invoke(instance.getInstance(), params);
+        } catch (DecodeException e) {
+            onError(session, e);
+        }
     }
 
     @Override
@@ -74,7 +82,7 @@ public class AnnotatedEndpoint extends Endpoint {
             final Map<Class<?>, Object> params = new HashMap<>();
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
-            webSocketClose.invoke(instance.getInstance(), params);
+            invokeMethod(params, webSocketClose, session);
         }
     }
 
@@ -85,7 +93,11 @@ public class AnnotatedEndpoint extends Endpoint {
             params.put(Session.class, session);
             params.put(Throwable.class, thr);
             params.put(Map.class, session.getPathParameters());
-            webSocketError.invoke(instance.getInstance(), params);
+            try {
+                webSocketError.invoke(instance.getInstance(), params);
+            } catch (DecodeException e) {
+                throw new RuntimeException(e); //not much we can do here
+            }
         }
     }
 
@@ -116,7 +128,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 final Map<Class<?>, Object> params = new HashMap<>();
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
-                webSocketClose.invoke(instance.getInstance(), params);
+                invokeMethod(params, webSocketClose, session);
             } catch (Exception e) {
                 onError(s, e);
             }
@@ -149,7 +161,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 params.put(PongMessage.class, message);
-                pongMessage.invoke(instance.getInstance(), params);
+                invokeMethod(params, pongMessage, session);
             } catch (Exception e) {
                 onError(s, e);
             }
@@ -164,7 +176,7 @@ public class AnnotatedEndpoint extends Endpoint {
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
             params.put(Throwable.class, cause);
-            webSocketError.invoke(instance.getInstance(), params);
+            invokeMethod(params, webSocketError, session);
         }
 
         @Override
@@ -187,7 +199,7 @@ public class AnnotatedEndpoint extends Endpoint {
                         onError(s, e);
                         return;
                     }
-                } else if(textMessage.getMessageType().equals(Reader.class)) {
+                } else if (textMessage.getMessageType().equals(Reader.class)) {
                     messageObject = new StringReader(builder.extract());
                 } else {
                     messageObject = builder.extract();
@@ -198,8 +210,15 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Map.class, session.getPathParameters());
                 params.put(textMessage.getMessageType(), messageObject);
                 params.put(boolean.class, header.isLastFragement());
-                Object result = textMessage.invoke(instance.getInstance(), params);
-                assembledTextFrame = null;
+                final Object result;
+                try {
+                    result = textMessage.invoke(instance.getInstance(), params);
+                } catch (DecodeException e) {
+                    onError(s, e);
+                    return;
+                } finally {
+                    assembledTextFrame = null;
+                }
                 sendResult(result);
             }
         }
@@ -237,7 +256,12 @@ public class AnnotatedEndpoint extends Endpoint {
 
                     params.put(ByteBuffer.class, payload[i]);
                     params.put(boolean.class, header.isLastFragement() && i == payload.length - 1);
-                    result = binaryMessage.invoke(instance.getInstance(), params);
+                    try {
+                        result = binaryMessage.invoke(instance.getInstance(), params);
+                    } catch (DecodeException e) {
+                        onError(s, e);
+                        return;
+                    }
                     sendResult(result);
                 }
             } else {
@@ -272,8 +296,15 @@ public class AnnotatedEndpoint extends Endpoint {
                         throw new RuntimeException("decoders are not implemented yet");
                     }
                     params.put(boolean.class, header.isLastFragement());
-                    Object result = binaryMessage.invoke(instance.getInstance(), params);
-                    assembledBinaryFrame = null;
+                    final Object result;
+                    try {
+                        result = binaryMessage.invoke(instance.getInstance(), params);
+                    } catch (DecodeException e) {
+                        onError(s, e);
+                        return;
+                    } finally {
+                        assembledBinaryFrame = null;
+                    }
                     sendResult(result);
                 }
             }

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.websocket.DecodeException;
 import javax.websocket.DeploymentException;
 
 import io.undertow.websockets.jsr.JsrWebSocketMessages;
@@ -41,7 +42,7 @@ final class BoundMethod {
         }
     }
 
-    public Object invoke(final Object instance, final Map<Class<?>, Object> values) {
+    public Object invoke(final Object instance, final Map<Class<?>, Object> values) throws DecodeException {
         final Object[] params = new Object[method.getParameterTypes().length];
         for (BoundParameter param : parameters) {
             param.populate(params, values);

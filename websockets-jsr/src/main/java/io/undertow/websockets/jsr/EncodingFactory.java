@@ -50,6 +50,11 @@ import io.undertow.servlet.api.InstanceHandle;
  */
 public class EncodingFactory {
 
+    /**
+     * An encoding factory that can deal with primitive types.
+     */
+    public static final EncodingFactory DEFAULT = new EncodingFactory(Collections.EMPTY_MAP, Collections.EMPTY_MAP,Collections.EMPTY_MAP,Collections.EMPTY_MAP);
+
     private final Map<Class<?>, List<InstanceFactory<? extends Encoder>>> binaryEncoders;
     private final Map<Class<?>, List<InstanceFactory<? extends Decoder>>> binaryDecoders;
     private final Map<Class<?>, List<InstanceFactory<? extends Encoder>>> textEncoders;
@@ -83,8 +88,8 @@ public class EncodingFactory {
     }
 
 
-    public boolean canDecodeDinary(final Class<?> type) {
-        return textDecoders.containsKey(type);
+    public boolean canDecodeBinary(final Class<?> type) {
+        return binaryDecoders.containsKey(type);
     }
 
     public Encoding createEncoding(final EndpointConfig endpointConfig) {
