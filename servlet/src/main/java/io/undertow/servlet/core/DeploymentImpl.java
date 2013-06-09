@@ -31,6 +31,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.ServletPathMatches;
@@ -47,6 +48,7 @@ import io.undertow.servlet.spec.ServletContextImpl;
 public class DeploymentImpl implements Deployment {
 
     private final DeploymentInfo deploymentInfo;
+    private final ServletContainer servletContainer;
     private final List<Lifecycle> lifecycleObjects = new ArrayList<Lifecycle>();
     private final ServletPathMatches servletPaths;
     private final Servlets servlets;
@@ -63,13 +65,19 @@ public class DeploymentImpl implements Deployment {
     private volatile Map<String, String> mimeExtensionMappings;
     private volatile SessionManager sessionManager;
 
-    public DeploymentImpl(final DeploymentInfo deploymentInfo) {
+    public DeploymentImpl(final DeploymentInfo deploymentInfo, ServletContainer servletContainer) {
         this.deploymentInfo = deploymentInfo;
+        this.servletContainer = servletContainer;
         this.executor = deploymentInfo.getExecutor();
         this.asyncExecutor = deploymentInfo.getAsyncExecutor();
         servletPaths = new ServletPathMatches(this);
         servlets = new Servlets(this, servletPaths);
         filters = new Filters(this, servletPaths);
+    }
+
+    @Override
+    public ServletContainer getServletContainer() {
+        return servletContainer;
     }
 
     public Servlets getServlets() {

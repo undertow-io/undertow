@@ -137,17 +137,19 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                     servletContext.getDeployment().getServletDispatcher().dispatchToPath(requestImpl.getExchange(), pathMatch, DispatcherType.FORWARD);
                 }
 
-                if (response instanceof HttpServletResponseImpl) {
-                    responseImpl.closeStreamAndWriter();
-                } else {
-                    try {
-                        final PrintWriter writer = response.getWriter();
-                        writer.flush();
-                        writer.close();
-                    } catch (IllegalStateException e) {
-                        final ServletOutputStream outputStream = response.getOutputStream();
-                        outputStream.flush();
-                        outputStream.close();
+                if(!request.isAsyncStarted()) {
+                    if (response instanceof HttpServletResponseImpl) {
+                        responseImpl.closeStreamAndWriter();
+                    } else {
+                        try {
+                            final PrintWriter writer = response.getWriter();
+                            writer.flush();
+                            writer.close();
+                        } catch (IllegalStateException e) {
+                            final ServletOutputStream outputStream = response.getOutputStream();
+                            outputStream.flush();
+                            outputStream.close();
+                        }
                     }
                 }
             } catch (ServletException e) {

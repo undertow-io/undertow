@@ -30,7 +30,6 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 
 /**
- *
  * The manager for all servlet deployments.
  *
  * @author Stuart Douglas
@@ -63,14 +62,31 @@ public class ServletContainerImpl implements ServletContainer {
     @Override
     public void removeDeployment(final String deploymentName) {
         final DeploymentManager deploymentManager = deployments.get(deploymentName);
-        if(deploymentManager.getState() != DeploymentManager.State.UNDEPLOYED) {
+        if (deploymentManager.getState() != DeploymentManager.State.UNDEPLOYED) {
             throw UndertowServletMessages.MESSAGES.canOnlyRemoveDeploymentsWhenUndeployed(deploymentManager.getState());
         }
         deployments.remove(deploymentName);
     }
 
     @Override
-    public DeploymentManager getDeploymentByPath(final String uripath) {
-        return deploymentsByPath.get(uripath);
+    public DeploymentManager getDeploymentByPath(final String path) {
+        DeploymentManager exact = deploymentsByPath.get(path);
+        if (exact != null) {
+            return exact;
+        }
+        int length = path.length();
+        int pos = length;
+
+        while (pos > 1) {
+            --pos;
+            if (path.charAt(pos) == '/') {
+                String part = path.substring(0, pos);
+                DeploymentManager deployment = deploymentsByPath.get(part);
+                if (deployment != null) {
+                    return deployment;
+                }
+            }
+        }
+        return null;
     }
 }

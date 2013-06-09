@@ -40,6 +40,8 @@ public interface Deployment {
 
     DeploymentInfo getDeploymentInfo();
 
+    ServletContainer getServletContainer();
+
     ApplicationListeners getApplicationListeners();
 
     Servlets getServlets();

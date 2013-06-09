@@ -115,7 +115,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
         DeploymentInfo deploymentInfo = originalDeployment.clone();
 
         deploymentInfo.validate();
-        final DeploymentImpl deployment = new DeploymentImpl(deploymentInfo);
+        final DeploymentImpl deployment = new DeploymentImpl(deploymentInfo, servletContainer);
         this.deployment = deployment;
 
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);

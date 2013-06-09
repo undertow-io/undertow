@@ -47,7 +47,9 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
+import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
@@ -72,6 +74,7 @@ public class AsyncContextImpl implements AsyncContext {
     private final ServletResponse servletResponse;
     private final TimeoutTask timeoutTask = new TimeoutTask();
     private final ServletRequestContext servletRequestContext;
+    private final boolean requestSupplied;
 
     private AsyncContextImpl previousAsyncContext; //the previous async context
 
@@ -88,11 +91,12 @@ public class AsyncContextImpl implements AsyncContext {
     private final Deque<Runnable> asyncTaskQueue = new ArrayDeque<>();
     private boolean processingAsyncTask = false;
 
-    public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse, final ServletRequestContext servletRequestContext, final AsyncContextImpl previousAsyncContext) {
+    public AsyncContextImpl(final HttpServerExchange exchange, final ServletRequest servletRequest, final ServletResponse servletResponse, final ServletRequestContext servletRequestContext, boolean requestSupplied, final AsyncContextImpl previousAsyncContext) {
         this.exchange = exchange;
         this.servletRequest = servletRequest;
         this.servletResponse = servletResponse;
         this.servletRequestContext = servletRequestContext;
+        this.requestSupplied = requestSupplied;
         this.previousAsyncContext = previousAsyncContext;
         initiatingThread = Thread.currentThread();
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
@@ -138,23 +142,37 @@ public class AsyncContextImpl implements AsyncContext {
             throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
         }
         final HttpServletRequestImpl requestImpl = this.servletRequestContext.getOriginalRequest();
-        final ServletPathMatch handler;
         Deployment deployment = requestImpl.getServletContext().getDeployment();
-        if (servletRequest instanceof HttpServletRequest) {
-            handler = deployment.getServletPaths().getServletHandlerByPath(((HttpServletRequest) servletRequest).getServletPath());
+
+        if (requestSupplied && servletRequest instanceof HttpServletRequest) {
+            ServletContainer container = deployment.getServletContainer();
+            final String requestURI = ((HttpServletRequest) servletRequest).getRequestURI();
+            DeploymentManager context = container.getDeploymentByPath(requestURI);
+            if(context == null) {
+                throw UndertowServletMessages.MESSAGES.couldNotFindContextToDispatchTo(requestImpl.getOriginalContextPath());
+            }
+            String toDispatch = requestURI.substring(context.getDeployment().getServletContext().getContextPath().length());
+            String qs = ((HttpServletRequest) servletRequest).getQueryString();
+            if (!qs.isEmpty()) {
+                toDispatch = toDispatch + "?" + qs;
+            }
+            dispatch(context.getDeployment().getServletContext(), toDispatch);
+
         } else {
-            handler = deployment.getServletPaths().getServletHandlerByPath(exchange.getRelativePath());
+            //original request
+            ServletContainer container = deployment.getServletContainer();
+            DeploymentManager context = container.getDeploymentByPath(requestImpl.getOriginalContextPath());
+            if(context == null) {
+                //this should never happen
+                throw UndertowServletMessages.MESSAGES.couldNotFindContextToDispatchTo(requestImpl.getOriginalContextPath());
+            }
+            String toDispatch = requestImpl.getOriginalRequestURI().substring(requestImpl.getOriginalContextPath().length());
+            String qs = requestImpl.getOriginalQueryString();
+            if (!qs.isEmpty()) {
+                toDispatch = toDispatch + "?" + qs;
+            }
+            dispatch(context.getDeployment().getServletContext(), toDispatch);
         }
-
-        final HttpServerExchange exchange = requestImpl.getExchange();
-        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-
-        servletRequestContext.setDispatcherType(DispatcherType.ASYNC);
-
-        servletRequestContext.setServletRequest(servletRequest);
-        servletRequestContext.setServletResponse(servletResponse);
-
-        dispatchAsyncRequest(deployment.getServletDispatcher(), handler, exchange);
     }
 
     private void dispatchAsyncRequest(final ServletDispatcher servletDispatcher, final ServletPathMatch pathInfo, final HttpServerExchange exchange) {
@@ -189,10 +207,10 @@ public class AsyncContextImpl implements AsyncContext {
 
         exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).setDispatcherType(DispatcherType.ASYNC);
 
-        requestImpl.setAttribute(ASYNC_REQUEST_URI, requestImpl.getRequestURI());
-        requestImpl.setAttribute(ASYNC_CONTEXT_PATH, requestImpl.getContextPath());
-        requestImpl.setAttribute(ASYNC_SERVLET_PATH, requestImpl.getServletPath());
-        requestImpl.setAttribute(ASYNC_QUERY_STRING, requestImpl.getQueryString());
+        requestImpl.setAttribute(ASYNC_REQUEST_URI, requestImpl.getOriginalRequestURI());
+        requestImpl.setAttribute(ASYNC_CONTEXT_PATH, requestImpl.getOriginalContextPath());
+        requestImpl.setAttribute(ASYNC_SERVLET_PATH, requestImpl.getOriginalServletPath());
+        requestImpl.setAttribute(ASYNC_QUERY_STRING, requestImpl.getOriginalQueryString());
 
         String newQueryString = "";
         int qsPos = path.indexOf("?");
@@ -336,7 +354,11 @@ public class AsyncContextImpl implements AsyncContext {
         if (!dispatched) {
             servletRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, error);
             try {
-                ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                if(servletResponse instanceof HttpServletResponse) {
+                    ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                } else {
+                    servletRequestContext.getOriginalResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                }
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             }
@@ -394,7 +416,11 @@ public class AsyncContextImpl implements AsyncContext {
                     if (!dispatched) {
                         //servlet
                         try {
-                            ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                            if(servletResponse instanceof HttpServletResponse) {
+                                ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                            } else {
+                                servletRequestContext.getOriginalResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                            }
                         } catch (IOException e) {
                             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                         }

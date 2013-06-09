@@ -848,7 +848,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         asyncStarted = true;
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        return asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), servletRequestContext, asyncContext);
+        return asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), servletRequestContext, false, asyncContext);
     }
 
     @Override
@@ -872,7 +872,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
         asyncStarted = true;
-        return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, servletRequestContext, asyncContext);
+        return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, servletRequestContext, true, asyncContext);
     }
 
     @Override
@@ -921,5 +921,66 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     void asyncRequestDispatched() {
         asyncStarted = false;
+    }
+
+    public String getOriginalRequestURI() {
+        String uri = (String) getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
+        if(uri != null) {
+            return uri;
+        }
+        uri = (String) getAttribute(AsyncContext.ASYNC_REQUEST_URI);
+        if(uri != null) {
+            return uri;
+        }
+        return getRequestURI();
+    }
+
+
+    public String getOriginalServletPath() {
+        String uri = (String) getAttribute(RequestDispatcher.FORWARD_SERVLET_PATH);
+        if(uri != null) {
+            return uri;
+        }
+        uri = (String) getAttribute(AsyncContext.ASYNC_SERVLET_PATH);
+        if(uri != null) {
+            return uri;
+        }
+        return getServletPath();
+    }
+
+    public String getOriginalPathInfo() {
+        String uri = (String) getAttribute(RequestDispatcher.FORWARD_PATH_INFO);
+        if(uri != null) {
+            return uri;
+        }
+        uri = (String) getAttribute(AsyncContext.ASYNC_PATH_INFO);
+        if(uri != null) {
+            return uri;
+        }
+        return getPathInfo();
+    }
+
+    public String getOriginalContextPath() {
+        String uri = (String) getAttribute(RequestDispatcher.FORWARD_CONTEXT_PATH);
+        if(uri != null) {
+            return uri;
+        }
+        uri = (String) getAttribute(AsyncContext.ASYNC_CONTEXT_PATH);
+        if(uri != null) {
+            return uri;
+        }
+        return getContextPath();
+    }
+
+    public String getOriginalQueryString() {
+        String uri = (String) getAttribute(RequestDispatcher.FORWARD_QUERY_STRING);
+        if(uri != null) {
+            return uri;
+        }
+        uri = (String) getAttribute(AsyncContext.ASYNC_QUERY_STRING);
+        if(uri != null) {
+            return uri;
+        }
+        return getQueryString();
     }
 }
