@@ -134,6 +134,9 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public void dispatch() {
+        if (dispatched) {
+            throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
+        }
         final HttpServletRequestImpl requestImpl = this.servletRequestContext.getOriginalRequest();
         final ServletPathMatch handler;
         Deployment deployment = requestImpl.getServletContext().getDeployment();
@@ -175,6 +178,10 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public void dispatch(final ServletContext context, final String path) {
+
+        if (dispatched) {
+            throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyDispatched();
+        }
 
         HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
         HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
