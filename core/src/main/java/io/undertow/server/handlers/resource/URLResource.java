@@ -175,6 +175,11 @@ public class URLResource implements Resource {
     }
 
     @Override
+    public File getResourceManagerRoot() {
+        return null;
+    }
+
+    @Override
     public URL getUrl() {
         return url;
     }

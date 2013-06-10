@@ -207,6 +207,11 @@ public class CachedResource implements Resource {
     }
 
     @Override
+    public File getResourceManagerRoot() {
+        return underlyingResource.getResourceManagerRoot();
+    }
+
+    @Override
     public URL getUrl() {
         return underlyingResource.getUrl();
     }

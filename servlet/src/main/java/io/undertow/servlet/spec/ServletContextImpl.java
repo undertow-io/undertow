@@ -204,7 +204,13 @@ public class ServletContextImpl implements ServletContext {
         for (Resource res : resource.list()) {
             File file = res.getFile();
             if(file != null) {
-                resources.add(file.toString());
+                File base = res.getResourceManagerRoot();
+                String filePath = file.getAbsolutePath().substring(base.getAbsolutePath().length());
+                filePath.replace('\\', '/'); //for windows systems
+                if(file.isDirectory()) {
+                    filePath = filePath + "/";
+                }
+                resources.add(filePath);
             }
         }
         return resources;
