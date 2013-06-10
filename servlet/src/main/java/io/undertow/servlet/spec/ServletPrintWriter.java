@@ -137,53 +137,52 @@ public class ServletPrintWriter {
     }
 
     public void println() {
-        final CharBuffer cb = CharBuffer.wrap("\n");
-        write(cb);
+        print('\n');
     }
 
     public void println(final boolean b) {
-        final CharBuffer cb = CharBuffer.wrap(Boolean.toString(b) + "\n");
-        write(cb);
+        print(b);
+        print('\n');
     }
 
     public void println(final char c) {
-        final CharBuffer cb = CharBuffer.wrap(Character.toString(c) + "\n");
-        write(cb);
+        print(c);
+        print('\n');
     }
 
     public void println(final int i) {
-        final CharBuffer cb = CharBuffer.wrap(Integer.toString(i) + "\n");
-        write(cb);
+        print(i);
+        print('\n');
     }
 
     public void println(final long l) {
-        final CharBuffer cb = CharBuffer.wrap(Long.toString(l) + "\n");
-        write(cb);
+        print(l);
+        print('\n');
     }
 
     public void println(final float f) {
-        final CharBuffer cb = CharBuffer.wrap(Float.toString(f) + "\n");
-        write(cb);
+        print(f);
+        print('\n');
     }
 
     public void println(final double d) {
-        final CharBuffer cb = CharBuffer.wrap(Double.toString(d) + "\n");
-        write(cb);
+        print(d);
+        print('\n');
     }
 
     public void println(final char[] s) {
-        final CharBuffer cb = CharBuffer.wrap(s + "\n");
-        write(cb);
+        print(s);
+        print('\n');
     }
 
     public void println(final String s) {
-        final CharBuffer cb = CharBuffer.wrap(s + "\n");
-        write(cb);
+        print(s);
+        print('\n');
     }
 
     public void println(final Object obj) {
-        final CharBuffer cb = CharBuffer.wrap(obj == null ? "null\n" : (obj.toString() + "\n"));
-        write(cb);
+        print(obj);
+        print('\n');
     }
 
     public void printf(final String format, final Object... args) {
