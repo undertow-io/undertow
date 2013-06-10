@@ -134,7 +134,7 @@ class HttpClientRequestImpl extends HttpClientRequest {
         boolean keepAlive;
         if (http11) {
             if(headers.contains(Headers.CONNECTION)) {
-                keepAlive = !headers.get(Headers.CONNECTION).equals(Headers.CLOSE.toString());
+                keepAlive = !Headers.CLOSE.equals(new HttpString(headers.getFirst(Headers.CONNECTION)));
             } else {
                 keepAlive = true;
             }
