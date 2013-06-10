@@ -7,6 +7,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
+import java.util.Arrays;
 import java.util.Locale;
 
 /**
@@ -172,8 +173,9 @@ public class ServletPrintWriter {
     }
 
     public void println(final char[] s) {
-        final CharBuffer cb = CharBuffer.wrap(s + "\n");
-        write(cb);
+        final char[] sn = Arrays.copyOf(s, s.length + 1);
+        sn[s.length] = '\n';
+        write(sn);
     }
 
     public void println(final String s) {
