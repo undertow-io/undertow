@@ -68,7 +68,7 @@ class RequestHeaderContainsPredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            final Map<String, Class<?>> params = new HashMap<>();
+            final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
             params.put("value", String[].class);
             params.put("header", String.class);
             return params;
@@ -76,7 +76,7 @@ class RequestHeaderContainsPredicate implements Predicate {
 
         @Override
         public Set<String> requiredParameters() {
-            final Set<String> params = new HashSet<>();
+            final Set<String> params = new HashSet<String>();
             params.add("value");
             params.add("header");
             return params;

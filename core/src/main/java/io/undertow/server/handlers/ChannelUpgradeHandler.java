@@ -40,7 +40,7 @@ import org.xnio.StreamConnection;
  * @author Stuart Douglas
  */
 public final class ChannelUpgradeHandler implements HttpHandler {
-    private final CopyOnWriteMap<String, List<Holder>> handlers = new CopyOnWriteMap<>();
+    private final CopyOnWriteMap<String, List<Holder>> handlers = new CopyOnWriteMap<String, List<Holder>>();
     private volatile HttpHandler nonUpgradeHandler = ResponseCodeHandler.HANDLE_404;
 
     /**
@@ -59,7 +59,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         }
         List<Holder> list = handlers.get(productString);
         if (list == null) {
-            handlers.put(productString, list = new ArrayList<>());
+            handlers.put(productString, list = new ArrayList<Holder>());
         }
         list.add(new Holder(openListener, handshake));
     }

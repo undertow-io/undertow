@@ -19,8 +19,8 @@ import io.undertow.websockets.jsr.JsrWebSocketMessages;
 final class BoundMethod {
 
     private final Method method;
-    private final List<BoundParameter> parameters = new ArrayList<>();
-    private final Set<Class> paramTypes = new HashSet<>();
+    private final List<BoundParameter> parameters = new ArrayList<BoundParameter>();
+    private final Set<Class> paramTypes = new HashSet<Class>();
     private final Class<?> messageType;
     private final boolean decoderRequired;
 
@@ -28,7 +28,7 @@ final class BoundMethod {
         this.method = method;
         this.messageType = messageType;
         this.decoderRequired = decoderRequired;
-        final Set<Integer> allParams = new HashSet<>();
+        final Set<Integer> allParams = new HashSet<Integer>();
         for (int i = 0; i < method.getParameterTypes().length; ++i) {
             allParams.add(i);
             paramTypes.add(method.getParameterTypes()[i]);
@@ -49,7 +49,9 @@ final class BoundMethod {
         }
         try {
             return method.invoke(instance, params);
-        } catch (IllegalAccessException | InvocationTargetException e) {
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }

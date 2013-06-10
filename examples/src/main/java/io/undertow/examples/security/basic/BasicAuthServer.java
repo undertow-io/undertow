@@ -36,7 +36,7 @@ public class BasicAuthServer {
         System.out.println("User: userOne Password: passwordOne");
         System.out.println("User: userTwo Password: passwordTwo");
 
-        final Map<String, char[]> users = new HashMap<>(2);
+        final Map<String, char[]> users = new HashMap<String, char[]>(2);
         users.put("userOne", "passwordOne".toCharArray());
         users.put("userTwo", "passwordTwo".toCharArray());
 

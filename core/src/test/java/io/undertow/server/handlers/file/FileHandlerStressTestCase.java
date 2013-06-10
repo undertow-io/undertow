@@ -18,10 +18,9 @@
 
 package io.undertow.server.handlers.file;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -60,7 +59,7 @@ public class FileHandlerStressTestCase {
     public void simpleFileStressTest() throws IOException, ExecutionException, InterruptedException, URISyntaxException {
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
-            Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+            File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
             final ResourceHandler handler = new ResourceHandler()
                     .setResourceManager(new FileResourceManager(rootPath));
 

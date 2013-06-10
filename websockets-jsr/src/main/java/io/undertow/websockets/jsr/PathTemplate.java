@@ -52,7 +52,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
 
         int state = 0;
         String base = "";
-        List<Part> parts = new ArrayList<>();
+        List<Part> parts = new ArrayList<Part>();
         boolean template;
         int stringStart = 0;
         //0 parsing base

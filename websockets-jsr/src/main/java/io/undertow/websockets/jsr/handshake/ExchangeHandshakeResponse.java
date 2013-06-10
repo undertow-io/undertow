@@ -43,7 +43,7 @@ public final class ExchangeHandshakeResponse implements HandshakeResponse {
     @Override
     public Map<String, List<String>> getHeaders() {
         if (headers == null) {
-            headers = new HashMap<>(exchange.getResponseHeaders());
+            headers = new HashMap<String, List<String>>(exchange.getResponseHeaders());
         }
         return headers;
     }

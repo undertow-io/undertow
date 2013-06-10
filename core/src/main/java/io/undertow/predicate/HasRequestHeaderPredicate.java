@@ -77,7 +77,7 @@ class HasRequestHeaderPredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            final Map<String, Class<?>> params = new HashMap<>();
+            final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
             params.put("headers", String[].class);
             params.put("requireAllHeaders", boolean.class);
             return params;

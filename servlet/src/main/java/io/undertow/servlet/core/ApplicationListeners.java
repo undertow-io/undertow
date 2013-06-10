@@ -61,7 +61,7 @@ public class ApplicationListeners implements Lifecycle {
             javax.servlet.http.HttpSessionAttributeListener.class,
             HttpSessionIdListener.class};
 
-    private static final ThreadLocal<Boolean> IN_PROGRAMATIC_SC_LISTENER_INVOCATION = new ThreadLocal<>();
+    private static final ThreadLocal<Boolean> IN_PROGRAMATIC_SC_LISTENER_INVOCATION = new ThreadLocal<Boolean>();
 
     private final ServletContext servletContext;
     private final List<ManagedListener> allListeners;

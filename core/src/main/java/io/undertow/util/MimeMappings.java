@@ -153,7 +153,7 @@ public class MimeMappings {
     }
 
     public static class Builder {
-        private final Map<String, String> mappings = new HashMap<>();
+        private final Map<String, String> mappings = new HashMap<String, String>();
 
 
         private Builder(boolean includeDefault) {

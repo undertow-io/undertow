@@ -54,8 +54,8 @@ public class IPAddressAccessControlHandler implements HttpHandler {
 
     private volatile HttpHandler next;
     private volatile boolean defaultAllow = false;
-    private final List<PeerMatch> ipv6acl = new CopyOnWriteArrayList<>();
-    private final List<PeerMatch> ipv4acl = new CopyOnWriteArrayList<>();
+    private final List<PeerMatch> ipv6acl = new CopyOnWriteArrayList<PeerMatch>();
+    private final List<PeerMatch> ipv4acl = new CopyOnWriteArrayList<PeerMatch>();
 
     public IPAddressAccessControlHandler(final HttpHandler next) {
         this.next = next;

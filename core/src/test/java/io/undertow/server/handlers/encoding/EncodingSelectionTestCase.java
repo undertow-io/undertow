@@ -201,7 +201,7 @@ public class EncodingSelectionTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             final EncodingHandler handler = new EncodingHandler();
-            handler.addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 100, Predicates.<HttpServerExchange>falsePredicate());
+            handler.addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 100, Predicates.falsePredicate());
             handler.addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 50);
             handler.setNext(new HttpHandler() {
                 @Override

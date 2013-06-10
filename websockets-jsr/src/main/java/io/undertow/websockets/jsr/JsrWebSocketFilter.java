@@ -66,9 +66,9 @@ public class JsrWebSocketFilter implements Filter {
     private List<ConfiguredServerEndpoint> configuredServerEndpoints;
 
     protected Map<ConfiguredServerEndpoint, List<Handshake>> handshakes(List<ConfiguredServerEndpoint> configs) {
-        final IdentityHashMap<ConfiguredServerEndpoint, List<Handshake>> ret = new IdentityHashMap<>();
+        final IdentityHashMap<ConfiguredServerEndpoint, List<Handshake>> ret = new IdentityHashMap<ConfiguredServerEndpoint, List<Handshake>>();
         for (ConfiguredServerEndpoint config : configs) {
-            List<Handshake> handshakes = new ArrayList<>();
+            List<Handshake> handshakes = new ArrayList<Handshake>();
             handshakes.add(new JsrHybi13Handshake(config));
             handshakes.add(new JsrHybi08Handshake(config));
             handshakes.add(new JsrHybi07Handshake(config));
@@ -81,7 +81,7 @@ public class JsrWebSocketFilter implements Filter {
     public void init(final FilterConfig filterConfig) throws ServletException {
         ServerWebSocketContainer container = (ServerWebSocketContainer) filterConfig.getServletContext().getAttribute(ServerContainer.class.getName());
         container.deploymentComplete();
-        configuredServerEndpoints = new ArrayList<>(container.getConfiguredServerEndpoints());
+        configuredServerEndpoints = new ArrayList<ConfiguredServerEndpoint>(container.getConfiguredServerEndpoints());
         Collections.sort(configuredServerEndpoints, new Comparator<ConfiguredServerEndpoint>() {
             @Override
             public int compare(final ConfiguredServerEndpoint o1, final ConfiguredServerEndpoint o2) {
@@ -109,7 +109,7 @@ public class JsrWebSocketFilter implements Filter {
                 path = "/" + path;
             }
 
-            final Map<String, String> params = new HashMap<>();
+            final Map<String, String> params = new HashMap<String, String>();
             //we need a better way of handling this mapping.
             for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
                 if (endpoint.getPathTemplate().matches(path, params)) {

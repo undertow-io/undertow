@@ -93,7 +93,7 @@ public class ChunkedResponseTrailersTestCase {
 
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
-        final AtomicReference<ChunkedInputStream> stream = new AtomicReference<>();
+        final AtomicReference<ChunkedInputStream> stream = new AtomicReference<ChunkedInputStream>();
         client.addResponseInterceptor(new HttpResponseInterceptor() {
 
             public void process( final HttpResponse response, final HttpContext context) throws IOException {

@@ -45,7 +45,7 @@ public class ServletSecurityConstraintHandler implements HttpHandler {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         List<SingleConstraintMatch> list = servletRequestContext.getRequiredConstrains();
         if (list == null) {
-            servletRequestContext.setRequiredConstrains(list = new ArrayList<>());
+            servletRequestContext.setRequiredConstrains(list = new ArrayList<SingleConstraintMatch>());
         }
         list.addAll(securityMatch.getRequiredConstraints());
         TransportGuaranteeType type = servletRequestContext.getTransportGuarenteeType();

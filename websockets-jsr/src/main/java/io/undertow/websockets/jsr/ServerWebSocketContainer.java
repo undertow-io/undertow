@@ -69,15 +69,15 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     private final WebSocketSessionIdGenerator sessionIdGenerator = new UuidWebSocketSessionIdGenerator();
 
-    private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new HashMap<>();
+    private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new HashMap<Class<?>, ConfiguredClientEndpoint>();
 
-    private final List<ConfiguredServerEndpoint> configuredServerEndpoints = new ArrayList<>();
+    private final List<ConfiguredServerEndpoint> configuredServerEndpoints = new ArrayList<ConfiguredServerEndpoint>();
 
     /**
      * set of all deployed server endpoint paths. Due to the comparison function we can detect
      * overlaps
      */
-    private final TreeSet<PathTemplate> seenPaths = new TreeSet<>();
+    private final TreeSet<PathTemplate> seenPaths = new TreeSet<PathTemplate>();
 
     private HttpClient httpClient;
     private Pool<ByteBuffer> bufferPool;
@@ -148,7 +148,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
         WebSocketRecieveListeners.startRecieving(wss, channel, false);
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
-        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>());
+        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>());
         endpointInstance.onOpen(undertowSession, cec);
 
         return undertowSession;
@@ -160,7 +160,9 @@ public class ServerWebSocketContainer implements ServerContainer {
         try {
             Endpoint endpoint = endpointClass.newInstance();
             return connectToServer(endpoint, cec, path);
-        } catch (InstantiationException | IllegalAccessException e) {
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
     }
@@ -175,7 +177,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
         WebSocketRecieveListeners.startRecieving(wss, channel, false);
 
-        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>());
+        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>());
         endpointInstance.onOpen(undertowSession, cec.getConfig());
 
         return undertowSession;
@@ -269,7 +271,11 @@ public class ServerWebSocketContainer implements ServerContainer {
                 throw JsrWebSocketMessages.MESSAGES.classWasNotAnnotated(endpoint);
             }
 
-        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException e) {
+        } catch (NoSuchMethodException e) {
+            throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+        } catch (InstantiationException e) {
+            throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+        } catch (IllegalAccessException e) {
             throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
         }
     }

@@ -18,16 +18,13 @@
 
 package io.undertow.server.handlers.resource;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.DirectoryIteratorException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -52,19 +49,15 @@ import org.xnio.Pooled;
 public class FileResource implements Resource {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.resources.file");
-    private final Path file;
+    private final File file;
 
-    public FileResource(final Path file) {
+    public FileResource(final File file) {
         this.file = file;
     }
 
     @Override
     public Date getLastModified() {
-        try {
-            return new Date(Files.getLastModifiedTime(file).toMillis());
-        } catch (IOException e) {
-            return null;
-        }
+        return new Date(file.lastModified());
     }
 
     @Override
@@ -83,31 +76,26 @@ public class FileResource implements Resource {
 
     @Override
     public String getName() {
-        return file.getFileName().toString();
+        return file.getName();
     }
 
     @Override
     public boolean isDirectory() {
-        return Files.isDirectory(file);
+        return file.isDirectory();
     }
 
     @Override
     public List<Resource> list() {
-        final List<Resource> resources = new ArrayList<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(file)) {
-            for (Path child : stream) {
-                resources.add(new FileResource(child));
-            }
-        } catch (IOException | DirectoryIteratorException x) {
-            // IOException can never be thrown by the iteration.
-            UndertowLogger.ROOT_LOGGER.warn("could not list directory", x);
+        final List<Resource> resources = new ArrayList<Resource>();
+        for (String child : file.list()) {
+            resources.add(new FileResource(new File(child)));
         }
         return resources;
     }
 
     @Override
     public String getContentType(final MimeMappings mimeMappings) {
-        final String fileName = file.getFileName().toString();
+        final String fileName = file.getName();
         int index = fileName.lastIndexOf('.');
         if (index != -1 && index != fileName.length() - 1) {
             return mimeMappings.getMimeType(fileName.substring(index + 1));
@@ -128,7 +116,7 @@ public class FileResource implements Resource {
             public void run() {
                 if (fileChannel == null) {
                     try {
-                        fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file.toFile(), FileAccess.READ_ONLY);
+                        fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
                     } catch (FileNotFoundException e) {
                         exchange.setResponseCode(404);
                         return;
@@ -193,18 +181,14 @@ public class FileResource implements Resource {
 
     @Override
     public Long getContentLength() {
-        try {
-            return Files.size(file);
-        } catch (IOException e) {
-            return 0L;
-        }
+        return file.length();
     }
 
     @Override
     public Resource getIndexResource(final List<String> possible) {
         for (String possibility : possible) {
-            Path index = file.resolve(possibility);
-            if (Files.exists(index)) {
+            File index = new File(file, possibility);
+            if (index.exists()) {
                 return new FileResource(index);
             }
         }
@@ -217,14 +201,14 @@ public class FileResource implements Resource {
     }
 
     @Override
-    public Path getFile() {
+    public File getFile() {
         return file;
     }
 
     @Override
     public URL getUrl() {
         try {
-            return file.toUri().toURL();
+            return file.toURL();
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }

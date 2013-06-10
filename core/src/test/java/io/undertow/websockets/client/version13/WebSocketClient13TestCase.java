@@ -73,7 +73,7 @@ public class WebSocketClient13TestCase {
         final WebSocketChannel webSocketChannel = WebSocketClient.connect(httpClient, buffer, OptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13).get();
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicReference<String> result = new AtomicReference<>();
+        final AtomicReference<String> result = new AtomicReference<String>();
         webSocketChannel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
             @Override
             public void handleEvent(final WebSocketChannel channel) {

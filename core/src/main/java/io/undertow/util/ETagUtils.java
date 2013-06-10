@@ -153,7 +153,7 @@ public class ETagUtils {
         char[] headerChars = header.toCharArray();
 
         // The LinkedHashMap is used so that the parameter order can also be retained.
-        List<ETag> response = new ArrayList<>();
+        List<ETag> response = new ArrayList<ETag>();
 
         SearchingFor searchingFor = SearchingFor.START_OF_VALUE;
         String currentToken = null;

@@ -24,14 +24,14 @@ public class HeaderOrderTestCase {
         orderIntField.setAccessible(true);
 
         Field[] fields = Headers.class.getDeclaredFields();
-        final List<HttpString> headers = new ArrayList<>();
+        final List<HttpString> headers = new ArrayList<HttpString>();
         for(final Field field : fields) {
             Object value = field.get(null);
             if(!(value instanceof HttpString)) {
                 continue;
             }
             HttpString header = (HttpString) value;
-            if((int)orderIntField.get(header) != 0) {
+            if((Integer)orderIntField.get(header) != 0) {
                 headers.add(header);
             }
         }

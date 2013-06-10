@@ -18,10 +18,9 @@
 
 package io.undertow.server.ssl;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 
 import io.undertow.server.HttpHandler;
@@ -53,7 +52,7 @@ public class ComplexSSLTestCase {
     @Test
     public void complexSSLTestCase() throws IOException, GeneralSecurityException, URISyntaxException {
         final PathHandler pathHandler = new PathHandler();
-        Path rootPath = Paths.get(FileHandlerTestCase.class.getResource("page.html").toURI()).getParent();
+        File rootPath = new File(FileHandlerTestCase.class.getResource("page.html").toURI()).getParentFile();
 
         final NameVirtualHostHandler virtualHostHandler = new NameVirtualHostHandler();
         HttpHandler root = virtualHostHandler;

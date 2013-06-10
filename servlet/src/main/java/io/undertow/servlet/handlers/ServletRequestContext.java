@@ -29,7 +29,7 @@ import javax.servlet.ServletResponse;
  */
 public class ServletRequestContext {
 
-    private static final ThreadLocal<ServletRequestContext> CURRENT = new ThreadLocal<>();
+    private static final ThreadLocal<ServletRequestContext> CURRENT = new ThreadLocal<ServletRequestContext>();
 
     static void setCurrentRequestContext(ServletRequestContext servletRequestContext) {
         CURRENT.set(servletRequestContext);

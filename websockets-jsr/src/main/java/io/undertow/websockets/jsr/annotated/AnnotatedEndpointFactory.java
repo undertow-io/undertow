@@ -60,7 +60,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
 
 
     public static AnnotatedEndpointFactory create(final Class<?> endpointClass, final InstanceFactory<?> underlyingInstance, final EncodingFactory encodingFactory) throws DeploymentException {
-        final Set<Class<? extends Annotation>> found = new HashSet<>();
+        final Set<Class<? extends Annotation>> found = new HashSet<Class<? extends Annotation>>();
         BoundMethod OnOpen = null;
         BoundMethod OnClose = null;
         BoundMethod OnError = null;
@@ -346,7 +346,7 @@ public class AnnotatedEndpointFactory implements InstanceFactory<Endpoint> {
         }
 
         public Set<Integer> positions() {
-            HashSet<Integer> ret = new HashSet<>();
+            HashSet<Integer> ret = new HashSet<Integer>();
             for (int i = 0; i < postions.length; ++i) {
                 if (postions[i] != null) {
                     ret.add(i);

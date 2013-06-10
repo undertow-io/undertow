@@ -307,7 +307,7 @@ public final class UndertowSession implements Session {
 
     @Override
     public Set<Session> getOpenSessions() {
-        return new HashSet<>(openSessions);
+        return new HashSet<Session>(openSessions);
     }
 
     @Override

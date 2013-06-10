@@ -56,9 +56,9 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     @Override
     public Map<String, List<String>> getRequestHeaders() {
-        Map<String, List<String>> headers = new HashMap<>();
+        Map<String, List<String>> headers = new HashMap<String, List<String>>();
         for (final HttpString header : exchange.getRequestHeaders().getHeaderNames()) {
-            headers.put(header.toString(), new ArrayList<>(exchange.getRequestHeaders().get(header)));
+            headers.put(header.toString(), new ArrayList<String>(exchange.getRequestHeaders().get(header)));
         }
         return Collections.unmodifiableMap(headers);
     }
@@ -70,9 +70,9 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
 
     @Override
     public Map<String, List<String>> getResponseHeaders() {
-        Map<String, List<String>> headers = new HashMap<>();
+        Map<String, List<String>> headers = new HashMap<String, List<String>>();
         for (final HttpString header : exchange.getResponseHeaders().getHeaderNames()) {
-            headers.put(header.toString(), new ArrayList<>(exchange.getResponseHeaders().get(header)));
+            headers.put(header.toString(), new ArrayList<String>(exchange.getResponseHeaders().get(header)));
         }
         return Collections.unmodifiableMap(headers);
     }
@@ -111,7 +111,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
         if (sender == null) {
             this.sender = exchange.getResponseSender();
         }
-        final FutureResult<Void> future = new FutureResult<>();
+        final FutureResult<Void> future = new FutureResult<Void>();
         sender.send(data, new IoCallback() {
             @Override
             public void onComplete(final HttpServerExchange exchange, final Sender sender) {
@@ -142,7 +142,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
                     return new FinishedIoFuture<byte[]>(data.toByteArray());
                 } else if (res == 0) {
                     //callback
-                    final FutureResult<byte[]> future = new FutureResult<>();
+                    final FutureResult<byte[]> future = new FutureResult<byte[]>();
                     channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
                         @Override
                         public void handleEvent(final StreamSourceChannel channel) {
@@ -179,7 +179,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
                 }
 
             } catch (IOException e) {
-                final FutureResult<byte[]> future = new FutureResult<>();
+                final FutureResult<byte[]> future = new FutureResult<byte[]>();
                 future.setException(e);
                 return future.getIoFuture();
             }

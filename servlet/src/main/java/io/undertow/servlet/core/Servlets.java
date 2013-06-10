@@ -15,7 +15,7 @@ import io.undertow.util.CopyOnWriteMap;
  */
 public class Servlets {
 
-    private final Map<String, ServletHandler> managedServletMap = new CopyOnWriteMap<>();
+    private final Map<String, ServletHandler> managedServletMap = new CopyOnWriteMap<String, ServletHandler>();
     private final DeploymentImpl deployment;
     private final ServletPathMatches servletPaths;
 
@@ -46,7 +46,7 @@ public class Servlets {
     }
 
     public Map<String, ServletHandler> getServletHandlers() {
-        return new HashMap<>(managedServletMap);
+        return new HashMap<String, ServletHandler>(managedServletMap);
     }
 
 }
