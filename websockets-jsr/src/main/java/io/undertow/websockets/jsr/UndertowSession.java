@@ -188,7 +188,7 @@ public final class UndertowSession implements Session {
 
     @Override
     public String getNegotiatedSubprotocol() {
-        return null;
+        return "";
     }
 
     @Override
