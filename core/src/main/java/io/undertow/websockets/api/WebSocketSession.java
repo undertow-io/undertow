@@ -90,7 +90,7 @@ public interface WebSocketSession extends BinaryFrameSender, TextFrameSender, Pi
      *
      * @param idleTimeout   the idle timeout in ms. If the smaller then 1 no timeout is used.
      */
-    void setIdleTimeout(int idleTimeout);
+    void setIdleTimeout(long idleTimeout);
 
     /**
      * Get the idle timeout for this {@link WebSocketSession}. The session will be closed
@@ -98,7 +98,7 @@ public interface WebSocketSession extends BinaryFrameSender, TextFrameSender, Pi
      *
      * @return the idle timeout in ms. If the smaller then 1 no timeout is used.
      */
-    int getIdleTimeout();
+    long getIdleTimeout();
 
     /**
      * Set the send timeout for this {@link WebSocketSession} when sending a Websocket frame in an async fashion

@@ -50,7 +50,7 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
     private volatile XnioExecutor.Key handle;
     private static final AtomicReferenceFieldUpdater<IdleTimeoutStreamChannel, XnioExecutor.Key> KEY_UPDATER = AtomicReferenceFieldUpdater.newUpdater(IdleTimeoutStreamChannel.class, XnioExecutor.Key.class, "handle");
 
-    private volatile int idleTimeout;
+    private volatile long idleTimeout;
 
     private final Runnable timeoutCommand = new Runnable() {
         @Override
@@ -77,7 +77,7 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
     }
 
     private void handleIdleTimeout(final long ret) {
-        int idleTimeout = this.idleTimeout;
+        long idleTimeout = this.idleTimeout;
         XnioExecutor.Key key = handle;
         if (idleTimeout > 0) {
             if (ret == 0 && key == null) {
@@ -223,7 +223,7 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
     public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
         T ret = super.setOption(option, value);
         if (option == UndertowOptions.IDLE_TIMEOUT) {
-            idleTimeout = (Integer) value;
+            idleTimeout = (Long) value;
             XnioExecutor.Key key = handle;
             if (key != null) {
                 key.remove();

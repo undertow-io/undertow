@@ -79,7 +79,7 @@ public final class WebSocketChannelSession implements WebSocketSession {
     }
 
     @Override
-    public void setIdleTimeout(int idleTimeout) {
+    public void setIdleTimeout(long idleTimeout) {
         try {
             channel.setOption(UndertowOptions.IDLE_TIMEOUT, idleTimeout);
         } catch (IOException e) {
@@ -89,7 +89,7 @@ public final class WebSocketChannelSession implements WebSocketSession {
     }
 
     @Override
-    public int getIdleTimeout() {
+    public long getIdleTimeout() {
         try {
             return channel.getOption(UndertowOptions.IDLE_TIMEOUT);
         } catch (IOException e) {

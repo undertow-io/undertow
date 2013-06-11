@@ -203,12 +203,12 @@ public final class UndertowSession implements Session {
 
     @Override
     public long getMaxIdleTimeout() {
-        return 0;
+        return session.getIdleTimeout();
     }
 
     @Override
     public void setMaxIdleTimeout(final long milliseconds) {
-
+        session.setIdleTimeout(milliseconds);
     }
 
     @Override
