@@ -90,7 +90,7 @@ public class FileResource implements Resource {
     public List<Resource> list() {
         final List<Resource> resources = new ArrayList<Resource>();
         for (String child : file.list()) {
-            resources.add(new FileResource(new File(child), resourceManagerRoot));
+            resources.add(new FileResource(new File(this.file, child), resourceManagerRoot));
         }
         return resources;
     }
