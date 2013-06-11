@@ -243,12 +243,19 @@ public class ServerWebSocketContainer implements ServerContainer {
 
                 EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, serverEndpoint.decoders(), serverEndpoint.encoders());
                 AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory);
+                Class<? extends ServerEndpointConfig.Configurator> configuratorClass = serverEndpoint.configurator();
+                ServerEndpointConfig.Configurator configurator;
+                if(configuratorClass != ServerEndpointConfig.Configurator.class) {
+                    configurator = configuratorClass.newInstance();
+                } else {
+                    configurator = new ServerInstanceFactoryConfigurator(factory);
+                }
 
                 ServerEndpointConfig config = ServerEndpointConfig.Builder.create(endpoint, serverEndpoint.value())
                         .decoders(Arrays.asList(serverEndpoint.decoders()))
                         .encoders(Arrays.asList(serverEndpoint.encoders()))
                         .subprotocols(Arrays.asList(serverEndpoint.subprotocols()))
-                        .configurator(new ServerInstanceFactoryConfigurator(factory))
+                        .configurator(configurator)
                         .build();
 
 
@@ -312,6 +319,10 @@ public class ServerWebSocketContainer implements ServerContainer {
         deploymentComplete = true;
     }
 
+    public List<ConfiguredServerEndpoint> getConfiguredServerEndpoints() {
+        return configuredServerEndpoints;
+    }
+
     private static final class ServerInstanceFactoryConfigurator extends ServerEndpointConfig.Configurator {
 
         private final InstanceFactory<?> factory;
@@ -324,9 +335,5 @@ public class ServerWebSocketContainer implements ServerContainer {
         public <T> T getEndpointInstance(final Class<T> endpointClass) throws InstantiationException {
             return (T) factory.createInstance().getInstance();
         }
-    }
-
-    public List<ConfiguredServerEndpoint> getConfiguredServerEndpoints() {
-        return configuredServerEndpoints;
     }
 }
