@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 import javax.websocket.DecodeException;
 import javax.websocket.Endpoint;
 import javax.websocket.MessageHandler;
-import javax.websocket.PongMessage;
 
 import io.undertow.websockets.api.AssembledFrameHandler;
 import io.undertow.websockets.api.WebSocketFrameHeader;
@@ -102,18 +101,4 @@ final class WholeFrameHandler extends AbstractFrameHandler<MessageHandler.Whole<
 
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    @Override
-    public void onPongFrame(WebSocketSession s, ByteBuffer... payload) {
-        HandlerWrapper handler = getHandler(FrameType.PONG);
-        if (handler != null) {
-            PongMessage message;
-            if (payload.length == 1) {
-                message = DefaultPongMessage.create(payload[0]);
-            } else {
-                message = DefaultPongMessage.create(toBuffer(payload));
-            }
-            ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
-        }
-    }
 }

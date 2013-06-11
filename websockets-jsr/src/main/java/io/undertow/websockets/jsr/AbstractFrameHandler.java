@@ -78,12 +78,18 @@ abstract class AbstractFrameHandler<E extends MessageHandler> implements FrameHa
         }
     }
 
-    /**
-     * Noop implementation. Sub-classes may override this.
-     */
     @Override
     public void onPongFrame(WebSocketSession session, ByteBuffer... payload) {
-        // NOOP
+        HandlerWrapper handler = getHandler(FrameType.PONG);
+        if (handler != null) {
+            PongMessage message;
+            if (payload.length == 1) {
+                message = DefaultPongMessage.create(payload[0]);
+            } else {
+                message = DefaultPongMessage.create(toBuffer(payload));
+            }
+            ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
+        }
     }
 
     @Override

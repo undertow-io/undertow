@@ -24,7 +24,6 @@ import org.xnio.Buffers;
 import javax.websocket.DecodeException;
 import javax.websocket.Endpoint;
 import javax.websocket.MessageHandler;
-import javax.websocket.PongMessage;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -109,21 +108,6 @@ class MixedFrameHandler extends PartialFrameHandler {
                     getEndpoint().onError(getSession(), e);
                 }
             }
-        }
-    }
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    @Override
-    public void onPongFrame(WebSocketSession s, ByteBuffer... payload) {
-        HandlerWrapper handler = getHandler(FrameType.PONG);
-        if (handler != null) {
-            PongMessage message;
-            if (payload.length == 1) {
-                message =  DefaultPongMessage.create(payload[0]);
-            } else {
-                message = DefaultPongMessage.create(toBuffer(payload));
-            }
-            ((MessageHandler.Whole)handler.getHandler()).onMessage(message);
         }
     }
 }

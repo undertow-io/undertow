@@ -161,7 +161,16 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Session.class, session);
                 params.put(Map.class, session.getPathParameters());
                 params.put(PongMessage.class, message);
-                invokeMethod(params, pongMessage, session);
+                final Object result;
+                try {
+                    result = pongMessage.invoke(instance.getInstance(), params);
+                } catch (DecodeException e) {
+                    onError(s, e);
+                    return;
+                } finally {
+                    assembledTextFrame = null;
+                }
+                sendResult(result);
             } catch (Exception e) {
                 onError(s, e);
             }
