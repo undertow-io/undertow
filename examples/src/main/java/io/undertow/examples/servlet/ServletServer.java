@@ -6,8 +6,10 @@ import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.api.ServletInfo;
+
+import static io.undertow.servlet.Servlets.defaultContainer;
+import static io.undertow.servlet.Servlets.deployment;
+import static io.undertow.servlet.Servlets.servlet;
 
 /**
  * @author Stuart Douglas
@@ -19,21 +21,19 @@ public class ServletServer {
     public static void main(final String[] args) {
         try {
 
-            final ServletContainer container = ServletContainer.Factory.newInstance();
-
-            DeploymentInfo servletBuilder = new DeploymentInfo()
+            DeploymentInfo servletBuilder = deployment()
                     .setClassLoader(ServletServer.class.getClassLoader())
                     .setContextPath("/myapp")
                     .setDeploymentName("test.war")
                     .addServlets(
-                            new ServletInfo("MessageServlet", MessageServlet.class)
+                            servlet("MessageServlet", MessageServlet.class)
                                     .addInitParam("message", "Hello World")
                                     .addMapping("/*"),
-                            new ServletInfo("MyServlet", MessageServlet.class)
+                            servlet("MyServlet", MessageServlet.class)
                                     .addInitParam("message", "MyServlet")
                                     .addMapping("/myservlet"));
 
-            DeploymentManager manager = container.addDeployment(servletBuilder);
+            DeploymentManager manager = defaultContainer().addDeployment(servletBuilder);
             manager.deploy();
 
             Undertow server = Undertow.builder()
