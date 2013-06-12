@@ -148,7 +148,7 @@ public class AsyncContextImpl implements AsyncContext {
             ServletContainer container = deployment.getServletContainer();
             final String requestURI = ((HttpServletRequest) servletRequest).getRequestURI();
             DeploymentManager context = container.getDeploymentByPath(requestURI);
-            if(context == null) {
+            if (context == null) {
                 throw UndertowServletMessages.MESSAGES.couldNotFindContextToDispatchTo(requestImpl.getOriginalContextPath());
             }
             String toDispatch = requestURI.substring(context.getDeployment().getServletContext().getContextPath().length());
@@ -162,7 +162,7 @@ public class AsyncContextImpl implements AsyncContext {
             //original request
             ServletContainer container = deployment.getServletContainer();
             DeploymentManager context = container.getDeploymentByPath(requestImpl.getOriginalContextPath());
-            if(context == null) {
+            if (context == null) {
                 //this should never happen
                 throw UndertowServletMessages.MESSAGES.couldNotFindContextToDispatchTo(requestImpl.getOriginalContextPath());
             }
@@ -354,7 +354,7 @@ public class AsyncContextImpl implements AsyncContext {
         if (!dispatched) {
             servletRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, error);
             try {
-                if(servletResponse instanceof HttpServletResponse) {
+                if (servletResponse instanceof HttpServletResponse) {
                     ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 } else {
                     servletRequestContext.getOriginalResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -416,7 +416,7 @@ public class AsyncContextImpl implements AsyncContext {
                     if (!dispatched) {
                         //servlet
                         try {
-                            if(servletResponse instanceof HttpServletResponse) {
+                            if (servletResponse instanceof HttpServletResponse) {
                                 ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                             } else {
                                 servletRequestContext.getOriginalResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -485,31 +485,53 @@ public class AsyncContextImpl implements AsyncContext {
 
 
     private void onAsyncComplete() {
-        final ThreadSetupAction.Handle handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
+        final boolean setupRequired = ServletRequestContext.current() == null;
+        ThreadSetupAction.Handle handle = null;
+        if (setupRequired) {
+            handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
+        }
         try {
-            for (final BoundAsyncListener listener : asyncListeners) {
-                AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse);
-                try {
-                    listener.asyncListener.onComplete(event);
-                } catch (IOException e) {
-                    UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+            //now run request listeners
+            if (setupRequired) {
+                servletRequestContext.getDeployment().getApplicationListeners().requestInitialized(servletRequest);
+            }
+            try {
+                for (final BoundAsyncListener listener : asyncListeners) {
+                    AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse);
+                    try {
+                        listener.asyncListener.onComplete(event);
+                    } catch (IOException e) {
+                        UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+                    }
+                }
+            } finally {
+                if (setupRequired) {
+                    servletRequestContext.getDeployment().getApplicationListeners().requestDestroyed(servletRequest);
                 }
             }
         } finally {
-            handle.tearDown();
+            if (setupRequired) {
+                handle.tearDown();
+            }
         }
     }
 
     private void onAsyncTimeout() {
         final ThreadSetupAction.Handle handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
         try {
-            for (final BoundAsyncListener listener : asyncListeners) {
-                AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse);
-                try {
-                    listener.asyncListener.onTimeout(event);
-                } catch (IOException e) {
-                    UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+            //now run request listeners
+            servletRequestContext.getDeployment().getApplicationListeners().requestInitialized(servletRequest);
+            try {
+                for (final BoundAsyncListener listener : asyncListeners) {
+                    AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse);
+                    try {
+                        listener.asyncListener.onTimeout(event);
+                    } catch (IOException e) {
+                        UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+                    }
                 }
+            } finally {
+                servletRequestContext.getDeployment().getApplicationListeners().requestDestroyed(servletRequest);
             }
         } finally {
             handle.tearDown();
@@ -519,14 +541,20 @@ public class AsyncContextImpl implements AsyncContext {
     private void onAsyncStart(AsyncContext newAsyncContext) {
         final ThreadSetupAction.Handle handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
         try {
-            for (final BoundAsyncListener listener : asyncListeners) {
-                //make sure we use the new async context
-                AsyncEvent event = new AsyncEvent(newAsyncContext, listener.servletRequest, listener.servletResponse);
-                try {
-                    listener.asyncListener.onStartAsync(event);
-                } catch (IOException e) {
-                    UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+            //now run request listeners
+            servletRequestContext.getDeployment().getApplicationListeners().requestInitialized(servletRequest);
+            try {
+                for (final BoundAsyncListener listener : asyncListeners) {
+                    //make sure we use the new async context
+                    AsyncEvent event = new AsyncEvent(newAsyncContext, listener.servletRequest, listener.servletResponse);
+                    try {
+                        listener.asyncListener.onStartAsync(event);
+                    } catch (IOException e) {
+                        UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+                    }
                 }
+            } finally {
+                servletRequestContext.getDeployment().getApplicationListeners().requestDestroyed(servletRequest);
             }
         } finally {
             handle.tearDown();
@@ -534,18 +562,34 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     private void onAsyncError(Throwable t) {
-        final ThreadSetupAction.Handle handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
+        final boolean setupRequired = ServletRequestContext.current() == null;
+        ThreadSetupAction.Handle handle = null;
+        if (setupRequired) {
+            handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
+        }
         try {
-            for (final BoundAsyncListener listener : asyncListeners) {
-                AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse, t);
-                try {
-                    listener.asyncListener.onError(event);
-                } catch (IOException e) {
-                    UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+            //now run request listeners
+            if (setupRequired) {
+                servletRequestContext.getDeployment().getApplicationListeners().requestInitialized(servletRequest);
+            }
+            try {
+                for (final BoundAsyncListener listener : asyncListeners) {
+                    AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse, t);
+                    try {
+                        listener.asyncListener.onError(event);
+                    } catch (IOException e) {
+                        UndertowServletLogger.REQUEST_LOGGER.ioExceptionDispatchingAsyncEvent(e);
+                    }
+                }
+            } finally {
+                if (setupRequired) {
+                    servletRequestContext.getDeployment().getApplicationListeners().requestDestroyed(servletRequest);
                 }
             }
         } finally {
-            handle.tearDown();
+            if (setupRequired) {
+                handle.tearDown();
+            }
         }
     }
 
