@@ -46,7 +46,6 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
     private final ChannelListener.SimpleSetter<C> closeSetter = new ChannelListener.SimpleSetter<C>();
     private final ChannelListener.SimpleSetter<C> writeSetter = new ChannelListener.SimpleSetter<C>();
 
-    // TODO: Remove volatile once XNIO changes are complete
     private volatile XnioExecutor.Key handle;
     private static final AtomicReferenceFieldUpdater<IdleTimeoutStreamChannel, XnioExecutor.Key> KEY_UPDATER = AtomicReferenceFieldUpdater.newUpdater(IdleTimeoutStreamChannel.class, XnioExecutor.Key.class, "handle");
 
@@ -56,15 +55,12 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
         @Override
         public void run() {
             UndertowLogger.REQUEST_LOGGER.tracef("Timing out channel %s due to inactivity");
-            try {
-                if (channel.isWriteResumed()) {
-                    ChannelListeners.invokeChannelListener((C) IdleTimeoutStreamChannel.this, writeSetter.get());
-                }
-                if (channel.isReadResumed()) {
-                    ChannelListeners.invokeChannelListener((C) IdleTimeoutStreamChannel.this, readSetter.get());
-                }
-            } finally {
-                IoUtils.safeClose(channel);
+            IoUtils.safeClose(channel);
+            if (channel.isWriteResumed()) {
+                ChannelListeners.invokeChannelListener((C) IdleTimeoutStreamChannel.this, writeSetter.get());
+            }
+            if (channel.isReadResumed()) {
+                ChannelListeners.invokeChannelListener((C) IdleTimeoutStreamChannel.this, readSetter.get());
             }
         }
     };
@@ -76,19 +72,16 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
         this.channel = channel;
     }
 
-    private void handleIdleTimeout(final long ret) {
+    private void handleIdleTimeout() {
         long idleTimeout = this.idleTimeout;
         XnioExecutor.Key key = handle;
+        if (key != null) {
+            key.remove();
+        }
         if (idleTimeout > 0) {
-            if (ret == 0 && key == null) {
-                XnioExecutor.Key k = channel.getWriteThread().executeAfter(timeoutCommand, idleTimeout, TimeUnit.MILLISECONDS);
-                if (!KEY_UPDATER.compareAndSet(this, null, k)) {
-                    k.remove();
-                } else {
-                    handle = k;
-                }
-            } else if (ret > 0 && key != null) {
-                key.remove();
+            XnioExecutor.Key k = channel.getIoThread().executeAfter(timeoutCommand, idleTimeout, TimeUnit.MILLISECONDS);
+            if (!KEY_UPDATER.compareAndSet(this, key, k)) {
+                k.remove();
             }
         }
     }
@@ -111,63 +104,63 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
     @Override
     public int write(ByteBuffer src) throws IOException {
         int w = channel.write(src);
-        handleIdleTimeout(w);
+        handleIdleTimeout();
         return w;
     }
 
     @Override
     public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
         long w = channel.write(srcs, offset, length);
-        handleIdleTimeout(w);
+        handleIdleTimeout();
         return w;
     }
 
     @Override
     public long transferTo(long position, long count, FileChannel target) throws IOException {
         long w = channel.transferTo(position, count, target);
-        handleIdleTimeout(w);
+        handleIdleTimeout();
         return w;
     }
 
     @Override
     public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         long w = channel.transferTo(count, throughBuffer, target);
-        handleIdleTimeout(w);
+        handleIdleTimeout();
         return w;
     }
 
     @Override
     public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
         long r = channel.read(dsts, offset, length);
-        handleIdleTimeout(r);
+        handleIdleTimeout();
         return r;
     }
 
     @Override
     public long read(ByteBuffer[] dsts) throws IOException {
         long r = channel.read(dsts);
-        handleIdleTimeout(r);
+        handleIdleTimeout();
         return r;
     }
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
         int r = channel.read(dst);
-        handleIdleTimeout(r);
+        handleIdleTimeout();
         return r;
     }
 
     @Override
     public long transferFrom(FileChannel src, long position, long count) throws IOException {
         long r = channel.transferFrom(src, position, count);
-        handleIdleTimeout(r);
+        handleIdleTimeout();
         return r;
     }
 
     @Override
     public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
         long r = channel.transferFrom(source, count, throughBuffer);
-        handleIdleTimeout(r);
+        handleIdleTimeout();
         return r;
     }
 
@@ -221,8 +214,8 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
 
     @Override
     public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
-        T ret = super.setOption(option, value);
         if (option == UndertowOptions.IDLE_TIMEOUT) {
+            Long old = idleTimeout;
             idleTimeout = (Long) value;
             XnioExecutor.Key key = handle;
             if (key != null) {
@@ -230,14 +223,21 @@ public class IdleTimeoutStreamChannel<C extends StreamChannel> extends Delegatin
             }
 
             if (idleTimeout > 0) {
-                XnioExecutor.Key k = getWriteThread().executeAfter(timeoutCommand, idleTimeout, TimeUnit.MILLISECONDS);
-                if (!KEY_UPDATER.compareAndSet(this, null, k)) {
+                XnioExecutor.Key k = getIoThread().executeAfter(timeoutCommand, idleTimeout, TimeUnit.MILLISECONDS);
+                if (!KEY_UPDATER.compareAndSet(this, key, k)) {
                     k.remove();
-                } else {
-                    handle = k;
                 }
             }
+            return (T)old;
         }
-        return ret;
+        return super.setOption(option, value);
+    }
+
+    @Override
+    public <T> T getOption(final Option<T> option) throws IOException {
+        if (option == UndertowOptions.IDLE_TIMEOUT) {
+            return (T) Long.valueOf(idleTimeout);
+        }
+        return super.getOption(option);
     }
 }

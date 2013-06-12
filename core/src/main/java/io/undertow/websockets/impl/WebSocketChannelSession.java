@@ -91,7 +91,8 @@ public final class WebSocketChannelSession implements WebSocketSession {
     @Override
     public long getIdleTimeout() {
         try {
-            return channel.getOption(UndertowOptions.IDLE_TIMEOUT);
+            Long value =  channel.getOption(UndertowOptions.IDLE_TIMEOUT);
+            return value == null ? 0 : value;
         } catch (IOException e) {
             // log this
             WebSocketLogger.REQUEST_LOGGER.getIdleTimeFailed(e);
