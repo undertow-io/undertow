@@ -52,14 +52,27 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
     private static final int PREFIX_LENGTH = BASIC_PREFIX.length();
     private static final String COLON = ":";
 
+    /**
+     * If silent is true then this mechanism will only take effect if there is an Authorization header.
+     *
+     * This allows you to combine basic auth with form auth, so human users will use form based auth, but allows
+     * programmatic clients to login using basic auth.
+     */
+    private final boolean silent;
+
     // TODO - Can we get the realm name from the IDM?
     public BasicAuthenticationMechanism(final String realmName) {
         this(realmName, "BASIC");
     }
 
     public BasicAuthenticationMechanism(final String realmName, final String mechanismName) {
+        this(realmName, mechanismName, false);
+    }
+
+    public BasicAuthenticationMechanism(final String realmName, final String mechanismName, final boolean silent) {
         this.challenge = BASIC_PREFIX + "realm=\"" + realmName + "\"";
         this.name = mechanismName;
+        this.silent = silent;
     }
 
     /**
@@ -115,6 +128,14 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
     @Override
     public ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext) {
+        if(silent) {
+            //if this is silent we only send a challenge if the request contained auth headers
+            //otherwise we assume another method will send the challenge
+            String authHeader = exchange.getRequestHeaders().getFirst(AUTHORIZATION);
+            if(authHeader == null) {
+                return new ChallengeResult(false);
+            }
+        }
         exchange.getResponseHeaders().add(WWW_AUTHENTICATE, challenge);
         return new ChallengeResult(true, UNAUTHORIZED);
     }
