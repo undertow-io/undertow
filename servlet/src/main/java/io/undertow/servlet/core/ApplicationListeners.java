@@ -42,6 +42,9 @@ import javax.servlet.http.HttpSessionListener;
 
 import io.undertow.servlet.UndertowServletLogger;
 
+import static io.undertow.servlet.core.ApplicationListeners.ListenerState.DECLARED_LISTENER;
+import static io.undertow.servlet.core.ApplicationListeners.ListenerState.PROGRAMATIC_LISTENER;
+
 /**
  * Class that is responsible for invoking application listeners.
  * <p/>
@@ -61,7 +64,12 @@ public class ApplicationListeners implements Lifecycle {
             javax.servlet.http.HttpSessionAttributeListener.class,
             HttpSessionIdListener.class};
 
-    private static final ThreadLocal<Boolean> IN_PROGRAMATIC_SC_LISTENER_INVOCATION = new ThreadLocal<Boolean>();
+    private static final ThreadLocal<ListenerState> IN_PROGRAMATIC_SC_LISTENER_INVOCATION = new ThreadLocal<ListenerState>() {
+        @Override
+        protected ListenerState initialValue() {
+            return ListenerState.NO_LISTENER;
+        }
+    };
 
     private final ServletContext servletContext;
     private final List<ManagedListener> allListeners;
@@ -108,7 +116,7 @@ public class ApplicationListeners implements Lifecycle {
         if (HttpSessionAttributeListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
             httpSessionAttributeListeners.add(listener);
         }
-        if(HttpSessionIdListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
+        if (HttpSessionIdListener.class.isAssignableFrom(listener.getListenerInfo().getListenerClass())) {
             httpSessionIdListeners.add(listener);
         }
         this.allListeners.add(listener);
@@ -137,9 +145,7 @@ public class ApplicationListeners implements Lifecycle {
         final ServletContextEvent event = new ServletContextEvent(servletContext);
         for (int i = 0; i < servletContextListeners.size(); ++i) {
             ManagedListener listener = servletContextListeners.get(i);
-            if(listener.isProgramatic()) {
-                IN_PROGRAMATIC_SC_LISTENER_INVOCATION.set(true);
-            }
+            IN_PROGRAMATIC_SC_LISTENER_INVOCATION.set(listener.isProgramatic() ? PROGRAMATIC_LISTENER : DECLARED_LISTENER);
             try {
                 this.<ServletContextListener>get(listener).contextInitialized(event);
             } finally {
@@ -256,12 +262,13 @@ public class ApplicationListeners implements Lifecycle {
             this.<HttpSessionAttributeListener>get(listener).attributeReplaced(sre);
         }
     }
+
     public void httpSessionIdChanged(final HttpSession session, final String oldSessionId) {
-            final HttpSessionEvent sre = new HttpSessionEvent(session);
-            for (final ManagedListener listener : httpSessionIdListeners) {
-                this.<HttpSessionIdListener>get(listener).sessionIdChanged(sre, oldSessionId);
-            }
+        final HttpSessionEvent sre = new HttpSessionEvent(session);
+        for (final ManagedListener listener : httpSessionIdListeners) {
+            this.<HttpSessionIdListener>get(listener).sessionIdChanged(sre, oldSessionId);
         }
+    }
 
     private <T> T get(final ManagedListener listener) {
         return (T) listener.instance();
@@ -271,13 +278,14 @@ public class ApplicationListeners implements Lifecycle {
         return list.listIterator(list.size());
     }
 
-    public static boolean isInProgramaticServletContextListenerInvocation() {
-        Boolean result = IN_PROGRAMATIC_SC_LISTENER_INVOCATION.get();
-        return result == null ? false : result;
+    /**
+     * returns true if this is in in a
+     */
+    public static ListenerState listenerState() {
+        return IN_PROGRAMATIC_SC_LISTENER_INVOCATION.get();
     }
 
     /**
-     *
      * @param clazz The potential listener class
      * @return true if the provided class is a valid listener class
      */
@@ -288,6 +296,12 @@ public class ApplicationListeners implements Lifecycle {
             }
         }
         return false;
+    }
+
+    public static enum ListenerState {
+        NO_LISTENER,
+        DECLARED_LISTENER,
+        PROGRAMATIC_LISTENER,
     }
 
 }

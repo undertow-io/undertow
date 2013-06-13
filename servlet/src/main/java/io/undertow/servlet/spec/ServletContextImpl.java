@@ -75,6 +75,9 @@ import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
 
+import static io.undertow.servlet.core.ApplicationListeners.ListenerState.NO_LISTENER;
+import static io.undertow.servlet.core.ApplicationListeners.ListenerState.PROGRAMATIC_LISTENER;
+
 /**
  * @author Stuart Douglas
  */
@@ -580,11 +583,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public <T extends EventListener> void addListener(final T t) {
-        ensureNotProgramaticListener();
         ensureNotInitialized();
-
-        if((ApplicationListeners.isInProgramaticServletContextListenerInvocation() &&
-                ServletContextListener.class.isAssignableFrom(t.getClass()))) {
+        if(ApplicationListeners.listenerState() != NO_LISTENER &&
+                ServletContextListener.class.isAssignableFrom(t.getClass())) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
         ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t));
@@ -594,10 +595,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void addListener(final Class<? extends EventListener> listenerClass) {
-        ensureNotProgramaticListener();
         ensureNotInitialized();
-        if((ApplicationListeners.isInProgramaticServletContextListenerInvocation() &&
-                ServletContextListener.class.isAssignableFrom(listenerClass))) {
+        if(ApplicationListeners.listenerState() != NO_LISTENER &&
+                ServletContextListener.class.isAssignableFrom(listenerClass)) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
         InstanceFactory<? extends EventListener> factory = null;
@@ -687,7 +687,7 @@ public class ServletContextImpl implements ServletContext {
     }
 
     private void ensureNotProgramaticListener() {
-        if(ApplicationListeners.isInProgramaticServletContextListenerInvocation()) {
+        if(ApplicationListeners.listenerState() == PROGRAMATIC_LISTENER) {
             throw UndertowServletMessages.MESSAGES.cannotCallFromProgramaticListener();
         }
     }
