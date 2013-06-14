@@ -268,9 +268,8 @@ public class AsyncContextImpl implements AsyncContext {
             }
             exchange.unDispatch();
             dispatched = true;
-            HttpServletRequestImpl request = servletRequestContext.getOriginalRequest();
+            final HttpServletRequestImpl request = servletRequestContext.getOriginalRequest();
             initialRequestDone();
-            request.asyncRequestDispatched();
         } else {
             doDispatch(new Runnable() {
                 @Override
