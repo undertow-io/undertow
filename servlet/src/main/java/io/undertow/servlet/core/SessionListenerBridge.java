@@ -42,6 +42,9 @@ public class SessionListenerBridge implements SessionListener {
             if (reason == SessionDestroyedReason.TIMEOUT) {
                 handle = threadSetup.setup(exchange);
             }
+            for(String attribute : session.getAttributeNames()) {
+                session.removeAttribute(attribute);
+            }
             applicationListeners.sessionDestroyed(httpSession);
         } finally {
             if (handle != null) {
