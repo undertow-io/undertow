@@ -294,10 +294,15 @@ class HttpClientRequestImpl extends HttpClientRequest {
             String host = null;
             if(target.isAbsolute()) {
                 host = target.getHost();
+                int port = target.getPort();
+                if(port != -1) {
+                    host = host + ':' + port;
+                }
             }
             if(host == null) {
                 try {
-                    host = connection.getPeerAddress(InetSocketAddress.class).getHostName();
+                    InetSocketAddress address = connection.getPeerAddress(InetSocketAddress.class);
+                    host = address.getHostName() + ':' + address.getPort();
                 } catch (Exception ignore)  {
                     //
                 }
