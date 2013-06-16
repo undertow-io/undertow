@@ -173,7 +173,7 @@ public class HttpTransferEncoding {
                 final StreamSinkConduit channel = factory.create();
                 final HeaderMap responseHeaders = exchange.getResponseHeaders();
                 // test to see if we're still persistent
-                boolean stillPersistent = requestLooksPersistent;
+                boolean stillPersistent = requestLooksPersistent && exchange.isPersistent();
                 HttpString transferEncoding = Headers.IDENTITY;
                 final String transferEncodingHeader = responseHeaders.getLast(Headers.TRANSFER_ENCODING);
                 final String contentLengthHeader = responseHeaders.getFirst(Headers.CONTENT_LENGTH);

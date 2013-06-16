@@ -37,6 +37,7 @@ import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.security.impl.DigestAuthenticationMechanism;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletMessages;
@@ -170,6 +171,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
 
             HttpHandler initialHandler = wrapHandlers(servletInitialHandler, deployment.getDeploymentInfo().getInitialHandlerChainWrappers());
+            initialHandler = new HttpContinueReadHandler(initialHandler);
 
             deployment.setInitialHandler(initialHandler);
             deployment.setServletHandler(servletInitialHandler);

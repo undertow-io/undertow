@@ -3,6 +3,7 @@ package io.undertow.server;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.PipelingBufferingStreamSinkConduit;
@@ -97,13 +98,67 @@ public class HttpContinue {
         internalSendContinueResponse(exchange, sinkChannel, callback);
     }
 
+    /**
+     * Creates a response sender that can be used to send a HTTP 100-continue response.
+     *
+     * @param exchange The exchange
+     * @return The response sender
+     */
+    public static ContinueResponseSender createResponseSender(final HttpServerExchange exchange) {
+        if (!exchange.isResponseChannelAvailable()) {
+            throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
+        }
+        final PipelingBufferingStreamSinkConduit pipelingbuffer = exchange.getAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY);
+        final StreamConnection channel = exchange.getConnection().getChannel();
+        final ConduitStreamSinkChannel sinkChannel = channel.getSinkChannel();
+        final ByteBuffer buf = BUFFER.duplicate();
+        final HttpServerConnection.ConduitState oldState = exchange.getConnection().resetChannel();
+        return new ContinueResponseSender() {
+            @Override
+            public boolean send() throws IOException {
+                if (pipelingbuffer != null) {
+                    if (!pipelingbuffer.flushPipelinedData()) {
+                        return false;
+                    }
+                }
+                if (!buf.hasRemaining()) {
+                    return true;
+                }
+                int res;
+                do {
+                    res = sinkChannel.write(buf);
+                } while (buf.hasRemaining() && res != 0);
+
+                if (buf.hasRemaining()) {
+                    return false;
+                }
+                if (pipelingbuffer != null) {
+                    if (!pipelingbuffer.flushPipelinedData()) {
+                        return false;
+                    }
+                }
+                exchange.getConnection().restoreChannel(oldState);
+                return true;
+            }
+
+            @Override
+            public void awaitWritable() throws IOException {
+                sinkChannel.awaitWritable();
+            }
+
+            @Override
+            public void awaitWritable(final long time, final TimeUnit timeUnit) throws IOException {
+                sinkChannel.awaitWritable(time, timeUnit);
+            }
+        };
+    }
 
     /**
      * Sends a continue response using blocking IO
      *
      * @param exchange The exchange
      */
-    public static void sendContinueResponse(final HttpServerExchange exchange) throws IOException {
+    public static void sendContinueResponseBlocking(final HttpServerExchange exchange) throws IOException {
         if (!exchange.isResponseChannelAvailable()) {
             throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
         }
@@ -137,6 +192,7 @@ public class HttpContinue {
      */
     public static void rejectExchange(final HttpServerExchange exchange) {
         exchange.setResponseCode(417);
+        exchange.setPersistent(false);
         exchange.endExchange();
     }
 
@@ -207,6 +263,25 @@ public class HttpContinue {
             callback.onException(exchange, null, e);
             return;
         }
+    }
+
+
+    /**
+     * A continue response that is in the process of being sent.
+     */
+    public interface ContinueResponseSender {
+
+        /**
+         * Continue sending the response.
+         *
+         * @return true if the response is fully sent, false otherwise.
+         */
+        boolean send() throws IOException;
+
+        void awaitWritable() throws IOException;
+
+        void awaitWritable(long time, final TimeUnit timeUnit) throws IOException;
+
     }
 
 }

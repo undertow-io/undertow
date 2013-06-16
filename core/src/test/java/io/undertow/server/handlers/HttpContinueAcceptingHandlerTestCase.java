@@ -44,14 +44,14 @@ import org.junit.runner.RunWith;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
-public class HttpContinueTestCase {
+public class HttpContinueAcceptingHandlerTestCase {
 
     private static volatile boolean accept = false;
 
     @BeforeClass
     public static void setup() {
         final BlockingHandler blockingHandler = new BlockingHandler();
-        final HttpContinueHandler handler = new HttpContinueHandler(blockingHandler) {
+        final HttpContinueAcceptingHandler handler = new HttpContinueAcceptingHandler(blockingHandler) {
             @Override
             protected boolean acceptRequest(final HttpServerExchange exchange) {
                 return accept;

@@ -20,15 +20,15 @@ import io.undertow.server.HttpServerExchange;
  * @see io.undertow.server.HttpContinue
  * @author Stuart Douglas
  */
-public class HttpContinueHandler implements HttpHandler {
+public class HttpContinueAcceptingHandler implements HttpHandler {
 
     private volatile HttpHandler next;
 
-    public HttpContinueHandler(HttpHandler next) {
+    public HttpContinueAcceptingHandler(HttpHandler next) {
         this.next = next;
     }
 
-    public HttpContinueHandler() {
+    public HttpContinueAcceptingHandler() {
         this(ResponseCodeHandler.HANDLE_404);
     }
 
@@ -65,7 +65,7 @@ public class HttpContinueHandler implements HttpHandler {
         return next;
     }
 
-    public HttpContinueHandler setNext(final HttpHandler next) {
+    public HttpContinueAcceptingHandler setNext(final HttpHandler next) {
         HttpHandlers.handlerNotNull(next);
         this.next = next;
         return this;

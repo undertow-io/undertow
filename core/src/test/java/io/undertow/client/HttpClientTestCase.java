@@ -21,7 +21,7 @@ package io.undertow.client;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.HttpContinueHandler;
+import io.undertow.server.handlers.HttpContinueAcceptingHandler;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -175,7 +175,7 @@ public class HttpClientTestCase {
     @Test
     public void testSimpleHttpContinue() throws Exception {
         //
-        final HttpContinueHandler handler = new HttpContinueHandler();
+        final HttpContinueAcceptingHandler handler = new HttpContinueAcceptingHandler();
         DefaultServer.setRootHandler(handler);
         final HttpClient client = createClient();
         try {
@@ -202,7 +202,7 @@ public class HttpClientTestCase {
     @Test
     public void testRejectHttpContinue() throws Exception {
         //
-        final HttpContinueHandler handler = new HttpContinueHandler() {
+        final HttpContinueAcceptingHandler handler = new HttpContinueAcceptingHandler() {
             @Override
             protected boolean acceptRequest(HttpServerExchange exchange) {
                 return false;
