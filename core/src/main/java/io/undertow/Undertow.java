@@ -17,6 +17,7 @@ import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
+import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Pool;
@@ -43,6 +44,9 @@ public class Undertow {
     private final boolean directBuffers;
     private final List<ListenerConfig> listeners = new ArrayList<ListenerConfig>();
     private final HttpHandler rootHandler;
+    private final OptionMap workerOptions;
+    private final OptionMap socketOptions;
+    private final OptionMap serverOptions;
 
     private XnioWorker worker;
     private List<AcceptingChannel<? extends StreamConnection>> channels;
@@ -56,6 +60,9 @@ public class Undertow {
         this.directBuffers = builder.directBuffers;
         this.listeners.addAll(builder.listeners);
         this.rootHandler = builder.handler;
+        this.workerOptions = builder.workerOptions.getMap();
+        this.socketOptions = builder.socketOptions.getMap();
+        this.serverOptions = builder.serverOptions.getMap();
     }
 
     /**
@@ -77,37 +84,41 @@ public class Undertow {
                     .set(Options.WORKER_TASK_MAX_THREADS, workerThreads)
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.CORK, true)
+                    .addAll(workerOptions)
                     .getMap());
 
-            OptionMap serverOptions = OptionMap.builder()
+            OptionMap socketOptions = OptionMap.builder()
                     .set(Options.WORKER_IO_THREADS, ioThreads)
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
+                    .addAll(this.socketOptions)
                     .getMap();
+
+
 
             Pool<ByteBuffer> buffers = new ByteBufferSlicePool(directBuffers ? BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR : BufferAllocator.BYTE_BUFFER_ALLOCATOR, bufferSize, bufferSize * buffersPerRegion);
 
             for (ListenerConfig listener : listeners) {
                 if (listener.type == ListenerType.AJP) {
-                    AjpOpenListener openListener = new AjpOpenListener(buffers, bufferSize);
+                    AjpOpenListener openListener = new AjpOpenListener(buffers, serverOptions, bufferSize);
                     openListener.setRootHandler(rootHandler);
                     ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                    AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, serverOptions);
+                    AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
                     server.resumeAccepts();
                     channels.add(server);
                 } else if (listener.type == ListenerType.HTTP) {
-                    HttpOpenListener openListener = new HttpOpenListener(buffers, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), bufferSize);
+                    HttpOpenListener openListener = new HttpOpenListener(buffers, OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap(), bufferSize);
                     openListener.setRootHandler(rootHandler);
                     ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
-                    AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, serverOptions);
+                    AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptions);
                     server.resumeAccepts();
                     channels.add(server);
                 } else if (listener.type == ListenerType.HTTPS){
-                    HttpOpenListener openListener = new HttpOpenListener(buffers, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), bufferSize);
+                    HttpOpenListener openListener = new HttpOpenListener(buffers, OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap(), bufferSize);
                     openListener.setRootHandler(rootHandler);
                     ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
                     XnioSsl xnioSsl = xnio.getSslProvider(OptionMap.create(Options.USE_DIRECT_BUFFERS, true));
-                    AcceptingChannel < SslConnection > sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, serverOptions);
+                    AcceptingChannel < SslConnection > sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptions);
                     sslServer.resumeAccepts();
                     channels.add(sslServer);
                 }
@@ -220,6 +231,10 @@ public class Undertow {
         private final List<ListenerConfig> listeners = new ArrayList<ListenerConfig>();
         private HttpHandler handler;
 
+        private final OptionMap.Builder workerOptions = OptionMap.builder();
+        private final OptionMap.Builder socketOptions = OptionMap.builder();
+        private final OptionMap.Builder serverOptions = OptionMap.builder();
+
         private Builder() {
             ioThreads = Runtime.getRuntime().availableProcessors();
             workerThreads = ioThreads * 8;
@@ -280,6 +295,21 @@ public class Undertow {
 
         public Builder setHandler(final HttpHandler handler) {
             this.handler = handler;
+            return this;
+        }
+
+        public <T> Builder setServerOption(final Option<T> option, final T value) {
+            serverOptions.set(option, value);
+            return this;
+        }
+
+        public <T> Builder setSocketOption(final Option<T> option, final T value) {
+            socketOptions.set(option, value);
+            return this;
+        }
+
+        public <T> Builder setWorkerOption(final Option<T> option, final T value) {
+            workerOptions.set(option, value);
             return this;
         }
     }
