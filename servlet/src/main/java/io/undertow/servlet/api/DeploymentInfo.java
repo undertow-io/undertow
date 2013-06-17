@@ -74,6 +74,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile ConcurrentMap<String, Object> servletContextAttributeBackingMap;
     private volatile ServletSessionConfig servletSessionConfig;
     private volatile FormParserFactory formParserFactory = FormParserFactory.builder().build();
+    private volatile String hostName = "localhost";
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -697,6 +698,18 @@ public class DeploymentInfo implements Cloneable {
         this.servletSessionConfig = servletSessionConfig;
     }
 
+    /**
+     * @return the host name
+     */
+    public String getHostName() {
+        return hostName;
+    }
+
+    public DeploymentInfo setHostName(final String hostName) {
+        this.hostName = hostName;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -749,6 +762,7 @@ public class DeploymentInfo implements Cloneable {
         info.additionalAuthenticationMechanisms.addAll(additionalAuthenticationMechanisms);
         info.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
         info.servletSessionConfig = servletSessionConfig;
+        info.hostName = hostName;
         return info;
     }
 

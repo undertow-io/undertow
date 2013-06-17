@@ -640,6 +640,11 @@ public class ServletContextImpl implements ServletContext {
     public void declareRoles(final String... roleNames) {
     }
 
+    @Override
+    public String getVirtualServerName() {
+        return deployment.getDeploymentInfo().getHostName();
+    }
+
 
     /**
      * Gets the session

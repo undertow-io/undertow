@@ -38,6 +38,8 @@ import io.undertow.util.HttpString;
  */
 public class PartImpl implements Part {
 
+    private final HttpString FILE_NAME = HttpString.tryFromString("File-Name");
+
     private final String name;
     private final FormData.FormValue formValue;
 
@@ -59,6 +61,11 @@ public class PartImpl implements Part {
     @Override
     public String getName() {
         return name;
+    }
+
+    @Override
+    public String getSubmittedFileName() {
+        return formValue.getFileName();
     }
 
     @Override

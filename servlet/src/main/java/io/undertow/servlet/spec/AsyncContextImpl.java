@@ -80,7 +80,7 @@ public class AsyncContextImpl implements AsyncContext {
 
 
     //todo: make default configurable
-    private volatile long timeout = 120000;
+    private volatile long timeout = 30000;
 
     private volatile XnioExecutor.Key timeoutKey;
 

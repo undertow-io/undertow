@@ -74,7 +74,7 @@
         <version.org.jboss.logging>3.1.2.GA</version.org.jboss.logging>
         <version.org.jboss.logmanager>1.4.0.Final</version.org.jboss.logmanager>
         <version.org.jboss.logging.processor>1.1.0.Final</version.org.jboss.logging.processor>
-        <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Alpha1</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
+        <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Beta1</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
         <version.org.jboss.spec.javax.servlet.jsp>1.0.1.Final</version.org.jboss.spec.javax.servlet.jsp>
         <version.org.jboss.spec.javax.websockets>1.0.0.Beta1</version.org.jboss.spec.javax.websockets>
         <version.org.jboss.web.jasper-jdt>7.0.3.Final</version.org.jboss.web.jasper-jdt>

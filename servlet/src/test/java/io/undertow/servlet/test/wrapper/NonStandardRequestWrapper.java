@@ -842,7 +842,7 @@ public class NonStandardRequestWrapper implements HttpServletRequest {
      * @since Servlet 3.1
      */
     @Override
-    public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) throws IOException {
+    public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) throws IOException, ServletException {
         return this._getHttpServletRequest().upgrade(handlerClass);
     }
 }
