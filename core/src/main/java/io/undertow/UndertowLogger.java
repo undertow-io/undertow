@@ -89,7 +89,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5011, value = "Ignoring AJP request with prefix %s")
     void ignoringAjpRequestWithPrefixCode(byte prefix);
 
-    @LogMessage(level = Logger.Level.ERROR)
+    @LogMessage(level = Logger.Level.DEBUG)
     @Message(id = 5013, value = "An IOException occurred")
     void ioException(@Cause IOException e);
 
