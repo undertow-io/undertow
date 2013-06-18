@@ -300,6 +300,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     }
 
                     SecurityConstraint newConstraint = new SecurityConstraint()
+                            .setEmptyRoleSemantic(securityInfo.getEmptyRoleSemantic())
                             .addRolesAllowed(securityInfo.getRolesAllowed())
                             .setTransportGuaranteeType(securityInfo.getTransportGuaranteeType())
                             .addWebResourceCollection(new WebResourceCollection().addUrlPatterns(mappings)
