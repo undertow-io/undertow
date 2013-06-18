@@ -1,6 +1,7 @@
 package io.undertow.servlet.handlers.security;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -56,6 +57,7 @@ public class SecurityPathMatches {
         if (match != null) {
             type = handleMatch(method, match, constraintSet, type);
         }
+
         int qsPos = -1;
         boolean extension = false;
         for (int i = path.length() - 1; i >= 0; --i) {
@@ -92,7 +94,24 @@ public class SecurityPathMatches {
                 }
             }
         }
-        return new SecurityPathMatch(type, constraintSet);
+
+
+        return new SecurityPathMatch(type, mergeConstraints(constraintSet));
+    }
+
+    /**
+     * merge all constraints, as per 13.8.1 Combining Constraints
+     */
+    private SingleConstraintMatch mergeConstraints(final List<SingleConstraintMatch> constraintSet) {
+        final Set<String> allowedRoles = new HashSet<String>();
+        for(SingleConstraintMatch match : constraintSet) {
+            if(match.getRequiredRoles().isEmpty()) {
+                return new SingleConstraintMatch(match.getEmptyRoleSemantic(), Collections.<String>emptySet());
+            } else {
+                allowedRoles.addAll(match.getRequiredRoles());
+            }
+        }
+        return new SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic.PERMIT, allowedRoles);
     }
 
     private TransportGuaranteeType handleMatch(final String method, final PathSecurityInformation exact, final List<SingleConstraintMatch> constraintSet, TransportGuaranteeType type) {

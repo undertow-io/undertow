@@ -75,6 +75,7 @@ public class DeploymentInfo implements Cloneable {
     private volatile ServletSessionConfig servletSessionConfig;
     private volatile FormParserFactory formParserFactory = FormParserFactory.builder().build();
     private volatile String hostName = "localhost";
+    private volatile boolean denyUncoveredHttpMethods = false;
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -710,6 +711,14 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public boolean isDenyUncoveredHttpMethods() {
+        return denyUncoveredHttpMethods;
+    }
+
+    public void setDenyUncoveredHttpMethods(final boolean denyUncoveredHttpMethods) {
+        this.denyUncoveredHttpMethods = denyUncoveredHttpMethods;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -763,6 +772,7 @@ public class DeploymentInfo implements Cloneable {
         info.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
         info.servletSessionConfig = servletSessionConfig;
         info.hostName = hostName;
+        info.denyUncoveredHttpMethods = denyUncoveredHttpMethods;
         return info;
     }
 

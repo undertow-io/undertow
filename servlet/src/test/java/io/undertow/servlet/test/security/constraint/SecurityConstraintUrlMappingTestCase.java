@@ -59,6 +59,7 @@ public class SecurityConstraintUrlMappingTestCase {
         identityManager.addUser("user1", "password1", "role1");
         identityManager.addUser("user2", "password2", "role2");
         identityManager.addUser("user3", "password3", "role1", "role2");
+        identityManager.addUser("user4", "password4", "badRole");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -123,8 +124,9 @@ public class SecurityConstraintUrlMappingTestCase {
 
     @Test
     public void testAggregatedRoles() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user1:password1", "user3:password3");
-        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user2:password2", "user3:password3");
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user4:password4", "user3:password3");
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user4:password4", "user1:password1");
+        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user4:password4", "user2:password2");
     }
 
     @Test
