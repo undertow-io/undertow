@@ -449,7 +449,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                     final FormData value = parser.parseBlocking();
                     for (final String namedPart : value) {
                         for (FormData.FormValue part : value.get(namedPart)) {
-                            //TODO: non-file parts?
                             parts.add(new PartImpl(namedPart, part));
                         }
                     }

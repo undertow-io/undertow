@@ -72,7 +72,11 @@ public class PartImpl implements Part {
 
     @Override
     public long getSize() {
-        return formValue.getFile().length();
+        if (formValue.isFile()) {
+            return formValue.getFile().length();
+        } else {
+            return formValue.getValue().length();
+        }
     }
 
     @Override
@@ -82,7 +86,7 @@ public class PartImpl implements Part {
 
     @Override
     public void delete() throws IOException {
-        if(!formValue.getFile().delete()) {
+        if (!formValue.getFile().delete()) {
             throw UndertowServletMessages.MESSAGES.deleteFailed(formValue.getFile());
         }
     }
@@ -101,7 +105,7 @@ public class PartImpl implements Part {
     @Override
     public Collection<String> getHeaderNames() {
         final Set<String> ret = new HashSet<String>();
-        for(HttpString i : formValue.getHeaders().getHeaderNames()) {
+        for (HttpString i : formValue.getHeaders().getHeaderNames()) {
             ret.add(i.toString());
         }
         return ret;
