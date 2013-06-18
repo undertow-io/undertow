@@ -23,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -30,6 +31,7 @@ import javax.servlet.http.Part;
 
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
@@ -92,7 +94,8 @@ public class PartImpl implements Part {
 
     @Override
     public Collection<String> getHeaders(final String name) {
-        return formValue.getHeaders().get(new HttpString(name));
+        HeaderValues values = formValue.getHeaders().get(new HttpString(name));
+        return values == null ? Collections.<String>emptyList() : values;
     }
 
     @Override
