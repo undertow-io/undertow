@@ -56,6 +56,7 @@ import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.SameThreadExecutor;
 import org.xnio.XnioExecutor;
 
@@ -166,7 +167,7 @@ public class AsyncContextImpl implements AsyncContext {
                 //this should never happen
                 throw UndertowServletMessages.MESSAGES.couldNotFindContextToDispatchTo(requestImpl.getOriginalContextPath());
             }
-            String toDispatch = requestImpl.getOriginalRequestURI().substring(requestImpl.getOriginalContextPath().length());
+            String toDispatch = CanonicalPathUtils.canonicalize(requestImpl.getOriginalRequestURI()).substring(requestImpl.getOriginalContextPath().length());
             String qs = requestImpl.getOriginalQueryString();
             if (!qs.isEmpty()) {
                 toDispatch = toDispatch + "?" + qs;
