@@ -371,10 +371,16 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         this.written += len;
         if (contentLength != -1 && this.written >= contentLength) {
             state |= FLAG_CLOSED;
-            if (flushBufferAsync()) {
-                channel.shutdownWrites();
-                state |= FLAG_DELEGATE_SHUTDOWN;
-                if (!channel.flush()) {
+            //if buffersToWrite is set we are already flushing
+            //so we don't have to do anything
+            if(buffersToWrite == null) {
+                if (flushBufferAsync()) {
+                    channel.shutdownWrites();
+                    state |= FLAG_DELEGATE_SHUTDOWN;
+                    if (!channel.flush()) {
+                        resumeWrites();
+                    }
+                } else {
                     resumeWrites();
                 }
             }
@@ -395,7 +401,10 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
         ByteBuffer[] bufs = buffersToWrite;
         if (bufs == null) {
-            ByteBuffer buffer = buffer();
+            ByteBuffer buffer = this.buffer;
+            if(buffer == null || buffer.position() == 0) {
+                return true;
+            }
             buffer.flip();
             bufs = new ByteBuffer[]{buffer};
         }
