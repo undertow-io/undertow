@@ -155,7 +155,8 @@ public class DefaultServlet extends HttpServlet {
 
         }
         if (!req.getMethod().equals(Methods.HEAD_STRING)) {
-            resource.serve(ServletRequestContext.requireCurrent().getOriginalRequest().getExchange());
+            HttpServerExchange exchange = ServletRequestContext.requireCurrent().getOriginalRequest().getExchange();
+            resource.serve(exchange.getResponseSender(), exchange);
         }
     }
 

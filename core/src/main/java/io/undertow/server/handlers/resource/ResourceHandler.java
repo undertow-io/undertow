@@ -182,7 +182,7 @@ public class ResourceHandler implements HttpHandler {
                 if (!sendContent) {
                     exchange.endExchange();
                 } else {
-                    resource.serve(exchange);
+                    resource.serve(exchange.getResponseSender(), exchange);
                 }
             }
         });

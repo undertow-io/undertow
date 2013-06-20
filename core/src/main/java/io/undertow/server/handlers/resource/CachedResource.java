@@ -28,16 +28,13 @@ import java.util.List;
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
-import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.cache.LimitedBufferSlicePool;
-import io.undertow.server.handlers.cache.ResponseCachingStreamSinkConduit;
-import io.undertow.util.ConduitFactory;
+import io.undertow.server.handlers.cache.ResponseCachingSender;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
-import org.xnio.conduits.StreamSinkConduit;
 
 /**
  * @author Stuart Douglas
@@ -112,49 +109,40 @@ public class CachedResource implements Resource {
     }
 
     @Override
-    public void serve(final HttpServerExchange exchange) {
+    public void serve(final Sender sender, final HttpServerExchange exchange) {
         final Long length = getContentLength();
         //if it is not eligable to be served from the cache
         if (length == null || length > cachingResourceManager.getMaxFileSize()) {
-            underlyingResource.serve(exchange);
+            underlyingResource.serve(sender, exchange);
             return;
         }
 
 
         final DirectBufferCache dataCache = cachingResourceManager.getDataCache();
         if (dataCache == null) {
-            underlyingResource.serve(exchange);
+            underlyingResource.serve(sender, exchange);
             return;
         }
         final DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
         //it is not cached yet, install a wrapper to grab the data
         if (existing == null || !existing.enabled() || !existing.reference()) {
-            exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
-                @Override
-                public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
+            Sender newSender = sender;
 
+            final DirectBufferCache.CacheEntry entry;
+            if (existing == null) {
+                entry = dataCache.add(cacheKey, length.intValue());
+            } else {
+                entry = existing;
+            }
 
-                    final DirectBufferCache.CacheEntry entry;
-                    if (existing == null) {
-                        entry = dataCache.add(cacheKey, length.intValue());
-                    } else {
-                        entry = existing;
-                    }
-
-                    if (entry == null || entry.buffers().length == 0 || !entry.claimEnable()) {
-                        return factory.create();
-                    }
-
-                    if (!entry.reference()) {
-                        entry.disable();
-                        return factory.create();
-                    }
-
-                    return new ResponseCachingStreamSinkConduit(factory.create(), entry, length);
+            if (entry != null && entry.buffers().length != 0 && entry.claimEnable()) {
+                if (entry.reference()) {
+                    newSender = new ResponseCachingSender(sender, entry, length);
+                } else {
+                    entry.disable();
                 }
-            });
-            underlyingResource.serve(exchange);
-            return;
+            }
+            underlyingResource.serve(newSender, exchange);
         } else {
             //serve straight from the cache
             ByteBuffer[] buffers;
@@ -238,7 +226,7 @@ public class CachedResource implements Resource {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
             try {
                 cache.dereference();
-                if (! exchange.isResponseStarted()) {
+                if (!exchange.isResponseStarted()) {
                     exchange.setResponseCode(500);
                 }
             } finally {
@@ -246,4 +234,6 @@ public class CachedResource implements Resource {
             }
         }
     }
+
+
 }

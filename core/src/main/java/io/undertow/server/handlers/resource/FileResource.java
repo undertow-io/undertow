@@ -106,13 +106,12 @@ public class FileResource implements Resource {
     }
 
     @Override
-    public void serve(final HttpServerExchange exchange) {
+    public void serve(final Sender sender, final HttpServerExchange exchange) {
 
         class ServerTask implements Runnable, IoCallback {
 
             private FileChannel fileChannel;
             private Pooled<ByteBuffer> pooled;
-            private Sender sender;
 
             @Override
             public void run() {
@@ -127,7 +126,6 @@ public class FileResource implements Resource {
                         return;
                     }
                     pooled = exchange.getConnection().getBufferPool().allocate();
-                    sender = exchange.getResponseSender();
                 }
                 if(pooled != null) {
                     ByteBuffer buffer = pooled.getResource();

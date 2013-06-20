@@ -85,13 +85,12 @@ public class URLResource implements Resource {
     }
 
     @Override
-    public void serve(final HttpServerExchange exchange) {
+    public void serve(final Sender sender, final HttpServerExchange exchange) {
 
         class ServerTask implements Runnable, IoCallback {
 
             private InputStream inputStream;
             private byte[] buffer;
-            private Sender sender;
 
             @Override
             public void run() {
@@ -103,7 +102,6 @@ public class URLResource implements Resource {
                         return;
                     }
                     buffer = new byte[1024];//TODO: we should be pooling these
-                    sender = exchange.getResponseSender();
                 }
                 try {
                     int res = inputStream.read(buffer);

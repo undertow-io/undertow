@@ -5,6 +5,7 @@ import java.net.URL;
 import java.util.Date;
 import java.util.List;
 
+import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
@@ -56,9 +57,10 @@ public interface Resource {
     /**
      * Serve the resource, and end the exchange when done
      *
+     * @param sender The sender to use.
      * @param exchange The exchange
      */
-    void serve(final HttpServerExchange exchange);
+    void serve(final Sender sender, final HttpServerExchange exchange);
 
     /**
      * @return The content length, or null if it is unknown
