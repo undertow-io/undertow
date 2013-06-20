@@ -298,9 +298,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private void createOutputStream() {
         if (servletOutputStream == null) {
             if (bufferSize == null) {
-                servletOutputStream = new ServletOutputStreamImpl(contentLength, this);
+                servletOutputStream = new ServletOutputStreamImpl(contentLength, exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY));
             } else {
-                servletOutputStream = new ServletOutputStreamImpl(contentLength, this, bufferSize);
+                servletOutputStream = new ServletOutputStreamImpl(contentLength, exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY), bufferSize);
             }
         }
     }

@@ -25,10 +25,13 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 
+import javax.servlet.DispatcherType;
+
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import org.xnio.IoUtils;
 
 /**
@@ -136,7 +139,9 @@ public class BlockingWriterSenderImpl implements Sender {
 
     @Override
     public void close() {
-        IoUtils.safeClose(writer);
+        if(exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getDispatcherType() != DispatcherType.INCLUDE) {
+            IoUtils.safeClose(writer);
+        }
     }
 
 

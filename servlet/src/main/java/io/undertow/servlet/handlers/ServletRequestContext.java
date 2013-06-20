@@ -3,6 +3,7 @@ package io.undertow.servlet.handlers;
 import java.util.List;
 
 import io.undertow.UndertowMessages;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.security.SingleConstraintMatch;
@@ -149,5 +150,9 @@ public class ServletRequestContext {
 
     public void setSession(final HttpSessionImpl session) {
         this.session = session;
+    }
+
+    public HttpServerExchange getExchange() {
+        return originalRequest.getExchange();
     }
 }

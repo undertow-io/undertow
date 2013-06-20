@@ -246,6 +246,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         }
         boolean inInclude = responseImpl.isInsideInclude();
         responseImpl.setInsideInclude(true);
+        DispatcherType oldDispatcherType = servletRequestContext.getDispatcherType();
 
         ServletContextImpl oldContext = requestImpl.getServletContext();
         try {
@@ -269,6 +270,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
             servletRequestContext.setServletRequest(oldRequest);
             servletRequestContext.setServletResponse(oldResponse);
+            servletRequestContext.setDispatcherType(oldDispatcherType);
             if (!named) {
                 requestImpl.setAttribute(INCLUDE_REQUEST_URI, requestUri);
                 requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, contextPath);
