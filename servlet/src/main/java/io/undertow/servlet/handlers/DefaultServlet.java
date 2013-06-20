@@ -143,12 +143,12 @@ public class DefaultServlet extends HttpServlet {
         if (etag != null) {
             resp.setHeader(Headers.ETAG_STRING, etag.toString());
         }
-        Long contentLength = resource.getContentLength();
         try {
             //only set the content length if we are using a stream
             //if we are using a writer who knows what the length will end up being
-            resp.getOutputStream();
+            Long contentLength = resource.getContentLength();
             if (contentLength != null) {
+                resp.getOutputStream();
                 resp.setContentLengthLong(contentLength);
             }
         } catch (IllegalStateException e) {
