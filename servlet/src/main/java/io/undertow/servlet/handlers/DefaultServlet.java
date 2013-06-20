@@ -30,6 +30,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.Resource;
@@ -154,9 +156,24 @@ public class DefaultServlet extends HttpServlet {
         } catch (IllegalStateException e) {
 
         }
+        final boolean include = req.getDispatcherType() == DispatcherType.INCLUDE;
         if (!req.getMethod().equals(Methods.HEAD_STRING)) {
             HttpServerExchange exchange = ServletRequestContext.requireCurrent().getOriginalRequest().getExchange();
-            resource.serve(exchange.getResponseSender(), exchange);
+            resource.serve(exchange.getResponseSender(), exchange, new IoCallback() {
+
+                @Override
+                public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                    if(!include) {
+                        sender.close();
+                    }
+                }
+
+                @Override
+                public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                    //not much we can do here, the connection is broken
+                    sender.close();
+                }
+            });
         }
     }
 

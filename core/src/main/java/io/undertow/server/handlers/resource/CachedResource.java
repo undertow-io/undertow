@@ -109,18 +109,18 @@ public class CachedResource implements Resource {
     }
 
     @Override
-    public void serve(final Sender sender, final HttpServerExchange exchange) {
+    public void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback completionCallback) {
         final Long length = getContentLength();
         //if it is not eligable to be served from the cache
         if (length == null || length > cachingResourceManager.getMaxFileSize()) {
-            underlyingResource.serve(sender, exchange);
+            underlyingResource.serve(sender, exchange, completionCallback);
             return;
         }
 
 
         final DirectBufferCache dataCache = cachingResourceManager.getDataCache();
         if (dataCache == null) {
-            underlyingResource.serve(sender, exchange);
+            underlyingResource.serve(sender, exchange, completionCallback);
             return;
         }
         final DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
@@ -142,7 +142,7 @@ public class CachedResource implements Resource {
                     entry.disable();
                 }
             }
-            underlyingResource.serve(newSender, exchange);
+            underlyingResource.serve(newSender, exchange, completionCallback);
         } else {
             //serve straight from the cache
             ByteBuffer[] buffers;
@@ -160,7 +160,7 @@ public class CachedResource implements Resource {
                     existing.dereference();
                 }
             }
-            exchange.getResponseSender().send(buffers, new DereferenceCallback(existing));
+            exchange.getResponseSender().send(buffers, new DereferenceCallback(existing, completionCallback));
         }
     }
 
@@ -206,10 +206,13 @@ public class CachedResource implements Resource {
 
 
     private static class DereferenceCallback implements IoCallback {
-        private final DirectBufferCache.CacheEntry cache;
 
-        public DereferenceCallback(DirectBufferCache.CacheEntry cache) {
+        private final DirectBufferCache.CacheEntry cache;
+        private final IoCallback callback;
+
+        public DereferenceCallback(DirectBufferCache.CacheEntry cache, final IoCallback callback) {
             this.cache = cache;
+            this.callback = callback;
         }
 
         @Override
@@ -217,7 +220,7 @@ public class CachedResource implements Resource {
             try {
                 cache.dereference();
             } finally {
-                exchange.endExchange();
+                callback.onComplete(exchange, sender);
             }
         }
 
@@ -226,11 +229,8 @@ public class CachedResource implements Resource {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
             try {
                 cache.dereference();
-                if (!exchange.isResponseStarted()) {
-                    exchange.setResponseCode(500);
-                }
             } finally {
-                exchange.endExchange();
+                callback.onException(exchange, sender, exception);
             }
         }
     }

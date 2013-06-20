@@ -106,7 +106,7 @@ public class FileResource implements Resource {
     }
 
     @Override
-    public void serve(final Sender sender, final HttpServerExchange exchange) {
+    public void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback callback) {
 
         class ServerTask implements Runnable, IoCallback {
 
@@ -120,9 +120,11 @@ public class FileResource implements Resource {
                         fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
                     } catch (FileNotFoundException e) {
                         exchange.setResponseCode(404);
+                        callback.onException(exchange, sender, e);
                         return;
                     } catch (IOException e) {
                         exchange.setResponseCode(500);
+                        callback.onException(exchange, sender, e);
                         return;
                     }
                     pooled = exchange.getConnection().getBufferPool().allocate();
@@ -133,9 +135,9 @@ public class FileResource implements Resource {
                         buffer.clear();
                         int res = fileChannel.read(buffer);
                         if (res == -1) {
-                            //we are done, just return
-                            sender.close();
+                            //we are done
                             pooled.free();
+                            callback.onComplete(exchange, sender);
                             return;
                         }
                         buffer.flip();
@@ -167,7 +169,7 @@ public class FileResource implements Resource {
                 if (!exchange.isResponseStarted()) {
                     exchange.setResponseCode(500);
                 }
-                exchange.endExchange();
+                callback.onException(exchange, sender, exception);
             }
         }
 

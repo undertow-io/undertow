@@ -5,6 +5,7 @@ import java.net.URL;
 import java.util.Date;
 import java.util.List;
 
+import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ETag;
@@ -55,12 +56,12 @@ public interface Resource {
     String getContentType(final MimeMappings mimeMappings);
 
     /**
-     * Serve the resource, and end the exchange when done
+     * Serve the resource, and call the provided callback when complete.
      *
      * @param sender The sender to use.
      * @param exchange The exchange
      */
-    void serve(final Sender sender, final HttpServerExchange exchange);
+    void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback completionCallback);
 
     /**
      * @return The content length, or null if it is unknown

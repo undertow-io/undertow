@@ -23,13 +23,21 @@ public class DefaultIoCallback implements IoCallback {
         sender.close(new IoCallback() {
             @Override
             public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-                exchange.endExchange();
+                try {
+                    sender.close();
+                } finally {
+                    exchange.endExchange();
+                }
             }
 
             @Override
             public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
-                exchange.endExchange();
+                try {
+                    sender.close();
+                } finally {
+                    exchange.endExchange();
+                }
             }
         });
     }

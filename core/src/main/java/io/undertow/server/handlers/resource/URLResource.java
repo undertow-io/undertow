@@ -85,7 +85,7 @@ public class URLResource implements Resource {
     }
 
     @Override
-    public void serve(final Sender sender, final HttpServerExchange exchange) {
+    public void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback completionCallback) {
 
         class ServerTask implements Runnable, IoCallback {
 
@@ -107,7 +107,8 @@ public class URLResource implements Resource {
                     int res = inputStream.read(buffer);
                     if (res == -1) {
                         //we are done, just return
-                        sender.close();
+                        IoUtils.safeClose(inputStream);
+                        completionCallback.onComplete(exchange, sender);
                         return;
                     }
                     sender.send(ByteBuffer.wrap(buffer, 0, res), this);
@@ -133,7 +134,7 @@ public class URLResource implements Resource {
                 if (!exchange.isResponseStarted()) {
                     exchange.setResponseCode(500);
                 }
-                exchange.endExchange();
+                completionCallback.onException(exchange, sender, exception);
             }
         }
 

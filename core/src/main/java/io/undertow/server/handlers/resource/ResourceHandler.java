@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.undertow.UndertowLogger;
+import io.undertow.io.IoCallback;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpHandler;
@@ -182,7 +183,7 @@ public class ResourceHandler implements HttpHandler {
                 if (!sendContent) {
                     exchange.endExchange();
                 } else {
-                    resource.serve(exchange.getResponseSender(), exchange);
+                    resource.serve(exchange.getResponseSender(), exchange, IoCallback.END_EXCHANGE);
                 }
             }
         });
