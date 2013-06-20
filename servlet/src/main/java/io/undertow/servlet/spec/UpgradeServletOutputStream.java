@@ -145,6 +145,7 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
         }
         listener = writeListener;
         channel.getWriteSetter().set(new WriteChannelListener());
+        state |= FLAG_READY;
         channel.resumeWrites();
     }
 
