@@ -21,7 +21,6 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 public class ServletBlockingHttpExchange implements BlockingHttpExchange {
 
     private final HttpServerExchange exchange;
-    private Sender sender;
 
     public ServletBlockingHttpExchange(final HttpServerExchange exchange) {
         this.exchange = exchange;
@@ -49,19 +48,16 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
 
     @Override
     public Sender getSender() {
-        if (sender == null) {
+        try {
+            return new BlockingSenderImpl(exchange, getOutputStream());
+        } catch (IllegalStateException e) {
+            ServletResponse response = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletResponse();
             try {
-                sender = new BlockingSenderImpl(exchange, getOutputStream());
-            } catch (IllegalStateException e) {
-                ServletResponse response = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletResponse();
-                try {
-                    sender = new BlockingWriterSenderImpl(exchange, response.getWriter(), response.getCharacterEncoding());
-                } catch (IOException e1) {
-                    throw new RuntimeException(e1);
-                }
+                return new BlockingWriterSenderImpl(exchange, response.getWriter(), response.getCharacterEncoding());
+            } catch (IOException e1) {
+                throw new RuntimeException(e1);
             }
         }
-        return sender;
     }
 
     @Override

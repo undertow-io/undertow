@@ -1037,12 +1037,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @see #getResponseChannel()
      */
     public Sender getResponseSender() {
+        if (blockingHttpExchange != null) {
+            return blockingHttpExchange.getSender();
+        }
         if(sender != null) {
             return sender;
-        }
-
-        if (blockingHttpExchange != null) {
-            return sender = blockingHttpExchange.getSender();
         }
         return sender = new AsyncSenderImpl(this);
     }
