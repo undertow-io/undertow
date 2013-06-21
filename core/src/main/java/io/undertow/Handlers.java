@@ -1,9 +1,16 @@
 package io.undertow;
 
+import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.DateHandler;
+import io.undertow.server.handlers.HttpContinueReadHandler;
+import io.undertow.server.handlers.HttpTraceHandler;
+import io.undertow.server.handlers.IPAddressAccessControlHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.RedirectHandler;
+import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.websockets.api.WebSocketSessionHandler;
@@ -115,6 +122,76 @@ public class Handlers {
     public static RedirectHandler redirect(final String location) {
         return new RedirectHandler(location);
     }
+
+    /**
+     * Returns a new HTTP trace handler. This handler will handle HTTP TRACE
+     * requests as per the RFC.
+     *
+     * WARNING: enabling trace requests may leak information, in general it is recomended that
+     * these be disabled for security reasons.
+     *
+     * @param next The next handler in the chain
+     * @return A HTTP trace handler
+     */
+    public static HttpTraceHandler trace(final HttpHandler next) {
+        return new HttpTraceHandler(next);
+    }
+
+    /**
+     * Returns a new HTTP handler that sets the Date: header.
+     *
+     * @param next The next handler in the chain
+     * @return A new date handler
+     */
+    public static DateHandler date(final HttpHandler next) {
+        return new DateHandler(next);
+    }
+
+    /**
+     * Returns a new predicate handler, that will delegate to one of the two provided handlers based on the value of the
+     * provided predicate.
+     * @param predicate The predicate
+     * @param trueHandler The handler that will be executed if the predicate is true
+     * @param falseHandler The handler that will be exected if the predicate is false
+     * @return A new predicate handler
+     * @see Predicate
+     * @see io.undertow.predicate.Predicates
+     */
+    public static PredicateHandler predicate(final Predicate predicate, final HttpHandler trueHandler, final HttpHandler falseHandler) {
+        return new PredicateHandler(predicate, trueHandler, falseHandler);
+    }
+
+    /**
+     * Returns a handler that sets a response header
+     * @param next The next handler in the chain
+     * @param headerName The name of the header
+     * @param headerValue The header value
+     * @return A new set header handler
+     */
+    public static SetHeaderHandler header(final HttpHandler next, final String headerName, final String headerValue) {
+        return new SetHeaderHandler(next, headerName, headerValue);
+    }
+
+    /**
+     * Returns a new handler that can allow or deny access to a resource based on IP address
+     * @param next The next handler in the chain
+     * @param defaultAllow Determine if a non-matching address will be allowed by default
+     * @return A new IP access control handler
+     */
+    public static final IPAddressAccessControlHandler ipAccessControl(final HttpHandler next, boolean defaultAllow) {
+        return new IPAddressAccessControlHandler(next).setDefaultAllow(defaultAllow);
+    }
+
+    /**
+     * A handler that automatically handles HTTP 100-continue responses, by sending a continue
+     * response when the first attempt is made to read from the request channel.
+     * @param next The next handler in the chain
+     * @return A new continue handler
+     */
+    public static final HttpContinueReadHandler httpContinueRead(final HttpHandler next) {
+        return new HttpContinueReadHandler(next);
+    }
+
 
     private Handlers() {
 
