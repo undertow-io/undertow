@@ -169,11 +169,13 @@ public abstract class HttpRequestParser {
     private final int maxParameters;
     private final int maxHeaders;
     private final boolean allowEncodedSlash;
+    private final boolean decode;
 
     public HttpRequestParser(OptionMap options) {
         maxParameters = options.get(UndertowOptions.MAX_PARAMETERS, 1000);
         maxHeaders = options.get(UndertowOptions.MAX_HEADERS, 200);
         allowEncodedSlash = options.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
+        decode = options.get(UndertowOptions.DECODE_URL, true);
     }
 
     public static final HttpRequestParser instance(final OptionMap options) {
@@ -393,7 +395,7 @@ public abstract class HttpRequestParser {
                     } else {
                         continue;
                     }
-                } else if (next == '%') {
+                } else if (next == '%' && decode) {
                     if (encodedStringBuilder == null) {
                         encodedStringBuilder = new StringBuilder(stringBuilder.toString());
                         encodedStringBuilder.append(next);
@@ -402,7 +404,7 @@ public abstract class HttpRequestParser {
                     urlDecodeCodePoint = 0;
                     urlDecodeState = 0;
                     continue;
-                } else if (next == '+') {
+                } else if (next == '+'  && decode) {
                     if (encodedStringBuilder == null) {
                         encodedStringBuilder = new StringBuilder(stringBuilder.toString());
                         encodedStringBuilder.append(next);
@@ -540,7 +542,7 @@ public abstract class HttpRequestParser {
                     } else {
                         continue;
                     }
-                } else if (next == '%') {
+                } else if (next == '%' && decode) {
                     urlDecodeCurrentByte = 0xFFFF; // to big to fit in a byte, used as a marker for it not being initialized
                     urlDecodeCodePoint = 0;
                     urlDecodeState = 0;
@@ -549,7 +551,7 @@ public abstract class HttpRequestParser {
                         encodedStringBuilder.append(next);
                     }
                     continue;
-                } else if (next == '+') {
+                } else if (next == '+' && decode) {
                     if (encodedStringBuilder == null) {
                         encodedStringBuilder = new StringBuilder(stringBuilder.toString());
                         encodedStringBuilder.append(next);
@@ -680,12 +682,12 @@ public abstract class HttpRequestParser {
                     } else {
                         continue;
                     }
-                } else if (next == '%') {
+                } else if (next == '%' && decode) {
                     urlDecodeCurrentByte = 0xFFFF; // to big to fit in a byte, used as a marker for it not being initialized
                     urlDecodeCodePoint = 0;
                     urlDecodeState = 0;
                     continue;
-                } else if (next == '+') {
+                } else if (next == '+' && decode) {
                     next = ' ';
                 } else if (next == '=' && nextQueryParam == null) {
                     nextQueryParam = stringBuilder.substring(queryParamPos);
