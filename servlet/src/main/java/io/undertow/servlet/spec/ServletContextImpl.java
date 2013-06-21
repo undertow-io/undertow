@@ -584,6 +584,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public <T extends EventListener> void addListener(final T t) {
         ensureNotInitialized();
+        ensureNotProgramaticListener();
         if(ApplicationListeners.listenerState() != NO_LISTENER &&
                 ServletContextListener.class.isAssignableFrom(t.getClass())) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
@@ -596,6 +597,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public void addListener(final Class<? extends EventListener> listenerClass) {
         ensureNotInitialized();
+        ensureNotProgramaticListener();
         if(ApplicationListeners.listenerState() != NO_LISTENER &&
                 ServletContextListener.class.isAssignableFrom(listenerClass)) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
