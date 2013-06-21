@@ -374,7 +374,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             state |= FLAG_CLOSED;
             //if buffersToWrite is set we are already flushing
             //so we don't have to do anything
-            if(buffersToWrite == null) {
+            if (buffersToWrite == null) {
                 if (flushBufferAsync()) {
                     channel.shutdownWrites();
                     state |= FLAG_DELEGATE_SHUTDOWN;
@@ -403,7 +403,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         ByteBuffer[] bufs = buffersToWrite;
         if (bufs == null) {
             ByteBuffer buffer = this.buffer;
-            if(buffer == null || buffer.position() == 0) {
+            if (buffer == null || buffer.position() == 0) {
                 return true;
             }
             buffer.flip();
@@ -455,9 +455,17 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      * {@inheritDoc}
      */
     public void flush() throws IOException {
+        //according to the servlet spec we ignore a flush from within an include
         if (servletRequestContext.getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE) {
             return;
         }
+        flushInternal();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void flushInternal() throws IOException {
         if (listener == null) {
             if (anyAreSet(state, FLAG_CLOSED)) {
                 //just return
@@ -513,7 +521,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      * {@inheritDoc}
      */
     public void close() throws IOException {
-        if(servletRequestContext.getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE) {
+        if (servletRequestContext.getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE) {
             return;
         }
         if (listener == null) {

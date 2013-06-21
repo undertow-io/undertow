@@ -51,14 +51,14 @@ public class ServletPrintWriter {
         ByteBuffer buffer = outputStream.underlyingBuffer();
         try {
             if (!buffer.hasRemaining()) {
-                outputStream.flush();
+                outputStream.flushInternal();
             }
             while (cb.hasRemaining()) {
                 int remaining = buffer.remaining();
                 CoderResult result = charsetEncoder.encode(cb, buffer, false);
                 outputStream.updateWritten(remaining - buffer.remaining());
                 if(result.isOverflow()) {
-                    outputStream.flush();
+                    outputStream.flushInternal();
                 }
             }
         } catch (IOException e) {
