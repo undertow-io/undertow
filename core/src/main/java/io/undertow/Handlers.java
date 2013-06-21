@@ -11,6 +11,7 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.RedirectHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
+import io.undertow.server.handlers.URLDecodingHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.websockets.api.WebSocketSessionHandler;
@@ -107,6 +108,7 @@ public class Handlers {
 
     /**
      * Return a new resource handler
+     *
      * @param resourceManager The resource manager to use
      * @return A new resource handler
      */
@@ -116,6 +118,7 @@ public class Handlers {
 
     /**
      * Returns a new redirect handler
+     *
      * @param location The redirect location
      * @return A new redirect handler
      */
@@ -126,7 +129,7 @@ public class Handlers {
     /**
      * Returns a new HTTP trace handler. This handler will handle HTTP TRACE
      * requests as per the RFC.
-     *
+     * <p/>
      * WARNING: enabling trace requests may leak information, in general it is recomended that
      * these be disabled for security reasons.
      *
@@ -150,8 +153,9 @@ public class Handlers {
     /**
      * Returns a new predicate handler, that will delegate to one of the two provided handlers based on the value of the
      * provided predicate.
-     * @param predicate The predicate
-     * @param trueHandler The handler that will be executed if the predicate is true
+     *
+     * @param predicate    The predicate
+     * @param trueHandler  The handler that will be executed if the predicate is true
      * @param falseHandler The handler that will be exected if the predicate is false
      * @return A new predicate handler
      * @see Predicate
@@ -163,8 +167,9 @@ public class Handlers {
 
     /**
      * Returns a handler that sets a response header
-     * @param next The next handler in the chain
-     * @param headerName The name of the header
+     *
+     * @param next        The next handler in the chain
+     * @param headerName  The name of the header
      * @param headerValue The header value
      * @return A new set header handler
      */
@@ -174,7 +179,8 @@ public class Handlers {
 
     /**
      * Returns a new handler that can allow or deny access to a resource based on IP address
-     * @param next The next handler in the chain
+     *
+     * @param next         The next handler in the chain
      * @param defaultAllow Determine if a non-matching address will be allowed by default
      * @return A new IP access control handler
      */
@@ -185,6 +191,7 @@ public class Handlers {
     /**
      * A handler that automatically handles HTTP 100-continue responses, by sending a continue
      * response when the first attempt is made to read from the request channel.
+     *
      * @param next The next handler in the chain
      * @return A new continue handler
      */
@@ -192,6 +199,21 @@ public class Handlers {
         return new HttpContinueReadHandler(next);
     }
 
+    /**
+     * A handler that will decode the URL, query parameters and to the specified charset.
+     * <p/>
+     * If you are using this handler you must set the {@link io.undertow.UndertowOptions#DECODE_URL} parameter to false.
+     * <p/>
+     * This is not as efficient as using the parsers built in UTF-8 decoder. Unless you need to decode to something other
+     * than UTF-8 you should rely on the parsers decoding instead.
+     *
+     * @param next    The next handler in the chain
+     * @param charset The charset to decode to
+     * @return a new url decoding handler
+     */
+    public static final URLDecodingHandler urlDecoding(final HttpHandler next, final String charset) {
+        return new URLDecodingHandler(next, charset);
+    }
 
     private Handlers() {
 
