@@ -43,6 +43,7 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     private boolean httpOnly;
     private int maxAge;
     private String comment;
+    private SessionConfig fallback;
 
     public SessionCookieConfigImpl(final ServletContextImpl servletContext) {
         this.servletContext = servletContext;
@@ -86,6 +87,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
             if (sessionId != null) {
                 return sessionId.getValue();
             }
+        }
+        if(fallback != null) {
+            return fallback.findSessionId(exchange);
         }
         return null;
     }
@@ -165,5 +169,13 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
         this.maxAge = maxAge;
+    }
+
+    public SessionConfig getFallback() {
+        return fallback;
+    }
+
+    public void setFallback(final SessionConfig fallback) {
+        this.fallback = fallback;
     }
 }

@@ -128,19 +128,18 @@ public class ServletContextImpl implements ServletContext {
         if(trackingMethods == null || trackingMethods.isEmpty()) {
             sessionConfig = sessionCookieConfig;
         } else {
-            SessionTrackingMode method = trackingMethods.iterator().next();
-            switch (method) {
-                case COOKIE:
+
+            if (sessionTrackingModes.contains(SessionTrackingMode.SSL)) {
+                sessionConfig = new SslSessionConfig(sessionCookieConfig);
+            } else {
+                if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE) || sessionTrackingModes.contains(SessionTrackingMode.URL)) {
                     sessionConfig = sessionCookieConfig;
-                    break;
-                case SSL:
-                    //todo: should we allow cookie fallback?
-                    sessionConfig = new SslSessionConfig(sessionCookieConfig);
-                    break;
-                case URL:
-                    PathParameterSessionConfig config = new PathParameterSessionConfig(sessionCookieConfig.getName());
-                    sessionConfig = config;
-                    break;
+                    sessionCookieConfig.setFallback(new PathParameterSessionConfig(sessionCookieConfig.getName()));
+                } else if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE)) {
+                    sessionConfig = sessionCookieConfig;
+                } else if (sessionTrackingModes.contains(SessionTrackingMode.URL)) {
+                    sessionConfig = new PathParameterSessionConfig(sessionCookieConfig.getName());
+                }
             }
         }
     }
