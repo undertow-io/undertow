@@ -2,6 +2,7 @@ package io.undertow.server.handlers.cache;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 
 import io.undertow.io.IoCallback;
@@ -93,6 +94,12 @@ public class ResponseCachingSender implements Sender {
     public void send(final String data, final Charset charset) {
         delegate.send(data, charset);
         handleUpdate(ByteBuffer.wrap(data.getBytes(charset)));
+    }
+
+    @Override
+    public void transferFrom(FileChannel channel, IoCallback callback) {
+        // Transfer never caches
+        delegate.transferFrom(channel, callback);
     }
 
     @Override
