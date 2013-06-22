@@ -91,6 +91,7 @@ public class ServletContextImpl implements ServletContext {
     private final FormParserFactory formParserFactory;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
     private volatile Set<SessionTrackingMode> sessionTrackingModes = Collections.singleton(SessionTrackingMode.COOKIE);
+    private volatile Set<SessionTrackingMode> defaultSessionTrackingModes = Collections.singleton(SessionTrackingMode.COOKIE);
     private volatile SessionConfig sessionConfig;
     private volatile boolean initialized = false;
 
@@ -110,7 +111,7 @@ public class ServletContextImpl implements ServletContext {
             sessionCookieConfig.setPath(sc.getPath());
             sessionCookieConfig.setSecure(sc.isSecure());
             if(sc.getSessionTrackingModes() != null) {
-                sessionTrackingModes = new HashSet<SessionTrackingMode>(sc.getSessionTrackingModes());
+                defaultSessionTrackingModes = sessionTrackingModes = new HashSet<SessionTrackingMode>(sc.getSessionTrackingModes());
             }
         }
         if(deploymentInfo.getServletContextAttributeBackingMap() == null) {
@@ -551,8 +552,8 @@ public class ServletContextImpl implements ServletContext {
     public void setSessionTrackingModes(final Set<SessionTrackingMode> sessionTrackingModes) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
-        if(sessionTrackingModes.size() > 1) {
-            throw UndertowServletMessages.MESSAGES.canOnlySetOneSessionTrackingMode();
+        if(sessionTrackingModes.size() > 1 && sessionTrackingModes.contains(SessionTrackingMode.SSL)) {
+            throw UndertowServletMessages.MESSAGES.sslCannotBeCombinedWithAnyOtherMethod();
         }
         this.sessionTrackingModes = new HashSet<SessionTrackingMode>(sessionTrackingModes);
         //TODO: actually make this work
@@ -561,7 +562,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
         ensureNotProgramaticListener();
-        return Collections.singleton(SessionTrackingMode.COOKIE);
+        return defaultSessionTrackingModes;
     }
 
     @Override

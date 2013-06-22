@@ -179,8 +179,8 @@ public interface UndertowServletMessages {
     @Message(id = 10044, value = "listener cannot be null")
     NullPointerException listenerCannotBeNull();
 
-    @Message(id = 10045, value = "Only one session tracking mode at a time is supported")
-    IllegalArgumentException canOnlySetOneSessionTrackingMode();
+    @Message(id = 10045, value = "SSL cannot be combined with any other method")
+    IllegalArgumentException sslCannotBeCombinedWithAnyOtherMethod();
 
     @Message(id = 10046, value = "No servlet context at %s to dispatch to")
     IllegalArgumentException couldNotFindContextToDispatchTo(String originalContextPath);
