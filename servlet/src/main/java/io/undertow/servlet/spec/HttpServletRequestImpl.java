@@ -63,6 +63,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
+import io.undertow.server.session.SessionConfig;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
@@ -276,7 +277,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRequestedSessionId() {
-        SessionCookieConfigImpl config = servletContext.getSessionCookieConfig();
+        SessionConfig config = servletContext.getSessionConfig();
         return config.findSessionId(exchange);
     }
 
