@@ -21,6 +21,7 @@ package io.undertow.servlet.core;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
@@ -129,6 +130,11 @@ public class BlockingWriterSenderImpl implements Sender {
     @Override
     public void send(final String data, final Charset charset) {
         send(data, charset, IoCallback.END_EXCHANGE);
+    }
+
+    @Override
+    public void transferFrom(FileChannel channel, IoCallback callback) {
+        throw new UnsupportedOperationException();
     }
 
     @Override

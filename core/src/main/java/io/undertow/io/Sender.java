@@ -1,6 +1,7 @@
 package io.undertow.io;
 
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 
 /**
@@ -87,6 +88,15 @@ public interface Sender {
      * @param callback The callback
      */
     void send(final String data, final Charset charset);
+
+
+    /**
+     * Transfers all content from the specified file
+     *
+     * @param channel the file channel to transfer
+     * @param callback The callback
+     */
+    void transferFrom(final FileChannel channel, final IoCallback callback);
 
     /**
      * Closes this sender asynchronously. The given callback is notified on completion
