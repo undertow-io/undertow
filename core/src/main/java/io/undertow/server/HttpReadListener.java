@@ -83,7 +83,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                         res = channel.read(buffer);
                     } catch (IOException e) {
                         UndertowLogger.REQUEST_IO_LOGGER.debug("Error reading request", e);
-                        safeClose(channel);
+                        safeClose(connection);
                         return;
                     }
                 } else {
