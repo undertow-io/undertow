@@ -30,10 +30,13 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.Methods;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
+import io.undertow.util.Methods;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
@@ -122,6 +125,40 @@ public class SimpleBlockingServerTestCase {
         }
     }
 
+    @Test
+    public void testHeadRequests() throws IOException {
+        message = "My HTTP Request!";
+        TestHttpClient client = new TestHttpClient();
+        HttpHead head = new HttpHead(DefaultServer.getDefaultServerURL() + "/path");
+        try {
+            for (int i = 0; i < 3; ++i) {
+                //WFLY-1540 run a few requests to make sure persistent re
+                HttpResponse result = client.execute(head);
+                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals("", HttpClientUtils.readResponse(result));
+                Assert.assertEquals(message.length() + "", result.getFirstHeader(Headers.CONTENT_LENGTH_STRING).getValue());
+            }
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testDeleteRequests() throws IOException {
+        message = "My HTTP Request!";
+        TestHttpClient client = new TestHttpClient();
+        HttpDelete delete = new HttpDelete(DefaultServer.getDefaultServerURL() + "/path");
+        try {
+            for (int i = 0; i < 3; ++i) {
+                //WFLY-1540 run a few requests to make sure persistent re
+                HttpResponse result = client.execute(delete);
+                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(message, HttpClientUtils.readResponse(result));
+            }
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 
     @Test
     public void testLargeResponse() throws IOException {
