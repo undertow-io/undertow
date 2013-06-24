@@ -38,7 +38,7 @@ public class AccessLogHandler implements HttpHandler {
                 }
             }
             if(tokenHandler == null) {
-                tokenHandler = new ConstantToken(elem);
+                tokenHandler = new ConstantAccessLogToken(elem);
             }
             tokenHandlers.add(tokenHandler);
         }
@@ -77,20 +77,6 @@ public class AccessLogHandler implements HttpHandler {
         return "AccessLogHandler{" +
                 "formatString='" + formatString + '\'' +
                 '}';
-    }
-
-    private static final class ConstantToken implements TokenHandler {
-
-        private final String token;
-
-        private ConstantToken(final String token) {
-            this.token = token;
-        }
-
-        @Override
-        public String generateMessage(final HttpServerExchange exchange) {
-            return token;
-        }
     }
 
 }

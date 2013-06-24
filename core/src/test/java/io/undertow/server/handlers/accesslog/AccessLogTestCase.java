@@ -37,15 +37,15 @@ public class AccessLogTestCase {
 
     @Test
     public void testRemoteAddress() throws IOException {
-        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, RECIEVER, "Remote address %a", DefaultAccessLogTokens.INSTANCE));
+        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, RECIEVER, "Remote address %a Code %s test-header %{test-header}i", DefaultAccessLogTokens.INSTANCE));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+            get.addHeader("test-header", "test-value");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
-            Assert.assertTrue(message.contains("Remote address"));
-            Assert.assertTrue(message.contains("127.0.0.1"));
+            Assert.assertEquals(message, "Remote address 127.0.0.1 Code 200 test-header test-value");
         } finally {
             client.getConnectionManager().shutdown();
         }
