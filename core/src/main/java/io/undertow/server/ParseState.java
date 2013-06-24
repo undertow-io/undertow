@@ -130,5 +130,6 @@ class ParseState {
     public void reset() {
         this.state = 0;
         this.pos = 0;
+        this.leftOver = 0;
     }
 }
