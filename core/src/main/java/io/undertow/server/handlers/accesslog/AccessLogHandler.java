@@ -10,21 +10,21 @@ import io.undertow.server.HttpServerExchange;
 
 /**
  * Access log handler. This handler will generate access log messages based on the provided format string,
- * and pass these messages into the provided {@link AccessLogReciever}.
+ * and pass these messages into the provided {@link AccessLogReceiver}.
  *
  * @author Stuart Douglas
  */
 public class AccessLogHandler implements HttpHandler {
 
     private final HttpHandler next;
-    private final AccessLogReciever accessLogReciever;
+    private final AccessLogReceiver accessLogReceiver;
     private final String formatString;
     private final TokenHandler[] tokens;
     private final ExchangeCompletionListener exchangeCompletionListener = new AccessLogCompletionListener();
 
-    public AccessLogHandler(final HttpHandler next, final AccessLogReciever accessLogReciever, final String formatString, TokenHandler.Factory... factories) {
+    public AccessLogHandler(final HttpHandler next, final AccessLogReceiver accessLogReceiver, final String formatString, TokenHandler.Factory... factories) {
         this.next = next;
-        this.accessLogReciever = accessLogReciever;
+        this.accessLogReceiver = accessLogReceiver;
         this.formatString = formatString;
         final List<TokenHandler> tokenHandlers = new ArrayList<TokenHandler>();
         StringTokenizer tokeniser = new StringTokenizer(formatString, " ", false);
@@ -68,7 +68,7 @@ public class AccessLogHandler implements HttpHandler {
                     builder.append(' ');
                 }
             }
-            accessLogReciever.logMessage(builder.toString());
+            accessLogReceiver.logMessage(builder.toString());
         }
     }
 

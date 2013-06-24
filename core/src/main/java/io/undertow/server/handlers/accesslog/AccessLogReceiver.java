@@ -7,7 +7,7 @@ package io.undertow.server.handlers.accesslog;
  *
  * @author Stuart Douglas
  */
-public interface AccessLogReciever {
+public interface AccessLogReceiver {
 
     void logMessage(final String message);
 
