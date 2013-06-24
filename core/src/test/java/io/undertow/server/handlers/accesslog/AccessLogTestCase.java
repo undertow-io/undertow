@@ -21,7 +21,7 @@ public class AccessLogTestCase {
 
     private static volatile String message;
 
-    private static final AccessLogReciever RECIEVER = new AccessLogReciever() {
+    private static final AccessLogReceiver RECIEVER = new AccessLogReceiver() {
         @Override
         public void logMessage(final String msg) {
             message = msg;

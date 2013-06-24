@@ -27,8 +27,8 @@ public class ResponseCachingSender implements Sender {
     @Override
     public void send(final ByteBuffer src, final IoCallback callback) {
         ByteBuffer origSrc = src.duplicate();
-        delegate.send(src, callback);
         handleUpdate(origSrc);
+        delegate.send(src, callback);
     }
 
 
@@ -40,15 +40,15 @@ public class ResponseCachingSender implements Sender {
             origSrc[i] = srcs[i].duplicate();
             total += origSrc[i].remaining();
         }
-        delegate.send(srcs, callback);
         handleUpdate(origSrc, total);
+        delegate.send(srcs, callback);
     }
 
     @Override
     public void send(final ByteBuffer src) {
         ByteBuffer origSrc = src.duplicate();
-        delegate.send(src);
         handleUpdate(origSrc);
+        delegate.send(src);
     }
 
     @Override
@@ -59,40 +59,40 @@ public class ResponseCachingSender implements Sender {
             origSrc[i] = srcs[i].duplicate();
             total += origSrc[i].remaining();
         }
-        delegate.send(srcs);
         handleUpdate(origSrc, total);
+        delegate.send(srcs);
     }
 
     @Override
     public void send(final String data, final IoCallback callback) {
-        delegate.send(data, callback);
         try {
             handleUpdate(ByteBuffer.wrap(data.getBytes("UTF-8")));
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
+        delegate.send(data, callback);
     }
 
     @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
-        delegate.send(data, charset, callback);
         handleUpdate(ByteBuffer.wrap(data.getBytes(charset)));
+        delegate.send(data, charset, callback);
     }
 
     @Override
     public void send(final String data) {
-        delegate.send(data);
         try {
             handleUpdate(ByteBuffer.wrap(data.getBytes("UTF-8")));
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
+        delegate.send(data);
     }
 
     @Override
     public void send(final String data, final Charset charset) {
-        delegate.send(data, charset);
         handleUpdate(ByteBuffer.wrap(data.getBytes(charset)));
+        delegate.send(data, charset);
     }
 
     @Override

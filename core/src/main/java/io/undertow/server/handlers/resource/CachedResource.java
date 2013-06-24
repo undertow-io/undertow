@@ -160,7 +160,7 @@ public class CachedResource implements Resource {
                     existing.dereference();
                 }
             }
-            exchange.getResponseSender().send(buffers, new DereferenceCallback(existing, completionCallback));
+            sender.send(buffers, new DereferenceCallback(existing, completionCallback));
         }
     }
 
