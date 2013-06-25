@@ -23,6 +23,7 @@ import java.util.Enumeration;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 
+import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.util.IteratorEnumeration;
 
@@ -51,6 +52,9 @@ public class ServletConfigImpl implements ServletConfig {
 
     @Override
     public String getInitParameter(final String name) {
+        if(name == null) {
+            throw UndertowServletMessages.MESSAGES.nullName();
+        }
         return servletInfo.getInitParams().get(name);
     }
 

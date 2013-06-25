@@ -184,4 +184,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10046, value = "No servlet context at %s to dispatch to")
     IllegalArgumentException couldNotFindContextToDispatchTo(String originalContextPath);
+
+    @Message(id = 10047, value = "Name was null")
+    NullPointerException nullName();
 }

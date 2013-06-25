@@ -334,6 +334,9 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getInitParameter(final String name) {
+        if(name == null) {
+            throw UndertowServletMessages.MESSAGES.nullName();
+        }
         return deploymentInfo.getInitParameters().get(name);
     }
 
