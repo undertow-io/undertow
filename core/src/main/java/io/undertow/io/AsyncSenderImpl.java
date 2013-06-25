@@ -116,7 +116,7 @@ public class AsyncSenderImpl implements Sender {
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
-        if (this.buffer != null) {
+        if (this.buffer != null || this.fileChannel != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
         StreamSinkChannel channel = this.channel;
@@ -216,7 +216,7 @@ public class AsyncSenderImpl implements Sender {
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
-        if (this.fileChannel != null) {
+        if (this.fileChannel != null || this.buffer != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
 

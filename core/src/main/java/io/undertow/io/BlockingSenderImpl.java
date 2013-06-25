@@ -37,6 +37,9 @@ import org.xnio.IoUtils;
 public class BlockingSenderImpl implements Sender {
 
     private static final Charset utf8 = Charset.forName("UTF-8");
+    /**
+     * TODO: we should be used pooled buffers
+     */
     public static final int BUFFER_SIZE = 128;
 
     private final HttpServerExchange exchange;

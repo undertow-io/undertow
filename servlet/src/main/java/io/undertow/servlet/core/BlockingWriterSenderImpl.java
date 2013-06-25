@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.core;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
@@ -36,17 +37,25 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import org.xnio.IoUtils;
 
 /**
- * A sender that uses an output stream.
+ * A sender that uses a print writer.
+ *
+ * In general this should never be used. It exists for the edge case where a filter has called
+ * getWriter() and then the default servlet is being used to serve a text file.
  *
  * @author Stuart Douglas
  */
 public class BlockingWriterSenderImpl implements Sender {
 
+    /**
+     * TODO: we should be used pooled buffers
+     */
     public static final int BUFFER_SIZE = 128;
 
     private final CharsetDecoder charsetDecoder;
     private final HttpServerExchange exchange;
     private final PrintWriter writer;
+
+    private FileChannel pendingFile;
     private boolean inCall;
     private String next;
     private IoCallback queuedCallback;
@@ -133,9 +142,42 @@ public class BlockingWriterSenderImpl implements Sender {
     }
 
     @Override
-    public void transferFrom(FileChannel channel, IoCallback callback) {
-        throw new UnsupportedOperationException();
+    public void transferFrom(FileChannel source, IoCallback callback) {
+        if (inCall) {
+            queue(source, callback);
+            return;
+        }
+        performTransfer(source, callback);
     }
+
+    private void performTransfer(FileChannel source, IoCallback callback) {
+
+        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+        try {
+            long pos = source.position();
+            long size = source.size();
+            while (size - pos > 0) {
+                int ret = source.read(buffer);
+                if (ret <= 0) {
+                    break;
+                }
+                pos += ret;
+                if (!writeBuffer(buffer, callback)) {
+                    return;
+                }
+                buffer.clear();
+            }
+
+            if (pos != size) {
+                throw new EOFException("Unexpected EOF reading file");
+            }
+
+        } catch (IOException e) {
+            callback.onException(exchange, this, e);
+        }
+        invokeOnComplete(callback);
+    }
+
 
     @Override
     public void close(final IoCallback callback) {
@@ -197,7 +239,7 @@ public class BlockingWriterSenderImpl implements Sender {
 
     private void queue(final ByteBuffer[] byteBuffers, final IoCallback ioCallback) {
         //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitly
-        if (next != null) {
+        if (next != null || pendingFile != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
         StringBuilder builder = new StringBuilder();
@@ -215,10 +257,18 @@ public class BlockingWriterSenderImpl implements Sender {
 
     private void queue(final String data, final IoCallback callback) {
         //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitly
-        if (next != null) {
+        if (next != null || pendingFile != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
         next = data;
+        queuedCallback = callback;
+    }
+    private void queue(final FileChannel data, final IoCallback callback) {
+        //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitly
+        if (next != null || pendingFile != null) {
+            throw UndertowMessages.MESSAGES.dataAlreadyQueued();
+        }
+        pendingFile = data;
         queuedCallback = callback;
     }
 
