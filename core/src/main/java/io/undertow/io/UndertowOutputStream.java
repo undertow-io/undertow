@@ -21,6 +21,7 @@ package io.undertow.io;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
@@ -245,7 +246,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         write(new ByteBuffer[]{byteBuffer});
     }
 
-    void updateWritten(final int len) throws IOException {
+    void updateWritten(final long len) throws IOException {
         this.written += len;
         if (contentLength != -1 && this.written >= contentLength) {
             flush();
@@ -277,6 +278,23 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         Channels.writeBlocking(channel, buffer);
         buffer.clear();
         state |= FLAG_WRITE_STARTED;
+    }
+
+    @Override
+    public void transferFrom(FileChannel source) throws IOException {
+        if (anyAreSet(state, FLAG_CLOSED)) {
+            throw UndertowMessages.MESSAGES.streamIsClosed();
+        }
+        if (buffer != null && buffer.position() != 0) {
+            writeBuffer();
+        }
+        if (channel == null) {
+            channel = exchange.getResponseChannel();
+        }
+        long position = source.position();
+        long size = source.size();
+        Channels.transferBlocking(channel, source, position, size);
+        updateWritten(size - position);
     }
 
     /**

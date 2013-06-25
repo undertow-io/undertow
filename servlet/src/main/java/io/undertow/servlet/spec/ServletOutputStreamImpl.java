@@ -20,6 +20,7 @@ package io.undertow.servlet.spec;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletOutputStream;
@@ -85,6 +86,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      * did not fit
      */
     private ByteBuffer[] buffersToWrite;
+
+    private FileChannel pendingFile;
 
     private static final int FLAG_CLOSED = 1;
     private static final int FLAG_WRITE_STARTED = 1 << 1;
@@ -361,20 +364,20 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         write(new ByteBuffer[]{byteBuffer});
     }
 
-    void updateWritten(final int len) throws IOException {
+    void updateWritten(final long len) throws IOException {
         this.written += len;
         if (contentLength != -1 && this.written >= contentLength) {
             close();
         }
     }
 
-    void updateWrittenAsync(final int len) throws IOException {
+    void updateWrittenAsync(final long len) throws IOException {
         this.written += len;
         if (contentLength != -1 && this.written >= contentLength) {
             state |= FLAG_CLOSED;
             //if buffersToWrite is set we are already flushing
             //so we don't have to do anything
-            if (buffersToWrite == null) {
+            if (buffersToWrite == null && pendingFile == null) {
                 if (flushBufferAsync()) {
                     channel.shutdownWrites();
                     state |= FLAG_DELEGATE_SHUTDOWN;
@@ -399,7 +402,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     }
 
     private boolean flushBufferAsync() throws IOException {
-
         ByteBuffer[] bufs = buffersToWrite;
         if (bufs == null) {
             ByteBuffer buffer = this.buffer;
@@ -504,6 +506,51 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             buffer.compact();
         }
     }
+
+    @Override
+    public void transferFrom(FileChannel source) throws IOException {
+        if (listener == null) {
+            if (anyAreSet(state, FLAG_CLOSED)) {
+                //just return
+                return;
+            }
+            if (buffer != null && buffer.position() != 0) {
+                writeBufferBlocking();
+            }
+            if (channel == null) {
+                channel = servletRequestContext.getExchange().getResponseChannel();
+            }
+            long position = source.position();
+            long count = source.size() - position;
+            Channels.transferBlocking(channel, source, position, count);
+            updateWritten(count);
+        } else {
+            state |= FLAG_WRITE_STARTED;
+            createChannel();
+
+            long pos = 0;
+            try {
+                long size = source.size();
+                pos = source.position();
+
+                while (size - pos > 0) {
+                    long ret = channel.transferFrom(pendingFile, pos, size - pos);
+                    if (ret <= 0) {
+                        state &= ~FLAG_READY;
+                        pendingFile = source;
+                        source.position(pos);
+                        resumeWrites();
+                        return;
+                    }
+                    pos += ret;
+                }
+            } finally {
+                updateWrittenAsync(pos - source.position());
+            }
+        }
+
+    }
+
 
     private void writeBufferBlocking() throws IOException {
         if (channel == null) {
@@ -715,6 +762,26 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                             }
                         } while (written < toWrite);
                         buffersToWrite = null;
+                    }
+                    if (pendingFile != null) {
+                        try {
+                            long size = pendingFile.size();
+                            long pos = pendingFile.position();
+
+                            while (size - pos > 0) {
+                                long ret = channel.transferFrom(pendingFile, pos, size - pos);
+                                if (ret <= 0) {
+                                    pendingFile.position(pos);
+                                    theConnectionChannel.resumeWrites();
+                                    return;
+                                }
+                                pos += ret;
+                            }
+                            pendingFile = null;
+                        } catch (IOException e) {
+                            handleError(e);
+                            return;
+                        }
                     }
                     if (anyAreSet(state, FLAG_CLOSED)) {
                         try {

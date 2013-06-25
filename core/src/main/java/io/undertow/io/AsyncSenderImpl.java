@@ -2,6 +2,7 @@ package io.undertow.io;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 
 import io.undertow.UndertowMessages;
@@ -22,6 +23,7 @@ public class AsyncSenderImpl implements Sender {
     private StreamSinkChannel channel;
     private final HttpServerExchange exchange;
     private ByteBuffer[] buffer;
+    private FileChannel fileChannel;
     private IoCallback callback;
     private boolean inCallback;
 
@@ -46,6 +48,62 @@ public class AsyncSenderImpl implements Sender {
             }
         }
     };
+
+    public class TransferTask implements Runnable, ChannelListener<StreamSinkChannel> {
+        public boolean run(boolean complete) {
+            try {
+                FileChannel source = fileChannel;
+                long pos = source.position();
+                long size = source.size();
+
+                StreamSinkChannel dest = channel;
+                if (dest == null) {
+                    if (callback == IoCallback.END_EXCHANGE) {
+                        if (exchange.getResponseContentLength() == -1) {
+                            exchange.setResponseContentLength(size);
+                        }
+                    }
+                    channel = dest = exchange.getResponseChannel();
+                    if (dest == null) {
+                        throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
+                    }
+                }
+
+                while (size - pos > 0) {
+                    long ret = dest.transferFrom(source, pos, size - pos);
+                    pos += ret;
+                    if (ret == 0) {
+                        source.position(pos);
+                        dest.getWriteSetter().set(this);
+                        dest.resumeWrites();
+                        return false;
+                    }
+                }
+
+                if (complete) {
+                    invokeOnComplete();
+                }
+            } catch (IOException e) {
+                callback.onException(exchange, AsyncSenderImpl.this , e);
+            }
+
+            return true;
+        }
+
+        @Override
+        public void handleEvent(StreamSinkChannel channel) {
+            channel.suspendWrites();
+            channel.getWriteSetter().set(null);
+            exchange.dispatch(this);
+        }
+
+        @Override
+        public void run() {
+            run(true);
+        }
+    }
+
+    private final TransferTask transferTask = new TransferTask();
 
 
     public AsyncSenderImpl(final HttpServerExchange exchange) {
@@ -151,6 +209,31 @@ public class AsyncSenderImpl implements Sender {
         }
     }
 
+
+
+    @Override
+    public void transferFrom(FileChannel source, IoCallback callback) {
+        if (callback == null) {
+            throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
+        }
+        if (this.fileChannel != null) {
+            throw UndertowMessages.MESSAGES.dataAlreadyQueued();
+        }
+
+        this.callback = callback;
+        this.fileChannel = source;
+        if (inCallback) {
+            return;
+        }
+
+        if (exchange.isInIoThread()) {
+            exchange.dispatch(transferTask);
+            return;
+        }
+
+        transferTask.run();
+    }
+
     @Override
     public void send(final ByteBuffer buffer) {
         send(buffer, IoCallback.END_EXCHANGE);
@@ -235,6 +318,7 @@ public class AsyncSenderImpl implements Sender {
         for (; ; ) {
             IoCallback callback = this.callback;
             this.buffer = null;
+            this.fileChannel = null;
             this.callback = null;
             inCallback = true;
             try {
@@ -262,6 +346,10 @@ public class AsyncSenderImpl implements Sender {
                     //we loop and invoke onComplete again
                 } catch (IOException e) {
                     callback.onException(exchange, this, e);
+                }
+            } else if (this.fileChannel != null) {
+                if (! transferTask.run(false)) {
+                    return;
                 }
             } else {
                 return;

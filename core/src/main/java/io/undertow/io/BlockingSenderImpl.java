@@ -18,9 +18,11 @@
 
 package io.undertow.io;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 
 import io.undertow.UndertowMessages;
@@ -41,6 +43,7 @@ public class BlockingSenderImpl implements Sender {
     private final OutputStream outputStream;
     private boolean inCall;
     private ByteBuffer[] next;
+    private FileChannel pendingFile;
     private IoCallback queuedCallback;
 
     public BlockingSenderImpl(final HttpServerExchange exchange, final OutputStream outputStream) {
@@ -121,6 +124,48 @@ public class BlockingSenderImpl implements Sender {
     }
 
     @Override
+    public void transferFrom(FileChannel source, IoCallback callback) {
+        if (inCall) {
+            queue(source, callback);
+            return;
+        }
+        performTransfer(source, callback);
+        invokeOnComplete(callback);
+    }
+
+    private void performTransfer(FileChannel source, IoCallback callback) {
+        if (outputStream instanceof BufferWritableOutputStream) {
+            try {
+                ((BufferWritableOutputStream) outputStream).transferFrom(source);
+            } catch (IOException e) {
+                callback.onException(exchange, this, e);
+            }
+        } else {
+            ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+            try {
+                long pos = source.position();
+                long size = source.size();
+                while (size - pos > 0) {
+                    int ret = source.read(buffer);
+                    if (ret <= 0) {
+                        break;
+                    }
+                    pos += ret;
+                    outputStream.write(buffer.array(), buffer.arrayOffset(), ret);
+                    buffer.clear();
+                }
+
+                if (pos != size) {
+                    throw new EOFException("Unexpected EOF reading file");
+                }
+
+            }  catch (IOException e) {
+                callback.onException(exchange, this, e);
+            }
+        }
+    }
+
+    @Override
     public void close(final IoCallback callback) {
         try {
             outputStream.close();
@@ -183,13 +228,20 @@ public class BlockingSenderImpl implements Sender {
         } finally {
             inCall = false;
         }
-        while (next != null) {
+        while (next != null || pendingFile != null) {
             ByteBuffer[] next = this.next;
             IoCallback queuedCallback = this.queuedCallback;
+            FileChannel file = this.pendingFile;
             this.next = null;
             this.queuedCallback = null;
-            for (ByteBuffer buffer : next) {
-                writeBuffer(buffer, queuedCallback);
+            this.pendingFile = null;
+
+            if (next != null) {
+                for (ByteBuffer buffer : next) {
+                    writeBuffer(buffer, queuedCallback);
+                }
+            } else if (file != null) {
+                performTransfer(file, queuedCallback);
             }
             inCall = true;
             try {
@@ -206,6 +258,15 @@ public class BlockingSenderImpl implements Sender {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
         next = byteBuffers;
+        queuedCallback = ioCallback;
+    }
+
+    private void queue(final FileChannel source, final IoCallback ioCallback) {
+        //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitly
+        if (pendingFile != null) {
+            throw UndertowMessages.MESSAGES.dataAlreadyQueued();
+        }
+        pendingFile = source;
         queuedCallback = ioCallback;
     }
 
