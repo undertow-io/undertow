@@ -85,28 +85,26 @@ public class FileUtils {
     }
 
 
-
-
-    public static File getFileOrCheckParentsIfNotFound( String baseStr, String path ) throws FileNotFoundException {
+    public static File getFileOrCheckParentsIfNotFound(String baseStr, String path) throws FileNotFoundException {
         //File f = new File( System.getProperty("jbossas.project.dir", "../../..") );
-        File base = new File( baseStr );
-        if( ! base.exists() ){
-            throw new FileNotFoundException( "Base path not found: " + base.getPath() );
+        File base = new File(baseStr);
+        if (!base.exists()) {
+            throw new FileNotFoundException("Base path not found: " + base.getPath());
         }
         base = base.getAbsoluteFile();
 
-        File f = new File( base, path );
-        if ( f.exists() )
+        File f = new File(base, path);
+        if (f.exists())
             return f;
 
         File fLast = f;
-        while( ! f.exists() ){
-            int slash = path.lastIndexOf( File.separatorChar );
-            if( slash <= 0 )  // no slash or "/xxx"
+        while (!f.exists()) {
+            int slash = path.lastIndexOf(File.separatorChar);
+            if (slash <= 0)  // no slash or "/xxx"
                 throw new FileNotFoundException("Path not found: " + f.getPath());
-            path = path.substring( 0, slash );
+            path = path.substring(0, slash);
             fLast = f;
-            f = new File( base, path );
+            f = new File(base, path);
         }
         // When first existing is found, report the last non-existent.
         throw new FileNotFoundException("Path not found: " + fLast.getPath());
@@ -144,5 +142,14 @@ public class FileUtils {
         }
     }
 
+    public static void deleteRecursive(final File file) {
+        File[] files = file.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                deleteRecursive(f);
+            }
+        }
+        file.delete();
+    }
 
 }

@@ -96,5 +96,13 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5014, value = "Failed to parse HTTP request")
     void failedToParseRequest(@Cause Exception e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5015, value = "Error rotating access log")
+    void errorRotatingAccessLog(@Cause IOException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5016, value = "Error writing access log")
+    void errorWritingAccessLog(@Cause IOException e);
 }
 

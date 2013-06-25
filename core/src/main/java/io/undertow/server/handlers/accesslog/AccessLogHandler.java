@@ -31,13 +31,13 @@ public class AccessLogHandler implements HttpHandler {
         while (tokeniser.hasMoreElements()) {
             String elem = (String) tokeniser.nextElement();
             TokenHandler tokenHandler = null;
-            for(TokenHandler.Factory factory : factories) {
+            for (TokenHandler.Factory factory : factories) {
                 tokenHandler = factory.create(elem);
-                if(tokenHandler != null) {
+                if (tokenHandler != null) {
                     break;
                 }
             }
-            if(tokenHandler == null) {
+            if (tokenHandler == null) {
                 tokenHandler = new ConstantAccessLogToken(elem);
             }
             tokenHandlers.add(tokenHandler);
@@ -56,19 +56,23 @@ public class AccessLogHandler implements HttpHandler {
     private class AccessLogCompletionListener implements ExchangeCompletionListener {
         @Override
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-            StringBuilder builder = new StringBuilder();
-            for(int i = 0; i < tokens.length; ++i) {
-                String result = tokens[i].generateMessage(exchange);
-                if(result == null) {
-                    builder.append('-');
-                } else {
-                    builder.append(result);
+            try {
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < tokens.length; ++i) {
+                    String result = tokens[i].generateMessage(exchange);
+                    if (result == null) {
+                        builder.append('-');
+                    } else {
+                        builder.append(result);
+                    }
+                    if (i != tokens.length - 1) {
+                        builder.append(' ');
+                    }
                 }
-                if(i != tokens.length -1) {
-                    builder.append(' ');
-                }
+                accessLogReceiver.logMessage(builder.toString());
+            } finally {
+                nextListener.proceed();
             }
-            accessLogReceiver.logMessage(builder.toString());
         }
     }
 
