@@ -209,7 +209,7 @@ public class ServletContextImpl implements ServletContext {
             if(file != null) {
                 File base = res.getResourceManagerRoot();
                 String filePath = file.getAbsolutePath().substring(base.getAbsolutePath().length());
-                filePath.replace('\\', '/'); //for windows systems
+                filePath = filePath.replace('\\', '/'); //for windows systems
                 if(file.isDirectory()) {
                     filePath = filePath + "/";
                 }
