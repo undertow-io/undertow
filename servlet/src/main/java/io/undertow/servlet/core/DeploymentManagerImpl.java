@@ -298,14 +298,18 @@ public class DeploymentManagerImpl implements DeploymentManager {
                                         .addHttpMethod(method.getMethod()));
                         builder.addSecurityConstraint(newConstraint);
                     }
-
-                    SecurityConstraint newConstraint = new SecurityConstraint()
-                            .setEmptyRoleSemantic(securityInfo.getEmptyRoleSemantic())
-                            .addRolesAllowed(securityInfo.getRolesAllowed())
-                            .setTransportGuaranteeType(securityInfo.getTransportGuaranteeType())
-                            .addWebResourceCollection(new WebResourceCollection().addUrlPatterns(mappings)
-                                    .addHttpMethodOmissions(methods));
-                    builder.addSecurityConstraint(newConstraint);
+                    //now add the constraint, unless it has all default values and method constrains where specified
+                    if(!securityInfo.getRolesAllowed().isEmpty()
+                            || securityInfo.getEmptyRoleSemantic() != EmptyRoleSemantic.PERMIT
+                            || methods.isEmpty()) {
+                        SecurityConstraint newConstraint = new SecurityConstraint()
+                                .setEmptyRoleSemantic(securityInfo.getEmptyRoleSemantic())
+                                .addRolesAllowed(securityInfo.getRolesAllowed())
+                                .setTransportGuaranteeType(securityInfo.getTransportGuaranteeType())
+                                .addWebResourceCollection(new WebResourceCollection().addUrlPatterns(mappings)
+                                        .addHttpMethodOmissions(methods));
+                        builder.addSecurityConstraint(newConstraint);
+                    }
                 }
 
             }

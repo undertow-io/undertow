@@ -19,12 +19,14 @@ import io.undertow.servlet.api.WebResourceCollection;
  */
 public class SecurityPathMatches {
 
+    private final boolean denyUncoveredHttpMethods;
     private final PathSecurityInformation defaultPathSecurityInformation;
     private final Map<String, PathSecurityInformation> exactPathRoleInformation;
     private final Map<String, PathSecurityInformation> prefixPathRoleInformation;
     private final Map<String, PathSecurityInformation> extensionRoleInformation;
 
-    private SecurityPathMatches(final PathSecurityInformation defaultPathSecurityInformation, final Map<String, PathSecurityInformation> exactPathRoleInformation, final Map<String, PathSecurityInformation> prefixPathRoleInformation, final Map<String, PathSecurityInformation> extensionRoleInformation) {
+    private SecurityPathMatches(final boolean denyUncoveredHttpMethods, final PathSecurityInformation defaultPathSecurityInformation, final Map<String, PathSecurityInformation> exactPathRoleInformation, final Map<String, PathSecurityInformation> prefixPathRoleInformation, final Map<String, PathSecurityInformation> extensionRoleInformation) {
+        this.denyUncoveredHttpMethods = denyUncoveredHttpMethods;
         this.defaultPathSecurityInformation = defaultPathSecurityInformation;
         this.exactPathRoleInformation = exactPathRoleInformation;
         this.prefixPathRoleInformation = prefixPathRoleInformation;
@@ -45,17 +47,16 @@ public class SecurityPathMatches {
     }
 
     public SecurityPathMatch getSecurityInfo(final String path, final String method) {
-        final List<SingleConstraintMatch> constraintSet = new ArrayList<SingleConstraintMatch>();
-        TransportGuaranteeType type = TransportGuaranteeType.NONE;
-        type = handleMatch(method, defaultPathSecurityInformation, constraintSet, type);
+        RuntimeMatch currentMatch = new RuntimeMatch();
+        handleMatch(method, defaultPathSecurityInformation, currentMatch);
         PathSecurityInformation match = exactPathRoleInformation.get(path);
         if (match != null) {
-            type = handleMatch(method, match, constraintSet, type);
+            handleMatch(method, match, currentMatch);
         }
 
         match = prefixPathRoleInformation.get(path);
         if (match != null) {
-            type = handleMatch(method, match, constraintSet, type);
+            handleMatch(method, match, currentMatch);
         }
 
         int qsPos = -1;
@@ -67,7 +68,7 @@ public class SecurityPathMatches {
                 final String part = path.substring(0, i);
                 match = exactPathRoleInformation.get(part);
                 if (match != null) {
-                    type = handleMatch(method, match, constraintSet, type);
+                    handleMatch(method, match, currentMatch);
                 }
                 qsPos = i;
                 extension = false;
@@ -76,7 +77,7 @@ public class SecurityPathMatches {
                 final String part = path.substring(0, i);
                 match = prefixPathRoleInformation.get(part);
                 if (match != null) {
-                    type = handleMatch(method, match, constraintSet, type);
+                    handleMatch(method, match, currentMatch);
                 }
             } else if (c == '.') {
                 if (!extension) {
@@ -89,22 +90,26 @@ public class SecurityPathMatches {
                     }
                     match = extensionRoleInformation.get(ext);
                     if (match != null) {
-                        type = handleMatch(method, match, constraintSet, type);
+                        handleMatch(method, match, currentMatch);
                     }
                 }
             }
         }
 
 
-        return new SecurityPathMatch(type, mergeConstraints(constraintSet));
+        return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
     }
 
     /**
      * merge all constraints, as per 13.8.1 Combining Constraints
+     * @param constraintSet
      */
-    private SingleConstraintMatch mergeConstraints(final List<SingleConstraintMatch> constraintSet) {
+    private SingleConstraintMatch mergeConstraints(final RuntimeMatch currentMatch) {
+        if(currentMatch.uncovered && denyUncoveredHttpMethods) {
+            return new SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic.DENY, Collections.<String>emptySet());
+        }
         final Set<String> allowedRoles = new HashSet<String>();
-        for(SingleConstraintMatch match : constraintSet) {
+        for(SingleConstraintMatch match : currentMatch.constraints) {
             if(match.getRequiredRoles().isEmpty()) {
                 return new SingleConstraintMatch(match.getEmptyRoleSemantic(), Collections.<String>emptySet());
             } else {
@@ -114,33 +119,36 @@ public class SecurityPathMatches {
         return new SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic.PERMIT, allowedRoles);
     }
 
-    private TransportGuaranteeType handleMatch(final String method, final PathSecurityInformation exact, final List<SingleConstraintMatch> constraintSet, TransportGuaranteeType type) {
+    private void handleMatch(final String method, final PathSecurityInformation exact, RuntimeMatch currentMatch) {
         List<SecurityInformation> roles = exact.defaultRequiredRoles;
         for (SecurityInformation role : roles) {
-            type = transport(type, role.transportGuaranteeType);
-            constraintSet.add(new SingleConstraintMatch(role.emptyRoleSemantic, role.roles));
+            transport(currentMatch, role.transportGuaranteeType);
+            currentMatch.constraints.add(new SingleConstraintMatch(role.emptyRoleSemantic, role.roles));
+            if(role.emptyRoleSemantic == SecurityInfo.EmptyRoleSemantic.DENY || !role.roles.isEmpty()) {
+                currentMatch.uncovered = false;
+            }
         }
         List<SecurityInformation> methodInfo = exact.perMethodRequiredRoles.get(method);
         if (methodInfo != null) {
+            currentMatch.uncovered = false;
             for (SecurityInformation role : methodInfo) {
-                type = transport(type, role.transportGuaranteeType);
-                constraintSet.add(new SingleConstraintMatch(role.emptyRoleSemantic, role.roles));
+                transport(currentMatch, role.transportGuaranteeType);
+                currentMatch.constraints.add(new SingleConstraintMatch(role.emptyRoleSemantic, role.roles));
             }
         }
         for (ExcludedMethodRoles excluded : exact.excludedMethodRoles) {
             if (!excluded.methods.contains(method)) {
-                type = transport(type, excluded.securityInformation.transportGuaranteeType);
-                constraintSet.add(new SingleConstraintMatch(excluded.securityInformation.emptyRoleSemantic, excluded.securityInformation.roles));
+                currentMatch.uncovered = false;
+                transport(currentMatch, excluded.securityInformation.transportGuaranteeType);
+                currentMatch.constraints.add(new SingleConstraintMatch(excluded.securityInformation.emptyRoleSemantic, excluded.securityInformation.roles));
             }
         }
-        return type;
     }
 
-    private TransportGuaranteeType transport(TransportGuaranteeType existing, TransportGuaranteeType other) {
-        if (other.ordinal() > existing.ordinal()) {
-            return other;
+    private void transport(RuntimeMatch match, TransportGuaranteeType other) {
+        if (other.ordinal() > match.type.ordinal()) {
+            match.type = other;
         }
-        return existing;
     }
 
     public static Builder builder(final DeploymentInfo deploymentInfo) {
@@ -221,7 +229,7 @@ public class SecurityPathMatches {
         }
 
         public SecurityPathMatches build() {
-            return new SecurityPathMatches(defaultPathSecurityInformation, exactPathRoleInformation, prefixPathRoleInformation, extensionRoleInformation);
+            return new SecurityPathMatches(deploymentInfo.isDenyUncoveredHttpMethods(), defaultPathSecurityInformation, exactPathRoleInformation, prefixPathRoleInformation, extensionRoleInformation);
         }
     }
 
@@ -252,5 +260,11 @@ public class SecurityPathMatches {
             this.roles = new HashSet<String>(roles);
             this.transportGuaranteeType = transportGuaranteeType;
         }
+    }
+
+    private static final class RuntimeMatch {
+        TransportGuaranteeType type = TransportGuaranteeType.NONE;
+        final List<SingleConstraintMatch> constraints = new ArrayList<SingleConstraintMatch>();
+        boolean uncovered = true;
     }
 }
