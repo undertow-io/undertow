@@ -241,7 +241,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
         @Override
         public void data(final ByteBuffer buffer) throws IOException {
-            this.currentFileSize += maxIndividualFileSize;
+            this.currentFileSize += buffer.remaining();
             if(this.maxIndividualFileSize > 0 && this.currentFileSize > this.maxIndividualFileSize) {
                 throw UndertowMessages.MESSAGES.maxFileSizeExceeded(this.maxIndividualFileSize);
             }
