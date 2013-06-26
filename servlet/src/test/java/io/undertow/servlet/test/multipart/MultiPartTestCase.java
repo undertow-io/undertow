@@ -112,8 +112,8 @@ public class MultiPartTestCase {
                     "filename: uploadfile.txt\n" +
                     "content-type: null\n" +
                     "Content-Disposition: form-data; name=\"file\"; filename=\"uploadfile.txt\"\n" +
-                    "size: 14\n" +
-                    "content: file contents\n\n", response);
+                    "size: 13\n" +
+                    "content: file contents\n", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
