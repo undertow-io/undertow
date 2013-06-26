@@ -52,17 +52,19 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
 
     private int read = 0;
     private final int maxRequestSize;
+    private final long maxEntitySize;
 
     HttpReadListener(final HttpServerConnection connection, final HttpRequestParser parser) {
         this.connection = connection;
         this.parser = parser;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
+        this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, 0);
     }
 
     public void newRequest() {
         state.reset();
         read = 0;
-        httpServerExchange = new HttpServerExchange(connection);
+        httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
         httpServerExchange.addExchangeCompleteListener(this);
     }
 
@@ -126,14 +128,13 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                 if (buffer.hasRemaining()) {
                     free = false;
                     connection.setExtraBytes(pooled);
-                } else {
-                    int total = read + res;
-                    read = total;
-                    if (read > maxRequestSize) {
-                        UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
-                        IoUtils.safeClose(connection);
-                        return;
-                    }
+                }
+                int total = read + res;
+                read = total;
+                if (read > maxRequestSize) {
+                    UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
+                    IoUtils.safeClose(connection);
+                    return;
                 }
             } while (!state.isComplete());
 

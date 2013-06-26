@@ -305,7 +305,7 @@ public final class PendingHttpRequest {
             }
 
             if (! transferEncoding.equals(Headers.IDENTITY.toString())) {
-                conduit = new ChunkedStreamSourceConduit(conduit, channel, connection.getBufferPool(), getFinishListener(closeConnection), maxEntitySize(connection.getOptions()), request);
+                conduit = new ChunkedStreamSourceConduit(conduit, channel, connection.getBufferPool(), getFinishListener(closeConnection), request);
             } else if (headers.contains(Headers.CONTENT_LENGTH)) {
                 contentLength = Long.parseLong(headers.getFirst(Headers.CONTENT_LENGTH));
                 if(contentLength == 0L) {

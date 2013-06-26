@@ -39,7 +39,7 @@ public class UndertowOptions {
     public static final int DEFAULT_MAX_HEADER_SIZE = 50 * 1024;
 
     /**
-     * The maximum size of the HTTP entity body.
+     * The default maximum size of the HTTP entity body.
      */
     public static final Option<Long> MAX_ENTITY_SIZE = Option.simple(UndertowOptions.class, "MAX_ENTITY_SIZE", Long.class);
 

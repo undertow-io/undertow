@@ -33,7 +33,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
@@ -42,7 +41,6 @@ import org.xnio.OptionMap;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@Ignore
 public class MaxRequestSizeTestCase {
 
     public static final String A_MESSAGE = "A message";
@@ -77,8 +75,8 @@ public class MaxRequestSizeTestCase {
     @Test
     public void testMaxRequestHeaderSize() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
+        final TestHttpClient client = new TestHttpClient();
         try {
-            final TestHttpClient client = new TestHttpClient();
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
@@ -104,14 +102,15 @@ public class MaxRequestSizeTestCase {
 
         } finally {
             DefaultServer.setUndertowOptions(existing);
+            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testMaxRequestEntitySize() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
+        final TestHttpClient client = new TestHttpClient();
         try {
-            final TestHttpClient client = new TestHttpClient();
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
@@ -139,6 +138,7 @@ public class MaxRequestSizeTestCase {
 
         } finally {
             DefaultServer.setUndertowOptions(existing);
+            client.getConnectionManager().shutdown();
         }
     }
 }

@@ -24,6 +24,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.server.HttpServerExchange;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.StreamSourceConduit;
@@ -31,6 +34,7 @@ import org.xnio.conduits.StreamSourceConduit;
 import static java.lang.Math.min;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 import static org.xnio.Bits.longBitMask;
 
@@ -59,12 +63,15 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
 
     private static final long FLAG_CLOSED = 1L << 63L;
     private static final long FLAG_FINISHED = 1L << 62L;
-    private static final long MASK_COUNT = longBitMask(0, 61);
+    private static final long FLAG_LENGTH_CHECKED = 1L << 61L;
+    private static final long MASK_COUNT = longBitMask(0, 60);
+
+    private final HttpServerExchange exchange;
 
     /**
      * Construct a new instance.  The given listener is called once all the bytes are read from the stream
      * <b>or</b> the stream is closed.  This listener should cause the remaining data to be drained from the
-     * underlying stream via the {@link #drain()} method if the underlying stream is to be reused.
+     * underlying stream if the underlying stream is to be reused.
      * <p/>
      * Calling this constructor will replace the read listener of the underlying channel.  The listener should be
      * restored from the {@code finishListener} object.  The underlying stream should not be closed while this wrapper
@@ -73,8 +80,9 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
      * @param next       the stream source channel to read from
      * @param contentLength  the amount of content to read
      * @param finishListener the listener to call once the stream is exhausted or closed
+     * @param exchange The server exchange. This is used to determine the max size
      */
-    public FixedLengthStreamSourceConduit(final StreamSourceConduit next, final long contentLength, final ConduitListener<? super FixedLengthStreamSourceConduit> finishListener) {
+    public FixedLengthStreamSourceConduit(final StreamSourceConduit next, final long contentLength, final ConduitListener<? super FixedLengthStreamSourceConduit> finishListener, final HttpServerExchange exchange) {
         super(next);
         this.finishListener = finishListener;
         if (contentLength < 0L) {
@@ -83,10 +91,29 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
             throw new IllegalArgumentException("Content length is too long");
         }
         state = contentLength;
+        this.exchange = exchange;
     }
+
+    /**
+      * Construct a new instance.  The given listener is called once all the bytes are read from the stream
+      * <b>or</b> the stream is closed.  This listener should cause the remaining data to be drained from the
+      * underlying stream if the underlying stream is to be reused.
+      * <p/>
+      * Calling this constructor will replace the read listener of the underlying channel.  The listener should be
+      * restored from the {@code finishListener} object.  The underlying stream should not be closed while this wrapper
+      * stream is active.
+      *
+      * @param next       the stream source channel to read from
+      * @param contentLength  the amount of content to read
+      * @param finishListener the listener to call once the stream is exhausted or closed
+      */
+     public FixedLengthStreamSourceConduit(final StreamSourceConduit next, final long contentLength, final ConduitListener<? super FixedLengthStreamSourceConduit> finishListener) {
+         this(next, contentLength, finishListener, null);
+     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
         long val = state;
+        checkMaxSize(val);
         if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED) || allAreClear(val, MASK_COUNT)) {
             return 0L;
         }
@@ -98,11 +125,32 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
         }
     }
 
+    private void checkMaxSize(long state) throws IOException {
+        if(anyAreClear(state, FLAG_LENGTH_CHECKED)) {
+            HttpServerExchange exchange = this.exchange;
+            if(exchange != null) {
+                if (exchange.getMaxEntitySize() > 0 && exchange.getMaxEntitySize() < (state & MASK_COUNT)) {
+                    //max entity size is exceeded
+                    //we need to forcibly close the read side
+                    try {
+                        next.terminateReads();
+                    } catch (IOException e) {
+                        UndertowLogger.REQUEST_LOGGER.debug("Exception terminating reads due to exceeding max size", e);
+                    }
+                    exchange.setPersistent(false);
+                    throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
+                }
+            }
+            this.state |= FLAG_LENGTH_CHECKED;
+        }
+    }
+
     public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
         if (count == 0L) {
             return 0L;
         }
         long val = state;
+        checkMaxSize(val);
         if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED) || allAreClear(val, MASK_COUNT)) {
             return -1;
         }
@@ -124,6 +172,7 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
             return read(dsts[offset]);
         }
         long val = state;
+        checkMaxSize(val);
         if (allAreSet(val, FLAG_CLOSED) || allAreClear(val, MASK_COUNT)) {
             return -1;
         }
@@ -164,6 +213,7 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
 
     public int read(final ByteBuffer dst) throws IOException {
         long val = state;
+        checkMaxSize(val);
         if (allAreSet(val, FLAG_CLOSED) || allAreClear(val, MASK_COUNT)) {
             return -1;
         }

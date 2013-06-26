@@ -179,6 +179,22 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private Sender sender;
 
+    /**
+     * The maximum entity size. This can be modified before the request stream is obtained, however once the request
+     * stream is obtained this cannot be modified further.
+     *
+     * The default value for this is determined by the {@link io.undertow.UndertowOptions#MAX_ENTITY_SIZE} option. A value
+     * of 0 indicates that this is unbounded.
+     *
+     * If this entity size is exceeded the request channel will be forcibly closed.
+     *
+     * TODO: integrate this with HTTP 100-continue responses, to make it possible to send a 417 rather than just forcibly
+     * closing the channel.
+     *
+     * @see io.undertow.UndertowOptions#MAX_ENTITY_SIZE
+     */
+    private long maxEntitySize;
+
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
 
     /**
@@ -231,8 +247,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private static final int FLAG_IN_CALL = 1 << 17;
 
+    public HttpServerExchange(final HttpServerConnection connection, long maxEntitySize) {
+        this.connection = connection;
+        this.maxEntitySize = maxEntitySize;
+    }
+
     public HttpServerExchange(final HttpServerConnection connection) {
         this.connection = connection;
+        this.maxEntitySize = 0;
     }
 
     /**
@@ -1351,6 +1373,25 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection.getIoThread();
     }
 
+    /**
+     *
+     * @return The maximum entity size for this exchange
+     */
+    public long getMaxEntitySize() {
+        return maxEntitySize;
+    }
+
+    /**
+     * Sets the max entity size for this exchange. This cannot be modified after the request channel has been obtained.
+     * @param maxEntitySize The max entity size
+     */
+    public void setMaxEntitySize(final long maxEntitySize) {
+        if(!isRequestChannelAvailable()) {
+            throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
+        }
+        this.maxEntitySize = maxEntitySize;
+    }
+
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {
         private final ExchangeCompletionListener[] list;
         private final HttpServerExchange exchange;
@@ -1406,8 +1447,8 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void close() throws IOException {
-            getInputStream().close();
-            getOutputStream().close();
+            IoUtils.safeClose(getInputStream());
+            IoUtils.safeClose(getOutputStream());
         }
     }
 

@@ -19,9 +19,7 @@
 package io.undertow.server;
 
 import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.conduits.BrokenStreamSourceConduit;
 import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
@@ -110,7 +108,7 @@ public class HttpTransferEncoding {
         }
         if (transferEncodingHeader != null && !transferEncoding.equals(Headers.IDENTITY)) {
             ConduitStreamSourceChannel sourceChannel = exchange.getConnection().getChannel().getSourceChannel();
-            sourceChannel.setConduit(new ChunkedStreamSourceConduit(sourceChannel.getConduit(), exchange, chunkedDrainListener(exchange), maxEntitySize(exchange)));
+            sourceChannel.setConduit(new ChunkedStreamSourceConduit(sourceChannel.getConduit(), exchange, chunkedDrainListener(exchange)));
         } else if (contentLengthHeader != null) {
             final long contentLength;
             contentLength = Long.parseLong(contentLengthHeader);
@@ -254,11 +252,7 @@ public class HttpTransferEncoding {
 
 
     private static StreamSourceConduit fixedLengthStreamSourceConduitWrapper(final long contentLength, final StreamSourceConduit conduit, final HttpServerExchange exchange) {
-        final long max = maxEntitySize(exchange);
-        if (max > 0 && contentLength > max) {
-            return new BrokenStreamSourceConduit(conduit, UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getSourceAddress(), max));
-        }
-        return new FixedLengthStreamSourceConduit(conduit, contentLength, fixedLengthDrainListener(exchange));
+        return new FixedLengthStreamSourceConduit(conduit, contentLength, fixedLengthDrainListener(exchange), exchange);
     }
 
     private static ConduitListener<FixedLengthStreamSourceConduit> fixedLengthDrainListener(final HttpServerExchange exchange) {
@@ -294,7 +288,4 @@ public class HttpTransferEncoding {
         };
     }
 
-    private static long maxEntitySize(final HttpServerExchange exchange) {
-        return exchange.getAttachment(UndertowOptions.ATTACHMENT_KEY).get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
-    }
 }

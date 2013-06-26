@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.client.HttpClientRequest;
 import io.undertow.server.HttpServerExchange;
@@ -59,10 +60,10 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     private final Attachable attachable;
     private final BufferWrapper bufferWrapper;
     private final ConduitListener<? super ChunkedStreamSourceConduit> finishListener;
+    private final HttpServerExchange exchange;
 
     private long state;
 
-    private final long maxSize;
     private long remainingAllowed;
     /**
      * The trailer parser that stores the trailer parse state. If this class is not null it means
@@ -79,7 +80,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
     private static final long MASK_COUNT = longBitMask(0, 56);
 
-    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamChannel channel, final Pool<ByteBuffer> pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final long maxLength, final HttpClientRequest request) {
+    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamChannel channel, final Pool<ByteBuffer> pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final HttpClientRequest request) {
         this(next, new BufferWrapper() {
             @Override
             public Pooled<ByteBuffer> allocate() {
@@ -90,10 +91,10 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             public void pushBack(Pooled<ByteBuffer> pooled) {
                 channel.unget(pooled);
             }
-        }, finishListener, maxLength, request);
+        }, finishListener, request, null);
     }
 
-    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final HttpServerExchange exchange, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final long maxLength) {
+    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final HttpServerExchange exchange, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener) {
         this(next, new BufferWrapper() {
             @Override
             public Pooled<ByteBuffer> allocate() {
@@ -104,16 +105,16 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             public void pushBack(Pooled<ByteBuffer> pooled) {
                 exchange.ungetRequestBytes(pooled);
             }
-        }, finishListener, maxLength, exchange);
+        }, finishListener, exchange, exchange);
     }
 
-    protected ChunkedStreamSourceConduit(final StreamSourceConduit next, final BufferWrapper bufferWrapper, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final long maxLength, final Attachable attachable) {
+    protected ChunkedStreamSourceConduit(final StreamSourceConduit next, final BufferWrapper bufferWrapper, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final Attachable attachable, final HttpServerExchange exchange) {
         super(next);
         this.bufferWrapper = bufferWrapper;
         this.finishListener = finishListener;
-        this.remainingAllowed = maxLength;
-        this.maxSize = maxLength;
+        this.remainingAllowed = Long.MIN_VALUE;
         this.attachable = attachable;
+        this.exchange = exchange;
         state = FLAG_READING_LENGTH;
     }
 
@@ -122,19 +123,28 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     }
 
     private void updateRemainingAllowed(final int written) throws IOException {
-        if (maxSize > 0) {
-            remainingAllowed -= written;
-            if (remainingAllowed < 0) {
-                throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxSize);
+        if(remainingAllowed == Long.MIN_VALUE) {
+            if(exchange == null) {
+                return;
+            } else {
+                long maxEntitySize = exchange.getMaxEntitySize();
+                if(maxEntitySize <= 0) {
+                    return;
+                }
+                remainingAllowed = maxEntitySize;
             }
         }
-    }
-
-    private void checkMaxLength() throws IOException {
-        if (maxSize > 0) {
-            if (remainingAllowed < 0) {
-                throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxSize);
+        remainingAllowed -= written;
+        if (remainingAllowed < 0) {
+            //max entity size is exceeded
+            //we need to forcibly close the read side
+            try {
+                next.terminateReads();
+            } catch (IOException e) {
+                UndertowLogger.REQUEST_LOGGER.debug("Exception terminating reads due to exceeding max size", e);
             }
+            exchange.setPersistent(false);
+            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
         }
     }
 
@@ -160,7 +170,6 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     }
 
     public int read(final ByteBuffer dst) throws IOException {
-        checkMaxLength();
         final long oldVal = state;
         //we have read the last chunk, we just return EOF
         if (anyAreSet(oldVal, FLAG_FINISHED)) {
