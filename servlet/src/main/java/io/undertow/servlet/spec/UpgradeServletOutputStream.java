@@ -191,16 +191,11 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
             } else {
                 state |= FLAG_READY;
                 channel.suspendWrites();
-                channel.getWorker().submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            listener.onWritePossible();
-                        } catch (IOException e) {
-                            listener.onError(e);
-                        }
-                    }
-                });
+                try {
+                    listener.onWritePossible();
+                } catch (IOException e) {
+                    listener.onError(e);
+                }
             }
         }
 

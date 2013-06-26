@@ -36,6 +36,12 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Exc
                 }
             }
         });
-        instance.getInstance().init(new WebConnectionImpl(channel));
+        exchange.getIoThread().execute(new Runnable() {
+            @Override
+            public void run() {
+                //run the upgrade in the IO thread, to prevent threading issues
+                instance.getInstance().init(new WebConnectionImpl(channel));
+            }
+        });
     }
 }
