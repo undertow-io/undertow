@@ -134,7 +134,9 @@ public class MultiPartTestCase {
             HttpResponse result = client.execute(post);
             Assert.assertEquals(500, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
-        } finally {
+        } catch (IOException expected) {
+            //in some environments the forced close of the read side will cause a connection reset
+        }finally {
             client.getConnectionManager().shutdown();
         }
     }
