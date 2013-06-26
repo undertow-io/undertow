@@ -182,4 +182,7 @@ public interface UndertowMessages {
 
     @Message(id = 53, value = "Listener %s already registered")
     IllegalArgumentException listenerAlreadyRegistered(String name);
+
+    @Message(id = 54, value = "The maximum size %s for an individual file in a multipart request was exceeded")
+    IOException maxFileSizeExceeded(long maxIndividualFileSize);
 }

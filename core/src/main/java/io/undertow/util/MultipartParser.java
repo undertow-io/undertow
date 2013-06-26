@@ -29,6 +29,7 @@ import org.xnio.Pooled;
  */
 public class MultipartParser {
 
+
     /**
      * The Carriage Return ASCII character value.
      */
@@ -54,7 +55,7 @@ public class MultipartParser {
     public interface PartHandler {
         void beginPart(final HeaderMap headers);
 
-        void data(final ByteBuffer buffer);
+        void data(final ByteBuffer buffer) throws IOException;
 
         void endPart();
     }
@@ -92,7 +93,7 @@ public class MultipartParser {
             this.boundary = boundary;
         }
 
-        public void parse(ByteBuffer buffer) throws MalformedMessageException {
+        public void parse(ByteBuffer buffer) throws IOException {
             while (buffer.hasRemaining()) {
                 switch (state) {
                     case 0: {
@@ -234,7 +235,7 @@ public class MultipartParser {
             }
         }
 
-        private void entity(final ByteBuffer buffer) {
+        private void entity(final ByteBuffer buffer) throws IOException {
             int pos = buffer.position();
             while (buffer.hasRemaining()) {
                 final byte b = buffer.get();
@@ -296,19 +297,15 @@ public class MultipartParser {
     }
 
 
-    public static class MalformedMessageException extends Exception {
-
-    }
-
 
     private interface Encoding {
-        void handle(final PartHandler handler, final ByteBuffer rawData);
+        void handle(final PartHandler handler, final ByteBuffer rawData) throws IOException;
     }
 
     private static class IdentityEncoding implements Encoding {
 
         @Override
-        public void handle(final PartHandler handler, final ByteBuffer rawData) {
+        public void handle(final PartHandler handler, final ByteBuffer rawData)  throws IOException {
             handler.data(rawData);
             rawData.clear();
         }
@@ -325,7 +322,7 @@ public class MultipartParser {
         }
 
         @Override
-        public void handle(final PartHandler handler, final ByteBuffer rawData) {
+        public void handle(final PartHandler handler, final ByteBuffer rawData)  throws IOException {
             Pooled<ByteBuffer> resource = bufferPool.allocate();
             ByteBuffer buf = resource.getResource();
             try {
@@ -357,7 +354,7 @@ public class MultipartParser {
 
 
         @Override
-        public void handle(final PartHandler handler, final ByteBuffer rawData) {
+        public void handle(final PartHandler handler, final ByteBuffer rawData)  throws IOException {
             boolean equalsSeen = this.equalsSeen;
             byte firstCharacter = this.firstCharacter;
             Pooled<ByteBuffer> resource = bufferPool.allocate();

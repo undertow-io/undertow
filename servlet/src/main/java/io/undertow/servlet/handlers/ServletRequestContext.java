@@ -57,6 +57,7 @@ public class ServletRequestContext {
     private final Deployment deployment;
     private final HttpServletRequestImpl originalRequest;
     private final HttpServletResponseImpl originalResponse;
+    private final ServletPathMatch originalServletPathMatch;
     private ServletResponse servletResponse;
     private ServletRequest servletRequest;
     private DispatcherType dispatcherType;
@@ -68,12 +69,13 @@ public class ServletRequestContext {
     private TransportGuaranteeType transportGuarenteeType;
     private HttpSessionImpl session;
 
-    public ServletRequestContext(final Deployment deployment, final HttpServletRequestImpl originalRequest, final HttpServletResponseImpl originalResponse) {
+    public ServletRequestContext(final Deployment deployment, final HttpServletRequestImpl originalRequest, final HttpServletResponseImpl originalResponse, final ServletPathMatch originalServletPathMatch) {
         this.deployment = deployment;
         this.originalRequest = originalRequest;
         this.originalResponse = originalResponse;
         this.servletRequest = originalRequest;
         this.servletResponse = originalResponse;
+        this.originalServletPathMatch = originalServletPathMatch;
     }
 
     public Deployment getDeployment() {
@@ -154,5 +156,9 @@ public class ServletRequestContext {
 
     public HttpServerExchange getExchange() {
         return originalRequest.getExchange();
+    }
+
+    public ServletPathMatch getOriginalServletPathMatch() {
+        return originalServletPathMatch;
     }
 }

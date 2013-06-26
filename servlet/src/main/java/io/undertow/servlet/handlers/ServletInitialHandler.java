@@ -71,7 +71,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
-        final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), request, response);
+        final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), request, response, info);
+        //set the max request size if applicable
+        if(info.getManagedServlet().getMaxRequestSize() > 0) {
+            exchange.setMaxEntitySize(info.getManagedServlet().getMaxRequestSize());
+        }
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
 
         exchange.startBlocking(new ServletBlockingHttpExchange(exchange));

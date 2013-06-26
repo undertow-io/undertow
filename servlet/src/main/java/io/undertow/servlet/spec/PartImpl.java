@@ -19,6 +19,7 @@
 package io.undertow.servlet.spec;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,7 +53,11 @@ public class PartImpl implements Part {
 
     @Override
     public InputStream getInputStream() throws IOException {
-        return new BufferedInputStream(new FileInputStream(formValue.getFile()));
+        if (formValue.isFile()) {
+            return new BufferedInputStream(new FileInputStream(formValue.getFile()));
+        } else {
+            return new ByteArrayInputStream(formValue.getValue().getBytes());
+        }
     }
 
     @Override

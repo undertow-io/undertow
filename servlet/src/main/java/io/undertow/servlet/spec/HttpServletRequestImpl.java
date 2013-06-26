@@ -24,7 +24,6 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.security.Principal;
@@ -68,6 +67,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.SecurityRoleRef;
+import io.undertow.servlet.core.ManagedServlet;
 import io.undertow.servlet.core.ServletUpgradeListener;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletChain;
@@ -445,7 +445,8 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             final List<Part> parts = new ArrayList<Part>();
             String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             if (mimeType != null && mimeType.startsWith(MultiPartParserDefinition.MULTIPART_FORM_DATA)) {
-                final FormDataParser parser = servletContext.getFormParserFactory().createParser(exchange);
+                final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getManagedServlet();
+                final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
                 if(parser != null) {
                     final FormData value = parser.parseBlocking();
                     for (final String namedPart : value) {
@@ -497,7 +498,8 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         try {
             characterEncoding = Charset.forName(env);
 
-            final FormDataParser parser = servletContext.getFormParserFactory().createParser(exchange);
+            final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getManagedServlet();
+            final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
             if (parser != null) {
                 parser.setCharacterEncoding(env);
             }
@@ -601,11 +603,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         Deque<String> params = queryParameters.get(name);
         if (params != null) {
             for (String param : params) {
-                try {
-                    ret.add(URLDecoder.decode(param, characterEncoding == null ? "ISO-8859-1" : characterEncoding.name()));
-                } catch (UnsupportedEncodingException e) {
-                    throw new RuntimeException(e);
-                }
+                ret.add(param);
             }
         }
         if (exchange.getRequestMethod().equals(Methods.POST)) {
@@ -673,7 +671,8 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 return null;
             }
             readStarted = true;
-            final FormDataParser parser = servletContext.getFormParserFactory().createParser(exchange);
+            final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getManagedServlet();
+            final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
             if (parser == null) {
                 return null;
             }

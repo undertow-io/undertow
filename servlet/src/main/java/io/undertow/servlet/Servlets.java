@@ -1,6 +1,7 @@
 package io.undertow.servlet;
 
 import javax.servlet.Filter;
+import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
 
 import io.undertow.servlet.api.DeploymentInfo;
@@ -73,7 +74,7 @@ public class Servlets {
      * @param servletClass The servlet class
      * @return A new servlet description
      */
-    public static final ServletInfo servlet(final String name, final Class<? extends Servlet> servletClass, final InstanceFactory<? extends Servlet> servlet) {
+    public static ServletInfo servlet(final String name, final Class<? extends Servlet> servletClass, final InstanceFactory<? extends Servlet> servlet) {
         return new ServletInfo(name, servletClass, servlet);
     }
 
@@ -96,8 +97,23 @@ public class Servlets {
      * @param filterClass The filter class
      * @return A new filter description
      */
-    public static final FilterInfo filter(final String name, final Class<? extends Filter> filterClass, final InstanceFactory<? extends Filter> filter) {
+    public static FilterInfo filter(final String name, final Class<? extends Filter> filterClass, final InstanceFactory<? extends Filter> filter) {
         return new FilterInfo(name, filterClass, filter);
+    }
+
+    /**
+     * Creates a new multipart config element
+     *
+     *
+     * @param location          the directory location where files will be stored
+     * @param maxFileSize       the maximum size allowed for uploaded files
+     * @param maxRequestSize    the maximum size allowed for
+     *                          multipart/form-data requests
+     * @param fileSizeThreshold the size threshold after which files will
+     *                          be written to disk
+     */
+    public static MultipartConfigElement multipartConfig(String location, long maxFileSize, long maxRequestSize, int fileSizeThreshold) {
+        return new MultipartConfigElement(location, maxFileSize, maxRequestSize, fileSizeThreshold);
     }
 
     private Servlets() {

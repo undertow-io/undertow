@@ -18,11 +18,17 @@
 
 package io.undertow.servlet.core;
 
+import java.io.File;
+
+import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.SingleThreadModel;
 import javax.servlet.UnavailableException;
 
+import io.undertow.server.handlers.form.FormEncodedDataDefinition;
+import io.undertow.server.handlers.form.FormParserFactory;
+import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
@@ -43,6 +49,9 @@ public class ManagedServlet implements Lifecycle {
     private final InstanceStrategy instanceStrategy;
     private volatile boolean permanentlyUnavailable = false;
 
+    private final long maxRequestSize;
+    private final FormParserFactory formParserFactory;
+
     public ManagedServlet(final ServletInfo servletInfo, final ServletContextImpl servletContext) {
         this.servletInfo = servletInfo;
         if (SingleThreadModel.class.isAssignableFrom(servletInfo.getServletClass())) {
@@ -50,12 +59,47 @@ public class ManagedServlet implements Lifecycle {
         } else {
             instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
         }
+        if (servletInfo.getMultipartConfig() != null) {
+            //todo: fileSizeThreshold
+            MultipartConfigElement config = servletInfo.getMultipartConfig();
+            if (config.getMaxRequestSize() != -1) {
+                maxRequestSize = config.getMaxRequestSize();
+            } else {
+                maxRequestSize = -1;
+            }
+            final  File tempDir;
+            if(config.getLocation() == null || config.getLocation().isEmpty()) {
+                tempDir = servletContext.getDeployment().getDeploymentInfo().getTempDir();
+            } else {
+                String location = config.getLocation();
+                File locFile = new File(location);
+                if(locFile.isAbsolute()) {
+                    tempDir = locFile;
+                } else {
+                    tempDir = new File(servletContext.getDeployment().getDeploymentInfo().getTempDir(), location);
+                }
+            }
+
+            MultiPartParserDefinition multiPartParserDefinition = new MultiPartParserDefinition(tempDir);
+            if(config.getMaxFileSize() > 0) {
+                multiPartParserDefinition.setMaxIndividualFileSize(config.getMaxFileSize());
+            }
+
+            formParserFactory = FormParserFactory.builder(false)
+                    .addParser(new FormEncodedDataDefinition())
+                    .addParser(multiPartParserDefinition)
+                    .build();
+
+        } else {
+            //no multipart config we don't allow multipart requests
+            formParserFactory = FormParserFactory.builder(false).addParser(new FormEncodedDataDefinition()).build();
+            maxRequestSize = -1;
+        }
     }
 
 
-
     public synchronized void start() throws ServletException {
-        if(permanentlyUnavailable) {
+        if (permanentlyUnavailable) {
             return;
         }
         try {
@@ -105,6 +149,14 @@ public class ManagedServlet implements Lifecycle {
 
     public ServletInfo getServletInfo() {
         return servletInfo;
+    }
+
+    public long getMaxRequestSize() {
+        return maxRequestSize;
+    }
+
+    public FormParserFactory getFormParserFactory() {
+        return formParserFactory;
     }
 
     /**

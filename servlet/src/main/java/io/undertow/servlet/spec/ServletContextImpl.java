@@ -49,7 +49,6 @@ import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.Version;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.server.session.PathParameterSessionConfig;
 import io.undertow.server.session.Session;
@@ -88,7 +87,6 @@ public class ServletContextImpl implements ServletContext {
     private final DeploymentInfo deploymentInfo;
     private final ConcurrentMap<String, Object> attributes;
     private final SessionCookieConfigImpl sessionCookieConfig;
-    private final FormParserFactory formParserFactory;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
     private volatile Set<SessionTrackingMode> sessionTrackingModes = Collections.singleton(SessionTrackingMode.COOKIE);
     private volatile Set<SessionTrackingMode> defaultSessionTrackingModes = Collections.singleton(SessionTrackingMode.COOKIE);
@@ -120,7 +118,6 @@ public class ServletContextImpl implements ServletContext {
             this.attributes = deploymentInfo.getServletContextAttributeBackingMap();
         }
         attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
-        this.formParserFactory = deployment.getDeploymentInfo().getFormParserFactory();
     }
 
     public void initDone() {
@@ -143,10 +140,6 @@ public class ServletContextImpl implements ServletContext {
                 }
             }
         }
-    }
-
-    public FormParserFactory getFormParserFactory() {
-        return formParserFactory;
     }
 
     @Override

@@ -7,7 +7,7 @@ import java.util.List;
 
 import javax.servlet.ServletException;
 
-import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.Servlets;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -25,6 +25,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import static io.undertow.servlet.Servlets.multipartConfig;
+
 /**
  * @author Matej Lazar
  */
@@ -34,8 +36,9 @@ public class ParameterCharacterEncodingTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
-        DeploymentUtils.setupServlet(new ServletInfo("servlet", EchoServlet.class)
-                .addMapping("/"));
+        DeploymentUtils.setupServlet(Servlets.servlet("servlet", EchoServlet.class)
+                .addMapping("/")
+                .setMultipartConfig(multipartConfig(null, 0, 0, 0)));
     }
 
     @Test

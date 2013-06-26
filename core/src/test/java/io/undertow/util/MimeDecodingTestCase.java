@@ -18,6 +18,7 @@
 
 package io.undertow.util;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +37,7 @@ public class MimeDecodingTestCase {
     final ByteBufferSlicePool bufferPool = new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 512, 512 * 6);
 
     @Test
-    public void testSimpleMimeDecodingWithPreamble() throws MultipartParser.MalformedMessageException {
+    public void testSimpleMimeDecodingWithPreamble() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime1.txt"));
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes());
@@ -52,7 +53,7 @@ public class MimeDecodingTestCase {
     }
 
     @Test
-    public void testSimpleMimeDecodingWithoutPreamble() throws MultipartParser.MalformedMessageException {
+    public void testSimpleMimeDecodingWithoutPreamble() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime2.txt"));
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes());
@@ -68,7 +69,7 @@ public class MimeDecodingTestCase {
     }
 
     @Test
-    public void testBase64MimeDecoding() throws MultipartParser.MalformedMessageException {
+    public void testBase64MimeDecoding() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime3.txt"));
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "unique-boundary-1".getBytes());
@@ -84,7 +85,7 @@ public class MimeDecodingTestCase {
     }
 
     @Test
-    public void testBase64MimeDecodingWithSmallBuffers() throws MultipartParser.MalformedMessageException {
+    public void testBase64MimeDecodingWithSmallBuffers() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime3.txt"));
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 6, 6 * 6), handler, "unique-boundary-1".getBytes());
@@ -100,7 +101,7 @@ public class MimeDecodingTestCase {
     }
 
     @Test
-    public void testQuotedPrintable() throws MultipartParser.MalformedMessageException {
+    public void testQuotedPrintable() throws IOException {
         final String data =  fixLineEndings(FileUtils.readFile(MimeDecodingTestCase.class, "mime4.txt"));
         TestPartHandler handler = new TestPartHandler();
         MultipartParser.ParseState parser = MultipartParser.beginParse(bufferPool, handler, "someboundarytext".getBytes());
