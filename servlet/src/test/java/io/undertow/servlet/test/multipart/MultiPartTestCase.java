@@ -154,8 +154,8 @@ public class MultiPartTestCase {
 
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(500, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("TEST FAILED: wrong response code\n" + response, 500, result.getStatusLine().getStatusCode());
         } finally {
             client.getConnectionManager().shutdown();
         }
