@@ -32,11 +32,11 @@ public class ServletRequestContext {
 
     private static final ThreadLocal<ServletRequestContext> CURRENT = new ThreadLocal<ServletRequestContext>();
 
-    static void setCurrentRequestContext(ServletRequestContext servletRequestContext) {
+    public static void setCurrentRequestContext(ServletRequestContext servletRequestContext) {
         CURRENT.set(servletRequestContext);
     }
 
-    static void clearCurrentServletAttachments() {
+    public static void clearCurrentServletAttachments() {
         CURRENT.remove();
     }
 
