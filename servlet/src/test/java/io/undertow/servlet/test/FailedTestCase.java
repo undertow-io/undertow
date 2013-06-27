@@ -6,7 +6,7 @@ import org.junit.Test;
 /**
  * @author Tomaz Cerar (c) 2013 Red Hat Inc.
  */
-public class FailedTestClass {
+public class FailedTestCase {
 
     @Test
     public void testFailure(){
