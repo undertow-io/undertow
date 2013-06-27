@@ -495,9 +495,7 @@ public class AsyncContextImpl implements AsyncContext {
         }
         try {
             //now run request listeners
-            if (setupRequired) {
-                servletRequestContext.getDeployment().getApplicationListeners().requestInitialized(servletRequest);
-            }
+            setupRequestContext(setupRequired);
             try {
                 for (final BoundAsyncListener listener : asyncListeners) {
                     AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse);
@@ -508,9 +506,7 @@ public class AsyncContextImpl implements AsyncContext {
                     }
                 }
             } finally {
-                if (setupRequired) {
-                    servletRequestContext.getDeployment().getApplicationListeners().requestDestroyed(servletRequest);
-                }
+                tearDownRequestContext(setupRequired);
             }
         } finally {
             if (setupRequired) {
@@ -520,10 +516,14 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     private void onAsyncTimeout() {
-        final ThreadSetupAction.Handle handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
+        final boolean setupRequired = ServletRequestContext.current() == null;
+        ThreadSetupAction.Handle handle = null;
+        if (setupRequired) {
+            handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
+        }
         try {
             //now run request listeners
-            servletRequestContext.getDeployment().getApplicationListeners().requestInitialized(servletRequest);
+            setupRequestContext(setupRequired);
             try {
                 for (final BoundAsyncListener listener : asyncListeners) {
                     AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse);
@@ -534,18 +534,24 @@ public class AsyncContextImpl implements AsyncContext {
                     }
                 }
             } finally {
-                servletRequestContext.getDeployment().getApplicationListeners().requestDestroyed(servletRequest);
+                tearDownRequestContext(setupRequired);
             }
         } finally {
-            handle.tearDown();
+            if (setupRequired) {
+                handle.tearDown();
+            }
         }
     }
 
     private void onAsyncStart(AsyncContext newAsyncContext) {
-        final ThreadSetupAction.Handle handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
+        final boolean setupRequired = ServletRequestContext.current() == null;
+        ThreadSetupAction.Handle handle = null;
+        if (setupRequired) {
+            handle = servletRequestContext.getDeployment().getThreadSetupAction().setup(exchange);
+        }
         try {
             //now run request listeners
-            servletRequestContext.getDeployment().getApplicationListeners().requestInitialized(servletRequest);
+            setupRequestContext(setupRequired);
             try {
                 for (final BoundAsyncListener listener : asyncListeners) {
                     //make sure we use the new async context
@@ -557,10 +563,12 @@ public class AsyncContextImpl implements AsyncContext {
                     }
                 }
             } finally {
-                servletRequestContext.getDeployment().getApplicationListeners().requestDestroyed(servletRequest);
+                tearDownRequestContext(setupRequired);
             }
         } finally {
-            handle.tearDown();
+            if (setupRequired) {
+                handle.tearDown();
+            }
         }
     }
 
@@ -572,9 +580,7 @@ public class AsyncContextImpl implements AsyncContext {
         }
         try {
             //now run request listeners
-            if (setupRequired) {
-                servletRequestContext.getDeployment().getApplicationListeners().requestInitialized(servletRequest);
-            }
+            setupRequestContext(setupRequired);
             try {
                 for (final BoundAsyncListener listener : asyncListeners) {
                     AsyncEvent event = new AsyncEvent(this, listener.servletRequest, listener.servletResponse, t);
@@ -585,14 +591,26 @@ public class AsyncContextImpl implements AsyncContext {
                     }
                 }
             } finally {
-                if (setupRequired) {
-                    servletRequestContext.getDeployment().getApplicationListeners().requestDestroyed(servletRequest);
-                }
+                tearDownRequestContext(setupRequired);
             }
         } finally {
             if (setupRequired) {
                 handle.tearDown();
             }
+        }
+    }
+
+    private void setupRequestContext(final boolean setupRequired) {
+        if (setupRequired) {
+            servletRequestContext.getDeployment().getApplicationListeners().requestInitialized(servletRequest);
+            ServletRequestContext.setCurrentRequestContext(servletRequestContext);
+        }
+    }
+
+    private void tearDownRequestContext(final boolean setupRequired) {
+        if (setupRequired) {
+            servletRequestContext.getDeployment().getApplicationListeners().requestDestroyed(servletRequest);
+            ServletRequestContext.clearCurrentServletAttachments();
         }
     }
 
