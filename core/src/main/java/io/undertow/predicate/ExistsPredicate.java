@@ -23,81 +23,59 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HttpString;
 
 /**
- * Returns true if the request headers are true.
- * <p/>
- * If allHeaders is true it will return true if all headers are present
- * otherwise it will return true if a single header is present
+ * Returns true if the given attribute is not null and not an empty string
  *
  * @author Stuart Douglas
  */
-class HasRequestHeaderPredicate implements Predicate {
+class ExistsPredicate implements Predicate {
 
-    private final HttpString[] headers;
-    private final boolean allHeaders;
+    private final ExchangeAttribute attribute;
 
-    HasRequestHeaderPredicate(final String[] headers, final boolean allHeaders) {
-        this.allHeaders = allHeaders;
-        HttpString[] h = new HttpString[headers.length];
-        for (int i = 0; i < headers.length; ++i) {
-            h[i] = new HttpString(headers[i]);
-        }
-        this.headers = h;
+    ExistsPredicate(final ExchangeAttribute attribute) {
+        this.attribute = attribute;
     }
-
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        if (allHeaders) {
-            for (HttpString header : headers) {
-                if (!value.getRequestHeaders().contains(header)) {
-                    return false;
-                }
-            }
-            return true;
-        } else {
-            for (HttpString header : headers) {
-                if (value.getRequestHeaders().contains(header)) {
-                    return true;
-                }
-            }
+        final String att = attribute.readAttribute(value);
+        if(att == null) {
             return false;
         }
+        return !att.isEmpty();
     }
 
     public static class Builder implements PredicateBuilder {
 
         @Override
         public String name() {
-            return "hasRequestHeaders";
+            return "exists";
         }
 
         @Override
         public Map<String, Class<?>> parameters() {
             final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
-            params.put("headers", String[].class);
-            params.put("requireAllHeaders", boolean.class);
+            params.put("value", ExchangeAttribute.class);
             return params;
         }
 
         @Override
         public Set<String> requiredParameters() {
-            return Collections.singleton("headers");
+            return Collections.singleton("value");
         }
 
         @Override
         public String defaultParameter() {
-            return "headers";
+            return "value";
         }
 
         @Override
         public Predicate build(final Map<String, Object> config) {
-            String[] headers = (String[]) config.get("headers");
-            Boolean all = (Boolean) config.get("requireAllHeaders");
-            return new HasRequestHeaderPredicate(headers, all == null ? true : all);
+            ExchangeAttribute value = (ExchangeAttribute) config.get("value");
+            return new ExistsPredicate(value);
         }
     }
 }

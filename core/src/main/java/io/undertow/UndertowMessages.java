@@ -188,4 +188,5 @@ public interface UndertowMessages {
 
     @Message(id = 55, value = "Could not set attribute %s to %s as it is read only")
     String couldNotSetAttribute(String attributeName, String newValue);
+
 }

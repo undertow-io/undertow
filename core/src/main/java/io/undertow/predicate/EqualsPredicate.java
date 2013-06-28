@@ -23,81 +23,71 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HttpString;
 
 /**
- * Returns true if the response headers are true.
- * <p/>
- * If allHeaders is true it will return true if all headers are present
- * otherwise it will return true if a single header is present
+ * Returns true if all the provided arguments are equal to each other
  *
  * @author Stuart Douglas
  */
-class HasResponseHeaderPredicate implements Predicate {
+class EqualsPredicate implements Predicate {
 
-    private final HttpString[] headers;
-    private final boolean allHeaders;
+    private final ExchangeAttribute[] attributes;
 
-    HasResponseHeaderPredicate(final String[] headers, final boolean allHeaders) {
-        this.allHeaders = allHeaders;
-        HttpString[] h = new HttpString[headers.length];
-        for (int i = 0; i < headers.length; ++i) {
-            h[i] = new HttpString(headers[i]);
-        }
-        this.headers = h;
+    EqualsPredicate(final ExchangeAttribute[] attribute) {
+        this.attributes = attribute;
     }
-
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        if (allHeaders) {
-            for (HttpString header : headers) {
-                if (!value.getResponseHeaders().contains(header)) {
+        if(attributes.length < 2) {
+            return true;
+        }
+        String first = attributes[0].readAttribute(value);
+        for(int i = 1; i < attributes.length; ++i) {
+            String current = attributes[i].readAttribute(value);
+            if(first == null) {
+                if(current != null) {
                     return false;
                 }
+            } else if(current == null) {
+                return false;
+            } else if(!first.equals(current)) {
+                return false;
             }
-            return true;
-        } else {
-            for (HttpString header : headers) {
-                if (value.getResponseHeaders().contains(header)) {
-                    return true;
-                }
-            }
-            return false;
         }
+        return true;
     }
 
     public static class Builder implements PredicateBuilder {
 
         @Override
         public String name() {
-            return "hasResponseHeaders";
+            return "equals";
         }
 
         @Override
         public Map<String, Class<?>> parameters() {
             final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
-            params.put("headers", String[].class);
-            params.put("requireAllHeaders", boolean.class);
+            params.put("value", ExchangeAttribute[].class);
             return params;
         }
 
         @Override
         public Set<String> requiredParameters() {
-            return Collections.singleton("headers");
+            return Collections.singleton("value");
         }
 
         @Override
         public String defaultParameter() {
-            return "headers";
+            return "value";
         }
 
         @Override
         public Predicate build(final Map<String, Object> config) {
-            String[] headers = (String[]) config.get("headers");
-            Boolean all = (Boolean) config.get("requireAllHeaders");
-            return new HasResponseHeaderPredicate(headers, all == null ? true : all);
+            ExchangeAttribute[] value = (ExchangeAttribute[]) config.get("value");
+            return new EqualsPredicate(value);
         }
     }
 }

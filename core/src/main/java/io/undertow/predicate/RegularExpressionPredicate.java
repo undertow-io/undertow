@@ -1,6 +1,9 @@
 package io.undertow.predicate;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,11 +50,48 @@ public class RegularExpressionPredicate implements Predicate {
             if (context != null) {
                 int count = matcher.groupCount();
                 for(int i = 0; i <= count; ++i) {
-                    context.put("$" + i, matcher.group(i));
+                    context.put(Integer.toString(i), matcher.group(i));
                 }
             }
         }
         return matches;
     }
 
+    public static class Builder implements PredicateBuilder {
+
+        @Override
+        public String name() {
+            return "regex";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
+            params.put("pattern", String.class);
+            params.put("value", ExchangeAttribute.class);
+            params.put("full-match", Boolean.class);
+            return params;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            final Set<String> params = new HashSet<String>();
+            params.add("pattern");
+            params.add("value");
+            return params;
+        }
+
+        @Override
+        public String defaultParameter() {
+            return null;
+        }
+
+        @Override
+        public Predicate build(final Map<String, Object> config) {
+            ExchangeAttribute value = (ExchangeAttribute) config.get("value");
+            Boolean fullMatch = (Boolean) config.get("full-match");
+            String pattern = (String) config.get("pattern");
+            return new RegularExpressionPredicate(pattern, value, fullMatch == null ? false : fullMatch);
+        }
+    }
 }

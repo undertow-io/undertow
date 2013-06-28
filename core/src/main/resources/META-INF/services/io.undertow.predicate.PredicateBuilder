@@ -1,4 +1,7 @@
 io.undertow.predicate.PathMatchPredicate$Builder
-io.undertow.predicate.HasResponseHeaderPredicate$Builder
-io.undertow.predicate.HasRequestHeaderPredicate$Builder
-io.undertow.predicate.RequestHeaderContainsPredicate$Builder
+io.undertow.predicate.PathPrefixPredicate$Builder
+io.undertow.predicate.ContainsPredicate$Builder
+io.undertow.predicate.ExistsPredicate$Builder
+io.undertow.predicate.RegularExpressionPredicate$Builder
+io.undertow.predicate.PathSuffixPredicate$Builder
+io.undertow.predicate.EqualsPredicate$Builder

@@ -86,7 +86,7 @@ public class AccessLogHandler implements HttpHandler {
         StringTokenizer tokeniser = new StringTokenizer(formatString, " ", false);
         while (tokeniser.hasMoreElements()) {
             String elem = (String) tokeniser.nextElement();
-            tokenHandlers.add(parser.parser(elem));
+            tokenHandlers.add(parser.parse(elem));
         }
 
         this.tokens = tokenHandlers.toArray(new ExchangeAttribute[tokenHandlers.size()]);

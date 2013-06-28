@@ -104,5 +104,9 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5016, value = "Error writing access log")
     void errorWritingAccessLog(@Cause IOException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5017, value = "Unknown variable %s")
+    void unkownVariable(String token);
 }
 

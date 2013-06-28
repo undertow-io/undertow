@@ -1,5 +1,7 @@
 package io.undertow.predicate;
 
+import io.undertow.attribute.ExchangeAttribute;
+
 /**
  * @author Stuart Douglas
  */
@@ -51,16 +53,16 @@ public class Predicates {
      * creates a predicate that returns true if the request path ends with the provided suffix
      */
     public static Predicate suffix(final String path) {
-        return new SuffixMatchPredicate(path);
+        return new PathSuffixPredicate(path);
     }
 
     /**
      * creates a predicate that returns true if the request path ends with any of the provided suffixs
      */
     public static Predicate suffixs(final String... paths) {
-        final SuffixMatchPredicate[] predicates = new SuffixMatchPredicate[paths.length];
+        final PathSuffixPredicate[] predicates = new PathSuffixPredicate[paths.length];
         for (int i = 0; i < paths.length; ++i) {
-            predicates[i] = new SuffixMatchPredicate(paths[i]);
+            predicates[i] = new PathSuffixPredicate(paths[i]);
         }
         return or(predicates);
     }
@@ -69,16 +71,16 @@ public class Predicates {
      * creates a predicate that returns true if the given relative path starts with the provided prefix
      */
     public static Predicate prefix(final String path) {
-        return new PrefixMatchPredicate(path);
+        return new PathPrefixPredicate(path);
     }
 
     /**
      * creates a predicate that returns true if the relative request path matches any of the provided prefixes
      */
     public static Predicate prefixs(final String... paths) {
-        final PrefixMatchPredicate[] predicates = new PrefixMatchPredicate[paths.length];
+        final PathPrefixPredicate[] predicates = new PathPrefixPredicate[paths.length];
         for (int i = 0; i < paths.length; ++i) {
-            predicates[i] = new PrefixMatchPredicate(paths[i]);
+            predicates[i] = new PathPrefixPredicate(paths[i]);
         }
         return or(predicates);
     }
@@ -116,32 +118,42 @@ public class Predicates {
     }
 
     /**
+     * Return a predicate that will return true if the given attribute is not null and not empty
      *
-     * @param headers The headers
-     * @return a predicate that returns true if all request headers are present
+     * @param attribute The attribute to check
      */
-    public static Predicate hasRequestHeaders(final String ... headers) {
-        return new HasRequestHeaderPredicate(headers, true);
+    public static Predicate exists(final ExchangeAttribute attribute) {
+        return new ExistsPredicate(attribute);
+    }
+
+
+
+    /**
+     * Returns true if the given attribute is present and contains one of the provided value
+     * @param attribute The exchange attribute
+     * @param values The values to check for
+     */
+    public static Predicate contains(final ExchangeAttribute attribute, final String ... values) {
+        return new ContainsPredicate(attribute, values);
     }
 
     /**
-     *
-     * @param allHeaders If all headers are required or only a single header
-     * @param headers The headers
-     * @return a predicate that returns true if request headers are present
+     * Creates a predicate that matches the given attribute against a regex. A full match is not required
+     * @param attribute The attribute
+     * @param pattern The pattern
      */
-    public static Predicate hasRequestHeaders(boolean allHeaders, final String ... headers) {
-        return new HasRequestHeaderPredicate(headers, true);
+    public static Predicate regex(final ExchangeAttribute attribute, final String pattern) {
+        return new RegularExpressionPredicate(pattern, attribute);
     }
 
     /**
-     * Returns true if the given request header is present and contains one
-     * @param header
-     * @param values
-     * @return
+     * Creates a predicate that matches the given attribute against a regex.
+     * @param requireFullMatch If a full match is required
+     * @param attribute The attribute
+     * @param pattern The pattern
      */
-    public static Predicate requestHeaderContains(final String header, final String ... values) {
-        return new RequestHeaderContainsPredicate(header, values);
+    public static Predicate regex(final ExchangeAttribute attribute, final String pattern, boolean requireFullMatch) {
+        return new RegularExpressionPredicate(pattern, attribute, requireFullMatch);
     }
 
     private Predicates() {

@@ -31,6 +31,9 @@ import java.util.ServiceLoader;
 import java.util.Set;
 
 import io.undertow.UndertowMessages;
+import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributeParser;
+import io.undertow.attribute.ExchangeAttributes;
 
 /**
  * Parser that can build a predicate from a string representation. The underlying syntax is quite simple, and example is
@@ -50,7 +53,7 @@ import io.undertow.UndertowMessages;
  * brackets can be omitted, otherwise they are mandatory.
  * <p/>
  * If a predicate is only being passed a single parameter then the parameter name can be omitted.
- * Strings can be enclosed in optional quotations marks, and quotation marks can be escaped using
+ * Strings can be enclosed in optional double or single quotations marks, and quotation marks can be escaped using
  * <code>\"</code>.
  * <p/>
  * Array types are represented via a comma separated list of values enclosed in curly braces.
@@ -62,13 +65,14 @@ import io.undertow.UndertowMessages;
 public class PredicateParser {
 
 
-    public static final Predicate parse(String string) {
-        final Map<String, PredicateBuilder> builders = loadBuilders();
-        return parse(string, builders);
+    public static final Predicate parse(String string, final ClassLoader classLoader) {
+        final Map<String, PredicateBuilder> builders = loadBuilders(classLoader);
+        final ExchangeAttributeParser attributeParser = ExchangeAttributes.parser(classLoader);
+        return parse(string, builders, attributeParser);
     }
 
-    private static Map<String, PredicateBuilder> loadBuilders() {
-        ServiceLoader<PredicateBuilder> loader = ServiceLoader.load(PredicateBuilder.class);
+    private static Map<String, PredicateBuilder> loadBuilders(final ClassLoader classLoader) {
+        ServiceLoader<PredicateBuilder> loader = ServiceLoader.load(PredicateBuilder.class, classLoader);
         final Map<String, PredicateBuilder> ret = new HashMap<String, PredicateBuilder>();
         for (PredicateBuilder builder : loader) {
             if (ret.containsKey(builder.name())) {
@@ -93,7 +97,7 @@ public class PredicateParser {
         throw UndertowMessages.MESSAGES.errorParsingPredicateString(reason, b.toString());
     }
 
-    static Predicate parse(final String string, final Map<String, PredicateBuilder> builders) {
+    static Predicate parse(final String string, final Map<String, PredicateBuilder> builders, final ExchangeAttributeParser attributeParser) {
 
         //shunting yard algorithm
         //gets rid or parentheses and fixes up operator ordering
@@ -141,7 +145,7 @@ public class PredicateParser {
                     }
                     operatorStack.push(token.token);
                 } else {
-                    output.push(parsePredicate(string, token, tokens, builders));
+                    output.push(parsePredicate(string, token, tokens, builders, attributeParser));
                 }
             }
         }
@@ -167,11 +171,11 @@ public class PredicateParser {
         } else if (token.equals("and")) {
             Node n1 = collapseOutput(tokens.pop(), tokens);
             Node n2 = collapseOutput(tokens.pop(), tokens);
-            return new AndNode(n1, n2);
+            return new AndNode(n2, n1);
         } else if (token.equals("or")) {
             Node n1 = collapseOutput(tokens.pop(), tokens);
             Node n2 = collapseOutput(tokens.pop(), tokens);
-            return new OrNode(n1, n2);
+            return new OrNode(n2, n1);
         } else if (token.equals("not")) {
             Node n1 = collapseOutput(tokens.pop(), tokens);
             return new NotNode(n1);
@@ -181,7 +185,7 @@ public class PredicateParser {
 
     }
 
-    private static Object parsePredicate(final String string, final Token token, final Deque<Token> tokens, final Map<String, PredicateBuilder> builders) {
+    private static Object parsePredicate(final String string, final Token token, final Deque<Token> tokens, final Map<String, PredicateBuilder> builders, final ExchangeAttributeParser attributeParser) {
         if (token.token.equals("true")) {
             return new PredicateNode(TruePredicate.instance());
         } else if (token.token.equals("false")) {
@@ -202,14 +206,14 @@ public class PredicateParser {
                 }
                 if (next.token.equals("{")) {
 
-                    return handleSingleArrayValue(string, builder, tokens, next);
+                    return handleSingleArrayValue(string, builder, tokens, next, attributeParser);
                 }
                 while (!next.token.equals("]")) {
                     Token equals = tokens.poll();
                     if (!equals.token.equals("=")) {
                         if (equals.token.equals("]") && values.isEmpty()) {
                             //single value case
-                            return handleSingleValue(string, builder, next);
+                            return handleSingleValue(string, builder, next, attributeParser);
                         } else {
                             throw error(string, equals.position, "Unexpected token");
                         }
@@ -219,7 +223,7 @@ public class PredicateParser {
                         throw error(string, string.length(), "Unexpected end of input");
                     }
                     if (value.token.equals("{")) {
-                        values.put(next.token, readArrayType(string, tokens, next, builder));
+                        values.put(next.token, readArrayType(string, tokens, next, builder, attributeParser));
                     } else {
                         if (isOperator(value.token) || isSpecialChar(value.token)) {
                             throw error(string, value.position, "Unexpected token");
@@ -229,15 +233,15 @@ public class PredicateParser {
                         if (type == null) {
                             throw error(string, next.position, "Unexpected parameter " + next.token);
                         }
-                        values.put(next.token, coerceToType(string, value, type));
+                        values.put(next.token, coerceToType(string, value, type, attributeParser));
                     }
 
                     next = tokens.poll();
                     if (next == null) {
                         throw error(string, string.length(), "Unexpected end of input");
                     }
-                    if(!next.token.equals("]")) {
-                        if(!next.token.equals(",")) {
+                    if (!next.token.equals("]")) {
+                        if (!next.token.equals(",")) {
                             throw error(string, string.length(), "Expecting , or ]");
                         }
                         next = tokens.poll();
@@ -258,12 +262,12 @@ public class PredicateParser {
         }
     }
 
-    private static Node handleSingleArrayValue(final String string, final PredicateBuilder builder, final Deque<Token> tokens, final Token token) {
+    private static Node handleSingleArrayValue(final String string, final PredicateBuilder builder, final Deque<Token> tokens, final Token token, final ExchangeAttributeParser attributeParser) {
         String sv = builder.defaultParameter();
         if (sv == null) {
             throw error(string, token.position, "default parameter not supported");
         }
-        Object array = readArrayType(string, tokens, new Token(sv, token.position), builder);
+        Object array = readArrayType(string, tokens, new Token(sv, token.position), builder, attributeParser);
         Token close = tokens.poll();
         if (!close.token.equals("]")) {
             throw error(string, close.position, "expected ]");
@@ -271,7 +275,7 @@ public class PredicateParser {
         return new BuilderNode(builder, Collections.singletonMap(sv, array));
     }
 
-    private static Object readArrayType(final String string, final Deque<Token> tokens, Token paramName, PredicateBuilder builder) {
+    private static Object readArrayType(final String string, final Deque<Token> tokens, Token paramName, PredicateBuilder builder, final ExchangeAttributeParser attributeParser) {
         Class<?> type = builder.parameters().get(paramName.token);
         if (type == null) {
             throw error(string, paramName.position, "no parameter called " + paramName.token);
@@ -284,7 +288,7 @@ public class PredicateParser {
         Token token = tokens.poll();
         while (token != null) {
             Token commaOrEnd = tokens.poll();
-            values.add(coerceToType(string, token, componentType));
+            values.add(coerceToType(string, token, componentType, attributeParser));
             if (commaOrEnd.token.equals("}")) {
                 Object array = Array.newInstance(componentType, values.size());
                 for (int i = 0; i < values.size(); ++i) {
@@ -300,12 +304,12 @@ public class PredicateParser {
     }
 
 
-    private static Object handleSingleValue(final String string, final PredicateBuilder builder, final Token next) {
+    private static Object handleSingleValue(final String string, final PredicateBuilder builder, final Token next, final ExchangeAttributeParser attributeParser) {
         String sv = builder.defaultParameter();
         if (sv == null) {
             throw error(string, next.position, "default parameter not supported");
         }
-        Map<String, Object> values = Collections.singletonMap(sv, coerceToType(string, next, builder.parameters().get(sv)));
+        Map<String, Object> values = Collections.singletonMap(sv, coerceToType(string, next, builder.parameters().get(sv), attributeParser));
         checkParameters(string, next.position, values, builder);
         return new BuilderNode(builder, values);
     }
@@ -321,10 +325,10 @@ public class PredicateParser {
     }
 
 
-    private static Object coerceToType(final String string, final Token token, final Class<?> type) {
+    private static Object coerceToType(final String string, final Token token, final Class<?> type, final ExchangeAttributeParser attributeParser) {
         if (type.isArray()) {
             Object array = Array.newInstance(type.getComponentType(), 1);
-            Array.set(array, 0, coerceToType(string, token, type.getComponentType()));
+            Array.set(array, 0, coerceToType(string, token, type.getComponentType(), attributeParser));
             return array;
         }
 
@@ -349,6 +353,8 @@ public class PredicateParser {
             return Float.valueOf(token.token);
         } else if (type.equals(Double.class) || type.equals(double.class)) {
             return Double.valueOf(token.token);
+        } else if (type.equals(ExchangeAttribute.class)) {
+            return attributeParser.parse(token.token);
         }
 
         return token.token;
@@ -391,17 +397,19 @@ public class PredicateParser {
     }
 
     static Deque<Token> tokenize(final String string) {
-        boolean inString = false;
+        char currentStringDelim = 0;
+        boolean inVariable = false;
+
         int pos = 0;
         StringBuilder current = new StringBuilder();
         Deque<Token> ret = new ArrayDeque<Token>();
         while (pos < string.length()) {
             char c = string.charAt(pos);
-            if (inString) {
-                if (c == '"' && current.charAt(current.length() - 1) != '\\') {
+            if (currentStringDelim != 0) {
+                if (c ==currentStringDelim && current.charAt(current.length() - 1) != '\\') {
                     ret.add(new Token(current.toString(), pos));
                     current.setLength(0);
-                    inString = false;
+                    currentStringDelim = 0;
                 } else {
                     current.append(c);
                 }
@@ -423,18 +431,33 @@ public class PredicateParser {
                     case ']':
                     case '{':
                     case '}': {
-                        if (current.length() != 0) {
-                            ret.add(new Token(current.toString(), pos));
-                            current.setLength(0);
+                        if (inVariable) {
+                            current.append(c);
+                            if(c == '}') {
+                                inVariable = false;
+                            }
+                        } else {
+                            if (current.length() != 0) {
+                                ret.add(new Token(current.toString(), pos));
+                                current.setLength(0);
+                            }
+                            ret.add(new Token("" + c, pos));
                         }
-                        ret.add(new Token("" + c, pos));
                         break;
                     }
-                    case '"': {
+                    case '"':
+                    case '\'': {
                         if (current.length() != 0) {
                             throw error(string, pos, "Unexpected token");
                         }
-                        inString = true;
+                        currentStringDelim = c;
+                        break;
+                    }
+                    case '%': {
+                        current.append(c);
+                        if (string.charAt(pos + 1) == '{') {
+                            inVariable = true;
+                        }
                         break;
                     }
                     default:

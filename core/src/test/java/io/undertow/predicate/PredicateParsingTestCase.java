@@ -18,6 +18,8 @@
 
 package io.undertow.predicate;
 
+import java.util.HashMap;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import org.junit.Assert;
@@ -30,7 +32,7 @@ public class PredicateParsingTestCase {
 
     @Test
     public void testPredicateParser() {
-        Predicate predicate = PredicateParser.parse("path[foo]");
+        Predicate predicate = PredicateParser.parse("path[foo]", PredicateParsingTestCase.class.getClassLoader());
         Assert.assertTrue(predicate instanceof PathMatchPredicate);
         HttpServerExchange e = new HttpServerExchange(null);
         e.setRelativePath("foo");
@@ -45,7 +47,7 @@ public class PredicateParsingTestCase {
                 "false or not path[/foo]",
                 "true and not path[foo] or not path[foo] and false"}) {
             try {
-                predicate = PredicateParser.parse(string);
+                predicate = PredicateParser.parse(string, PredicateParsingTestCase.class.getClassLoader());
                 e = new HttpServerExchange(null);
                 e.setRelativePath("foo");
                 Assert.assertFalse(predicate.resolve(e));
@@ -58,19 +60,38 @@ public class PredicateParsingTestCase {
     }
 
     @Test
+    public void testRegularExpressionsWithPredicateContext() {
+        Predicate predicate = PredicateParser.parse("regex[pattern=a* , value=%{RELATIVE_PATH}] and equals[{$0, aaa}]", PredicateParsingTestCase.class.getClassLoader());
+        HttpServerExchange e = new HttpServerExchange(null);
+        e.putAttachment(Predicate.PREDICATE_CONTEXT, new HashMap<String, Object>());
+        e.setRelativePath("aaab");
+        Assert.assertTrue(predicate.resolve(e));
+        e.setRelativePath("aaaab");
+        Assert.assertFalse(predicate.resolve(e));
+
+        predicate = PredicateParser.parse("regex[pattern='a(b*)a*' , value=%{RELATIVE_PATH}] and equals[{$1, bb}]", PredicateParsingTestCase.class.getClassLoader());
+        e.putAttachment(Predicate.PREDICATE_CONTEXT, new HashMap<String, Object>());
+        e.setRelativePath("abb");
+        Assert.assertTrue(predicate.resolve(e));
+        e.setRelativePath("abbaaa");
+        Assert.assertTrue(predicate.resolve(e));
+        e.setRelativePath("abbb");
+        Assert.assertFalse(predicate.resolve(e));
+    }
+
+    @Test
     public void testArrayValues() {
         Predicate predicate;
         for (String string : new String[]{
-                "hasRequestHeaders[Content-Length]",
-                "hasRequestHeaders[{Content-Length}]",
-                "hasRequestHeaders[headers={Content-Length}]",
-                "hasRequestHeaders[headers={Content-Length, otherHeader, \"some more headers\"}, requireAllHeaders=false]",
+                "contains[value=%{Content-Type}i, search=text]",
+                "contains[value=\"%{Content-Type}i\", search={text}]",
+                "contains[value=\"%{Content-Type}i\", search={text, \"other text\"}]",
         }) {
             try {
-                predicate = PredicateParser.parse(string);
+                predicate = PredicateParser.parse(string, PredicateParsingTestCase.class.getClassLoader());
                 HttpServerExchange e = new HttpServerExchange(null);
                 Assert.assertFalse(predicate.resolve(e));
-                e.getRequestHeaders().add(Headers.CONTENT_LENGTH, "a");
+                e.getRequestHeaders().add(Headers.CONTENT_TYPE, "text");
                 Assert.assertTrue(predicate.resolve(e));
             } catch (Throwable ex) {
                 throw new RuntimeException("String " + string, ex);
@@ -80,13 +101,13 @@ public class PredicateParsingTestCase {
 
     @Test
     public void testOrderOfOperations() {
-        expect("hasRequestHeaders[Content-Length] or hasRequestHeaders[headers=Trailer] and hasRequestHeaders[Other]", false, true);
-        expect("(hasRequestHeaders[Content-Length] or hasRequestHeaders[headers=Trailer]) and hasRequestHeaders[Other]", false, false);
+        expect("exists[%{Content-Length}i] or exists[value=%{Trailer}i] and exists[%{Other}i]", false, true);
+        expect("(exists[%{Content-Length}i] or exists[value=%{Trailer}i]) and exists[%{Other}i]", false, false);
     }
 
     private void expect(String string, boolean result1, boolean result2) {
         try {
-            Predicate predicate = PredicateParser.parse(string);
+            Predicate predicate = PredicateParser.parse(string, PredicateParsingTestCase.class.getClassLoader());
             HttpServerExchange e = new HttpServerExchange(null);
             e.getRequestHeaders().add(Headers.TRAILER, "a");
             Assert.assertEquals(result1, predicate.resolve(e));

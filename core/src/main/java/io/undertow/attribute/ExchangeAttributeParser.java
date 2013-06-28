@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import io.undertow.UndertowLogger;
+
 /**
  * Attribute parser for exchange attributes. This builds an attribute from a string definition.
  *
@@ -29,12 +31,15 @@ public class ExchangeAttributeParser {
 
     }
 
-    public ExchangeAttribute parser(final String token) {
+    public ExchangeAttribute parse(final String token) {
         for (final ExchangeAttributeBuilder builder : buiders) {
             ExchangeAttribute res = builder.build(token);
             if (res != null) {
                 return res;
             }
+        }
+        if(token.startsWith("%")) {
+            UndertowLogger.ROOT_LOGGER.unkownVariable(token);
         }
         return new ConstantExchangeAttribute(token);
     }

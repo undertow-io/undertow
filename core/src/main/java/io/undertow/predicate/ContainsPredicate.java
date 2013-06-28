@@ -23,37 +23,34 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.HttpString;
 
 /**
  * Returns true if the request header is present and contains one of the strings to match.
  *
  * @author Stuart Douglas
  */
-class RequestHeaderContainsPredicate implements Predicate {
+class ContainsPredicate implements Predicate {
 
-    private final HttpString header;
+    private final ExchangeAttribute attribute;
     private final String[] values;
 
-    RequestHeaderContainsPredicate(final String header, final String[] values) {
-        this.header = new HttpString(header);
+    ContainsPredicate(final ExchangeAttribute attribute, final String[] values) {
+        this.attribute = attribute;
         this.values = new String[values.length];
         System.arraycopy(values, 0, this.values, 0, values.length);
     }
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        HeaderValues headers = value.getRequestHeaders().get(header);
-        if(headers == null) {
+        String attr = attribute.readAttribute(value);
+        if (attr == null) {
             return false;
         }
-        for(String header : headers) {
-            for(int i = 0; i < values.length; ++i) {
-                if(header.contains(values[i])) {
-                    return true;
-                }
+        for (int i = 0; i < values.length; ++i) {
+            if (attr.contains(values[i])) {
+                return true;
             }
         }
         return false;
@@ -63,14 +60,14 @@ class RequestHeaderContainsPredicate implements Predicate {
 
         @Override
         public String name() {
-            return "requestHeaderContains";
+            return "contains";
         }
 
         @Override
         public Map<String, Class<?>> parameters() {
             final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
-            params.put("value", String[].class);
-            params.put("header", String.class);
+            params.put("value", ExchangeAttribute.class);
+            params.put("search", String[].class);
             return params;
         }
 
@@ -78,7 +75,7 @@ class RequestHeaderContainsPredicate implements Predicate {
         public Set<String> requiredParameters() {
             final Set<String> params = new HashSet<String>();
             params.add("value");
-            params.add("header");
+            params.add("search");
             return params;
         }
 
@@ -89,9 +86,9 @@ class RequestHeaderContainsPredicate implements Predicate {
 
         @Override
         public Predicate build(final Map<String, Object> config) {
-            String[] values = (String[]) config.get("value");
-            String header = (String) config.get("header");
-            return new RequestHeaderContainsPredicate(header, values);
+            String[] search = (String[]) config.get("search");
+            ExchangeAttribute values = (ExchangeAttribute) config.get("value");
+            return new ContainsPredicate(values, search);
         }
     }
 }
