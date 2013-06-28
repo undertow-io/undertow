@@ -185,4 +185,7 @@ public interface UndertowMessages {
 
     @Message(id = 54, value = "The maximum size %s for an individual file in a multipart request was exceeded")
     IOException maxFileSizeExceeded(long maxIndividualFileSize);
+
+    @Message(id = 55, value = "Could not set attribute %s to %s as it is read only")
+    String couldNotSetAttribute(String attributeName, String newValue);
 }

@@ -4,13 +4,68 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributeParser;
+import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
 /**
+ *
+ *
  * Access log handler. This handler will generate access log messages based on the provided format string,
  * and pass these messages into the provided {@link AccessLogReceiver}.
+ *
+ * This handler can log any attribute that is provides via the {@link io.undertow.attribute.ExchangeAttribute}
+ * mechanism. A general guide to the most common attribute is provided before, however this mechanism is extensible.
+ *
+ * <p/>
+ * <p>This factory produces token handlers for the following patterns</p>
+ * <ul>
+ * <li><b>%a</b> - Remote IP address
+ * <li><b>%A</b> - Local IP address
+ * <li><b>%b</b> - Bytes sent, excluding HTTP headers, or '-' if no bytes
+ * were sent
+ * <li><b>%B</b> - Bytes sent, excluding HTTP headers
+ * <li><b>%h</b> - Remote host name
+ * <li><b>%H</b> - Request protocol
+ * <li><b>%l</b> - Remote logical username from identd (always returns '-')
+ * <li><b>%m</b> - Request method
+ * <li><b>%p</b> - Local port
+ * <li><b>%q</b> - Query string (prepended with a '?' if it exists, otherwise
+ * an empty string
+ * <li><b>%r</b> - First line of the request
+ * <li><b>%s</b> - HTTP status code of the response
+ * <li><b>%t</b> - Date and time, in Common Log Format format
+ * <li><b>%u</b> - Remote user that was authenticated
+ * <li><b>%U</b> - Requested URL path
+ * <li><b>%v</b> - Local server name
+ * <li><b>%D</b> - Time taken to process the request, in millis
+ * <li><b>%T</b> - Time taken to process the request, in seconds
+ * <li><b>%I</b> - current Request thread name (can compare later with stacktraces)
+ * </ul>
+ * <p>In addition, the caller can specify one of the following aliases for
+ * commonly utilized patterns:</p>
+ * <ul>
+ * <li><b>common</b> - <code>%h %l %u %t "%r" %s %b</code>
+ * <li><b>combined</b> -
+ * <code>%h %l %u %t "%r" %s %b "%{Referer}i" "%{User-Agent}i"</code>
+ * </ul>
+ * <p/>
+ * <p>
+ * There is also support to write information from the cookie, incoming
+ * header, or the session<br>
+ * It is modeled after the apache syntax:
+ * <ul>
+ * <li><code>%{xxx}i</code> for incoming headers
+ * <li><code>%{xxx}o</code> for outgoing response headers
+ * <li><code>%{xxx}c</code> for a specific cookie
+ * <li><code>%{xxx}r</code> xxx is an attribute in the ServletRequest
+ * <li><code>%{xxx}s</code> xxx is an attribute in the HttpSession
+ * </ul>
+ * </p>
+ *
  *
  * @author Stuart Douglas
  */
@@ -19,31 +74,22 @@ public class AccessLogHandler implements HttpHandler {
     private final HttpHandler next;
     private final AccessLogReceiver accessLogReceiver;
     private final String formatString;
-    private final TokenHandler[] tokens;
+    private final ExchangeAttribute[] tokens;
     private final ExchangeCompletionListener exchangeCompletionListener = new AccessLogCompletionListener();
 
-    public AccessLogHandler(final HttpHandler next, final AccessLogReceiver accessLogReceiver, final String formatString, TokenHandler.Factory... factories) {
+    public AccessLogHandler(final HttpHandler next, final AccessLogReceiver accessLogReceiver, final String formatString, ClassLoader classLoader) {
         this.next = next;
         this.accessLogReceiver = accessLogReceiver;
         this.formatString = formatString;
-        final List<TokenHandler> tokenHandlers = new ArrayList<TokenHandler>();
+        ExchangeAttributeParser parser = ExchangeAttributes.parser(classLoader);
+        final List<ExchangeAttribute> tokenHandlers = new ArrayList<ExchangeAttribute>();
         StringTokenizer tokeniser = new StringTokenizer(formatString, " ", false);
         while (tokeniser.hasMoreElements()) {
             String elem = (String) tokeniser.nextElement();
-            TokenHandler tokenHandler = null;
-            for (TokenHandler.Factory factory : factories) {
-                tokenHandler = factory.create(elem);
-                if (tokenHandler != null) {
-                    break;
-                }
-            }
-            if (tokenHandler == null) {
-                tokenHandler = new ConstantAccessLogToken(elem);
-            }
-            tokenHandlers.add(tokenHandler);
+            tokenHandlers.add(parser.parser(elem));
         }
 
-        this.tokens = tokenHandlers.toArray(new TokenHandler[tokenHandlers.size()]);
+        this.tokens = tokenHandlers.toArray(new ExchangeAttribute[tokenHandlers.size()]);
     }
 
 
@@ -59,7 +105,7 @@ public class AccessLogHandler implements HttpHandler {
             try {
                 StringBuilder builder = new StringBuilder();
                 for (int i = 0; i < tokens.length; ++i) {
-                    String result = tokens[i].generateMessage(exchange);
+                    String result = tokens[i].readAttribute(exchange);
                     if (result == null) {
                         builder.append('-');
                     } else {
