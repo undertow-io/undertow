@@ -69,7 +69,7 @@ public class PredicateParsingTestCase {
         e.setRelativePath("aaaab");
         Assert.assertFalse(predicate.resolve(e));
 
-        predicate = PredicateParser.parse("regex[pattern='a(b*)a*' , value=%{RELATIVE_PATH}] and equals[{$1, bb}]", PredicateParsingTestCase.class.getClassLoader());
+        predicate = PredicateParser.parse("regex[pattern='a(b*)a*' , value=%{RELATIVE_PATH}] and equals[$1, bb]", PredicateParsingTestCase.class.getClassLoader());
         e.putAttachment(Predicate.PREDICATE_CONTEXT, new HashMap<String, Object>());
         e.setRelativePath("abb");
         Assert.assertTrue(predicate.resolve(e));

@@ -205,7 +205,6 @@ public class PredicateParser {
                     throw error(string, string.length(), "Unexpected end of input");
                 }
                 if (next.token.equals("{")) {
-
                     return handleSingleArrayValue(string, builder, tokens, next, attributeParser);
                 }
                 while (!next.token.equals("]")) {
@@ -214,16 +213,19 @@ public class PredicateParser {
                         if (equals.token.equals("]") && values.isEmpty()) {
                             //single value case
                             return handleSingleValue(string, builder, next, attributeParser);
-                        } else {
-                            throw error(string, equals.position, "Unexpected token");
+                        } else if (equals.token.equals(",")) {
+                            tokens.push(equals);
+                            tokens.push(next);
+                            return handleSingleVarArgsValue(string, builder, tokens, next, attributeParser);
                         }
+                        throw error(string, equals.position, "Unexpected token");
                     }
                     Token value = tokens.poll();
                     if (value == null) {
                         throw error(string, string.length(), "Unexpected end of input");
                     }
                     if (value.token.equals("{")) {
-                        values.put(next.token, readArrayType(string, tokens, next, builder, attributeParser));
+                        values.put(next.token, readArrayType(string, tokens, next, builder, attributeParser, "}"));
                     } else {
                         if (isOperator(value.token) || isSpecialChar(value.token)) {
                             throw error(string, value.position, "Unexpected token");
@@ -267,7 +269,7 @@ public class PredicateParser {
         if (sv == null) {
             throw error(string, token.position, "default parameter not supported");
         }
-        Object array = readArrayType(string, tokens, new Token(sv, token.position), builder, attributeParser);
+        Object array = readArrayType(string, tokens, new Token(sv, token.position), builder, attributeParser, "}");
         Token close = tokens.poll();
         if (!close.token.equals("]")) {
             throw error(string, close.position, "expected ]");
@@ -275,7 +277,16 @@ public class PredicateParser {
         return new BuilderNode(builder, Collections.singletonMap(sv, array));
     }
 
-    private static Object readArrayType(final String string, final Deque<Token> tokens, Token paramName, PredicateBuilder builder, final ExchangeAttributeParser attributeParser) {
+    private static Node handleSingleVarArgsValue(final String string, final PredicateBuilder builder, final Deque<Token> tokens, final Token token, final ExchangeAttributeParser attributeParser) {
+        String sv = builder.defaultParameter();
+        if (sv == null) {
+            throw error(string, token.position, "default parameter not supported");
+        }
+        Object array = readArrayType(string, tokens, new Token(sv, token.position), builder, attributeParser, "]");
+        return new BuilderNode(builder, Collections.singletonMap(sv, array));
+    }
+
+    private static Object readArrayType(final String string, final Deque<Token> tokens, Token paramName, PredicateBuilder builder, final ExchangeAttributeParser attributeParser, String expectedEndToken) {
         Class<?> type = builder.parameters().get(paramName.token);
         if (type == null) {
             throw error(string, paramName.position, "no parameter called " + paramName.token);
@@ -289,7 +300,7 @@ public class PredicateParser {
         while (token != null) {
             Token commaOrEnd = tokens.poll();
             values.add(coerceToType(string, token, componentType, attributeParser));
-            if (commaOrEnd.token.equals("}")) {
+            if (commaOrEnd.token.equals(expectedEndToken)) {
                 Object array = Array.newInstance(componentType, values.size());
                 for (int i = 0; i < values.size(); ++i) {
                     Array.set(array, i, values.get(i));
@@ -406,7 +417,7 @@ public class PredicateParser {
         while (pos < string.length()) {
             char c = string.charAt(pos);
             if (currentStringDelim != 0) {
-                if (c ==currentStringDelim && current.charAt(current.length() - 1) != '\\') {
+                if (c == currentStringDelim && current.charAt(current.length() - 1) != '\\') {
                     ret.add(new Token(current.toString(), pos));
                     current.setLength(0);
                     currentStringDelim = 0;
@@ -433,7 +444,7 @@ public class PredicateParser {
                     case '}': {
                         if (inVariable) {
                             current.append(c);
-                            if(c == '}') {
+                            if (c == '}') {
                                 inVariable = false;
                             }
                         } else {
