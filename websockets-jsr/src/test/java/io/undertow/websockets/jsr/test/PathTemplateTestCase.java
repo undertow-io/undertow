@@ -24,7 +24,7 @@ import java.util.TreeSet;
 
 import javax.websocket.DeploymentException;
 
-import io.undertow.websockets.jsr.PathTemplate;
+import io.undertow.util.PathTemplate;
 import org.junit.Assert;
 import org.junit.Test;
 

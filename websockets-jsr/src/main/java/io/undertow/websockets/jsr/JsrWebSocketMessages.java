@@ -27,6 +27,7 @@ import javax.websocket.Decoder;
 import javax.websocket.DeploymentException;
 import javax.websocket.Encoder;
 
+import io.undertow.util.PathTemplate;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
@@ -102,9 +103,6 @@ public interface JsrWebSocketMessages {
 
     @Message(id = 3021, value = "%s does not have default constructor")
     DeploymentException classDoesNotHaveDefaultConstructor(Class<?> c, @Cause NoSuchMethodException e);
-
-    @Message(id = 3022, value = "Could not parse URI template %s, exception at char %s")
-    DeploymentException couldNotParseUriTemplate(String path, int i);
 
     @Message(id = 3023, value = "Multiple endpoints with the same logical mapping %s and %s")
     DeploymentException multipleEndpointsWithOverlappingPaths(PathTemplate template, PathTemplate existing);

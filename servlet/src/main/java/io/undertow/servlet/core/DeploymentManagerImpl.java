@@ -59,7 +59,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.WebResourceCollection;
-import io.undertow.servlet.handlers.DispatcherTypePredicate;
+import io.undertow.servlet.predicate.DispatcherTypePredicate;
 import io.undertow.servlet.handlers.ServletDispatchingHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
 import io.undertow.servlet.handlers.security.CachedAuthenticatedSessionHandler;

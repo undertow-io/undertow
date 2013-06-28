@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package io.undertow.websockets.jsr;
+package io.undertow.util;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.websocket.DeploymentException;
+import io.undertow.UndertowMessages;
+
 
 /**
  * Represents a parsed web socket path template.
@@ -48,7 +49,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
         this.parts = parts;
     }
 
-    public static PathTemplate create(final String path) throws DeploymentException {
+    public static PathTemplate create(final String path) {
 
         int state = 0;
         String base = "";
@@ -96,7 +97,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
                     if (c == '/') {
                         state = 4;
                     } else {
-                        throw JsrWebSocketMessages.MESSAGES.couldNotParseUriTemplate(path, i);
+                        throw UndertowMessages.MESSAGES.couldNotParseUriTemplate(path, i);
                     }
                     break;
                 }
@@ -129,7 +130,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
                 break;
             }
             case 2: {
-                throw JsrWebSocketMessages.MESSAGES.couldNotParseUriTemplate(path, path.length());
+                throw UndertowMessages.MESSAGES.couldNotParseUriTemplate(path, path.length());
             }
             case 5: {
                 Part part = new Part(false, path.substring(stringStart));

@@ -189,4 +189,6 @@ public interface UndertowMessages {
     @Message(id = 55, value = "Could not set attribute %s to %s as it is read only")
     String couldNotSetAttribute(String attributeName, String newValue);
 
+    @Message(id = 56, value = "Could not parse URI template %s, exception at char %s")
+    RuntimeException couldNotParseUriTemplate(String path, int i);
 }

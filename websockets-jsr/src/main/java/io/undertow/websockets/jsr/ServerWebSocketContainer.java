@@ -45,6 +45,7 @@ import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
+import io.undertow.util.PathTemplate;
 import io.undertow.websockets.api.WebSocketSessionIdGenerator;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.WebSocketChannel;

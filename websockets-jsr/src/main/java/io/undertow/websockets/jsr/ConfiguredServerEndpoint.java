@@ -9,6 +9,7 @@ import javax.websocket.Session;
 import javax.websocket.server.ServerEndpointConfig;
 
 import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.util.PathTemplate;
 
 /**
  * @author Stuart Douglas

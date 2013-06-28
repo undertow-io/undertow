@@ -1,13 +1,19 @@
-package io.undertow.servlet.handlers;
+package io.undertow.servlet.predicate;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.DispatcherType;
 
 import io.undertow.predicate.Predicate;
+import io.undertow.predicate.PredicateBuilder;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.handlers.ServletRequestContext;
 
 /**
  * Predicate that returns true if the dispatcher type matches the specified type.
- *
  *
  * @author Stuart Douglas
  */
@@ -30,4 +36,39 @@ public class DispatcherTypePredicate implements Predicate {
     public boolean resolve(final HttpServerExchange value) {
         return value.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getDispatcherType() == dispatcherType;
     }
+
+
+    public static class Builder implements PredicateBuilder {
+
+        @Override
+        public String name() {
+            return "dispatcher";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            final Map<String, Class<?>> params = new HashMap<String, Class<?>>();
+            params.put("value", String.class);
+            return params;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            final Set<String> params = new HashSet<String>();
+            params.add("value");
+            return params;
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "value";
+        }
+
+        @Override
+        public Predicate build(final Map<String, Object> config) {
+            String value = (String) config.get("value");
+            return new DispatcherTypePredicate(DispatcherType.valueOf(value));
+        }
+    }
+
 }
