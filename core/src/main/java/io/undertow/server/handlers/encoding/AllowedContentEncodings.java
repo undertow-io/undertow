@@ -15,15 +15,15 @@ import org.xnio.conduits.StreamSinkConduit;
  *
  * @author Stuart Douglas
  */
-public class ContentEncoding implements ConduitWrapper<StreamSinkConduit> {
+public class AllowedContentEncodings implements ConduitWrapper<StreamSinkConduit> {
 
-    public static final AttachmentKey<ContentEncoding> CONENT_ENCODING = AttachmentKey.create(ContentEncoding.class);
+    public static final AttachmentKey<AllowedContentEncodings> ATTACHMENT_KEY = AttachmentKey.create(AllowedContentEncodings.class);
 
     private final HttpServerExchange exchange;
     private final List<EncodingMapping> encodings;
 
 
-    public ContentEncoding(final HttpServerExchange exchange, final List<EncodingMapping> encodings) {
+    public AllowedContentEncodings(final HttpServerExchange exchange, final List<EncodingMapping> encodings) {
         this.exchange = exchange;
         this.encodings = encodings;
     }
@@ -38,6 +38,15 @@ public class ContentEncoding implements ConduitWrapper<StreamSinkConduit> {
             }
         }
         return Headers.IDENTITY.toString();
+    }
+
+    /**
+     * If the list of allowed encodings was empty then it means that no encodings were allowed, and
+     * identity was explicitly prohibited with a q value of 0.
+     *
+     */
+    public boolean isNoEncodingsAllowed() {
+        return encodings.isEmpty();
     }
 
     @Override

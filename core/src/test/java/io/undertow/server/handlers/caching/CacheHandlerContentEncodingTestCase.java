@@ -10,6 +10,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.CacheHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.cache.ResponseCache;
+import io.undertow.server.handlers.encoding.ContentEncodingRepository;
 import io.undertow.server.handlers.encoding.DeflateEncodingProvider;
 import io.undertow.server.handlers.encoding.EncodingHandler;
 import io.undertow.testutils.DefaultServer;
@@ -57,13 +58,13 @@ public class CacheHandlerContentEncodingTestCase {
             }
         };
         final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(100, 10, 10000), messageHandler);
-        final EncodingHandler handler = new EncodingHandler(cacheHandler);
-        handler.addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, new Predicate() {
+        final EncodingHandler handler = new EncodingHandler(cacheHandler, new ContentEncodingRepository()
+        .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, new Predicate() {
             @Override
             public boolean resolve(final HttpServerExchange value) {
                 return value.getRequestHeaders().contains(ACTUALLY_DEFLATE);
             }
-        });
+        }));
         DefaultServer.setRootHandler(handler);
     }
 

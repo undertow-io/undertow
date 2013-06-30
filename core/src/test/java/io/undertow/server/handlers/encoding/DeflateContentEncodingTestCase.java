@@ -29,8 +29,8 @@ public class DeflateContentEncodingTestCase {
 
     @BeforeClass
     public static void setup() {
-        final EncodingHandler handler = new EncodingHandler()
-                .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, Predicates.maxContentSize(5))
+        final EncodingHandler handler = new EncodingHandler(new ContentEncodingRepository()
+                .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50, Predicates.maxContentSize(5)))
                 .setNext(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {

@@ -56,10 +56,10 @@ public class EncodingSelectionTestCase {
     public void testBasicEncodingSelect() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            final EncodingHandler handler = new EncodingHandler();
-            handler.addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 50);
-            handler.addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 100);
-            handler.setNext(new HttpHandler() {
+            final EncodingHandler handler = new EncodingHandler(new ContentEncodingRepository()
+            .addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 50)
+            .addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 100))
+            .setNext(new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange) throws Exception {
                     exchange.getResponseSender().send("hi"); //we need some content to encode
@@ -131,10 +131,10 @@ public class EncodingSelectionTestCase {
     public void testEncodingSelectWithQValue() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            final EncodingHandler handler = new EncodingHandler();
-            handler.addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 100);
-            handler.addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 50);
-            handler.setNext(new HttpHandler() {
+            final EncodingHandler handler = new EncodingHandler(new ContentEncodingRepository()
+            .addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 100)
+            .addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 50))
+            .setNext(new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange) throws Exception {
                     exchange.getResponseSender().send("hi"); //we need some content to encode
@@ -200,10 +200,10 @@ public class EncodingSelectionTestCase {
     public void testEncodingSelectionWithQValueAndPredicate() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            final EncodingHandler handler = new EncodingHandler();
-            handler.addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 100, Predicates.falsePredicate());
-            handler.addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 50);
-            handler.setNext(new HttpHandler() {
+            final EncodingHandler handler = new EncodingHandler(new ContentEncodingRepository()
+            .addEncodingHandler("compress", ContentEncodingProvider.IDENTITY, 100, Predicates.falsePredicate())
+            .addEncodingHandler("bzip", ContentEncodingProvider.IDENTITY, 50))
+            .setNext(new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange) throws Exception {
                     exchange.getResponseSender().send("hi"); //we need some content to encode

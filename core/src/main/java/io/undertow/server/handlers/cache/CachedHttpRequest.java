@@ -3,7 +3,7 @@ package io.undertow.server.handlers.cache;
 import java.util.Date;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.encoding.ContentEncoding;
+import io.undertow.server.handlers.encoding.AllowedContentEncodings;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
@@ -37,7 +37,7 @@ public class CachedHttpRequest {
         }
         //the content encoding can be decided dynamically, based on the current state of the request
         //as the decision to compress generally dependends on size and mime type
-        final ContentEncoding encoding = exchange.getAttachment(ContentEncoding.CONENT_ENCODING);
+        final AllowedContentEncodings encoding = exchange.getAttachment(AllowedContentEncodings.ATTACHMENT_KEY);
         if(encoding != null) {
             this.contentEncoding = encoding.getCurrentContentEncoding();
         } else {
