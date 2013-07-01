@@ -161,7 +161,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             HttpHandler wrappedHandlers = ServletDispatchingHandler.INSTANCE;
             wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getInnerHandlerChainWrappers());
-            HttpHandler securityHandler  = setupSecurityHandlers(wrappedHandlers);
+            HttpHandler securityHandler = setupSecurityHandlers(wrappedHandlers);
             wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, securityHandler, wrappedHandlers);
 
             HttpHandler outerHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getOuterHandlerChainWrappers());
@@ -186,16 +186,16 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private void createServletsAndFilters(final DeploymentImpl deployment, final DeploymentInfo deploymentInfo) {
-        for(Map.Entry<String, ServletInfo> servlet : deploymentInfo.getServlets().entrySet()) {
+        for (Map.Entry<String, ServletInfo> servlet : deploymentInfo.getServlets().entrySet()) {
             deployment.getServlets().addServlet(servlet.getValue());
         }
-        for(Map.Entry<String, FilterInfo> filter : deploymentInfo.getFilters().entrySet()) {
+        for (Map.Entry<String, FilterInfo> filter : deploymentInfo.getFilters().entrySet()) {
             deployment.getFilters().addFilter(filter.getValue());
         }
     }
 
     private void handleExtensions(final DeploymentInfo deploymentInfo, final ServletContextImpl servletContext) {
-        for(ServletExtension extension : ServiceLoader.load(ServletExtension.class, deploymentInfo.getClassLoader())) {
+        for (ServletExtension extension : ServiceLoader.load(ServletExtension.class, deploymentInfo.getClassLoader())) {
             extension.handleDeployment(deploymentInfo, servletContext);
         }
     }
@@ -216,16 +216,16 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         final SecurityPathMatches securityPathMatches = buildSecurityConstraints();
         current = new AuthenticationCallHandler(current);
-        if(!securityPathMatches.isEmpty()) {
+        if (!securityPathMatches.isEmpty()) {
             current = new ServletAuthenticationConstraintHandler(current);
         }
         current = new ServletConfidentialityConstraintHandler(deploymentInfo.getConfidentialPortManager(), current);
-        if(!securityPathMatches.isEmpty()) {
+        if (!securityPathMatches.isEmpty()) {
             current = new ServletSecurityConstraintHandler(securityPathMatches, current);
         }
 
         String mechName = null;
-        if(loginConfig != null || !deploymentInfo.getAdditionalAuthenticationMechanisms().isEmpty()) {
+        if (loginConfig != null || !deploymentInfo.getAdditionalAuthenticationMechanisms().isEmpty()) {
             List<AuthenticationMechanism> authenticationMechanisms = new LinkedList<AuthenticationMechanism>();
             authenticationMechanisms.add(new CachedAuthenticatedSessionMechanism());
             authenticationMechanisms.addAll(deploymentInfo.getAdditionalAuthenticationMechanisms());
@@ -234,21 +234,30 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
                 mechName = loginConfig.getAuthMethod();
                 if (!deploymentInfo.isIgnoreStandardAuthenticationMechanism()) {
-                    if (mechName.equalsIgnoreCase(BASIC_AUTH)) {
-                        // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
-                        // comparable using '=='
-                        authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH));
-                    } else if (mechName.equalsIgnoreCase(FORM_AUTH)) {
-                        // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
-                        // comparable using '=='
-                        authenticationMechanisms.add(new ServletFormAuthenticationMechanism(FORM_AUTH, loginConfig.getLoginPage(),
-                                loginConfig.getErrorPage()));
-                    } else if (mechName.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
-                        authenticationMechanisms.add(new ClientCertAuthenticationMechanism(CLIENT_CERT_AUTH));
-                    } else if (mechName.equalsIgnoreCase(DIGEST_AUTH)) {
-                        authenticationMechanisms.add(new DigestAuthenticationMechanism(loginConfig.getRealmName(), deploymentInfo.getContextPath(), DIGEST_AUTH));
-                    } else {
-                        throw UndertowServletMessages.MESSAGES.unknownAuthenticationMechanism(mechName);
+                    if (mechName != null) {
+                        String[] mechanisms = mechName.split(",");
+                        for (String mechanism : mechanisms) {
+                            if (mechanism.equalsIgnoreCase(BASIC_AUTH)) {
+                                // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
+                                // comparable using '=='
+                                authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH));
+                            }else if (mechanism.equalsIgnoreCase("BASIC-SILENT")) {
+                                //slient basic auth with use the basic headers if available, but will never challenge
+                                //this allows programtic clients to use basic auth, and browsers to use other mechanisms
+                                authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), "BASIC-SILENT", true));
+                            } else if (mechanism.equalsIgnoreCase(FORM_AUTH)) {
+                                // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
+                                // comparable using '=='
+                                authenticationMechanisms.add(new ServletFormAuthenticationMechanism(FORM_AUTH, loginConfig.getLoginPage(),
+                                        loginConfig.getErrorPage()));
+                            } else if (mechanism.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
+                                authenticationMechanisms.add(new ClientCertAuthenticationMechanism(CLIENT_CERT_AUTH));
+                            } else if (mechanism.equalsIgnoreCase(DIGEST_AUTH)) {
+                                authenticationMechanisms.add(new DigestAuthenticationMechanism(loginConfig.getRealmName(), deploymentInfo.getContextPath(), DIGEST_AUTH));
+                            } else {
+                                throw UndertowServletMessages.MESSAGES.unknownAuthenticationMechanism(mechanism);
+                            }
+                        }
                     }
                 }
             }
@@ -341,10 +350,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
         for (final ErrorPage page : deploymentInfo.getErrorPages()) {
             if (page.getExceptionType() != null) {
                 exceptions.put(page.getExceptionType(), page.getLocation());
-            } else if(page.getErrorCode() != null){
+            } else if (page.getErrorCode() != null) {
                 codes.put(page.getErrorCode(), page.getLocation());
             } else {
-                if(defaultErrorPage != null) {
+                if (defaultErrorPage != null) {
                     throw UndertowServletMessages.MESSAGES.moreThanOneDefaultErrorPage(defaultErrorPage, page.getLocation());
                 } else {
                     defaultErrorPage = page.getLocation();
