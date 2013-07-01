@@ -57,7 +57,7 @@ public class FileResourceManager implements ResourceManager {
         try {
             File file = new File(base, p);
             if (file.exists()) {
-                return new FileResource(file, base);
+                return new FileResource(file, base, path);
             } else {
                 return null;
             }

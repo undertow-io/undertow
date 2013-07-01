@@ -74,6 +74,11 @@ public class CachedResource implements Resource {
     }
 
     @Override
+    public String getPath() {
+        return underlyingResource.getPath();
+    }
+
+    @Override
     public Date getLastModified() {
         return lastModifiedDate;
     }

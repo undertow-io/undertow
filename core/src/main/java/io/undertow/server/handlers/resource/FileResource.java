@@ -51,10 +51,17 @@ public class FileResource implements Resource {
     private static final Logger log = Logger.getLogger("io.undertow.server.resources.file");
     private final File file;
     private final File resourceManagerRoot;
+    private final String path;
 
-    public FileResource(final File file, final File resourceManagerRoot) {
+    public FileResource(final File file, final File resourceManagerRoot, String path) {
         this.file = file;
         this.resourceManagerRoot = resourceManagerRoot;
+        this.path = path;
+    }
+
+    @Override
+    public String getPath() {
+        return path;
     }
 
     @Override
@@ -90,7 +97,7 @@ public class FileResource implements Resource {
     public List<Resource> list() {
         final List<Resource> resources = new ArrayList<Resource>();
         for (String child : file.list()) {
-            resources.add(new FileResource(new File(this.file, child), resourceManagerRoot));
+            resources.add(new FileResource(new File(this.file, child), resourceManagerRoot, path));
         }
         return resources;
     }
@@ -191,7 +198,7 @@ public class FileResource implements Resource {
         for (String possibility : possible) {
             File index = new File(file, possibility);
             if (index.exists()) {
-                return new FileResource(index, resourceManagerRoot);
+                return new FileResource(index, resourceManagerRoot, path);
             }
         }
         return null;

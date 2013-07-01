@@ -19,7 +19,7 @@ import java.util.Map;
  */
 public class ContentEncodingRepository {
 
-    private static final String IDENTITY = "identity";
+    public static final String IDENTITY = "identity";
 
     private final Map<String, EncodingMapping> encodingMap = new CopyOnWriteMap<String, EncodingMapping>();
 

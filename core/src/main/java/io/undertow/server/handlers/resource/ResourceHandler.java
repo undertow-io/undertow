@@ -13,6 +13,8 @@ import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.ResponseCache;
+import io.undertow.server.handlers.encoding.ContentEncodedResource;
+import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
@@ -57,6 +59,8 @@ public class ResourceHandler implements HttpHandler {
      */
     private volatile long lastExpiryDate;
     private volatile String lastExpiryHeader;
+
+    private volatile ContentEncodedResourceManager contentEncodedResourceManager;
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -180,6 +184,27 @@ public class ResourceHandler implements HttpHandler {
                 if (contentLength != null) {
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, contentLength.toString());
                 }
+
+                final ContentEncodedResourceManager contentEncodedResourceManager = ResourceHandler.this.contentEncodedResourceManager;
+                if(contentEncodedResourceManager != null) {
+                    try {
+                        ContentEncodedResource encoded = contentEncodedResourceManager.getResource(resource, exchange);
+                        if(encoded != null ) {
+                            exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, encoded.getContentEncoding());
+                            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, encoded.getResource().getContentLength());
+                            encoded.getResource().serve(exchange.getResponseSender(), exchange, IoCallback.END_EXCHANGE);
+                            return;
+                        }
+
+                    } catch (IOException e) {
+                        //TODO: should this be fatal
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                        exchange.setResponseCode(500);
+                        exchange.endExchange();
+                        return;
+                    }
+                }
+
                 if (!sendContent) {
                     exchange.endExchange();
                 } else {
@@ -253,6 +278,15 @@ public class ResourceHandler implements HttpHandler {
 
     public ResourceHandler setCacheTime(final Integer cacheTime) {
         this.cacheTime = cacheTime;
+        return this;
+    }
+
+    public ContentEncodedResourceManager getContentEncodedResourceManager() {
+        return contentEncodedResourceManager;
+    }
+
+    public ResourceHandler setContentEncodedResourceManager(ContentEncodedResourceManager contentEncodedResourceManager) {
+        this.contentEncodedResourceManager = contentEncodedResourceManager;
         return this;
     }
 }

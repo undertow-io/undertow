@@ -19,6 +19,12 @@ import io.undertow.util.MimeMappings;
 public interface Resource {
 
     /**
+     *
+     * @return The path from the resource manager root
+     */
+    String getPath();
+
+    /**
      * @return The last modified date of this resource, or null if this cannot be determined
      */
     Date getLastModified();

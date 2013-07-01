@@ -33,17 +33,29 @@ public class AllowedContentEncodings implements ConduitWrapper<StreamSinkConduit
      */
     public String getCurrentContentEncoding() {
         for (EncodingMapping encoding : encodings) {
-            if (encoding.getAllowed().resolve(exchange)) {
+            if (encoding.getAllowed() == null || encoding.getAllowed().resolve(exchange)) {
                 return encoding.getName();
             }
         }
         return Headers.IDENTITY.toString();
     }
 
+    public EncodingMapping getEncoding() {
+        for (EncodingMapping encoding : encodings) {
+            if (encoding.getAllowed() == null || encoding.getAllowed().resolve(exchange)) {
+                return encoding;
+            }
+        }
+        return null;
+    }
+
+    public boolean isIdentity() {
+        return getCurrentContentEncoding().equals(Headers.IDENTITY);
+    }
+
     /**
      * If the list of allowed encodings was empty then it means that no encodings were allowed, and
      * identity was explicitly prohibited with a q value of 0.
-     *
      */
     public boolean isNoEncodingsAllowed() {
         return encodings.isEmpty();
@@ -51,19 +63,22 @@ public class AllowedContentEncodings implements ConduitWrapper<StreamSinkConduit
 
     @Override
     public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
+        if (exchange.getResponseHeaders().contains(Headers.CONTENT_ENCODING)) {
+            //already encoded
+            return factory.create();
+        }
         //if this is a zero length response we don't want to encode
-        if(exchange.getResponseContentLength() != 0
+        if (exchange.getResponseContentLength() != 0
                 && exchange.getResponseCode() != 204
                 && exchange.getResponseCode() != 304) {
-            for (EncodingMapping encoding : encodings) {
-                if (encoding.getAllowed().resolve(exchange)) {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, encoding.getName());
-                    if(exchange.getRequestMethod().equals(Methods.HEAD)) {
-                        //we don't create an actual encoder for HEAD requests, but we set the header
-                        return factory.create();
-                    } else {
-                        return encoding.getEncoding().getResponseWrapper().wrap(factory, exchange);
-                    }
+            EncodingMapping encoding = getEncoding();
+            if (encoding != null) {
+                exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, encoding.getName());
+                if (exchange.getRequestMethod().equals(Methods.HEAD)) {
+                    //we don't create an actual encoder for HEAD requests, but we set the header
+                    return factory.create();
+                } else {
+                    return encoding.getEncoding().getResponseWrapper().wrap(factory, exchange);
                 }
             }
         }

@@ -75,6 +75,10 @@ public class CachingResourceManager implements ResourceManager {
         return resource;
     }
 
+    public void invalidate(final String path) {
+        cache.remove(path);
+    }
+
     DirectBufferCache getDataCache() {
         return dataCache;
     }

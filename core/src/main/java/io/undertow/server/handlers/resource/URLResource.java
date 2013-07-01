@@ -26,10 +26,17 @@ public class URLResource implements Resource {
 
     private final URL url;
     private final URLConnection connection;
+    private final String path;
 
-    public URLResource(final URL url, final URLConnection connection) {
+    public URLResource(final URL url, final URLConnection connection, String path) {
         this.url = url;
         this.connection = connection;
+        this.path = path;
+    }
+
+    @Override
+    public String getPath() {
+        return path;
     }
 
     @Override

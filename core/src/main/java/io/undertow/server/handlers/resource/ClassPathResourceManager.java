@@ -43,7 +43,7 @@ public class ClassPathResourceManager implements ResourceManager {
         if(resource == null) {
             return null;
         } else {
-            return new URLResource(resource, resource.openConnection());
+            return new URLResource(resource, resource.openConnection(), path);
         }
 
     }

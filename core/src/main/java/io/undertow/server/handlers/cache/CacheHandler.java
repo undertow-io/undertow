@@ -5,6 +5,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.encoding.AllowedContentEncodings;
 import io.undertow.util.ConduitFactory;
 import org.xnio.conduits.StreamSinkConduit;
 
@@ -41,6 +42,13 @@ public class CacheHandler implements HttpHandler {
             public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
                 if(!responseCache.isResponseCachable()) {
                     return factory.create();
+                }
+                final AllowedContentEncodings contentEncodings = exchange.getAttachment(AllowedContentEncodings.ATTACHMENT_KEY);
+                if(contentEncodings != null) {
+                    if(!contentEncodings.isIdentity()) {
+                        //we can't cache content encoded responses, as we have no idea how big they will end up being
+                        return factory.create();
+                    }
                 }
                 String lengthString = exchange.getResponseHeaders().getFirst(CONTENT_LENGTH);
                 if(lengthString == null) {
