@@ -169,7 +169,7 @@ public class AsyncContextImpl implements AsyncContext {
             }
             String toDispatch = CanonicalPathUtils.canonicalize(requestImpl.getOriginalRequestURI()).substring(requestImpl.getOriginalContextPath().length());
             String qs = requestImpl.getOriginalQueryString();
-            if (!qs.isEmpty()) {
+            if (qs != null && !qs.isEmpty()) {
                 toDispatch = toDispatch + "?" + qs;
             }
             dispatch(context.getDeployment().getServletContext(), toDispatch);
