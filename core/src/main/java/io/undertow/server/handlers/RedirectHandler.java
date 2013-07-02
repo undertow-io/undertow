@@ -7,13 +7,12 @@ import io.undertow.util.Headers;
 /**
  * A handler for redirects.
  * <p/>
- * TODO: this is pretty basic at the moment, it should support much more advanced rules
  *
  * @author Stuart Douglas
  */
 public class RedirectHandler implements HttpHandler {
 
-    private volatile String location;
+    private final String location;
 
     public RedirectHandler(final String location) {
         this.location = location;
@@ -26,11 +25,4 @@ public class RedirectHandler implements HttpHandler {
         exchange.endExchange();
     }
 
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(final String location) {
-        this.location = location;
-    }
 }

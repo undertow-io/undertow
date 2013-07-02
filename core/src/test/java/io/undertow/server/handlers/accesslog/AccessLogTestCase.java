@@ -46,7 +46,7 @@ public class AccessLogTestCase {
     @Test
     public void testRemoteAddress() throws IOException, InterruptedException {
         latch = new CountDownLatch(1);
-        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, RECIEVER, "Remote address %a Code %s test-header %{test-header}i", AccessLogFileTestCase.class.getClassLoader()));
+        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, RECIEVER, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");

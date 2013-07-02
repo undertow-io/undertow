@@ -1,25 +1,19 @@
 package io.undertow.server.handlers.accesslog;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.StringTokenizer;
 
 import io.undertow.attribute.ExchangeAttribute;
-import io.undertow.attribute.ExchangeAttributeParser;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
 /**
- *
- *
  * Access log handler. This handler will generate access log messages based on the provided format string,
  * and pass these messages into the provided {@link AccessLogReceiver}.
- *
+ * <p/>
  * This handler can log any attribute that is provides via the {@link io.undertow.attribute.ExchangeAttribute}
  * mechanism. A general guide to the most common attribute is provided before, however this mechanism is extensible.
- *
+ * <p/>
  * <p/>
  * <p>This factory produces token handlers for the following patterns</p>
  * <ul>
@@ -58,14 +52,13 @@ import io.undertow.server.HttpServerExchange;
  * header, or the session<br>
  * It is modeled after the apache syntax:
  * <ul>
- * <li><code>%{xxx}i</code> for incoming headers
- * <li><code>%{xxx}o</code> for outgoing response headers
- * <li><code>%{xxx}c</code> for a specific cookie
- * <li><code>%{xxx}r</code> xxx is an attribute in the ServletRequest
- * <li><code>%{xxx}s</code> xxx is an attribute in the HttpSession
+ * <li><code>%{i,xxx}</code> for incoming headers
+ * <li><code>%{o,xxx}</code> for outgoing response headers
+ * <li><code>%{c,xxx}</code> for a specific cookie
+ * <li><code>%{r,xxx}</code> xxx is an attribute in the ServletRequest
+ * <li><code>%{s,xxx}</code> xxx is an attribute in the HttpSession
  * </ul>
  * </p>
- *
  *
  * @author Stuart Douglas
  */
@@ -81,15 +74,7 @@ public class AccessLogHandler implements HttpHandler {
         this.next = next;
         this.accessLogReceiver = accessLogReceiver;
         this.formatString = formatString;
-        ExchangeAttributeParser parser = ExchangeAttributes.parser(classLoader);
-        final List<ExchangeAttribute> tokenHandlers = new ArrayList<ExchangeAttribute>();
-        StringTokenizer tokeniser = new StringTokenizer(formatString, " ", false);
-        while (tokeniser.hasMoreElements()) {
-            String elem = (String) tokeniser.nextElement();
-            tokenHandlers.add(parser.parse(elem));
-        }
-
-        this.tokens = tokenHandlers.toArray(new ExchangeAttribute[tokenHandlers.size()]);
+        this.tokens = ExchangeAttributes.parser(classLoader).parse(formatString);
     }
 
 
@@ -110,9 +95,6 @@ public class AccessLogHandler implements HttpHandler {
                         builder.append('-');
                     } else {
                         builder.append(result);
-                    }
-                    if (i != tokens.length - 1) {
-                        builder.append(' ');
                     }
                 }
                 accessLogReceiver.logMessage(builder.toString());

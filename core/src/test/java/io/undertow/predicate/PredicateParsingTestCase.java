@@ -83,9 +83,9 @@ public class PredicateParsingTestCase {
     public void testArrayValues() {
         Predicate predicate;
         for (String string : new String[]{
-                "contains[value=%{Content-Type}i, search=text]",
-                "contains[value=\"%{Content-Type}i\", search={text}]",
-                "contains[value=\"%{Content-Type}i\", search={text, \"other text\"}]",
+                "contains[value=%{i,Content-Type}, search=text]",
+                "contains[value=\"%{i,Content-Type}\", search={text}]",
+                "contains[value=\"%{i,Content-Type}\", search={text, \"other text\"}]",
         }) {
             try {
                 predicate = PredicateParser.parse(string, PredicateParsingTestCase.class.getClassLoader());
@@ -101,8 +101,8 @@ public class PredicateParsingTestCase {
 
     @Test
     public void testOrderOfOperations() {
-        expect("exists[%{Content-Length}i] or exists[value=%{Trailer}i] and exists[%{Other}i]", false, true);
-        expect("(exists[%{Content-Length}i] or exists[value=%{Trailer}i]) and exists[%{Other}i]", false, false);
+        expect("exists[%{i,Content-Length}] or exists[value=%{i,Trailer}] and exists[%{i,Other}]", false, true);
+        expect("(exists[%{i,Content-Length}] or exists[value=%{i,Trailer}]) and exists[%{i,Other}]", false, false);
     }
 
     private void expect(String string, boolean result1, boolean result2) {

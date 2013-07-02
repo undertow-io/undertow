@@ -36,8 +36,8 @@ public class RequestHeaderAttribute implements ExchangeAttribute {
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if (token.startsWith("%{") && token.endsWith("}i")) {
-                final HttpString headerName = HttpString.tryFromString(token.substring(2, token.length() - 2));
+            if (token.startsWith("%{i,") && token.endsWith("}")) {
+                final HttpString headerName = HttpString.tryFromString(token.substring(4, token.length() - 1));
                 return new RequestHeaderAttribute(headerName);
             }
             return null;

@@ -64,8 +64,8 @@ public class ServletSessionAttribute implements ExchangeAttribute {
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if (token.startsWith("%{") && token.endsWith("}s")) {
-                final String attributeName = token.substring(2, token.length() - 2);
+            if (token.startsWith("%{s,") && token.endsWith("}")) {
+                final String attributeName = token.substring(4, token.length() - 1);
                 return new ServletSessionAttribute(attributeName);
             }
             return null;

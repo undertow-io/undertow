@@ -40,8 +40,8 @@ public class CookieAttribute implements ExchangeAttribute {
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if (token.startsWith("%{") && token.endsWith("}c")) {
-                final String cookieName = token.substring(2, token.length() - 2);
+            if (token.startsWith("%{c,") && token.endsWith("}")) {
+                final String cookieName = token.substring(4, token.length() - 1);
                 return new CookieAttribute(cookieName);
             }
             return null;

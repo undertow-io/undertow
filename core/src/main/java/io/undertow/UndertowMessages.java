@@ -191,4 +191,7 @@ public interface UndertowMessages {
 
     @Message(id = 56, value = "Could not parse URI template %s, exception at char %s")
     RuntimeException couldNotParseUriTemplate(String path, int i);
+
+    @Message(id = 57, value = "Mismatched braces in attribute string %s")
+    RuntimeException mismatchedBraces(String valueString);
 }

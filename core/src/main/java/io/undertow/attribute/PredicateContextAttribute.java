@@ -19,7 +19,7 @@ public class PredicateContextAttribute implements ExchangeAttribute {
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         Map<String, Object> context = exchange.getAttachment(Predicate.PREDICATE_CONTEXT);
-        if(context != null) {
+        if (context != null) {
             Object object = context.get(name);
             return object == null ? null : object.toString();
         }
@@ -29,7 +29,7 @@ public class PredicateContextAttribute implements ExchangeAttribute {
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
         Map<String, Object> context = exchange.getAttachment(Predicate.PREDICATE_CONTEXT);
-        if(context != null) {
+        if (context != null) {
             context.put(name, newValue);
         }
     }
@@ -43,8 +43,10 @@ public class PredicateContextAttribute implements ExchangeAttribute {
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if (token.startsWith("$") && token.length() > 1) {
-                return new PredicateContextAttribute(token.substring(1));
+            if (token.startsWith("${") && token.endsWith("}") && token.length() > 3) {
+                return new PredicateContextAttribute(token.substring(2, token.length() - 1));
+            } else if (token.startsWith("$")) {
+                return new PredicateContextAttribute(token.substring(1, token.length()));
             }
             return null;
         }

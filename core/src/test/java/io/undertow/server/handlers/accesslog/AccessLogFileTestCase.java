@@ -61,7 +61,7 @@ public class AccessLogFileTestCase {
         File logFileName = new File(directory, "server.log");
 
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server");
-        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{test-header}i", AccessLogFileTestCase.class.getClassLoader()));
+        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
@@ -83,7 +83,7 @@ public class AccessLogFileTestCase {
         File logFileName = new File(directory, "server.log");
 
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server");
-        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "REQ %{test-header}i", AccessLogFileTestCase.class.getClassLoader()));
+        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "REQ %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
 
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
@@ -135,7 +135,7 @@ public class AccessLogFileTestCase {
         File logFileName = new File(logDirectory, "server.log");
 
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), logDirectory, "server");
-        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{test-header}i", AccessLogFileTestCase.class.getClassLoader()));
+        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
