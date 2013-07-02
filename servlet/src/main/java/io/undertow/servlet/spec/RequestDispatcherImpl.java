@@ -38,6 +38,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
+import io.undertow.util.QueryParameterUtils;
 
 /**
  * @author Stuart Douglas
@@ -115,7 +116,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             }
             String newRequestUri = servletContext.getContextPath() + newServletPath;
 
-            Map<String, Deque<String>> newQueryParameters = createNewQueryParameters(queryParameters, newQueryString);
+            Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
             requestImpl.setQueryParameters(newQueryParameters);
 
             requestImpl.getExchange().setRelativePath(newServletPath);
@@ -165,31 +166,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         }
     }
 
-    private Map<String, Deque<String>> createNewQueryParameters(final Map<String, Deque<String>> queryParameters, final String newQueryString) {
-        Map<String, Deque<String>> newQueryParameters = new HashMap<String, Deque<String>>();
-        for (String part : newQueryString.split("&")) {
-            String name = part;
-            String value = "";
-            int equals = part.indexOf('=');
-            if (equals != -1) {
-                name = part.substring(0, equals);
-                value = part.substring(equals + 1);
-            }
-            Deque<String> queue = newQueryParameters.get(name);
-            if (queue == null) {
-                newQueryParameters.put(name, queue = new ArrayDeque<String>(1));
-            }
-            queue.add(value);
-        }
-        for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
-            if (!newQueryParameters.containsKey(entry.getKey())) {
-                newQueryParameters.put(entry.getKey(), new ArrayDeque<String>(entry.getValue()));
-            } else {
-                newQueryParameters.get(entry.getKey()).addAll(entry.getValue());
-            }
-        }
-        return newQueryParameters;
-    }
 
     @Override
     public void include(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
@@ -235,7 +211,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             }
             String newRequestUri = servletContext.getContextPath() + newServletPath;
 
-            Map<String, Deque<String>> newQueryParameters = createNewQueryParameters(queryParameters, newQueryString);
+            Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
             requestImpl.setQueryParameters(newQueryParameters);
 
             requestImpl.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);

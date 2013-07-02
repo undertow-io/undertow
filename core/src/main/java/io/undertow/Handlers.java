@@ -1,6 +1,7 @@
 package io.undertow;
 
 import io.undertow.predicate.Predicate;
+import io.undertow.predicate.PredicateParser;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
@@ -229,14 +230,25 @@ public class Handlers {
      * Returns an attribute setting handler that can be used to set an arbitrary attribute on the exchange.
      * This includes functions such as adding and removing headers etc.
      *
-     * @param next The next handler
-     * @param attribute The attribute to set, specified as a string presentation of an {@link io.undertow.attribute.ExchangeAttribute}
-     * @param value The value to set, specified an a string representation of an {@link io.undertow.attribute.ExchangeAttribute}
+     * @param next        The next handler
+     * @param attribute   The attribute to set, specified as a string presentation of an {@link io.undertow.attribute.ExchangeAttribute}
+     * @param value       The value to set, specified an a string representation of an {@link io.undertow.attribute.ExchangeAttribute}
      * @param classLoader The class loader to use to parser the exchange attributes
      * @return The handler
      */
-    public static final SetAttributeHandler setAttribute(final HttpHandler next, final String attribute, final String value, final ClassLoader classLoader) {
+    public static SetAttributeHandler setAttribute(final HttpHandler next, final String attribute, final String value, final ClassLoader classLoader) {
         return new SetAttributeHandler(next, attribute, value, classLoader);
+    }
+
+    /**
+     * Creates the set of handlers that are required to perform a simple rewrite.
+     * @param condition The rewrite condition
+     * @param target The rewrite target if the condition matches
+     * @param next The next handler
+     * @return
+     */
+    public static HttpHandler rewrite(final String condition, final String target, final ClassLoader classLoader, final HttpHandler next) {
+        return predicateContext(predicate(PredicateParser.parse(condition, classLoader), setAttribute(next, "%R", target, classLoader), next));
     }
 
     private Handlers() {

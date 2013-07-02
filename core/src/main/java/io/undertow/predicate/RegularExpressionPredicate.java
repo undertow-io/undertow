@@ -8,6 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -77,18 +78,20 @@ public class RegularExpressionPredicate implements Predicate {
         public Set<String> requiredParameters() {
             final Set<String> params = new HashSet<String>();
             params.add("pattern");
-            params.add("value");
             return params;
         }
 
         @Override
         public String defaultParameter() {
-            return null;
+            return "pattern";
         }
 
         @Override
         public Predicate build(final Map<String, Object> config) {
             ExchangeAttribute value = (ExchangeAttribute) config.get("value");
+            if(value == null) {
+                value = ExchangeAttributes.relativePath();
+            }
             Boolean fullMatch = (Boolean) config.get("full-match");
             String pattern = (String) config.get("pattern");
             return new RegularExpressionPredicate(pattern, value, fullMatch == null ? false : fullMatch);
