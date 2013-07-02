@@ -8,6 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -22,22 +23,35 @@ import io.undertow.server.HttpServerExchange;
 public class RegularExpressionPredicate implements Predicate {
 
     private final Pattern pattern;
-    private final ExchangeAttribute matchAttribute;
+    private final ExchangeAttribute[] matchAttributes;
     private final boolean requireFullMatch;
 
     public RegularExpressionPredicate(final String regex, final ExchangeAttribute matchAttribute, final boolean requireFullMatch) {
         this.requireFullMatch = requireFullMatch;
         pattern = Pattern.compile(regex);
-        this.matchAttribute = matchAttribute;
+        this.matchAttributes = new ExchangeAttribute[]{matchAttribute};
     }
 
     public RegularExpressionPredicate(final String regex, final ExchangeAttribute matchAttribute) {
         this(regex, matchAttribute, false);
     }
 
+
+    public RegularExpressionPredicate(final String regex, final ExchangeAttribute[] matchAttribute, final boolean requireFullMatch) {
+        this.requireFullMatch = requireFullMatch;
+        pattern = Pattern.compile(regex);
+        this.matchAttributes = new ExchangeAttribute[matchAttribute.length];
+        System.arraycopy(matchAttribute, 0, this.matchAttributes, 0, matchAttribute.length);
+    }
+
+    public RegularExpressionPredicate(final String regex, final ExchangeAttribute[] matchAttribute) {
+        this(regex, matchAttribute, false);
+    }
+
+
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        Matcher matcher = pattern.matcher(matchAttribute.readAttribute(value));
+        Matcher matcher = pattern.matcher(ExchangeAttributes.resolve(value, matchAttributes));
         final boolean matches;
         if (requireFullMatch) {
             matches = matcher.matches();
@@ -49,7 +63,7 @@ public class RegularExpressionPredicate implements Predicate {
             Map<String, Object> context = value.getAttachment(PREDICATE_CONTEXT);
             if (context != null) {
                 int count = matcher.groupCount();
-                for(int i = 0; i <= count; ++i) {
+                for (int i = 0; i <= count; ++i) {
                     context.put(Integer.toString(i), matcher.group(i));
                 }
             }

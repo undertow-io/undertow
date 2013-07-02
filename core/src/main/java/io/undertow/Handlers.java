@@ -8,6 +8,7 @@ import io.undertow.server.handlers.HttpTraceHandler;
 import io.undertow.server.handlers.IPAddressAccessControlHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.PredicateContextHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.RedirectHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
@@ -163,6 +164,14 @@ public class Handlers {
      */
     public static PredicateHandler predicate(final Predicate predicate, final HttpHandler trueHandler, final HttpHandler falseHandler) {
         return new PredicateHandler(predicate, trueHandler, falseHandler);
+    }
+
+    /**
+     * @param next The next handler
+     * @return a handler that sets up a new predicate context
+     */
+    public static HttpHandler predicateContext(HttpHandler next) {
+        return new PredicateContextHandler(next);
     }
 
     /**

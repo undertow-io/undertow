@@ -1,5 +1,6 @@
 package io.undertow.attribute;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
 
 /**
@@ -80,6 +81,18 @@ public class ExchangeAttributes {
     public static ExchangeAttribute threadName() {
         return ThreadNameAttribute.INSTANCE;
     }
+
+    public static String  resolve(final HttpServerExchange exchange, final ExchangeAttribute[] attributes) {
+        final StringBuilder result = new StringBuilder();
+        for (int i = 0; i < attributes.length; ++i) {
+            final String str = attributes[i].readAttribute(exchange);
+            if (str != null) {
+                result.append(str);
+            }
+        }
+        return result.toString();
+    }
+
 
     private ExchangeAttributes() {
 

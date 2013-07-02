@@ -1,6 +1,7 @@
 package io.undertow.predicate;
 
 import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributes;
 
 /**
  * @author Stuart Douglas
@@ -154,6 +155,16 @@ public class Predicates {
      */
     public static Predicate regex(final ExchangeAttribute attribute, final String pattern, boolean requireFullMatch) {
         return new RegularExpressionPredicate(pattern, attribute, requireFullMatch);
+    }
+
+    /**
+     * Creates a predicate that matches the given attribute against a regex.
+     * @param requireFullMatch If a full match is required
+     * @param attribute The attribute
+     * @param pattern The pattern
+     */
+    public static Predicate regex(final String attribute, final String pattern, final ClassLoader classLoader, final boolean requireFullMatch) {
+        return new RegularExpressionPredicate(pattern, ExchangeAttributes.parser(classLoader).parse(attribute), requireFullMatch);
     }
 
     private Predicates() {
