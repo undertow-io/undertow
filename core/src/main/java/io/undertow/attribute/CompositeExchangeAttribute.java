@@ -21,7 +21,10 @@ public class CompositeExchangeAttribute implements ExchangeAttribute {
     public String readAttribute(HttpServerExchange exchange) {
         final StringBuilder sb = new StringBuilder();
         for (int i = 0; i < attributes.length; ++i) {
-            sb.append(attributes[i].readAttribute(exchange));
+            final String val = attributes[i].readAttribute(exchange);
+            if(val != null) {
+                sb.append(val);
+            }
         }
         return sb.toString();
     }

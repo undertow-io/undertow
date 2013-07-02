@@ -17,3 +17,4 @@ io.undertow.attribute.ResponseHeaderAttribute$Builder
 io.undertow.attribute.CookieAttribute$Builder
 io.undertow.attribute.ResponseCodeAttribute$Builder
 io.undertow.attribute.PredicateContextAttribute$Builder
+io.undertow.attribute.QueryParameterAttribute$Builder

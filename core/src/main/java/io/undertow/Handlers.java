@@ -11,6 +11,7 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.PredicateContextHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.handlers.RedirectHandler;
+import io.undertow.server.handlers.SetAttributeHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.URLDecodingHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
@@ -222,6 +223,20 @@ public class Handlers {
      */
     public static final URLDecodingHandler urlDecoding(final HttpHandler next, final String charset) {
         return new URLDecodingHandler(next, charset);
+    }
+
+    /**
+     * Returns an attribute setting handler that can be used to set an arbitrary attribute on the exchange.
+     * This includes functions such as adding and removing headers etc.
+     *
+     * @param next The next handler
+     * @param attribute The attribute to set, specified as a string presentation of an {@link io.undertow.attribute.ExchangeAttribute}
+     * @param value The value to set, specified an a string representation of an {@link io.undertow.attribute.ExchangeAttribute}
+     * @param classLoader The class loader to use to parser the exchange attributes
+     * @return The handler
+     */
+    public static final SetAttributeHandler setAttribute(final HttpHandler next, final String attribute, final String value, final ClassLoader classLoader) {
+        return new SetAttributeHandler(next, attribute, value, classLoader);
     }
 
     private Handlers() {
