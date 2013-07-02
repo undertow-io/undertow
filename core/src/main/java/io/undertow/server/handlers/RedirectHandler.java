@@ -17,22 +17,22 @@ import io.undertow.util.Headers;
  */
 public class RedirectHandler implements HttpHandler {
 
-    private final ExchangeAttribute[] attributes;
+    private final ExchangeAttribute attribute;
 
     public RedirectHandler(final String location) {
         ExchangeAttributeParser parser = ExchangeAttributes.parser(getClass().getClassLoader());
-        attributes = parser.parse(location);
+        attribute = parser.parse(location);
     }
 
     public RedirectHandler(final String location, final ClassLoader classLoader) {
         ExchangeAttributeParser parser = ExchangeAttributes.parser(classLoader);
-        attributes = parser.parse(location);
+        attribute = parser.parse(location);
     }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.setResponseCode(302);
-        exchange.getResponseHeaders().put(Headers.LOCATION, ExchangeAttributes.resolve(exchange, attributes));
+        exchange.getResponseHeaders().put(Headers.LOCATION, attribute.readAttribute(exchange));
         exchange.endExchange();
     }
 

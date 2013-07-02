@@ -8,7 +8,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.undertow.attribute.ExchangeAttribute;
-import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -23,35 +22,22 @@ import io.undertow.server.HttpServerExchange;
 public class RegularExpressionPredicate implements Predicate {
 
     private final Pattern pattern;
-    private final ExchangeAttribute[] matchAttributes;
+    private final ExchangeAttribute matchAttribute;
     private final boolean requireFullMatch;
 
     public RegularExpressionPredicate(final String regex, final ExchangeAttribute matchAttribute, final boolean requireFullMatch) {
         this.requireFullMatch = requireFullMatch;
         pattern = Pattern.compile(regex);
-        this.matchAttributes = new ExchangeAttribute[]{matchAttribute};
+        this.matchAttribute = matchAttribute;
     }
 
     public RegularExpressionPredicate(final String regex, final ExchangeAttribute matchAttribute) {
         this(regex, matchAttribute, false);
     }
 
-
-    public RegularExpressionPredicate(final String regex, final ExchangeAttribute[] matchAttribute, final boolean requireFullMatch) {
-        this.requireFullMatch = requireFullMatch;
-        pattern = Pattern.compile(regex);
-        this.matchAttributes = new ExchangeAttribute[matchAttribute.length];
-        System.arraycopy(matchAttribute, 0, this.matchAttributes, 0, matchAttribute.length);
-    }
-
-    public RegularExpressionPredicate(final String regex, final ExchangeAttribute[] matchAttribute) {
-        this(regex, matchAttribute, false);
-    }
-
-
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        Matcher matcher = pattern.matcher(ExchangeAttributes.resolve(value, matchAttributes));
+        Matcher matcher = pattern.matcher(matchAttribute.readAttribute(value));
         final boolean matches;
         if (requireFullMatch) {
             matches = matcher.matches();

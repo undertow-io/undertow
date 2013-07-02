@@ -43,7 +43,7 @@ public class ExchangeAttributeParser {
      * @param valueString
      * @return
      */
-    public ExchangeAttribute[] parse(final String valueString) {
+    public ExchangeAttribute parse(final String valueString) {
         final List<ExchangeAttribute> attributes = new ArrayList<ExchangeAttribute>();
         int pos = 0;
         int state = 0; //0 = literal, 1 = %, 2 = %{, 3 = $, 4 = ${
@@ -110,7 +110,9 @@ public class ExchangeAttributeParser {
             case 0:
             case 1:
             case 3:{
-                attributes.add(parseSingleToken(valueString.substring(pos)));
+                if(pos != valueString.length()) {
+                    attributes.add(parseSingleToken(valueString.substring(pos)));
+                }
                 break;
             }
             case 2:
@@ -118,7 +120,10 @@ public class ExchangeAttributeParser {
                 throw UndertowMessages.MESSAGES.mismatchedBraces(valueString);
             }
         }
-        return attributes.toArray(new ExchangeAttribute[attributes.size()]);
+        if(attributes.size() == 1) {
+            return attributes.get(0);
+        }
+        return new CompositeExchangeAttribute(attributes.toArray(new ExchangeAttribute[attributes.size()]));
     }
 
     public ExchangeAttribute parseSingleToken(final String token) {

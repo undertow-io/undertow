@@ -67,7 +67,7 @@ public class AccessLogHandler implements HttpHandler {
     private final HttpHandler next;
     private final AccessLogReceiver accessLogReceiver;
     private final String formatString;
-    private final ExchangeAttribute[] tokens;
+    private final ExchangeAttribute tokens;
     private final ExchangeCompletionListener exchangeCompletionListener = new AccessLogCompletionListener();
 
     public AccessLogHandler(final HttpHandler next, final AccessLogReceiver accessLogReceiver, final String formatString, ClassLoader classLoader) {
@@ -88,16 +88,7 @@ public class AccessLogHandler implements HttpHandler {
         @Override
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
             try {
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < tokens.length; ++i) {
-                    String result = tokens[i].readAttribute(exchange);
-                    if (result == null) {
-                        builder.append('-');
-                    } else {
-                        builder.append(result);
-                    }
-                }
-                accessLogReceiver.logMessage(builder.toString());
+                accessLogReceiver.logMessage(tokens.readAttribute(exchange));
             } finally {
                 nextListener.proceed();
             }

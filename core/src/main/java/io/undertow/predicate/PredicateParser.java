@@ -365,7 +365,7 @@ public class PredicateParser {
         } else if (type.equals(Double.class) || type.equals(double.class)) {
             return Double.valueOf(token.token);
         } else if (type.equals(ExchangeAttribute.class)) {
-            return attributeParser.parseSingleToken(token.token);
+            return attributeParser.parse(token.token);
         }
 
         return token.token;
