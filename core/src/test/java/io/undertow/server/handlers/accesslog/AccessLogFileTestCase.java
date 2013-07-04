@@ -14,7 +14,7 @@ import java.util.concurrent.Future;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.FileUtils;
+import io.undertow.util.FileUtils;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;

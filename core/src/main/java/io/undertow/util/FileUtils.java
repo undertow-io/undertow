@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.testutils;
+package io.undertow.util;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

@@ -23,6 +23,7 @@ import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 
 import io.undertow.predicate.PredicateBuilder;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
@@ -194,4 +195,13 @@ public interface UndertowMessages {
 
     @Message(id = 57, value = "Mismatched braces in attribute string %s")
     RuntimeException mismatchedBraces(String valueString);
+
+    @Message(id = 58, value = "More than one handler with name %s. Builder class %s and %s")
+    IllegalStateException moreThanOneHandlerWithName(String name, Class<? extends HandlerBuilder> aClass, Class<? extends HandlerBuilder> existing);
+
+    @Message(id = 59, value = "Invalid syntax %s")
+    IllegalArgumentException invalidSyntax(String line);
+
+    @Message(id = 60, value = "Error parsing handler string %s:%n%s")
+    IllegalArgumentException errorParsingHandlerString(String reason, String s);
 }

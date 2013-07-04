@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import io.undertow.client.HttpClient;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.FileUtils;
+import io.undertow.util.FileUtils;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
