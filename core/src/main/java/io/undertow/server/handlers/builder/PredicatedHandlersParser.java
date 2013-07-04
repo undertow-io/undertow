@@ -4,13 +4,13 @@ import io.undertow.UndertowMessages;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.PredicateParser;
 import io.undertow.predicate.Predicates;
-import io.undertow.predicate.PredicatesHandler;
 import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
 import io.undertow.util.FileUtils;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Parser for the undertow-handlers.conf file.
@@ -23,17 +23,17 @@ import java.io.InputStream;
 public class PredicatedHandlersParser {
 
 
-    public static PredicatesHandler parse(final File file, final ClassLoader classLoader, final HttpHandler next) {
-        return parse(FileUtils.readFile(file), classLoader, next);
+    public static List<PredicatedHandler> parse(final File file, final ClassLoader classLoader) {
+        return parse(FileUtils.readFile(file), classLoader);
     }
 
-    public static PredicatesHandler parse(final InputStream inputStream, final ClassLoader classLoader, final HttpHandler next) {
-        return parse(FileUtils.readFile(inputStream), classLoader, next);
+    public static List<PredicatedHandler> parse(final InputStream inputStream, final ClassLoader classLoader) {
+        return parse(FileUtils.readFile(inputStream), classLoader);
     }
 
-    public static PredicatesHandler parse(final String contents, final ClassLoader classLoader, final HttpHandler next) {
+    public static List<PredicatedHandler> parse(final String contents, final ClassLoader classLoader) {
         String[] lines = contents.split("\\n");
-        PredicatesHandler predicatesHandler = new PredicatesHandler(next);
+        final List<PredicatedHandler> wrappers = new ArrayList<PredicatedHandler>();
 
         for (String line : lines) {
             if (line.trim().length() > 0) {
@@ -49,10 +49,10 @@ public class PredicatedHandlersParser {
                 } else {
                     throw UndertowMessages.MESSAGES.invalidSyntax(line);
                 }
-                predicatesHandler.addPredicatedHandler(predicate, handler);
+                wrappers.add(new PredicatedHandler(predicate, handler));
             }
         }
-        return predicatesHandler;
+        return wrappers;
     }
 
 }

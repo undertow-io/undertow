@@ -1,5 +1,6 @@
 package io.undertow.server.handlers;
 
+import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser;
@@ -23,11 +24,12 @@ public class PredicatedHandlersTestCase {
     @Test
     public void testRewrite() throws IOException {
         DefaultServer.setRootHandler(
-                PredicatedHandlersParser.parse(
-                        "method[GET] -> set[attribute='%{o,type}', value=get]\n" +
-                                "regex['(.*).css'] -> rewrite['${1}.xcss']\n" +
-                                "set[attribute='%{o,someHeader}', value=always]\n" +
-                                "path-template['/foo/{bar}/{f}'] -> set[attribute='%{o,template}', value='${bar}']", getClass().getClassLoader(), new HttpHandler() {
+                Handlers.predicates(
+                        PredicatedHandlersParser.parse(
+                                "method[GET] -> set[attribute='%{o,type}', value=get]\n" +
+                                        "regex['(.*).css'] -> rewrite['${1}.xcss']\n" +
+                                        "set[attribute='%{o,someHeader}', value=always]\n" +
+                                        "path-template['/foo/{bar}/{f}'] -> set[attribute='%{o,template}', value='${bar}']", getClass().getClassLoader()), new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send(exchange.getRelativePath());

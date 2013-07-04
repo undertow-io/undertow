@@ -2,6 +2,7 @@ package io.undertow;
 
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.PredicateParser;
+import io.undertow.predicate.PredicatesHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
@@ -15,11 +16,14 @@ import io.undertow.server.handlers.RedirectHandler;
 import io.undertow.server.handlers.SetAttributeHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.URLDecodingHandler;
+import io.undertow.server.handlers.builder.PredicatedHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.websockets.api.WebSocketSessionHandler;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
+
+import java.util.List;
 
 /**
  * Utility class with convenience methods for dealing with handlers
@@ -174,6 +178,14 @@ public class Handlers {
      */
     public static HttpHandler predicateContext(HttpHandler next) {
         return new PredicateContextHandler(next);
+    }
+
+    public static PredicatesHandler predicates(final List<PredicatedHandler> handlers, HttpHandler next) {
+        final PredicatesHandler predicatesHandler = new PredicatesHandler(next);
+        for(PredicatedHandler handler : handlers) {
+            predicatesHandler.addPredicatedHandler(handler);
+        }
+        return predicatesHandler;
     }
 
     /**

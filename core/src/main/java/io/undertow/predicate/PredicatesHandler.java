@@ -3,19 +3,20 @@ package io.undertow.predicate;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.PredicatedHandler;
 import io.undertow.util.AttachmentKey;
 
 import java.util.TreeMap;
 
 /**
- * Handler that can deal with a large number of predicates. chaining together a large number of {@link PredicatedHandler}
+ * Handler that can deal with a large number of predicates. chaining together a large number of {@link io.undertow.predicate.PredicatesHandler.Holder}
  * instances will make the stack grow to large, so this class is used that can deal with a large number of predicates.
  *
  * @author Stuart Douglas
  */
 public class PredicatesHandler implements HttpHandler {
 
-    private volatile PredicatedHandler[] handlers = new PredicatedHandler[0];
+    private volatile Holder[] handlers = new Holder[0];
     private final HttpHandler next;
 
     //non-static, so multiple handlers can co-exist
@@ -37,7 +38,7 @@ public class PredicatesHandler implements HttpHandler {
             pos = current;
         }
         for (; pos < length; ++pos) {
-            final PredicatedHandler handler = handlers[pos];
+            final Holder handler = handlers[pos];
             if (handler.predicate.resolve(exchange)) {
                 exchange.putAttachment(CURRENT_POSITION, pos + 1);
                 handler.handler.handleRequest(exchange);
@@ -51,25 +52,28 @@ public class PredicatesHandler implements HttpHandler {
     /**
      * Adds a new predicated handler.
      * <p/>
-     * Do not call this
      *
      * @param predicate
      * @param handlerWrapper
      */
     public PredicatesHandler addPredicatedHandler(final Predicate predicate, final HandlerWrapper handlerWrapper) {
-        PredicatedHandler[] old = handlers;
-        PredicatedHandler[] handlers = new PredicatedHandler[old.length + 1];
+        Holder[] old = handlers;
+        Holder[] handlers = new Holder[old.length + 1];
         System.arraycopy(old, 0, handlers, 0, old.length);
-        handlers[old.length] = new PredicatedHandler(predicate, handlerWrapper.wrap(this));
+        handlers[old.length] = new Holder(predicate, handlerWrapper.wrap(this));
         this.handlers = handlers;
         return this;
     }
 
-    private static final class PredicatedHandler {
+    public PredicatesHandler addPredicatedHandler(final PredicatedHandler handler) {
+        return addPredicatedHandler(handler.getPredicate(), handler.getHandler());
+    }
+
+    private static final class Holder {
         final Predicate predicate;
         final HttpHandler handler;
 
-        private PredicatedHandler(Predicate predicate, HttpHandler handler) {
+        private Holder(Predicate predicate, HttpHandler handler) {
             this.predicate = predicate;
             this.handler = handler;
         }
