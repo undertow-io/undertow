@@ -94,22 +94,26 @@ public class PathHandler implements HttpHandler {
      * @param handler The handler
      */
     public synchronized PathHandler addPath(final String path, final HttpHandler handler) {
-        if(path.equals("/")) {
-            this.defaultHandler = handler;
-            return this;
-        }
-        if(path.length() > maxPathLength) {
-            maxPathLength = path.length();
-        }
         HttpHandlers.handlerNotNull(handler);
         if (path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }
+        if(path.equals("/")) {
+            this.defaultHandler = handler;
+            return this;
+        }
+        final int pathLength;
         if (path.charAt(0) != '/') {
+            pathLength = path.length() + 1;
             paths.put("/" + path, handler);
         } else {
+            pathLength = path.length();
             paths.put(path, handler);
         }
+        if(pathLength > maxPathLength) {
+            maxPathLength = path.length() + pathLength;
+        }
+
         return this;
     }
 

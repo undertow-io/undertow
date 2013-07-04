@@ -194,17 +194,6 @@ public class FileResource implements Resource {
     }
 
     @Override
-    public Resource getIndexResource(final List<String> possible) {
-        for (String possibility : possible) {
-            File index = new File(file, possibility);
-            if (index.exists()) {
-                return new FileResource(index, resourceManagerRoot, path);
-            }
-        }
-        return null;
-    }
-
-    @Override
     public String getCacheKey() {
         return file.toString();
     }

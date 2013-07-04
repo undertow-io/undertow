@@ -159,11 +159,6 @@ public class URLResource implements Resource {
     }
 
     @Override
-    public Resource getIndexResource(List<String> possible) {
-        return null;
-    }
-
-    @Override
     public String getCacheKey() {
         return url.toString();
     }

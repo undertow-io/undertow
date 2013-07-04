@@ -42,19 +42,19 @@ public class ResourceHandler implements HttpHandler {
     private volatile ResourceManager resourceManager;
     /**
      * If this is set this will be the maximum time the client will cache the resource.
-     *
+     * <p/>
      * Note: Do not set this for private resources, as it will cause a Cache-Control: public
      * to be sent.
-     *
+     * <p/>
      * TODO: make this more flexible
-     *
+     * <p/>
      * This will only be used if the {@link #cachable} predicate returns true
      */
     private volatile Integer cacheTime;
     /**
      * we do not calculate a new expiry date every request. Instead calculate it once
      * and cache it until it is in the past.
-     *
+     * <p/>
      * TODO: do we need this policy to be plugable
      */
     private volatile long lastExpiryDate;
@@ -91,9 +91,9 @@ public class ResourceHandler implements HttpHandler {
         final boolean cachable = this.cachable.resolve(exchange);
 
         //we set caching headers before we try and serve from the cache
-        if(cachable && cacheTime != null) {
+        if (cachable && cacheTime != null) {
             exchange.getResponseHeaders().put(Headers.CACHE_CONTROL, "public, max-age=" + cacheTime);
-            if(System.currentTimeMillis() > lastExpiryDate ) {
+            if (System.currentTimeMillis() > lastExpiryDate) {
                 long date = System.currentTimeMillis();
                 lastExpiryHeader = DateUtils.toDateString(new Date(date));
                 lastExpiryDate = date;
@@ -129,7 +129,15 @@ public class ResourceHandler implements HttpHandler {
                 }
 
                 if (resource.isDirectory()) {
-                    Resource indexResource = resource.getIndexResource(welcomeFiles);
+                    Resource indexResource = null;
+                    try {
+                        indexResource = getIndexFiles(resourceManager, resource.getPath(), welcomeFiles);
+                    } catch (IOException e) {
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                        exchange.setResponseCode(500);
+                        exchange.endExchange();
+                        return;
+                    }
                     if (indexResource == null) {
                         if (directoryListingEnabled) {
                             DirectoryUtils.renderDirectoryListing(exchange, resource);
@@ -139,9 +147,9 @@ public class ResourceHandler implements HttpHandler {
                             exchange.endExchange();
                             return;
                         }
-                    } else if(!exchange.getRequestPath().endsWith("/")) {
+                    } else if (!exchange.getRequestPath().endsWith("/")) {
                         exchange.setResponseCode(302);
-                        if(exchange.getQueryString() == null) {
+                        if (exchange.getQueryString() == null) {
                             exchange.getResponseHeaders().put(Headers.LOCATION, exchange.getRequestURL() + "/?" + exchange.getQueryString());
                         } else {
                             exchange.getResponseHeaders().put(Headers.LOCATION, exchange.getRequestURL() + "/");
@@ -186,10 +194,10 @@ public class ResourceHandler implements HttpHandler {
                 }
 
                 final ContentEncodedResourceManager contentEncodedResourceManager = ResourceHandler.this.contentEncodedResourceManager;
-                if(contentEncodedResourceManager != null) {
+                if (contentEncodedResourceManager != null) {
                     try {
                         ContentEncodedResource encoded = contentEncodedResourceManager.getResource(resource, exchange);
-                        if(encoded != null ) {
+                        if (encoded != null) {
                             exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, encoded.getContentEncoding());
                             exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, encoded.getResource().getContentLength());
                             encoded.getResource().serve(exchange.getResponseSender(), exchange, IoCallback.END_EXCHANGE);
@@ -214,6 +222,22 @@ public class ResourceHandler implements HttpHandler {
         });
 
 
+    }
+
+    private Resource getIndexFiles(ResourceManager resourceManager, final String base, List<String> possible) throws IOException {
+        String realBase;
+        if (base.endsWith("/")) {
+            realBase = base;
+        } else {
+            realBase = base + "/";
+        }
+        for (String possibility : possible) {
+            Resource index = resourceManager.getResource(realBase + possibility);
+            if (index != null) {
+                return index;
+            }
+        }
+        return null;
     }
 
     public boolean isDirectoryListingEnabled() {

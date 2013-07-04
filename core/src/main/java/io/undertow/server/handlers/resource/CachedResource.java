@@ -175,21 +175,6 @@ public class CachedResource implements Resource {
     }
 
     @Override
-    public Resource getIndexResource(final List<String> possible) {
-        for (final String p : possible) {
-            try {
-                Resource res = cachingResourceManager.getResource(this.path + p);
-                if (res != null) {
-                    return res;
-                }
-            } catch (IOException e) {
-                UndertowLogger.ROOT_LOGGER.debugf(e, "Exception getting resource %s", this.path + p);
-            }
-        }
-        return null;
-    }
-
-    @Override
     public String getCacheKey() {
         return cacheKey;
     }
