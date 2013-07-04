@@ -6,3 +6,4 @@ io.undertow.predicate.RegularExpressionPredicate$Builder
 io.undertow.predicate.PathSuffixPredicate$Builder
 io.undertow.predicate.EqualsPredicate$Builder
 io.undertow.predicate.PathTemplatePredicate$Builder
+io.undertow.predicate.MethodPredicate$Builder
