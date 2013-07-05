@@ -1,22 +1,24 @@
 package io.undertow.websockets.client;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.nio.ByteBuffer;
-
-import io.undertow.client.HttpClient;
-import io.undertow.client.HttpClientCallback;
-import io.undertow.client.HttpClientConnection;
-import io.undertow.client.HttpClientRequest;
-import io.undertow.client.HttpClientResponse;
-import io.undertow.util.Methods;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
+import org.xnio.ChannelListener;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
+import org.xnio.StreamConnection;
+import org.xnio.XnioWorker;
+import org.xnio.channels.AssembledConnectedSslStreamChannel;
+import org.xnio.channels.AssembledConnectedStreamChannel;
+import org.xnio.channels.SslChannel;
+import org.xnio.channels.SslConnection;
+import org.xnio.http.HttpUpgrade;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * The Web socket client.
@@ -26,54 +28,39 @@ import org.xnio.Pool;
 public class WebSocketClient {
 
 
-    public static IoFuture<WebSocketChannel> connect(HttpClient client, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
         final FutureResult<WebSocketChannel> ioFuture = new FutureResult<WebSocketChannel>();
-        connect(client, bufferPool, optionMap, uri, version, new HttpClientCallback<WebSocketChannel>() {
+        final URI newUri;
+        try {
+            newUri = new URI(uri.getScheme().equals("wss") ? "https" : "http", uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath().isEmpty() ? "/" : uri.getPath(), uri.getQuery(), uri.getFragment());
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+        final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(WebSocketVersion.V13, newUri);
+        final Map<String, String> headers = handshake.createHeaders();
+        IoFuture<StreamConnection> result = HttpUpgrade.performUpgrade(worker, null, newUri, headers, new ChannelListener<StreamConnection>() {
             @Override
-            public void completed(final WebSocketChannel result) {
+            public void handleEvent(StreamConnection channel) {
+                WebSocketChannel result;
+                if (channel instanceof SslConnection) {
+                    result = handshake.createChannel(new AssembledConnectedSslStreamChannel((SslChannel) channel, channel.getSourceChannel(), channel.getSinkChannel()), newUri.toString(), bufferPool);
+                } else {
+                    result = handshake.createChannel(new AssembledConnectedStreamChannel(channel, channel.getSourceChannel(), channel.getSinkChannel()), newUri.toString(), bufferPool);
+                }
                 ioFuture.setResult(result);
             }
-
+        }, null, optionMap, handshake.handshakeChecker(newUri, headers));
+        result.addNotifier(new IoFuture.Notifier<StreamConnection, Object>() {
             @Override
-            public void failed(final IOException e) {
-                ioFuture.setException(e);
+            public void notify(IoFuture<? extends StreamConnection> res, Object attachment) {
+                if (res.getStatus() == IoFuture.Status.FAILED) {
+                    ioFuture.setException(res.getException());
+                }
             }
-        });
+        }, null);
         return ioFuture.getIoFuture();
     }
 
-    public static void connect(HttpClient client, final Pool<ByteBuffer> bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, final HttpClientCallback<WebSocketChannel> callback) {
-        InetSocketAddress address = new InetSocketAddress(uri.getHost(), uri.getPort());
-        client.connect(address, optionMap, new HttpClientCallback<HttpClientConnection>() {
-            @Override
-            public void completed(final HttpClientConnection connection) {
-                final WebSocketClientHandshake handshake = WebSocketClientHandshake.create(WebSocketVersion.V13, uri);
-                HttpClientRequest request = connection.createRequest(Methods.GET, uri);
-                handshake.setupRequest(request);
-                request.writeRequest(new HttpClientCallback<HttpClientResponse>() {
-                    @Override
-                    public void completed(final HttpClientResponse result) {
-                        try {
-                            handshake.verifyResponse(uri, result, connection, callback);
-                        } catch (IOException e) {
-                            callback.failed(e);
-                        }
-                    }
-
-                    @Override
-                    public void failed(final IOException e) {
-                        callback.failed(e);
-                    }
-                });
-            }
-
-            @Override
-            public void failed(final IOException e) {
-                callback.failed(e);
-            }
-        });
-
-    }
 
     private WebSocketClient() {
 

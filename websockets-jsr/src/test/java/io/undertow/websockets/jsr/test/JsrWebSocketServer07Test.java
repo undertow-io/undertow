@@ -17,28 +17,6 @@
  */
 package io.undertow.websockets.jsr.test;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
-import javax.websocket.SendHandler;
-import javax.websocket.SendResult;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpointConfig;
-
-import io.undertow.client.HttpClient;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -61,7 +39,26 @@ import org.junit.Assert;
 import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.FutureResult;
-import org.xnio.OptionMap;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import javax.websocket.CloseReason;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.MessageHandler;
+import javax.websocket.SendHandler;
+import javax.websocket.SendResult;
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpointConfig;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -99,7 +96,7 @@ public class JsrWebSocketServer07Test {
         }
 
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -137,7 +134,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         deployServlet(builder);
@@ -176,7 +173,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
@@ -222,7 +219,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -271,7 +268,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
@@ -314,7 +311,7 @@ public class JsrWebSocketServer07Test {
 
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -349,7 +346,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
@@ -391,7 +388,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
@@ -434,7 +431,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -461,7 +458,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -501,7 +498,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -547,7 +544,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -586,7 +583,7 @@ public class JsrWebSocketServer07Test {
             }
         }
         ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 100));
+        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);

@@ -17,12 +17,6 @@
  */
 package io.undertow.websockets.jsr.test.annotated;
 
-import java.net.URI;
-
-import javax.servlet.DispatcherType;
-import javax.websocket.Session;
-
-import io.undertow.client.HttpClient;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
@@ -42,7 +36,10 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.FutureResult;
-import org.xnio.OptionMap;
+
+import javax.servlet.DispatcherType;
+import javax.websocket.Session;
+import java.net.URI;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -67,7 +64,7 @@ public class AnnotatedEndpointTest {
                 .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
                 .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
 
-        deployment.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 1000));
+        deployment.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 1000));
         deployment.addEndpoint(MessageEndpoint.class);
         deployment.addEndpoint(AnnotatedClientEndpoint.class);
         deployment.addEndpoint(IncrementEndpoint.class);

@@ -1,17 +1,14 @@
 package io.undertow.websockets.client;
 
-import java.io.IOException;
-import java.net.URI;
-import java.nio.ByteBuffer;
-
-import io.undertow.client.HttpClientCallback;
-import io.undertow.client.HttpClientConnection;
-import io.undertow.client.HttpClientRequest;
-import io.undertow.client.HttpClientResponse;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import org.xnio.Pool;
 import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.http.HandshakeChecker;
+
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * @author Stuart Douglas
@@ -34,9 +31,9 @@ public abstract class WebSocketClientHandshake{
 
     public abstract WebSocketChannel createChannel(final ConnectedStreamChannel channel, final String wsUri, final Pool<ByteBuffer> bufferPool);
 
-    public abstract void setupRequest(final HttpClientRequest request);
+    public abstract Map<String, String> createHeaders();
 
-    public abstract void verifyResponse(final URI uri, final HttpClientResponse response, final HttpClientConnection connection, final HttpClientCallback<WebSocketChannel> callback) throws IOException;
+    public abstract HandshakeChecker handshakeChecker(final URI uri, final Map<String, String> requestHeaders);
 
 
 }

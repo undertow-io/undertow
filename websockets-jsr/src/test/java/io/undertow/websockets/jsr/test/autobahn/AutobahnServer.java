@@ -17,11 +17,6 @@
  */
 package io.undertow.websockets.jsr.test.autobahn;
 
-import java.net.InetSocketAddress;
-
-import javax.servlet.DispatcherType;
-
-import io.undertow.client.HttpClient;
 import io.undertow.server.HttpOpenListener;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -41,6 +36,9 @@ import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
+
+import javax.servlet.DispatcherType;
+import java.net.InetSocketAddress;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -94,7 +92,7 @@ public class AutobahnServer implements Runnable {
                     .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
                     .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
 
-            deployment.start(HttpClient.create(DefaultServer.getWorker(), OptionMap.EMPTY), new ByteBufferSlicePool(100, 1000));
+            deployment.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 1000));
             deployment.addEndpoint(AutobahnEndpoint.class);
 
             DeploymentManager manager = container.addDeployment(builder);

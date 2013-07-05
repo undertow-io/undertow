@@ -17,30 +17,6 @@
  */
 package io.undertow.websockets.jsr;
 
-import java.io.IOException;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
-import javax.websocket.ClientEndpoint;
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.DeploymentException;
-import javax.websocket.Endpoint;
-import javax.websocket.Extension;
-import javax.websocket.Session;
-import javax.websocket.server.ServerContainer;
-import javax.websocket.server.ServerEndpoint;
-import javax.websocket.server.ServerEndpointConfig;
-
-import io.undertow.client.HttpClient;
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
@@ -57,6 +33,29 @@ import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
+import org.xnio.XnioWorker;
+
+import javax.websocket.ClientEndpoint;
+import javax.websocket.ClientEndpointConfig;
+import javax.websocket.DeploymentException;
+import javax.websocket.Endpoint;
+import javax.websocket.Extension;
+import javax.websocket.Session;
+import javax.websocket.server.ServerContainer;
+import javax.websocket.server.ServerEndpoint;
+import javax.websocket.server.ServerEndpointConfig;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 
 /**
@@ -80,7 +79,7 @@ public class ServerWebSocketContainer implements ServerContainer {
      */
     private final TreeSet<PathTemplate> seenPaths = new TreeSet<PathTemplate>();
 
-    private HttpClient httpClient;
+    private XnioWorker xnioWorker;
     private Pool<ByteBuffer> bufferPool;
 
     private volatile long defaultAsyncSendTimeout;
@@ -94,13 +93,13 @@ public class ServerWebSocketContainer implements ServerContainer {
     }
 
 
-    public void start(HttpClient httpClient, Pool<ByteBuffer> bufferPool) {
-        this.httpClient = httpClient;
+    public void start(XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool) {
         this.bufferPool = bufferPool;
+        this.xnioWorker = xnioWorker;
     }
 
     public void stop() {
-        this.httpClient = null;
+        this.xnioWorker = null;
         this.bufferPool = null;
     }
 
@@ -141,7 +140,7 @@ public class ServerWebSocketContainer implements ServerContainer {
     @Override
     public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(httpClient, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
@@ -170,7 +169,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     public Session connectToServerInternal(final Endpoint endpointInstance, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
-        IoFuture<WebSocketChannel> session = WebSocketClient.connect(httpClient, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
+        IoFuture<WebSocketChannel> session = WebSocketClient.connect(xnioWorker, bufferPool, OptionMap.EMPTY, path, WebSocketVersion.V13); //TODO: fix this
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 

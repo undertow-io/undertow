@@ -7,12 +7,11 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.undertow.client.HttpClientCallback;
 import io.undertow.client.HttpClientConnection;
-import io.undertow.client.HttpClientRequest;
-import io.undertow.client.HttpClientResponse;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -20,13 +19,9 @@ import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version13.WebSocket13Channel;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import org.xnio.Pool;
-import org.xnio.channels.Channels;
 import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.channels.StreamSourceChannel;
+import org.xnio.http.HandshakeChecker;
 
 /**
  * @author Stuart Douglas
@@ -34,8 +29,6 @@ import org.xnio.channels.StreamSourceChannel;
 public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
 
     public static final String MAGIC_NUMBER = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-    private static final AttachmentKey<String> KEY = AttachmentKey.create(String.class);
 
     public WebSocket13ClientHandshake(final URI url) {
         super(url);
@@ -47,13 +40,14 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     }
 
 
-    public void setupRequest(final HttpClientRequest request) {
-        request.getRequestHeaders().put(Headers.UPGRADE, "websocket");
-        request.getRequestHeaders().put(Headers.CONNECTION, "upgrade");
+    public Map<String, String> createHeaders() {
+        Map<String, String> headers = new HashMap<String, String>();
+        headers.put(Headers.UPGRADE_STRING, "websocket");
+        headers.put(Headers.CONNECTION_STRING, "upgrade");
         String key = createSecKey();
-        request.getConnection().putAttachment(KEY, key);
-        request.getRequestHeaders().put(Headers.SEC_WEB_SOCKET_KEY, key);
-        request.getRequestHeaders().put(Headers.SEC_WEB_SOCKET_VERSION, getVersion().toHttpHeaderValue());
+        headers.put(Headers.SEC_WEB_SOCKET_KEY_STRING, key);
+        headers.put(Headers.SEC_WEB_SOCKET_VERSION_STRING, getVersion().toHttpHeaderValue());
+        return headers;
 
     }
 
@@ -71,51 +65,26 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     }
 
     @Override
-    public void verifyResponse(final URI uri, final HttpClientResponse response, final HttpClientConnection connection, final HttpClientCallback<WebSocketChannel> callback) throws IOException {
-        String upgrade = response.getResponseHeaders().getFirst(Headers.UPGRADE);
-        if (upgrade == null || !upgrade.toLowerCase().trim().equals("websocket")) {
-            throw WebSocketMessages.MESSAGES.noWebSocketUpgradeHeader();
-        }
-        String connHeader = response.getResponseHeaders().getFirst(Headers.CONNECTION);
-        if (connHeader == null || !connHeader.toLowerCase().trim().equals("upgrade")) {
-            throw WebSocketMessages.MESSAGES.noWebSocketConnectionHeader();
-        }
-        String acceptKey = response.getResponseHeaders().getFirst(Headers.SEC_WEB_SOCKET_ACCEPT);
-        String sentKey = connection.getAttachment(KEY);
-        final String dKey = solve(sentKey);
-        if (!dKey.equals(acceptKey)) {
-            throw WebSocketMessages.MESSAGES.webSocketAcceptKeyMismatch(dKey, acceptKey);
-        }
-        StreamSourceChannel responseChannel = response.readReplyBody();
-        for (; ; ) {
-            try {
-                long read = Channels.drain(responseChannel, Long.MAX_VALUE);
-                if (read == 0) {
-
-                    responseChannel.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE,
-                            new ChannelListener<StreamSourceChannel>() {
-                                @Override
-                                public void handleEvent(final StreamSourceChannel channel) {
-                                    handleUpgrade(uri, connection, callback);
-                                }
-                            }, new ChannelExceptionHandler<StreamSourceChannel>() {
-                                @Override
-                                public void handleException(final StreamSourceChannel channel, final IOException e) {
-                                    callback.failed(e);
-                                }
-                            }
-                    ));
-                    responseChannel.resumeReads();
-                    return;
-                } else if (read == -1) {
-                    break;
+    public HandshakeChecker handshakeChecker(final URI uri, final Map<String, String> requestHeaders) {
+        final String sentKey = requestHeaders.get(Headers.SEC_WEB_SOCKET_KEY_STRING);
+        return new HandshakeChecker() {
+            @Override
+            public void checkHandshake(Map<String, String> headers) throws IOException {
+                String upgrade = headers.get(Headers.UPGRADE_STRING.toLowerCase());
+                if (upgrade == null || !upgrade.toLowerCase().trim().equals("websocket")) {
+                    throw WebSocketMessages.MESSAGES.noWebSocketUpgradeHeader();
                 }
-            } catch (IOException e) {
-                callback.failed(e);
-                break;
+                String connHeader = headers.get(Headers.CONNECTION_STRING.toLowerCase());
+                if (connHeader == null || !connHeader.toLowerCase().trim().equals("upgrade")) {
+                    throw WebSocketMessages.MESSAGES.noWebSocketConnectionHeader();
+                }
+                String acceptKey = headers.get(Headers.SEC_WEB_SOCKET_ACCEPT_STRING.toLowerCase());
+                final String dKey = solve(sentKey);
+                if (!dKey.equals(acceptKey)) {
+                    throw WebSocketMessages.MESSAGES.webSocketAcceptKeyMismatch(dKey, acceptKey);
+                }
             }
-        }
-        handleUpgrade(uri, connection, callback);
+        };
     }
 
     private void handleUpgrade(final URI uri, final HttpClientConnection connection, final HttpClientCallback<WebSocketChannel> callback) {

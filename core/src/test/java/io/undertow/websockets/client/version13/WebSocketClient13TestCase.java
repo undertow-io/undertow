@@ -1,13 +1,5 @@
 package io.undertow.websockets.client.version13;
 
-import java.io.IOException;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
-import io.undertow.client.HttpClient;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.util.FileUtils;
@@ -19,8 +11,8 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
-import org.junit.Assert;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,6 +26,13 @@ import org.xnio.Pool;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import sun.nio.ch.ChannelInputStream;
+
+import java.io.IOException;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Stuart Douglas
@@ -68,9 +67,8 @@ public class WebSocketClient13TestCase {
 
     @Test
     public void testTextMessage() throws Exception {
-        HttpClient httpClient = HttpClient.create(worker, OptionMap.EMPTY);
 
-        final WebSocketChannel webSocketChannel = WebSocketClient.connect(httpClient, buffer, OptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13).get();
+        final WebSocketChannel webSocketChannel = WebSocketClient.connect(worker, buffer, OptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13).get();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<String>();
