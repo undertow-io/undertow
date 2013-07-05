@@ -19,7 +19,10 @@
 package io.undertow.server.handlers;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 
 import io.undertow.UndertowMessages;
@@ -42,10 +45,11 @@ public class PathHandler implements HttpHandler {
 
     private volatile HttpHandler defaultHandler = ResponseCodeHandler.HANDLE_404;
     private final ConcurrentMap<String, HttpHandler> paths = new CopyOnWriteMap<String, HttpHandler>();
+
     /**
-     * internal tracker of the largest path we have.
+     * lengths of all registered paths
      */
-    private volatile int maxPathLength = 0;
+    private volatile int[] lengths = {};
 
     public PathHandler(final HttpHandler defaultHandler) {
         this.defaultHandler = defaultHandler;
@@ -58,26 +62,28 @@ public class PathHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
         int length = path.length();
-        int pos = length > maxPathLength ? maxPathLength : length;
-        String part = path.substring(0, pos);
-        HttpHandler next = paths.get(part);
-        if (next != null) {
-            exchange.setRelativePath(path.substring(pos));
-            exchange.setResolvedPath(exchange.getResolvedPath() + part);
-            next.handleRequest(exchange);
-            return;
-        }
-
-        while (pos > 1) {
-            --pos;
-            if (path.charAt(pos) == '/') {
-                part = path.substring(0, pos);
-                next = paths.get(part);
+        final int[] lengths = this.lengths;
+        for(int i = 0; i < lengths.length; ++i) {
+            int pathLength = lengths[i];
+            if(pathLength == length) {
+                HttpHandler next = paths.get(path);
                 if (next != null) {
-                    exchange.setRelativePath(path.substring(pos));
-                    exchange.setResolvedPath(exchange.getResolvedPath() + part);
+                    exchange.setRelativePath(path.substring(pathLength));
+                    exchange.setResolvedPath(exchange.getResolvedPath() + path);
                     next.handleRequest(exchange);
                     return;
+                }
+            } else if(pathLength < length) {
+                char c = path.charAt(pathLength);
+                if(c == '/') {
+                    String part = path.substring(0, pathLength);
+                    HttpHandler next = paths.get(part);
+                    if (next != null) {
+                        exchange.setRelativePath(path.substring(pathLength));
+                        exchange.setResolvedPath(exchange.getResolvedPath() + part);
+                        next.handleRequest(exchange);
+                        return;
+                    }
                 }
             }
         }
@@ -89,6 +95,8 @@ public class PathHandler implements HttpHandler {
      * with a / then one will be prepended.
      *
      * If / is specified as the path then it will replace the default handler.
+     *
+     * Note that this should not be
      *
      * @param path    The path
      * @param handler The handler
@@ -102,19 +110,32 @@ public class PathHandler implements HttpHandler {
             this.defaultHandler = handler;
             return this;
         }
-        final int pathLength;
         if (path.charAt(0) != '/') {
-            pathLength = path.length() + 1;
             paths.put("/" + path, handler);
         } else {
-            pathLength = path.length();
             paths.put(path, handler);
         }
-        if(pathLength > maxPathLength) {
-            maxPathLength = path.length() + pathLength;
+        buildLengths();
+        return this;
+    }
+
+    private void buildLengths() {
+        final Set<Integer> lengths = new TreeSet<Integer>(new Comparator<Integer>() {
+            @Override
+            public int compare(Integer o1, Integer o2) {
+                return -o1.compareTo(o2);
+            }
+        });
+        for(String p : paths.keySet()) {
+            lengths.add(p.length());
         }
 
-        return this;
+        int[] lengthArray = new int[lengths.size()];
+        int pos = 0;
+        for(int i : lengths) {
+            lengthArray[pos++] = i;
+        }
+        this.lengths = lengthArray;
     }
 
     public synchronized PathHandler removePath(final String path) {
@@ -132,18 +153,13 @@ public class PathHandler implements HttpHandler {
         } else {
             paths.remove(path);
         }
-        int max = 0;
-        for (Map.Entry<String, HttpHandler> entry : paths.entrySet()) {
-            if(entry.getKey().length() > max) {
-                max = entry.getKey().length();
-            }
-        }
-        this.maxPathLength = max;
+        buildLengths();
         return this;
     }
 
     public synchronized PathHandler clearPaths() {
         paths.clear();
+        this.lengths = new int[0];
         defaultHandler = ResponseCodeHandler.HANDLE_404;
         return this;
     }
