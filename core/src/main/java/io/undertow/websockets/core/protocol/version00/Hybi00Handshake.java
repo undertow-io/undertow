@@ -16,6 +16,15 @@
 
 package io.undertow.websockets.core.protocol.version00;
 
+import io.undertow.util.Headers;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketVersion;
+import io.undertow.websockets.core.protocol.Handshake;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
+import org.xnio.IoFuture;
+import org.xnio.Pool;
+import org.xnio.StreamConnection;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -24,15 +33,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.Set;
 import java.util.regex.Pattern;
-
-import io.undertow.util.Headers;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketVersion;
-import io.undertow.websockets.core.protocol.Handshake;
-import io.undertow.websockets.spi.WebSocketHttpExchange;
-import org.xnio.IoFuture;
-import org.xnio.Pool;
-import org.xnio.channels.ConnectedStreamChannel;
 
 /**
  * @author Mike Brock
@@ -89,7 +89,7 @@ public class Hybi00Handshake extends Handshake {
     }
 
     @Override
-    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final ConnectedStreamChannel channel, final Pool<ByteBuffer> pool) {
+    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection channel, final Pool<ByteBuffer> pool) {
         return new WebSocket00Channel(channel, pool, getWebSocketLocation(exchange), subprotocols, false);
     }
 

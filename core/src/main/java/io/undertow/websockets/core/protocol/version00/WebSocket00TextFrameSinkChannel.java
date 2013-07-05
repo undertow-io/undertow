@@ -17,11 +17,11 @@
  */
 package io.undertow.websockets.core.protocol.version00;
 
-import java.nio.ByteBuffer;
-
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import org.xnio.channels.StreamSinkChannel;
+
+import java.nio.ByteBuffer;
 
 /**
  * {@link StreamSinkFrameChannel} implementation for writing {@link WebSocketFrameType#TEXT}

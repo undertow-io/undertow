@@ -16,23 +16,21 @@
 
 package io.undertow.websockets.core.protocol;
 
-import java.nio.ByteBuffer;
-import java.util.Set;
-import java.util.regex.Pattern;
-
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketHandshakeException;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
-import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.spi.UpgradeCallback;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoFuture;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
-import org.xnio.channels.AssembledConnectedStreamChannel;
-import org.xnio.channels.ConnectedStreamChannel;
+
+import java.nio.ByteBuffer;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Abstract base class for doing a WebSocket Handshake.
@@ -101,7 +99,7 @@ public abstract class Handshake {
             @Override
             public void handleUpgrade(final StreamConnection channel, final Pool<ByteBuffer> buffers) {
                 //TODO: fix this up to use the new API and not assembled
-                WebSocketChannel webSocket = createChannel(exchange, new AssembledConnectedStreamChannel(channel, channel.getSourceChannel(), channel.getSinkChannel()), buffers);
+                WebSocketChannel webSocket = createChannel(exchange, channel, buffers);
                 callback.onConnect(exchange, webSocket);
             }
         });
@@ -118,7 +116,7 @@ public abstract class Handshake {
     /**
      * Create the {@link WebSocketChannel} from the {@link HttpServerExchange}
      */
-    public abstract WebSocketChannel createChannel(WebSocketHttpExchange exchange, final ConnectedStreamChannel channel, final Pool<ByteBuffer> pool);
+    public abstract WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection channel, final Pool<ByteBuffer> pool);
 
     /**
      * convenience method to perform the upgrade

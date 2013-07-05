@@ -15,9 +15,9 @@
  */
 package io.undertow.websockets.impl;
 
+import io.undertow.websockets.api.FragmentedBinaryFrameSender;
 import io.undertow.websockets.core.FragmentedMessageChannel;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.api.FragmentedBinaryFrameSender;
 import io.undertow.websockets.core.WebSocketMessages;
 
 import java.io.IOException;

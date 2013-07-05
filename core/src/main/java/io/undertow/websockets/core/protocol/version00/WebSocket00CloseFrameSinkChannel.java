@@ -17,15 +17,15 @@
  */
 package io.undertow.websockets.core.protocol.version00;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
 import org.xnio.Buffers;
 import org.xnio.channels.StreamSinkChannel;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
  * {@link StreamSinkFrameChannel} implementation for writing {@link WebSocketFrameType#CLOSE}

@@ -17,6 +17,23 @@
  */
 package io.undertow.websockets.core;
 
+import io.undertow.channels.IdleTimeoutConduit;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListener.Setter;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.Option;
+import org.xnio.Pool;
+import org.xnio.Pooled;
+import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.channels.ConnectedChannel;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.PushBackStreamSourceConduit;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -28,22 +45,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import io.undertow.channels.IdleTimeoutStreamChannel;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListener.Setter;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.Option;
-import org.xnio.Pool;
-import org.xnio.Pooled;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.channels.ConnectedChannel;
-import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.channels.PushBackStreamChannel;
-import org.xnio.channels.StreamSinkChannel;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -58,14 +59,14 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private final boolean client;
 
     private final Queue<SendChannel> senders = new ArrayDeque<SendChannel>();
-    private final IdleTimeoutStreamChannel<ConnectedStreamChannel> channel;
-    private final ConnectedStreamChannel connectedChannel;
+    private final StreamConnection channel;
+    private final StreamConnection connectedChannel;
 
     private final WebSocketVersion version;
     private final String wsUrl;
     private final ChannelListener.SimpleSetter<WebSocketChannel> closeSetter;
     private final ChannelListener.SimpleSetter<WebSocketChannel> receiveSetter;
-    private final PushBackStreamChannel pushBackStreamChannel;
+    private final PushBackStreamSourceConduit pushBackConduit;
     private final Pool<ByteBuffer> bufferPool;
 
     private volatile StreamSourceFrameChannel receiver;
@@ -96,9 +97,12 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      * @param wsUrl                  The url for which the {@link io.undertow.websockets.core.protocol.version00.WebSocket00Channel} was created.
      * @param client
      */
-    protected WebSocketChannel(final ConnectedStreamChannel connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, Set<String> subProtocols, final boolean client, boolean extensionsSupported) {
+    protected WebSocketChannel(final StreamConnection connectedStreamChannel, Pool<ByteBuffer> bufferPool, WebSocketVersion version, String wsUrl, Set<String> subProtocols, final boolean client, boolean extensionsSupported) {
         this.client = client;
-        channel = new IdleTimeoutStreamChannel<ConnectedStreamChannel>(connectedStreamChannel);
+        IdleTimeoutConduit idle = new IdleTimeoutConduit(connectedStreamChannel.getSinkChannel().getConduit(), connectedStreamChannel.getSourceChannel().getConduit());
+        connectedStreamChannel.getSourceChannel().setConduit(idle);
+        connectedStreamChannel.getSinkChannel().setConduit(idle);
+        channel = connectedStreamChannel;
         this.version = version;
         this.wsUrl = wsUrl;
         this.bufferPool = bufferPool;
@@ -108,12 +112,15 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
         closeSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
         receiveSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
-        channel.getReadSetter().set(null);
-        channel.suspendReads();
-        pushBackStreamChannel = new PushBackStreamChannel(channel);
-        pushBackStreamChannel.getReadSetter().set(new WebSocketReadListener());
-        connectedStreamChannel.getWriteSetter().set(new WebSocketWriteListener());
-        connectedStreamChannel.getCloseSetter().set(new WebSocketCloseListener());
+        channel.getSourceChannel().getReadSetter().set(null);
+        channel.getSourceChannel().suspendReads();
+
+        this.pushBackConduit = new PushBackStreamSourceConduit(channel.getSourceChannel().getConduit());
+        channel.getSourceChannel().setConduit(this.pushBackConduit);
+
+        channel.getSourceChannel().getReadSetter().set(new WebSocketReadListener());
+        connectedStreamChannel.getSinkChannel().getWriteSetter().set(new WebSocketWriteListener());
+        connectedStreamChannel.getSinkChannel().getCloseSetter().set(new WebSocketCloseListener());
     }
 
 
@@ -301,12 +308,12 @@ public abstract class WebSocketChannel implements ConnectedChannel {
             while (!partialFrame.isDone()) {
                 buffer.clear();
                 try {
-                    res = pushBackStreamChannel.read(buffer);
+                    res = channel.getSourceChannel().read(buffer);
                 } catch (IOException e) {
                     if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         WebSocketLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException");
                     }
-                    safeClose(pushBackStreamChannel);
+                    safeClose(channel.getSourceChannel());
                     throw e;
                 }
                 if (res == 0) {
@@ -314,38 +321,38 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 }
                 if (res == -1) {
                     try {
-                        pushBackStreamChannel.shutdownReads();
+                        channel.getSourceChannel().shutdownReads();
 
                     } catch (IOException e) {
                         if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
                             WebSocketLogger.REQUEST_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
                         }
                         // nothing we can do here.. close
-                        safeClose(pushBackStreamChannel);
+                        safeClose(channel.getSourceChannel());
                         throw e;
                     }
                     throw WebSocketMessages.MESSAGES.channelClosed();
                 }
                 buffer.flip();
                 try {
-                    partialFrame.handle(buffer, pushBackStreamChannel);
+                    partialFrame.handle(buffer, channel, pushBackConduit);
                 } catch (WebSocketException e) {
                     //the data was corrupt
                     if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
                         WebSocketLogger.REQUEST_LOGGER.debugf(e, "receive failed due to Exception");
                     }
                     // nothing we can do here.. close
-                    safeClose(pushBackStreamChannel);
+                    safeClose(channel.getSourceChannel());
                     throw new IOException(e);
                 }
             }
             if (buffer.hasRemaining()) {
                 // something was left in the buffer, push it back so it can be processed by the actual Source
-                pushBackStreamChannel.unget(pooled);
+                pushBackConduit.pushBack(pooled);
                 free = false;
             }
 
-            pushBackStreamChannel.suspendReads();
+            channel.getSourceChannel().suspendReads();
             this.partialFrame = null;
             receiver = partialFrame.getChannel();
             if (receiver.getType() == WebSocketFrameType.CLOSE) {
@@ -373,7 +380,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     public synchronized void suspendReceives() {
         receivesSuspended = true;
         if (receiver == null) {
-            pushBackStreamChannel.suspendReads();
+            channel.getSourceChannel().suspendReads();
         }
     }
 
@@ -387,7 +394,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     public synchronized void resumeReceives() {
         receivesSuspended = false;
         if (receiver == null) {
-            pushBackStreamChannel.resumeReads();
+            channel.getSourceChannel().resumeReads();
         }
     }
 
@@ -396,7 +403,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
      */
     @Override
     public void close() throws IOException {
-        pushBackStreamChannel.close();
+        channel.getSourceChannel().close();
     }
 
     /**
@@ -415,7 +422,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         if (broken.get()) {
             throw WebSocketMessages.MESSAGES.streamIsBroken();
         }
-        StreamSinkFrameChannel ch = createStreamSinkChannel(channel, type, payloadSize);
+        StreamSinkFrameChannel ch = createStreamSinkChannel(channel.getSinkChannel(), type, payloadSize);
         synchronized (sendersLock) {
             if (type == WebSocketFrameType.PING || type == WebSocketFrameType.PONG || type == WebSocketFrameType.CLOSE) {
                 // PING / PONG / CLOSE frames can be send while a fragmented message is send, so take special care
@@ -474,14 +481,14 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     public void sendClose() throws IOException {
         StreamSinkFrameChannel closeChannel = send(WebSocketFrameType.CLOSE, 0);
         closeChannel.shutdownWrites();
-        if(!closeChannel.flush()) {
+        if (!closeChannel.flush()) {
             closeChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
                     null, new ChannelExceptionHandler<StreamSinkFrameChannel>() {
-                        @Override
-                        public void handleException(final StreamSinkFrameChannel channel, final IOException exception) {
-                            IoUtils.safeClose(WebSocketChannel.this);
-                        }
-                    }
+                @Override
+                public void handleException(final StreamSinkFrameChannel channel, final IOException exception) {
+                    IoUtils.safeClose(WebSocketChannel.this);
+                }
+            }
             ));
         }
     }
@@ -557,7 +564,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     @SuppressWarnings({"unchecked", "rawtypes"})
     void markBroken() {
         if (broken.compareAndSet(false, true)) {
-            safeClose(pushBackStreamChannel);
+            safeClose(channel.getSourceChannel());
 
             StreamSourceFrameChannel receiver = this.receiver;
             if (receiver != null && receiver.isReadResumed()) {
@@ -580,10 +587,10 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     /**
      * {@link ChannelListener} which delegates the read notification to the appropriate listener
      */
-    private final class WebSocketReadListener implements ChannelListener<PushBackStreamChannel> {
+    private final class WebSocketReadListener implements ChannelListener<StreamSourceChannel> {
         @SuppressWarnings({"unchecked", "rawtypes"})
         @Override
-        public void handleEvent(final PushBackStreamChannel channel) {
+        public void handleEvent(final StreamSourceChannel channel) {
             final StreamSourceFrameChannel receiver = WebSocketChannel.this.receiver;
             if (receiver != null) {
                 final ChannelListener listener = ((SimpleSetter) receiver.getReadSetter()).get();
@@ -594,7 +601,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                     WebSocketLogger.REQUEST_LOGGER.debugf("Suspending reads on channel %s due to no listener", receiver);
                     channel.suspendReads();
                 }
-            } else if(closeFrameReceived) {
+            } else if (closeFrameReceived) {
                 channel.suspendReads();
             } else {
                 final ChannelListener listener = receiveSetter.get();
@@ -608,9 +615,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
     }
 
-    private class WebSocketWriteListener implements ChannelListener<ConnectedStreamChannel> {
+    private class WebSocketWriteListener implements ChannelListener<StreamSinkChannel> {
         @Override
-        public void handleEvent(final ConnectedStreamChannel channel) {
+        public void handleEvent(final StreamSinkChannel channel) {
             SendChannel ch = null, oldCh;
             for (; ; ) {
                 oldCh = ch;
@@ -663,10 +670,10 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     /**
      * close listener, just goes through and activates any sub channels to make sure their listeners are invoked
      */
-    private class WebSocketCloseListener implements ChannelListener<ConnectedStreamChannel> {
+    private class WebSocketCloseListener implements ChannelListener<StreamSinkChannel> {
 
         @Override
-        public void handleEvent(final ConnectedStreamChannel c) {
+        public void handleEvent(final StreamSinkChannel c) {
             StreamSourceFrameChannel receiver = WebSocketChannel.this.receiver;
             if (receiver != null && receiver.isOpen() && receiver.isReadResumed()) {
                 ChannelListeners.invokeChannelListener(receiver, (ChannelListener<? super StreamSourceFrameChannel>) receiver.getReadSetter().get());
@@ -699,7 +706,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         /**
          * Handles the data, any remaining data will be pushed back
          */
-        void handle(ByteBuffer data, PushBackStreamChannel channel) throws WebSocketException;
+        void handle(ByteBuffer data, StreamConnection channel, PushBackStreamSourceConduit pushBack) throws WebSocketException;
 
         /**
          * @return true if the channel is available
@@ -720,9 +727,9 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 if (channel == receiver) {
                     receiver = null;
                     if (receivesSuspended) {
-                        pushBackStreamChannel.suspendReads();
+                        channel.suspendReads();
                     } else {
-                        pushBackStreamChannel.resumeReads();
+                        channel.resumeReads();
                     }
                 }
 
@@ -767,7 +774,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                 }
             }
 
-            StreamSinkFrameChannel sink = createStreamSinkChannel(channel, type, payloadSize);
+            StreamSinkFrameChannel sink = createStreamSinkChannel(channel.getSinkChannel(), type, payloadSize);
             sink.setFinalFragment(finalFrame);
 
             synchronized (sendersLock) {

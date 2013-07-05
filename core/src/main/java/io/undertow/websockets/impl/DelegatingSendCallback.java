@@ -15,9 +15,9 @@
  */
 package io.undertow.websockets.impl;
 
+import io.undertow.websockets.api.SendCallback;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
-import io.undertow.websockets.api.SendCallback;
 
 /**
  * Wraps a array of {@link SendCallback}s to execute on {@link #onCompletion()} or {@link #onError(Throwable)}

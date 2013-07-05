@@ -3,7 +3,7 @@ package io.undertow.websockets.client;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import org.xnio.Pool;
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
 import org.xnio.http.HandshakeChecker;
 
 import java.net.URI;
@@ -29,7 +29,7 @@ public abstract class WebSocketClientHandshake{
         this.url = url;
     }
 
-    public abstract WebSocketChannel createChannel(final ConnectedStreamChannel channel, final String wsUri, final Pool<ByteBuffer> bufferPool);
+    public abstract WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final Pool<ByteBuffer> bufferPool);
 
     public abstract Map<String, String> createHeaders();
 

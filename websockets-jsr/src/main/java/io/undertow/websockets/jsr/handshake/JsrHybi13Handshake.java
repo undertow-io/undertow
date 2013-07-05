@@ -17,15 +17,15 @@
  */
 package io.undertow.websockets.jsr.handshake;
 
-import java.nio.ByteBuffer;
-import java.util.Collections;
-
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.Pool;
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
+
+import java.nio.ByteBuffer;
+import java.util.Collections;
 
 /**
  * {@link Hybi13Handshake} sub-class which takes care of match against the {@link javax.websocket.server.ServerEndpointConfiguration} and
@@ -48,7 +48,7 @@ public final class JsrHybi13Handshake extends Hybi13Handshake {
     }
 
     @Override
-    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final ConnectedStreamChannel c, final Pool<ByteBuffer> buffers) {
+    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection c, final Pool<ByteBuffer> buffers) {
         WebSocketChannel channel = super.createChannel(exchange, c, buffers);
         HandshakeUtil.setConfig(channel, config);
         return channel;

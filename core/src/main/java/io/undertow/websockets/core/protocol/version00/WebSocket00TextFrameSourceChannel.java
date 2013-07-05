@@ -18,17 +18,18 @@
 
 package io.undertow.websockets.core.protocol.version00;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-
+import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketFrameType;
 import org.xnio.Pooled;
 import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.PushBackStreamSourceConduit;
 
-import io.undertow.websockets.core.StreamSourceFrameChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
  * {@link StreamSourceFrameChannel} to read Frames of type {@link WebSocketFrameType#TEXT}
@@ -38,10 +39,14 @@ import io.undertow.websockets.core.WebSocketFrameType;
 class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
 
     private static final byte END_FRAME_MARKER = (byte) 0xFF;
+
+    private final PushBackStreamSourceConduit pushBackStreamSourceConduit;
     private boolean complete;
 
-    WebSocket00TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, PushBackStreamChannel channel, WebSocket00Channel wsChannel) {
+
+    WebSocket00TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket00Channel wsChannel, PushBackStreamSourceConduit pushBackStreamSourceConduit) {
         super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, -1);
+        this.pushBackStreamSourceConduit = pushBackStreamSourceConduit;
     }
 
     @Override
@@ -82,7 +87,7 @@ class WebSocket00TextFrameSourceChannel extends StreamSourceFrameChannel {
                         if (written == 0) {
                             if (buf.hasRemaining()) {
                                 // nothing could be written and the buffer has something left in there, so push it back to the channel
-                                ((PushBackStreamChannel) channel).unget(pooled);
+                                pushBackStreamSourceConduit.pushBack(pooled);
                                 free = false;
                             }
                             return r;

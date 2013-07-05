@@ -18,13 +18,13 @@
 
 package io.undertow.websockets.core;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.Set;
-
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.Set;
 
 /**
  * start at 20000

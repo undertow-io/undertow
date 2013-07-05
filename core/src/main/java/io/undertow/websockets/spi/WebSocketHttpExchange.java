@@ -1,13 +1,13 @@
 package io.undertow.websockets.spi;
 
+import io.undertow.util.AttachmentKey;
+import org.xnio.IoFuture;
+import org.xnio.Pool;
+
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-
-import io.undertow.util.AttachmentKey;
-import org.xnio.IoFuture;
-import org.xnio.Pool;
 
 
 /**

@@ -17,13 +17,13 @@
  */
 package io.undertow.websockets.core.protocol.version08;
 
-import java.nio.ByteBuffer;
-import java.util.Set;
-
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version07.WebSocket07Channel;
 import org.xnio.Pool;
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
+
+import java.nio.ByteBuffer;
+import java.util.Set;
 
 
 /**
@@ -32,7 +32,7 @@ import org.xnio.channels.ConnectedStreamChannel;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket08Channel extends WebSocket07Channel {
-    public WebSocket08Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool, String wsUrl, Set<String> subProtocols, final boolean client, boolean allowExtensions) {
+    public WebSocket08Channel(StreamConnection channel, Pool<ByteBuffer> bufferPool, String wsUrl, Set<String> subProtocols, final boolean client, boolean allowExtensions) {
         super(channel, bufferPool, wsUrl, subProtocols, client, allowExtensions);
     }
 

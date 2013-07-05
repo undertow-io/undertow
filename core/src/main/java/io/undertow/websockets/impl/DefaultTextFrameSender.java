@@ -15,10 +15,10 @@
  */
 package io.undertow.websockets.impl;
 
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.api.SendCallback;
 import io.undertow.websockets.api.TextFrameSender;
+import io.undertow.websockets.core.WebSocketFrameType;
+import io.undertow.websockets.core.WebSocketUtils;
 import org.xnio.channels.StreamSinkChannel;
 
 import java.io.IOException;

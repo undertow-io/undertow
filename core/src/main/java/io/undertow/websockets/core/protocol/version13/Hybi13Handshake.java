@@ -16,19 +16,19 @@
 
 package io.undertow.websockets.core.protocol.version13;
 
-import java.nio.ByteBuffer;
-import java.security.NoSuchAlgorithmException;
-import java.util.Collections;
-import java.util.Set;
-
-import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
-import org.xnio.channels.ConnectedStreamChannel;
+import org.xnio.StreamConnection;
+
+import java.nio.ByteBuffer;
+import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
+import java.util.Set;
 
 /**
  * The handshaking protocol implementation for Hybi-13.
@@ -70,7 +70,7 @@ public class Hybi13Handshake extends Hybi07Handshake {
     }
 
     @Override
-    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final ConnectedStreamChannel channel, final Pool<ByteBuffer> pool) {
+    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection channel, final Pool<ByteBuffer> pool) {
         return new WebSocket13Channel(channel, pool, getWebSocketLocation(exchange), subprotocols, false, allowExtensions);
     }
 }

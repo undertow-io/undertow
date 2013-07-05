@@ -1,9 +1,9 @@
 package io.undertow.websockets.spi;
 
-import java.nio.ByteBuffer;
-
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
+
+import java.nio.ByteBuffer;
 
 /**
  * @author Stuart Douglas

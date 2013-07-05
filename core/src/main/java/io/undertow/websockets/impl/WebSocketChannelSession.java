@@ -16,19 +16,19 @@
 package io.undertow.websockets.impl;
 
 import io.undertow.UndertowOptions;
-import io.undertow.websockets.api.CloseFrameSender;
-import io.undertow.websockets.api.PingFrameSender;
-import io.undertow.websockets.api.PongFrameSender;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.api.BinaryFrameSender;
+import io.undertow.websockets.api.CloseFrameSender;
 import io.undertow.websockets.api.CloseReason;
+import io.undertow.websockets.api.FragmentedBinaryFrameSender;
 import io.undertow.websockets.api.FragmentedTextFrameSender;
 import io.undertow.websockets.api.FrameHandler;
-import io.undertow.websockets.api.FragmentedBinaryFrameSender;
+import io.undertow.websockets.api.PingFrameSender;
+import io.undertow.websockets.api.PongFrameSender;
 import io.undertow.websockets.api.SendCallback;
 import io.undertow.websockets.api.TextFrameSender;
 import io.undertow.websockets.api.WebSocketSession;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketLogger;
 import org.xnio.Pool;
 
 import java.io.IOException;

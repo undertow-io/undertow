@@ -17,9 +17,6 @@
  */
 package io.undertow.websockets.core.protocol.version00;
 
-import java.nio.ByteBuffer;
-import java.util.Set;
-
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -28,9 +25,12 @@ import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
 import org.xnio.Pool;
-import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.channels.PushBackStreamChannel;
+import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
+import org.xnio.conduits.PushBackStreamSourceConduit;
+
+import java.nio.ByteBuffer;
+import java.util.Set;
 
 
 /**
@@ -46,12 +46,12 @@ public class WebSocket00Channel extends WebSocketChannel {
     /**
      * Create a new {@link WebSocket00Channel}
      *
-     * @param channel    The {@link ConnectedStreamChannel} over which the WebSocket Frames should get send and received.
+     * @param channel    The {@link StreamConnection} over which the WebSocket Frames should get send and received.
      *                   Be aware that it already must be "upgraded".
      * @param bufferPool The {@link Pool} which will be used to acquire {@link ByteBuffer}'s from.
      * @param wsUrl      The url for which the {@link WebSocket00Channel} was created.
      */
-    public WebSocket00Channel(ConnectedStreamChannel channel, Pool<ByteBuffer> bufferPool,
+    public WebSocket00Channel(StreamConnection channel, Pool<ByteBuffer> bufferPool,
                               String wsUrl, Set<String> subProtocols, final boolean client) {
         super(channel, bufferPool, WebSocketVersion.V00, wsUrl, subProtocols, client, false);
     }
@@ -71,7 +71,7 @@ public class WebSocket00Channel extends WebSocketChannel {
             }
 
             @Override
-            public void handle(final ByteBuffer buffer, final PushBackStreamChannel channel) throws WebSocketException {
+            public void handle(final ByteBuffer buffer, StreamConnection channel, PushBackStreamSourceConduit pushBack) throws WebSocketException {
                 if (!buffer.hasRemaining()) {
                     return;
                 }
@@ -126,14 +126,14 @@ public class WebSocket00Channel extends WebSocketChannel {
                     case FRAME_SIZE_READ:
                         if (frameSize == 0) {
                             receivedClosingHandshake = true;
-                            this.channel = new WebSocket00CloseFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
+                            this.channel = new WebSocket00CloseFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket00Channel.this);
                         } else {
-                            this.channel = new WebSocket00BinaryFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this, frameSize);
+                            this.channel = new WebSocket00BinaryFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket00Channel.this, frameSize);
                         }
                         return;
                     case TEXT_FRAME:
                         // Decode a 0xff terminated UTF-8 string
-                        this.channel = new WebSocket00TextFrameSourceChannel(streamSourceChannelControl, channel, WebSocket00Channel.this);
+                        this.channel = new WebSocket00TextFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket00Channel.this, pushBack);
                         return;
                     default:
                         throw new IllegalStateException();

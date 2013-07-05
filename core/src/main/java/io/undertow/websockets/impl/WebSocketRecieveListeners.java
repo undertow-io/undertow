@@ -18,11 +18,6 @@
 
 package io.undertow.websockets.impl;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-
 import io.undertow.websockets.api.AssembledFrameHandler;
 import io.undertow.websockets.api.CloseReason;
 import io.undertow.websockets.api.FragmentedFrameHandler;
@@ -39,6 +34,11 @@ import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Stuart Douglas

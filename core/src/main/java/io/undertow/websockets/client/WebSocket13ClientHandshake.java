@@ -1,5 +1,16 @@
 package io.undertow.websockets.client;
 
+import io.undertow.util.FlexBase64;
+import io.undertow.util.Headers;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketMessages;
+import io.undertow.websockets.core.WebSocketUtils;
+import io.undertow.websockets.core.WebSocketVersion;
+import io.undertow.websockets.core.protocol.version13.WebSocket13Channel;
+import org.xnio.Pool;
+import org.xnio.StreamConnection;
+import org.xnio.http.HandshakeChecker;
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -9,19 +20,6 @@ import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import io.undertow.client.HttpClientCallback;
-import io.undertow.client.HttpClientConnection;
-import io.undertow.util.FlexBase64;
-import io.undertow.util.Headers;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketMessages;
-import io.undertow.websockets.core.WebSocketUtils;
-import io.undertow.websockets.core.WebSocketVersion;
-import io.undertow.websockets.core.protocol.version13.WebSocket13Channel;
-import org.xnio.Pool;
-import org.xnio.channels.ConnectedStreamChannel;
-import org.xnio.http.HandshakeChecker;
 
 /**
  * @author Stuart Douglas
@@ -35,7 +33,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     }
 
     @Override
-    public WebSocketChannel createChannel(final ConnectedStreamChannel channel, final String wsUri, final Pool<ByteBuffer> bufferPool) {
+    public WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final Pool<ByteBuffer> bufferPool) {
         return new WebSocket13Channel(channel, bufferPool, wsUri, Collections.<String>emptySet(), true, false);
     }
 
@@ -86,17 +84,6 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
             }
         };
     }
-
-    private void handleUpgrade(final URI uri, final HttpClientConnection connection, final HttpClientCallback<WebSocketChannel> callback) {
-        try {
-            ConnectedStreamChannel channel = connection.performUpgrade();
-            callback.completed(new WebSocket13Channel(channel, connection.getBufferPool(), uri.toString(), Collections.<String>emptySet(), true, false));
-        } catch (IOException e) {
-            callback.failed(e);
-        }
-
-    }
-
 
     protected final String solve(final String nonceBase64) {
         try {

@@ -16,8 +16,8 @@
 
 package io.undertow.websockets.core.handler;
 
-import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 /**
  * Interface that is used on the client side to accept web socket connections

@@ -9,10 +9,6 @@ import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioWorker;
-import org.xnio.channels.AssembledConnectedSslStreamChannel;
-import org.xnio.channels.AssembledConnectedStreamChannel;
-import org.xnio.channels.SslChannel;
-import org.xnio.channels.SslConnection;
 import org.xnio.http.HttpUpgrade;
 
 import java.net.URI;
@@ -41,12 +37,7 @@ public class WebSocketClient {
         IoFuture<StreamConnection> result = HttpUpgrade.performUpgrade(worker, null, newUri, headers, new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection channel) {
-                WebSocketChannel result;
-                if (channel instanceof SslConnection) {
-                    result = handshake.createChannel(new AssembledConnectedSslStreamChannel((SslChannel) channel, channel.getSourceChannel(), channel.getSinkChannel()), newUri.toString(), bufferPool);
-                } else {
-                    result = handshake.createChannel(new AssembledConnectedStreamChannel(channel, channel.getSourceChannel(), channel.getSinkChannel()), newUri.toString(), bufferPool);
-                }
+                WebSocketChannel result = handshake.createChannel(channel, newUri.toString(), bufferPool);
                 ioFuture.setResult(result);
             }
         }, null, optionMap, handshake.handshakeChecker(newUri, headers));

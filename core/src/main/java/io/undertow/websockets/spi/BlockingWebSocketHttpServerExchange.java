@@ -1,15 +1,15 @@
 package io.undertow.websockets.spi;
 
+import io.undertow.server.HttpServerExchange;
+import org.xnio.FinishedIoFuture;
+import org.xnio.FutureResult;
+import org.xnio.IoFuture;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
-import io.undertow.server.HttpServerExchange;
-import org.xnio.FinishedIoFuture;
-import org.xnio.FutureResult;
-import org.xnio.IoFuture;
 
 /**
  * @author Stuart Douglas

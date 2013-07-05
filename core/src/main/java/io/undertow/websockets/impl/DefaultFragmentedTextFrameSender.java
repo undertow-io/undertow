@@ -15,10 +15,10 @@
  */
 package io.undertow.websockets.impl;
 
-import io.undertow.websockets.core.FragmentedMessageChannel;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.api.FragmentedTextFrameSender;
 import io.undertow.websockets.api.SendCallback;
+import io.undertow.websockets.core.FragmentedMessageChannel;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketMessages;
 import org.xnio.channels.BlockingWritableByteChannel;
 import org.xnio.channels.StreamSinkChannel;
