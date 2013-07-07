@@ -48,11 +48,13 @@ import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.DevelopmentModeInfo;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
+import io.undertow.servlet.handlers.ServletDebugPageHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.AttachmentKey;
@@ -341,7 +343,7 @@ public class AsyncContextImpl implements AsyncContext {
     @Override
     public void setTimeout(final long timeout) {
         this.timeout = timeout;
-        if(initialRequestDone) {
+        if (initialRequestDone) {
             updateTimeout();
         }
     }
@@ -357,10 +359,16 @@ public class AsyncContextImpl implements AsyncContext {
         if (!dispatched) {
             servletRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, error);
             try {
-                if (servletResponse instanceof HttpServletResponse) {
-                    ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                DevelopmentModeInfo devMode = servletRequestContext.getDeployment().getDeploymentInfo().getDevelopmentMode();
+                boolean errorPage = devMode != null && devMode.isDisplayErrorDetails();
+                if(errorPage) {
+                    ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, error);
                 } else {
-                    servletRequestContext.getOriginalResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                    if (servletResponse instanceof HttpServletResponse) {
+                        ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                    } else {
+                        servletRequestContext.getOriginalResponse().sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                    }
                 }
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);

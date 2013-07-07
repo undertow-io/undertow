@@ -40,6 +40,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -114,6 +115,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
     @Override
     public void deploy() {
         DeploymentInfo deploymentInfo = originalDeployment.clone();
+
+        if(deploymentInfo.getDevelopmentMode() != null) {
+            UndertowServletLogger.REQUEST_LOGGER.developmentModeEnabled(deploymentInfo.getDeploymentName());
+        }
 
         deploymentInfo.validate();
         final DeploymentImpl deployment = new DeploymentImpl(deploymentInfo, servletContainer);

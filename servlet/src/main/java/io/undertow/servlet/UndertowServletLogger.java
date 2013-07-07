@@ -70,4 +70,9 @@ public interface UndertowServletLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 15006, value = "IOException dispatching async event")
     void ioExceptionDispatchingAsyncEvent(@Cause IOException e);
+
+
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 15007, value = "Development mode enabled for deployment %s, please do not enable development mode for production use")
+    void developmentModeEnabled(String deploymentName);
 }

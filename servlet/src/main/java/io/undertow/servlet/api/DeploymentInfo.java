@@ -50,30 +50,31 @@ import io.undertow.servlet.util.DefaultClassIntrospector;
  */
 public class DeploymentInfo implements Cloneable {
 
-    private volatile String deploymentName;
-    private volatile String displayName;
-    private volatile String contextPath;
-    private volatile ClassLoader classLoader;
-    private volatile ResourceManager resourceManager = ResourceManager.EMPTY_RESOURCE_MANAGER;
-    private volatile ClassIntrospecter classIntrospecter = DefaultClassIntrospector.INSTANCE;
-    private volatile int majorVersion = 3;
-    private volatile int minorVersion;
-    private volatile Executor executor;
-    private volatile Executor asyncExecutor;
-    private volatile File tempDir;
-    private volatile JspConfigDescriptor jspConfigDescriptor;
-    private volatile DefaultServletConfig defaultServletConfig;
-    private volatile SessionManagerFactory sessionManagerFactory = new InMemorySessionManagerFactory();
-    private volatile LoginConfig loginConfig;
-    private volatile IdentityManager identityManager;
-    private volatile ConfidentialPortManager confidentialPortManager;
-    private volatile boolean allowNonStandardWrappers = false;
-    private volatile int defaultSessionTimeout = 60 * 30;
-    private volatile boolean ignoreStandardAuthenticationMechanism = false;
-    private volatile ConcurrentMap<String, Object> servletContextAttributeBackingMap;
-    private volatile ServletSessionConfig servletSessionConfig;
-    private volatile String hostName = "localhost";
-    private volatile boolean denyUncoveredHttpMethods = false;
+    private String deploymentName;
+    private String displayName;
+    private String contextPath;
+    private ClassLoader classLoader;
+    private ResourceManager resourceManager = ResourceManager.EMPTY_RESOURCE_MANAGER;
+    private ClassIntrospecter classIntrospecter = DefaultClassIntrospector.INSTANCE;
+    private int majorVersion = 3;
+    private int minorVersion;
+    private Executor executor;
+    private Executor asyncExecutor;
+    private File tempDir;
+    private JspConfigDescriptor jspConfigDescriptor;
+    private DefaultServletConfig defaultServletConfig;
+    private SessionManagerFactory sessionManagerFactory = new InMemorySessionManagerFactory();
+    private LoginConfig loginConfig;
+    private IdentityManager identityManager;
+    private ConfidentialPortManager confidentialPortManager;
+    private boolean allowNonStandardWrappers = false;
+    private int defaultSessionTimeout = 60 * 30;
+    private boolean ignoreStandardAuthenticationMechanism = false;
+    private ConcurrentMap<String, Object> servletContextAttributeBackingMap;
+    private ServletSessionConfig servletSessionConfig;
+    private String hostName = "localhost";
+    private boolean denyUncoveredHttpMethods = false;
+    private DevelopmentModeInfo developmentMode;
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -703,6 +704,15 @@ public class DeploymentInfo implements Cloneable {
         this.denyUncoveredHttpMethods = denyUncoveredHttpMethods;
     }
 
+    public DevelopmentModeInfo getDevelopmentMode() {
+        return developmentMode;
+    }
+
+    public DeploymentInfo setDevelopmentMode(DevelopmentModeInfo developmentMode) {
+        this.developmentMode = developmentMode;
+        return this;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -756,6 +766,7 @@ public class DeploymentInfo implements Cloneable {
         info.servletSessionConfig = servletSessionConfig;
         info.hostName = hostName;
         info.denyUncoveredHttpMethods = denyUncoveredHttpMethods;
+        info.developmentMode = developmentMode;
         return info;
     }
 

@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.api.DevelopmentModeInfo;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.ApplicationListeners;
@@ -57,12 +58,16 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
     private final ServletPathMatches paths;
 
+    private final boolean debugErrorPage;
+
     public ServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final CompositeThreadSetupAction setupAction, final ServletContextImpl servletContext) {
         this.next = next;
         this.setupAction = setupAction;
         this.servletContext = servletContext;
         this.paths = paths;
         this.listeners = servletContext.getDeployment().getApplicationListeners();
+        final DevelopmentModeInfo developmentMode = servletContext.getDeployment().getDeploymentInfo().getDevelopmentMode();
+        this.debugErrorPage = developmentMode != null && developmentMode.isDisplayErrorDetails();
     }
 
     @Override
@@ -149,11 +154,15 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                             }
                         } else {
                             UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", exchange);
-                            //TODO: we need a debug mode to generate a debug error page
-                            if(response instanceof HttpServletResponse) {
-                                ((HttpServletResponse) response).sendError(500);
+                            if(debugErrorPage) {
+                                ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, t);
                             } else {
-                                servletRequestContext.getOriginalResponse().sendError(500);
+                                //TODO: we need a debug mode to generate a debug error page
+                                if(response instanceof HttpServletResponse) {
+                                    ((HttpServletResponse) response).sendError(500);
+                                } else {
+                                    servletRequestContext.getOriginalResponse().sendError(500);
+                                }
                             }
                         }
                     }
