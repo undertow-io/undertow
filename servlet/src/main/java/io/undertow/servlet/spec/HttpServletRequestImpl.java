@@ -402,6 +402,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public void logout() throws ServletException {
         SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
         sc.logout();
+        if(servletContext.getDeployment().getDeploymentInfo().isInvalidateSessionOnLogout()) {
+            HttpSession session = getSession(false);
+            if(session != null) {
+                session.invalidate();
+            }
+        }
     }
 
     @Override
