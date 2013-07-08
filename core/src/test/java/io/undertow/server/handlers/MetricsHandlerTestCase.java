@@ -5,6 +5,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.CompletionLatchHandler;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -21,15 +22,15 @@ import java.io.IOException;
 public class MetricsHandlerTestCase {
 
     private static MetricsHandler metricsHandler;
-
+    private static CompletionLatchHandler latchHandler;
     @BeforeClass
     public static void setup() {
-        DefaultServer.setRootHandler(metricsHandler = new MetricsHandler(new HttpHandler() {
+        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(metricsHandler = new MetricsHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
-                Thread.sleep(10);
+                Thread.sleep(100);
             }
-        }));
+        })));
     }
 
     @Test
@@ -40,6 +41,8 @@ public class MetricsHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
+            latchHandler.await();
+            latchHandler.reset();
 
             MetricsHandler.MetricResult metrics = metricsHandler.getMetrics();
             Assert.assertEquals(1, metrics.getTotalRequests());
@@ -51,6 +54,9 @@ public class MetricsHandlerTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
+            latchHandler.await();
+            latchHandler.reset();
+
             metrics = metricsHandler.getMetrics();
             Assert.assertEquals(2, metrics.getTotalRequests());
 
@@ -59,5 +65,4 @@ public class MetricsHandlerTestCase {
             client.getConnectionManager().shutdown();
         }
     }
-
 }
