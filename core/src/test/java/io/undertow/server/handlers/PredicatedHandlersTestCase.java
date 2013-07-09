@@ -25,6 +25,7 @@ public class PredicatedHandlersTestCase {
     public void testRewrite() throws IOException {
         DefaultServer.setRootHandler(
                 Handlers.predicates(
+
                         PredicatedHandlersParser.parse(
                                 "method[GET] -> set[attribute='%{o,type}', value=get]\n" +
                                         "regex['(.*).css'] -> rewrite['${1}.xcss']\n" +
