@@ -119,9 +119,29 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
         }
         long res = 0L;
         try {
-            return res = next.transferTo(position, min(count, val), target);
+            return res = next.transferTo(position, min(count, val & MASK_COUNT), target);
         } finally {
             exitRead(res);
+        }
+    }
+
+    public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
+        if (count == 0L) {
+            return 0L;
+        }
+        long val = state;
+        checkMaxSize(val);
+        if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED) || allAreClear(val, MASK_COUNT)) {
+            return -1;
+        }
+        long res = 0L;
+        try {
+            if (allAreSet(val, FLAG_CLOSED) || val == 0L) {
+                return -1L;
+            }
+            return res = next.transferTo(min(count, val & MASK_COUNT), throughBuffer, target);
+        } finally {
+            exitRead(res == -1L ? val & MASK_COUNT : res + throughBuffer.remaining());
         }
     }
 
@@ -142,26 +162,6 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
                 }
             }
             this.state |= FLAG_LENGTH_CHECKED;
-        }
-    }
-
-    public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
-        if (count == 0L) {
-            return 0L;
-        }
-        long val = state;
-        checkMaxSize(val);
-        if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED) || allAreClear(val, MASK_COUNT)) {
-            return -1;
-        }
-        long res = 0L;
-        try {
-            if (allAreSet(val, FLAG_CLOSED) || val == 0L) {
-                return -1L;
-            }
-            return res = next.transferTo(min(count, val), throughBuffer, target);
-        } finally {
-            exitRead(res == -1L ? val & MASK_COUNT : res + throughBuffer.remaining());
         }
     }
 
