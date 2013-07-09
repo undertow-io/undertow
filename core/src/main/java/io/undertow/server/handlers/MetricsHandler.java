@@ -41,6 +41,7 @@ public class MetricsHandler implements HttpHandler {
                 nextListener.proceed();
             }
         });
+        next.handleRequest(exchange);
     }
 
     public void reset() {

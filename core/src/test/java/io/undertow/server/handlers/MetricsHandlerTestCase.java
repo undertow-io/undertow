@@ -29,6 +29,7 @@ public class MetricsHandlerTestCase {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
                 Thread.sleep(100);
+                exchange.getResponseSender().send("Hello");
             }
         })));
     }
@@ -40,7 +41,7 @@ public class MetricsHandlerTestCase {
         try {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
             latchHandler.await();
             latchHandler.reset();
 
@@ -52,7 +53,7 @@ public class MetricsHandlerTestCase {
 
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
 
             latchHandler.await();
             latchHandler.reset();
