@@ -58,9 +58,9 @@ public class AccessLogFileTestCase {
     @Test
     public void testSingleLogMessageToFile() throws IOException, InterruptedException {
         File directory = new File(System.getProperty("java.io.tmpdir"));
-        File logFileName = new File(directory, "server.log");
+        File logFileName = new File(directory, "server1.log");
 
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1");
         DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
         TestHttpClient client = new TestHttpClient();
         try {
@@ -80,9 +80,9 @@ public class AccessLogFileTestCase {
     @Test
     public void testLogLotsOfThreads() throws IOException, InterruptedException, ExecutionException {
         File directory = new File(System.getProperty("java.io.tmpdir"));
-        File logFileName = new File(directory, "server.log");
+        File logFileName = new File(directory, "server2.log");
 
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server2");
         DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "REQ %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
 
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
