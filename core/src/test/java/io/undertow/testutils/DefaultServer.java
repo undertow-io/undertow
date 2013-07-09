@@ -18,32 +18,15 @@
 
 package io.undertow.testutils;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.Inet4Address;
-import java.net.InetSocketAddress;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-
 import io.undertow.UndertowOptions;
 import io.undertow.ajp.AjpOpenListener;
-import io.undertow.client.HttpClient;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpOpenListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
-import io.undertow.server.handlers.ProxyHandler;
 import io.undertow.server.handlers.RequestDumplingHandler;
+import io.undertow.server.handlers.proxy.ProxyHandler;
+import io.undertow.server.handlers.proxy.SimpleProxyClientProvider;
 import io.undertow.util.NetworkUtils;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
@@ -65,6 +48,22 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.XnioSsl;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Inet4Address;
+import java.net.InetSocketAddress;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 
 import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
 import static org.xnio.SslClientAuthMode.REQUESTED;
@@ -227,7 +226,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         HttpOpenListener proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                         ChannelListener<AcceptingChannel<StreamConnection>> proxyAcceptListener = ChannelListeners.openListenerAdapter(proxyOpenListener);
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                        proxyOpenListener.setRootHandler(new ProxyHandler(HttpClient.create(worker, OptionMap.EMPTY), targetAddress));
+                        proxyOpenListener.setRootHandler(new ProxyHandler(new SimpleProxyClientProvider(targetAddress)));
                         proxyServer.resumeAccepts();
                     }
 
@@ -366,6 +365,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     public static boolean isAjp() {
         return ajp;
+    }
+
+    public static boolean isProxy() {
+        return proxy;
     }
 
     /**

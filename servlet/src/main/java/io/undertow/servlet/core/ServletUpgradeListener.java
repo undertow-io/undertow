@@ -1,15 +1,13 @@
 package io.undertow.servlet.core;
 
-import java.nio.channels.Channel;
-
-import javax.servlet.http.HttpUpgradeHandler;
-
 import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.spec.WebConnectionImpl;
-import org.xnio.ChannelListener;
 import org.xnio.StreamConnection;
+
+import javax.servlet.http.HttpUpgradeHandler;
 
 /**
  * Lister that handles a servlet exchange upgrade event.
@@ -26,9 +24,9 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Exc
     @Override
     public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
         final StreamConnection channel = exchange.getConnection().getChannel();
-        channel.getCloseSetter().set(new ChannelListener<Channel>() {
+        exchange.getConnection().addCloseListener(new HttpServerConnection.CloseListener() {
             @Override
-            public void handleEvent(final Channel channel) {
+            public void closed(HttpServerConnection connection) {
                 try {
                     instance.getInstance().destroy();
                 } finally {

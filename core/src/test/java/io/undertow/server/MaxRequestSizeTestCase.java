@@ -88,8 +88,14 @@ public class MaxRequestSizeTestCase {
             DefaultServer.setUndertowOptions(maxSize);
 
             try {
-                client.execute(post);
-                Assert.fail("request should have been too big");
+                HttpResponse response = client.execute(post);
+                HttpClientUtils.readResponse(response);
+
+                if(DefaultServer.isProxy()) {
+                    Assert.assertEquals(500, response.getStatusLine().getStatusCode());
+                } else {
+                    Assert.fail("request should have been too big");
+                }
             } catch (IOException e) {
                 //expected
             }

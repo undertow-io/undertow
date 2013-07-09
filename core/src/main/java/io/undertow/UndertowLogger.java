@@ -19,6 +19,7 @@
 package io.undertow;
 
 import io.undertow.client.HttpClient;
+import io.undertow.server.HttpServerConnection;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
@@ -108,5 +109,9 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5017, value = "Unknown variable %s")
     void unkownVariable(String token);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5018, value = "Exception invoking close listener %s")
+    void exceptionInvokingCloseListener(HttpServerConnection.CloseListener l, @Cause Throwable e);
 }
 

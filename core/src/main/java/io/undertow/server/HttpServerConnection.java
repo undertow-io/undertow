@@ -21,9 +21,12 @@ package io.undertow.server;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.LinkedList;
+import java.util.List;
 
 import javax.net.ssl.SSLSession;
 
+import io.undertow.UndertowLogger;
 import io.undertow.util.AbstractAttachable;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -42,16 +45,20 @@ import org.xnio.conduits.StreamSourceConduit;
 /**
  * A server-side HTTP connection.
  *
+ * Note that the lifecycle of the server connection is tied to the underlying TCP connection. Even if the channel
+ * is upgraded the connection is not considered closed until the upgraded channel is closed.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class HttpServerConnection extends AbstractAttachable implements ConnectedChannel {
     private final StreamConnection channel;
-    private final ChannelListener.Setter<HttpServerConnection> closeSetter;
+    private final CloseSetter closeSetter;
     private final Pool<ByteBuffer> bufferPool;
     private final HttpHandler rootHandler;
     private final OptionMap undertowOptions;
     private final StreamSourceConduit originalSourceConduit;
     private final StreamSinkConduit originalSinkConduit;
+    private final List<CloseListener> closeListeners = new LinkedList<CloseListener>();
 
     private final int bufferSize;
     /**
@@ -65,9 +72,10 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
         this.rootHandler = rootHandler;
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
-        closeSetter = ChannelListeners.getDelegatingSetter(channel.getCloseSetter(), this);
         this.originalSinkConduit = channel.getSinkChannel().getConduit();
         this.originalSourceConduit = channel.getSourceChannel().getConduit();
+        closeSetter = new CloseSetter();
+        channel.setCloseListener(closeSetter);
     }
 
     /**
@@ -221,6 +229,37 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
         private ConduitState(final StreamSinkConduit sink, final StreamSourceConduit source) {
             this.sink = sink;
             this.source = source;
+        }
+    }
+
+    public void addCloseListener(CloseListener listener) {
+        this.closeListeners.add(listener);
+    }
+
+    public interface CloseListener {
+
+        void closed(final HttpServerConnection connection);
+    }
+
+    private class CloseSetter implements ChannelListener.Setter<HttpServerConnection>, ChannelListener<StreamConnection> {
+
+        private ChannelListener<? super HttpServerConnection> listener;
+
+        @Override
+        public void set(ChannelListener<? super HttpServerConnection> listener) {
+            this.listener = listener;
+        }
+
+        @Override
+        public void handleEvent(StreamConnection channel) {
+            for(CloseListener l : closeListeners) {
+                try {
+                    l.closed(HttpServerConnection.this);
+                } catch (Throwable e) {
+                    UndertowLogger.REQUEST_LOGGER.exceptionInvokingCloseListener(l, e);
+                }
+            }
+            ChannelListeners.invokeChannelListener(HttpServerConnection.this, listener);
         }
     }
 }

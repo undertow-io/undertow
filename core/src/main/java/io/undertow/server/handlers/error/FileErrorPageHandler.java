@@ -21,7 +21,6 @@ package io.undertow.server.handlers.error;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,13 +29,13 @@ import java.util.Set;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.DefaultResponseListener;
+import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
 import org.jboss.logging.Logger;
-import org.xnio.ChannelListener;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
@@ -104,9 +103,11 @@ public class FileErrorPageHandler implements HttpHandler {
                 }
 
                 final StreamSinkChannel response = exchange.getResponseChannel();
-                response.getCloseSetter().set(new ChannelListener<Channel>() {
-                    public void handleEvent(final Channel channel) {
+                exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                    @Override
+                    public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
                         IoUtils.safeClose(fileChannel);
+                        nextListener.proceed();
                     }
                 });
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, file.length());
