@@ -32,9 +32,9 @@ public class DateHandler implements HttpHandler {
         if(time < nextUpdateTime) {
             exchange.getResponseHeaders().put(Headers.DATE, cachedDateString);
         } else {
-            nextUpdateTime = time + 1000;
             String dateString = DateUtils.toDateString(new Date(time));
             cachedDateString = dateString;
+            nextUpdateTime = time + 1000;
             exchange.getResponseHeaders().put(Headers.DATE, dateString);
         }
         next.handleRequest(exchange);
