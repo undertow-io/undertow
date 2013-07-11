@@ -57,7 +57,7 @@ public class AccessLogFileTestCase {
 
     @Test
     public void testSingleLogMessageToFile() throws IOException, InterruptedException {
-        File directory = new File(System.getProperty("java.io.tmpdir"));
+        File directory = logDirectory;
         File logFileName = new File(directory, "server1.log");
 
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1");
@@ -79,7 +79,7 @@ public class AccessLogFileTestCase {
 
     @Test
     public void testLogLotsOfThreads() throws IOException, InterruptedException, ExecutionException {
-        File directory = new File(System.getProperty("java.io.tmpdir"));
+        File directory = logDirectory;
         File logFileName = new File(directory, "server2.log");
 
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server2");
