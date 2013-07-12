@@ -60,12 +60,13 @@ public class ServletContainerImpl implements ServletContainer {
     }
 
     @Override
-    public void removeDeployment(final String deploymentName) {
-        final DeploymentManager deploymentManager = deployments.get(deploymentName);
+    public void removeDeployment(final DeploymentInfo deploymentInfo) {
+        final DeploymentManager deploymentManager = deployments.get(deploymentInfo.getDeploymentName());
         if (deploymentManager.getState() != DeploymentManager.State.UNDEPLOYED) {
             throw UndertowServletMessages.MESSAGES.canOnlyRemoveDeploymentsWhenUndeployed(deploymentManager.getState());
         }
-        deployments.remove(deploymentName);
+        deployments.remove(deploymentInfo.getDeploymentName());
+        deploymentsByPath.remove(deploymentInfo.getContextPath());
     }
 
     @Override

@@ -37,7 +37,7 @@ public interface ServletContainer {
 
     DeploymentManager getDeployment(String deploymentName);
 
-    void removeDeployment(String deploymentName);
+    void removeDeployment(DeploymentInfo deploymentInfo);
 
     DeploymentManager getDeploymentByPath(String uripath);
 
