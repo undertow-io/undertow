@@ -143,7 +143,7 @@ public class AutobahnWebSocketServer {
                 }
                 channel.resumeReceives();
             } catch (IOException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
                 IoUtils.safeClose(channel);
             }
         }

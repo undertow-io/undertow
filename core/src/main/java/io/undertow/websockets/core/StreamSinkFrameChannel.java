@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.core;
 
+import org.xnio.Buffers;
 import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListener.SimpleSetter;
 import org.xnio.ChannelListeners;
@@ -24,6 +25,7 @@ import org.xnio.Option;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
+import org.xnio.channels.FixedLengthOverflowException;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -467,7 +469,11 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendC
         long toWrite = bytesToWrite();
 
         if (toWrite < 1) {
-            return -1;
+            if(Buffers.remaining(srcs) == 0) {
+                return 0;
+            } else {
+                throw new FixedLengthOverflowException();
+            }
         }
         ByteBuffer[] bufs = composeBuffers(srcs, offset, length);
 
@@ -789,5 +795,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendC
         if (state == ChannelState.CLOSED || state == ChannelState.SHUTDOWN || state == ChannelState.WAITING_SHUTDOWN) {
             throw WebSocketMessages.MESSAGES.channelClosed();
         }
+    }
+
+    public WebSocketChannel getWebSocketChannel() {
+        return wsChannel;
     }
 }

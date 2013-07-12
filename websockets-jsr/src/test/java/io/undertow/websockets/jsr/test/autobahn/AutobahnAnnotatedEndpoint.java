@@ -30,7 +30,7 @@ import javax.websocket.server.ServerEndpoint;
  * @author Stuart Douglas
  */
 @ServerEndpoint("/")
-public class AutobahnEndpoint {
+public class AutobahnAnnotatedEndpoint {
 
     Writer writer;
     OutputStream stream;
@@ -41,10 +41,11 @@ public class AutobahnEndpoint {
             writer = session.getBasicRemote().getSendWriter();
         }
         writer.write(message);
-        writer.flush();
         if (last) {
             writer.close();
             writer = null;
+        } else {
+            writer.flush();
         }
     }
 

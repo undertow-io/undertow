@@ -17,13 +17,13 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketChannel;
+
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-
-import io.undertow.websockets.api.SendCallback;
 
 /**
  * Default implementation of a {@link Future} that is used in the {@link javax.websocket.RemoteEndpoint.Async}
@@ -31,14 +31,14 @@ import io.undertow.websockets.api.SendCallback;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class SendResultFuture implements Future<Void>, SendCallback {
+final class SendResultFuture<T> implements Future<Void>, WebSocketCallback<T> {
     private boolean done;
     private Throwable exception;
     private int waiters;
 
 
     @Override
-    public synchronized void onCompletion() {
+    public synchronized void complete(WebSocketChannel channel, T context) {
         if (done) {
             throw new IllegalStateException();
         }
@@ -50,15 +50,14 @@ final class SendResultFuture implements Future<Void>, SendCallback {
     }
 
     @Override
-    public synchronized void onError(final Throwable cause) {
+    public synchronized void onError(WebSocketChannel channel, T context, Throwable throwable) {
         if (done) {
             throw new IllegalStateException();
         }
-        exception = cause;
+        exception = throwable;
         if (waiters > 0) {
             notifyAll();
         }
-
     }
 
     /**

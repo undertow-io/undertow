@@ -17,6 +17,7 @@ package io.undertow.websockets.jsr;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Future;
@@ -26,10 +27,11 @@ import javax.websocket.EndpointConfig;
 import javax.websocket.RemoteEndpoint;
 import javax.websocket.SendHandler;
 
-import io.undertow.websockets.api.FragmentedBinaryFrameSender;
-import io.undertow.websockets.api.FragmentedTextFrameSender;
-import io.undertow.websockets.api.SendCallback;
-import io.undertow.websockets.impl.WebSocketChannelSession;
+import io.undertow.websockets.core.BinaryOutputStream;
+import io.undertow.websockets.core.FragmentedMessageChannel;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSockets;
 
 /**
  * {@link RemoteEndpoint} implementation which uses a WebSocketSession for all its operation.
@@ -37,14 +39,14 @@ import io.undertow.websockets.impl.WebSocketChannelSession;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
-    private final WebSocketChannelSession session;
+    private final WebSocketChannel webSocketChannel;
     private final EndpointConfig config;
     private final Async async = new AsyncWebSocketSessionRemoteEndpoint();
     private final Basic basic = new BasicWebSocketSessionRemoteEndpoint();
     private final Encoding encoding;
 
-    public WebSocketSessionRemoteEndpoint(WebSocketChannelSession session, EndpointConfig config, final Encoding encoding) {
-        this.session = session;
+    public WebSocketSessionRemoteEndpoint(WebSocketChannel webSocketChannel, EndpointConfig config, final Encoding encoding) {
+        this.webSocketChannel = webSocketChannel;
         this.config = config;
         this.encoding = encoding;
     }
@@ -74,48 +76,49 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
     @Override
     public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-        session.sendPing(applicationData);
+        WebSockets.sendPing(applicationData, webSocketChannel, null);
     }
 
     @Override
     public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-        session.sendPong(applicationData);
+        WebSockets.sendPong(applicationData, webSocketChannel, null);
     }
 
     class AsyncWebSocketSessionRemoteEndpoint implements Async {
 
         @Override
         public long getSendTimeout() {
-            return session.getAsyncSendTimeout();
+            return 0;
+            //return webSocketChannel.getAsyncSendTimeout();
         }
 
         @Override
         public void setSendTimeout(final long timeoutmillis) {
-            session.setAsyncSendTimeout((int) timeoutmillis);
+            //webSocketChannel.setAsyncSendTimeout((int) timeoutmillis);
         }
 
         @Override
         public void sendText(final String text, final SendHandler handler) {
-            session.sendText(text, new SendHandlerAdapter(handler));
+            WebSockets.sendText(text, webSocketChannel, new SendHandlerAdapter(handler));
         }
 
         @Override
         public Future<Void> sendText(final String text) {
             final SendResultFuture future = new SendResultFuture();
-            session.sendText(text, future);
+            WebSockets.sendText(text, webSocketChannel, future);
             return future;
         }
 
         @Override
         public Future<Void> sendBinary(final ByteBuffer data) {
             final SendResultFuture future = new SendResultFuture();
-            session.sendBinary(data, future);
+            WebSockets.sendBinary(data, webSocketChannel, future);
             return future;
         }
 
         @Override
         public void sendBinary(final ByteBuffer data, final SendHandler completion) {
-            session.sendBinary(data, new SendHandlerAdapter(completion));
+            WebSockets.sendBinary(data, webSocketChannel, new SendHandlerAdapter(completion));
         }
 
         @Override
@@ -130,12 +133,12 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             sendObjectImpl(data, new SendHandlerAdapter(handler));
         }
 
-        private void sendObjectImpl(final Object o, final SendCallback callback) {
+        private void sendObjectImpl(final Object o, final WebSocketCallback callback) {
             try {
                 if (encoding.canEncodeText(o.getClass())) {
-                    session.sendText(encoding.encodeText(o), callback);
+                    WebSockets.sendText(encoding.encodeText(o), webSocketChannel, callback);
                 } else if (encoding.canEncodeBinary(o.getClass())) {
-                    session.sendBinary(encoding.encodeBinary(o), callback);
+                    WebSockets.sendBinary(encoding.encodeBinary(o), webSocketChannel, callback);
                 } else {
                     // TODO: Replace on bug is fixed
                     // https://issues.jboss.org/browse/LOGTOOL-64
@@ -163,20 +166,20 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            session.sendPing(applicationData);
+            WebSockets.sendPing(applicationData, webSocketChannel, null);
         }
 
         @Override
         public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            session.sendPong(applicationData);
+            WebSockets.sendPong(applicationData, webSocketChannel, null);
         }
     }
 
 
     class BasicWebSocketSessionRemoteEndpoint implements Basic {
 
-        private FragmentedBinaryFrameSender binaryFrameSender;
-        private FragmentedTextFrameSender textFrameSender;
+        private FragmentedMessageChannel binaryFrameSender;
+        private FragmentedMessageChannel textFrameSender;
 
         public void assertNotInFragment() {
             if (textFrameSender != null || binaryFrameSender != null) {
@@ -187,13 +190,13 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         @Override
         public void sendText(final String text) throws IOException {
             assertNotInFragment();
-            session.sendText(text);
+            WebSockets.sendTextBlocking(text, webSocketChannel);
         }
 
         @Override
         public void sendBinary(final ByteBuffer data) throws IOException {
             assertNotInFragment();
-            session.sendBinary(data);
+            WebSockets.sendBinaryBlocking(data, webSocketChannel);
         }
 
         @Override
@@ -202,13 +205,10 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
             if (textFrameSender == null) {
-                textFrameSender = session.sendFragmentedText();
-            }
-            if (isLast) {
-                textFrameSender.finalFragment();
+                textFrameSender = webSocketChannel.sendFragmentedText();
             }
             try {
-                textFrameSender.sendText(partialMessage);
+                WebSockets.sendTextBlocking(partialMessage, isLast, textFrameSender);
             } finally {
                 if (isLast) {
                     textFrameSender = null;
@@ -223,13 +223,10 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
             if (binaryFrameSender == null) {
-                binaryFrameSender = session.sendFragmentedBinary();
-            }
-            if (isLast) {
-                binaryFrameSender.finalFragment();
+                binaryFrameSender = webSocketChannel.sendFragmentedBinary();
             }
             try {
-                binaryFrameSender.sendBinary(partialByte);
+                WebSockets.sendBinaryBlocking(partialByte, isLast, textFrameSender);
             } finally {
                 if (isLast) {
                     binaryFrameSender = null;
@@ -241,13 +238,13 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         public OutputStream getSendStream() throws IOException {
             assertNotInFragment();
             //TODO: track fragment state
-            return new BinaryOutputStream(session.sendFragmentedBinary(), session.getBufferPool());
+            return new BinaryOutputStream(webSocketChannel.sendFragmentedBinary(), webSocketChannel.getBufferPool());
         }
 
         @Override
         public Writer getSendWriter() throws IOException {
             assertNotInFragment();
-            return new TextWriter(session.sendFragmentedText(), session.getBufferPool());
+            return new OutputStreamWriter(new BinaryOutputStream(webSocketChannel.sendFragmentedText(), webSocketChannel.getBufferPool()));
         }
 
         @Override
@@ -258,9 +255,9 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         private void sendObjectImpl(final Object o) throws IOException {
             try {
                 if (encoding.canEncodeText(o.getClass())) {
-                    session.sendText(encoding.encodeText(o));
+                    WebSockets.sendTextBlocking(encoding.encodeText(o), webSocketChannel);
                 } else if (encoding.canEncodeBinary(o.getClass())) {
-                    session.sendBinary(encoding.encodeBinary(o));
+                    WebSockets.sendBinaryBlocking(encoding.encodeBinary(o), webSocketChannel);
                 } else {
                     // TODO: Replace on bug is fixed
                     // https://issues.jboss.org/browse/LOGTOOL-64
@@ -288,13 +285,12 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            session.sendPing(applicationData);
+            WebSockets.sendPingBlocking(applicationData, webSocketChannel);
         }
 
         @Override
         public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            session.sendPong(applicationData);
+            WebSockets.sendPingBlocking(applicationData, webSocketChannel);
         }
     }
-
 }

@@ -1,13 +1,16 @@
 package io.undertow.websockets.jsr.annotated;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.Reader;
-import java.io.StringReader;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.websockets.core.AbstractReceiveListener;
+import io.undertow.websockets.core.BufferedBinaryMessage;
+import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSockets;
+import io.undertow.websockets.jsr.DefaultPongMessage;
+import io.undertow.websockets.jsr.UndertowSession;
+import org.xnio.Buffers;
 
 import javax.websocket.CloseReason;
 import javax.websocket.DecodeException;
@@ -17,16 +20,14 @@ import javax.websocket.PongMessage;
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 import javax.websocket.Session;
-
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.websockets.api.FragmentedFrameHandler;
-import io.undertow.websockets.api.WebSocketFrameHeader;
-import io.undertow.websockets.api.WebSocketSession;
-import io.undertow.websockets.jsr.DefaultPongMessage;
-import io.undertow.websockets.jsr.JsrWebSocketMessages;
-import io.undertow.websockets.jsr.UTF8Output;
-import io.undertow.websockets.jsr.UndertowSession;
-import org.xnio.Buffers;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author Stuart Douglas
@@ -56,24 +57,31 @@ public class AnnotatedEndpoint extends Endpoint {
     public void onOpen(final Session session, final EndpointConfig endpointConfiguration) {
 
         UndertowSession s = (UndertowSession) session;
-        s.setFrameHandler(new AnnotatedEndpointFrameHandler((UndertowSession) session));
+        boolean partialText = textMessage == null || (textMessage.hasParameterType(boolean.class) && !textMessage.getMessageType().equals(boolean.class));
+        boolean partialBinary = binaryMessage == null || (binaryMessage.hasParameterType(boolean.class) && !binaryMessage.getMessageType().equals(boolean.class));
+        s.setReceiveListener(new AnnotatedEndpointFrameHandler((UndertowSession) session, partialText, partialBinary));
 
         if (webSocketOpen != null) {
             final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
             params.put(Session.class, session);
             params.put(EndpointConfig.class, endpointConfiguration);
             params.put(Map.class, session.getPathParameters());
-            invokeMethod(params, webSocketOpen, session);
+            invokeMethod(params, webSocketOpen, s);
         }
 
     }
 
-    private void invokeMethod(final Map<Class<?>, Object> params, final BoundMethod method, final Session session) {
-        try {
-            method.invoke(instance.getInstance(), params);
-        } catch (DecodeException e) {
-            onError(session, e);
-        }
+    private void invokeMethod(final Map<Class<?>, Object> params, final BoundMethod method, final UndertowSession session) {
+        session.getContainer().invokeEndpointMethod(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    method.invoke(instance.getInstance(), params);
+                } catch (DecodeException e) {
+                    onError(session, e);
+                }
+            }
+        });
     }
 
     @Override
@@ -82,45 +90,77 @@ public class AnnotatedEndpoint extends Endpoint {
             final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
-            invokeMethod(params, webSocketClose, session);
+            invokeMethod(params, webSocketClose, (UndertowSession) session);
         }
     }
 
     @Override
     public void onError(final Session session, final Throwable thr) {
-        if (webSocketError != null) {
-            final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
-            params.put(Session.class, session);
-            params.put(Throwable.class, thr);
-            params.put(Map.class, session.getPathParameters());
-            try {
-                webSocketError.invoke(instance.getInstance(), params);
-            } catch (DecodeException e) {
-                throw new RuntimeException(e); //not much we can do here
+        try {
+            if (webSocketError != null) {
+                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+                params.put(Session.class, session);
+                params.put(Throwable.class, thr);
+                params.put(Map.class, session.getPathParameters());
+                ((UndertowSession) session).getContainer().invokeEndpointMethod(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            webSocketError.invoke(instance.getInstance(), params);
+                        } catch (DecodeException e) {
+                            throw new RuntimeException(e); //not much we can do here
+                        }
+                    }
+                });
             }
+        } finally {
+            ((UndertowSession) session).forceClose();
         }
     }
 
-    private class AnnotatedEndpointFrameHandler implements FragmentedFrameHandler {
+    private class AnnotatedEndpointFrameHandler extends AbstractReceiveListener {
 
+        //because fragmented messages can be split on code points we may need
+        //to buffer data between frames
+        BufferedTextMessage bufferedTextMessage;
         private final UndertowSession session;
-        private UTF8Output assembledTextFrame;
-        private ByteArrayOutputStream assembledBinaryFrame;
+        private final boolean partialText;
+        private final boolean partialBinary;
         private final SendHandler errorReportingSendHandler = new SendHandler() {
             @Override
             public void onResult(final SendResult result) {
                 if (!result.isOK()) {
-                    onError(null, result.getException());
+                    AnnotatedEndpoint.this.onError(null, result.getException());
                 }
             }
         };
 
-        public AnnotatedEndpointFrameHandler(final UndertowSession session) {
+        public AnnotatedEndpointFrameHandler(final UndertowSession session, boolean partialText, boolean partialBinary) {
             this.session = session;
+            this.partialText = partialText;
+            this.partialBinary = partialBinary;
         }
 
         @Override
-        public void onCloseFrame(final WebSocketSession s, final io.undertow.websockets.api.CloseReason reason) {
+        protected long getMaxTextBufferSize() {
+            if (textMessage != null) {
+                return textMessage.getMaxMessageSize();
+            }
+            //TODO: what do we do when there is no handler?
+            return 1;
+        }
+
+        @Override
+        protected long getMaxBinaryBufferSize() {
+            if (binaryMessage != null) {
+                return binaryMessage.getMaxMessageSize();
+            }
+            return 1;
+        }
+
+        @Override
+        protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+            super.onFullCloseMessage(channel, message);
             if (webSocketClose == null) {
                 return;
             }
@@ -130,106 +170,110 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Map.class, session.getPathParameters());
                 invokeMethod(params, webSocketClose, session);
             } catch (Exception e) {
-                onError(s, e);
+                AnnotatedEndpoint.this.onError(session, e);
             }
         }
 
         @Override
-        public void onPingFrame(final WebSocketSession s, final ByteBuffer... payload) {
-            //noop
-        }
-
-        @Override
-        public void onPongFrame(final WebSocketSession s, final ByteBuffer... payload) {
+        protected void onFullPongMessage(WebSocketChannel channel, BufferedBinaryMessage data) throws IOException {
             if (pongMessage == null) {
                 return;
             }
-            PongMessage message;
-            if (payload.length == 1) {
-                message = DefaultPongMessage.create(payload[0]);
-            } else {
-                int count = 0;
-                for (ByteBuffer b : payload) {
-                    count += b.remaining();
-                }
-                ByteBuffer data = ByteBuffer.allocate(count);
-                Buffers.copy(data, payload, 0, payload.length);
-                message = DefaultPongMessage.create(data);
-            }
-            try {
-                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
-                params.put(Session.class, session);
-                params.put(Map.class, session.getPathParameters());
-                params.put(PongMessage.class, message);
-                final Object result;
-                try {
-                    result = pongMessage.invoke(instance.getInstance(), params);
-                } catch (DecodeException e) {
-                    onError(s, e);
-                    return;
-                } finally {
-                    assembledTextFrame = null;
-                }
-                sendResult(result);
-            } catch (Exception e) {
-                onError(s, e);
-            }
-        }
-
-        @Override
-        public void onError(final WebSocketSession s, final Throwable cause) {
-            if (webSocketError == null) {
-                return;
-            }
+            PongMessage message = DefaultPongMessage.create(WebSockets.mergeBuffers(data.getData()));
             final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
-            params.put(Throwable.class, cause);
-            invokeMethod(params, webSocketError, session);
+            params.put(PongMessage.class, message);
+            session.getContainer().invokeEndpointMethod(new Runnable() {
+                @Override
+                public void run() {
+                    final Object result;
+                    try {
+                        result = pongMessage.invoke(instance.getInstance(), params);
+                    } catch (Exception e) {
+                        AnnotatedEndpoint.this.onError(session, e);
+                        return;
+                    }
+                    sendResult(result);
+                }
+            });
         }
 
         @Override
-        public void onTextFrame(final WebSocketSession s, final WebSocketFrameHeader header, final ByteBuffer... payload) {
-            if (textMessage == null) {
-                onError(s, JsrWebSocketMessages.MESSAGES.receivedTextFrameButNoMethod());
-                return;
+        protected void onError(WebSocketChannel channel, Throwable error) {
+            AnnotatedEndpoint.this.onError(session, error);
+        }
+
+        @Override
+        protected void onText(final WebSocketChannel webSocketChannel, final StreamSourceFrameChannel messageChannel) throws IOException {
+            if (!partialText) {
+                super.onText(webSocketChannel, messageChannel);
+            } else {
+                if (bufferedTextMessage == null) {
+                    bufferedTextMessage = new BufferedTextMessage();
+                }
+                bufferedTextMessage.read(messageChannel, new WebSocketCallback<BufferedTextMessage>() {
+                    @Override
+                    public void complete(WebSocketChannel channel, BufferedTextMessage context) {
+                        try {
+                            handleTextMessage(context, messageChannel.isFinalFragment());
+                        } finally {
+                            if (messageChannel.isFinalFragment()) {
+                                bufferedTextMessage = null;
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onError(WebSocketChannel channel, BufferedTextMessage context, Throwable throwable) {
+                        AnnotatedEndpoint.this.onError(session, throwable);
+                        bufferedTextMessage = null;
+                    }
+                });
             }
-            if (assembledTextFrame == null) {
-                assembledTextFrame = new UTF8Output();
+        }
+
+        @Override
+        protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+            handleTextMessage(message, true);
+        }
+
+
+        private void handleTextMessage(BufferedTextMessage message, boolean finalFragment) {
+            final String data = message.getData();
+            Object messageObject;
+
+            if (textMessage.isDecoderRequired()) {
+                try {
+                    messageObject = session.getEncoding().decodeText(textMessage.getMessageType(), data);
+                } catch (DecodeException e) {
+                    AnnotatedEndpoint.this.onError(session, e);
+                    return;
+                }
+            } else if (textMessage.getMessageType().equals(Reader.class)) {
+                messageObject = new StringReader(data);
+            } else {
+                messageObject = data;
             }
-            UTF8Output builder = assembledTextFrame;
-            builder.write(payload);
-            if (header.isLastFragement() || (textMessage.hasParameterType(boolean.class) && !textMessage.isDecoderRequired() && builder.hasData())) {
-                Object messageObject;
-                if (textMessage.isDecoderRequired()) {
+
+            final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+            params.put(Session.class, session);
+            params.put(Map.class, session.getPathParameters());
+            params.put(textMessage.getMessageType(), messageObject);
+            params.put(boolean.class, finalFragment);
+            session.getContainer().invokeEndpointMethod(new Runnable() {
+                @Override
+                public void run() {
+                    final Object result;
                     try {
-                        messageObject = session.getEncoding().decodeText(textMessage.getMessageType(), builder.extract());
-                    } catch (DecodeException e) {
-                        onError(s, e);
+                        result = textMessage.invoke(instance.getInstance(), params);
+                    } catch (Exception e) {
+                        AnnotatedEndpoint.this.onError(session, e);
                         return;
                     }
-                } else if (textMessage.getMessageType().equals(Reader.class)) {
-                    messageObject = new StringReader(builder.extract());
-                } else {
-                    messageObject = builder.extract();
+                    sendResult(result);
                 }
-
-                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
-                params.put(Session.class, session);
-                params.put(Map.class, session.getPathParameters());
-                params.put(textMessage.getMessageType(), messageObject);
-                params.put(boolean.class, header.isLastFragement());
-                final Object result;
-                try {
-                    result = textMessage.invoke(instance.getInstance(), params);
-                } catch (DecodeException e) {
-                    onError(s, e);
-                    return;
-                } finally {
-                    assembledTextFrame = null;
-                }
-                sendResult(result);
-            }
+            });
         }
 
         private void sendResult(final Object result) {
@@ -247,76 +291,85 @@ public class AnnotatedEndpoint extends Endpoint {
         }
 
         @Override
-        public void onBinaryFrame(final WebSocketSession s, final WebSocketFrameHeader header, final ByteBuffer... payload) {
-            //TODO: this could be more efficent
-            if (binaryMessage == null) {
-                onError(s, JsrWebSocketMessages.MESSAGES.receivedBinaryFrameButNoMethod());
-                return;
-            }
-            boolean allowPartial = binaryMessage.hasParameterType(boolean.class);
-            //if they take a byte buffer and allow partial frames this is the most efficent path
-            //we can also take this path for a non-fragmented frame with a single buffer in the payload
-            if (binaryMessage.getMessageType() == ByteBuffer.class && (allowPartial || (payload.length == 1 && header.isLastFragement() && assembledBinaryFrame == null))) {
-                final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
-                params.put(Session.class, session);
-                params.put(Map.class, session.getPathParameters());
-                Object result = null;
-                for (int i = 0; i < payload.length; ++i) {
-
-                    params.put(ByteBuffer.class, payload[i]);
-                    params.put(boolean.class, header.isLastFragement() && i == payload.length - 1);
-                    try {
-                        result = binaryMessage.invoke(instance.getInstance(), params);
-                    } catch (DecodeException e) {
-                        onError(s, e);
-                        return;
-                    }
-                    sendResult(result);
-                }
+        protected void onBinary(WebSocketChannel webSocketChannel, final StreamSourceFrameChannel messageChannel) throws IOException {
+            if (!partialBinary) {
+                super.onText(webSocketChannel, messageChannel);
             } else {
-                if (assembledBinaryFrame == null) {
-                    assembledBinaryFrame = new ByteArrayOutputStream();
-                }
-                ByteArrayOutputStream builder = assembledBinaryFrame;
-                for (ByteBuffer buf : payload) {
-                    while (buf.hasRemaining()) {
-                        builder.write(buf.get());
+                BufferedBinaryMessage buffered = new BufferedBinaryMessage(session.getMaxBinaryMessageBufferSize());
+                buffered.read(messageChannel, new WebSocketCallback<BufferedBinaryMessage>() {
+                    @Override
+                    public void complete(WebSocketChannel channel, BufferedBinaryMessage context) {
+                        handleBinaryMessage(context, messageChannel.isFinalFragment());
                     }
-                }
-                if (header.isLastFragement() || binaryMessage.hasParameterType(boolean.class)) {
-                    final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
-                    params.put(Session.class, session);
-                    params.put(Map.class, session.getPathParameters());
-                    if (binaryMessage.isDecoderRequired()) {
-                        try {
-                            params.put(binaryMessage.getMessageType(), session.getEncoding().decodeBinary(binaryMessage.getMessageType(), assembledBinaryFrame.toByteArray()));
-                        } catch (DecodeException e) {
-                            onError(s, e);
-                            return;
-                        }
-                    } else if (binaryMessage.getMessageType() == ByteBuffer.class) {
-                        params.put(ByteBuffer.class, ByteBuffer.wrap(assembledBinaryFrame.toByteArray()));
-                    } else if (binaryMessage.getMessageType() == byte[].class) {
-                        params.put(byte[].class, assembledBinaryFrame.toByteArray());
-                    } else if (binaryMessage.getMessageType() == InputStream.class) {
-                        params.put(InputStream.class, new ByteArrayInputStream(assembledBinaryFrame.toByteArray()));
-                    } else {
-                        //decoders
-                        throw new RuntimeException("decoders are not implemented yet");
+
+                    @Override
+                    public void onError(WebSocketChannel channel, BufferedBinaryMessage context, Throwable throwable) {
+                        AnnotatedEndpoint.this.onError(session, throwable);
                     }
-                    params.put(boolean.class, header.isLastFragement());
+                });
+            }
+        }
+
+        @Override
+        protected void onFullBinaryMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+            handleBinaryMessage(message, true);
+        }
+
+        protected byte[] toArray(ByteBuffer... payload) {
+            if (payload.length == 1) {
+                ByteBuffer buf = payload[0];
+                if (buf.hasArray() && buf.arrayOffset() == 0 && buf.position() == 0) {
+                    return buf.array();
+                }
+            }
+            int size = (int) Buffers.remaining(payload);
+            byte[] data = new byte[size];
+            int pos = 0;
+            for (ByteBuffer buf : payload) {
+                int toWrite = buf.remaining();
+                buf.get(data, pos, toWrite);
+                pos += toWrite;
+            }
+            return data;
+        }
+
+
+        private void handleBinaryMessage(BufferedBinaryMessage message, boolean finalFragment) {
+
+            final Map<Class<?>, Object> params = new HashMap<Class<?>, Object>();
+            params.put(Session.class, session);
+            params.put(Map.class, session.getPathParameters());
+            if (binaryMessage.isDecoderRequired()) {
+                try {
+                    params.put(binaryMessage.getMessageType(), session.getEncoding().decodeBinary(binaryMessage.getMessageType(), toArray(message.getData())));
+                } catch (Exception e) {
+                    AnnotatedEndpoint.this.onError(session, e);
+                    return;
+                }
+            } else if (binaryMessage.getMessageType() == ByteBuffer.class) {
+                params.put(ByteBuffer.class, WebSockets.mergeBuffers(message.getData()));
+            } else if (binaryMessage.getMessageType() == byte[].class) {
+                params.put(byte[].class, toArray(message.getData()));
+            } else if (binaryMessage.getMessageType() == InputStream.class) {
+                params.put(InputStream.class, new ByteArrayInputStream(toArray(message.getData())));
+            } else {
+                //decoders
+                throw new RuntimeException("decoders are not implemented yet");
+            }
+            params.put(boolean.class, finalFragment);
+            session.getContainer().invokeEndpointMethod(new Runnable() {
+                @Override
+                public void run() {
                     final Object result;
                     try {
                         result = binaryMessage.invoke(instance.getInstance(), params);
-                    } catch (DecodeException e) {
-                        onError(s, e);
+                    } catch (Exception e) {
+                        AnnotatedEndpoint.this.onError(session, e);
                         return;
-                    } finally {
-                        assembledBinaryFrame = null;
                     }
                     sendResult(result);
                 }
-            }
+            });
         }
     }
 }

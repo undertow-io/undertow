@@ -15,32 +15,32 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.api.SendCallback;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketChannel;
 
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 
 /**
- * {@link SendCallback} implementation which will notify a wrapped {@link SendHandler} once a send operation
+ * {@link WebSocketCallback} implementation which will notify a wrapped {@link SendHandler} once a send operation
  * completes.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class SendHandlerAdapter implements SendCallback {
+final class SendHandlerAdapter implements WebSocketCallback<Void> {
     private final SendHandler handler;
     private static final SendResult OK = new SendResult();
 
     public SendHandlerAdapter(SendHandler handler) {
         this.handler = handler;
     }
-
     @Override
-    public void onCompletion() {
+    public void complete(WebSocketChannel channel, Void context) {
         handler.onResult(new SendResult());
     }
 
     @Override
-    public void onError(Throwable cause) {
-        handler.onResult(new SendResult(cause));
+    public void onError(WebSocketChannel channel, Void context, Throwable throwable) {
+        handler.onResult(new SendResult(throwable));
     }
 }

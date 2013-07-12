@@ -57,7 +57,7 @@ public interface JsrWebSocketMessages {
     DeploymentException clientNotSupported();
 
     @Message(id = 3005, value = "MessageHandler for type %s already registered")
-    IllegalStateException handlerAlreadyRegistered(AbstractFrameHandler.FrameType frameType);
+    IllegalStateException handlerAlreadyRegistered(FrameHandler.FrameType frameType);
 
     @Message(id = 3006, value = "Unable to detect FrameType for clazz %s")
     IllegalStateException unsupportedFrameType(Class<?> clazz);

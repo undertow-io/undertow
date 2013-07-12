@@ -18,14 +18,13 @@
 
 package io.undertow.websockets.jsr;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
+import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
+import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
+import io.undertow.websockets.core.protocol.Handshake;
+import io.undertow.websockets.jsr.handshake.HandshakeUtil;
+import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
+import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
+import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -36,15 +35,14 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.websocket.server.ServerContainer;
-
-import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
-import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
-import io.undertow.websockets.core.protocol.Handshake;
-import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
-import io.undertow.websockets.jsr.handshake.HandshakeUtil;
-import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
-import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
-import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Filter that provides HTTP upgrade functionality. This should be run after all user filters, but before any servlets.
@@ -89,7 +87,7 @@ public class JsrWebSocketFilter implements Filter {
             }
         });
         this.handshakes = handshakes(configuredServerEndpoints);
-        this.callback = new WebSocketSessionConnectionCallback(new EndpointSessionHandler(container));
+        this.callback = new EndpointSessionHandler(container);
     }
 
     @Override

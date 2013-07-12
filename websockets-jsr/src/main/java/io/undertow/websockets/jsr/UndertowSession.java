@@ -15,6 +15,21 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.undertow.server.session.SecureRandomSessionIdGenerator;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.websockets.core.CloseMessage;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSockets;
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+
+import javax.websocket.CloseReason;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.Extension;
+import javax.websocket.MessageHandler;
+import javax.websocket.RemoteEndpoint;
+import javax.websocket.Session;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.channels.Channel;
@@ -27,21 +42,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.Extension;
-import javax.websocket.MessageHandler;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.Session;
-import javax.websocket.WebSocketContainer;
-
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.websockets.api.FrameHandler;
-import io.undertow.websockets.api.WebSocketSession;
-import io.undertow.websockets.impl.WebSocketChannelSession;
-import org.xnio.ChannelListener;
-
 /**
  * {@link Session} implementation which makes use of the high-level WebSocket API of undertow under the hood.
  *
@@ -49,8 +49,10 @@ import org.xnio.ChannelListener;
  */
 public final class UndertowSession implements Session {
 
-    private final WebSocketSession session;
-    private final WebSocketContainer container;
+    private final String sessionId;
+    private final WebSocketChannel webSocketChannel;
+    private final FrameHandler frameHandler;
+    private final ServerWebSocketContainer container;
     private final Principal user;
     private final WebSocketSessionRemoteEndpoint remote;
     private final Map<String, Object> attrs = new ConcurrentHashMap<String, Object>();
@@ -63,8 +65,8 @@ public final class UndertowSession implements Session {
     private final AtomicBoolean closed = new AtomicBoolean();
     private final Set<Session> openSessions;
 
-    public UndertowSession(WebSocketChannelSession session, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString, final Encoding encoding, final Set<Session> openSessions) {
-        this.session = session;
+    public UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters, Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user, InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString, final Encoding encoding, final Set<Session> openSessions) {
+        this.webSocketChannel = webSocketChannel;
         this.queryString = queryString;
         this.encoding = encoding;
         this.openSessions = openSessions;
@@ -73,117 +75,54 @@ public final class UndertowSession implements Session {
         this.requestUri = requestUri;
         this.requestParameterMap = Collections.unmodifiableMap(requestParameterMap);
         this.pathParameters = Collections.unmodifiableMap(pathParameters);
-        remote = new WebSocketSessionRemoteEndpoint(session, config, encoding);
-        session.setFrameHandler(new WholeFrameHandler(this, endpoint.getInstance()));
+        remote = new WebSocketSessionRemoteEndpoint(webSocketChannel, config, encoding);
         this.endpoint = endpoint;
-        session.getChannel().getCloseSetter().set(new ChannelListener<Channel>() {
+        webSocketChannel.getCloseSetter().set(new ChannelListener<Channel>() {
             @Override
             public void handleEvent(final Channel channel) {
                 close0();
             }
         });
+        this.frameHandler = new FrameHandler(this, this.endpoint.getInstance());
+        webSocketChannel.getReceiveSetter().set(frameHandler);
+        this.sessionId = new SecureRandomSessionIdGenerator().createSessionId();
     }
 
     @Override
-    public WebSocketContainer getContainer() {
+    public ServerWebSocketContainer getContainer() {
         return container;
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public synchronized void addMessageHandler(MessageHandler messageHandler) throws IllegalStateException {
-        AbstractFrameHandler handler = (AbstractFrameHandler<?>) session.getFrameHandler();
-        if (messageHandler instanceof MessageHandler.Whole) {
-            if (handler instanceof WholeFrameHandler) {
-                handler.addHandler(messageHandler);
-            } else {
-                if (handler.getHandlers().isEmpty()) {
-                    handler = new WholeFrameHandler(this, endpoint.getInstance());
-                    handler.addHandler(messageHandler);
-                    session.setFrameHandler(handler);
-                } else {
-                    // Mixed Async and Basic handlers need to switch to support both
-                    switchToMixed(handler, messageHandler);
-                }
-            }
-        } else if (messageHandler instanceof MessageHandler.Partial) {
-            if (handler instanceof PartialFrameHandler) {
-                handler.addHandler(messageHandler);
-            } else {
-                if (handler.getHandlers().isEmpty()) {
-                    handler = new PartialFrameHandler(this, endpoint.getInstance());
-                    handler.addHandler(messageHandler);
-                    session.setFrameHandler(handler);
-                } else {
-                    // Mixed Async and Basic handlers need to switch to support both
-                    switchToMixed(handler, messageHandler);
-                }
-            }
-        }
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private void switchToMixed(AbstractFrameHandler handler, MessageHandler messageHandler) {
-        Set<MessageHandler> handlers = handler.getHandlers();
-        handler = new MixedFrameHandler(this, endpoint.getInstance());
-        for (MessageHandler h : handlers) {
-            handler.addHandler(h);
-        }
-        handler.addHandler(messageHandler);
-        session.setFrameHandler(handler);
+        frameHandler.addHandler(messageHandler);
     }
 
     @SuppressWarnings("rawtypes")
     @Override
     public synchronized Set<MessageHandler> getMessageHandlers() {
-        return ((AbstractFrameHandler) session.getFrameHandler()).getHandlers();
+        return frameHandler.getHandlers();
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public synchronized void removeMessageHandler(MessageHandler messageHandler) {
-        AbstractFrameHandler handler = (AbstractFrameHandler) session.getFrameHandler();
-        handler.removeHandler(messageHandler);
-        if (handler instanceof MixedFrameHandler) {
-            Set<MessageHandler> handlers = handler.getHandlers();
-            boolean basic = false;
-            boolean async = false;
-            for (MessageHandler h : handlers) {
-                if (h instanceof MessageHandler.Partial) {
-                    async = true;
-                } else if (h instanceof MessageHandler.Whole) {
-                    basic = true;
-                }
-                if (basic && async) {
-                    return;
-                }
-            }
-            // This means we not have the case of mixed Async and Basic handlers so we can switch back to the
-            // most optimized implementation
-            if (basic) {
-                handler = new WholeFrameHandler(this, endpoint.getInstance());
-            } else if (async) {
-                handler = new PartialFrameHandler(this, endpoint.getInstance());
-            }
-            for (MessageHandler h : handlers) {
-                handler.addHandler(h);
-            }
-            session.setFrameHandler(handler);
-        }
+        frameHandler.removeHandler(messageHandler);
     }
 
     /**
-     * sets the frame handler. This should only be used for annotated endpoints.
+     * sets the recieve listener This should only be used for annotated endpoints.
      *
      * @param handler The handler
      */
-    public void setFrameHandler(final FrameHandler handler) {
-        session.setFrameHandler(handler);
+    public void setReceiveListener(final ChannelListener<WebSocketChannel> handler) {
+        webSocketChannel.getReceiveSetter().set(handler);
     }
 
     @Override
     public String getProtocolVersion() {
-        return session.getProtocolVersion();
+        return webSocketChannel.getVersion().toHttpHeaderValue();
     }
 
     @Override
@@ -193,27 +132,27 @@ public final class UndertowSession implements Session {
 
     @Override
     public boolean isSecure() {
-        return session.isSecure();
+        return webSocketChannel.isSecure();
     }
 
     @Override
     public boolean isOpen() {
-        return session.isOpen();
+        return webSocketChannel.isOpen();
     }
 
     @Override
     public long getMaxIdleTimeout() {
-        return session.getIdleTimeout();
+        return webSocketChannel.getIdleTimeout();
     }
 
     @Override
     public void setMaxIdleTimeout(final long milliseconds) {
-        session.setIdleTimeout(milliseconds);
+        webSocketChannel.setIdleTimeout(milliseconds);
     }
 
     @Override
     public String getId() {
-        return session.getId();
+        return sessionId;
     }
 
     @Override
@@ -230,19 +169,23 @@ public final class UndertowSession implements Session {
                 } else {
                     endpoint.getInstance().onClose(this, closeReason);
                 }
-                if(!session.isCloseFrameReceived()) {
+                if(!webSocketChannel.isCloseFrameReceived()) {
                     //if we have already recieved a close frame then the close frame handler
                     //will deal with sending back the reason message
                     if (closeReason == null) {
-                        session.sendClose(null);
+                        webSocketChannel.sendClose();
                     } else {
-                        session.sendClose(new io.undertow.websockets.api.CloseReason(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()));
+                        WebSockets.sendClose(new CloseMessage(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()).toByteBuffer(), webSocketChannel, null);
                     }
                 }
             } finally {
                 close0();
             }
         }
+    }
+
+    public void forceClose() {
+        IoUtils.safeClose(webSocketChannel);
     }
 
     @Override
@@ -277,22 +220,24 @@ public final class UndertowSession implements Session {
 
     @Override
     public void setMaxBinaryMessageBufferSize(int i) {
-        session.setMaximumBinaryFrameSize(i);
+        //webSocketChannel.setMaximumBinaryFrameSize(i);
     }
 
     @Override
     public int getMaxBinaryMessageBufferSize() {
-        return (int) session.getMaximumBinaryFrameSize();
+        return 0;
+        //return (int) webSocketChannel.getMaximumBinaryFrameSize();
     }
 
     @Override
     public void setMaxTextMessageBufferSize(int i) {
-        session.setMaximumTextFrameSize(i);
+        //webSocketChannel.setMaximumTextFrameSize(i);
     }
 
     @Override
     public int getMaxTextMessageBufferSize() {
-        return (int) session.getMaximumTextFrameSize();
+        return 0;
+        //return (int) webSocketChannel.getMaximumTextFrameSize();
     }
 
     @Override

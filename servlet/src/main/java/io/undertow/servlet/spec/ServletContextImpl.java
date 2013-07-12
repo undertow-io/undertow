@@ -362,15 +362,19 @@ public class ServletContextImpl implements ServletContext {
 
         if (object == null) {
             Object existing = attributes.remove(name);
-            if (existing != null) {
-                deployment.getApplicationListeners().servletContextAttributeRemoved(name, existing);
+            if (deployment.getApplicationListeners() != null) {
+                if (existing != null) {
+                    deployment.getApplicationListeners().servletContextAttributeRemoved(name, existing);
+                }
             }
         } else {
             Object existing = attributes.put(name, object);
-            if (existing != null) {
-                deployment.getApplicationListeners().servletContextAttributeReplaced(name, existing);
-            } else {
-                deployment.getApplicationListeners().servletContextAttributeAdded(name, object);
+            if (deployment.getApplicationListeners() != null) {
+                if (existing != null) {
+                    deployment.getApplicationListeners().servletContextAttributeReplaced(name, existing);
+                } else {
+                    deployment.getApplicationListeners().servletContextAttributeAdded(name, object);
+                }
             }
         }
     }
@@ -645,6 +649,7 @@ public class ServletContextImpl implements ServletContext {
 
     /**
      * Gets the session with the specified ID if it exists
+     *
      * @param sessionId The session ID
      * @return The session
      */

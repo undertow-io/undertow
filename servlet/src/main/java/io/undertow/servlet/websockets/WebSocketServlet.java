@@ -1,25 +1,22 @@
 package io.undertow.servlet.websockets;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import io.undertow.UndertowLogger;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.websockets.api.WebSocketSessionHandler;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.core.protocol.version00.Hybi00Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
-import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Stuart Douglas
@@ -50,11 +47,7 @@ public class WebSocketServlet extends HttpServlet {
             if (sessionHandler != null) {
                 final Class<?> clazz = Class.forName(sessionHandler, true, Thread.currentThread().getContextClassLoader());
                 final Object handler = clazz.newInstance();
-                if (handler instanceof WebSocketSessionHandler) {
-                    this.callback = new WebSocketSessionConnectionCallback((WebSocketSessionHandler) handler);
-                } else {
-                    this.callback = (WebSocketConnectionCallback) handler;
-                }
+                this.callback = (WebSocketConnectionCallback) handler;
             }
             //TODO: set properties based on init params
 

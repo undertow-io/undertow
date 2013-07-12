@@ -19,12 +19,11 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -37,7 +36,6 @@ import org.junit.runner.RunWith;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.FutureResult;
 
-import javax.servlet.DispatcherType;
 import javax.websocket.Session;
 import java.net.URI;
 
@@ -54,21 +52,27 @@ public class AnnotatedEndpointTest {
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
-        deployment = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(AnnotatedEndpointTest.class.getClassLoader())
                 .setContextPath("/")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
-                .setDeploymentName("servletContext.war")
-                .addServletContextAttribute(javax.websocket.server.ServerContainer.class.getName(), deployment)
-                .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
-                .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
+                .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
+                        new WebSocketDeploymentInfo()
+                                .setBuffers(new ByteBufferSlicePool(100, 1000))
+                                .setWorker(DefaultServer.getWorker())
+                                .addEndpoint(MessageEndpoint.class)
+                                .addEndpoint(AnnotatedClientEndpoint.class)
+                                .addEndpoint(IncrementEndpoint.class)
+                                .addEndpoint(EncodingEndpoint.class)
+                                .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
+                                    @Override
+                                    public void ready(ServerWebSocketContainer container) {
+                                        deployment = container;
+                                    }
+                                })
+                )
+                .setDeploymentName("servletContext.war");
 
-        deployment.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 1000));
-        deployment.addEndpoint(MessageEndpoint.class);
-        deployment.addEndpoint(AnnotatedClientEndpoint.class);
-        deployment.addEndpoint(IncrementEndpoint.class);
-        deployment.addEndpoint(EncodingEndpoint.class);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();

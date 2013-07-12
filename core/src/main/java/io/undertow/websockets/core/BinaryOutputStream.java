@@ -13,28 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.core;
+
+import io.undertow.UndertowMessages;
+import org.xnio.Pool;
+import org.xnio.Pooled;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import io.undertow.websockets.api.FragmentedBinaryFrameSender;
-import org.xnio.Pool;
-import org.xnio.Pooled;
-
 /**
  * {@link OutputStream} implementation which buffers all the data until {@link #close()} is called and then will
- * try to send it in a blocking fashion with the provided {@link FragmentedBinaryFrameSender}.
+ * try to send it in a blocking fashion with the provided {@link FragmentedMessageChannel}.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class BinaryOutputStream extends OutputStream {
-    private final FragmentedBinaryFrameSender sender;
+public final class BinaryOutputStream extends OutputStream {
+    private final FragmentedMessageChannel sender;
     private final Pooled<ByteBuffer> pooled;
     private boolean closed;
 
-    BinaryOutputStream(FragmentedBinaryFrameSender sender, Pool<ByteBuffer> pool) {
+    public BinaryOutputStream(FragmentedMessageChannel sender, Pool<ByteBuffer> pool) {
         this.sender = sender;
         pooled = pool.allocate();
     }
@@ -65,10 +65,17 @@ final class BinaryOutputStream extends OutputStream {
         ByteBuffer buffer = pooled.getResource();
         if (force || !buffer.hasRemaining()) {
             buffer.flip();
-            if (last) {
-                sender.finalFragment();
+            StreamSinkFrameChannel channel = sender.send(buffer.remaining(), last);
+            while (buffer.hasRemaining()){
+                int res = channel.write(buffer);
+                if(res == 0) {
+                    channel.awaitWritable();
+                }
             }
-            sender.sendBinary(buffer);
+            channel.shutdownWrites();
+            while (!channel.flush()) {
+                channel.awaitWritable();
+            }
             buffer.clear();
         }
     }
@@ -102,7 +109,7 @@ final class BinaryOutputStream extends OutputStream {
 
     private void checkClosed() throws IOException {
         if (closed) {
-            throw JsrWebSocketMessages.MESSAGES.sendStreamClosed();
+            throw UndertowMessages.MESSAGES.streamIsClosed();
         }
     }
 }

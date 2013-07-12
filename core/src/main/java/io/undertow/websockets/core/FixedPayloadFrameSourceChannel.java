@@ -19,10 +19,12 @@ package io.undertow.websockets.core;
 
 import io.undertow.websockets.core.function.ChannelFunction;
 import io.undertow.websockets.core.function.ChannelFunctionFileChannel;
+import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -168,14 +170,19 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
     /**
      * Caled after data was read into the {@link ByteBuffer}
      *
-     * @param buffer        the {@link ByteBuffer} into which the data was read
-     * @param position      the position it was written to
-     * @param length        the number of bytes there were written
-     * @throws IOException  thrown if an error accour
+     * @param buffer   the {@link ByteBuffer} into which the data was read
+     * @param position the position it was written to
+     * @param length   the number of bytes there were written
+     * @throws IOException thrown if an error accour
      */
     protected void afterRead(ByteBuffer buffer, int position, int length) throws IOException {
-        for (ChannelFunction func : functions) {
-            func.afterRead(buffer, position, length);
+        try {
+            for (ChannelFunction func : functions) {
+                func.afterRead(buffer, position, length);
+            }
+        } catch (UnsupportedEncodingException e) {
+            IoUtils.safeClose(getWebSocketChannel());
+            throw e;
         }
 
     }

@@ -72,7 +72,7 @@ public interface WebSocketMessages {
     WebSocketFrameCorruptedException invalidDataFrameLength();
 
     @Message(id = 2013, value = "Cannot decode web socket frame with opcode: %s")
-    WebSocketFrameCorruptedException unsupportedOpCode(int opCode);
+    InvalidOpCodeException unsupportedOpCode(int opCode);
 
     @Message(id = 2014, value = "WebSocketFrameType %s is not supported by this WebSocketChannel\"")
     IllegalArgumentException unsupportedFrameType(WebSocketFrameType type);
@@ -145,4 +145,13 @@ public interface WebSocketMessages {
 
     @Message(id = 2037, value = "Sec-WebSocket-Accept mismatch, expecting %s, received %s")
     IOException webSocketAcceptKeyMismatch(String dKey, String acceptKey);
+
+    @Message(id = 2038, value = "Cannot call method with frame type %s, only text or binary is allowed")
+    IllegalArgumentException incorrectFrameType(WebSocketFrameType type);
+
+    @Message(id = 2039, value = "Data has already been released")
+    IllegalStateException dataHasBeenReleased();
+
+    @Message(id = 2040, value = "Message exceeded max message size of %s")
+    String messageToBig(long maxMessageSize);
 }

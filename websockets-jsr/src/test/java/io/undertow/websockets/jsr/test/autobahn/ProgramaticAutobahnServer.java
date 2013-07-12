@@ -22,9 +22,10 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.testutils.DefaultServer;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
+import io.undertow.websockets.jsr.ServerEnpointConfigImpl;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
@@ -39,17 +40,18 @@ import org.xnio.channels.AcceptingChannel;
 
 import javax.servlet.DispatcherType;
 import java.net.InetSocketAddress;
+import java.util.Collections;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class AutobahnServer implements Runnable {
+public class ProgramaticAutobahnServer implements Runnable {
 
     private static ServerWebSocketContainer deployment;
 
     private final int port;
 
-    public AutobahnServer(final int port) {
+    public ProgramaticAutobahnServer(final int port) {
         this.port = port;
     }
 
@@ -82,9 +84,9 @@ public class AutobahnServer implements Runnable {
 
             final ServletContainer container = ServletContainer.Factory.newInstance();
 
-            ServerWebSocketContainer deployment = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
+            ServerWebSocketContainer deployment = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, worker, new ByteBufferSlicePool(100, 1000),new CompositeThreadSetupAction(Collections.EMPTY_LIST));
             DeploymentInfo builder = new DeploymentInfo()
-                    .setClassLoader(AutobahnServer.class.getClassLoader())
+                    .setClassLoader(ProgramaticAutobahnServer.class.getClassLoader())
                     .setContextPath("/")
                     .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                     .setDeploymentName("servletContext.war")
@@ -92,8 +94,7 @@ public class AutobahnServer implements Runnable {
                     .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
                     .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
 
-            deployment.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 1000));
-            deployment.addEndpoint(AutobahnEndpoint.class);
+            deployment.addEndpoint(new ServerEnpointConfigImpl(ProgramaticAutobahnEndpoint.class, "/"));
 
             DeploymentManager manager = container.addDeployment(builder);
             manager.deploy();
@@ -107,7 +108,7 @@ public class AutobahnServer implements Runnable {
 
 
     public static void main(String[] args) {
-        new AutobahnServer(7777).run();
+        new ProgramaticAutobahnServer(7777).run();
     }
 
 }

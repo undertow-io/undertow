@@ -215,7 +215,7 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     }
 
     @Override
-    public SimpleSetter<? extends StreamSourceChannel> getReadSetter() {
+    public SimpleSetter<? extends StreamSourceFrameChannel> getReadSetter() {
         return readSetter;
     }
 
@@ -352,5 +352,9 @@ public abstract class StreamSourceFrameChannel implements StreamSourceChannel {
     @Override
     public Setter<? extends StreamSourceChannel> getCloseSetter() {
         return closeSetter;
+    }
+
+    public WebSocketChannel getWebSocketChannel() {
+        return wsChannel;
     }
 }

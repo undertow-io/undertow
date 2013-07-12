@@ -3,10 +3,11 @@ package io.undertow.examples.websockets;
 import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
-import io.undertow.websockets.api.AbstractAssembledFrameHandler;
-import io.undertow.websockets.api.WebSocketFrameHeader;
-import io.undertow.websockets.api.WebSocketSession;
-import io.undertow.websockets.api.WebSocketSessionHandler;
+import io.undertow.websockets.core.AbstractReceiveListener;
+import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSockets;
+import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 import static io.undertow.Handlers.path;
@@ -24,13 +25,15 @@ public class WebSocketServer {
         Undertow server = Undertow.builder()
                 .addListener(8080, "localhost")
                 .setHandler(path()
-                        .addPath("/myapp", websocket(new WebSocketSessionHandler() {
+                        .addPath("/myapp", websocket(new WebSocketConnectionCallback() {
+
                             @Override
-                            public void onSession(final WebSocketSession session, WebSocketHttpExchange exchange) {
-                                session.setFrameHandler(new AbstractAssembledFrameHandler() {
+                            public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
+                                channel.getReceiveSetter().set(new AbstractReceiveListener() {
+
                                     @Override
-                                    public void onTextFrame(final WebSocketSession session, final WebSocketFrameHeader header, final CharSequence payload) {
-                                        session.sendText(payload, null);
+                                    protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
+                                        WebSockets.sendText(message.getData(), channel, null);
                                     }
                                 });
                             }

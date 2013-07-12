@@ -19,9 +19,8 @@ import io.undertow.server.handlers.URLDecodingHandler;
 import io.undertow.server.handlers.builder.PredicatedHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
-import io.undertow.websockets.api.WebSocketSessionHandler;
+import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
-import io.undertow.websockets.impl.WebSocketSessionConnectionCallback;
 
 import java.util.List;
 
@@ -100,8 +99,8 @@ public class Handlers {
      * @param sessionHandler The web socket session handler
      * @return The web socket handler
      */
-    public static WebSocketProtocolHandshakeHandler websocket(final WebSocketSessionHandler sessionHandler) {
-        return new WebSocketProtocolHandshakeHandler(new WebSocketSessionConnectionCallback(sessionHandler));
+    public static WebSocketProtocolHandshakeHandler websocket(final WebSocketConnectionCallback sessionHandler) {
+        return new WebSocketProtocolHandshakeHandler(sessionHandler);
     }
 
     /**
@@ -109,8 +108,8 @@ public class Handlers {
      * @param next           The handler to invoke if the web socket connection fails
      * @return The web socket handler
      */
-    public static WebSocketProtocolHandshakeHandler websocket(final WebSocketSessionHandler sessionHandler, final HttpHandler next) {
-        return new WebSocketProtocolHandshakeHandler(new WebSocketSessionConnectionCallback(sessionHandler), next);
+    public static WebSocketProtocolHandshakeHandler websocket(final WebSocketConnectionCallback sessionHandler, final HttpHandler next) {
+        return new WebSocketProtocolHandshakeHandler(sessionHandler, next);
     }
 
     /**

@@ -22,6 +22,7 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
@@ -55,6 +56,8 @@ import java.io.OutputStream;
 import java.io.Writer;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -95,8 +98,7 @@ public class JsrWebSocketServer07Test {
             }
         }
 
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -133,8 +135,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         deployServlet(builder);
@@ -172,8 +173,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
@@ -218,8 +218,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -267,8 +266,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
@@ -310,8 +308,7 @@ public class JsrWebSocketServer07Test {
             }
 
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -345,8 +342,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
@@ -387,8 +383,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
@@ -430,8 +425,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -457,8 +451,7 @@ public class JsrWebSocketServer07Test {
                 connected.set(true);
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -483,6 +476,7 @@ public class JsrWebSocketServer07Test {
 
         final AtomicBoolean connected = new AtomicBoolean(false);
         final FutureResult latch = new FutureResult();
+        final CountDownLatch clientLatch = new CountDownLatch(1);
         final AtomicInteger closeCount = new AtomicInteger();
 
         class TestEndPoint extends Endpoint {
@@ -495,10 +489,10 @@ public class JsrWebSocketServer07Test {
             public void onClose(Session session, CloseReason closeReason) {
                 closeCount.incrementAndGet();
                 reason.set(closeReason);
+                clientLatch.countDown();
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -507,6 +501,7 @@ public class JsrWebSocketServer07Test {
         client.connect();
         client.send(new CloseWebSocketFrame(code, reasonText), new FrameChecker(CloseWebSocketFrame.class, payload.array(), latch));
         latch.getIoFuture().get();
+        clientLatch.await();
         Assert.assertEquals(code, reason.get().getCloseCode().getCode());
         Assert.assertEquals(reasonText, reason.get().getReasonPhrase());
         Assert.assertEquals(1, closeCount.get());
@@ -543,8 +538,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
@@ -582,8 +576,7 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE);
-        builder.start(DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100));
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE,DefaultServer.getWorker(), new ByteBufferSlicePool(100, 100), new CompositeThreadSetupAction(Collections.EMPTY_LIST));
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);

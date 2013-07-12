@@ -34,4 +34,10 @@ public interface FragmentedMessageChannel extends SendChannel {
      * @param finalFrame  if true any futher attempt to use this channel will throw an {@link IllegalStateException}
      */
     StreamSinkFrameChannel send(long payloadSize, boolean finalFrame) throws IOException;
+
+    /**
+     *
+     * @return The underlying web socket channel
+     */
+    WebSocketChannel getWebSocketChannel();
 }

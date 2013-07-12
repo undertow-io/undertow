@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.core;
 
 import java.nio.ByteBuffer;
 
@@ -55,6 +55,10 @@ public final class UTF8Output {
     public UTF8Output(ByteBuffer... payload) {
         stringBuilder = new StringBuilder((int) Buffers.remaining(payload));
         write(payload);
+    }
+
+    public UTF8Output() {
+        stringBuilder = new StringBuilder();
     }
 
     public void write(ByteBuffer... bytes) {

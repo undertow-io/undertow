@@ -17,29 +17,27 @@
  */
 package io.undertow.websockets.jsr;
 
-import java.net.URI;
-import java.util.Collections;
-import java.util.List;
-
-import javax.websocket.Endpoint;
-
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
-import io.undertow.websockets.api.WebSocketSession;
-import io.undertow.websockets.api.WebSocketSessionHandler;
-import io.undertow.websockets.impl.WebSocketChannelSession;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoUtils;
 
+import javax.websocket.Endpoint;
+import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+
 /**
- * {@link WebSocketSessionHandler} implementation which will setuo the {@link UndertowSession} and notify
+ * {@link WebSocketConnectionCallback} implementation which will setuo the {@link UndertowSession} and notify
  * the {@link Endpoint} about the new session.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public final class EndpointSessionHandler implements WebSocketSessionHandler {
+public final class EndpointSessionHandler implements WebSocketConnectionCallback {
     private final ServerWebSocketContainer container;
 
     public EndpointSessionHandler(ServerWebSocketContainer container) {
@@ -47,18 +45,15 @@ public final class EndpointSessionHandler implements WebSocketSessionHandler {
     }
 
     /**
-     * Returns the {@link ServerWebSocketContainer} which was used for this {@link WebSocketSessionHandler}.
+     * Returns the {@link ServerWebSocketContainer} which was used for this {@link WebSocketConnectionCallback}.
      */
     ServerWebSocketContainer getContainer() {
         return container;
     }
 
     @Override
-    public void onSession(WebSocketSession s, WebSocketHttpExchange exchange) {
-        WebSocketChannelSession channelSession = (WebSocketChannelSession) s;
-        ConfiguredServerEndpoint config = HandshakeUtil.getConfig(channelSession.getChannel());
-
-
+    public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
+        ConfiguredServerEndpoint config = HandshakeUtil.getConfig(channel);
         try {
             InstanceFactory<Endpoint> endpointFactory = config.getEndpointFactory();
             final InstanceHandle<Endpoint> instance;
@@ -68,16 +63,17 @@ public final class EndpointSessionHandler implements WebSocketSessionHandler {
                 instance = new ImmediateInstanceHandle<Endpoint>((Endpoint) config.getEndpointConfiguration().getConfigurator().getEndpointInstance(config.getEndpointConfiguration().getEndpointClass()));
             }
 
-            UndertowSession session = new UndertowSession(channelSession, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), Collections.<String, List<String>>emptyMap(), this, null, instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions());
+            UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), Collections.<String, List<String>>emptyMap(), this, null, instance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config.getOpenSessions());
             config.getOpenSessions().add(session);
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());
             session.setMaxTextMessageBufferSize(getContainer().getDefaultMaxTextMessageBufferSize());
             //session.setTimeout(getContainer().getMaxSessionIdleTimeout());
             session.getAsyncRemote().setSendTimeout(getContainer().getDefaultAsyncSendTimeout());
             instance.getInstance().onOpen(session, config.getEndpointConfiguration());
+            channel.resumeReceives();
         } catch (InstantiationException e) {
             JsrWebSocketLogger.REQUEST_LOGGER.endpointCreationFailed(e);
-            IoUtils.safeClose(channelSession.getChannel());
+            IoUtils.safeClose(channel);
         }
     }
 }

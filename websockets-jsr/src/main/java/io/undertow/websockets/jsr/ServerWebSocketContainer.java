@@ -20,15 +20,12 @@ package io.undertow.websockets.jsr;
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.util.PathTemplate;
-import io.undertow.websockets.api.WebSocketSessionIdGenerator;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
-import io.undertow.websockets.impl.UuidWebSocketSessionIdGenerator;
-import io.undertow.websockets.impl.WebSocketChannelSession;
-import io.undertow.websockets.impl.WebSocketRecieveListeners;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
@@ -67,8 +64,6 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     private final ClassIntrospecter classIntrospecter;
 
-    private final WebSocketSessionIdGenerator sessionIdGenerator = new UuidWebSocketSessionIdGenerator();
-
     private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new HashMap<Class<?>, ConfiguredClientEndpoint>();
 
     private final List<ConfiguredServerEndpoint> configuredServerEndpoints = new ArrayList<ConfiguredServerEndpoint>();
@@ -79,8 +74,9 @@ public class ServerWebSocketContainer implements ServerContainer {
      */
     private final TreeSet<PathTemplate> seenPaths = new TreeSet<PathTemplate>();
 
-    private XnioWorker xnioWorker;
-    private Pool<ByteBuffer> bufferPool;
+    private final XnioWorker xnioWorker;
+    private final Pool<ByteBuffer> bufferPool;
+    private final ThreadSetupAction threadSetupAction;
 
     private volatile long defaultAsyncSendTimeout;
     private volatile long maxSessionIdleTimeout;
@@ -88,19 +84,12 @@ public class ServerWebSocketContainer implements ServerContainer {
     private volatile int defaultMaxTextMessageBufferSize;
     private volatile boolean deploymentComplete = false;
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter) {
+
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter,XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction) {
         this.classIntrospecter = classIntrospecter;
-    }
-
-
-    public void start(XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool) {
         this.bufferPool = bufferPool;
         this.xnioWorker = xnioWorker;
-    }
-
-    public void stop() {
-        this.xnioWorker = null;
-        this.bufferPool = null;
+        this.threadSetupAction = threadSetupAction;
     }
 
     @Override
@@ -144,12 +133,10 @@ public class ServerWebSocketContainer implements ServerContainer {
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
-        WebSocketChannelSession wss = new WebSocketChannelSession(channel, sessionIdGenerator.nextId(), false);
-
-        WebSocketRecieveListeners.startRecieving(wss, channel, false);
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
-        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>());
+        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec, path.getQuery(), encodingFactory.createEncoding(cec), new HashSet<Session>());
         endpointInstance.onOpen(undertowSession, cec);
+        channel.resumeReceives();
 
         return undertowSession;
     }
@@ -173,12 +160,9 @@ public class ServerWebSocketContainer implements ServerContainer {
         WebSocketChannel channel = session.get();
         EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
 
-        WebSocketChannelSession wss = new WebSocketChannelSession(channel, sessionIdGenerator.nextId(), false);
-
-        WebSocketRecieveListeners.startRecieving(wss, channel, false);
-
-        UndertowSession undertowSession = new UndertowSession(wss, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>());
+        UndertowSession undertowSession = new UndertowSession(channel, path, Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<Endpoint>(endpointInstance), cec.getConfig(), path.getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), new HashSet<Session>());
         endpointInstance.onOpen(undertowSession, cec.getConfig());
+        channel.resumeReceives();
 
         return undertowSession;
     }
@@ -218,6 +202,26 @@ public class ServerWebSocketContainer implements ServerContainer {
         return Collections.emptySet();
     }
 
+    /**
+     * Runs a web socket invocation, setting up the threads and dispatching a thread pool
+     *
+     * TODO: have a think about this, we can do better
+     * @param invocation The task to run
+     */
+    public void invokeEndpointMethod(final Runnable invocation) {
+        xnioWorker.submit(new Runnable() {
+            @Override
+            public void run() {
+                ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
+                try {
+                    invocation.run();
+                } finally {
+                    handle.tearDown();
+                }
+
+            }
+        });
+    }
 
     @Override
     public void addEndpoint(final Class<?> endpoint) throws DeploymentException {

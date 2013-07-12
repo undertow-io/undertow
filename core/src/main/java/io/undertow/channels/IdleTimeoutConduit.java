@@ -275,4 +275,22 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public XnioWorker getWorker() {
         return sink.getWorker();
     }
+
+    public long getIdleTimeout() {
+        return idleTimeout;
+    }
+
+    public void setIdleTimeout(long idleTimeout) {
+        this.idleTimeout = idleTimeout;
+        XnioExecutor.Key key = handle;
+        if (key != null) {
+            key.remove();
+        }
+        if (idleTimeout > 0) {
+            XnioExecutor.Key k = sink.getWriteThread().executeAfter(timeoutCommand, idleTimeout, TimeUnit.MILLISECONDS);
+            if (!KEY_UPDATER.compareAndSet(this, key, k)) {
+                k.remove();
+            }
+        }
+    }
 }

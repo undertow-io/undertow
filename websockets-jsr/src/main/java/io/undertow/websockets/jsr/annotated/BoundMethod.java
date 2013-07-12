@@ -23,11 +23,13 @@ final class BoundMethod {
     private final Set<Class> paramTypes = new HashSet<Class>();
     private final Class<?> messageType;
     private final boolean decoderRequired;
+    private final long maxMessageSize;
 
-    public BoundMethod(final Method method, final Class<?> messageType, final boolean decoderRequired, BoundParameter... params) throws DeploymentException {
+    public BoundMethod(final Method method, final Class<?> messageType, final boolean decoderRequired, long maxMessageSize, BoundParameter... params) throws DeploymentException {
         this.method = method;
         this.messageType = messageType;
         this.decoderRequired = decoderRequired;
+        this.maxMessageSize = maxMessageSize;
         final Set<Integer> allParams = new HashSet<Integer>();
         for (int i = 0; i < method.getParameterTypes().length; ++i) {
             allParams.add(i);
@@ -66,5 +68,9 @@ final class BoundMethod {
 
     public boolean isDecoderRequired() {
         return decoderRequired;
+    }
+
+    public long getMaxMessageSize() {
+        return maxMessageSize;
     }
 }
