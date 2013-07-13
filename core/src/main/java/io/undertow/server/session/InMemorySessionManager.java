@@ -58,6 +58,10 @@ public class InMemorySessionManager implements SessionManager {
     @Override
     public void stop() {
         for (Map.Entry<String, InMemorySession> session : sessions.entrySet()) {
+            XnioExecutor.Key key = session.getValue().session.cancelKey;
+            if(key != null) {
+                key.remove();
+            }
             sessionListeners.sessionDestroyed(session.getValue().session, null, SessionListener.SessionDestroyedReason.UNDEPLOY);
         }
         sessions.clear();
@@ -309,9 +313,9 @@ public class InMemorySessionManager implements SessionManager {
      */
     private static class InMemorySession {
 
-        final Session session;
+        final SessionImpl session;
 
-        InMemorySession(final Session session, int maxInactiveInterval) {
+        InMemorySession(final SessionImpl session, int maxInactiveInterval) {
             this.session = session;
             creationTime = lastAccessed = System.currentTimeMillis();
             this.maxInactiveInterval = maxInactiveInterval;
