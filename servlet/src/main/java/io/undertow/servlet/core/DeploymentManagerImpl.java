@@ -421,8 +421,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
     public void undeploy() {
         ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
-            deployment.getApplicationListeners().contextDestroyed();
-            deployment.getApplicationListeners().stop();
+
+            deployment.destroy();
             deployment = null;
         } finally {
             handle.tearDown();

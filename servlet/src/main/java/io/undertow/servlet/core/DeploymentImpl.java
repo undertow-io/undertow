@@ -189,4 +189,13 @@ public class DeploymentImpl implements Deployment {
     public Executor getAsyncExecutor() {
         return asyncExecutor;
     }
+
+    void destroy(){
+        getApplicationListeners().contextDestroyed();
+        getApplicationListeners().stop();
+        if (servletContext!=null){
+            servletContext.destroy();
+        }
+        servletContext = null;
+    }
 }
