@@ -21,12 +21,15 @@ package io.undertow.servlet.handlers;
 import java.util.concurrent.Executor;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.DevelopmentModeInfo;
 import io.undertow.servlet.api.ServletDispatcher;
@@ -38,6 +41,11 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.HttpString;
+import io.undertow.util.Protocols;
+import org.xnio.BufferAllocator;
+import org.xnio.ByteBufferSlicePool;
+import org.xnio.OptionMap;
 
 /**
  * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
@@ -114,6 +122,46 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     public void dispatchToServlet(final HttpServerExchange exchange, final ServletChain servletchain, final DispatcherType dispatcherType) throws Exception {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         dispatchRequest(exchange, servletRequestContext, servletchain, dispatcherType);
+    }
+
+    @Override
+    public void dispatchMockRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException {
+
+        HttpServerConnection connection = new HttpServerConnection(null,new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), next, OptionMap.EMPTY, 1024);
+        HttpServerExchange exchange = new HttpServerExchange(connection);
+        exchange.setRequestMethod(new HttpString(request.getMethod()));
+        exchange.setProtocol(Protocols.HTTP_1_0);
+        exchange.setResolvedPath(request.getContextPath());
+        String relative;
+        if(request.getPathInfo() == null) {
+            relative = request.getServletPath();
+        } else {
+            relative = request.getServletPath() + request.getPathInfo();
+        }
+        exchange.setRelativePath(relative);
+        final ServletPathMatch info = paths.getServletHandlerByPath(request.getServletPath());
+        final HttpServletResponseImpl oResponse = new HttpServletResponseImpl(exchange, servletContext);
+        final HttpServletRequestImpl oRequest = new HttpServletRequestImpl(exchange, servletContext);
+        final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), oRequest, oResponse, info);
+        servletRequestContext.setServletRequest(request);
+        servletRequestContext.setServletResponse(response);
+        //set the max request size if applicable
+        if(info.getManagedServlet().getMaxRequestSize() > 0) {
+            exchange.setMaxEntitySize(info.getManagedServlet().getMaxRequestSize());
+        }
+        exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
+
+        exchange.startBlocking(new ServletBlockingHttpExchange(exchange));
+        servletRequestContext.setServletPathMatch(info);
+
+        try {
+            dispatchRequest(exchange, servletRequestContext, info, DispatcherType.REQUEST);
+        } catch (Exception e) {
+            if(e instanceof RuntimeException) {
+                throw (RuntimeException)e;
+            }
+            throw new ServletException(e);
+        }
     }
 
     private void dispatchRequest(final HttpServerExchange exchange, final ServletRequestContext servletRequestContext, final ServletChain servletChain, final DispatcherType dispatcherType) throws Exception {
