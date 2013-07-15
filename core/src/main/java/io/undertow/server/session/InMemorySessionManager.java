@@ -59,7 +59,7 @@ public class InMemorySessionManager implements SessionManager {
     public void stop() {
         for (Map.Entry<String, InMemorySession> session : sessions.entrySet()) {
             XnioExecutor.Key key = session.getValue().session.cancelKey;
-            if(key != null) {
+            if (key != null) {
                 key.remove();
             }
             sessionListeners.sessionDestroyed(session.getValue().session, null, SessionListener.SessionDestroyedReason.UNDEPLOY);
@@ -94,6 +94,11 @@ public class InMemorySessionManager implements SessionManager {
     @Override
     public Session getSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         String sessionId = config.findSessionId(serverExchange);
+        return getSession(sessionId);
+    }
+
+    @Override
+    public Session getSession(String sessionId) {
         if (sessionId == null) {
             return null;
         }

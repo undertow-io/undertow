@@ -76,6 +76,13 @@ public interface SessionManager {
     Session getSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
 
     /**
+     * Retrieves a session with the given session id
+     * @param sessionId The session ID
+     * @return The session, or null if it does not exist
+     */
+    Session getSession(final String sessionId);
+
+    /**
      * Registers a session listener for the session manager
      *
      * @param listener The listener
