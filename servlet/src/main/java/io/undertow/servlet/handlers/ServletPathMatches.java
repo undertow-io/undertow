@@ -126,12 +126,11 @@ public class ServletPathMatches {
         }
 
         //now loop through all servlets.
-        for (Map.Entry<String, ServletInfo> entry : deploymentInfo.getServlets().entrySet()) {
-            ServletInfo servlet = entry.getValue();
+        for (Map.Entry<String, ServletHandler> entry : servlets.getServletHandlers().entrySet()) {
             //add the servlet to the deployment
-            final ServletHandler handler = servlets.addServlet(servlet);
+            final ServletHandler handler = entry.getValue();
             //add the servlet to the approprite path maps
-            for (String path : entry.getValue().getMappings()) {
+            for (String path : handler.getManagedServlet().getServletInfo().getMappings()) {
                 if (path.equals("/")) {
                     //the default servlet
                     pathMatches.add("/*");
