@@ -100,7 +100,7 @@ public class ServletContextImpl implements ServletContext {
         this.deploymentInfo = deployment.getDeploymentInfo();
         sessionCookieConfig = new SessionCookieConfigImpl(this);
         ServletSessionConfig sc = deploymentInfo.getServletSessionConfig();
-        if(sc != null) {
+        if (sc != null) {
             sessionCookieConfig.setName(sc.getName());
             sessionCookieConfig.setComment(sc.getComment());
             sessionCookieConfig.setDomain(sc.getDomain());
@@ -108,11 +108,11 @@ public class ServletContextImpl implements ServletContext {
             sessionCookieConfig.setMaxAge(sc.getMaxAge());
             sessionCookieConfig.setPath(sc.getPath());
             sessionCookieConfig.setSecure(sc.isSecure());
-            if(sc.getSessionTrackingModes() != null) {
+            if (sc.getSessionTrackingModes() != null) {
                 defaultSessionTrackingModes = sessionTrackingModes = new HashSet<SessionTrackingMode>(sc.getSessionTrackingModes());
             }
         }
-        if(deploymentInfo.getServletContextAttributeBackingMap() == null) {
+        if (deploymentInfo.getServletContextAttributeBackingMap() == null) {
             this.attributes = new ConcurrentHashMap<String, Object>();
         } else {
             this.attributes = deploymentInfo.getServletContextAttributeBackingMap();
@@ -123,7 +123,7 @@ public class ServletContextImpl implements ServletContext {
     public void initDone() {
         initialized = true;
         Set<SessionTrackingMode> trackingMethods = sessionTrackingModes;
-        if(trackingMethods == null || trackingMethods.isEmpty()) {
+        if (trackingMethods == null || trackingMethods.isEmpty()) {
             sessionConfig = sessionCookieConfig;
         } else {
 
@@ -199,11 +199,11 @@ public class ServletContextImpl implements ServletContext {
         final Set<String> resources = new HashSet<String>();
         for (Resource res : resource.list()) {
             File file = res.getFile();
-            if(file != null) {
+            if (file != null) {
                 File base = res.getResourceManagerRoot();
                 String filePath = file.getAbsolutePath().substring(base.getAbsolutePath().length());
                 filePath = filePath.replace('\\', '/'); //for windows systems
-                if(file.isDirectory()) {
+                if (file.isDirectory()) {
                     filePath = filePath + "/";
                 }
                 resources.add(filePath);
@@ -241,7 +241,7 @@ public class ServletContextImpl implements ServletContext {
             return null;
         }
         try {
-            if(resource.getFile() != null) {
+            if (resource.getFile() != null) {
                 return new BufferedInputStream(new FileInputStream(resource.getFile()));
             } else {
                 return new BufferedInputStream(resource.getUrl().openStream());
@@ -301,7 +301,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getRealPath(final String path) {
-        if (path==null){
+        if (path == null) {
             return null;
         }
         Resource resource = null;
@@ -310,11 +310,11 @@ public class ServletContextImpl implements ServletContext {
         } catch (IOException e) {
             return null;
         }
-        if(resource == null) {
+        if (resource == null) {
             return null;
         }
         File file = resource.getFile();
-        if(file == null) {
+        if (file == null) {
             return null;
         }
         return file.getAbsolutePath();
@@ -322,12 +322,12 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServerInfo() {
-        return  Version.getFullVersionString();
+        return Version.getFullVersionString();
     }
 
     @Override
     public String getInitParameter(final String name) {
-        if(name == null) {
+        if (name == null) {
             throw UndertowServletMessages.MESSAGES.nullName();
         }
         return deploymentInfo.getInitParameters().get(name);
@@ -391,7 +391,7 @@ public class ServletContextImpl implements ServletContext {
         ensureNotProgramaticListener();
         ensureNotInitialized();
         try {
-            if(deploymentInfo.getServlets().containsKey(servletName)) {
+            if (deploymentInfo.getServlets().containsKey(servletName)) {
                 return null;
             }
             ServletInfo servlet = new ServletInfo(servletName, (Class<? extends Servlet>) deploymentInfo.getClassLoader().loadClass(className));
@@ -407,7 +407,7 @@ public class ServletContextImpl implements ServletContext {
     public ServletRegistration.Dynamic addServlet(final String servletName, final Servlet servlet) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
-        if(deploymentInfo.getServlets().containsKey(servletName)) {
+        if (deploymentInfo.getServlets().containsKey(servletName)) {
             return null;
         }
         ServletInfo s = new ServletInfo(servletName, servlet.getClass(), new ImmediateInstanceFactory<Servlet>(servlet));
@@ -420,7 +420,7 @@ public class ServletContextImpl implements ServletContext {
     public ServletRegistration.Dynamic addServlet(final String servletName, final Class<? extends Servlet> servletClass) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
-        if(deploymentInfo.getServlets().containsKey(servletName)) {
+        if (deploymentInfo.getServlets().containsKey(servletName)) {
             return null;
         }
         ServletInfo servlet = new ServletInfo(servletName, servletClass);
@@ -445,7 +445,7 @@ public class ServletContextImpl implements ServletContext {
     public ServletRegistration getServletRegistration(final String servletName) {
         ensureNotProgramaticListener();
         final ServletInfo servlet = deploymentInfo.getServlets().get(servletName);
-        if(servlet == null) {
+        if (servlet == null) {
             return null;
         }
         return new ServletRegistrationImpl(servlet, deployment);
@@ -465,7 +465,7 @@ public class ServletContextImpl implements ServletContext {
     public FilterRegistration.Dynamic addFilter(final String filterName, final String className) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
-        if(deploymentInfo.getFilters().containsKey(filterName)) {
+        if (deploymentInfo.getFilters().containsKey(filterName)) {
             return null;
         }
         try {
@@ -483,7 +483,7 @@ public class ServletContextImpl implements ServletContext {
         ensureNotProgramaticListener();
         ensureNotInitialized();
 
-        if(deploymentInfo.getFilters().containsKey(filterName)) {
+        if (deploymentInfo.getFilters().containsKey(filterName)) {
             return null;
         }
         FilterInfo f = new FilterInfo(filterName, filter.getClass(), new ImmediateInstanceFactory<Filter>(filter));
@@ -497,7 +497,7 @@ public class ServletContextImpl implements ServletContext {
     public FilterRegistration.Dynamic addFilter(final String filterName, final Class<? extends Filter> filterClass) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
-        if(deploymentInfo.getFilters().containsKey(filterName)) {
+        if (deploymentInfo.getFilters().containsKey(filterName)) {
             return null;
         }
         FilterInfo filter = new FilterInfo(filterName, filterClass);
@@ -548,7 +548,7 @@ public class ServletContextImpl implements ServletContext {
     public void setSessionTrackingModes(final Set<SessionTrackingMode> sessionTrackingModes) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
-        if(sessionTrackingModes.size() > 1 && sessionTrackingModes.contains(SessionTrackingMode.SSL)) {
+        if (sessionTrackingModes.size() > 1 && sessionTrackingModes.contains(SessionTrackingMode.SSL)) {
             throw UndertowServletMessages.MESSAGES.sslCannotBeCombinedWithAnyOtherMethod();
         }
         this.sessionTrackingModes = new HashSet<SessionTrackingMode>(sessionTrackingModes);
@@ -581,7 +581,7 @@ public class ServletContextImpl implements ServletContext {
     public <T extends EventListener> void addListener(final T t) {
         ensureNotInitialized();
         ensureNotProgramaticListener();
-        if(ApplicationListeners.listenerState() != NO_LISTENER &&
+        if (ApplicationListeners.listenerState() != NO_LISTENER &&
                 ServletContextListener.class.isAssignableFrom(t.getClass())) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
@@ -594,7 +594,7 @@ public class ServletContextImpl implements ServletContext {
     public void addListener(final Class<? extends EventListener> listenerClass) {
         ensureNotInitialized();
         ensureNotProgramaticListener();
-        if(ApplicationListeners.listenerState() != NO_LISTENER &&
+        if (ApplicationListeners.listenerState() != NO_LISTENER &&
                 ServletContextListener.class.isAssignableFrom(listenerClass)) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
@@ -612,7 +612,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public <T extends EventListener> T createListener(final Class<T> clazz) throws ServletException {
         ensureNotProgramaticListener();
-        if(!ApplicationListeners.isListenerClass(clazz)) {
+        if (!ApplicationListeners.isListenerClass(clazz)) {
             throw UndertowServletMessages.MESSAGES.listenerMustImplementListenerClass(clazz);
         }
         try {
@@ -643,6 +643,19 @@ public class ServletContextImpl implements ServletContext {
         return deployment.getDeploymentInfo().getHostName();
     }
 
+    /**
+     * Gets the session with the specified ID if it exists
+     * @param sessionId The session ID
+     * @return The session
+     */
+    public HttpSessionImpl getSession(final String sessionId) {
+        final SessionManager sessionManager = deployment.getSessionManager();
+        Session session = sessionManager.getSession(sessionId);
+        if (session != null) {
+            return HttpSessionImpl.forSession(session, this, false);
+        }
+        return null;
+    }
 
     /**
      * Gets the session
@@ -684,13 +697,13 @@ public class ServletContextImpl implements ServletContext {
     }
 
     private void ensureNotInitialized() {
-        if(initialized) {
+        if (initialized) {
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
     }
 
     private void ensureNotProgramaticListener() {
-        if(ApplicationListeners.listenerState() == PROGRAMATIC_LISTENER) {
+        if (ApplicationListeners.listenerState() == PROGRAMATIC_LISTENER) {
             throw UndertowServletMessages.MESSAGES.cannotCallFromProgramaticListener();
         }
     }
