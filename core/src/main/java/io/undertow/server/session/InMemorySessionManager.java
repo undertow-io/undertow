@@ -58,10 +58,7 @@ public class InMemorySessionManager implements SessionManager {
     @Override
     public void stop() {
         for (Map.Entry<String, InMemorySession> session : sessions.entrySet()) {
-            XnioExecutor.Key key = session.getValue().session.cancelKey;
-            if (key != null) {
-                key.remove();
-            }
+            session.getValue().session.destroy();
             sessionListeners.sessionDestroyed(session.getValue().session, null, SessionListener.SessionDestroyedReason.UNDEPLOY);
         }
         sessions.clear();
@@ -144,7 +141,7 @@ public class InMemorySessionManager implements SessionManager {
 
         XnioExecutor.Key cancelKey;
 
-        final Runnable cancelTask = new Runnable() {
+        Runnable cancelTask = new Runnable() {
             @Override
             public void run() {
                 worker.execute(new Runnable() {
@@ -309,6 +306,13 @@ public class InMemorySessionManager implements SessionManager {
             sessions.remove(oldId);
             config.setSessionId(exchange, this.getId());
             return newId;
+        }
+
+        private void destroy() {
+            if (cancelKey != null) {
+                cancelKey.remove();
+            }
+            cancelTask = null;
         }
 
     }
