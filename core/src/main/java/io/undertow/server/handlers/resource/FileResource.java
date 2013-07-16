@@ -144,6 +144,7 @@ public class FileResource implements Resource {
                         if (res == -1) {
                             //we are done
                             pooled.free();
+                            IoUtils.safeClose(fileChannel);
                             callback.onComplete(exchange, sender);
                             return;
                         }
