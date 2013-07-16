@@ -24,6 +24,7 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import org.junit.Assert;
@@ -61,10 +62,10 @@ import java.util.Map;
 
 /**
  * @author Stuart Douglas
+ * @author Ales Justin
  */
 @RunWith(DefaultServer.class)
 public class MockRequestTestCase {
-
 
     public static final String HELLO_WORLD = "Hello World";
 
@@ -76,8 +77,7 @@ public class MockRequestTestCase {
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
-        ServletInfo s = new ServletInfo("servlet", HelloServlet.class)
-                .addMapping("/aa");
+        ServletInfo s = new ServletInfo("servlet", HelloServlet.class).addMapping("/aa");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(MockRequestTestCase.class.getClassLoader())
@@ -95,13 +95,26 @@ public class MockRequestTestCase {
     }
 
     @Test
-    public void tesTMockHttpRequest() throws IOException, ServletException {
+    public void testMockHttpRequest() throws Exception {
         MockHttpResponse response = new MockHttpResponse();
         MockHttpRequest request = new MockHttpRequest();
+
         deployment.getServletDispatcher().dispatchMockRequest(request, response);
         Assert.assertEquals(HELLO_WORLD, new String(response.out.toByteArray()));
     }
 
+    @Test
+    public void testMockDispatch() throws Exception {
+        MockHttpResponse response = new MockHttpResponse();
+        MockHttpRequest request = new MockHttpRequest();
+
+        RequestDispatcher rd = deployment.getServletContext().getRequestDispatcher("/aa");
+        Assert.assertNotNull(rd);
+        Assert.assertTrue(rd instanceof RequestDispatcherImpl);
+        RequestDispatcherImpl rdi = (RequestDispatcherImpl) rd;
+        rdi.mock(request, response);
+        Assert.assertEquals(HELLO_WORLD, new String(response.out.toByteArray()));
+    }
 
     private static class HelloServlet extends HttpServlet {
         @Override

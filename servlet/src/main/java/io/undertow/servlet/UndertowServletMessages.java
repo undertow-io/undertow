@@ -187,4 +187,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10047, value = "Name was null")
     NullPointerException nullName();
+
+    @Message(id = 10048, value = "Can only handle HTTP type of request / response: %s / %s")
+    IllegalArgumentException invalidRequestResponseType(ServletRequest request, ServletResponse response);
 }

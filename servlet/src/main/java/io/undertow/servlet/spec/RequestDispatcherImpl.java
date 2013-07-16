@@ -33,6 +33,8 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletRequestWrapper;
 import javax.servlet.ServletResponse;
 import javax.servlet.ServletResponseWrapper;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
@@ -270,7 +272,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         error(request, response, servletName, exception, exception.getMessage());
     }
 
-
     private void error(final ServletRequest request, final ServletResponse response, final String servletName, final Throwable exception, final String message) throws ServletException, IOException {
         final ServletRequestContext servletRequestContext = ServletRequestContext.requireCurrent();
         final HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
@@ -291,7 +292,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         final ServletRequest oldRequest = servletRequestContext.getServletRequest();
         final ServletResponse oldResponse = servletRequestContext.getServletResponse();
         servletRequestContext.setDispatcherType(DispatcherType.ERROR);
-
 
         //only update if this is the first forward
         requestImpl.setAttribute(ERROR_REQUEST_URI, requestImpl.getRequestURI());
@@ -338,7 +338,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         requestImpl.setServletContext(servletContext);
         responseImpl.setServletContext(servletContext);
 
-
         try {
             try {
                 servletRequestContext.setServletRequest(request);
@@ -354,6 +353,16 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         } finally {
             servletRequestContext.setServletRequest(oldRequest);
             servletRequestContext.setServletResponse(oldResponse);
+        }
+    }
+
+    public void mock(ServletRequest request, ServletResponse response) throws ServletException, IOException {
+        if (request instanceof HttpServletRequest && response instanceof HttpServletResponse) {
+            HttpServletRequest req = (HttpServletRequest) request;
+            HttpServletResponse resp = (HttpServletResponse) response;
+            servletContext.getDeployment().getServletDispatcher().dispatchMockRequest(req, resp);
+        } else {
+            throw UndertowServletMessages.MESSAGES.invalidRequestResponseType(request, response);
         }
     }
 }
