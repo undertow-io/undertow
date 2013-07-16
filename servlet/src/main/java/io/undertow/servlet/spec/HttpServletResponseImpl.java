@@ -155,18 +155,22 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         resetBuffer();
         setStatus(302);
         String realPath;
-        if (location.startsWith("/")) {
-            realPath = location;
+        if (location.contains("://")) {//absolute url
+            exchange.getResponseHeaders().put(Headers.LOCATION, location);
         } else {
-            String current = exchange.getRelativePath();
-            int lastSlash = current.lastIndexOf("/");
-            if (lastSlash != -1) {
-                current = current.substring(0, lastSlash + 1);
+            if (location.startsWith("/")) {
+                realPath = location;
+            } else {
+                String current = exchange.getRelativePath();
+                int lastSlash = current.lastIndexOf("/");
+                if (lastSlash != -1) {
+                    current = current.substring(0, lastSlash + 1);
+                }
+                realPath = servletContext.getContextPath() + CanonicalPathUtils.canonicalize(current + location);
             }
-            realPath = servletContext.getContextPath() + CanonicalPathUtils.canonicalize(current + location);
+            String loc = exchange.getRequestScheme() + "://" + exchange.getHostAndPort() + realPath;
+            exchange.getResponseHeaders().put(Headers.LOCATION, loc);
         }
-        String loc = exchange.getRequestScheme() + "://" + exchange.getHostAndPort() + realPath;
-        exchange.getResponseHeaders().put(Headers.LOCATION, loc);
         responseDone();
     }
 
