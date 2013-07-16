@@ -44,7 +44,7 @@ import org.xnio.conduits.StreamSourceConduit;
 
 /**
  * A server-side HTTP connection.
- *
+ * <p/>
  * Note that the lifecycle of the server connection is tied to the underlying TCP connection. Even if the channel
  * is upgraded the connection is not considered closed until the upgraded channel is closed.
  *
@@ -72,10 +72,15 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
         this.rootHandler = rootHandler;
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
-        this.originalSinkConduit = channel.getSinkChannel().getConduit();
-        this.originalSourceConduit = channel.getSourceChannel().getConduit();
         closeSetter = new CloseSetter();
-        channel.setCloseListener(closeSetter);
+        if (channel != null) {
+            this.originalSinkConduit = channel.getSinkChannel().getConduit();
+            this.originalSourceConduit = channel.getSourceChannel().getConduit();
+            channel.setCloseListener(closeSetter);
+        } else {
+            this.originalSinkConduit = null;
+            this.originalSourceConduit = null;
+        }
     }
 
     /**
@@ -115,6 +120,9 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
 
     @Override
     public XnioIoThread getIoThread() {
+        if(channel == null) {
+            return null;
+        }
         return channel.getIoThread();
     }
 
@@ -182,7 +190,6 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     }
 
     /**
-     *
      * @return The original source conduit
      */
     public StreamSourceConduit getOriginalSourceConduit() {
@@ -190,7 +197,6 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     }
 
     /**
-     *
      * @return The original underlying sink conduit
      */
     public StreamSinkConduit getOriginalSinkConduit() {
@@ -214,10 +220,10 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     /**
      * Resores the channel conduits to a previous state.
      *
-     * @see #resetChannel()
      * @param state The original state
+     * @see #resetChannel()
      */
-    public void restoreChannel(final ConduitState state){
+    public void restoreChannel(final ConduitState state) {
         channel.getSinkChannel().setConduit(state.sink);
         channel.getSourceChannel().setConduit(state.source);
     }
@@ -252,7 +258,7 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
 
         @Override
         public void handleEvent(StreamConnection channel) {
-            for(CloseListener l : closeListeners) {
+            for (CloseListener l : closeListeners) {
                 try {
                     l.closed(HttpServerConnection.this);
                 } catch (Throwable e) {

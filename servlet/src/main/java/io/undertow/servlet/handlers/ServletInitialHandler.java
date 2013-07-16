@@ -129,6 +129,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
         HttpServerConnection connection = new HttpServerConnection(null,new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), next, OptionMap.EMPTY, 1024);
         HttpServerExchange exchange = new HttpServerExchange(connection);
+        exchange.setRequestScheme(request.getScheme());
         exchange.setRequestMethod(new HttpString(request.getMethod()));
         exchange.setProtocol(Protocols.HTTP_1_0);
         exchange.setResolvedPath(request.getContextPath());
@@ -218,7 +219,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
             }
             servletContext.getDeployment().getApplicationListeners().requestDestroyed(request);
-            if (!exchange.isDispatched()) {
+            //if it is not dispatched and is not a mock request
+            if (!exchange.isDispatched() && exchange.getConnection().getChannel() != null) {
                 servletRequestContext.getOriginalResponse().responseDone();
             }
         } finally {
