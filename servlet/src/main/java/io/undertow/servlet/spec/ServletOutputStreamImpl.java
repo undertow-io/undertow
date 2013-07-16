@@ -107,7 +107,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     public ServletOutputStreamImpl(long contentLength, final ServletRequestContext servletRequestContext) {
         this.contentLength = contentLength;
         this.underlyingConnectionChannel = servletRequestContext.getExchange().getConnection().getChannel().getSinkChannel();
-        this.threadSetupAction = servletRequestContext.getDeployment().getServletContext().getDeployment().getThreadSetupAction();
+        this.threadSetupAction = servletRequestContext.getDeployment().getThreadSetupAction();
         this.servletRequestContext = servletRequestContext;
     }
 
