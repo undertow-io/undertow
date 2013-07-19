@@ -60,4 +60,10 @@ public class SessionListeners {
         }
     }
 
+    public void sessionIdChanged(final Session session, final String oldSessionId) {
+        for (SessionListener listener : sessionListeners) {
+            listener.sessionIdChanged(session, oldSessionId);
+        }
+    }
+
 }

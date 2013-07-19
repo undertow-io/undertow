@@ -18,17 +18,17 @@
 
 package io.undertow.server.session;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.SecureHashMap;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
+
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The default in memory session manager. This basically just stores sessions in an in memory hash map.
@@ -305,6 +305,7 @@ public class InMemorySessionManager implements SessionManager {
             sessions.put(newId, sess);
             sessions.remove(oldId);
             config.setSessionId(exchange, this.getId());
+            sessionListeners.sessionIdChanged(sess.session, oldId);
             return newId;
         }
 

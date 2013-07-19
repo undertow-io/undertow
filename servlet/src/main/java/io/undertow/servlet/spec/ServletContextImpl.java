@@ -717,7 +717,7 @@ public class ServletContextImpl implements ServletContext {
         return initialized;
     }
 
-    SessionConfig getSessionConfig() {
+    public SessionConfig getSessionConfig() {
         return sessionConfig;
     }
 

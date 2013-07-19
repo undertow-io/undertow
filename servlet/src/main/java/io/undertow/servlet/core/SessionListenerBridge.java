@@ -90,4 +90,8 @@ public class SessionListenerBridge implements SessionListener {
             }
         }
     }
+
+    @Override
+    public void sessionIdChanged(Session session, String oldSessionId) {
+    }
 }

@@ -50,6 +50,8 @@ public interface SessionListener {
 
     void attributeRemoved(final Session session, final String name,final Object oldValue);
 
+    void sessionIdChanged(final Session session, final String oldSessionId);
+
     enum SessionDestroyedReason {
         INVALIDATED,
         TIMEOUT,

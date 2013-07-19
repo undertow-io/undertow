@@ -39,12 +39,14 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.PredicateHandler;
+import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.DevelopmentModeInfo;
 import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.HttpMethodSecurityInfo;
@@ -58,8 +60,10 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletContainerInitializerInfo;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
+import io.undertow.servlet.api.SessionPersistenceManager;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.WebResourceCollection;
+import io.undertow.servlet.handlers.SessionRestoringHandler;
 import io.undertow.servlet.predicate.DispatcherTypePredicate;
 import io.undertow.servlet.handlers.ServletDispatchingHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
@@ -116,7 +120,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     public void deploy() {
         DeploymentInfo deploymentInfo = originalDeployment.clone();
 
-        if(deploymentInfo.getDevelopmentMode() != null) {
+        if (deploymentInfo.getDevelopmentMode() != null) {
             UndertowServletLogger.REQUEST_LOGGER.developmentModeEnabled(deploymentInfo.getDeploymentName());
         }
 
@@ -177,6 +181,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
             HttpHandler initialHandler = wrapHandlers(servletInitialHandler, deployment.getDeploymentInfo().getInitialHandlerChainWrappers());
             initialHandler = new HttpContinueReadHandler(initialHandler);
+            initialHandler = handleDevelopmentModePersistentSessions(initialHandler, deploymentInfo, deployment.getSessionManager(), servletContext);
 
             deployment.setInitialHandler(initialHandler);
             deployment.setServletHandler(servletInitialHandler);
@@ -246,7 +251,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                                 // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
                                 // comparable using '=='
                                 authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), BASIC_AUTH));
-                            }else if (mechanism.equalsIgnoreCase("BASIC-SILENT")) {
+                            } else if (mechanism.equalsIgnoreCase("BASIC-SILENT")) {
                                 //slient basic auth with use the basic headers if available, but will never challenge
                                 //this allows programtic clients to use basic auth, and browsers to use other mechanisms
                                 authenticationMechanisms.add(new BasicAuthenticationMechanism(loginConfig.getRealmName(), "BASIC-SILENT", true));
@@ -313,7 +318,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                         builder.addSecurityConstraint(newConstraint);
                     }
                     //now add the constraint, unless it has all default values and method constrains where specified
-                    if(!securityInfo.getRolesAllowed().isEmpty()
+                    if (!securityInfo.getRolesAllowed().isEmpty()
                             || securityInfo.getEmptyRoleSemantic() != EmptyRoleSemantic.PERMIT
                             || methods.isEmpty()) {
                         SecurityConstraint newConstraint = new SecurityConstraint()
@@ -391,6 +396,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
         ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
             deployment.getSessionManager().start();
+
+
             for (Lifecycle object : deployment.getLifecycleObjects()) {
                 object.start();
             }
@@ -417,11 +424,24 @@ public class DeploymentManagerImpl implements DeploymentManager {
         state = State.DEPLOYED;
     }
 
+    private HttpHandler handleDevelopmentModePersistentSessions(HttpHandler next, final DeploymentInfo deploymentInfo, final SessionManager sessionManager, final ServletContextImpl servletContext) {
+        final DevelopmentModeInfo developmentMode = deploymentInfo.getDevelopmentMode();
+        if (developmentMode != null) {
+            final SessionPersistenceManager sessionPersistenceManager = developmentMode.getSessionPersistenceManager();
+            if (sessionPersistenceManager != null) {
+                SessionRestoringHandler handler =  new SessionRestoringHandler(deployment.getDeploymentInfo().getDeploymentName(), sessionManager, servletContext, next, sessionPersistenceManager);
+                deployment.addLifecycleObjects(handler);
+                return handler;
+            }
+        }
+        return next;
+    }
+
+
     @Override
     public void undeploy() {
         ThreadSetupAction.Handle handle = deployment.getThreadSetupAction().setup(null);
         try {
-
             deployment.destroy();
             deployment = null;
         } finally {

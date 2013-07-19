@@ -75,4 +75,16 @@ public interface UndertowServletLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.WARN)
     @Message(id = 15007, value = "Development mode enabled for deployment %s, please do not enable development mode for production use")
     void developmentModeEnabled(String deploymentName);
+
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 15008, value = "Failed to load development mode persistent sessions")
+    void failedtoLoadPersistentSessions(@Cause Exception e);
+
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 15009, value = "Failed to persist session %s")
+    void failedToPersistSession(String sessionId, @Cause Exception e);
+
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 15010, value = "Failed to persist sessions")
+    void failedToPersistSessions(@Cause Exception e);
 }

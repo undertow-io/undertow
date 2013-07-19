@@ -52,13 +52,10 @@ public interface SessionManager {
      * Creates a new session. Any {@link SessionListener}s registered with this manager will be notified
      * of the session creation.
      *
-     * This method *MUST* call {@link SessionConfig#findSession(io.undertow.server.HttpServerExchange)} first to
+     * This method *MUST* call {@link SessionConfig#findSessionId(io.undertow.server.HttpServerExchange)} (io.undertow.server.HttpServerExchange)} first to
      * determine if an existing session ID is present in the exchange. If this id is present then it must be used
      * as the new session ID. If a session with this ID already exists then an {@link IllegalStateException} must be
      * thrown.
-     *
-     * this method *MUST* call {@link SessionConfig#attachSession(io.undertow.server.HttpServerExchange, Session)}
-     * on the newly created session to attach it to the exchange.
      *
      *
      * This requirement exists to allow forwards across servlet contexts to work correctly.
@@ -70,7 +67,6 @@ public interface SessionManager {
 
     /**
      *
-     * @param sessionId The session id
      * @return An IoFuture that can be used to retrieve the session, or an IoFuture that will return null if not found
      */
     Session getSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
