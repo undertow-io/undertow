@@ -76,6 +76,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean denyUncoveredHttpMethods = false;
     private DevelopmentModeInfo developmentMode;
     private boolean invalidateSessionOnLogout = false;
+    private int defaultCookieVersion = 0;
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -722,6 +723,14 @@ public class DeploymentInfo implements Cloneable {
         this.invalidateSessionOnLogout = invalidateSessionOnLogout;
     }
 
+    public int getDefaultCookieVersion() {
+        return defaultCookieVersion;
+    }
+
+    public void setDefaultCookieVersion(int defaultCookieVersion) {
+        this.defaultCookieVersion = defaultCookieVersion;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -777,6 +786,7 @@ public class DeploymentInfo implements Cloneable {
         info.denyUncoveredHttpMethods = denyUncoveredHttpMethods;
         info.developmentMode = developmentMode;
         info.invalidateSessionOnLogout = invalidateSessionOnLogout;
+        info.defaultCookieVersion = defaultCookieVersion;
         return info;
     }
 

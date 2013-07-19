@@ -79,7 +79,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude) {
             return;
         }
-        exchange.setResponseCookie(new ServletCookieAdaptor(cookie));
+        final ServletCookieAdaptor servletCookieAdaptor = new ServletCookieAdaptor(cookie);
+        servletCookieAdaptor.setVersion(servletContext.getDeployment().getDeploymentInfo().getDefaultCookieVersion());
+        exchange.setResponseCookie(servletCookieAdaptor);
     }
 
     @Override
