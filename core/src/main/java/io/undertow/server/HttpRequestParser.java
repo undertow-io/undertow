@@ -355,11 +355,11 @@ public abstract class HttpRequestParser {
                     //we are in the middle of an encoding sequence
                     if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F')) {
                         if (urlDecodeCurrentByte == 0xFFFF) {
-                            urlDecodeCurrentByte = Integer.parseInt("" + next, 16);
+                            urlDecodeCurrentByte = Character.digit(next, 16);
                             continue;
                         } else {
                             urlDecodeCurrentByte <<= 4;
-                            urlDecodeCurrentByte += Integer.parseInt("" + next, 16);
+                            urlDecodeCurrentByte += Character.digit(next, 16);
                             byte type = TYPES[urlDecodeCurrentByte & 0xFF];
 
                             urlDecodeCodePoint = urlDecodeState != UTF8_ACCEPT ? urlDecodeCurrentByte & 0x3f | urlDecodeCodePoint << 6 : 0xff >> type & urlDecodeCurrentByte;
@@ -506,11 +506,11 @@ public abstract class HttpRequestParser {
                     //we are in the middle of an encoding sequence
                     if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F')) {
                         if (urlDecodeCurrentByte == 0xFFFF) {
-                            urlDecodeCurrentByte = Integer.parseInt("" + next, 16);
+                            urlDecodeCurrentByte = Character.digit(next, 16);
                             continue;
                         } else {
                             urlDecodeCurrentByte <<= 4;
-                            urlDecodeCurrentByte += Integer.parseInt("" + next, 16);
+                            urlDecodeCurrentByte += Character.digit(next, 16);
                             byte type = TYPES[urlDecodeCurrentByte & 0xFF];
 
                             urlDecodeCodePoint = urlDecodeState != UTF8_ACCEPT ? urlDecodeCurrentByte & 0x3f | urlDecodeCodePoint << 6 : 0xff >> type & urlDecodeCurrentByte;
@@ -646,11 +646,11 @@ public abstract class HttpRequestParser {
                     //we are in the middle of an encoding sequence
                     if ((next >= '0' && next <= '9') || (next >= 'a' && next <= 'f') || (next >= 'A' && next <= 'F')) {
                         if (urlDecodeCurrentByte == 0xFFFF) {
-                            urlDecodeCurrentByte = Integer.parseInt("" + next, 16);
+                            urlDecodeCurrentByte = Character.digit(next, 16);
                             continue;
                         } else {
                             urlDecodeCurrentByte <<= 4;
-                            urlDecodeCurrentByte += Integer.parseInt("" + next, 16);
+                            urlDecodeCurrentByte += Character.digit(next, 16);
                             byte type = TYPES[urlDecodeCurrentByte & 0xFF];
 
                             urlDecodeCodePoint = urlDecodeState != UTF8_ACCEPT ? urlDecodeCurrentByte & 0x3f | urlDecodeCodePoint << 6 : 0xff >> type & urlDecodeCurrentByte;
