@@ -371,9 +371,7 @@ public abstract class HttpRequestParser {
                                 if (urlDecodeCodePoint > ASCII_MAX) {
                                     //in this case we know we are not interested in the value
                                     //just append it and continue looping
-                                    for (char c : Character.toChars(urlDecodeCodePoint)) {
-                                        stringBuilder.append(c);
-                                    }
+                                    stringBuilder.append(Character.toChars(urlDecodeCodePoint));
                                     urlDecodeCurrentByte = 0;
                                     continue;
                                 } else {
@@ -522,9 +520,7 @@ public abstract class HttpRequestParser {
                                 if (urlDecodeCodePoint > ASCII_MAX) {
                                     //in this case we know we are not interested in the value
                                     //just append it and continue looping
-                                    for (char c : Character.toChars(urlDecodeCodePoint)) {
-                                        stringBuilder.append(c);
-                                    }
+                                    stringBuilder.append(Character.toChars(urlDecodeCodePoint));
                                     urlDecodeCurrentByte = 0;
                                     continue;
                                 } else {
@@ -662,9 +658,7 @@ public abstract class HttpRequestParser {
                                 if (urlDecodeCodePoint > ASCII_MAX) {
                                     //in this case we know we are not interested in the value
                                     //just append it and continue looping
-                                    for (char c : Character.toChars(urlDecodeCodePoint)) {
-                                        stringBuilder.append(c);
-                                    }
+                                    stringBuilder.append(Character.toChars(urlDecodeCodePoint));
                                     urlDecodeCurrentByte = 0;
                                     continue;
                                 } else {
