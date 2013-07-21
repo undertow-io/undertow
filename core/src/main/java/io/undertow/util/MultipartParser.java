@@ -372,9 +372,9 @@ public class MultipartParser {
                                 firstCharacter = b;
                             }
                         } else {
-                            int result = Integer.parseInt("" + (char) firstCharacter, 16);
+                            int result = Character.digit((char) firstCharacter, 16);
                             result <<= 4; //shift it 4 bytes and then add the next value to the end
-                            result += Integer.parseInt("" + (char) b, 16);
+                            result += Character.digit((char) b, 16);
                             buf.put((byte) result);
                             equalsSeen = false;
                             firstCharacter = 0;
