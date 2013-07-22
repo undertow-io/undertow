@@ -8,6 +8,7 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.SessionPersistenceManager;
 import io.undertow.servlet.core.Lifecycle;
+import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 
 import java.security.AccessController;
@@ -108,7 +109,7 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
         //we have some old data
         Map<String, Object> result = data.remove(incomingSessionId);
         if (result != null) {
-            final Session session = sessionManager.createSession(exchange, servletContext.getSessionConfig());
+            final HttpSessionImpl session = servletContext.getSession(exchange, true);
             for (Map.Entry<String, Object> entry : result.entrySet()) {
                 session.setAttribute(entry.getKey(), entry.getValue());
             }

@@ -20,7 +20,6 @@ package io.undertow.server.session;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.SecureHashMap;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
 
@@ -41,7 +40,7 @@ public class InMemorySessionManager implements SessionManager {
 
     private volatile SessionIdGenerator sessionIdGenerator = new SecureRandomSessionIdGenerator();
 
-    private final ConcurrentMap<String, InMemorySession> sessions = new SecureHashMap<String, InMemorySession>();
+    private final ConcurrentMap<String, InMemorySession> sessions = new ConcurrentHashMap<String, InMemorySession>();
 
     private final SessionListeners sessionListeners = new SessionListeners();
 
@@ -69,15 +68,7 @@ public class InMemorySessionManager implements SessionManager {
         if (config == null) {
             throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
         }
-        String sessionID = config.findSessionId(serverExchange);
-        if (sessionID != null) {
-            InMemorySession session = sessions.get(sessionID);
-            if (session != null) {
-                throw UndertowMessages.MESSAGES.sessionAlreadyExists(sessionID);
-            }
-        } else {
-            sessionID = sessionIdGenerator.createSessionId();
-        }
+        String sessionID = sessionIdGenerator.createSessionId();
         final SessionImpl session = new SessionImpl(sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker());
         InMemorySession im = new InMemorySession(session, defaultSessionTimeout);
         sessions.put(sessionID, im);
