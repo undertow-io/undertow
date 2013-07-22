@@ -18,7 +18,13 @@
 
 package io.undertow.util;
 
+import io.undertow.server.session.SecureRandomSessionIdGenerator;
+import io.undertow.server.session.SessionIdGenerator;
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author Stuart Douglas
@@ -26,8 +32,30 @@ import org.junit.Test;
 public class SecureHashMapTestCase {
 
     @Test
-    public void testGetNonExistentDoesNotNPE(){
+    public void testGetNonExistentDoesNotNPE() {
         final SecureHashMap<String, String> map = new SecureHashMap<String, String>();
         map.get("nothing");
     }
+
+
+    @Test
+    public void testLotsOfPutsAndGets() {
+
+        SessionIdGenerator generator = new SecureRandomSessionIdGenerator();
+        final Map<String, String> reference = new HashMap<String, String>();
+        final SecureHashMap<String, String> map = new SecureHashMap<String, String>();
+        for (int i = 0; i < 10000; ++i) {
+            String key = generator.createSessionId();
+            String value = generator.createSessionId();
+            map.put(key, value);
+            reference.put(key, value);
+        }
+        for (Map.Entry<String, String> entry : reference.entrySet()) {
+            Assert.assertEquals(entry.getValue(), map.get(entry.getKey()));
+            Assert.assertEquals(entry.getValue(), map.remove(entry.getKey()));
+        }
+        Assert.assertEquals(0, map.size());
+    }
+
+
 }
