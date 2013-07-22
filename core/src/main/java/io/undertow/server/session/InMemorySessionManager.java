@@ -81,10 +81,10 @@ public class InMemorySessionManager implements SessionManager {
         final SessionImpl session = new SessionImpl(sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker());
         InMemorySession im = new InMemorySession(session, defaultSessionTimeout);
         sessions.put(sessionID, im);
-        sessionListeners.sessionCreated(session, serverExchange);
         config.setSessionId(serverExchange, session.getId());
         im.lastAccessed = System.currentTimeMillis();
         session.bumpTimeout();
+        sessionListeners.sessionCreated(session, serverExchange);
         return session;
     }
 
