@@ -157,12 +157,13 @@ public class ServletPathMatches {
                 }
             }
         }
+        //we always create a default servlet, even if it is not going to have any path mappings registered
+        final DefaultServletConfig config = deploymentInfo.getDefaultServletConfig() == null ? new DefaultServletConfig() : deploymentInfo.getDefaultServletConfig();
+        DefaultServlet defaultInstance = new DefaultServlet(deployment, config, deploymentInfo.getWelcomePages());
+        final ServletHandler managedDefaultServlet = servlets.addServlet(new ServletInfo(DEFAULT_SERVLET_NAME, DefaultServlet.class, new ImmediateInstanceFactory<Servlet>(defaultInstance)));
 
         if (defaultServlet == null) {
-            //no explicit default servlet was specified, so we create our own
-            final DefaultServletConfig config = deploymentInfo.getDefaultServletConfig() == null ? new DefaultServletConfig() : deploymentInfo.getDefaultServletConfig();
-            DefaultServlet defaultInstance = new DefaultServlet(deployment, config, deploymentInfo.getWelcomePages());
-            final ServletHandler managedDefaultServlet = servlets.addServlet(new ServletInfo(DEFAULT_SERVLET_NAME, DefaultServlet.class, new ImmediateInstanceFactory<Servlet>(defaultInstance)));
+            //no explicit default servlet was specified, so we register our mapping
             pathMatches.add("/*");
             defaultServlet = managedDefaultServlet;
             defaultHandler = new ServletChain(defaultServlet, managedDefaultServlet.getManagedServlet(), null);
