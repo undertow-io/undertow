@@ -76,17 +76,13 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
             this.started = false;
             final Map<String, Map<String, Object>> objectData = new HashMap<String, Map<String, Object>>();
             for (String sessionId : sessionIds) {
-                try {
-                    Session session = sessionManager.getSession(sessionId);
-                    if (session != null) {
-                        final Map<String, Object> sessionData = new HashMap<String, Object>();
-                        for (String attr : session.getAttributeNames()) {
-                            sessionData.put(attr, session.getAttribute(attr));
-                        }
-                        objectData.put(sessionId, sessionData);
+                Session session = sessionManager.getSession(sessionId);
+                if (session != null) {
+                    final Map<String, Object> sessionData = new HashMap<String, Object>();
+                    for (String attr : session.getAttributeNames()) {
+                        sessionData.put(attr, session.getAttribute(attr));
                     }
-                } catch (Exception e) {
-                    UndertowServletLogger.ROOT_LOGGER.failedToPersistSession(sessionId, e);
+                    objectData.put(sessionId, sessionData);
                 }
             }
             sessionPersistenceManager.persistSessions(deploymentName, objectData);

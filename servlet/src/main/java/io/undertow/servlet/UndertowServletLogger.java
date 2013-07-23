@@ -81,8 +81,8 @@ public interface UndertowServletLogger extends BasicLogger {
     void failedtoLoadPersistentSessions(@Cause Exception e);
 
     @LogMessage(level = Logger.Level.WARN)
-    @Message(id = 15009, value = "Failed to persist session %s")
-    void failedToPersistSession(String sessionId, @Cause Exception e);
+    @Message(id = 15009, value = "Failed to persist session attribute %s with value %s for session %s")
+    void failedToPersistSessionAttribute(String attributeName, Object value, String sessionID);
 
     @LogMessage(level = Logger.Level.WARN)
     @Message(id = 15010, value = "Failed to persist sessions")
