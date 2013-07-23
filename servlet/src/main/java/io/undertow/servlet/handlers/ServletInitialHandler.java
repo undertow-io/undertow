@@ -18,15 +18,6 @@
 
 package io.undertow.servlet.handlers;
 
-import java.util.concurrent.Executor;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
@@ -43,11 +34,21 @@ import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.OptionMap;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.concurrent.Executor;
+
+import static io.undertow.util.Methods.GET;
+import static io.undertow.util.Methods.HEAD;
 
 /**
  * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
@@ -83,7 +84,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
-        if(path.isEmpty() && exchange.getRequestMethod().equals(Methods.GET)) {
+        if(path.isEmpty() && (exchange.getRequestMethod().equals(GET) || exchange.getRequestMethod().equals(HEAD))) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
             exchange.setResponseCode(302);
