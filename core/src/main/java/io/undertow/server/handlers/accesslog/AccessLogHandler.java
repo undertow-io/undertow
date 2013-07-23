@@ -44,7 +44,7 @@ import io.undertow.server.HttpServerExchange;
  * <ul>
  * <li><b>common</b> - <code>%h %l %u %t "%r" %s %b</code>
  * <li><b>combined</b> -
- * <code>%h %l %u %t "%r" %s %b "%{Referer}i" "%{User-Agent}i"</code>
+ * <code>%h %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
  * </ul>
  * <p/>
  * <p>
@@ -73,8 +73,17 @@ public class AccessLogHandler implements HttpHandler {
     public AccessLogHandler(final HttpHandler next, final AccessLogReceiver accessLogReceiver, final String formatString, ClassLoader classLoader) {
         this.next = next;
         this.accessLogReceiver = accessLogReceiver;
-        this.formatString = formatString;
+        this.formatString = handleCommonNames(formatString);
         this.tokens = ExchangeAttributes.parser(classLoader).parse(formatString);
+    }
+
+    private static String handleCommonNames(String formatString) {
+        if(formatString.equals("common")) {
+            return "%h %l %u %t \"%r\" %s %b";
+        } else if (formatString.equals("combined")) {
+            return "%h %l %u %t \"%r\" %s %b \"%{i,Referer}\" \"%{i,User-Agent}\"";
+        }
+        return formatString;
     }
 
 
