@@ -44,7 +44,7 @@ public class Bootstrap implements ServletExtension {
         } catch (DeploymentException e) {
             throw new RuntimeException(e);
         }
-        deploymentInfo.addFilter(Servlets.filter(FILTER_NAME, JsrWebSocketFilter.class));
+        deploymentInfo.addFilter(Servlets.filter(FILTER_NAME, JsrWebSocketFilter.class).setAsyncSupported(true));
         deploymentInfo.addFilterUrlMapping(FILTER_NAME, "/*", DispatcherType.REQUEST);
         servletContext.setAttribute(ServerContainer.class.getName(), container);
         info.containerReady(container);
