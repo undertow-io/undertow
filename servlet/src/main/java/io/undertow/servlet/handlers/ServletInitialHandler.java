@@ -41,7 +41,9 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
@@ -81,7 +83,16 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
+        if(path.isEmpty() && exchange.getRequestMethod().equals(Methods.GET)) {
+            //UNDERTOW-89
+            //we redirect on GET requests to the root context to add an / to the end
+            exchange.setResponseCode(302);
+            exchange.getResponseHeaders().put(Headers.LOCATION, exchange.getResolvedPath() + "/" + (exchange.getQueryString().isEmpty() ? "" : ("?" + exchange.getQueryString())));
+            return;
+        }
+
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
+
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
         final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), request, response, info);
