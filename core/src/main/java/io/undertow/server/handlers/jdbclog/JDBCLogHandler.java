@@ -1,14 +1,14 @@
-package io.undertow.server.handlers.accesslog;
-
+package io.undertow.server.handlers.jdbclog;
 
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.accesslog.AccessLogReceiver;
 
 /**
- * Access log handler. This handler will generate access log messages based on the provided format string,
+ * JDBC log handler. This handler will generate access log messages based on the provided format string,
  * and pass these messages into the provided {@link AccessLogReceiver}.
  * <p/>
  * This handler can log any attribute that is provides via the {@link io.undertow.attribute.ExchangeAttribute}
@@ -62,42 +62,42 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author Stuart Douglas
  */
-public class AccessLogHandler implements HttpHandler {
+
+public class JDBCLogHandler implements HttpHandler {
 
     private final HttpHandler next;
-    private final AccessLogReceiver accessLogReceiver;
+    private final JDBCLogReceiver jdbcLogReceiver;
     private final String formatString;
     private final ExchangeAttribute tokens;
-    private final ExchangeCompletionListener exchangeCompletionListener = new AccessLogCompletionListener();
+    private final ExchangeCompletionListener exchangeCompletionListener = new JDBCLogCompletionListener();
 
-    public AccessLogHandler(final HttpHandler next, final AccessLogReceiver accessLogReceiver, final String formatString, ClassLoader classLoader) {
+    public JDBCLogHandler(final HttpHandler next, final JDBCLogReceiver jdbcLogReceiver, final String formatString, ClassLoader classLoader) {
         this.next = next;
-        this.accessLogReceiver = accessLogReceiver;
+        this.jdbcLogReceiver = jdbcLogReceiver;
         this.formatString = handleCommonNames(formatString);
         this.tokens = ExchangeAttributes.parser(classLoader).parse(this.formatString);
     }
 
     private static String handleCommonNames(String formatString) {
         if(formatString.equals("common")) {
-            return "%h %l %u %t \"%r\" %s %b";
+            return "%a %u %t \"%q\" %s %b";
         } else if (formatString.equals("combined")) {
-            return "%h %l %u %t \"%r\" %s %b \"%{i,Referer}\" \"%{i,User-Agent}\"";
+            return "%a %u %t \"%q\" %s %b %v %m \"%{i,Referer}\" \"%{i,User-Agent}\"";
         }
         return formatString;
     }
 
-
     @Override
-    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+    public void handleRequest(HttpServerExchange exchange) throws Exception {
         exchange.addExchangeCompleteListener(exchangeCompletionListener);
         next.handleRequest(exchange);
     }
 
-    private class AccessLogCompletionListener implements ExchangeCompletionListener {
+    private class JDBCLogCompletionListener implements ExchangeCompletionListener {
         @Override
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
             try {
-                accessLogReceiver.logMessage(tokens.readAttribute(exchange));
+                jdbcLogReceiver.logMessage(tokens.readAttribute(exchange));
             } finally {
                 nextListener.proceed();
             }
@@ -106,7 +106,7 @@ public class AccessLogHandler implements HttpHandler {
 
     @Override
     public String toString() {
-        return "AccessLogHandler{" +
+        return "JDBCLogHandler{" +
                 "formatString='" + formatString + '\'' +
                 '}';
     }
