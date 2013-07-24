@@ -74,7 +74,7 @@ public class AccessLogHandler implements HttpHandler {
         this.next = next;
         this.accessLogReceiver = accessLogReceiver;
         this.formatString = handleCommonNames(formatString);
-        this.tokens = ExchangeAttributes.parser(classLoader).parse(formatString);
+        this.tokens = ExchangeAttributes.parser(classLoader).parse(this.formatString);
     }
 
     private static String handleCommonNames(String formatString) {
