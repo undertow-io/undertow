@@ -7,9 +7,12 @@ import javax.servlet.Servlet;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.core.ServletContainerImpl;
+
+import java.util.EventListener;
 
 /**
  * Utility class for building servlet deployments.
@@ -104,7 +107,6 @@ public class Servlets {
     /**
      * Creates a new multipart config element
      *
-     *
      * @param location          the directory location where files will be stored
      * @param maxFileSize       the maximum size allowed for uploaded files
      * @param maxRequestSize    the maximum size allowed for
@@ -114,6 +116,14 @@ public class Servlets {
      */
     public static MultipartConfigElement multipartConfig(String location, long maxFileSize, long maxRequestSize, int fileSizeThreshold) {
         return new MultipartConfigElement(location, maxFileSize, maxRequestSize, fileSizeThreshold);
+    }
+
+    public static ListenerInfo listener(final Class<? extends EventListener> listenerClass, final InstanceFactory<? extends EventListener> instanceFactory) {
+        return new ListenerInfo(listenerClass, instanceFactory);
+    }
+
+    public static ListenerInfo listener(final Class<? extends EventListener> listenerClass) {
+        return new ListenerInfo(listenerClass);
     }
 
     private Servlets() {

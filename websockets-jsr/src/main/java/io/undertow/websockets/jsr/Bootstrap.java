@@ -9,6 +9,8 @@ import io.undertow.servlet.core.ContextClassLoaderSetupAction;
 import io.undertow.servlet.spec.ServletContextImpl;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
 import javax.websocket.DeploymentException;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpointConfig;
@@ -48,5 +50,22 @@ public class Bootstrap implements ServletExtension {
         deploymentInfo.addFilterUrlMapping(FILTER_NAME, "/*", DispatcherType.REQUEST);
         servletContext.setAttribute(ServerContainer.class.getName(), container);
         info.containerReady(container);
+        UndertowContainerProvider.addContainer(deploymentInfo.getClassLoader(), container);
+
+        deploymentInfo.addListener(Servlets.listener(ContainerRemovedListener.class));
     }
+
+    private static final class ContainerRemovedListener implements ServletContextListener {
+
+        @Override
+        public void contextInitialized(ServletContextEvent sce) {
+        }
+
+        @Override
+        public void contextDestroyed(ServletContextEvent sce) {
+            UndertowContainerProvider.removeContainer(sce.getServletContext().getClassLoader());
+
+        }
+    }
+
 }
