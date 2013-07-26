@@ -76,6 +76,8 @@ public class JDBCLogDatabaseTestCase {
             ResultSet resultDatabase = conn.createStatement().executeQuery("SELECT * FROM PUBLIC.ACCESS;");
             resultDatabase.next();
             Assert.assertEquals("127.0.0.1", resultDatabase.getString(logReceiver.getRemoteHostField()));
+            Assert.assertEquals("5", resultDatabase.getString(logReceiver.getBytesField()));
+            Assert.assertEquals("200", resultDatabase.getString(logReceiver.getStatusField()));
             conn.close();
             client.getConnectionManager().shutdown();
         }
