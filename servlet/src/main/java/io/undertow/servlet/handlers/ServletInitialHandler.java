@@ -84,7 +84,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
-        if(path.isEmpty() && (exchange.getRequestMethod().equals(GET) || exchange.getRequestMethod().equals(HEAD))) {
+        final ServletPathMatch info = paths.getServletHandlerByPath(path);
+        if(path.isEmpty() && (exchange.getRequestMethod().equals(GET) || exchange.getRequestMethod().equals(HEAD)) && info.isDefaultServletMatch()) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
             exchange.setResponseCode(302);
@@ -92,7 +93,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             return;
         }
 
-        final ServletPathMatch info = paths.getServletHandlerByPath(path);
 
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);

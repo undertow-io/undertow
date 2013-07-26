@@ -43,7 +43,7 @@ class ServletPathMatchesData {
         this.defaultServlet = defaultServlet;
         Map<String, ServletPathMatch> newExactPathMatches = new HashMap<String, ServletPathMatch>();
         for (Map.Entry<String, ServletChain> entry : exactPathMatches.entrySet()) {
-            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey()));
+            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey(), false));
         }
         this.exactPathMatches = newExactPathMatches;
 
@@ -81,23 +81,23 @@ class ServletPathMatchesData {
                 }
             }
         }
-        return new ServletPathMatch(defaultServlet, path);
+        return new ServletPathMatch(defaultServlet, path, true);
     }
 
     private ServletPathMatch handleMatch(final String path, final PathMatch match, final int extensionPos) {
         if (match.extensionMatches.isEmpty()) {
-            return new ServletPathMatch(match.defaultHandler, path);
+            return new ServletPathMatch(match.defaultHandler, path, false);
         } else {
             if (extensionPos == -1) {
-                return new ServletPathMatch(match.defaultHandler, path);
+                return new ServletPathMatch(match.defaultHandler, path, false);
             } else {
                 final String ext;
                 ext = path.substring(extensionPos + 1, path.length());
                 ServletChain handler = match.extensionMatches.get(ext);
                 if (handler != null) {
-                    return new ServletPathMatch(handler, path);
+                    return new ServletPathMatch(handler, path, false);
                 } else {
-                    return new ServletPathMatch(match.defaultHandler, path);
+                    return new ServletPathMatch(match.defaultHandler, path, false);
                 }
             }
         }

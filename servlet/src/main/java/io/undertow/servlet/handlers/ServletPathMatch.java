@@ -25,9 +25,11 @@ public class ServletPathMatch extends ServletChain {
 
     private final String matched;
     private final String remaining;
+    private final boolean defaultServletMatch;
 
-    public ServletPathMatch(final ServletChain target, final String uri) {
+    public ServletPathMatch(final ServletChain target, final String uri, boolean defaultServletMatch) {
         super(target);
+        this.defaultServletMatch = defaultServletMatch;
         if (target.getServletPath() == null) {
             //the default servlet is always considered to have matched the full path.
             this.matched = uri;
@@ -49,5 +51,9 @@ public class ServletPathMatch extends ServletChain {
 
     public String getRemaining() {
         return remaining;
+    }
+
+    public boolean isDefaultServletMatch() {
+        return defaultServletMatch;
     }
 }
