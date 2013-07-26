@@ -70,7 +70,6 @@ public class JDBCLogDatabaseTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
             logReceiver.awaitWrittenForTest();
-//            Thread.sleep(3000);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
         } finally {
