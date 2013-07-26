@@ -10,6 +10,7 @@ import io.undertow.servlet.handlers.security.SingleConstraintMatch;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.HttpSessionImpl;
+import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.AttachmentKey;
 
 import javax.servlet.DispatcherType;
@@ -69,6 +70,8 @@ public class ServletRequestContext {
     private TransportGuaranteeType transportGuarenteeType;
     private HttpSessionImpl session;
 
+    private ServletContextImpl currentServetContext;
+
     public ServletRequestContext(final Deployment deployment, final HttpServletRequestImpl originalRequest, final HttpServletResponseImpl originalResponse, final ServletPathMatch originalServletPathMatch) {
         this.deployment = deployment;
         this.originalRequest = originalRequest;
@@ -76,6 +79,7 @@ public class ServletRequestContext {
         this.servletRequest = originalRequest;
         this.servletResponse = originalResponse;
         this.originalServletPathMatch = originalServletPathMatch;
+        this.currentServetContext = deployment.getServletContext();
     }
 
     public Deployment getDeployment() {
@@ -160,5 +164,13 @@ public class ServletRequestContext {
 
     public ServletPathMatch getOriginalServletPathMatch() {
         return originalServletPathMatch;
+    }
+
+    public ServletContextImpl getCurrentServetContext() {
+        return currentServetContext;
+    }
+
+    public void setCurrentServetContext(ServletContextImpl currentServetContext) {
+        this.currentServetContext = currentServetContext;
     }
 }
