@@ -438,9 +438,7 @@ public class ServletContextImpl implements ServletContext {
         ensureNotProgramaticListener();
         try {
             return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
-        } catch (InstantiationException e) {
-            throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
-        } catch (NoSuchMethodException e) {
+        } catch (Exception e) {
             throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
         }
     }
@@ -515,9 +513,7 @@ public class ServletContextImpl implements ServletContext {
         ensureNotProgramaticListener();
         try {
             return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
-        } catch (InstantiationException e) {
-            throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
-        } catch (NoSuchMethodException e) {
+        } catch (Exception e) {
             throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
         }
     }
@@ -605,7 +601,7 @@ public class ServletContextImpl implements ServletContext {
         InstanceFactory<? extends EventListener> factory = null;
         try {
             factory = deploymentInfo.getClassIntrospecter().createInstanceFactory(listenerClass);
-        } catch (NoSuchMethodException e) {
+        } catch (Exception e) {
             throw new IllegalArgumentException(e);
         }
         final ListenerInfo listener = new ListenerInfo(listenerClass, factory);
@@ -621,9 +617,7 @@ public class ServletContextImpl implements ServletContext {
         }
         try {
             return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
-        } catch (InstantiationException e) {
-            throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
-        } catch (NoSuchMethodException e) {
+        } catch (Exception e) {
             throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
         }
     }
