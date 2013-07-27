@@ -1,73 +1,29 @@
-package io.undertow.server.handlers.jdbclog;
+package io.undertow.server.handlers;
 
 import io.undertow.UndertowLogger;
-import io.undertow.attribute.ExchangeAttributeParser;
 import io.undertow.attribute.ExchangeAttributes;
+import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
-import javax.xml.bind.SchemaOutputResolver;
 import java.io.Closeable;
-import java.sql.Connection;
-import java.sql.Driver;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.*;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-/**
- * Log Receiver that stores logs in database.
- * <p>
+public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
 
- * Many parameters can be configured, such as the database connection (with
- * <code>driverName</code> and <code>connectionURL</code>),
- * the table name (<code>tableName</code>)
- * and the field names (corresponding to the get/set method names).
+    private final HttpHandler next;
+    private final String formatString;
+    private final ExchangeCompletionListener exchangeCompletionListener = new JDBCLogCompletionListener();
 
- * </p>
- * <p>
- * The database table can be created with the following command:
- * </p>
- * <pre>
- * CREATE TABLE access (
- * id INT UNSIGNED AUTO_INCREMENT NOT NULL,
- * remoteHost CHAR(15) NOT NULL,
- * userName CHAR(15),
- * timestamp TIMESTAMP NOT NULL,
- * virtualHost VARCHAR(64) NOT NULL,
- * method VARCHAR(8) NOT NULL,
- * query VARCHAR(255) NOT NULL,
- * status SMALLINT UNSIGNED NOT NULL,
- * bytes INT UNSIGNED NOT NULL,
- * referer VARCHAR(128),
- * userAgent VARCHAR(128),
- * PRIMARY KEY (id),
- * INDEX (timestamp),
- * INDEX (remoteHost),
- * INDEX (virtualHost),
- * INDEX (query),
- * INDEX (userAgent)
- * );
- * </pre>
- * <p>Set DefaultJDBCLogReceiver attribute useLongContentLength="true" as you have more then 4GB outputs.
- * Please, use long SQL datatype at access.bytes attribute.
- * The datatype of bytes at oracle is <i>number</i> and other databases use <i>bytes BIGINT NOT NULL</i>.
- * </p>
- *
- * <p>
- * If the table is created as above, its name and the field names don't need
- * to be defined.
- * </p>
- * <p>
- * If the request method is "common", only these fields are used:
- * <code>remoteHost, user, timeStamp, query, status, bytes</code>
- * </p>
- * @author Filipe Ferraz
- */
 
-public class DefaultJDBCLogReceiver implements Runnable, Closeable {
+    //
 
     private final Executor logWriteExecutor;
 
@@ -79,7 +35,7 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
     @SuppressWarnings("unused")
     private volatile int state = 0;
 
-    private static final AtomicIntegerFieldUpdater<DefaultJDBCLogReceiver> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultJDBCLogReceiver.class, "state");
+    private static final AtomicIntegerFieldUpdater<JDBCLogHandler> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(JDBCLogHandler.class, "state");
 
     protected boolean useLongContentLength = false;
 
@@ -109,7 +65,10 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
 
     private long currentTimeMillis;
 
-    public DefaultJDBCLogReceiver(final Executor logWriteExecutor) {
+    public JDBCLogHandler(final HttpHandler next, final  Executor logWriteExecutor, final String formatString, ClassLoader classLoader) {
+        this.next = next;
+        this.formatString = formatString;
+
         driverName = null;
         connectionURL = null;
         tableName = "access";
@@ -130,6 +89,23 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
 
         this.logWriteExecutor = logWriteExecutor;
         this.pendingMessages = new ConcurrentLinkedDeque<JDBCLogAttribute>();
+    }
+
+    @Override
+    public void handleRequest(HttpServerExchange exchange) throws Exception {
+        exchange.addExchangeCompleteListener(exchangeCompletionListener);
+        next.handleRequest(exchange);
+    }
+
+    private class JDBCLogCompletionListener implements ExchangeCompletionListener {
+        @Override
+        public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
+            try {
+                logMessage(formatString, exchange);
+            } finally {
+                nextListener.proceed();
+            }
+        }
     }
 
     public void logMessage(String pattern, HttpServerExchange exchange) {
@@ -253,6 +229,7 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
         while (state != 0) {
             Thread.sleep(10);
         }
+        // temporary solution?
         Thread.sleep(1000);
     }
 
@@ -281,17 +258,17 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
 
     private void prepareStatement() throws SQLException {
         ps = conn.prepareStatement
-            ("INSERT INTO " + tableName + " ("
-                + remoteHostField + ", " + userField + ", "
-                + timestampField + ", " + queryField + ", "
-                + statusField + ", " + bytesField + ", "
-                + virtualHostField + ", " + methodField + ", "
-                + refererField + ", " + userAgentField
-                + ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                ("INSERT INTO " + tableName + " ("
+                        + remoteHostField + ", " + userField + ", "
+                        + timestampField + ", " + queryField + ", "
+                        + statusField + ", " + bytesField + ", "
+                        + virtualHostField + ", " + methodField + ", "
+                        + refererField + ", " + userAgentField
+                        + ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     }
 
     private String resolveAttribute(String attribute, HttpServerExchange exchange) {
-        return ExchangeAttributes.parser(DefaultJDBCLogReceiver.class.getClassLoader()).parse(attribute).readAttribute(exchange);
+        return ExchangeAttributes.parser(JDBCLogHandler.class.getClassLoader()).parse(attribute).readAttribute(exchange);
     }
 
     @Override
@@ -449,6 +426,13 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
 
     public void setUserAgentField(String userAgentField) {
         this.userAgentField = userAgentField;
+    }
+
+    @Override
+    public String toString() {
+        return "JDBCLogHandler{" +
+                "formatString='" + formatString + '\'' +
+                '}';
     }
 
 }
