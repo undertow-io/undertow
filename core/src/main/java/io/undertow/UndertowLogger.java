@@ -30,6 +30,7 @@ import org.jboss.logging.annotations.MessageLogger;
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.sql.SQLException;
 
 /**
  * log messages start at 5000
@@ -113,5 +114,10 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5018, value = "Exception invoking close listener %s")
     void exceptionInvokingCloseListener(HttpServerConnection.CloseListener l, @Cause Throwable e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5019, value = "Error writing JDBC log")
+    void errorWritingJDBCLog(@Cause SQLException e);
+
 }
 

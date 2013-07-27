@@ -5,13 +5,15 @@ import io.undertow.attribute.ExchangeAttributeParser;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.HttpServerExchange;
 
+import javax.xml.bind.SchemaOutputResolver;
 import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.Properties;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -69,11 +71,13 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
 
     private final Executor logWriteExecutor;
 
+    private final Deque<JDBCLogAttribute> pendingMessages;
+
     //0 = not running
     //1 = queued
     //2 = running
     @SuppressWarnings("unused")
-    private volatile int state = 1;
+    private volatile int state = 0;
 
     private static final AtomicIntegerFieldUpdater<DefaultJDBCLogReceiver> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultJDBCLogReceiver.class, "state");
 
@@ -105,8 +109,6 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
 
     private long currentTimeMillis;
 
-    private JDBCLogAttribute jdbcLogAttribute;
-
     public DefaultJDBCLogReceiver(final Executor logWriteExecutor) {
         driverName = null;
         connectionURL = null;
@@ -127,34 +129,37 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
         currentTimeMillis = new java.util.Date().getTime();
 
         this.logWriteExecutor = logWriteExecutor;
-        this.jdbcLogAttribute = new JDBCLogAttribute();
+        this.pendingMessages = new ConcurrentLinkedDeque<JDBCLogAttribute>();
     }
 
     public void logMessage(String pattern, HttpServerExchange exchange) {
+        JDBCLogAttribute jdbcLogAttribute = new JDBCLogAttribute();
+
         if (pattern.equals("combined")) {
-            this.pattern = pattern;
+            jdbcLogAttribute.pattern = pattern;
         }
 
-        this.jdbcLogAttribute.remoteHost = resolveAttribute("%h", exchange);
-        this.jdbcLogAttribute.user = resolveAttribute("%u", exchange);
-        this.jdbcLogAttribute.query = resolveAttribute("%q", exchange);
+        jdbcLogAttribute.remoteHost = resolveAttribute("%h", exchange);
+        jdbcLogAttribute.user = resolveAttribute("%u", exchange);
+        jdbcLogAttribute.query = resolveAttribute("%q", exchange);
 
-        this.jdbcLogAttribute.bytes = Long.valueOf(resolveAttribute("%B", exchange));
-        if (this.jdbcLogAttribute.bytes < 0)
-            this.jdbcLogAttribute.bytes = 0;
+        jdbcLogAttribute.bytes = Long.valueOf(resolveAttribute("%B", exchange));
+        if (jdbcLogAttribute.bytes < 0)
+            jdbcLogAttribute.bytes = 0;
 
-        this.jdbcLogAttribute.status = Integer.valueOf(resolveAttribute("%s", exchange));
+        jdbcLogAttribute.status = Integer.valueOf(resolveAttribute("%s", exchange));
 
-        if (this.pattern.equals("combined")) {
-            this.jdbcLogAttribute.virtualHost = resolveAttribute("%v", exchange);
-            this.jdbcLogAttribute.method = resolveAttribute("%m", exchange);
-            this.jdbcLogAttribute.referer = resolveAttribute("\"%{i,referer}\"", exchange);
-            this.jdbcLogAttribute.userAgent = resolveAttribute("\"%{i,user-agent}\"", exchange);
+        if (jdbcLogAttribute.pattern.equals("combined")) {
+            jdbcLogAttribute.virtualHost = resolveAttribute("%v", exchange);
+            jdbcLogAttribute.method = resolveAttribute("%m", exchange);
+            jdbcLogAttribute.referer = resolveAttribute("\"%{i,referer}\"", exchange);
+            jdbcLogAttribute.userAgent = resolveAttribute("\"%{i,user-agent}\"", exchange);
         }
 
+        this.pendingMessages.add(jdbcLogAttribute);
         int state = stateUpdater.get(this);
-        if (state == 1) {
-            if (stateUpdater.compareAndSet(this, 1, 2)) {
+        if (state == 0) {
+            if (stateUpdater.compareAndSet(this, 0, 1)) {
                 logWriteExecutor.execute(this);
             }
         }
@@ -165,39 +170,73 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
      */
     @Override
     public void run() {
-        if (state == 1) {
+        if (!stateUpdater.compareAndSet(this, 1, 2)) {
             return;
         }
-        int numberOfTries = 2;
-        while (numberOfTries>0) {
-            try {
-                open();
-                prepareStatement();
-                ps.setString(1, this.jdbcLogAttribute.remoteHost);
-                ps.setString(2, this.jdbcLogAttribute.user);
-                ps.setTimestamp(3, new Timestamp(getCurrentTimeMillis()));
-                ps.setString(4, this.jdbcLogAttribute.query);
-                ps.setInt(5, this.jdbcLogAttribute.status);
-                if (useLongContentLength) {
-                    ps.setLong(6, this.jdbcLogAttribute.bytes);
-                } else {
-                    if (this.jdbcLogAttribute.bytes > Integer.MAX_VALUE)
-                        this.jdbcLogAttribute.bytes = -1;
-                    ps.setInt(6, (int) this.jdbcLogAttribute.bytes);
-                }
-                if (this.pattern.equals("combined")) {
-                    ps.setString(7, this.jdbcLogAttribute.virtualHost);
-                    ps.setString(8, this.jdbcLogAttribute.method);
-                    ps.setString(9, this.jdbcLogAttribute.referer);
-                    ps.setString(10, this.jdbcLogAttribute.userAgent);
-                }
-                ps.executeUpdate();
-                stateUpdater.set(this, 0);
-                return;
-            } catch (SQLException e) {
-                UndertowLogger.ROOT_LOGGER.error(e);
+
+        List<JDBCLogAttribute> messages = new ArrayList<JDBCLogAttribute>();
+        JDBCLogAttribute msg = null;
+
+        //only grab at most 20 messages at a time
+        for (int i = 0; i < 20; ++i) {
+            msg = pendingMessages.poll();
+            if (msg == null) {
+                break;
             }
-            numberOfTries--;
+            messages.add(msg);
+        }
+
+        if(!messages.isEmpty()) {
+            writeMessage(messages);
+        }
+    }
+
+    private void writeMessage(List<JDBCLogAttribute> messages) {
+        try {
+            open();
+            prepareStatement();
+            for (JDBCLogAttribute jdbcLogAttribute : messages) {
+                int numberOfTries = 2;
+                while (numberOfTries>0) {
+                    try {
+                        ps.clearParameters();
+                        ps.setString(1, jdbcLogAttribute.remoteHost);
+                        ps.setString(2, jdbcLogAttribute.user);
+                        ps.setTimestamp(3, jdbcLogAttribute.timestamp);
+                        ps.setString(4, jdbcLogAttribute.query);
+                        ps.setInt(5, jdbcLogAttribute.status);
+                        if (useLongContentLength) {
+                            ps.setLong(6, jdbcLogAttribute.bytes);
+                        } else {
+                            if (jdbcLogAttribute.bytes > Integer.MAX_VALUE)
+                                jdbcLogAttribute.bytes = -1;
+                            ps.setInt(6, (int) jdbcLogAttribute.bytes);
+                        }
+                        ps.setString(7, jdbcLogAttribute.virtualHost);
+                        ps.setString(8, jdbcLogAttribute.method);
+                        ps.setString(9, jdbcLogAttribute.referer);
+                        ps.setString(10, jdbcLogAttribute.userAgent);
+
+                        ps.executeUpdate();
+                        numberOfTries = 0;
+                    } catch (SQLException e) {
+                        UndertowLogger.ROOT_LOGGER.error(e);
+                    }
+                    numberOfTries--;
+                }
+            }
+            ps.close();
+
+            stateUpdater.set(this, 0);
+            //check to see if there is still more messages
+            //if so then run this again
+            if (!pendingMessages.isEmpty()) {
+                if (stateUpdater.compareAndSet(this, 0, 1)) {
+                    logWriteExecutor.execute(this);
+                }
+            }
+        } catch (SQLException e) {
+            UndertowLogger.ROOT_LOGGER.errorWritingJDBCLog(e);
         }
     }
 
@@ -208,9 +247,13 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
      * DO NOT USE THIS OUTSIDE OF A TEST
      */
     void awaitWrittenForTest() throws InterruptedException {
+        while (!pendingMessages.isEmpty()) {
+            Thread.sleep(10);
+        }
         while (state != 0) {
             Thread.sleep(10);
         }
+        Thread.sleep(1000);
     }
 
     protected void open() throws SQLException {
@@ -237,31 +280,14 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
     }
 
     private void prepareStatement() throws SQLException {
-        if (pattern.equals("common")) {
-            ps = conn.prepareStatement
-                    ("INSERT INTO " + tableName + " ("
-                            + remoteHostField + ", " + userField + ", "
-                            + timestampField +", " + queryField + ", "
-                            + statusField + ", " + bytesField
-                            + ") VALUES(?, ?, ?, ?, ?, ?)");
-        } else if (pattern.equals("combined")) {
-            ps = conn.prepareStatement
-                    ("INSERT INTO " + tableName + " ("
-                            + remoteHostField + ", " + userField + ", "
-                            + timestampField + ", " + queryField + ", "
-                            + statusField + ", " + bytesField + ", "
-                            + virtualHostField + ", " + methodField + ", "
-                            + refererField + ", " + userAgentField
-                            + ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        }
-    }
-
-    public long getCurrentTimeMillis() {
-        long systime  =  System.currentTimeMillis();
-        if ((systime - currentTimeMillis) > 1000) {
-            currentTimeMillis  =  new java.util.Date(systime).getTime();
-        }
-        return currentTimeMillis;
+        ps = conn.prepareStatement
+            ("INSERT INTO " + tableName + " ("
+                + remoteHostField + ", " + userField + ", "
+                + timestampField + ", " + queryField + ", "
+                + statusField + ", " + bytesField + ", "
+                + virtualHostField + ", " + methodField + ", "
+                + refererField + ", " + userAgentField
+                + ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     }
 
     private String resolveAttribute(String attribute, HttpServerExchange exchange) {
@@ -293,6 +319,8 @@ public class DefaultJDBCLogReceiver implements Runnable, Closeable {
         protected String method = EMPTY;
         protected String referer = EMPTY;
         protected String userAgent = EMPTY;
+        protected String pattern = "common";
+        protected Timestamp timestamp = new Timestamp(System.currentTimeMillis());
     }
 
     public boolean isUseLongContentLength() {
