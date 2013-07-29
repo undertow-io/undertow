@@ -14,6 +14,7 @@ import java.util.concurrent.Future;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.util.CompletionLatchHandler;
 import io.undertow.util.FileUtils;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -60,8 +61,9 @@ public class AccessLogFileTestCase {
         File directory = logDirectory;
         File logFileName = new File(directory, "server1.log");
 
+        CompletionLatchHandler latchHandler;
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1");
-        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
+        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader())));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
@@ -69,6 +71,7 @@ public class AccessLogFileTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
+            latchHandler.await();
             logReceiver.awaitWrittenForTest();
             Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header single-val\n", FileUtils.readFile(logFileName));
         } finally {
@@ -83,7 +86,8 @@ public class AccessLogFileTestCase {
         File logFileName = new File(directory, "server2.log");
 
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server2");
-        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "REQ %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
+        CompletionLatchHandler latchHandler;
+        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(NUM_REQUESTS * NUM_THREADS, new AccessLogHandler(HELLO_HANDLER, logReceiver, "REQ %{i,test-header}", AccessLogFileTestCase.class.getClassLoader())));
 
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
@@ -119,6 +123,7 @@ public class AccessLogFileTestCase {
         } finally {
             executor.shutdown();
         }
+        latchHandler.await();
         logReceiver.awaitWrittenForTest();
         String completeLog = FileUtils.readFile(logFileName);
         for (int i = 0; i < NUM_THREADS; ++i) {
@@ -135,7 +140,8 @@ public class AccessLogFileTestCase {
         File logFileName = new File(logDirectory, "server.log");
 
         DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), logDirectory, "server");
-        DefaultServer.setRootHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader()));
+        CompletionLatchHandler latchHandler;
+        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader())));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
@@ -143,6 +149,8 @@ public class AccessLogFileTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
+            latchHandler.await();
+            latchHandler.reset();
             logReceiver.awaitWrittenForTest();
             Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header v1\n", FileUtils.readFile(logFileName));
             logReceiver.rotate();
@@ -156,6 +164,8 @@ public class AccessLogFileTestCase {
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
+            latchHandler.await();
+            latchHandler.reset();
             logReceiver.awaitWrittenForTest();
             Assert.assertEquals("Remote address 127.0.0.1 Code 200 test-header v2\n", FileUtils.readFile(logFileName));
             logReceiver.rotate();
