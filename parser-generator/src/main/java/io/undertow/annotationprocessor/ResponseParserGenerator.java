@@ -31,8 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ResponseParserGenerator extends AbstractParserGenerator {
 
     //class names
-    public static final String PARSE_STATE_CLASS = "io.undertow.client.ResponseParseState";
-    public static final String HTTP_RESPONSE_CLASS = "io.undertow.client.PendingHttpRequest";
+    public static final String PARSE_STATE_CLASS = "io.undertow.client.http.ResponseParseState";
+    public static final String HTTP_RESPONSE_CLASS = "io.undertow.client.http.HttpResponseBuilder";
 
     //parsing states
     public static final int VERSION = 0;

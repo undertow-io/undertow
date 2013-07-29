@@ -1,40 +1,41 @@
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.client.HttpClient;
-import io.undertow.client.HttpClientConnection;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.SameThreadExecutor;
-import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 
 import java.io.IOException;
-import java.net.SocketAddress;
+import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Simple proxy client provider. This provider simply proxies to another server, using a a one to one
  * connection strategy.
  *
- *
  * @author Stuart Douglas
  */
 public class SimpleProxyClientProvider implements ProxyClientProvider {
 
-    private final SocketAddress destination;
+    private final URI uri;
     private final AttachmentKey<ProxyClient> clientAttachmentKey = AttachmentKey.create(ProxyClient.class);
+    private final UndertowClient client;
 
-    public SimpleProxyClientProvider(SocketAddress destination) {
-        this.destination = destination;
+    public SimpleProxyClientProvider(URI uri) {
+        this.uri = uri;
+        client = UndertowClient.getInstance();
     }
 
     @Override
     public void createProxyClient(final HttpServerExchange exchange, final HttpHandler nextHandler, final long timeout, final TimeUnit timeUnit) {
         ProxyClient existing = exchange.getConnection().getAttachment(clientAttachmentKey);
-        if(existing != null) {
+        if (existing != null) {
             //this connection already has a client, re-use it
             exchange.putAttachment(CLIENT, existing);
             exchange.dispatch(SameThreadExecutor.INSTANCE, nextHandler);
@@ -43,19 +44,20 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
             public void run() {
-                HttpClient client = HttpClient.create(exchange.getConnection().getWorker(), OptionMap.EMPTY);
-                client.connect(exchange.getIoThread(), destination, OptionMap.EMPTY).addNotifier(new ConnectNotifier(nextHandler), exchange);
+                client.connect(new ConnectNotifier(nextHandler, exchange), uri, exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
             }
         });
     }
 
 
-    private final class ConnectNotifier extends IoFuture.HandlingNotifier<HttpClientConnection, HttpServerExchange> {
+    private final class ConnectNotifier implements ClientCallback<ClientConnection> {
 
         private final HttpHandler next;
+        private final HttpServerExchange exchange;
 
-        private ConnectNotifier(HttpHandler next) {
+        private ConnectNotifier(HttpHandler next, HttpServerExchange exchange) {
             this.next = next;
+            this.exchange = exchange;
         }
 
         public void handleCancelled(final HttpServerExchange exchange) {
@@ -68,12 +70,8 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
             }
         }
 
-        public void handleFailed(final IOException exception, final HttpServerExchange exchange) {
-            exchange.putAttachment(THROWABLE, exception);
-            exchange.dispatch(SameThreadExecutor.INSTANCE, next);
-        }
-
-        public void handleDone(final HttpClientConnection connection, final HttpServerExchange exchange) {
+        @Override
+        public void completed(final ClientConnection connection) {
             final ServerConnection serverConnection = exchange.getConnection();
             final SimpleProxyClient simpleProxyClient = new SimpleProxyClient(connection);
             //we attach to the connection so it can be re-used
@@ -81,19 +79,25 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
             exchange.putAttachment(CLIENT, simpleProxyClient);
             serverConnection.addCloseListener(new ServerConnection.CloseListener() {
                 @Override
-                public void closed(ServerConnection connection) {
-                    IoUtils.safeClose(serverConnection);
+                public void closed(ServerConnection serverConnection) {
+                    IoUtils.safeClose(connection);
                 }
             });
             exchange.dispatch(SameThreadExecutor.INSTANCE, next);
         }
-    };
+
+        @Override
+        public void failed(IOException e) {
+            exchange.putAttachment(THROWABLE, e);
+            exchange.dispatch(SameThreadExecutor.INSTANCE, next);
+        }
+    }
 
     private static final class SimpleProxyClient implements ProxyClient {
 
-        private final HttpClientConnection connection;
+        private final ClientConnection connection;
 
-        private SimpleProxyClient(HttpClientConnection connection) {
+        private SimpleProxyClient(ClientConnection connection) {
             this.connection = connection;
         }
 

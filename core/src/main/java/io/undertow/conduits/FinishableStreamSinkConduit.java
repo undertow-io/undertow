@@ -32,7 +32,7 @@ public final class FinishableStreamSinkConduit extends AbstractStreamSinkConduit
     //0 = open
     //1 = writes shutdown
     //2 = finish listener invoked
-    private  int shutdownState = 0;
+    private int shutdownState = 0;
 
     public FinishableStreamSinkConduit(final StreamSinkConduit delegate, final ConduitListener<? super FinishableStreamSinkConduit> finishListener) {
         super(delegate);
@@ -41,7 +41,7 @@ public final class FinishableStreamSinkConduit extends AbstractStreamSinkConduit
 
     public void terminateWrites() throws IOException {
         super.terminateWrites();
-        if(shutdownState ==0 ) {
+        if (shutdownState == 0) {
             shutdownState = 1;
         }
     }
@@ -49,15 +49,15 @@ public final class FinishableStreamSinkConduit extends AbstractStreamSinkConduit
     @Override
     public void truncateWrites() throws IOException {
         next.truncateWrites();
-        if(shutdownState != 2) {
+        if (shutdownState != 2) {
             shutdownState = 2;
             finishListener.handleEvent(this);
         }
     }
 
     public boolean flush() throws IOException {
-        final boolean val =  next.flush();
-        if(val && shutdownState == 1) {
+        final boolean val = next.flush();
+        if (val && shutdownState == 1) {
             shutdownState = 2;
             finishListener.handleEvent(this);
         }

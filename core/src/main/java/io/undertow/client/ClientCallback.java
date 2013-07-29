@@ -5,7 +5,7 @@ import java.io.IOException;
 /**
  * @author Emanuel Muckenhuber
  */
-public interface HttpClientCallback<T> {
+public interface ClientCallback<T> {
 
     /**
      * Invoked when an operation completed.

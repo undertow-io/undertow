@@ -20,6 +20,8 @@ package io.undertow.server;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.channels.DetachableStreamSinkChannel;
+import io.undertow.channels.DetachableStreamSourceChannel;
 import io.undertow.io.AsyncSenderImpl;
 import io.undertow.io.BlockingSenderImpl;
 import io.undertow.io.Sender;
@@ -40,10 +42,7 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.Option;
-import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
 import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSinkChannel;
@@ -57,15 +56,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
-import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreClear;
@@ -181,12 +177,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * The maximum entity size. This can be modified before the request stream is obtained, however once the request
      * stream is obtained this cannot be modified further.
-     *
+     * <p/>
      * The default value for this is determined by the {@link io.undertow.UndertowOptions#MAX_ENTITY_SIZE} option. A value
      * of 0 indicates that this is unbounded.
-     *
+     * <p/>
      * If this entity size is exceeded the request channel will be forcibly closed.
-     *
+     * <p/>
      * TODO: integrate this with HTTP 100-continue responses, to make it possible to send a 417 rather than just forcibly
      * closing the channel.
      *
@@ -471,9 +467,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Reconstructs the complete URL as seen by the user. This includes scheme, host name etc,
      * but does not include query string.
-     *
+     * <p/>
      * This is not decoded.
-     *
      */
     public String getRequestURL() {
         if (isHostIncludedInRequestURI()) {
@@ -486,7 +481,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Return the host that this request was sent to, in general this will be the
      * value of the Host header, minus the port specifier.
-     *
+     * <p/>
      * If this resolves to an IPv6 address it will not be enclosed by square brackets.
      * Care must be taken when constructing URLs based on this method to ensure IPv6 URLs
      * are handled correctly.
@@ -510,7 +505,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Return the host, and also the port if this request was sent to a non-standard port. In general
      * this will just be the value of the Host header.
-     *
+     * <p/>
      * If this resolves to an IPv6 address it *will*  be enclosed by square brackets. The return
      * value of this method is suitable for inclusion in a URL.
      *
@@ -799,7 +794,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param length The content length
      */
     public void setResponseContentLength(long length) {
-        if(length == -1) {
+        if (length == -1) {
             responseHeaders.remove(Headers.CONTENT_LENGTH);
         } else {
             responseHeaders.put(Headers.CONTENT_LENGTH, Long.toString(length));
@@ -854,11 +849,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return A mutable map of request cookies
      */
     public Map<String, Cookie> getRequestCookies() {
-        if(requestCookies == null) {
+        if (requestCookies == null) {
             requestCookies = ExchangeCookieUtils.parseRequestCookies(this);
         }
         return requestCookies;
@@ -866,10 +860,11 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Sets a response cookie
+     *
      * @param cookie The cookie
      */
     public void setResponseCookie(final Cookie cookie) {
-        if(responseCookies == null) {
+        if (responseCookies == null) {
             responseCookies = new TreeMap<String, Cookie>(); //hashmap is slow to allocate in JDK7
         }
         responseCookies.put(cookie.getName(), cookie);
@@ -965,7 +960,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
-   /**
+    /**
      * Get the response channel. The channel must be closed and fully flushed before the next response can be started.
      * In order to close the channel you must first call {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()},
      * and then call {@link org.xnio.channels.StreamSinkChannel#flush()} until it returns true. Alternativly you can
@@ -992,7 +987,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             return null;
         }
         final ConduitStreamSinkChannel sinkChannel = connection.getSinkChannel();
-        if(sinkChannel == null) {
+        if (sinkChannel == null) {
             return null;
         }
         final WrapperConduitFactory<StreamSinkConduit> factory = new WrapperConduitFactory<StreamSinkConduit>(wrappers, responseWrapperCount, sinkChannel.getConduit(), this);
@@ -1014,7 +1009,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (blockingHttpExchange != null) {
             return blockingHttpExchange.getSender();
         }
-        if(sender != null) {
+        if (sender != null) {
             return sender;
         }
         return sender = new AsyncSenderImpl(this);
@@ -1326,7 +1321,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return The maximum entity size for this exchange
      */
     public long getMaxEntitySize() {
@@ -1335,10 +1329,11 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Sets the max entity size for this exchange. This cannot be modified after the request channel has been obtained.
+     *
      * @param maxEntitySize The max entity size
      */
     public void setMaxEntitySize(final long maxEntitySize) {
-        if(!isRequestChannelAvailable()) {
+        if (!isRequestChannelAvailable()) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
         this.maxEntitySize = maxEntitySize;
@@ -1413,169 +1408,22 @@ public final class HttpServerExchange extends AbstractAttachable {
      * It also delays a wakeup/resumesWrites calls until the current call stack has returned, thus ensuring that only 1 thread is
      * active in the exchange at any one time.
      */
-    private class WriteDispatchChannel implements StreamSinkChannel, Runnable {
+    private class WriteDispatchChannel extends DetachableStreamSinkChannel implements StreamSinkChannel, Runnable {
 
-        protected final StreamSinkChannel delegate;
-        protected final ChannelListener.SimpleSetter<WriteDispatchChannel> writeSetter = new ChannelListener.SimpleSetter<WriteDispatchChannel>();
-        protected final ChannelListener.SimpleSetter<WriteDispatchChannel> closeSetter = new ChannelListener.SimpleSetter<WriteDispatchChannel>();
         private boolean wakeup;
 
         public WriteDispatchChannel(final StreamSinkChannel delegate) {
-            this.delegate = delegate;
-            delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
-            delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
-        }
-
-
-        @Override
-        public void suspendWrites() {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                return;
-            }
-            delegate.suspendWrites();
-        }
-
-
-        @Override
-        public boolean isWriteResumed() {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                return false;
-            }
-            return delegate.isWriteResumed();
+            super(delegate);
         }
 
         @Override
-        public void shutdownWrites() throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                return;
-            }
-            delegate.shutdownWrites();
-        }
-
-        @Override
-        public void awaitWritable() throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            delegate.awaitWritable();
-        }
-
-        @Override
-        public void awaitWritable(final long time, final TimeUnit timeUnit) throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            delegate.awaitWritable(time, timeUnit);
-        }
-
-        @Override
-        public XnioExecutor getWriteThread() {
-            return delegate.getWriteThread();
-        }
-
-        @Override
-        public boolean isOpen() {
-            return !allAreSet(state, FLAG_RESPONSE_TERMINATED) && delegate.isOpen();
-        }
-
-        @Override
-        public void close() throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) return;
-            delegate.close();
-        }
-
-        @Override
-        public boolean flush() throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                return true;
-            }
-            return delegate.flush();
-        }
-
-        @Override
-        public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            return delegate.transferFrom(src, position, count);
-        }
-
-        @Override
-        public long transferFrom(final StreamSourceChannel source, final long count, final ByteBuffer throughBuffer) throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            return delegate.transferFrom(source, count, throughBuffer);
-        }
-
-        @Override
-        public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter() {
-            return writeSetter;
-        }
-
-        @Override
-        public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
-            return closeSetter;
-        }
-
-        @Override
-        public XnioWorker getWorker() {
-            return delegate.getWorker();
-        }
-
-        @Override
-        public XnioIoThread getIoThread() {
-            return delegate.getIoThread();
-        }
-
-        @Override
-        public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            return delegate.write(srcs, offset, length);
-        }
-
-        @Override
-        public long write(final ByteBuffer[] srcs) throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            return delegate.write(srcs);
-        }
-
-        @Override
-        public boolean supportsOption(final Option<?> option) {
-            return delegate.supportsOption(option);
-        }
-
-        @Override
-        public <T> T getOption(final Option<T> option) throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            return delegate.getOption(option);
-        }
-
-        @Override
-        public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            return delegate.setOption(option, value);
-        }
-
-        @Override
-        public int write(final ByteBuffer src) throws IOException {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            return delegate.write(src);
+        protected boolean isFinished() {
+            return allAreSet(state, FLAG_RESPONSE_TERMINATED);
         }
 
         @Override
         public void resumeWrites() {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+            if (isFinished()) {
                 return;
             }
             if (isInCall()) {
@@ -1588,7 +1436,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void wakeupWrites() {
-            if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+            if (isFinished()) {
                 return;
             }
             if (isInCall()) {
@@ -1625,169 +1473,53 @@ public final class HttpServerExchange extends AbstractAttachable {
      * It also delays a readResume call until the current call stack has returned, thus ensuring that only 1 thread is
      * active in the exchange at any one time.
      */
-    private final class ReadDispatchChannel implements StreamSourceChannel, Runnable {
+    private final class ReadDispatchChannel extends DetachableStreamSourceChannel implements StreamSourceChannel, Runnable {
 
-        private final StreamSourceChannel delegate;
-
-        protected final ChannelListener.SimpleSetter<ReadDispatchChannel> readSetter = new ChannelListener.SimpleSetter<ReadDispatchChannel>();
-        protected final ChannelListener.SimpleSetter<ReadDispatchChannel> closeSetter = new ChannelListener.SimpleSetter<ReadDispatchChannel>();
+        private boolean wakeup = true;
 
         public ReadDispatchChannel(final StreamSourceChannel delegate) {
-            this.delegate = delegate;
-            delegate.getReadSetter().set(ChannelListeners.delegatingChannelListener(this, readSetter));
-            delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
+            super(delegate);
+        }
+
+        @Override
+        protected boolean isFinished() {
+            return allAreSet(state, FLAG_REQUEST_TERMINATED);
         }
 
         @Override
         public void resumeReads() {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
+            if (isFinished()) {
                 return;
             }
             if (isInCall()) {
+                wakeup = false;
                 dispatch(SameThreadExecutor.INSTANCE, this);
             } else {
                 delegate.resumeReads();
             }
         }
 
+        public void wakeupReads() {
+            if (isFinished()) {
+                return;
+            }
+            if (isInCall()) {
+                wakeup = true;
+                dispatch(SameThreadExecutor.INSTANCE, this);
+            } else {
+                delegate.wakeupReads();
+            }
+        }
 
         @Override
         public void run() {
-            if (!allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                delegate.resumeReads();
+            if (!isFinished()) {
+                if (wakeup) {
+                    delegate.wakeupReads();
+                } else {
+                    delegate.resumeReads();
+                }
             }
-        }
-
-
-        public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return -1;
-            }
-            return delegate.transferTo(position, count, target);
-        }
-
-        public void awaitReadable() throws IOException {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return;
-            }
-            delegate.awaitReadable();
-        }
-
-        public void suspendReads() {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return;
-            }
-            delegate.suspendReads();
-        }
-
-        public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return -1;
-            }
-            return delegate.transferTo(count, throughBuffer, target);
-        }
-
-        public XnioWorker getWorker() {
-            return delegate.getWorker();
-        }
-
-        public boolean isReadResumed() {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return false;
-            }
-            return delegate.isReadResumed();
-        }
-
-        public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
-
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            return delegate.setOption(option, value);
-        }
-
-        public boolean supportsOption(final Option<?> option) {
-            return delegate.supportsOption(option);
-        }
-
-        public void shutdownReads() throws IOException {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return;
-            }
-            delegate.shutdownReads();
-        }
-
-        public ChannelListener.Setter<? extends StreamSourceChannel> getReadSetter() {
-            return readSetter;
-        }
-
-        public boolean isOpen() {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return false;
-            }
-            return delegate.isOpen();
-        }
-
-        public long read(final ByteBuffer[] dsts) throws IOException {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return -1;
-            }
-            return delegate.read(dsts);
-        }
-
-        public long read(final ByteBuffer[] dsts, final int offset, final int length) throws IOException {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return -1;
-            }
-            return delegate.read(dsts, offset, length);
-        }
-
-        public void wakeupReads() {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return;
-            }
-            delegate.wakeupReads();
-        }
-
-        public XnioExecutor getReadThread() {
-            return delegate.getReadThread();
-        }
-
-        public void awaitReadable(final long time, final TimeUnit timeUnit) throws IOException {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.channelIsClosed();
-            }
-            delegate.awaitReadable(time, timeUnit);
-        }
-
-        public ChannelListener.Setter<? extends StreamSourceChannel> getCloseSetter() {
-            return closeSetter;
-        }
-
-        public void close() throws IOException {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return;
-            }
-            delegate.close();
-        }
-
-        public <T> T getOption(final Option<T> option) throws IOException {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                throw UndertowMessages.MESSAGES.streamIsClosed();
-            }
-            return delegate.getOption(option);
-        }
-
-        public int read(final ByteBuffer dst) throws IOException {
-            if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
-                return -1;
-            }
-            return delegate.read(dst);
-        }
-
-        @Override
-        public XnioIoThread getIoThread() {
-            return delegate.getIoThread();
         }
 
         public void requestDone() {

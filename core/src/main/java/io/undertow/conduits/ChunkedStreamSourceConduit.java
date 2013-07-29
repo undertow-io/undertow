@@ -18,14 +18,8 @@
 
 package io.undertow.conduits;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.client.HttpClientRequest;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Attachable;
@@ -35,11 +29,16 @@ import io.undertow.util.HttpString;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
-import org.xnio.channels.PushBackStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitReadableByteChannel;
+import org.xnio.conduits.PushBackStreamSourceConduit;
 import org.xnio.conduits.StreamSourceConduit;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
@@ -81,7 +80,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
     private static final long MASK_COUNT = longBitMask(0, 56);
 
-    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamChannel channel, final Pool<ByteBuffer> pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final HttpClientRequest request) {
+    public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamSourceConduit channel, final Pool<ByteBuffer> pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, Attachable attachable) {
         this(next, new BufferWrapper() {
             @Override
             public Pooled<ByteBuffer> allocate() {
@@ -90,9 +89,9 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
             @Override
             public void pushBack(Pooled<ByteBuffer> pooled) {
-                channel.unget(pooled);
+                channel.pushBack(pooled);
             }
-        }, finishListener, request, null);
+        }, finishListener, attachable, null);
     }
 
     public ChunkedStreamSourceConduit(final StreamSourceConduit next, final HttpServerExchange exchange, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener) {

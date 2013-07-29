@@ -1,6 +1,6 @@
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.client.HttpClientConnection;
+import io.undertow.client.ClientConnection;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
  */
 public interface ProxyClient {
 
-    AttachmentKey<HttpClientConnection> CONNECTION = AttachmentKey.create(HttpClientConnection.class);
+    AttachmentKey<ClientConnection> CONNECTION = AttachmentKey.create(ClientConnection.class);
 
     AttachmentKey<Throwable> THROWABLE = AttachmentKey.create(Throwable.class);
 

@@ -54,7 +54,7 @@ import static org.xnio.Bits.longBitMask;
  * the EOF -1 value is read or the channel is closed.  Since this is a half-duplex channel, shutting down reads is
  * identical to closing the channel.
  */
-public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceConduit<StreamSourceConduit> {
+public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
 
     private final ConduitListener<? super FixedLengthStreamSourceConduit> finishListener;
 
@@ -77,10 +77,10 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
      * restored from the {@code finishListener} object.  The underlying stream should not be closed while this wrapper
      * stream is active.
      *
-     * @param next       the stream source channel to read from
+     * @param next           the stream source channel to read from
      * @param contentLength  the amount of content to read
      * @param finishListener the listener to call once the stream is exhausted or closed
-     * @param exchange The server exchange. This is used to determine the max size
+     * @param exchange       The server exchange. This is used to determine the max size
      */
     public FixedLengthStreamSourceConduit(final StreamSourceConduit next, final long contentLength, final ConduitListener<? super FixedLengthStreamSourceConduit> finishListener, final HttpServerExchange exchange) {
         super(next);
@@ -95,27 +95,30 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
     }
 
     /**
-      * Construct a new instance.  The given listener is called once all the bytes are read from the stream
-      * <b>or</b> the stream is closed.  This listener should cause the remaining data to be drained from the
-      * underlying stream if the underlying stream is to be reused.
-      * <p/>
-      * Calling this constructor will replace the read listener of the underlying channel.  The listener should be
-      * restored from the {@code finishListener} object.  The underlying stream should not be closed while this wrapper
-      * stream is active.
-      *
-      * @param next       the stream source channel to read from
-      * @param contentLength  the amount of content to read
-      * @param finishListener the listener to call once the stream is exhausted or closed
-      */
-     public FixedLengthStreamSourceConduit(final StreamSourceConduit next, final long contentLength, final ConduitListener<? super FixedLengthStreamSourceConduit> finishListener) {
-         this(next, contentLength, finishListener, null);
-     }
+     * Construct a new instance.  The given listener is called once all the bytes are read from the stream
+     * <b>or</b> the stream is closed.  This listener should cause the remaining data to be drained from the
+     * underlying stream if the underlying stream is to be reused.
+     * <p/>
+     * Calling this constructor will replace the read listener of the underlying channel.  The listener should be
+     * restored from the {@code finishListener} object.  The underlying stream should not be closed while this wrapper
+     * stream is active.
+     *
+     * @param next           the stream source channel to read from
+     * @param contentLength  the amount of content to read
+     * @param finishListener the listener to call once the stream is exhausted or closed
+     */
+    public FixedLengthStreamSourceConduit(final StreamSourceConduit next, final long contentLength, final ConduitListener<? super FixedLengthStreamSourceConduit> finishListener) {
+        this(next, contentLength, finishListener, null);
+    }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
         long val = state;
         checkMaxSize(val);
         if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED) || allAreClear(val, MASK_COUNT)) {
-            return 0L;
+            if (allAreClear(val, FLAG_FINISHED)) {
+                invokeFinishListener();
+            }
+            return -1L;
         }
         long res = 0L;
         try {
@@ -132,6 +135,9 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
         long val = state;
         checkMaxSize(val);
         if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED) || allAreClear(val, MASK_COUNT)) {
+            if (allAreClear(val, FLAG_FINISHED)) {
+                invokeFinishListener();
+            }
             return -1;
         }
         long res = 0L;
@@ -143,9 +149,9 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
     }
 
     private void checkMaxSize(long state) throws IOException {
-        if(anyAreClear(state, FLAG_LENGTH_CHECKED)) {
+        if (anyAreClear(state, FLAG_LENGTH_CHECKED)) {
             HttpServerExchange exchange = this.exchange;
-            if(exchange != null) {
+            if (exchange != null) {
                 if (exchange.getMaxEntitySize() > 0 && exchange.getMaxEntitySize() < (state & MASK_COUNT)) {
                     //max entity size is exceeded
                     //we need to forcibly close the read side
@@ -171,6 +177,9 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
         long val = state;
         checkMaxSize(val);
         if (allAreSet(val, FLAG_CLOSED) || allAreClear(val, MASK_COUNT)) {
+            if (allAreClear(val, FLAG_FINISHED)) {
+                invokeFinishListener();
+            }
             return -1;
         }
         long res = 0L;
@@ -212,6 +221,9 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
         long val = state;
         checkMaxSize(val);
         if (allAreSet(val, FLAG_CLOSED) || allAreClear(val, MASK_COUNT)) {
+            if(allAreClear(val, FLAG_FINISHED)) {
+                invokeFinishListener();
+            }
             return -1;
         }
         int res = 0;
@@ -313,7 +325,7 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
 
     private void exitShutdownReads(long oldVal) {
         if (!allAreClear(oldVal, MASK_COUNT)) {
-            finishListener.handleEvent(this);
+            invokeFinishListener();
         }
     }
 
@@ -327,8 +339,13 @@ public final class FixedLengthStreamSourceConduit  extends AbstractStreamSourceC
         long newVal = oldVal - consumed;
         state = newVal;
         if (anyAreSet(oldVal, MASK_COUNT) && allAreClear(newVal, MASK_COUNT)) {
-            finishListener.handleEvent(this);
+            invokeFinishListener();
         }
+    }
+
+    private void invokeFinishListener() {
+        this.state |= FLAG_FINISHED;
+        finishListener.handleEvent(this);
     }
 
 }

@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package io.undertow.client;
+package io.undertow.client.http;
 
+import io.undertow.client.ClientRequest;
 import io.undertow.server.TruncatedResponseException;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -56,7 +57,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     private Iterator<String> valueIterator;
     private int charIndex;
     private Pooled<ByteBuffer> pooledBuffer;
-    private final PendingHttpRequest request;
+    private final ClientRequest request;
 
     private static final int STATE_BODY = 0; // Message body, normal pass-through operation
     private static final int STATE_START = 1; // No headers written yet
@@ -73,7 +74,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     private static final int MASK_STATE         = 0x0000000F;
     private static final int FLAG_SHUTDOWN      = 0x00000010;
 
-    HttpRequestConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final PendingHttpRequest request) {
+    HttpRequestConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final ClientRequest request) {
         super(next);
         this.pool = pool;
         this.request = request;
@@ -95,7 +96,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         if (state == STATE_START) {
             pooledBuffer = pool.allocate();
         }
-        HttpClientRequestImpl request = (HttpClientRequestImpl) this.request.getRequest();
+        ClientRequest request = this.request;
         ByteBuffer buffer = pooledBuffer.getResource();
         Iterator<HttpString> nameIterator = this.nameIterator;
         Iterator<String> valueIterator = this.valueIterator;
@@ -126,19 +127,19 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                     log.trace("Starting request");
                     // we assume that our buffer has enough space for the initial request line plus one more CR+LF
                     assert buffer.remaining() >= 0x100;
-                    string = request.getMethod();
+                    string = request.getMethod().toString();
                     length = string.length();
                     for (charIndex = 0; charIndex < length; charIndex ++) {
                         buffer.put((byte) string.charAt(charIndex));
                     }
                     buffer.put((byte) ' ');
-                    string = request.getURIString();
+                    string = request.getPath();
                     length = string.length();
                     for (charIndex = 0; charIndex < length; charIndex ++) {
                         buffer.put((byte) string.charAt(charIndex));
                     }
                     buffer.put((byte) ' ');
-                    string = request.getProtocol();
+                    string = request.getProtocol().toString();
                     length = string.length();
                     for (charIndex = 0; charIndex < length; charIndex ++) {
                         buffer.put((byte) string.charAt(charIndex));

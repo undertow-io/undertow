@@ -1,4 +1,4 @@
-package io.undertow.client;
+package io.undertow.client.http;
 
 import io.undertow.util.HttpString;
 

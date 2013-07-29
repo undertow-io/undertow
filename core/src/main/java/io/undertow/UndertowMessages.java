@@ -216,4 +216,7 @@ public interface UndertowMessages {
 
     @Message(id = 64, value = "File system watcher not started")
     IllegalStateException fileSystemWatcherNotStarted();
+
+    @Message(id = 65, value = "SSL must be specified to connect to a https URL")
+    IllegalArgumentException sslWasNull();
 }

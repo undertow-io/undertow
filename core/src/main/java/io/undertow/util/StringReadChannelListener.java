@@ -3,6 +3,7 @@ package io.undertow.util;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import io.undertow.websockets.core.UTF8Output;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
@@ -18,7 +19,7 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public abstract class StringReadChannelListener implements ChannelListener<StreamSourceChannel> {
 
-    private final StringBuilder string = new StringBuilder();
+    private final UTF8Output string = new UTF8Output();
     private final Pool<ByteBuffer> bufferPool;
 
     public StringReadChannelListener(final Pool<ByteBuffer> bufferPool) {
@@ -36,13 +37,11 @@ public abstract class StringReadChannelListener implements ChannelListener<Strea
                     channel.getReadSetter().set(this);
                     channel.resumeReads();
                 } else if (r == -1) {
-                    stringDone(string.toString());
+                    stringDone(string.extract());
                     IoUtils.safeClose(channel);
                 } else {
                     buffer.flip();
-                    while (buffer.hasRemaining()) {
-                        string.append((char) buffer.get());
-                    }
+                    string.write(buffer);
                 }
             } while (r > 0);
         } catch (IOException e) {
@@ -63,13 +62,11 @@ public abstract class StringReadChannelListener implements ChannelListener<Strea
                 if (r == 0) {
                     return;
                 } else if (r == -1) {
-                    stringDone(string.toString());
+                    stringDone(string.extract());
                     IoUtils.safeClose(channel);
                 } else {
                     buffer.flip();
-                    while (buffer.hasRemaining()) {
-                        string.append((char) buffer.get());
-                    }
+                    string.write(buffer);
                 }
             } while (r > 0);
         } catch (IOException e) {

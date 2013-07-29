@@ -1,4 +1,4 @@
-package io.undertow.client;
+package io.undertow.client.http;
 
 import io.undertow.annotationprocessor.HttpResponseParserConfig;
 import io.undertow.util.Headers;
@@ -99,11 +99,11 @@ public abstract class HttpResponseParser {
         }
     }
 
-    abstract void handleHttpVersion(ByteBuffer buffer, ResponseParseState currentState, PendingHttpRequest builder);
+    abstract void handleHttpVersion(ByteBuffer buffer, ResponseParseState currentState, HttpResponseBuilder builder);
 
-    abstract void handleHeader(ByteBuffer buffer, ResponseParseState currentState, PendingHttpRequest builder);
+    abstract void handleHeader(ByteBuffer buffer, ResponseParseState currentState, HttpResponseBuilder builder);
 
-    public void handle(final ByteBuffer buffer, final ResponseParseState currentState, final PendingHttpRequest builder) {
+    public void handle(final ByteBuffer buffer, final ResponseParseState currentState, final HttpResponseBuilder builder) {
 
         if (currentState.state == ResponseParseState.VERSION) {
             handleHttpVersion(buffer, currentState, builder);
@@ -154,7 +154,7 @@ public abstract class HttpResponseParser {
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final void handleStatusCode(ByteBuffer buffer, ResponseParseState state, PendingHttpRequest builder) {
+    final void handleStatusCode(ByteBuffer buffer, ResponseParseState state, HttpResponseBuilder builder) {
         StringBuilder stringBuilder = state.stringBuilder;
         while (buffer.hasRemaining()) {
             final char next = (char) buffer.get();
@@ -181,7 +181,7 @@ public abstract class HttpResponseParser {
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final void handleReasonPhrase(ByteBuffer buffer, ResponseParseState state, PendingHttpRequest builder) {
+    final void handleReasonPhrase(ByteBuffer buffer, ResponseParseState state, HttpResponseBuilder builder) {
         StringBuilder stringBuilder = state.stringBuilder;
         while (buffer.hasRemaining()) {
             final char next = (char) buffer.get();
@@ -218,7 +218,7 @@ public abstract class HttpResponseParser {
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    final void handleHeaderValue(ByteBuffer buffer, ResponseParseState state, PendingHttpRequest builder) {
+    final void handleHeaderValue(ByteBuffer buffer, ResponseParseState state, HttpResponseBuilder builder) {
         StringBuilder stringBuilder = state.stringBuilder;
         if (stringBuilder == null) {
             stringBuilder = new StringBuilder();
@@ -296,7 +296,7 @@ public abstract class HttpResponseParser {
         state.parseState = parseState;
     }
 
-    protected void handleAfterReasonPhrase(ByteBuffer buffer, ResponseParseState state, PendingHttpRequest builder) {
+    protected void handleAfterReasonPhrase(ByteBuffer buffer, ResponseParseState state, HttpResponseBuilder builder) {
         boolean newLine = state.leftOver == '\n';
         while (buffer.hasRemaining()) {
             final byte next = buffer.get();

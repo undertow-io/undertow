@@ -18,7 +18,7 @@
 
 package io.undertow;
 
-import io.undertow.client.HttpClient;
+import io.undertow.client.ClientConnection;
 import io.undertow.server.ServerConnection;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
@@ -41,7 +41,7 @@ import java.sql.SQLException;
 public interface UndertowLogger extends BasicLogger {
 
     UndertowLogger ROOT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName());
-    UndertowLogger CLIENT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, HttpClient.class.getPackage().getName());
+    UndertowLogger CLIENT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, ClientConnection.class.getPackage().getName());
 
     UndertowLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request");
     UndertowLogger REQUEST_DUMPER_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.dump");

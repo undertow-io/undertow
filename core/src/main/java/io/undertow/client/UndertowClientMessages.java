@@ -4,6 +4,9 @@ import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
+import java.io.IOException;
+import java.net.URI;
+
 /**
  * starting from 1000
  *
@@ -29,4 +32,12 @@ public interface UndertowClientMessages {
     @Message(id = 1030, value = "invalid content length %d")
     IllegalArgumentException illegalContentLength(long length);
 
+    @Message(id = 1031, value = "Unknown scheme in URI %s")
+    IllegalArgumentException unknownScheme(URI uri);
+
+    @Message(id = 1032, value = "Unknown transfer encoding %s")
+    IOException unknownTransferEncoding(String transferEncodingString);
+
+    @Message(id = 1033, value = "Invalid connection state")
+    IllegalStateException invalidConnectionState();
 }

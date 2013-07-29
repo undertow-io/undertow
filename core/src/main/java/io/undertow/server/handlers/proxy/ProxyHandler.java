@@ -19,10 +19,12 @@
 package io.undertow.server.handlers.proxy;
 
 import io.undertow.UndertowLogger;
-import io.undertow.client.HttpClientConnection;
-import io.undertow.client.HttpClientRequest;
-import io.undertow.client.HttpClientResponse;
-import io.undertow.client.HttpContinueNotification;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientExchange;
+import io.undertow.client.ClientRequest;
+import io.undertow.client.ClientResponse;
+import io.undertow.client.ContinueNotification;
 import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
@@ -35,21 +37,17 @@ import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.Attachable;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
-import io.undertow.util.Methods;
 import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.StreamConnection;
-import org.xnio.channels.ConnectedStreamChannel;
 import org.xnio.channels.StreamSinkChannel;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -61,18 +59,20 @@ public final class ProxyHandler implements HttpHandler {
 
     private final ProxyClientProvider clientProvider;
 
-    private static final IoFuture.HandlingNotifier<HttpClientResponse, HttpServerExchange> RESPONSE_NOTIFIER = new IoFuture.HandlingNotifier<HttpClientResponse, HttpServerExchange>() {
-        public void handleCancelled(final HttpServerExchange exchange) {
-            exchange.setResponseCode(500);
-            exchange.endExchange();
+    private static final AttachmentKey<HttpServerExchange> EXCHANGE = AttachmentKey.create(HttpServerExchange.class);
+
+    private static final class ResponseCallback implements ClientCallback<ClientExchange> {
+
+        private final HttpServerExchange exchange;
+
+        private ResponseCallback(HttpServerExchange exchange) {
+            this.exchange = exchange;
         }
 
-        public void handleFailed(final IOException exception, final HttpServerExchange exchange) {
-            exchange.setResponseCode(500);
-            exchange.endExchange();
-        }
-
-        public void handleDone(final HttpClientResponse response, final HttpServerExchange exchange) {
+        @Override
+        public void completed(final ClientExchange result) {
+            HttpServerExchange exchange = result.getAttachment(EXCHANGE);
+            final ClientResponse response = result.getResponse();
             final HeaderMap inboundResponseHeaders = response.getResponseHeaders();
             final HeaderMap outboundResponseHeaders = exchange.getResponseHeaders();
             exchange.setResponseCode(response.getResponseCode());
@@ -82,18 +82,18 @@ public final class ProxyHandler implements HttpHandler {
                 exchange.upgradeChannel(new ExchangeCompletionListener() {
                     @Override
                     public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-                        ConnectedStreamChannel clientChannel = null;
+                        StreamConnection clientChannel = null;
                         final HttpServerConnection connection = (HttpServerConnection) exchange.getConnection();
                         try {
-                            clientChannel = response.getRequest().getConnection().performUpgrade();
+                            clientChannel = result.getConnection().performUpgrade();
                             connection.resetChannel();
 
                             StreamConnection streamConnection = connection.getChannel();
                             if (connection.getExtraBytes() != null) {
                                 streamConnection.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(streamConnection.getSourceChannel().getConduit(), connection));
                             }
-                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, clientChannel, streamConnection.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), connection.getBufferPool());
-                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, streamConnection.getSourceChannel(), clientChannel, ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), connection.getBufferPool());
+                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, clientChannel.getSourceChannel(), streamConnection.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), connection.getBufferPool());
+                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, streamConnection.getSourceChannel(), clientChannel.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), connection.getBufferPool());
                             nextListener.proceed();
                         } catch (IOException e) {
                             IoUtils.safeClose(connection.getChannel());
@@ -101,29 +101,27 @@ public final class ProxyHandler implements HttpHandler {
                     }
                 });
             }
-            try {
-                ChannelListeners.initiateTransfer(Long.MAX_VALUE, response.readReplyBody(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(response.getRequest(), exchange), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
-            } catch (IOException e) {
-                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                try {
-                    if (!exchange.isResponseStarted()) {
-                        exchange.setResponseCode(500);
-                    }
-                } finally {
-                    exchange.endExchange();
-                }
-            }
+            ChannelListeners.initiateTransfer(Long.MAX_VALUE, result.getResponseChannel(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(result, exchange), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+
         }
-    };
+
+        @Override
+        public void failed(IOException e) {
+            exchange.setResponseCode(500);
+            exchange.endExchange();
+        }
+    }
+
+    ;
 
     private final HttpHandler proxyClientHandler = new HttpHandler() {
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
             final ServerConnection serverConnection = exchange.getConnection();
-            HttpClientConnection clientConnection = exchange.getAttachment(ProxyClient.CONNECTION);
+            ClientConnection clientConnection = exchange.getAttachment(ProxyClient.CONNECTION);
             //see if we already have a client
             if (clientConnection != null) {
-                exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(clientConnection, exchange, serverConnection));
+                exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(clientConnection, exchange));
                 return;
             }
 
@@ -182,63 +180,66 @@ public final class ProxyHandler implements HttpHandler {
 
 
     private static class ProxyAction implements Runnable {
-        private final HttpClientConnection clientConnection;
+        private final ClientConnection clientConnection;
         private final HttpServerExchange exchange;
-        private final ServerConnection serverConnection;
 
-        public ProxyAction(final HttpClientConnection clientConnection, final HttpServerExchange exchange, final ServerConnection serverConnection) {
+        public ProxyAction(final ClientConnection clientConnection, final HttpServerExchange exchange) {
             this.clientConnection = clientConnection;
             this.exchange = exchange;
-            this.serverConnection = serverConnection;
         }
 
         @Override
         public void run() {
-            final HttpClientRequest request;
-            try {
-                String requestURI = exchange.getRequestURI();
-                String qs = exchange.getQueryString();
-                if (qs != null && !qs.isEmpty()) {
-                    requestURI += "?" + qs;
-                }
-                request = clientConnection.createRequest(exchange.getRequestMethod(), new URI(requestURI));
-            } catch (URISyntaxException e) {
-                exchange.setResponseCode(500);
-                exchange.endExchange();
-                return;
+            final ClientRequest request = new ClientRequest();
+            String requestURI = exchange.getRequestURI();
+            String qs = exchange.getQueryString();
+            if (qs != null && !qs.isEmpty()) {
+                requestURI += "?" + qs;
             }
+            request.setPath(requestURI)
+                    .setMethod(exchange.getRequestMethod());
             final HeaderMap inboundRequestHeaders = exchange.getRequestHeaders();
             final HeaderMap outboundRequestHeaders = request.getRequestHeaders();
             copyHeaders(outboundRequestHeaders, inboundRequestHeaders);
-            final long requestContentLength = exchange.getRequestContentLength();
 
-            if (HttpContinue.requiresContinueResponse(exchange)) {
-                request.setContinueHandler(new HttpContinueNotification() {
-                    @Override
-                    public void handleContinue(final ContinueContext context) {
-                        HttpContinue.sendContinueResponse(exchange, new IoCallback() {
-                            @Override
-                            public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-                                context.done();
-                            }
+            clientConnection.sendRequest(request, new ClientCallback<ClientExchange>() {
+                @Override
+                public void completed(ClientExchange result) {
 
+                    result.putAttachment(EXCHANGE, exchange);
+
+                    if (HttpContinue.requiresContinueResponse(exchange)) {
+                        result.setContinueHandler(new ContinueNotification() {
                             @Override
-                            public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
-                                context.done();
+                            public void handleContinue(final ClientExchange clientExchange) {
+                                HttpContinue.sendContinueResponse(exchange, new IoCallback() {
+                                    @Override
+                                    public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                                        //don't care
+                                    }
+
+                                    @Override
+                                    public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                                        IoUtils.safeClose(clientConnection);
+                                    }
+                                });
                             }
                         });
                     }
-                });
-            }
+
+                    result.setResponseListener(new ResponseCallback(exchange));
+                    ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), result.getRequestChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, result), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+                }
+
+                @Override
+                public void failed(IOException e) {
+                    exchange.setResponseCode(500);
+                    exchange.setPersistent(false);
+                    exchange.endExchange();
+                }
+            });
 
 
-            if (requestContentLength == 0L || exchange.getRequestMethod().equals(Methods.GET)) {
-                request.writeRequestBody(0L);
-            } else {
-                ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), request.writeRequestBody(requestContentLength), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, request), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
-            }
-            final IoFuture<HttpClientResponse> futureResponse = request.getResponse();
-            futureResponse.addNotifier(RESPONSE_NOTIFIER, exchange);
         }
     }
 

@@ -5,12 +5,8 @@ package io.undertow.client;
  *
  * @author Stuart Douglas
  */
-public interface HttpContinueNotification {
+public interface ContinueNotification {
 
-    void handleContinue(ContinueContext context);
-
-    interface ContinueContext {
-        void done();
-    }
+    void handleContinue(ClientExchange exchange);
 
 }
