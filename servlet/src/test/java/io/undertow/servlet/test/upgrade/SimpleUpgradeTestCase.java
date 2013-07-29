@@ -75,12 +75,15 @@ public class SimpleUpgradeTestCase {
             Assert.assertEquals("HTTP/1.1 101 Switching Protocols\r\nContent-Length: 0\r\n\r\n", readBytes(in));
 
             out.write("Echo Messages\r\n\r\n".getBytes());
+            out.flush();
             Assert.assertEquals("Echo Messages\r\n\r\n", readBytes(in));
 
             out.write("Echo Messages2\r\n\r\n".getBytes());
+            out.flush();
             Assert.assertEquals("Echo Messages2\r\n\r\n", readBytes(in));
 
             out.write("exit\r\n\r\n".getBytes());
+            out.flush();
 
         } finally {
             client.getConnectionManager().shutdown();
