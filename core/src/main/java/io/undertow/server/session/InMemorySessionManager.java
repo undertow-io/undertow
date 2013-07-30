@@ -157,7 +157,9 @@ public class InMemorySessionManager implements SessionManager {
                     return;
                 }
             }
-            cancelKey = executor.executeAfter(cancelTask, getMaxInactiveInterval(), TimeUnit.SECONDS);
+            if(getMaxInactiveInterval() > 0) {
+                cancelKey = executor.executeAfter(cancelTask, getMaxInactiveInterval(), TimeUnit.SECONDS);
+            }
         }
 
 
