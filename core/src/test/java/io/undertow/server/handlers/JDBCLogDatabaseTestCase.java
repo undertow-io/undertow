@@ -2,6 +2,7 @@ package io.undertow.server.handlers;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.accesslog.AccessLogHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -16,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import io.undertow.util.CompletionLatchHandler;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.h2.jdbcx.JdbcConnectionPool;
@@ -65,12 +67,6 @@ public class JDBCLogDatabaseTestCase {
             " PRIMARY KEY (id)" +
             " );");
 
-//        DefaultJDBCLogReceiver logReceiver = new DefaultJDBCLogReceiver(DefaultServer.getWorker());
-//
-//        logReceiver.setDriverName("org.h2.Driver");
-//        logReceiver.setConnectionName("user");
-//        logReceiver.setConnectionPassword("password");
-//        logReceiver.setConnectionURL("jdbc:h2:mem:test");
         JDBCLogHandler logHandler = new JDBCLogHandler(HELLO_HANDLER, DefaultServer.getWorker(), "common", JDBCLogDatabaseTestCase.class.getClassLoader());
         logHandler.setDriverName("org.h2.Driver");
         logHandler.setConnectionName("user");
@@ -117,20 +113,14 @@ public class JDBCLogDatabaseTestCase {
                 " PRIMARY KEY (id)" +
                 " );");
 
-//        DefaultJDBCLogReceiver logReceiver = new DefaultJDBCLogReceiver(DefaultServer.getWorker());
-//
-//        logReceiver.setDriverName("org.h2.Driver");
-//        logReceiver.setConnectionName("user");
-//        logReceiver.setConnectionPassword("password");
-//        logReceiver.setConnectionURL("jdbc:h2:mem:test");
-
         JDBCLogHandler logHandler = new JDBCLogHandler(HELLO_HANDLER, DefaultServer.getWorker(), "combined", JDBCLogDatabaseTestCase.class.getClassLoader());
         logHandler.setDriverName("org.h2.Driver");
         logHandler.setConnectionName("user");
         logHandler.setConnectionPassword("password");
         logHandler.setConnectionURL("jdbc:h2:mem:test");
-        DefaultServer.setRootHandler(logHandler);
-        TestHttpClient client = new TestHttpClient();
+
+        CompletionLatchHandler latchHandler;
+        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(NUM_REQUESTS * NUM_THREADS, logHandler));
 
         ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         try {
@@ -163,6 +153,7 @@ public class JDBCLogDatabaseTestCase {
         } finally {
             executor.shutdown();
         }
+        latchHandler.await();
         logHandler.awaitWrittenForTest();
 
         ResultSet resultDatabase = conn.createStatement().executeQuery("SELECT COUNT(*) FROM PUBLIC.ACCESS;");
@@ -171,7 +162,6 @@ public class JDBCLogDatabaseTestCase {
         Assert.assertEquals(resultDatabase.getInt(1), NUM_REQUESTS * NUM_THREADS);
 
         conn.close();
-        client.getConnectionManager().shutdown();
 
     }
 

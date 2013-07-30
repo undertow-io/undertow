@@ -2,11 +2,16 @@ package io.undertow.server.handlers;
 
 import io.undertow.UndertowLogger;
 import io.undertow.attribute.ExchangeAttributes;
+import io.undertow.attribute.RequestHeaderAttribute;
+import io.undertow.security.api.SecurityContext;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 
 import java.io.Closeable;
+import java.net.InetSocketAddress;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -114,22 +119,26 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
         if (pattern.equals("combined")) {
             jdbcLogAttribute.pattern = pattern;
         }
+        jdbcLogAttribute.remoteHost = ((InetSocketAddress) exchange.getConnection().getPeerAddress()).getAddress().getHostAddress();
+        SecurityContext sc = exchange.getAttachment(SecurityContext.ATTACHMENT_KEY);
+        if (sc == null || !sc.isAuthenticated()) {
+            jdbcLogAttribute.user = null;
+        } else {
+            jdbcLogAttribute.user = sc.getAuthenticatedAccount().getPrincipal().getName();
+        }
+        jdbcLogAttribute.query = exchange.getQueryString();
 
-        jdbcLogAttribute.remoteHost = resolveAttribute("%h", exchange);
-        jdbcLogAttribute.user = resolveAttribute("%u", exchange);
-        jdbcLogAttribute.query = resolveAttribute("%q", exchange);
-
-        jdbcLogAttribute.bytes = Long.valueOf(resolveAttribute("%B", exchange));
+        jdbcLogAttribute.bytes = exchange.getResponseContentLength();
         if (jdbcLogAttribute.bytes < 0)
             jdbcLogAttribute.bytes = 0;
 
-        jdbcLogAttribute.status = Integer.valueOf(resolveAttribute("%s", exchange));
+        jdbcLogAttribute.status = exchange.getResponseCode();
 
         if (jdbcLogAttribute.pattern.equals("combined")) {
-            jdbcLogAttribute.virtualHost = resolveAttribute("%v", exchange);
-            jdbcLogAttribute.method = resolveAttribute("%m", exchange);
-            jdbcLogAttribute.referer = resolveAttribute("\"%{i,referer}\"", exchange);
-            jdbcLogAttribute.userAgent = resolveAttribute("\"%{i,user-agent}\"", exchange);
+            jdbcLogAttribute.virtualHost = exchange.getRequestHeaders().getFirst(Headers.HOST);
+            jdbcLogAttribute.method = exchange.getRequestMethod().toString();
+            jdbcLogAttribute.referer = exchange.getRequestHeaders().getFirst(new HttpString("referer"));
+            jdbcLogAttribute.userAgent = exchange.getRequestHeaders().getFirst(new HttpString("user-agent"));
         }
 
         this.pendingMessages.add(jdbcLogAttribute);
@@ -229,8 +238,6 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
         while (state != 0) {
             Thread.sleep(10);
         }
-        // temporary solution?
-        Thread.sleep(1000);
     }
 
     protected void open() throws SQLException {
@@ -265,10 +272,6 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
                         + virtualHostField + ", " + methodField + ", "
                         + refererField + ", " + userAgentField
                         + ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    }
-
-    private String resolveAttribute(String attribute, HttpServerExchange exchange) {
-        return ExchangeAttributes.parser(JDBCLogHandler.class.getClassLoader()).parse(attribute).readAttribute(exchange);
     }
 
     @Override
