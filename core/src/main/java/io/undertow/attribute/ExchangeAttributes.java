@@ -18,12 +18,8 @@ public class ExchangeAttributes {
         return new CookieAttribute(cookieName);
     }
 
-    public static ExchangeAttribute bytesSent() {
-        return BytesSentAttribute.INSTANCE;
-    }
-
-    public static ExchangeAttribute bytesSentModified() {
-        return BytesSentModifiedAttribute.INSTANCE;
+    public static ExchangeAttribute bytesSent(final String attribute) {
+        return new BytesSentAttribute(attribute);
     }
 
     public static ExchangeAttribute dateTime() {

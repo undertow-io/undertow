@@ -9,18 +9,24 @@ import io.undertow.server.HttpServerExchange;
  */
 public class BytesSentAttribute implements ExchangeAttribute {
 
-    public static final String BYTES_SENT_SHORT = "%B";
+    public static final String BYTES_SENT_SHORT_UPPER = "%B";
+    public static final String BYTES_SENT_SHORT_LOWER = "%b";
     public static final String BYTES_SENT = "%{BYTES_SENT}";
 
-    public static final ExchangeAttribute INSTANCE = new BytesSentAttribute();
+    private final String attribute;
 
-    private BytesSentAttribute() {
-
+    public BytesSentAttribute(final String attribute) {
+        this.attribute = attribute;
     }
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        return Long.toString(exchange.getResponseContentLength());
+        if (attribute.equals(BYTES_SENT_SHORT_LOWER))  {
+            long bytesSent = exchange.getResponseContentLength();
+            return bytesSent == 0 ? "-" : Long.toString(bytesSent);
+        } else {
+            return Long.toString(exchange.getResponseContentLength());
+        }
     }
 
     @Override
@@ -37,8 +43,8 @@ public class BytesSentAttribute implements ExchangeAttribute {
 
         @Override
         public ExchangeAttribute build(final String token) {
-            if (token.equals(BYTES_SENT) || token.equals(BYTES_SENT_SHORT)) {
-                return BytesSentAttribute.INSTANCE;
+            if (token.equals(BYTES_SENT) || token.equals(BYTES_SENT_SHORT_UPPER) || token.equals(BYTES_SENT_SHORT_LOWER)) {
+                return new BytesSentAttribute(token);
             }
             return null;
         }

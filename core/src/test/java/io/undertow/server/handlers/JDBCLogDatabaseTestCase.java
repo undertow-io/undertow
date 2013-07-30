@@ -73,11 +73,13 @@ public class JDBCLogDatabaseTestCase {
         logHandler.setConnectionPassword("password");
         logHandler.setConnectionURL("jdbc:h2:mem:test");
 
-        DefaultServer.setRootHandler(logHandler);
+        CompletionLatchHandler latchHandler;
+        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(logHandler));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
+            latchHandler.await();
             logHandler.awaitWrittenForTest();
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
