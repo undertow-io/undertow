@@ -87,4 +87,8 @@ public interface UndertowServletLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.WARN)
     @Message(id = 15010, value = "Failed to persist sessions")
     void failedToPersistSessions(@Cause Exception e);
+
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 15011, value = "Non standard filter mapping '*' for filter %s. Portable application should use '/*' instead.")
+    void nonStandardFilterMapping(String filterName);
 }

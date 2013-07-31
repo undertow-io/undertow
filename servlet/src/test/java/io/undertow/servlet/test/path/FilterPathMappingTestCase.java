@@ -80,6 +80,10 @@ public class FilterPathMappingTestCase {
         builder.addFilter(new FilterInfo("/*", PathFilter.class));
         builder.addFilterUrlMapping("/*", "/*", DispatcherType.REQUEST);
 
+        //non standard, but we still support it
+        builder.addFilter(new FilterInfo("*", PathFilter.class));
+        builder.addFilterUrlMapping("*", "*", DispatcherType.REQUEST);
+
         builder.addFilter(new FilterInfo("/a/*", PathFilter.class));
         builder.addFilterUrlMapping("/a/*", "/a/*", DispatcherType.REQUEST);
 
@@ -112,19 +116,19 @@ public class FilterPathMappingTestCase {
 
         TestHttpClient client = new TestHttpClient();
         try {
-            runTest(client, "aa", "/aa - /aa - null", "/*", "/aa");
-            runTest(client, "a/c", "/a/* - /a - /c", "/*", "/a/*");
-            runTest(client, "a", "/a/* - /a - null", "/*", "/a/*");
-            runTest(client, "aa/b", "/ - /aa/b - null", "/*");
-            runTest(client, "a/b/c/d", "/a/* - /a - /b/c/d", "/*", "/a/*");
-            runTest(client, "defaultStuff", "/ - /defaultStuff - null", "/*");
-            runTest(client, "", "contextRoot - / - null", "/*", "contextRoot");
-            runTest(client, "yyyy.bop", "/ - /yyyy.bop - null", "/*", "*.bop");
-            runTest(client, "a/yyyy.bop", "/a/* - /a - /yyyy.bop", "/*", "*.bop", "/a/*");
-            runTest(client, "myservlet/myfilter/file.dat", "/myservlet/* - /myservlet - /myfilter/file.dat", "/*", "/myservlet/myfilter/*");
-            runTest(client, "myservlet/myfilter/file.jsp", "/myservlet/* - /myservlet - /myfilter/file.jsp", "/*", "/myservlet/myfilter/*");
-            runTest(client, "otherservlet/myfilter/file.jsp", "*.jsp - /otherservlet/myfilter/file.jsp - null", "/*");
-            runTest(client, "myfilter/file.jsp", "*.jsp - /myfilter/file.jsp - null", "/*", "/myfilter/*");
+            runTest(client, "aa", "/aa - /aa - null", "/*", "*", "/aa");
+            runTest(client, "a/c", "/a/* - /a - /c", "/*", "*", "/a/*");
+            runTest(client, "a", "/a/* - /a - null", "/*", "*", "/a/*");
+            runTest(client, "aa/b", "/ - /aa/b - null", "/*", "*");
+            runTest(client, "a/b/c/d", "/a/* - /a - /b/c/d", "/*", "*", "/a/*");
+            runTest(client, "defaultStuff", "/ - /defaultStuff - null", "/*", "*");
+            runTest(client, "", "contextRoot - / - null", "/*", "*", "contextRoot");
+            runTest(client, "yyyy.bop", "/ - /yyyy.bop - null", "/*", "*", "*.bop");
+            runTest(client, "a/yyyy.bop", "/a/* - /a - /yyyy.bop", "/*", "*", "*.bop", "/a/*");
+            runTest(client, "myservlet/myfilter/file.dat", "/myservlet/* - /myservlet - /myfilter/file.dat", "/*", "*", "/myservlet/myfilter/*");
+            runTest(client, "myservlet/myfilter/file.jsp", "/myservlet/* - /myservlet - /myfilter/file.jsp", "/*", "*", "/myservlet/myfilter/*");
+            runTest(client, "otherservlet/myfilter/file.jsp", "*.jsp - /otherservlet/myfilter/file.jsp - null", "/*", "*");
+            runTest(client, "myfilter/file.jsp", "*.jsp - /myfilter/file.jsp - null", "/*", "*", "/myfilter/*");
 
         } finally {
             client.getConnectionManager().shutdown();
