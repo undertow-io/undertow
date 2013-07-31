@@ -70,7 +70,7 @@
         <version.easymock>3.1</version.easymock>
         <version.netty>3.6.2.Final</version.netty>
         <version.xnio>3.1.0.CR6</version.xnio>
-        <version.io.undertow.jastow>1.0.0.Alpha1</version.io.undertow.jastow>
+        <version.io.undertow.jastow>1.0.0.Beta1</version.io.undertow.jastow>
         <version.org.jboss.logging>3.1.2.GA</version.org.jboss.logging>
         <version.org.jboss.logmanager>1.4.0.Final</version.org.jboss.logmanager>
         <version.org.jboss.logging.processor>1.1.0.Final</version.org.jboss.logging.processor>
