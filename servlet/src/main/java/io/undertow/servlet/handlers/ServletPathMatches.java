@@ -36,10 +36,10 @@ import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.FilterMappingInfo;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.core.Filters;
+import io.undertow.servlet.core.ManagedFilters;
 import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.core.ManagedServlet;
-import io.undertow.servlet.core.Servlets;
+import io.undertow.servlet.core.ManagedServlets;
 import io.undertow.servlet.handlers.security.ServletSecurityRoleHandler;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 
@@ -102,8 +102,8 @@ public class ServletPathMatches {
         //create the default servlet
         ServletChain defaultHandler = null;
         ServletHandler defaultServlet = null;
-        final Servlets servlets = deployment.getServlets();
-        final Filters filters = deployment.getFilters();
+        final ManagedServlets servlets = deployment.getServlets();
+        final ManagedFilters filters = deployment.getFilters();
 
         final Map<String, ServletHandler> extensionServlets = new HashMap<String, ServletHandler>();
         final Map<String, ServletHandler> pathServlets = new HashMap<String, ServletHandler>();

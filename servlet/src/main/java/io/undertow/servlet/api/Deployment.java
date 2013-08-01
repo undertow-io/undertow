@@ -23,9 +23,9 @@ import java.util.concurrent.Executor;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.session.SessionManager;
-import io.undertow.servlet.core.Filters;
+import io.undertow.servlet.core.ManagedFilters;
 import io.undertow.servlet.core.ApplicationListeners;
-import io.undertow.servlet.core.Servlets;
+import io.undertow.servlet.core.ManagedServlets;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ErrorPages;
 import io.undertow.servlet.handlers.ServletPathMatches;
@@ -44,9 +44,9 @@ public interface Deployment {
 
     ApplicationListeners getApplicationListeners();
 
-    Servlets getServlets();
+    ManagedServlets getServlets();
 
-    Filters getFilters();
+    ManagedFilters getFilters();
 
     ServletContextImpl getServletContext();
 

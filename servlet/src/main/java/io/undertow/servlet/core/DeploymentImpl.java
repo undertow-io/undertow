@@ -51,8 +51,8 @@ public class DeploymentImpl implements Deployment {
     private final ServletContainer servletContainer;
     private final List<Lifecycle> lifecycleObjects = new ArrayList<Lifecycle>();
     private final ServletPathMatches servletPaths;
-    private final Servlets servlets;
-    private final Filters filters;
+    private final ManagedServlets servlets;
+    private final ManagedFilters filters;
     private final Executor executor;
     private final Executor asyncExecutor;
 
@@ -71,8 +71,8 @@ public class DeploymentImpl implements Deployment {
         this.executor = deploymentInfo.getExecutor();
         this.asyncExecutor = deploymentInfo.getAsyncExecutor();
         servletPaths = new ServletPathMatches(this);
-        servlets = new Servlets(this, servletPaths);
-        filters = new Filters(this, servletPaths);
+        servlets = new ManagedServlets(this, servletPaths);
+        filters = new ManagedFilters(this, servletPaths);
     }
 
     @Override
@@ -80,11 +80,11 @@ public class DeploymentImpl implements Deployment {
         return servletContainer;
     }
 
-    public Servlets getServlets() {
+    public ManagedServlets getServlets() {
         return servlets;
     }
 
-    public Filters getFilters() {
+    public ManagedFilters getFilters() {
         return filters;
     }
 

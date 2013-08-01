@@ -13,13 +13,13 @@ import io.undertow.util.CopyOnWriteMap;
  *
  * @author Stuart Douglas
  */
-public class Servlets {
+public class ManagedServlets {
 
     private final Map<String, ServletHandler> managedServletMap = new CopyOnWriteMap<String, ServletHandler>();
     private final DeploymentImpl deployment;
     private final ServletPathMatches servletPaths;
 
-    public Servlets(final DeploymentImpl deployment, final ServletPathMatches servletPaths) {
+    public ManagedServlets(final DeploymentImpl deployment, final ServletPathMatches servletPaths) {
         this.deployment = deployment;
         this.servletPaths = servletPaths;
     }
