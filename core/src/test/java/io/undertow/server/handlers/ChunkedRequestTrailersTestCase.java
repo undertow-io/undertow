@@ -18,11 +18,6 @@
 
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
-
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
@@ -36,6 +31,11 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
 
 /**
  * @author Stuart Douglas
@@ -55,8 +55,8 @@ public class ChunkedRequestTrailersTestCase {
             public void handleRequest(final HttpServerExchange exchange) {
                 try {
                     if (connection == null) {
-                        connection = exchange.getConnection();
-                    } else if (!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()) {
+                        connection = (HttpServerConnection) exchange.getConnection();
+                    } else if (!DefaultServer.isAjp() && connection != exchange.getConnection()) {
                         exchange.setResponseCode(500);
                         final OutputStream outputStream = exchange.getOutputStream();
                         outputStream.write("Connection not persistent".getBytes());

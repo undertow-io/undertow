@@ -33,6 +33,7 @@ import io.undertow.server.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
 import io.undertow.util.Attachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
@@ -82,19 +83,20 @@ public final class ProxyHandler implements HttpHandler {
                     @Override
                     public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
                         ConnectedStreamChannel clientChannel = null;
+                        final HttpServerConnection connection = (HttpServerConnection) exchange.getConnection();
                         try {
                             clientChannel = response.getRequest().getConnection().performUpgrade();
-                            exchange.getConnection().resetChannel();
+                            connection.resetChannel();
 
-                            StreamConnection streamConnection = exchange.getConnection().getChannel();
-                            if (exchange.getConnection().getExtraBytes() != null) {
-                                streamConnection.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(streamConnection.getSourceChannel().getConduit(), exchange.getConnection()));
+                            StreamConnection streamConnection = connection.getChannel();
+                            if (connection.getExtraBytes() != null) {
+                                streamConnection.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(streamConnection.getSourceChannel().getConduit(), connection));
                             }
-                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, clientChannel, streamConnection.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
-                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, streamConnection.getSourceChannel(), clientChannel, ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, clientChannel, streamConnection.getSinkChannel(), ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), connection.getBufferPool());
+                            ChannelListeners.initiateTransfer(Long.MAX_VALUE, streamConnection.getSourceChannel(), clientChannel, ChannelListeners.closingChannelListener(), ChannelListeners.<StreamSinkChannel>writeShutdownChannelListener(ChannelListeners.<StreamSinkChannel>flushingChannelListener(ChannelListeners.closingChannelListener(), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler()), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), connection.getBufferPool());
                             nextListener.proceed();
                         } catch (IOException e) {
-                            IoUtils.safeClose(exchange.getConnection().getChannel());
+                            IoUtils.safeClose(connection.getChannel());
                         }
                     }
                 });
@@ -117,7 +119,7 @@ public final class ProxyHandler implements HttpHandler {
     private final HttpHandler proxyClientHandler = new HttpHandler() {
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
-            final HttpServerConnection serverConnection = exchange.getConnection();
+            final ServerConnection serverConnection = exchange.getConnection();
             HttpClientConnection clientConnection = exchange.getAttachment(ProxyClient.CONNECTION);
             //see if we already have a client
             if (clientConnection != null) {
@@ -147,7 +149,7 @@ public final class ProxyHandler implements HttpHandler {
                 return;
             }
 
-           Throwable error = exchange.getAttachment(ProxyClientProvider.THROWABLE);
+            Throwable error = exchange.getAttachment(ProxyClientProvider.THROWABLE);
             if (error != null) {
                 if (error instanceof Exception) {
                     throw (Exception) error;
@@ -182,9 +184,9 @@ public final class ProxyHandler implements HttpHandler {
     private static class ProxyAction implements Runnable {
         private final HttpClientConnection clientConnection;
         private final HttpServerExchange exchange;
-        private final HttpServerConnection serverConnection;
+        private final ServerConnection serverConnection;
 
-        public ProxyAction(final HttpClientConnection clientConnection, final HttpServerExchange exchange, final HttpServerConnection serverConnection) {
+        public ProxyAction(final HttpClientConnection clientConnection, final HttpServerExchange exchange, final ServerConnection serverConnection) {
             this.clientConnection = clientConnection;
             this.exchange = exchange;
             this.serverConnection = serverConnection;

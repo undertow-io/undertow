@@ -18,15 +18,10 @@
 
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Random;
-
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -41,6 +36,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Random;
+
 /**
  * @author Stuart Douglas
  */
@@ -51,7 +51,7 @@ public class ChunkedRequestTransferCodingTestCase {
 
     private static volatile String message;
 
-    private static volatile HttpServerConnection connection;
+    private static volatile ServerConnection connection;
 
     @BeforeClass
     public static void setup() {
@@ -63,7 +63,7 @@ public class ChunkedRequestTransferCodingTestCase {
                 try {
                     if (connection == null) {
                         connection = exchange.getConnection();
-                    } else if (!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()) {
+                    } else if (!DefaultServer.isAjp() && connection != exchange.getConnection()) {
                         exchange.setResponseCode(500);
                         final OutputStream outputStream = exchange.getOutputStream();
                         outputStream.write("Connection not persistent".getBytes());

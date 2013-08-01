@@ -20,6 +20,7 @@ package io.undertow.server.session;
 
 import javax.net.ssl.SSLSession;
 
+import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -43,7 +44,7 @@ public class SslSessionConfig implements SessionConfig {
 
     @Override
     public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
-        SSLSession sslSession = exchange.getConnection().getSslSession();
+        SSLSession sslSession = ((HttpServerConnection)exchange.getConnection()).getSslSession();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
                 fallbackSessionConfig.setSessionId(exchange, sessionId);
@@ -55,7 +56,7 @@ public class SslSessionConfig implements SessionConfig {
 
     @Override
     public void clearSession(final HttpServerExchange exchange, final String sessionId) {
-        SSLSession sslSession = exchange.getConnection().getSslSession();
+        SSLSession sslSession = ((HttpServerConnection)exchange.getConnection()).getSslSession();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
                 fallbackSessionConfig.clearSession(exchange, sessionId);
@@ -67,7 +68,7 @@ public class SslSessionConfig implements SessionConfig {
 
     @Override
     public String findSessionId(final HttpServerExchange exchange) {
-        SSLSession sslSession = exchange.getConnection().getSslSession();
+        SSLSession sslSession = ((HttpServerConnection)exchange.getConnection()).getSslSession();
         if (sslSession == null) {
             if (fallbackSessionConfig != null) {
                 return fallbackSessionConfig.findSessionId(exchange);

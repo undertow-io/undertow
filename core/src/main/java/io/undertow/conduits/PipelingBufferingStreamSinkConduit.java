@@ -197,7 +197,7 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
      */
     public void setupPipelineBuffer(final HttpServerExchange exchange) {
         exchange.addExchangeCompleteListener(completionListener);
-        exchange.getConnection().getChannel().getSinkChannel().setConduit(this);
+        ((HttpServerConnection)exchange.getConnection()).getChannel().getSinkChannel().setConduit(this);
     }
 
     private boolean flushBuffer() throws IOException {
@@ -284,7 +284,7 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
             //if we ever fail to read then we flush the pipeline buffer
             //this relies on us always doing an eager read when starting a request,
             //rather than waiting to be notified of data being available
-            final HttpServerConnection connection = exchange.getConnection();
+            final HttpServerConnection connection = (HttpServerConnection) exchange.getConnection();
             if (connection.getExtraBytes() == null || exchange.isUpgrade()) {
                 performFlush(nextListener, connection);
             } else {

@@ -17,12 +17,6 @@
  */
 package io.undertow.security.impl;
 
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
-
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLSession;
-
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
@@ -30,6 +24,11 @@ import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.X509CertificateCredential;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.SSLSessionInfo;
+
+import javax.net.ssl.SSLPeerUnverifiedException;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 
 /**
  * The Client Cert based authentication mechanism.
@@ -52,7 +51,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
     }
 
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange, final SecurityContext securityContext) {
-        SSLSession sslSession = exchange.getConnection().getSslSession();
+        SSLSessionInfo sslSession = exchange.getConnection().getSslSessionInfo();
         if (sslSession != null) {
             try {
                 Certificate[] clientCerts = sslSession.getPeerCertificates();

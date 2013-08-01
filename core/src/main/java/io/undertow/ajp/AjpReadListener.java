@@ -225,14 +225,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
     @Override
     public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
         startRequest();
-        ConduitStreamSourceChannel channel = exchange.getConnection().getChannel().getSourceChannel();
+        ConduitStreamSourceChannel channel = ((HttpServerConnection)exchange.getConnection()).getChannel().getSourceChannel();
         channel.getReadSetter().set(this);
         channel.wakeupReads();
         nextListener.proceed();
     }
 
     private StreamSourceConduit createSourceConduit(StreamSourceConduit underlyingConduit, AjpResponseConduit responseConduit, final HttpServerExchange exchange) {
-        ReadDataStreamSourceConduit conduit = new ReadDataStreamSourceConduit(underlyingConduit, exchange.getConnection());
+        ReadDataStreamSourceConduit conduit = new ReadDataStreamSourceConduit(underlyingConduit, (HttpServerConnection) exchange.getConnection());
 
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         HttpString transferEncoding = Headers.IDENTITY;

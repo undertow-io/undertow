@@ -19,7 +19,7 @@
 package io.undertow;
 
 import io.undertow.client.HttpClient;
-import io.undertow.server.HttpServerConnection;
+import io.undertow.server.ServerConnection;
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
@@ -112,6 +112,10 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5018, value = "Exception invoking close listener %s")
-    void exceptionInvokingCloseListener(HttpServerConnection.CloseListener l, @Cause Throwable e);
+    void exceptionInvokingCloseListener(ServerConnection.CloseListener l, @Cause Throwable e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5019, value = "Cannot upgrade connection")
+    void cannotUpgradeConnection(@Cause Exception e);
 }
 

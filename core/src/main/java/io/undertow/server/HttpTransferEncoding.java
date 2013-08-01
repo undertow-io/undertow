@@ -35,7 +35,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import org.jboss.logging.Logger;
-import org.xnio.XnioExecutor;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
@@ -59,13 +58,13 @@ public class HttpTransferEncoding {
     private HttpTransferEncoding() {
     }
 
-    public static void handleRequest(final HttpServerExchange exchange, final HttpHandler next) {
+    public static void setupRequest(final HttpServerExchange exchange) {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         final String connectionHeader = requestHeaders.getFirst(Headers.CONNECTION);
         final String transferEncodingHeader = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
         final String contentLengthHeader = requestHeaders.getFirst(Headers.CONTENT_LENGTH);
 
-        final HttpServerConnection connection = exchange.getConnection();
+        final HttpServerConnection connection = (HttpServerConnection) exchange.getConnection();
         ConduitStreamSinkChannel sinkChannel = connection.getChannel().getSinkChannel();
         //if we are already using the pipelineing buffer add it to the exchange
         PipelingBufferingStreamSinkConduit pipeliningBuffer = connection.getAttachment(PipelingBufferingStreamSinkConduit.ATTACHMENT_KEY);
@@ -98,7 +97,6 @@ public class HttpTransferEncoding {
         //now the response wrapper, to add in the appropriate connection control headers
         exchange.addResponseWrapper(responseWrapper(persistentConnection));
 
-        HttpHandlers.executeRootHandler(next, exchange, Thread.currentThread() instanceof XnioExecutor);
     }
 
     private static boolean handleRequestEncoding(HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipelingBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) {
@@ -107,7 +105,7 @@ public class HttpTransferEncoding {
             transferEncoding = new HttpString(transferEncodingHeader);
         }
         if (transferEncodingHeader != null && !transferEncoding.equals(Headers.IDENTITY)) {
-            ConduitStreamSourceChannel sourceChannel = exchange.getConnection().getChannel().getSourceChannel();
+            ConduitStreamSourceChannel sourceChannel = ((HttpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
             sourceChannel.setConduit(new ChunkedStreamSourceConduit(sourceChannel.getConduit(), exchange, chunkedDrainListener(exchange)));
         } else if (contentLengthHeader != null) {
             final long contentLength;
@@ -118,7 +116,7 @@ public class HttpTransferEncoding {
                 exchange.terminateRequest();
             } else {
                 // fixed-length content - add a wrapper for a fixed-length stream
-                ConduitStreamSourceChannel sourceChannel = exchange.getConnection().getChannel().getSourceChannel();
+                ConduitStreamSourceChannel sourceChannel = ((HttpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
                 sourceChannel.setConduit(fixedLengthStreamSourceConduitWrapper(contentLength, sourceChannel.getConduit(), exchange));
             }
         } else if (transferEncodingHeader != null) {
@@ -165,7 +163,7 @@ public class HttpTransferEncoding {
     private static ConduitWrapper<StreamSinkConduit> responseWrapper(final boolean requestLooksPersistent) {
         return new ConduitWrapper<StreamSinkConduit>() {
             public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
-                if(exchange.getRequestMethod().equals(Methods.HEAD)) {
+                if (exchange.getRequestMethod().equals(Methods.HEAD)) {
                     return new HeadStreamSinkConduit(factory.create(), terminateResponseListener(exchange));
                 }
                 final StreamSinkConduit channel = factory.create();

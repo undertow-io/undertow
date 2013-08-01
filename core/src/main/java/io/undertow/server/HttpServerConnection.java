@@ -27,7 +27,11 @@ import java.util.List;
 import javax.net.ssl.SSLSession;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.util.AbstractAttachable;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -37,8 +41,9 @@ import org.xnio.Pooled;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
-import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.SslChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
@@ -50,7 +55,7 @@ import org.xnio.conduits.StreamSourceConduit;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HttpServerConnection extends AbstractAttachable implements ConnectedChannel {
+public final class HttpServerConnection extends AbstractAttachable implements ServerConnection {
     private final StreamConnection channel;
     private final CloseSetter closeSetter;
     private final Pool<ByteBuffer> bufferPool;
@@ -97,6 +102,7 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
      *
      * @return the buffer pool for this connection
      */
+    @Override
     public Pool<ByteBuffer> getBufferPool() {
         return bufferPool;
     }
@@ -110,10 +116,12 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
         return channel;
     }
 
-    public ChannelListener.Setter<HttpServerConnection> getCloseSetter() {
+    @Override
+    public ChannelListener.Setter<ServerConnection> getCloseSetter() {
         return closeSetter;
     }
 
+    @Override
     public XnioWorker getWorker() {
         return channel.getWorker();
     }
@@ -126,42 +134,130 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
         return channel.getIoThread();
     }
 
+    @Override
+    public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
+        if(exchange == null || !HttpContinue.requiresContinueResponse(exchange)) {
+            throw UndertowMessages.MESSAGES.outOfBandResponseOnlyAllowedFor100Continue();
+        }
+        final ConduitState state = resetChannel();
+        HttpServerExchange newExchange =  new HttpServerExchange(this);
+        for(HttpString header : exchange.getRequestHeaders().getHeaderNames()) {
+            newExchange.getRequestHeaders().putAll(header, exchange.getRequestHeaders().get(header));
+        }
+        newExchange.setProtocol(exchange.getProtocol());
+        newExchange.setRequestMethod(exchange.getRequestMethod());
+        newExchange.setParsedRequestPath(exchange.getRequestPath());
+        newExchange.getRequestHeaders().put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
+        newExchange.getRequestHeaders().put(Headers.CONTENT_LENGTH, 0);
+
+        //apply transfer encoding rules
+        HttpTransferEncoding.setupRequest(newExchange);
+
+        newExchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+            @Override
+            public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                restoreChannel(state);
+            }
+        });
+        return newExchange;
+    }
+
+    /**
+     * Pushes back the given data. This should only be used by transfer coding handlers that have read past
+     * the end of the request when handling pipelined requests
+     *
+     * @param unget The buffer to push back
+     */
+    public void ungetRequestBytes(final Pooled<ByteBuffer> unget) {
+        if (getExtraBytes() == null) {
+            setExtraBytes(unget);
+        } else {
+            Pooled<ByteBuffer> eb = getExtraBytes();
+            ByteBuffer buf = eb.getResource();
+            final ByteBuffer ugBuffer = unget.getResource();
+
+            if (ugBuffer.limit() - ugBuffer.remaining() > buf.remaining()) {
+                //stuff the existing data after the data we are ungetting
+                ugBuffer.compact();
+                ugBuffer.put(buf);
+                ugBuffer.flip();
+                eb.free();
+                setExtraBytes(unget);
+            } else {
+                //TODO: this is horrible, but should not happen often
+                final byte[] data = new byte[ugBuffer.remaining() + buf.remaining()];
+                int first = ugBuffer.remaining();
+                ugBuffer.get(data, 0, ugBuffer.remaining());
+                buf.get(data, first, buf.remaining());
+                eb.free();
+                unget.free();
+                final ByteBuffer newBuffer = ByteBuffer.wrap(data);
+                setExtraBytes(new Pooled<ByteBuffer>() {
+                    @Override
+                    public void discard() {
+
+                    }
+
+                    @Override
+                    public void free() {
+
+                    }
+
+                    @Override
+                    public ByteBuffer getResource() throws IllegalStateException {
+                        return newBuffer;
+                    }
+                });
+            }
+        }
+    }
+
+    @Override
     public boolean isOpen() {
         return channel.isOpen();
     }
 
+    @Override
     public boolean supportsOption(final Option<?> option) {
         return channel.supportsOption(option);
     }
 
+    @Override
     public <T> T getOption(final Option<T> option) throws IOException {
         return channel.getOption(option);
     }
 
+    @Override
     public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
         return channel.setOption(option, value);
     }
 
+    @Override
     public void close() throws IOException {
         channel.close();
     }
 
+    @Override
     public SocketAddress getPeerAddress() {
         return channel.getPeerAddress();
     }
 
+    @Override
     public <A extends SocketAddress> A getPeerAddress(final Class<A> type) {
         return channel.getPeerAddress(type);
     }
 
+    @Override
     public SocketAddress getLocalAddress() {
         return channel.getLocalAddress();
     }
 
+    @Override
     public <A extends SocketAddress> A getLocalAddress(final Class<A> type) {
         return channel.getLocalAddress(type);
     }
 
+    @Override
     public OptionMap getUndertowOptions() {
         return undertowOptions;
     }
@@ -169,15 +265,23 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
     /**
      * @return The size of the buffers allocated by the buffer pool
      */
+    @Override
     public int getBufferSize() {
         return bufferSize;
+    }
+
+    @Override
+    public SSLSessionInfo getSslSessionInfo() {
+        if (channel instanceof SslChannel) {
+            return new DefaultSslSessionInfo(((SslChannel) channel).getSslSession());
+        }
+        return null;
     }
 
     public SSLSession getSslSession() {
         if (channel instanceof SslChannel) {
             return ((SslChannel) channel).getSslSession();
         }
-
         return null;
     }
 
@@ -238,21 +342,36 @@ public final class HttpServerConnection extends AbstractAttachable implements Co
         }
     }
 
+    @Override
     public void addCloseListener(CloseListener listener) {
         this.closeListeners.add(listener);
     }
 
-    public interface CloseListener {
-
-        void closed(final HttpServerConnection connection);
+    @Override
+    public StreamConnection upgradeChannel() {
+        resetChannel();
+        if(extraBytes != null) {
+            channel.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(channel.getSourceChannel().getConduit(), this));
+        }
+        return channel;
     }
 
-    private class CloseSetter implements ChannelListener.Setter<HttpServerConnection>, ChannelListener<StreamConnection> {
+    @Override
+    public ConduitStreamSinkChannel getSinkChannel() {
+        return channel.getSinkChannel();
+    }
 
-        private ChannelListener<? super HttpServerConnection> listener;
+    @Override
+    public ConduitStreamSourceChannel getSourceChannel() {
+        return channel.getSourceChannel();
+    }
+
+    private class CloseSetter implements ChannelListener.Setter<ServerConnection>, ChannelListener<StreamConnection> {
+
+        private ChannelListener<? super ServerConnection> listener;
 
         @Override
-        public void set(ChannelListener<? super HttpServerConnection> listener) {
+        public void set(ChannelListener<? super ServerConnection> listener) {
             this.listener = listener;
         }
 

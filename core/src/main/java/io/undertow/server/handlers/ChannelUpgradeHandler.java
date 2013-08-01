@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
@@ -145,7 +146,11 @@ public final class ChannelUpgradeHandler implements HttpHandler {
                         exchange.upgradeChannel(string, new ExchangeCompletionListener() {
                             @Override
                             public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-                                ChannelListeners.invokeChannelListener(exchange.getConnection().getChannel(), listener);
+                                try {
+                                ChannelListeners.invokeChannelListener(exchange.getConnection().upgradeChannel(), listener);
+                                } catch (Exception e) {
+                                    UndertowLogger.REQUEST_LOGGER.cannotUpgradeConnection(e);
+                                }
                             }
                         });
                         exchange.endExchange();

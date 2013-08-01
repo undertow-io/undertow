@@ -101,7 +101,11 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
         exchange.upgradeChannel(new ExchangeCompletionListener() {
             @Override
             public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-                upgradeCallback.handleUpgrade(exchange.getConnection().getChannel(), exchange.getConnection().getBufferPool());
+                try {
+                    upgradeCallback.handleUpgrade(exchange.getConnection().upgradeChannel(), exchange.getConnection().getBufferPool());
+                } catch (Exception e) {
+                    UndertowLogger.REQUEST_LOGGER.cannotUpgradeConnection(e);
+                }
             }
         });
     }

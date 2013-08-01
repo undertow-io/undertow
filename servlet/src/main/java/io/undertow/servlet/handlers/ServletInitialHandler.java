@@ -20,8 +20,9 @@ package io.undertow.servlet.handlers;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.SSLSessionInfo;
+import io.undertow.server.ServerConnection;
 import io.undertow.servlet.api.DevelopmentModeInfo;
 import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.api.ThreadSetupAction;
@@ -32,12 +33,22 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
+import org.xnio.ChannelListener;
+import org.xnio.Option;
 import org.xnio.OptionMap;
+import org.xnio.Pool;
+import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.channels.ConnectedChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
@@ -45,6 +56,9 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
 
 import static io.undertow.util.Methods.GET;
@@ -85,7 +99,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
-        if(path.isEmpty() && (exchange.getRequestMethod().equals(GET) || exchange.getRequestMethod().equals(HEAD)) && info.isDefaultServletMatch()) {
+        if (path.isEmpty() && (exchange.getRequestMethod().equals(GET) || exchange.getRequestMethod().equals(HEAD)) && info.isDefaultServletMatch()) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
             exchange.setResponseCode(302);
@@ -98,7 +112,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
         final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), request, response, info);
         //set the max request size if applicable
-        if(info.getManagedServlet().getMaxRequestSize() > 0) {
+        if (info.getManagedServlet().getMaxRequestSize() > 0) {
             exchange.setMaxEntitySize(info.getManagedServlet().getMaxRequestSize());
         }
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
@@ -139,14 +153,15 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     @Override
     public void dispatchMockRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException {
 
-        HttpServerConnection connection = new HttpServerConnection(null,new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024), next, OptionMap.EMPTY, 1024);
+        final ByteBufferSlicePool bufferPool = new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 1024, 1024);
+        MockServerConnection connection = new MockServerConnection(bufferPool);
         HttpServerExchange exchange = new HttpServerExchange(connection);
         exchange.setRequestScheme(request.getScheme());
         exchange.setRequestMethod(new HttpString(request.getMethod()));
         exchange.setProtocol(Protocols.HTTP_1_0);
         exchange.setResolvedPath(request.getContextPath());
         String relative;
-        if(request.getPathInfo() == null) {
+        if (request.getPathInfo() == null) {
             relative = request.getServletPath();
         } else {
             relative = request.getServletPath() + request.getPathInfo();
@@ -159,7 +174,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         servletRequestContext.setServletRequest(request);
         servletRequestContext.setServletResponse(response);
         //set the max request size if applicable
-        if(info.getManagedServlet().getMaxRequestSize() > 0) {
+        if (info.getManagedServlet().getMaxRequestSize() > 0) {
             exchange.setMaxEntitySize(info.getManagedServlet().getMaxRequestSize());
         }
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
@@ -170,8 +185,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         try {
             dispatchRequest(exchange, servletRequestContext, info, DispatcherType.REQUEST);
         } catch (Exception e) {
-            if(e instanceof RuntimeException) {
-                throw (RuntimeException)e;
+            if (e instanceof RuntimeException) {
+                throw (RuntimeException) e;
             }
             throw new ServletException(e);
         }
@@ -215,11 +230,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                             }
                         } else {
                             UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", exchange);
-                            if(debugErrorPage) {
+                            if (debugErrorPage) {
                                 ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, t);
                             } else {
                                 //TODO: we need a debug mode to generate a debug error page
-                                if(response instanceof HttpServletResponse) {
+                                if (response instanceof HttpServletResponse) {
                                     ((HttpServletResponse) response).sendError(500);
                                 } else {
                                     servletRequestContext.getOriginalResponse().sendError(500);
@@ -233,7 +248,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 servletContext.getDeployment().getApplicationListeners().requestDestroyed(request);
             }
             //if it is not dispatched and is not a mock request
-            if (!exchange.isDispatched() && exchange.getConnection().getChannel() != null) {
+            if (!exchange.isDispatched() && !(exchange.getConnection() instanceof MockServerConnection)) {
                 servletRequestContext.getOriginalResponse().responseDone();
             }
         } finally {
@@ -247,6 +262,117 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
     public HttpHandler getNext() {
         return next;
+    }
+
+    private static class MockServerConnection extends AbstractAttachable implements ServerConnection {
+        private final Pool<ByteBuffer> bufferPool;
+
+        private MockServerConnection(Pool<ByteBuffer> bufferPool) {
+            this.bufferPool = bufferPool;
+        }
+
+        @Override
+        public Pool<ByteBuffer> getBufferPool() {
+            return bufferPool;
+        }
+
+        @Override
+        public XnioWorker getWorker() {
+            return null;
+        }
+
+        @Override
+        public XnioIoThread getIoThread() {
+            return null;
+        }
+
+        @Override
+        public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
+            throw new IllegalStateException();
+        }
+
+        @Override
+        public boolean isOpen() {
+            return true;
+        }
+
+        @Override
+        public boolean supportsOption(Option<?> option) {
+            return false;
+        }
+
+        @Override
+        public <T> T getOption(Option<T> option) throws IOException {
+            return null;
+        }
+
+        @Override
+        public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+            return null;
+        }
+
+        @Override
+        public void close() throws IOException {
+        }
+
+        @Override
+        public SocketAddress getPeerAddress() {
+            return null;
+        }
+
+        @Override
+        public <A extends SocketAddress> A getPeerAddress(Class<A> type) {
+            return null;
+        }
+
+        @Override
+        public ChannelListener.Setter<? extends ConnectedChannel> getCloseSetter() {
+            return null;
+        }
+
+        @Override
+        public SocketAddress getLocalAddress() {
+            return null;
+        }
+
+        @Override
+        public <A extends SocketAddress> A getLocalAddress(Class<A> type) {
+            return null;
+        }
+
+        @Override
+        public OptionMap getUndertowOptions() {
+            return null;
+        }
+
+        @Override
+        public int getBufferSize() {
+            return 1024;
+        }
+
+        @Override
+        public SSLSessionInfo getSslSessionInfo() {
+            return null;
+        }
+
+        @Override
+        public void addCloseListener(CloseListener listener) {
+        }
+
+        @Override
+        public StreamConnection upgradeChannel() {
+            return null;
+        }
+
+        @Override
+        public ConduitStreamSinkChannel getSinkChannel() {
+            return null;
+        }
+
+        @Override
+        public ConduitStreamSourceChannel getSourceChannel() {
+            return new ConduitStreamSourceChannel(null, null);
+        }
     }
 
 }

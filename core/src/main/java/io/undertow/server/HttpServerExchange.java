@@ -18,20 +18,6 @@
 
 package io.undertow.server;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
-import java.nio.channels.FileChannel;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.io.AsyncSenderImpl;
@@ -55,7 +41,6 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
-import org.xnio.Pooled;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -67,6 +52,20 @@ import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
+import java.nio.channels.FileChannel;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreClear;
@@ -98,7 +97,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private static final Logger log = Logger.getLogger(HttpServerExchange.class);
 
-    private final HttpServerConnection connection;
+    private final ServerConnection connection;
     private final HeaderMap requestHeaders = new HeaderMap();
     private final HeaderMap responseHeaders = new HeaderMap();
 
@@ -247,12 +246,12 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private static final int FLAG_IN_CALL = 1 << 17;
 
-    public HttpServerExchange(final HttpServerConnection connection, long maxEntitySize) {
+    public HttpServerExchange(final ServerConnection connection, long maxEntitySize) {
         this.connection = connection;
         this.maxEntitySize = maxEntitySize;
     }
 
-    public HttpServerExchange(final HttpServerConnection connection) {
+    public HttpServerExchange(final ServerConnection connection) {
         this.connection = connection;
         this.maxEntitySize = 0;
     }
@@ -535,7 +534,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @return the underlying HTTP connection
      */
-    public HttpServerConnection getConnection() {
+    public ServerConnection getConnection() {
         return connection;
     }
 
@@ -918,7 +917,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             return requestChannel = new ReadDispatchChannel(new EmptyStreamSourceChannel(getIoThread()));
         }
         final ConduitWrapper<StreamSourceConduit>[] wrappers = this.requestWrappers;
-        final ConduitStreamSourceChannel sourceChannel = connection.getChannel().getSourceChannel();
+        final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
         if (wrappers != null) {
             this.requestWrappers = null;
             final WrapperConduitFactory<StreamSourceConduit> factory = new WrapperConduitFactory<StreamSourceConduit>(wrappers, requestWrapperCount, sourceChannel.getConduit(), this);
@@ -966,57 +965,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
-    /**
-     * Pushes back the given data. This should only be used by transfer coding handlers that have read past
-     * the end of the request when handling pipelined requests
-     *
-     * @param unget The buffer to push back
-     */
-    public void ungetRequestBytes(final Pooled<ByteBuffer> unget) {
-        if (connection.getExtraBytes() == null) {
-            connection.setExtraBytes(unget);
-        } else {
-            Pooled<ByteBuffer> eb = connection.getExtraBytes();
-            ByteBuffer buf = eb.getResource();
-            final ByteBuffer ugBuffer = unget.getResource();
-
-            if (ugBuffer.limit() - ugBuffer.remaining() > buf.remaining()) {
-                //stuff the existing data after the data we are ungetting
-                ugBuffer.compact();
-                ugBuffer.put(buf);
-                ugBuffer.flip();
-                eb.free();
-                connection.setExtraBytes(unget);
-            } else {
-                //TODO: this is horrible, but should not happen often
-                final byte[] data = new byte[ugBuffer.remaining() + buf.remaining()];
-                int first = ugBuffer.remaining();
-                ugBuffer.get(data, 0, ugBuffer.remaining());
-                buf.get(data, first, buf.remaining());
-                eb.free();
-                unget.free();
-                final ByteBuffer newBuffer = ByteBuffer.wrap(data);
-                connection.setExtraBytes(new Pooled<ByteBuffer>() {
-                    @Override
-                    public void discard() {
-
-                    }
-
-                    @Override
-                    public void free() {
-
-                    }
-
-                    @Override
-                    public ByteBuffer getResource() throws IllegalStateException {
-                        return newBuffer;
-                    }
-                });
-            }
-        }
-    }
-
-    /**
+   /**
      * Get the response channel. The channel must be closed and fully flushed before the next response can be started.
      * In order to close the channel you must first call {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()},
      * and then call {@link org.xnio.channels.StreamSinkChannel#flush()} until it returns true. Alternativly you can
@@ -1042,7 +991,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (wrappers == null) {
             return null;
         }
-        final ConduitStreamSinkChannel sinkChannel = connection.getChannel().getSinkChannel();
+        final ConduitStreamSinkChannel sinkChannel = connection.getSinkChannel();
+        if(sinkChannel == null) {
+            return null;
+        }
         final WrapperConduitFactory<StreamSinkConduit> factory = new WrapperConduitFactory<StreamSinkConduit>(wrappers, responseWrapperCount, sinkChannel.getConduit(), this);
         sinkChannel.setConduit(factory.create());
         this.responseChannel = new WriteDispatchChannel(sinkChannel);
@@ -1246,7 +1198,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 blockingHttpExchange.close();
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                IoUtils.safeClose(connection.getChannel());
+                IoUtils.safeClose(connection);
             }
         }
 
@@ -1284,7 +1236,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                                         @Override
                                         public void handleException(final StreamSourceChannel channel, final IOException e) {
                                             UndertowLogger.REQUEST_LOGGER.debug("Exception draining request stream", e);
-                                            IoUtils.safeClose(connection.getChannel());
+                                            IoUtils.safeClose(connection);
                                         }
                                     }
                             ));
@@ -1298,7 +1250,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                     }
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                    IoUtils.safeClose(connection.getChannel());
+                    IoUtils.safeClose(connection);
                     break;
                 }
 
@@ -1328,7 +1280,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                             @Override
                             public void handleException(final Channel channel, final IOException exception) {
                                 UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", exception);
-                                IoUtils.safeClose(connection.getChannel());
+                                IoUtils.safeClose(connection);
                             }
                         }
                 ));
@@ -1336,7 +1288,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-            IoUtils.safeClose(connection.getChannel());
+            IoUtils.safeClose(connection);
         }
     }
 
