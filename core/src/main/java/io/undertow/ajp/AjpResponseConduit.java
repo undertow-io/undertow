@@ -310,6 +310,7 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                 for (ByteBuffer buffer : buffers) {
                     toWrite += buffer.remaining();
                 }
+                final int originalPayloadSize = writeSize;
                 int total = 0;
                 long r = 0;
                 do {
@@ -332,10 +333,10 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         this.packetHeaderAndDataBuffer = savedBuffers;
                         this.currentDataBuffer = newPooledBuffer;
 
-                        return writeSize;
+                        return originalPayloadSize;
                     }
                 } while (toWrite > 0);
-                return total;
+                return originalPayloadSize;
             } finally {
                 src.limit(limit);
             }
