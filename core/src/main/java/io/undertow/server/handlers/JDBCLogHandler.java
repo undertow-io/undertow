@@ -1,8 +1,6 @@
 package io.undertow.server.handlers;
 
 import io.undertow.UndertowLogger;
-import io.undertow.attribute.ExchangeAttributes;
-import io.undertow.attribute.RequestHeaderAttribute;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
@@ -12,7 +10,11 @@ import io.undertow.util.HttpString;
 
 import java.io.Closeable;
 import java.net.InetSocketAddress;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
