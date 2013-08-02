@@ -49,10 +49,35 @@ public class AjpParser {
     public static final int SHUTDOWN = 7;
 
 
-
     private static final HttpString[] HTTP_METHODS;
     private static final HttpString[] HTTP_HEADERS;
     private static final String[] ATTRIBUTES;
+
+    public static final String QUERY_STRING = "query_string";
+
+    public static final String SSL_CERT = "ssl_cert";
+
+    public static final String CONTEXT = "context";
+
+    public static final String SERVLET_PATH = "servlet_path";
+
+    public static final String REMOTE_USER = "remote_user";
+
+    public static final String AUTH_TYPE = "auth_type";
+
+    public static final String ROUTE = "route";
+
+    public static final String SSL_CIPHER = "ssl_cipher";
+
+    public static final String SSL_SESSION = "ssl_session";
+
+    public static final String REQ_ATTRIBUTE = "req_attribute";
+
+    public static final String SSL_KEY_SIZE = "ssl_key_size";
+
+    public static final String SECRET = "secret";
+
+    public static final String STORED_METHOD = "stored_method";
 
     static {
         HTTP_METHODS = new HttpString[28];
@@ -102,19 +127,19 @@ public class AjpParser {
         HTTP_HEADERS[0xE] = Headers.USER_AGENT;
 
         ATTRIBUTES = new String[0xE];
-        ATTRIBUTES[1] = "context";
-        ATTRIBUTES[2] = "servlet_path";
-        ATTRIBUTES[3] = "remote_user";
-        ATTRIBUTES[4] = "auth_type";
-        ATTRIBUTES[5] = "query_string";
-        ATTRIBUTES[6] = "route";
-        ATTRIBUTES[7] = "ssl_cert";
-        ATTRIBUTES[8] = "ssl_cipher";
-        ATTRIBUTES[9] = "ssl_session";
-        ATTRIBUTES[10] = "req_attribute";
-        ATTRIBUTES[11] = "ssl_key_size";
-        ATTRIBUTES[12] = "secret";
-        ATTRIBUTES[13] = "stored_method";
+        ATTRIBUTES[1] = CONTEXT;
+        ATTRIBUTES[2] = SERVLET_PATH;
+        ATTRIBUTES[3] = REMOTE_USER;
+        ATTRIBUTES[4] = AUTH_TYPE;
+        ATTRIBUTES[5] = QUERY_STRING;
+        ATTRIBUTES[6] = ROUTE;
+        ATTRIBUTES[7] = SSL_CERT;
+        ATTRIBUTES[8] = SSL_CIPHER;
+        ATTRIBUTES[9] = SSL_SESSION;
+        ATTRIBUTES[10] = REQ_ATTRIBUTE;
+        ATTRIBUTES[11] = SSL_KEY_SIZE;
+        ATTRIBUTES[12] = SECRET;
+        ATTRIBUTES[13] = STORED_METHOD;
     }
 
 
@@ -301,33 +326,35 @@ public class AjpParser {
                         return;
                     }
                     //query string.
-                    if(state.currentAttribute.equals(ATTRIBUTES[5])) {
+                    if (state.currentAttribute.equals(QUERY_STRING)) {
                         String res = result.value;
                         exchange.setQueryString(res == null ? "" : res);
                         int stringStart = 0;
                         String attrName = null;
                         for (int i = 0; i < res.length(); ++i) {
                             char c = res.charAt(i);
-                            if(c == '=' && attrName == null) {
+                            if (c == '=' && attrName == null) {
                                 attrName = res.substring(stringStart, i);
-                                stringStart = i+1;
-                            } else if(c == '&') {
-                                if(attrName != null) {
+                                stringStart = i + 1;
+                            } else if (c == '&') {
+                                if (attrName != null) {
                                     exchange.addQueryParam(attrName, res.substring(stringStart, i));
                                 } else {
                                     exchange.addQueryParam(res.substring(stringStart, i), "");
                                 }
-                                stringStart = i+1;
+                                stringStart = i + 1;
                                 attrName = null;
                             }
                         }
-                        if(attrName != null) {
+                        if (attrName != null) {
                             exchange.addQueryParam(attrName, res.substring(stringStart, res.length()));
-                        } else if(res.length() != stringStart) {
+                        } else if (res.length() != stringStart) {
                             exchange.addQueryParam(res.substring(stringStart, res.length()), "");
                         }
+                    } else {
+                        //other attributes
+                        state.attributes.put(state.currentAttribute, result.value);
                     }
-                    //TODO: do something with the attributes
                     state.currentAttribute = null;
                 }
             }

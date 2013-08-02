@@ -205,6 +205,9 @@ public interface UndertowMessages {
     @Message(id = 60, value = "Error parsing handler string %s:%n%s")
     IllegalArgumentException errorParsingHandlerString(String reason, String s);
 
-    @Message(id = 6, value = "Out of band responses only allowed for 100-continue requests")
+    @Message(id = 61, value = "Out of band responses only allowed for 100-continue requests")
     IllegalArgumentException outOfBandResponseOnlyAllowedFor100Continue();
+
+    @Message(id = 62, value = "AJP does not support HTTP upgrade")
+    IllegalStateException ajpDoesNotSupportHTTPUpgrade();
 }
