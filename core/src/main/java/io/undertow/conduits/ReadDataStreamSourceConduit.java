@@ -1,11 +1,6 @@
 package io.undertow.conduits;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-
-import io.undertow.server.HttpServerConnection;
+import io.undertow.server.AbstractServerConnection;
 import org.xnio.Buffers;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
@@ -14,14 +9,19 @@ import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitReadableByteChannel;
 import org.xnio.conduits.StreamSourceConduit;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+
 /**
  * @author Stuart Douglas
  */
 public class ReadDataStreamSourceConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
 
-    private final HttpServerConnection connection;
+    private final AbstractServerConnection connection;
 
-    public ReadDataStreamSourceConduit(final StreamSourceConduit next, final HttpServerConnection connection) {
+    public ReadDataStreamSourceConduit(final StreamSourceConduit next, final AbstractServerConnection connection) {
         super(next);
         this.connection = connection;
     }

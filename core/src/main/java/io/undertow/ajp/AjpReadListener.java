@@ -5,9 +5,9 @@ import io.undertow.UndertowOptions;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.EmptyStreamSourceConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandlers;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -226,14 +226,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
     @Override
     public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
         startRequest();
-        ConduitStreamSourceChannel channel = ((HttpServerConnection)exchange.getConnection()).getChannel().getSourceChannel();
+        ConduitStreamSourceChannel channel = ((AjpServerConnection)exchange.getConnection()).getChannel().getSourceChannel();
         channel.getReadSetter().set(this);
         channel.wakeupReads();
         nextListener.proceed();
     }
 
     private StreamSourceConduit createSourceConduit(StreamSourceConduit underlyingConduit, AjpResponseConduit responseConduit, final HttpServerExchange exchange) {
-        ReadDataStreamSourceConduit conduit = new ReadDataStreamSourceConduit(underlyingConduit, (HttpServerConnection) exchange.getConnection());
+        ReadDataStreamSourceConduit conduit = new ReadDataStreamSourceConduit(underlyingConduit, (AbstractServerConnection) exchange.getConnection());
 
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         HttpString transferEncoding = Headers.IDENTITY;
