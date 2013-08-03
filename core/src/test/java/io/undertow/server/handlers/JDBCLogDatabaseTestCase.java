@@ -89,6 +89,7 @@ public class JDBCLogDatabaseTestCase {
             Assert.assertEquals("127.0.0.1", resultDatabase.getString(logHandler.getRemoteHostField()));
             Assert.assertEquals("5", resultDatabase.getString(logHandler.getBytesField()));
             Assert.assertEquals("200", resultDatabase.getString(logHandler.getStatusField()));
+            conn.createStatement().executeUpdate("DROP TABLE PUBLIC.ACCESS;");
             conn.close();
             client.getConnectionManager().shutdown();
         }
@@ -163,6 +164,7 @@ public class JDBCLogDatabaseTestCase {
         resultDatabase.next();
         Assert.assertEquals(resultDatabase.getInt(1), NUM_REQUESTS * NUM_THREADS);
 
+        conn.createStatement().executeUpdate("DROP TABLE PUBLIC.ACCESS;");
         conn.close();
 
     }
