@@ -2,6 +2,10 @@ package io.undertow.ajp;
 
 import io.undertow.util.HttpString;
 
+import java.security.cert.CertificateException;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @author Stuart Douglas
  */
@@ -45,7 +49,28 @@ import io.undertow.util.HttpString;
 
     String currentAttribute;
 
+    //TODO: can there be more than one attribute?
+    Map<String, String> attributes = new HashMap<String, String>();
+
     public boolean isComplete() {
         return state == 15;
+    }
+
+    AjpSSLSessionInfo createSslSessionInfo() {
+        String sessionId = attributes.get(AjpParser.SSL_SESSION);
+        String cypher = attributes.get(AjpParser.SSL_CIPHER);
+        String cert = attributes.get(AjpParser.SSL_CERT);
+        if (sessionId == null ||
+                cypher == null ||
+                cert == null) {
+            return null;
+        }
+        try {
+            return new AjpSSLSessionInfo(sessionId.getBytes(), cypher, cert.getBytes());
+        } catch (CertificateException e) {
+            return null;
+        } catch (javax.security.cert.CertificateException e) {
+            return null;
+        }
     }
 }

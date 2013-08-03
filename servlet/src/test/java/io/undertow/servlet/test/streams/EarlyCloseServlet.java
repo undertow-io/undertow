@@ -25,7 +25,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import io.undertow.server.HttpServerConnection;
+import io.undertow.server.ServerConnection;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.testutils.DefaultServer;
@@ -37,7 +37,7 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class EarlyCloseServlet extends HttpServlet {
 
-    private static volatile HttpServerConnection connection;
+    private static volatile ServerConnection connection;
 
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {

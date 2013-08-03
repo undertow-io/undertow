@@ -12,13 +12,13 @@ import io.undertow.util.CopyOnWriteMap;
  *
  * @author Stuart Douglas
  */
-public class Filters {
+public class ManagedFilters {
 
     private final Map<String, ManagedFilter> managedFilterMap = new CopyOnWriteMap<String, ManagedFilter>();
     private final DeploymentImpl deployment;
     private final ServletPathMatches servletPathMatches;
 
-    public Filters(final DeploymentImpl deployment, final ServletPathMatches servletPathMatches) {
+    public ManagedFilters(final DeploymentImpl deployment, final ServletPathMatches servletPathMatches) {
         this.deployment = deployment;
         this.servletPathMatches = servletPathMatches;
     }

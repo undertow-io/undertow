@@ -31,6 +31,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
+import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.StreamSourceConduit;
@@ -149,7 +150,8 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
             this.httpServerExchange = null;
-            HttpTransferEncoding.handleRequest(httpServerExchange, connection.getRootHandler());
+            HttpTransferEncoding.setupRequest(httpServerExchange);
+            HttpHandlers.executeRootHandler(connection.getRootHandler(), httpServerExchange, Thread.currentThread() instanceof XnioExecutor);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);
         } finally {
@@ -171,10 +173,11 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
     @Override
     public void exchangeEvent(final HttpServerExchange exchange, final ExchangeCompletionListener.NextListener nextListener) {
         connection.resetChannel();
+        final HttpServerConnection connection = this.connection;
         if (exchange.isPersistent() && !exchange.isUpgrade()) {
             newRequest();
-            StreamConnection channel = exchange.getConnection().getChannel();
-            if (exchange.getConnection().getExtraBytes() == null) {
+            StreamConnection channel = connection.getChannel();
+            if (connection.getExtraBytes() == null) {
                 //if we are not pipelining we just register a listener
 
                 channel.getSourceChannel().getReadSetter().set(this);
@@ -193,7 +196,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                     executor.execute(this);
                 }
             }
-        } else if(exchange.isUpgrade() && exchange.getConnection().getExtraBytes() != null) {
+        } else if(exchange.isUpgrade() && connection.getExtraBytes() != null) {
             //if this is a HTTP upgrade request and there are extra bytes make the extra bytes available
             StreamSourceConduit conduit = connection.getChannel().getSourceChannel().getConduit();
             connection.getChannel().getSourceChannel().setConduit(new ReadDataStreamSourceConduit(conduit, connection));

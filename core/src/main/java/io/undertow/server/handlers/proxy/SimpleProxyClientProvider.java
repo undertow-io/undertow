@@ -3,8 +3,8 @@ package io.undertow.server.handlers.proxy;
 import io.undertow.client.HttpClient;
 import io.undertow.client.HttpClientConnection;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.SameThreadExecutor;
 import org.xnio.IoFuture;
@@ -74,14 +74,14 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
         }
 
         public void handleDone(final HttpClientConnection connection, final HttpServerExchange exchange) {
-            final HttpServerConnection serverConnection = exchange.getConnection();
+            final ServerConnection serverConnection = exchange.getConnection();
             final SimpleProxyClient simpleProxyClient = new SimpleProxyClient(connection);
             //we attach to the connection so it can be re-used
             serverConnection.putAttachment(clientAttachmentKey, simpleProxyClient);
             exchange.putAttachment(CLIENT, simpleProxyClient);
-            serverConnection.addCloseListener(new HttpServerConnection.CloseListener() {
+            serverConnection.addCloseListener(new ServerConnection.CloseListener() {
                 @Override
-                public void closed(HttpServerConnection connection) {
+                public void closed(ServerConnection connection) {
                     IoUtils.safeClose(serverConnection);
                 }
             });

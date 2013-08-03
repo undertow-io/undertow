@@ -1,16 +1,13 @@
 package io.undertow.ajp;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.EmptyStreamSourceConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandlers;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -27,6 +24,9 @@ import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSourceConduit;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import static org.xnio.IoUtils.safeClose;
 
 /**
@@ -37,7 +37,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
 
     private static final byte[] CPONG = {'A', 'B', 0, 1, 9}; //CPONG response data
 
-    private final HttpServerConnection connection;
+    private final AjpServerConnection connection;
     private final String scheme;
     private AjpParseState state = new AjpParseState();
     private HttpServerExchange httpServerExchange;
@@ -45,7 +45,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
     private volatile int read = 0;
     private final int maxRequestSize;
 
-    AjpReadListener(final HttpServerConnection connection, final String scheme) {
+    AjpReadListener(final AjpServerConnection connection, final String scheme) {
         this.connection = connection;
         this.scheme = scheme;
         maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
@@ -162,6 +162,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
             connection.getChannel().getSourceChannel().setConduit(createSourceConduit(connection.getChannel().getSourceChannel().getConduit(), responseConduit, httpServerExchange));
 
             try {
+                connection.setSSLSessionInfo(state.createSslSessionInfo());
                 state = null;
                 this.httpServerExchange = null;
                 httpServerExchange.setPersistent(true);
@@ -225,14 +226,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
     @Override
     public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
         startRequest();
-        ConduitStreamSourceChannel channel = exchange.getConnection().getChannel().getSourceChannel();
+        ConduitStreamSourceChannel channel = ((AjpServerConnection)exchange.getConnection()).getChannel().getSourceChannel();
         channel.getReadSetter().set(this);
         channel.wakeupReads();
         nextListener.proceed();
     }
 
     private StreamSourceConduit createSourceConduit(StreamSourceConduit underlyingConduit, AjpResponseConduit responseConduit, final HttpServerExchange exchange) {
-        ReadDataStreamSourceConduit conduit = new ReadDataStreamSourceConduit(underlyingConduit, exchange.getConnection());
+        ReadDataStreamSourceConduit conduit = new ReadDataStreamSourceConduit(underlyingConduit, (AbstractServerConnection) exchange.getConnection());
 
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         HttpString transferEncoding = Headers.IDENTITY;

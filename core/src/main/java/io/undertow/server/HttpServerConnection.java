@@ -18,29 +18,18 @@
 
 package io.undertow.server;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.util.LinkedList;
-import java.util.List;
-
-import javax.net.ssl.SSLSession;
-
-import io.undertow.UndertowLogger;
-import io.undertow.util.AbstractAttachable;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.Option;
+import io.undertow.UndertowMessages;
+import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.channels.ConnectedChannel;
 import org.xnio.channels.SslChannel;
-import org.xnio.conduits.StreamSinkConduit;
-import org.xnio.conduits.StreamSourceConduit;
+
+import javax.net.ssl.SSLSession;
+import java.nio.ByteBuffer;
 
 /**
  * A server-side HTTP connection.
@@ -50,222 +39,111 @@ import org.xnio.conduits.StreamSourceConduit;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HttpServerConnection extends AbstractAttachable implements ConnectedChannel {
-    private final StreamConnection channel;
-    private final CloseSetter closeSetter;
-    private final Pool<ByteBuffer> bufferPool;
-    private final HttpHandler rootHandler;
-    private final OptionMap undertowOptions;
-    private final StreamSourceConduit originalSourceConduit;
-    private final StreamSinkConduit originalSinkConduit;
-    private final List<CloseListener> closeListeners = new LinkedList<CloseListener>();
-
-    private final int bufferSize;
-    /**
-     * Any extra bytes that were read from the channel. This could be data for this requests, or the next response.
-     */
-    private Pooled<ByteBuffer> extraBytes;
+public final class HttpServerConnection extends AbstractServerConnection implements ServerConnection {
 
     public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
-        this.channel = channel;
-        this.bufferPool = bufferPool;
-        this.rootHandler = rootHandler;
-        this.undertowOptions = undertowOptions;
-        this.bufferSize = bufferSize;
-        closeSetter = new CloseSetter();
-        if (channel != null) {
-            this.originalSinkConduit = channel.getSinkChannel().getConduit();
-            this.originalSourceConduit = channel.getSourceChannel().getConduit();
-            channel.setCloseListener(closeSetter);
-        } else {
-            this.originalSinkConduit = null;
-            this.originalSourceConduit = null;
-        }
-    }
-
-    /**
-     * Get the root HTTP handler for this connection.
-     *
-     * @return the root HTTP handler for this connection
-     */
-    public HttpHandler getRootHandler() {
-        return rootHandler;
-    }
-
-    /**
-     * Get the buffer pool for this connection.
-     *
-     * @return the buffer pool for this connection
-     */
-    public Pool<ByteBuffer> getBufferPool() {
-        return bufferPool;
-    }
-
-    /**
-     * Get the underlying channel.
-     *
-     * @return the underlying channel
-     */
-    public StreamConnection getChannel() {
-        return channel;
-    }
-
-    public ChannelListener.Setter<HttpServerConnection> getCloseSetter() {
-        return closeSetter;
-    }
-
-    public XnioWorker getWorker() {
-        return channel.getWorker();
+        super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
     }
 
     @Override
-    public XnioIoThread getIoThread() {
-        if(channel == null) {
-            return null;
+    public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
+        if (exchange == null || !HttpContinue.requiresContinueResponse(exchange)) {
+            throw UndertowMessages.MESSAGES.outOfBandResponseOnlyAllowedFor100Continue();
         }
-        return channel.getIoThread();
-    }
+        final ConduitState state = resetChannel();
+        HttpServerExchange newExchange = new HttpServerExchange(this);
+        for (HttpString header : exchange.getRequestHeaders().getHeaderNames()) {
+            newExchange.getRequestHeaders().putAll(header, exchange.getRequestHeaders().get(header));
+        }
+        newExchange.setProtocol(exchange.getProtocol());
+        newExchange.setRequestMethod(exchange.getRequestMethod());
+        newExchange.setParsedRequestPath(exchange.getRequestPath());
+        newExchange.getRequestHeaders().put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
+        newExchange.getRequestHeaders().put(Headers.CONTENT_LENGTH, 0);
 
-    public boolean isOpen() {
-        return channel.isOpen();
-    }
+        //apply transfer encoding rules
+        HttpTransferEncoding.setupRequest(newExchange);
 
-    public boolean supportsOption(final Option<?> option) {
-        return channel.supportsOption(option);
-    }
-
-    public <T> T getOption(final Option<T> option) throws IOException {
-        return channel.getOption(option);
-    }
-
-    public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
-        return channel.setOption(option, value);
-    }
-
-    public void close() throws IOException {
-        channel.close();
-    }
-
-    public SocketAddress getPeerAddress() {
-        return channel.getPeerAddress();
-    }
-
-    public <A extends SocketAddress> A getPeerAddress(final Class<A> type) {
-        return channel.getPeerAddress(type);
-    }
-
-    public SocketAddress getLocalAddress() {
-        return channel.getLocalAddress();
-    }
-
-    public <A extends SocketAddress> A getLocalAddress(final Class<A> type) {
-        return channel.getLocalAddress(type);
-    }
-
-    public OptionMap getUndertowOptions() {
-        return undertowOptions;
+        newExchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+            @Override
+            public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                restoreChannel(state);
+            }
+        });
+        return newExchange;
     }
 
     /**
-     * @return The size of the buffers allocated by the buffer pool
+     * Pushes back the given data. This should only be used by transfer coding handlers that have read past
+     * the end of the request when handling pipelined requests
+     *
+     * @param unget The buffer to push back
      */
-    public int getBufferSize() {
-        return bufferSize;
+    public void ungetRequestBytes(final Pooled<ByteBuffer> unget) {
+        if (getExtraBytes() == null) {
+            setExtraBytes(unget);
+        } else {
+            Pooled<ByteBuffer> eb = getExtraBytes();
+            ByteBuffer buf = eb.getResource();
+            final ByteBuffer ugBuffer = unget.getResource();
+
+            if (ugBuffer.limit() - ugBuffer.remaining() > buf.remaining()) {
+                //stuff the existing data after the data we are ungetting
+                ugBuffer.compact();
+                ugBuffer.put(buf);
+                ugBuffer.flip();
+                eb.free();
+                setExtraBytes(unget);
+            } else {
+                //TODO: this is horrible, but should not happen often
+                final byte[] data = new byte[ugBuffer.remaining() + buf.remaining()];
+                int first = ugBuffer.remaining();
+                ugBuffer.get(data, 0, ugBuffer.remaining());
+                buf.get(data, first, buf.remaining());
+                eb.free();
+                unget.free();
+                final ByteBuffer newBuffer = ByteBuffer.wrap(data);
+                setExtraBytes(new Pooled<ByteBuffer>() {
+                    @Override
+                    public void discard() {
+
+                    }
+
+                    @Override
+                    public void free() {
+
+                    }
+
+                    @Override
+                    public ByteBuffer getResource() throws IllegalStateException {
+                        return newBuffer;
+                    }
+                });
+            }
+        }
+    }
+
+    @Override
+    public SSLSessionInfo getSslSessionInfo() {
+        if (channel instanceof SslChannel) {
+            return new DefaultSslSessionInfo(((SslChannel) channel).getSslSession());
+        }
+        return null;
     }
 
     public SSLSession getSslSession() {
         if (channel instanceof SslChannel) {
             return ((SslChannel) channel).getSslSession();
         }
-
         return null;
     }
 
-    public Pooled<ByteBuffer> getExtraBytes() {
-        return extraBytes;
-    }
-
-    public void setExtraBytes(final Pooled<ByteBuffer> extraBytes) {
-        this.extraBytes = extraBytes;
-    }
-
-    /**
-     * @return The original source conduit
-     */
-    public StreamSourceConduit getOriginalSourceConduit() {
-        return originalSourceConduit;
-    }
-
-    /**
-     * @return The original underlying sink conduit
-     */
-    public StreamSinkConduit getOriginalSinkConduit() {
-        return originalSinkConduit;
-    }
-
-    /**
-     * Resets the channel to its original state, effectively disabling all current conduit
-     * wrappers. The current state is encapsulated inside a {@link ConduitState} object that
-     * can be used the restore the channel.
-     *
-     * @return An opaque representation of the previous channel state
-     */
-    public ConduitState resetChannel() {
-        ConduitState ret = new ConduitState(channel.getSinkChannel().getConduit(), channel.getSourceChannel().getConduit());
-        channel.getSinkChannel().setConduit(originalSinkConduit);
-        channel.getSourceChannel().setConduit(originalSourceConduit);
-        return ret;
-    }
-
-    /**
-     * Resores the channel conduits to a previous state.
-     *
-     * @param state The original state
-     * @see #resetChannel()
-     */
-    public void restoreChannel(final ConduitState state) {
-        channel.getSinkChannel().setConduit(state.sink);
-        channel.getSourceChannel().setConduit(state.source);
-    }
-
-    public static class ConduitState {
-        final StreamSinkConduit sink;
-        final StreamSourceConduit source;
-
-        private ConduitState(final StreamSinkConduit sink, final StreamSourceConduit source) {
-            this.sink = sink;
-            this.source = source;
+    @Override
+    public StreamConnection upgradeChannel() {
+        resetChannel();
+        if (extraBytes != null) {
+            channel.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(channel.getSourceChannel().getConduit(), this));
         }
-    }
-
-    public void addCloseListener(CloseListener listener) {
-        this.closeListeners.add(listener);
-    }
-
-    public interface CloseListener {
-
-        void closed(final HttpServerConnection connection);
-    }
-
-    private class CloseSetter implements ChannelListener.Setter<HttpServerConnection>, ChannelListener<StreamConnection> {
-
-        private ChannelListener<? super HttpServerConnection> listener;
-
-        @Override
-        public void set(ChannelListener<? super HttpServerConnection> listener) {
-            this.listener = listener;
-        }
-
-        @Override
-        public void handleEvent(StreamConnection channel) {
-            for (CloseListener l : closeListeners) {
-                try {
-                    l.closed(HttpServerConnection.this);
-                } catch (Throwable e) {
-                    UndertowLogger.REQUEST_LOGGER.exceptionInvokingCloseListener(l, e);
-                }
-            }
-            ChannelListeners.invokeChannelListener(HttpServerConnection.this, listener);
-        }
+        return channel;
     }
 }

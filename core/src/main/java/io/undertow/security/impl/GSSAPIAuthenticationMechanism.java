@@ -34,8 +34,8 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.GSSContextCredential;
 import io.undertow.security.idm.IdentityManager;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.FlexBase64;
 import org.ietf.jgss.GSSContext;
@@ -75,7 +75,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
     @Override
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
                                                        final SecurityContext securityContext) {
-        HttpServerConnection connection = exchange.getConnection();
+        ServerConnection connection = exchange.getConnection();
         NegotiationContext negContext = connection.getAttachment(NegotiationContext.ATTACHMENT_KEY);
         if (negContext != null) {
             exchange.putAttachment(NegotiationContext.ATTACHMENT_KEY, negContext);

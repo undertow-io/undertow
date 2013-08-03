@@ -1,14 +1,13 @@
 package io.undertow.servlet.handlers.security;
 
-import java.io.ByteArrayInputStream;
-import java.security.cert.X509Certificate;
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLSession;
-import javax.servlet.ServletRequest;
-
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.SSLSessionInfo;
 import io.undertow.servlet.handlers.ServletRequestContext;
+
+import javax.servlet.ServletRequest;
+import java.io.ByteArrayInputStream;
+import java.security.cert.X509Certificate;
 
 /**
  * Handler that associates SSL metadata with request
@@ -72,12 +71,13 @@ public class SSLInformationAssociationHandler implements HttpHandler {
      *
      * We convert JSSE's javax.security.cert.X509Certificate[]  to servlet's  java.security.cert.X509Certificate[]
      *
+     *
      * @param session the   javax.net.ssl.SSLSession to use as the source of the cert chain.
      * @return the chain of java.security.cert.X509Certificates used to
      *         negotiate the SSL connection. <br>
      *         Will be null if the chain is missing or empty.
      */
-    private X509Certificate[] getCerts(SSLSession session) {
+    private X509Certificate[] getCerts(SSLSessionInfo session) {
         try {
             javax.security.cert.X509Certificate[] javaxCerts = session.getPeerCertificateChain();
             if (javaxCerts == null || javaxCerts.length == 0) {
@@ -92,8 +92,6 @@ public class SSLInformationAssociationHandler implements HttpHandler {
             }
 
             return javaCerts;
-        } catch (SSLPeerUnverifiedException pue) {
-            return null;
         } catch (Exception e) {
             return null;
         }
@@ -102,7 +100,7 @@ public class SSLInformationAssociationHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         ServletRequest request = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletRequest();
-                SSLSession ssl = exchange.getConnection().getSslSession();
+        SSLSessionInfo ssl = exchange.getConnection().getSslSessionInfo();
         if (ssl != null) {
             request.setAttribute("javax.servlet.request.cipher_suite", ssl.getCipherSuite());
             request.setAttribute("javax.servlet.request.key_size", getKeyLenght(ssl.getCipherSuite()));

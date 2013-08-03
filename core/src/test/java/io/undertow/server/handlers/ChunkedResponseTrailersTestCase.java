@@ -18,22 +18,17 @@
 
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.concurrent.atomic.AtomicReference;
-
 import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import io.undertow.util.StringWriteChannelListener;
-import io.undertow.testutils.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -46,6 +41,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicReference;
+
 /**
  * @author Stuart Douglas
  */
@@ -57,7 +57,7 @@ public class ChunkedResponseTrailersTestCase {
 
     private static volatile String message;
 
-    private static volatile HttpServerConnection connection;
+    private static volatile ServerConnection connection;
 
     @BeforeClass
     public static void setup() {
@@ -69,7 +69,7 @@ public class ChunkedResponseTrailersTestCase {
                 try {
                     if (connection == null) {
                         connection = exchange.getConnection();
-                    } else if (!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()) {
+                    } else if (!DefaultServer.isAjp() && connection != exchange.getConnection()) {
                         final OutputStream outputStream = exchange.getOutputStream();
                         outputStream.write("Connection not persistent".getBytes());
                         outputStream.close();
@@ -96,7 +96,7 @@ public class ChunkedResponseTrailersTestCase {
         final AtomicReference<ChunkedInputStream> stream = new AtomicReference<ChunkedInputStream>();
         client.addResponseInterceptor(new HttpResponseInterceptor() {
 
-            public void process( final HttpResponse response, final HttpContext context) throws IOException {
+            public void process(final HttpResponse response, final HttpContext context) throws IOException {
                 HttpEntity entity = response.getEntity();
                 if (entity != null) {
                     InputStream instream = entity.getContent();

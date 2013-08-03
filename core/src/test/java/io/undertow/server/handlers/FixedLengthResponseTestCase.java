@@ -18,22 +18,22 @@
 
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.Headers;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 /**
  * Tests that persistent connections work with fixed length responses
@@ -47,7 +47,7 @@ public class FixedLengthResponseTestCase {
 
     private static volatile String message;
 
-    private static volatile HttpServerConnection connection;
+    private static volatile ServerConnection connection;
 
     @BeforeClass
     public static void setup() {
@@ -57,7 +57,7 @@ public class FixedLengthResponseTestCase {
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 if (connection == null) {
                     connection = exchange.getConnection();
-                } else if (!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()) {
+                } else if (!DefaultServer.isAjp() && connection != exchange.getConnection()) {
                     Sender sender = exchange.getResponseSender();
                     sender.send("Connection not persistent");
                     return;

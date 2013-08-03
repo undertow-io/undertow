@@ -11,6 +11,8 @@ import io.undertow.servlet.core.Lifecycle;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 
+import javax.servlet.http.HttpSessionActivationListener;
+import javax.servlet.http.HttpSessionEvent;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
@@ -78,9 +80,14 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
             for (String sessionId : sessionIds) {
                 Session session = sessionManager.getSession(sessionId);
                 if (session != null) {
+                    final HttpSessionEvent event = new HttpSessionEvent(HttpSessionImpl.forSession(session, servletContext, false));
                     final Map<String, Object> sessionData = new HashMap<String, Object>();
                     for (String attr : session.getAttributeNames()) {
-                        sessionData.put(attr, session.getAttribute(attr));
+                        final Object attribute = session.getAttribute(attr);
+                        sessionData.put(attr, attribute);
+                        if (attribute instanceof HttpSessionActivationListener) {
+                            ((HttpSessionActivationListener) attribute).sessionWillPassivate(event);
+                        }
                     }
                     objectData.put(sessionId, sessionData);
                 }
@@ -97,7 +104,7 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         final String incomingSessionId = servletContext.getSessionConfig().findSessionId(exchange);
-        if (incomingSessionId == null || sessionIds.contains(incomingSessionId)) {
+        if (incomingSessionId == null || !data.containsKey(incomingSessionId)) {
             next.handleRequest(exchange);
             return;
         }
@@ -106,7 +113,12 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
         Map<String, Object> result = data.remove(incomingSessionId);
         if (result != null) {
             final HttpSessionImpl session = servletContext.getSession(exchange, true);
+            final HttpSessionEvent event = new HttpSessionEvent(session);
             for (Map.Entry<String, Object> entry : result.entrySet()) {
+
+                if (entry.getValue() instanceof HttpSessionActivationListener) {
+                    ((HttpSessionActivationListener) entry.getValue()).sessionWillPassivate(event);
+                }
                 session.setAttribute(entry.getKey(), entry.getValue());
             }
         }

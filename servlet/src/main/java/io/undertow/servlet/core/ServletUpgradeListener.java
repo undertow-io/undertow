@@ -1,8 +1,8 @@
 package io.undertow.servlet.core;
 
 import io.undertow.server.ExchangeCompletionListener;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.spec.WebConnectionImpl;
 import org.xnio.StreamConnection;
@@ -23,10 +23,10 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Exc
 
     @Override
     public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-        final StreamConnection channel = exchange.getConnection().getChannel();
-        exchange.getConnection().addCloseListener(new HttpServerConnection.CloseListener() {
+        final StreamConnection channel = exchange.getConnection().upgradeChannel();
+        exchange.getConnection().addCloseListener(new ServerConnection.CloseListener() {
             @Override
-            public void closed(HttpServerConnection connection) {
+            public void closed(ServerConnection connection) {
                 try {
                     instance.getInstance().destroy();
                 } finally {

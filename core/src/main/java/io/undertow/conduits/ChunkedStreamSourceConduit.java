@@ -26,6 +26,7 @@ import java.nio.channels.FileChannel;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.client.HttpClientRequest;
+import io.undertow.server.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
@@ -103,7 +104,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
             @Override
             public void pushBack(Pooled<ByteBuffer> pooled) {
-                exchange.ungetRequestBytes(pooled);
+                ((HttpServerConnection)exchange.getConnection()).ungetRequestBytes(pooled);
             }
         }, finishListener, exchange, exchange);
     }

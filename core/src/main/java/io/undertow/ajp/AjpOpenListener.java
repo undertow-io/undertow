@@ -1,15 +1,14 @@
 package io.undertow.ajp;
 
-import java.nio.ByteBuffer;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerConnection;
 import io.undertow.server.OpenListener;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
+
+import java.nio.ByteBuffer;
 
 /**
  * @author Stuart Douglas
@@ -40,7 +39,7 @@ public class AjpOpenListener implements OpenListener {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
 
-        HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
+        AjpServerConnection connection = new AjpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         AjpReadListener readListener = new AjpReadListener(connection, scheme);
         readListener.startRequest();
         channel.getSourceChannel().setReadListener(readListener);

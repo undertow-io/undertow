@@ -18,22 +18,22 @@
 
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-import java.io.OutputStream;
-
-import io.undertow.server.HttpServerConnection;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.StringWriteChannelListener;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StringWriteChannelListener;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * @author Stuart Douglas
@@ -45,7 +45,7 @@ public class ChunkedResponseTransferCodingTestCase {
 
     private static volatile String message;
 
-    private static volatile HttpServerConnection connection;
+    private static volatile ServerConnection connection;
 
     @BeforeClass
     public static void setup() {
@@ -57,7 +57,7 @@ public class ChunkedResponseTransferCodingTestCase {
                 try {
                     if(connection == null) {
                         connection = exchange.getConnection();
-                    } else if(!DefaultServer.isAjp() && connection.getChannel() != exchange.getConnection().getChannel()){
+                    } else if(!DefaultServer.isAjp() && connection != exchange.getConnection()){
                         final OutputStream outputStream = exchange.getOutputStream();
                         outputStream.write("Connection not persistent".getBytes());
                         outputStream.close();
