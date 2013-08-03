@@ -215,6 +215,9 @@ public class SecurityContextImpl implements SecurityContext {
 
     @Override
     public void logout() {
+        if(!isAuthenticated()) {
+            return;
+        }
         sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.LOGGED_OUT, account, mechanismName, true,
                 MESSAGES.userLoggedOut(account.getPrincipal().getName())));
 
