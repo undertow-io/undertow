@@ -104,6 +104,13 @@ public class FileSystemWatcher {
         fileSystemWatcherTask.addPath(file, callback);
     }
 
+    public synchronized void removePath(final File file) {
+        if (!started) {
+            throw UndertowMessages.MESSAGES.fileSystemWatcherNotStarted();
+        }
+        fileSystemWatcherTask.removePath(file);
+    }
+
     private class FileSystemWatcherTask implements Runnable {
 
         volatile boolean stopped = false;
@@ -145,7 +152,11 @@ public class FileSystemWatcher {
         }
 
         public void addPath(File file, FileChangeCallback callback) {
-            watcher.addTarget(file, callback);
+            watcher.addPath(file, callback);
+        }
+
+        public void removePath(File file) {
+            watcher.removePath(file);
         }
     }
 
@@ -169,9 +180,9 @@ public class FileSystemWatcher {
 
         void watch() throws InterruptedException;
 
-        void addTarget(final File file, final FileChangeCallback contextKey);
+        void addPath(final File file, final FileChangeCallback contextKey);
 
-        void removeTarget(final File file);
+        void removePath(final File file);
 
         void shutdown();
     }
@@ -266,7 +277,7 @@ public class FileSystemWatcher {
         }
 
         @Override
-        public synchronized void addTarget(File file, FileChangeCallback contextKey) {
+        public synchronized void addPath(File file, FileChangeCallback contextKey) {
             try {
 
                 //all the holders share a keylist
@@ -291,7 +302,7 @@ public class FileSystemWatcher {
         }
 
         @Override
-        public synchronized void removeTarget(File file) {
+        public synchronized void removePath(File file) {
             Path path = Paths.get(file.toURI());
             WatcherHolder data = files.remove(path);
             if (data != null) {
@@ -380,12 +391,12 @@ public class FileSystemWatcher {
         }
 
         @Override
-        public void addTarget(File file, final FileChangeCallback contextKey) {
+        public void addPath(File file, final FileChangeCallback contextKey) {
             files.put(file.getAbsoluteFile(), new PollHolder(doScan(file, false), contextKey));
         }
 
         @Override
-        public void removeTarget(File file) {
+        public void removePath(File file) {
             files.remove(file);
         }
 
