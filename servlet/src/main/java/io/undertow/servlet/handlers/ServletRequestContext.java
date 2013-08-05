@@ -1,10 +1,12 @@
 package io.undertow.servlet.handlers;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.Deployment;
+import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.security.SingleConstraintMatch;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -12,6 +14,7 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.Headers;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletRequest;
@@ -19,10 +22,10 @@ import javax.servlet.ServletResponse;
 
 /**
  * All the information that servlet needs to attach to the exchange.
- *
+ * <p/>
  * This is all stored under this class, rather than using individual attachments, as
  * this approach has significant performance advantages.
- *
+ * <p/>
  * The {@link ServletInitialHandler} also pushed this information to the {@link #CURRENT}
  * thread local, which allows it to be access even if the request or response have been
  * wrapped with non-compliant wrapper classes.
@@ -43,7 +46,7 @@ public class ServletRequestContext {
 
     public static ServletRequestContext requireCurrent() {
         ServletRequestContext attachments = CURRENT.get();
-        if(attachments == null) {
+        if (attachments == null) {
             throw UndertowMessages.MESSAGES.noRequestActive();
         }
         return attachments;
@@ -172,5 +175,24 @@ public class ServletRequestContext {
 
     public void setCurrentServetContext(ServletContextImpl currentServetContext) {
         this.currentServetContext = currentServetContext;
+    }
+
+    public boolean displayStackTraces() {
+        ServletStackTraces mode = deployment.getDeploymentInfo().getServletStackTraces();
+        if (mode == ServletStackTraces.NONE) {
+            return false;
+        } else if (mode == ServletStackTraces.ALL) {
+            return true;
+        } else {
+            InetSocketAddress localAddress = getExchange().getSourceAddress();
+            if(localAddress == null) {
+                return false;
+            }
+            if(!localAddress.getAddress().isLoopbackAddress()) {
+                return false;
+            }
+            return !getExchange().getRequestHeaders().contains(Headers.X_FORWARDED_FOR);
+        }
+
     }
 }

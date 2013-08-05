@@ -28,6 +28,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -70,6 +71,7 @@ public class ErrorPageTestCase {
         builder1.setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setClassLoader(ErrorPageTestCase.class.getClassLoader())
                 .setContextPath("/servletContext1")
+                .setServletStackTraces(ServletStackTraces.NONE)
                 .setDeploymentName("servletContext1.war");
 
         final DeploymentManager manager1 = container.addDeployment(builder1);
@@ -94,6 +96,7 @@ public class ErrorPageTestCase {
         builder2.setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setClassLoader(ErrorPageTestCase.class.getClassLoader())
                 .setContextPath("/servletContext2")
+                .setServletStackTraces(ServletStackTraces.NONE)
                 .setDeploymentName("servletContext2.war");
 
         final DeploymentManager manager2 = container.addDeployment(builder2);

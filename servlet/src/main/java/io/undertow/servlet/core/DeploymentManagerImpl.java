@@ -18,11 +18,6 @@
 
 package io.undertow.servlet.core;
 
-import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
-import static javax.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
-import static javax.servlet.http.HttpServletRequest.DIGEST_AUTH;
-import static javax.servlet.http.HttpServletRequest.FORM_AUTH;
-
 import io.undertow.predicate.Predicates;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
@@ -46,7 +41,6 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.DevelopmentModeInfo;
 import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.HttpMethodSecurityInfo;
@@ -63,10 +57,9 @@ import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.SessionPersistenceManager;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.WebResourceCollection;
-import io.undertow.servlet.handlers.SessionRestoringHandler;
-import io.undertow.servlet.predicate.DispatcherTypePredicate;
 import io.undertow.servlet.handlers.ServletDispatchingHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
+import io.undertow.servlet.handlers.SessionRestoringHandler;
 import io.undertow.servlet.handlers.security.CachedAuthenticatedSessionHandler;
 import io.undertow.servlet.handlers.security.SSLInformationAssociationHandler;
 import io.undertow.servlet.handlers.security.SecurityPathMatches;
@@ -74,9 +67,13 @@ import io.undertow.servlet.handlers.security.ServletAuthenticationConstraintHand
 import io.undertow.servlet.handlers.security.ServletConfidentialityConstraintHandler;
 import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.servlet.handlers.security.ServletSecurityConstraintHandler;
+import io.undertow.servlet.predicate.DispatcherTypePredicate;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.MimeMappings;
 
+import javax.servlet.ServletContainerInitializer;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -87,9 +84,10 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 
-import javax.servlet.ServletContainerInitializer;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
+import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
+import static javax.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
+import static javax.servlet.http.HttpServletRequest.DIGEST_AUTH;
+import static javax.servlet.http.HttpServletRequest.FORM_AUTH;
 
 /**
  * The deployment manager. This manager is responsible for controlling the lifecycle of a servlet deployment.
@@ -120,7 +118,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
     public void deploy() {
         DeploymentInfo deploymentInfo = originalDeployment.clone();
 
-        if (deploymentInfo.getDevelopmentMode() != null) {
+        if (deploymentInfo.getServletStackTraces() != null) {
             UndertowServletLogger.REQUEST_LOGGER.developmentModeEnabled(deploymentInfo.getDeploymentName());
         }
 
@@ -425,14 +423,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private HttpHandler handleDevelopmentModePersistentSessions(HttpHandler next, final DeploymentInfo deploymentInfo, final SessionManager sessionManager, final ServletContextImpl servletContext) {
-        final DevelopmentModeInfo developmentMode = deploymentInfo.getDevelopmentMode();
-        if (developmentMode != null) {
-            final SessionPersistenceManager sessionPersistenceManager = developmentMode.getSessionPersistenceManager();
-            if (sessionPersistenceManager != null) {
-                SessionRestoringHandler handler =  new SessionRestoringHandler(deployment.getDeploymentInfo().getDeploymentName(), sessionManager, servletContext, next, sessionPersistenceManager);
-                deployment.addLifecycleObjects(handler);
-                return handler;
-            }
+        final SessionPersistenceManager sessionPersistenceManager = deploymentInfo.getSessionPersistenceManager();
+        if (sessionPersistenceManager != null) {
+            SessionRestoringHandler handler = new SessionRestoringHandler(deployment.getDeploymentInfo().getDeploymentName(), sessionManager, servletContext, next, sessionPersistenceManager);
+            deployment.addLifecycleObjects(handler);
+            return handler;
         }
         return next;
     }

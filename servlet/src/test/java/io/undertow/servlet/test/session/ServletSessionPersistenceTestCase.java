@@ -21,7 +21,6 @@ package io.undertow.servlet.test.session;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.DevelopmentModeInfo;
 import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
@@ -55,7 +54,7 @@ public class ServletSessionPersistenceTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setDevelopmentMode(new DevelopmentModeInfo(true, new InMemorySessionPersistence()))
+                .setSessionPersistenceManager(new InMemorySessionPersistence())
                 .addListener(new ListenerInfo(SessionCookieConfigListener.class))
                 .addServlets(new ServletInfo("servlet", SessionServlet.class)
                         .addMapping("/aa"));

@@ -48,10 +48,10 @@ import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.DevelopmentModeInfo;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletDispatcher;
+import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.handlers.ServletDebugPageHandler;
@@ -360,8 +360,8 @@ public class AsyncContextImpl implements AsyncContext {
         if (!dispatched) {
             servletRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, error);
             try {
-                DevelopmentModeInfo devMode = servletRequestContext.getDeployment().getDeploymentInfo().getDevelopmentMode();
-                boolean errorPage = devMode != null && devMode.isDisplayErrorDetails();
+                ServletStackTraces devMode = servletRequestContext.getDeployment().getDeploymentInfo().getServletStackTraces();
+                boolean errorPage = servletRequestContext.displayStackTraces();
                 if(errorPage) {
                     ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, error);
                 } else {

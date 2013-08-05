@@ -74,9 +74,10 @@ public class DeploymentInfo implements Cloneable {
     private ServletSessionConfig servletSessionConfig;
     private String hostName = "localhost";
     private boolean denyUncoveredHttpMethods = false;
-    private DevelopmentModeInfo developmentMode;
+    private ServletStackTraces servletStackTraces = ServletStackTraces.LOCAL_ONLY;
     private boolean invalidateSessionOnLogout = false;
     private int defaultCookieVersion = 0;
+    private SessionPersistenceManager sessionPersistenceManager;
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -706,12 +707,12 @@ public class DeploymentInfo implements Cloneable {
         this.denyUncoveredHttpMethods = denyUncoveredHttpMethods;
     }
 
-    public DevelopmentModeInfo getDevelopmentMode() {
-        return developmentMode;
+    public ServletStackTraces getServletStackTraces() {
+        return servletStackTraces;
     }
 
-    public DeploymentInfo setDevelopmentMode(DevelopmentModeInfo developmentMode) {
-        this.developmentMode = developmentMode;
+    public DeploymentInfo setServletStackTraces(ServletStackTraces servletStackTraces) {
+        this.servletStackTraces = servletStackTraces;
         return this;
     }
 
@@ -729,6 +730,15 @@ public class DeploymentInfo implements Cloneable {
 
     public void setDefaultCookieVersion(int defaultCookieVersion) {
         this.defaultCookieVersion = defaultCookieVersion;
+    }
+
+    public SessionPersistenceManager getSessionPersistenceManager() {
+        return sessionPersistenceManager;
+    }
+
+    public DeploymentInfo setSessionPersistenceManager(SessionPersistenceManager sessionPersistenceManager) {
+        this.sessionPersistenceManager = sessionPersistenceManager;
+        return this;
     }
 
     @Override
@@ -784,9 +794,10 @@ public class DeploymentInfo implements Cloneable {
         info.servletSessionConfig = servletSessionConfig;
         info.hostName = hostName;
         info.denyUncoveredHttpMethods = denyUncoveredHttpMethods;
-        info.developmentMode = developmentMode;
+        info.servletStackTraces = servletStackTraces;
         info.invalidateSessionOnLogout = invalidateSessionOnLogout;
         info.defaultCookieVersion = defaultCookieVersion;
+        info.sessionPersistenceManager = sessionPersistenceManager;
         return info;
     }
 
