@@ -22,6 +22,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.FileUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
@@ -41,7 +42,6 @@ public class DefaultServletCachingTestCase {
     public static final String DIR_NAME = "/cacheTest";
 
     static File tmpDir;
-
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -74,12 +74,8 @@ public class DefaultServletCachingTestCase {
 
     @AfterClass
     public static void after() {
-        for (File file : tmpDir.listFiles()) {
-            file.delete();
-        }
-        tmpDir.delete();
+        FileUtils.deleteRecursive(tmpDir);
     }
-
 
     @Test
     public void testFileExistanceCheckCached() throws IOException, InterruptedException {
@@ -146,40 +142,40 @@ public class DefaultServletCachingTestCase {
     }
 
     @Test
-        public void testFileContentsCachedWithFilter() throws IOException, InterruptedException {
-            TestHttpClient client = new TestHttpClient();
-            String fileName = "hello.txt";
-            File f = new File(tmpDir, fileName);
-            writeFile(f, "hello");
-            try {
-                for (int i = 0; i < 10; ++i) {
-                    HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-                    HttpResponse result = client.execute(get);
-                    Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-                    String response = HttpClientUtils.readResponse(result);
-                    Assert.assertEquals("FILTER_TEXT hello", response);
-                }
-                writeFile(f, "hello world");
-
-
+    public void testFileContentsCachedWithFilter() throws IOException, InterruptedException {
+        TestHttpClient client = new TestHttpClient();
+        String fileName = "hello.txt";
+        File f = new File(tmpDir, fileName);
+        writeFile(f, "hello");
+        try {
+            for (int i = 0; i < 10; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
                 HttpResponse result = client.execute(get);
                 Assert.assertEquals(200, result.getStatusLine().getStatusCode());
                 String response = HttpClientUtils.readResponse(result);
                 Assert.assertEquals("FILTER_TEXT hello", response);
-
-                Thread.sleep(METADATA_MAX_AGE);
-
-                get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-                result = client.execute(get);
-                Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-                response = HttpClientUtils.readResponse(result);
-                Assert.assertEquals("FILTER_TEXT hello world", response);
-
-            } finally {
-                client.getConnectionManager().shutdown();
             }
+            writeFile(f, "hello world");
+
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("FILTER_TEXT hello", response);
+
+            Thread.sleep(METADATA_MAX_AGE);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("FILTER_TEXT hello world", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
         }
+    }
 
     private void writeFile(final File f, final String contents) throws IOException {
         FileOutputStream out = new FileOutputStream(f);

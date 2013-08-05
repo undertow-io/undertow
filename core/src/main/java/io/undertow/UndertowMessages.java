@@ -210,4 +210,10 @@ public interface UndertowMessages {
 
     @Message(id = 62, value = "AJP does not support HTTP upgrade")
     IllegalStateException ajpDoesNotSupportHTTPUpgrade();
+
+    @Message(id = 63, value = "File system watcher already started")
+    IllegalStateException fileSystemWatcherAlreadyStarted();
+
+    @Message(id = 64, value = "File system watcher not started")
+    IllegalStateException fileSystemWatcherNotStarted();
 }
