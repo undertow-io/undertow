@@ -3,7 +3,6 @@ package io.undertow.servlet.handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
-import io.undertow.server.session.SessionListener;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.api.SessionPersistenceManager;
@@ -17,9 +16,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * A handler that restores persistent HTTP session state for requests in development mode.
@@ -35,8 +32,6 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
     private final SessionManager sessionManager;
     private final ServletContextImpl servletContext;
     private final HttpHandler next;
-    private final Set<String> sessionIds;
-    private final SessionIdListener sessionListener;
     private final SessionPersistenceManager sessionPersistenceManager;
     private volatile boolean started = false;
 
@@ -47,8 +42,6 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
         this.next = next;
         this.sessionPersistenceManager = sessionPersistenceManager;
         this.data = new ConcurrentHashMap<String, Map<String, Object>>();
-        this.sessionIds = new ConcurrentSkipListSet<String>();
-        this.sessionListener = new SessionIdListener();
     }
 
     public void start() {
@@ -56,7 +49,6 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
         try {
             setTccl(servletContext.getClassLoader());
 
-            sessionManager.registerSessionListener(sessionListener);
             try {
                 final Map<String, Map<String, Object>> sessionData = sessionPersistenceManager.loadSessionAttributes(deploymentName, servletContext.getClassLoader());
                 if (sessionData != null) {
@@ -77,7 +69,7 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
             setTccl(servletContext.getClassLoader());
             this.started = false;
             final Map<String, Map<String, Object>> objectData = new HashMap<String, Map<String, Object>>();
-            for (String sessionId : sessionIds) {
+            for (String sessionId : sessionManager.getTransientSessions()) {
                 Session session = sessionManager.getSession(sessionId);
                 if (session != null) {
                     final HttpSessionEvent event = new HttpSessionEvent(HttpSessionImpl.forSession(session, servletContext, false));
@@ -93,9 +85,7 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
                 }
             }
             sessionPersistenceManager.persistSessions(deploymentName, objectData);
-            sessionManager.removeSessionListener(sessionListener);
             this.data.clear();
-            this.sessionIds.clear();
         } finally {
             setTccl(old);
         }
@@ -128,37 +118,6 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
     @Override
     public boolean isStarted() {
         return started;
-    }
-
-    class SessionIdListener implements SessionListener {
-
-        @Override
-        public void sessionCreated(Session session, HttpServerExchange exchange) {
-            sessionIds.add(session.getId());
-        }
-
-        @Override
-        public void sessionDestroyed(Session session, HttpServerExchange exchange, SessionDestroyedReason reason) {
-            sessionIds.remove(session.getId());
-        }
-
-        @Override
-        public void attributeAdded(Session session, String name, Object value) {
-        }
-
-        @Override
-        public void attributeUpdated(Session session, String name, Object newValue, Object oldValue) {
-        }
-
-        @Override
-        public void attributeRemoved(Session session, String name, Object oldValue) {
-        }
-
-        @Override
-        public void sessionIdChanged(Session session, String oldSessionId) {
-            sessionIds.add(session.getId());
-            sessionIds.remove(oldSessionId);
-        }
     }
 
     private ClassLoader getTccl() {

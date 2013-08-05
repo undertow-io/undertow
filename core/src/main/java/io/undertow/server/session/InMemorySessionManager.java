@@ -23,6 +23,7 @@ import io.undertow.server.HttpServerExchange;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioWorker;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * The default in memory session manager. This basically just stores sessions in an in memory hash map.
  * <p/>
- * TODO: implement session expiration
  *
  * @author Stuart Douglas
  */
@@ -117,6 +117,21 @@ public class InMemorySessionManager implements SessionManager {
     @Override
     public int activeSessions() {
         return sessions.size();
+    }
+
+    @Override
+    public Set<String> getTransientSessions() {
+        return getAllSessions();
+    }
+
+    @Override
+    public Set<String> getActiveSessions() {
+        return getAllSessions();
+    }
+
+    @Override
+    public Set<String> getAllSessions() {
+        return new HashSet<String>(sessions.keySet());
     }
 
     /**

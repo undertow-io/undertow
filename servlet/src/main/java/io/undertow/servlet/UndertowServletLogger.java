@@ -73,8 +73,8 @@ public interface UndertowServletLogger extends BasicLogger {
 
 
     @LogMessage(level = Logger.Level.WARN)
-    @Message(id = 15007, value = "Development mode enabled for deployment %s, please do not enable development mode for production use")
-    void developmentModeEnabled(String deploymentName);
+    @Message(id = 15007, value = "Stack trace on error enabled for deployment %s, please do not enable for production use")
+    void servletStackTracesAll(String deploymentName);
 
     @LogMessage(level = Logger.Level.WARN)
     @Message(id = 15008, value = "Failed to load development mode persistent sessions")

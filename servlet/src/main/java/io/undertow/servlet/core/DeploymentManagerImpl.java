@@ -54,6 +54,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletContainerInitializerInfo;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
+import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.api.SessionPersistenceManager;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.WebResourceCollection;
@@ -118,8 +119,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
     public void deploy() {
         DeploymentInfo deploymentInfo = originalDeployment.clone();
 
-        if (deploymentInfo.getServletStackTraces() != null) {
-            UndertowServletLogger.REQUEST_LOGGER.developmentModeEnabled(deploymentInfo.getDeploymentName());
+        if (deploymentInfo.getServletStackTraces() == ServletStackTraces.ALL) {
+            UndertowServletLogger.REQUEST_LOGGER.servletStackTracesAll(deploymentInfo.getDeploymentName());
         }
 
         deploymentInfo.validate();

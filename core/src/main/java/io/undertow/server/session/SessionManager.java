@@ -21,16 +21,17 @@ package io.undertow.server.session;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 
+import java.util.Set;
+
 /**
  * Interface that manages sessions.
- *
+ * <p/>
  * The session manager is responsible for maintaining session state.
- *
+ * <p/>
  * As part of session creation the session manager MUST attempt to retrieve the {@link SessionCookieConfig} from
  * the {@link HttpServerExchange} and use it to set the session cookie. The frees up the session manager from
  * needing to know details of the cookie configuration. When invalidating a session the session manager MUST
  * also use this to clear the session cookie.
- *
  *
  * @author Stuart Douglas
  */
@@ -51,28 +52,27 @@ public interface SessionManager {
     /**
      * Creates a new session. Any {@link SessionListener}s registered with this manager will be notified
      * of the session creation.
-     *
+     * <p/>
      * This method *MUST* call {@link SessionConfig#findSessionId(io.undertow.server.HttpServerExchange)} (io.undertow.server.HttpServerExchange)} first to
      * determine if an existing session ID is present in the exchange. If this id is present then it must be used
      * as the new session ID. If a session with this ID already exists then an {@link IllegalStateException} must be
      * thrown.
-     *
-     *
+     * <p/>
+     * <p/>
      * This requirement exists to allow forwards across servlet contexts to work correctly.
-     *
      *
      * @return The created session
      */
     Session createSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
 
     /**
-     *
      * @return An IoFuture that can be used to retrieve the session, or an IoFuture that will return null if not found
      */
     Session getSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
 
     /**
      * Retrieves a session with the given session id
+     *
      * @param sessionId The session ID
      * @return The session, or null if it does not exist
      */
@@ -87,19 +87,40 @@ public interface SessionManager {
 
     /**
      * Removes a session listener from the session manager
+     *
      * @param listener the listener
      */
     void removeSessionListener(final SessionListener listener);
 
     /**
      * Sets the default session timeout
+     *
      * @param timeout the timeout
      */
     void setDefaultSessionTimeout(final int timeout);
 
     /**
      * Returns the number of active sessions managed by this session manager.
+     *
      * @return the number of active sessions
      */
     int activeSessions();
+
+    /**
+     * Returns the identifiers of those sessions that would be lost upon
+     * shutdown of this node
+     */
+    Set<String> getTransientSessions();
+
+    /**
+     * Returns the identifiers of those sessions that are active on this
+     * node, excluding passivated sessions
+     */
+    Set<String> getActiveSessions();
+
+    /**
+     * Returns the identifiers of all sessions, including both active and
+     * passive
+     */
+    Set<String> getAllSessions();
 }
