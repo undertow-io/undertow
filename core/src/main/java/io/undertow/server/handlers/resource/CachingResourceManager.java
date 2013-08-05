@@ -20,6 +20,7 @@ package io.undertow.server.handlers.resource;
 
 import java.io.IOException;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.cache.LRUCache;
 
@@ -66,7 +67,7 @@ public class CachingResourceManager implements ResourceManager {
             return (Resource) res;
         }
         final Resource underlying = underlyingResourceManager.getResource(path);
-        if(underlying == null) {
+        if (underlying == null) {
             cache.add(path, NO_RESOURCE);
             return null;
         }
@@ -76,6 +77,14 @@ public class CachingResourceManager implements ResourceManager {
     }
 
     public void invalidate(final String path) {
+        try {
+            CachedResource resource = (CachedResource) getResource(path);
+            if (resource != null) {
+                resource.invalidate();
+            }
+        } catch (IOException e) {
+            UndertowLogger.ROOT_LOGGER.debugf(e, "Exception invalidating cached resource %s", path);
+        }
         cache.remove(path);
     }
 

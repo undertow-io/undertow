@@ -113,6 +113,10 @@ public class CachedResource implements Resource {
         return underlyingResource.getContentType(mimeMappings);
     }
 
+    public void invalidate() {
+        cachingResourceManager.getDataCache().remove(cacheKey);
+    }
+
     @Override
     public void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback completionCallback) {
         final Long length = getContentLength();
