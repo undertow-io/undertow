@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,15 +19,15 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class InMemorySessionPersistence implements SessionPersistenceManager {
 
-    private static final Map<String, Map<String, Map<String, byte[]>>> data = new ConcurrentHashMap<String, Map<String, Map<String, byte[]>>>();
+    private static final Map<String, Map<String, SessionEntry>> data = new ConcurrentHashMap<String, Map<String, SessionEntry>>();
 
     @Override
-    public void persistSessions(String deploymentName, Map<String, Map<String, Object>> sessionData) {
+    public void persistSessions(String deploymentName, Map<String, PersistentSession> sessionData) {
         try {
-            final Map<String, Map<String, byte[]>> serializedData = new HashMap<String, Map<String, byte[]>>();
-            for (Map.Entry<String, Map<String, Object>> sessionEntry : sessionData.entrySet()) {
+            final Map<String, SessionEntry> serializedData = new HashMap<String, SessionEntry>();
+            for (Map.Entry<String, PersistentSession> sessionEntry : sessionData.entrySet()) {
                 Map<String, byte[]> data = new HashMap<String, byte[]>();
-                for (Map.Entry<String, Object> sessionAttribute : sessionEntry.getValue().entrySet()) {
+                for (Map.Entry<String, Object> sessionAttribute : sessionEntry.getValue().getSessionData().entrySet()) {
                     try {
                         final ByteArrayOutputStream out = new ByteArrayOutputStream();
                         final ObjectOutputStream objectOutputStream = new ObjectOutputStream(out);
@@ -37,7 +38,7 @@ public class InMemorySessionPersistence implements SessionPersistenceManager {
                         UndertowServletLogger.ROOT_LOGGER.failedToPersistSessionAttribute(sessionAttribute.getKey(), sessionAttribute.getValue(), sessionEntry.getKey());
                     }
                 }
-                serializedData.put(sessionEntry.getKey(), data);
+                serializedData.put(sessionEntry.getKey(), new SessionEntry(sessionEntry.getValue().getExpiration(), data));
             }
             data.put(deploymentName, serializedData);
         } catch (Exception e) {
@@ -47,18 +48,21 @@ public class InMemorySessionPersistence implements SessionPersistenceManager {
     }
 
     @Override
-    public Map<String, Map<String, Object>> loadSessionAttributes(String deploymentName, final ClassLoader classLoader) {
+    public Map<String, PersistentSession> loadSessionAttributes(String deploymentName, final ClassLoader classLoader) {
         try {
-            Map<String, Map<String, byte[]>> data = this.data.remove(deploymentName);
+            long time = System.currentTimeMillis();
+            Map<String, SessionEntry> data = this.data.remove(deploymentName);
             if (data != null) {
-                Map<String, Map<String, Object>> ret = new HashMap<String, Map<String, Object>>();
-                for (Map.Entry<String, Map<String, byte[]>> sessionEntry : data.entrySet()) {
-                    Map<String, Object> session = new HashMap<String, Object>();
-                    for (Map.Entry<String, byte[]> sessionAttribute : sessionEntry.getValue().entrySet()) {
-                        final ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(sessionAttribute.getValue()));
-                        session.put(sessionAttribute.getKey(), in.readObject());
+                Map<String, PersistentSession> ret = new HashMap<String, PersistentSession>();
+                for (Map.Entry<String, SessionEntry> sessionEntry : data.entrySet()) {
+                    if (sessionEntry.getValue().expiry.getTime() > time) {
+                        Map<String, Object> session = new HashMap<String, Object>();
+                        for (Map.Entry<String, byte[]> sessionAttribute : sessionEntry.getValue().data.entrySet()) {
+                            final ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(sessionAttribute.getValue()));
+                            session.put(sessionAttribute.getKey(), in.readObject());
+                        }
+                        ret.put(sessionEntry.getKey(), new PersistentSession(sessionEntry.getValue().expiry, session));
                     }
-                    ret.put(sessionEntry.getKey(), session);
                 }
                 return ret;
             }
@@ -70,5 +74,16 @@ public class InMemorySessionPersistence implements SessionPersistenceManager {
 
     @Override
     public void clear(String deploymentName) {
+    }
+
+    static final class SessionEntry {
+        private final Date expiry;
+        private final Map<String, byte[]> data;
+
+        private SessionEntry(Date expiry, Map<String, byte[]> data) {
+            this.expiry = expiry;
+            this.data = data;
+        }
+
     }
 }

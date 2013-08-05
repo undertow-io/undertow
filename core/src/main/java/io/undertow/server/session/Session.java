@@ -87,7 +87,6 @@ public interface Session {
      */
     long getLastAccessedTime();
 
-
     /**
      * Specifies the time, in seconds, between client requests before the
      * servlet container will invalidate this session.  A negative time

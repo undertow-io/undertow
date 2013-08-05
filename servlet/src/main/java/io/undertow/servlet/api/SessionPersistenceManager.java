@@ -1,5 +1,7 @@
 package io.undertow.servlet.api;
 
+import java.util.Collections;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -11,10 +13,28 @@ import java.util.Map;
  */
 public interface SessionPersistenceManager {
 
-    void persistSessions(final String deploymentName, Map<String, Map<String, Object>> sessionData);
+    void persistSessions(final String deploymentName, Map<String, PersistentSession> sessionData);
 
-    Map<String, Map<String, Object>> loadSessionAttributes(final String deploymentName, final ClassLoader classLoader);
+    Map<String, PersistentSession> loadSessionAttributes(final String deploymentName, final ClassLoader classLoader);
 
     void clear(final String deploymentName);
+
+    public class PersistentSession {
+        private final Date expiration;
+        private final Map<String, Object> sessionData;
+
+        public PersistentSession(Date expiration, Map<String, Object> sessionData) {
+            this.expiration = expiration;
+            this.sessionData = sessionData;
+        }
+
+        public Date getExpiration() {
+            return expiration;
+        }
+
+        public Map<String, Object> getSessionData() {
+            return Collections.unmodifiableMap(sessionData);
+        }
+    }
 
 }

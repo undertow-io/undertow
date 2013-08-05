@@ -14,9 +14,12 @@ import javax.servlet.http.HttpSessionActivationListener;
 import javax.servlet.http.HttpSessionEvent;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static io.undertow.servlet.api.SessionPersistenceManager.PersistentSession;
 
 /**
  * A handler that restores persistent HTTP session state for requests in development mode.
@@ -28,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SessionRestoringHandler implements HttpHandler, Lifecycle {
 
     private final String deploymentName;
-    private final Map<String, Map<String, Object>> data;
+    private final Map<String, SessionPersistenceManager.PersistentSession> data;
     private final SessionManager sessionManager;
     private final ServletContextImpl servletContext;
     private final HttpHandler next;
@@ -41,7 +44,7 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
         this.servletContext = servletContext;
         this.next = next;
         this.sessionPersistenceManager = sessionPersistenceManager;
-        this.data = new ConcurrentHashMap<String, Map<String, Object>>();
+        this.data = new ConcurrentHashMap<String, SessionPersistenceManager.PersistentSession>();
     }
 
     public void start() {
@@ -50,7 +53,7 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
             setTccl(servletContext.getClassLoader());
 
             try {
-                final Map<String, Map<String, Object>> sessionData = sessionPersistenceManager.loadSessionAttributes(deploymentName, servletContext.getClassLoader());
+                final Map<String, SessionPersistenceManager.PersistentSession> sessionData = sessionPersistenceManager.loadSessionAttributes(deploymentName, servletContext.getClassLoader());
                 if (sessionData != null) {
                     this.data.putAll(sessionData);
                 }
@@ -68,7 +71,7 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
         try {
             setTccl(servletContext.getClassLoader());
             this.started = false;
-            final Map<String, Map<String, Object>> objectData = new HashMap<String, Map<String, Object>>();
+            final Map<String, SessionPersistenceManager.PersistentSession> objectData = new HashMap<String, SessionPersistenceManager.PersistentSession>();
             for (String sessionId : sessionManager.getTransientSessions()) {
                 Session session = sessionManager.getSession(sessionId);
                 if (session != null) {
@@ -81,7 +84,7 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
                             ((HttpSessionActivationListener) attribute).sessionWillPassivate(event);
                         }
                     }
-                    objectData.put(sessionId, sessionData);
+                    objectData.put(sessionId, new PersistentSession(new Date(session.getLastAccessedTime() + (session.getMaxInactiveInterval() * 1000)), sessionData));
                 }
             }
             sessionPersistenceManager.persistSessions(deploymentName, objectData);
@@ -100,16 +103,19 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
         }
 
         //we have some old data
-        Map<String, Object> result = data.remove(incomingSessionId);
+        PersistentSession result = data.remove(incomingSessionId);
         if (result != null) {
-            final HttpSessionImpl session = servletContext.getSession(exchange, true);
-            final HttpSessionEvent event = new HttpSessionEvent(session);
-            for (Map.Entry<String, Object> entry : result.entrySet()) {
+            long time = System.currentTimeMillis();
+            if (time < result.getExpiration().getTime()) {
+                final HttpSessionImpl session = servletContext.getSession(exchange, true);
+                final HttpSessionEvent event = new HttpSessionEvent(session);
+                for (Map.Entry<String, Object> entry : result.getSessionData().entrySet()) {
 
-                if (entry.getValue() instanceof HttpSessionActivationListener) {
-                    ((HttpSessionActivationListener) entry.getValue()).sessionWillPassivate(event);
+                    if (entry.getValue() instanceof HttpSessionActivationListener) {
+                        ((HttpSessionActivationListener) entry.getValue()).sessionWillPassivate(event);
+                    }
+                    session.setAttribute(entry.getKey(), entry.getValue());
                 }
-                session.setAttribute(entry.getKey(), entry.getValue());
             }
         }
         next.handleRequest(exchange);
