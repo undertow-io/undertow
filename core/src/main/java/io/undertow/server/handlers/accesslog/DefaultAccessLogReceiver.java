@@ -96,8 +96,8 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         }
         List<String> messsages = new ArrayList<String>();
         String msg = null;
-        //only grab at most 20 messages at a time
-        for (int i = 0; i < 20; ++i) {
+        //only grab at most 1000 messages at a time
+        for (int i = 0; i < 1000; ++i) {
             msg = pendingMessages.poll();
             if (msg == null) {
                 break;

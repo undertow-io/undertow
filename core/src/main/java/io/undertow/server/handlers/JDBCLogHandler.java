@@ -6,31 +6,26 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
 
-import java.io.Closeable;
+import javax.sql.DataSource;
 import java.net.InetSocketAddress;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
+public class JDBCLogHandler implements HttpHandler, Runnable {
 
     private final HttpHandler next;
     private final String formatString;
     private final ExchangeCompletionListener exchangeCompletionListener = new JDBCLogCompletionListener();
 
-
-    //
 
     private final Executor logWriteExecutor;
 
@@ -46,14 +41,8 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
 
     protected boolean useLongContentLength = false;
 
-    protected String connectionName = null;
+    private final DataSource dataSource;
 
-    protected String connectionPassword = null;
-
-    protected Driver driver = null;
-
-    private String driverName;
-    private String connectionURL;
     private String tableName;
     private String remoteHostField;
     private String userField;
@@ -65,19 +54,12 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
     private String bytesField;
     private String refererField;
     private String userAgentField;
-    private String pattern;
 
-    private Connection conn;
-    private PreparedStatement ps;
-
-    private long currentTimeMillis;
-
-    public JDBCLogHandler(final HttpHandler next, final  Executor logWriteExecutor, final String formatString, ClassLoader classLoader) {
+    public JDBCLogHandler(final HttpHandler next, final Executor logWriteExecutor, final String formatString, DataSource dataSource) {
         this.next = next;
         this.formatString = formatString;
+        this.dataSource = dataSource;
 
-        driverName = null;
-        connectionURL = null;
         tableName = "access";
         remoteHostField = "remoteHost";
         userField = "userName";
@@ -89,11 +71,6 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
         bytesField = "bytes";
         refererField = "referer";
         userAgentField = "userAgent";
-        pattern = "common";
-        conn = null;
-        ps = null;
-        currentTimeMillis = new java.util.Date().getTime();
-
         this.logWriteExecutor = logWriteExecutor;
         this.pendingMessages = new ConcurrentLinkedDeque<JDBCLogAttribute>();
     }
@@ -139,8 +116,8 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
         if (jdbcLogAttribute.pattern.equals("combined")) {
             jdbcLogAttribute.virtualHost = exchange.getRequestHeaders().getFirst(Headers.HOST);
             jdbcLogAttribute.method = exchange.getRequestMethod().toString();
-            jdbcLogAttribute.referer = exchange.getRequestHeaders().getFirst(new HttpString("referer"));
-            jdbcLogAttribute.userAgent = exchange.getRequestHeaders().getFirst(new HttpString("user-agent"));
+            jdbcLogAttribute.referer = exchange.getRequestHeaders().getFirst(Headers.REFERER);
+            jdbcLogAttribute.userAgent = exchange.getRequestHeaders().getFirst(Headers.USER_AGENT);
         }
 
         this.pendingMessages.add(jdbcLogAttribute);
@@ -164,8 +141,8 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
         List<JDBCLogAttribute> messages = new ArrayList<JDBCLogAttribute>();
         JDBCLogAttribute msg = null;
 
-        //only grab at most 20 messages at a time
-        for (int i = 0; i < 20; ++i) {
+        //only grab at most 1000 messages at a time
+        for (int i = 0; i < 1000; ++i) {
             msg = pendingMessages.poll();
             if (msg == null) {
                 break;
@@ -173,18 +150,21 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
             messages.add(msg);
         }
 
-        if(!messages.isEmpty()) {
+        if (!messages.isEmpty()) {
             writeMessage(messages);
         }
     }
 
     private void writeMessage(List<JDBCLogAttribute> messages) {
+        PreparedStatement ps = null;
+        Connection conn = null;
         try {
-            open();
-            prepareStatement();
+            conn = dataSource.getConnection();
+            conn.setAutoCommit(true);
+            ps = prepareStatement(conn);
             for (JDBCLogAttribute jdbcLogAttribute : messages) {
                 int numberOfTries = 2;
-                while (numberOfTries>0) {
+                while (numberOfTries > 0) {
                     try {
                         ps.clearParameters();
                         ps.setString(1, jdbcLogAttribute.remoteHost);
@@ -224,13 +204,28 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
             }
         } catch (SQLException e) {
             UndertowLogger.ROOT_LOGGER.errorWritingJDBCLog(e);
+        } finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                    UndertowLogger.ROOT_LOGGER.debug("Exception closing prepared statement", e);
+                }
+            }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    UndertowLogger.ROOT_LOGGER.debug("Exception closing connection", e);
+                }
+            }
         }
     }
 
     /**
      * For tests only. Blocks the current thread until all messages are written
      * Just does a busy wait.
-     *
+     * <p/>
      * DO NOT USE THIS OUTSIDE OF A TEST
      */
     void awaitWrittenForTest() throws InterruptedException {
@@ -242,31 +237,8 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
         }
     }
 
-    protected void open() throws SQLException {
-        if (conn != null)
-            return ;
-
-        if (driver == null) {
-            try {
-                Class<?> clazz = Class.forName(driverName);
-                driver = (Driver) clazz.newInstance();
-            } catch (Throwable e) {
-                throw new SQLException(e.getMessage());
-            }
-        }
-
-        Properties props = new Properties();
-        props.put("autoReconnect", "true");
-        if (connectionName != null)
-            props.put("user", connectionName);
-        if (connectionPassword != null)
-            props.put("password", connectionPassword);
-        conn = driver.connect(connectionURL, props);
-        conn.setAutoCommit(true);
-    }
-
-    private void prepareStatement() throws SQLException {
-        ps = conn.prepareStatement
+    private PreparedStatement prepareStatement(Connection conn) throws SQLException {
+        return conn.prepareStatement
                 ("INSERT INTO " + tableName + " ("
                         + remoteHostField + ", " + userField + ", "
                         + timestampField + ", " + queryField + ", "
@@ -276,31 +248,16 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
                         + ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     }
 
-    @Override
-    public void close() {
-        try {
-            if (conn != null && !conn.isClosed()) {
-                ps.close();
-                ps = null;
-                conn.close();
-                conn = null;
-            }
-        } catch (SQLException e) {
-            UndertowLogger.ROOT_LOGGER.error(e);
-        }
-    }
-
     private class JDBCLogAttribute {
-        private static final String EMPTY = "";
-        protected String remoteHost = EMPTY;
-        protected String user = EMPTY;
-        protected String query = EMPTY;
+        protected String remoteHost = "";
+        protected String user = "";
+        protected String query = "";
         protected long bytes = 0;
         protected int status = 0;
-        protected String virtualHost = EMPTY;
-        protected String method = EMPTY;
-        protected String referer = EMPTY;
-        protected String userAgent = EMPTY;
+        protected String virtualHost = "";
+        protected String method = "";
+        protected String referer = "";
+        protected String userAgent = "";
         protected String pattern = "common";
         protected Timestamp timestamp = new Timestamp(System.currentTimeMillis());
     }
@@ -311,38 +268,6 @@ public class JDBCLogHandler implements HttpHandler, Runnable, Closeable {
 
     public void setUseLongContentLength(boolean useLongContentLength) {
         this.useLongContentLength = useLongContentLength;
-    }
-
-    public String getConnectionName() {
-        return connectionName;
-    }
-
-    public void setConnectionName(String connectionName) {
-        this.connectionName = connectionName;
-    }
-
-    public String getConnectionPassword() {
-        return connectionPassword;
-    }
-
-    public void setConnectionPassword(String connectionPassword) {
-        this.connectionPassword = connectionPassword;
-    }
-
-    public String getDriverName() {
-        return driverName;
-    }
-
-    public void setDriverName(String driverName) {
-        this.driverName = driverName;
-    }
-
-    public String getConnectionURL() {
-        return connectionURL;
-    }
-
-    public void setConnectionURL(String connectionURL) {
-        this.connectionURL = connectionURL;
     }
 
     public String getTableName() {

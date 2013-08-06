@@ -5,27 +5,27 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.CompletionLatchHandler;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.h2.jdbcx.JdbcConnectionPool;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import io.undertow.util.CompletionLatchHandler;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.h2.jdbcx.JdbcConnectionPool;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import javax.sql.DataSource;
 
 /**
  * Tests writing the database (in memory)
@@ -46,32 +46,72 @@ public class JDBCLogDatabaseTestCase {
         }
     };
 
+    private JdbcConnectionPool ds;
+
+
+    @Before
+    public void setup() throws SQLException {
+        ds = JdbcConnectionPool.create("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1", "user", "password");
+        Connection conn = null;
+        Statement statement = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(true);
+            statement = conn.createStatement();
+            statement.executeUpdate("CREATE TABLE PUBLIC.ACCESS (" +
+                    " id SERIAL NOT NULL," +
+                    " remoteHost CHAR(15) NOT NULL," +
+                    " userName CHAR(15)," +
+                    " timestamp TIMESTAMP NOT NULL," +
+                    " virtualHost VARCHAR(64)," +
+                    " method VARCHAR(8)," +
+                    " query VARCHAR(255) NOT NULL," +
+                    " status SMALLINT UNSIGNED NOT NULL," +
+                    " bytes INT UNSIGNED NOT NULL," +
+                    " referer VARCHAR(128)," +
+                    " userAgent VARCHAR(128)," +
+                    " PRIMARY KEY (id)" +
+                    " );");
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+            if (conn != null) {
+                conn.close();
+            }
+
+        }
+
+    }
+
+    @After
+    public void teardown() throws SQLException {
+
+        Connection conn = null;
+        Statement statement = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(true);
+            statement = conn.createStatement();
+            statement.executeUpdate("DROP TABLE PUBLIC.ACCESS;");
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+            if (conn != null) {
+                conn.close();
+            }
+
+        }
+        ds.dispose();
+        ds = null;
+    }
+
     @Test
     public void testSingleLogMessageToDatabase() throws IOException, InterruptedException, SQLException {
-        DataSource ds = JdbcConnectionPool.create("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1", "user", "password");
-        Connection conn = null;
-        conn = ds.getConnection();
-        conn.setAutoCommit(true);
-        conn.createStatement().executeUpdate("CREATE TABLE PUBLIC.ACCESS (" +
-            " id SERIAL NOT NULL," +
-            " remoteHost CHAR(15) NOT NULL," +
-            " userName CHAR(15)," +
-            " timestamp TIMESTAMP NOT NULL," +
-            " virtualHost VARCHAR(64)," +
-            " method VARCHAR(8)," +
-            " query VARCHAR(255) NOT NULL," +
-            " status SMALLINT UNSIGNED NOT NULL," +
-            " bytes INT UNSIGNED NOT NULL," +
-            " referer VARCHAR(128)," +
-            " userAgent VARCHAR(128)," +
-            " PRIMARY KEY (id)" +
-            " );");
 
-        JDBCLogHandler logHandler = new JDBCLogHandler(HELLO_HANDLER, DefaultServer.getWorker(), "common", JDBCLogDatabaseTestCase.class.getClassLoader());
-        logHandler.setDriverName("org.h2.Driver");
-        logHandler.setConnectionName("user");
-        logHandler.setConnectionPassword("password");
-        logHandler.setConnectionURL("jdbc:h2:mem:test");
+
+        JDBCLogHandler logHandler = new JDBCLogHandler(HELLO_HANDLER, DefaultServer.getWorker(), "common", ds);
 
         CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(logHandler));
@@ -84,43 +124,32 @@ public class JDBCLogDatabaseTestCase {
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
         } finally {
-            ResultSet resultDatabase = conn.createStatement().executeQuery("SELECT * FROM PUBLIC.ACCESS;");
-            resultDatabase.next();
-            Assert.assertEquals("127.0.0.1", resultDatabase.getString(logHandler.getRemoteHostField()));
-            Assert.assertEquals("5", resultDatabase.getString(logHandler.getBytesField()));
-            Assert.assertEquals("200", resultDatabase.getString(logHandler.getStatusField()));
-            conn.createStatement().executeUpdate("DROP TABLE PUBLIC.ACCESS;");
-            conn.close();
-            client.getConnectionManager().shutdown();
+            Connection conn = null;
+            Statement statement = null;
+            try {
+                conn = ds.getConnection();
+                statement = conn.createStatement();
+                ResultSet resultDatabase = statement.executeQuery("SELECT * FROM PUBLIC.ACCESS;");
+                resultDatabase.next();
+                Assert.assertEquals("127.0.0.1", resultDatabase.getString(logHandler.getRemoteHostField()));
+                Assert.assertEquals("5", resultDatabase.getString(logHandler.getBytesField()));
+                Assert.assertEquals("200", resultDatabase.getString(logHandler.getStatusField()));
+                client.getConnectionManager().shutdown();
+            } finally {
+                if (statement != null) {
+                    statement.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            }
         }
     }
 
     @Test
     public void testLogLotsOfThreadsToDatabase() throws IOException, InterruptedException, ExecutionException, SQLException {
-        DataSource ds = JdbcConnectionPool.create("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1", "user", "password");
-        Connection conn = null;
-        conn = ds.getConnection();
-        conn.setAutoCommit(true);
-        conn.createStatement().executeUpdate("CREATE TABLE PUBLIC.ACCESS (" +
-                " id SERIAL NOT NULL," +
-                " remoteHost CHAR(15) NOT NULL," +
-                " userName CHAR(15)," +
-                " timestamp TIMESTAMP NOT NULL," +
-                " virtualHost VARCHAR(64)," +
-                " method VARCHAR(8)," +
-                " query VARCHAR(255) NOT NULL," +
-                " status SMALLINT UNSIGNED NOT NULL," +
-                " bytes INT UNSIGNED NOT NULL," +
-                " referer VARCHAR(128)," +
-                " userAgent VARCHAR(128)," +
-                " PRIMARY KEY (id)" +
-                " );");
 
-        JDBCLogHandler logHandler = new JDBCLogHandler(HELLO_HANDLER, DefaultServer.getWorker(), "combined", JDBCLogDatabaseTestCase.class.getClassLoader());
-        logHandler.setDriverName("org.h2.Driver");
-        logHandler.setConnectionName("user");
-        logHandler.setConnectionPassword("password");
-        logHandler.setConnectionURL("jdbc:h2:mem:test");
+        JDBCLogHandler logHandler = new JDBCLogHandler(HELLO_HANDLER, DefaultServer.getWorker(), "combined", ds);
 
         CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(NUM_REQUESTS * NUM_THREADS, logHandler));
@@ -156,17 +185,29 @@ public class JDBCLogDatabaseTestCase {
         } finally {
             executor.shutdown();
         }
+
         latchHandler.await();
         logHandler.awaitWrittenForTest();
 
-        ResultSet resultDatabase = conn.createStatement().executeQuery("SELECT COUNT(*) FROM PUBLIC.ACCESS;");
+        Connection conn = null;
+        Statement statement = null;
+        try {
+            conn = ds.getConnection();
+            statement = conn.createStatement();
 
-        resultDatabase.next();
-        Assert.assertEquals(resultDatabase.getInt(1), NUM_REQUESTS * NUM_THREADS);
+            ResultSet resultDatabase = conn.createStatement().executeQuery("SELECT COUNT(*) FROM PUBLIC.ACCESS;");
 
-        conn.createStatement().executeUpdate("DROP TABLE PUBLIC.ACCESS;");
-        conn.close();
+            resultDatabase.next();
+            Assert.assertEquals(resultDatabase.getInt(1), NUM_REQUESTS * NUM_THREADS);
 
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+            if (conn != null) {
+                conn.close();
+            }
+        }
     }
 
 }
