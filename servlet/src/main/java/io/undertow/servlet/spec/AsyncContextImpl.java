@@ -343,10 +343,10 @@ public class AsyncContextImpl implements AsyncContext {
 
     @Override
     public void setTimeout(final long timeout) {
-        this.timeout = timeout;
         if (initialRequestDone) {
-            updateTimeout();
+            throw UndertowServletMessages.MESSAGES.asyncRequestAlreadyReturnedToContainer();
         }
+        this.timeout = timeout;
     }
 
     @Override

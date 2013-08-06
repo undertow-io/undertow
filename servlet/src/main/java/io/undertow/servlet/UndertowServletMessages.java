@@ -190,4 +190,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10048, value = "Can only handle HTTP type of request / response: %s / %s")
     IllegalArgumentException invalidRequestResponseType(ServletRequest request, ServletResponse response);
+
+    @Message(id = 10049, value = "Async request already returned to container")
+    IllegalStateException asyncRequestAlreadyReturnedToContainer();
 }
