@@ -30,6 +30,7 @@ import org.jboss.logging.annotations.MessageLogger;
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.sql.SQLException;
 
 /**
  * log messages start at 5000
@@ -117,5 +118,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5019, value = "Cannot upgrade connection")
     void cannotUpgradeConnection(@Cause Exception e);
-}
 
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5020, value = "Error writing JDBC log")
+    void errorWritingJDBCLog(@Cause SQLException e);
+}
