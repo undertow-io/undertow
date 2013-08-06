@@ -14,7 +14,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,8 +30,7 @@ public class FileSystemWatcherTestCase {
     public static final String EXISTING_FILE_NAME = "a.txt";
     public static final String EXISTING_DIR = "existingDir";
 
-    private volatile CountDownLatch latch = new CountDownLatch(1);
-    private Collection<FileChangeEvent> results = null;
+    private final BlockingDeque<Collection<FileChangeEvent>> results = new LinkedBlockingDeque<Collection<FileChangeEvent>>();
 
     File rootDir;
     File existingSubDir;
@@ -90,11 +90,9 @@ public class FileSystemWatcherTestCase {
             watcher.addPath(rootDir, new FileChangeCallback() {
                 @Override
                 public void handleChanges(Collection<FileChangeEvent> changes) {
-                    results = changes;
-                    latch.countDown();
+                    results.add(changes);
                 }
             });
-            reset();
             //first add a file
             File added = new File(rootDir, "newlyAddedFile.txt").getAbsoluteFile();
             touchFile(added);
@@ -125,7 +123,6 @@ public class FileSystemWatcherTestCase {
             checkResult(added, FileChangeEvent.Type.REMOVED);
 
 
-
         } finally {
             watcher.stop();
         }
@@ -133,18 +130,18 @@ public class FileSystemWatcherTestCase {
     }
 
     private void checkResult(File file, FileChangeEvent.Type type) throws InterruptedException {
-        latch.await(10, TimeUnit.SECONDS);
+        Collection<FileChangeEvent> results = this.results.poll(10, TimeUnit.SECONDS);
         Assert.assertNotNull(results);
         Assert.assertEquals(1, results.size());
         FileChangeEvent res = results.iterator().next();
+        if (type == FileChangeEvent.Type.REMOVED && res.getType() == FileChangeEvent.Type.MODIFIED) {
+            //sometime OS's will give a MODIFIED event before the REMOVED one
+            results = this.results.poll(10, TimeUnit.SECONDS);
+            Assert.assertNotNull(results);
+            Assert.assertEquals(1, results.size());
+            res = results.iterator().next();
+        }
         Assert.assertEquals(file, res.getFile());
         Assert.assertEquals(type, res.getType());
-        reset();
     }
-
-    void reset() {
-        latch = new CountDownLatch(1);
-        results = null;
-    }
-
 }
