@@ -100,6 +100,7 @@ public class FileSystemWatcherTestCase {
             added.setLastModified(500);
             checkResult(added, FileChangeEvent.Type.MODIFIED);
             added.delete();
+            Thread.sleep(1);
             checkResult(added, FileChangeEvent.Type.REMOVED);
             added = new File(existingSubDir, "newSubDirFile.txt");
             touchFile(added);
@@ -107,9 +108,11 @@ public class FileSystemWatcherTestCase {
             added.setLastModified(500);
             checkResult(added, FileChangeEvent.Type.MODIFIED);
             added.delete();
+            Thread.sleep(1);
             checkResult(added, FileChangeEvent.Type.REMOVED);
             File existing = new File(rootDir, EXISTING_FILE_NAME);
             existing.delete();
+            Thread.sleep(1);
             checkResult(existing, FileChangeEvent.Type.REMOVED);
             File newDir = new File(rootDir, "newlyCreatedDirectory");
             newDir.mkdir();
@@ -120,6 +123,7 @@ public class FileSystemWatcherTestCase {
             added.setLastModified(500);
             checkResult(added, FileChangeEvent.Type.MODIFIED);
             added.delete();
+            Thread.sleep(1);
             checkResult(added, FileChangeEvent.Type.REMOVED);
 
 
