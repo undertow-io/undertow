@@ -67,6 +67,10 @@ public class DirectBufferCache {
     }
 
     public CacheEntry add(Object key, int size) {
+        return add(key, size, maxAge);
+    }
+
+    public CacheEntry add(Object key, int size, int maxAge) {
         CacheEntry value = cache.get(key);
         if (value == null) {
             value = new CacheEntry(key, size, this, maxAge);

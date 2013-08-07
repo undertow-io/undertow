@@ -29,8 +29,6 @@ import io.undertow.server.handlers.cache.LRUCache;
  */
 public class CachingResourceManager implements ResourceManager {
 
-    private static final Object NO_RESOURCE = new Object();
-
     /**
      * The biggest file size we cache
      */
@@ -51,24 +49,48 @@ public class CachingResourceManager implements ResourceManager {
      */
     private final LRUCache<String, Object> cache;
 
-    public CachingResourceManager(final int metadataCacheSize, final long maxFileSize, final DirectBufferCache dataCache, final ResourceManager underlyingResourceManager, final int metadataCacheMaxAge) {
+    private final int maxAge;
+
+    public CachingResourceManager(final int metadataCacheSize, final long maxFileSize, final DirectBufferCache dataCache, final ResourceManager underlyingResourceManager, final int maxAge) {
         this.maxFileSize = maxFileSize;
         this.underlyingResourceManager = underlyingResourceManager;
         this.dataCache = dataCache;
-        this.cache = new LRUCache<String, Object>(metadataCacheSize, metadataCacheMaxAge);
+        this.cache = new LRUCache<String, Object>(metadataCacheSize, maxAge);
+        this.maxAge = maxAge;
     }
 
     @Override
     public Resource getResource(final String path) throws IOException {
         Object res = cache.get(path);
-        if (res == NO_RESOURCE) {
-            return null;
+        if (res instanceof NoResourceMarker) {
+            NoResourceMarker marker = (NoResourceMarker) res;
+            long nextCheck = marker.getNextCheckTime();
+            if(nextCheck > 0) {
+                long time = System.currentTimeMillis();
+                if(time > nextCheck) {
+                    marker.setNextCheckTime(time + maxAge);
+                    if(underlyingResourceManager.getResource(path) != null) {
+                        cache.remove(path);
+                    } else {
+                        return null;
+                    }
+                } else {
+                    return null;
+                }
+            } else {
+                return null;
+            }
         } else if (res != null) {
-            return (Resource) res;
+            CachedResource resource = (CachedResource) res;
+            if (resource.checkStillValid()) {
+                return (Resource) res;
+            } else {
+                invalidate(path);
+            }
         }
         final Resource underlying = underlyingResourceManager.getResource(path);
         if (underlying == null) {
-            cache.add(path, NO_RESOURCE);
+            cache.add(path, new NoResourceMarker(maxAge > 0 ? System.currentTimeMillis() + maxAge : -1));
             return null;
         }
         final CachedResource resource = new CachedResource(this, underlying, path);
@@ -94,5 +116,26 @@ public class CachingResourceManager implements ResourceManager {
 
     public long getMaxFileSize() {
         return maxFileSize;
+    }
+
+    public int getMaxAge() {
+        return maxAge;
+    }
+
+    private static final class NoResourceMarker {
+
+        volatile long nextCheckTime;
+
+        private NoResourceMarker(long nextCheckTime) {
+            this.nextCheckTime = nextCheckTime;
+        }
+
+        public long getNextCheckTime() {
+            return nextCheckTime;
+        }
+
+        public void setNextCheckTime(long nextCheckTime) {
+            this.nextCheckTime = nextCheckTime;
+        }
     }
 }
