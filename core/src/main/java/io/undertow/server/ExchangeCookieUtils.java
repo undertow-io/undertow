@@ -91,6 +91,18 @@ public class ExchangeCookieUtils {
                         name = cookie.substring(start, i);
                         start = i + 1;
                         state = 2;
+                    } else if (c == ';') {
+                        final String value = cookie.substring(start, i);
+                        if (++cookieCount == maxCookies) {
+                            throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
+                        }
+                        if (name.startsWith("$")) {
+                            additional.put(name, value);
+                        } else {
+                            cookies.put(name, value);
+                        }
+                        state = 0;
+                        start = i + 1;
                     }
                     break;
                 }
