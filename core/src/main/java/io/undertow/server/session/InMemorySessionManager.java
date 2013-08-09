@@ -115,11 +115,6 @@ public class InMemorySessionManager implements SessionManager {
     }
 
     @Override
-    public int activeSessions() {
-        return sessions.size();
-    }
-
-    @Override
     public Set<String> getTransientSessions() {
         return getAllSessions();
     }

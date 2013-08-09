@@ -100,13 +100,6 @@ public interface SessionManager {
     void setDefaultSessionTimeout(final int timeout);
 
     /**
-     * Returns the number of active sessions managed by this session manager.
-     *
-     * @return the number of active sessions
-     */
-    int activeSessions();
-
-    /**
      * Returns the identifiers of those sessions that would be lost upon
      * shutdown of this node
      */
