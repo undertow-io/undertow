@@ -85,9 +85,10 @@ public class AsyncInputStreamServlet extends HttpServlet {
                 int read = inputStream.read(buf);
                 if (read != -1) {
                     dataToWrite.write(buf, 0, read);
+                } else {
+                    onWritePossible();
                 }
             }
-            onWritePossible();
         }
 
         @Override

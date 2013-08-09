@@ -1,5 +1,6 @@
 package io.undertow.client;
 
+import io.undertow.util.HttpString;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
@@ -40,4 +41,13 @@ public interface UndertowClientMessages {
 
     @Message(id = 1033, value = "Invalid connection state")
     IllegalStateException invalidConnectionState();
+
+    @Message(id = 1034, value = "Unkown AJP packet type %s")
+    IOException unknownAjpMessageType(byte packetType);
+
+    @Message(id = 1035, value = "Unkown method type for AJP request %s")
+    IOException unknownMethod(HttpString method);
+
+    @Message(id = 1036, value = "Data still remaining in chunk %s")
+    IOException dataStillRemainingInChunk(long remaining);
 }

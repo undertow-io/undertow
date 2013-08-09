@@ -219,4 +219,8 @@ public interface UndertowMessages {
 
     @Message(id = 65, value = "SSL must be specified to connect to a https URL")
     IllegalArgumentException sslWasNull();
+
+    @Message(id = 66, value = "Incorect magic number for AJP packet header")
+    IOException wrongMagicNumber();
+
 }

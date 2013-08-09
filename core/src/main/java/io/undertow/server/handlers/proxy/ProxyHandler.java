@@ -41,6 +41,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.SameThreadExecutor;
+import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -49,6 +50,7 @@ import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 
 import java.io.IOException;
+import java.nio.channels.Channel;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -104,7 +106,8 @@ public final class ProxyHandler implements HttpHandler {
                     }
                 });
             }
-            ChannelListeners.initiateTransfer(Long.MAX_VALUE, result.getResponseChannel(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(result, exchange), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+            IoExceptionHandler handler = new IoExceptionHandler(exchange, result.getConnection());
+            ChannelListeners.initiateTransfer(Long.MAX_VALUE, result.getResponseChannel(), exchange.getResponseChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(result, exchange), handler, handler, exchange.getConnection().getBufferPool());
 
         }
 
@@ -259,7 +262,8 @@ public final class ProxyHandler implements HttpHandler {
                     }
 
                     result.setResponseListener(new ResponseCallback(exchange));
-                    ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), result.getRequestChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, result), ChannelListeners.closingChannelExceptionHandler(), ChannelListeners.closingChannelExceptionHandler(), exchange.getConnection().getBufferPool());
+                    IoExceptionHandler handler = new IoExceptionHandler(exchange, clientConnection);
+                    ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), result.getRequestChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, result), handler, handler, exchange.getConnection().getBufferPool());
                 }
 
                 @Override
@@ -301,6 +305,27 @@ public final class ProxyHandler implements HttpHandler {
                 IoUtils.safeClose(channel);
             }
 
+        }
+    }
+
+    private static final class IoExceptionHandler implements ChannelExceptionHandler<Channel> {
+
+        private final HttpServerExchange exchange;
+        private final ClientConnection clientConnection;
+
+        private IoExceptionHandler(HttpServerExchange exchange, ClientConnection clientConnection) {
+            this.exchange = exchange;
+            this.clientConnection = clientConnection;
+        }
+
+        @Override
+        public void handleException(Channel channel, IOException exception) {
+            IoUtils.safeClose(clientConnection);
+            if (!exchange.isResponseStarted()) {
+                exchange.setResponseCode(500);
+            }
+            exchange.setPersistent(false);
+            exchange.endExchange();
         }
     }
 }

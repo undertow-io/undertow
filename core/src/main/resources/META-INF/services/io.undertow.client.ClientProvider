@@ -1,1 +1,2 @@
 io.undertow.client.http.HttpClientProvider
+io.undertow.client.ajp.AjpClientProvider

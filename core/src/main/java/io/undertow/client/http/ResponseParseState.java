@@ -5,7 +5,7 @@ import io.undertow.util.HttpString;
 /**
  * @author Emanuel Muckenhuber
  */
-public class ResponseParseState {
+class ResponseParseState {
 
     //parsing states
     public static final int VERSION = 0;

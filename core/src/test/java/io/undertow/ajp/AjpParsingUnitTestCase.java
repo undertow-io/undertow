@@ -39,11 +39,11 @@ public class AjpParsingUnitTestCase {
 
 
     @Test
-    public void testAjpParsing() {
+    public void testAjpParsing() throws IOException {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
         HttpServerExchange result = new HttpServerExchange(null);
-        final AjpParseState state = new AjpParseState();
-        AjpParser.INSTANCE.parse(buffer, state, result);
+        final AjpRequestParseState state = new AjpRequestParseState();
+        AjpRequestParser.INSTANCE.parse(buffer, state, result);
         Assert.assertEquals(165, state.dataSize);
         Assert.assertTrue(state.isComplete());
         Assert.assertEquals(0, buffer.remaining());
@@ -52,15 +52,15 @@ public class AjpParsingUnitTestCase {
     }
 
     @Test
-    public void testByteByByteAjpParsing() {
+    public void testByteByByteAjpParsing() throws IOException {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
 
         HttpServerExchange result = new HttpServerExchange(null);
-        final AjpParseState state = new AjpParseState();
+        final AjpRequestParseState state = new AjpRequestParseState();
         int limit = buffer.limit();
         for (int i = 1; i <= limit; ++i) {
             buffer.limit(i);
-            AjpParser.INSTANCE.parse(buffer, state, result);
+            AjpRequestParser.INSTANCE.parse(buffer, state, result);
         }
         Assert.assertEquals(165, state.dataSize);
         Assert.assertTrue(state.isComplete());

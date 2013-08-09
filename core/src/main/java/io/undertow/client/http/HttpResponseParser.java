@@ -86,7 +86,7 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 WARNING_STRING,
                 WWW_AUTHENTICATE_STRING
         })
-public abstract class HttpResponseParser {
+abstract class HttpResponseParser {
 
     public static final HttpResponseParser INSTANCE;
 

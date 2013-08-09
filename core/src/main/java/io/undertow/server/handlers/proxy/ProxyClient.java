@@ -28,4 +28,6 @@ public interface ProxyClient {
 
     void getConnection(final HttpServerExchange exchange, final HttpHandler nextHandler, long timeout, TimeUnit timeUnit);
 
+    boolean isOpen();
+
 }

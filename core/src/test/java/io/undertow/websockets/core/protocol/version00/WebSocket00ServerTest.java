@@ -56,7 +56,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
+@AjpIgnore(apacheOnly = true)
 public class WebSocket00ServerTest {
 
     @org.junit.Test

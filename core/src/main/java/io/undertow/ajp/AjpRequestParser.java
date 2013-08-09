@@ -4,6 +4,8 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
+import java.io.IOException;
+import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 
 import static io.undertow.util.Methods.ACL;
@@ -37,11 +39,11 @@ import static io.undertow.util.Methods.VERSION_CONTROL;
 /**
  * @author Stuart Douglas
  */
-public class AjpParser {
+public class AjpRequestParser extends AbstractAjpParser {
 
-    public static final int STRING_LENGTH_MASK = 1 << 31;
 
-    public static final AjpParser INSTANCE = new AjpParser();
+    private static final HttpString[] HTTP_HEADERS;
+    public static final AjpRequestParser INSTANCE = new AjpRequestParser();
 
     public static final int FORWARD_REQUEST = 2;
     public static final int CPONG = 9;
@@ -50,7 +52,6 @@ public class AjpParser {
 
 
     private static final HttpString[] HTTP_METHODS;
-    private static final HttpString[] HTTP_HEADERS;
     private static final String[] ATTRIBUTES;
 
     public static final String QUERY_STRING = "query_string";
@@ -109,7 +110,6 @@ public class AjpParser {
         HTTP_METHODS[26] = BASELINE_CONTROL;
         HTTP_METHODS[27] = MKACTIVITY;
 
-
         HTTP_HEADERS = new HttpString[0xF];
         HTTP_HEADERS[1] = Headers.ACCEPT;
         HTTP_HEADERS[2] = Headers.ACCEPT_CHARSET;
@@ -142,13 +142,15 @@ public class AjpParser {
         ATTRIBUTES[13] = STORED_METHOD;
     }
 
+    public static final String UTF_8 = "UTF-8";
 
-    public void parse(final ByteBuffer buf, final AjpParseState state, final HttpServerExchange exchange) {
+
+    public void parse(final ByteBuffer buf, final AjpRequestParseState state, final HttpServerExchange exchange) throws IOException {
         if (!buf.hasRemaining()) {
             return;
         }
         switch (state.state) {
-            case AjpParseState.BEGIN: {
+            case AjpRequestParseState.BEGIN: {
                 IntegerHolder result = parse16BitInteger(buf, state);
                 if (!result.readComplete) {
                     return;
@@ -158,31 +160,31 @@ public class AjpParser {
                     }
                 }
             }
-            case AjpParseState.READING_DATA_SIZE: {
+            case AjpRequestParseState.READING_DATA_SIZE: {
                 IntegerHolder result = parse16BitInteger(buf, state);
                 if (!result.readComplete) {
-                    state.state = AjpParseState.READING_DATA_SIZE;
+                    state.state = AjpRequestParseState.READING_DATA_SIZE;
                     return;
                 } else {
                     state.dataSize = result.value;
                 }
             }
-            case AjpParseState.READING_PREFIX_CODE: {
+            case AjpRequestParseState.READING_PREFIX_CODE: {
                 if (!buf.hasRemaining()) {
-                    state.state = AjpParseState.READING_PREFIX_CODE;
+                    state.state = AjpRequestParseState.READING_PREFIX_CODE;
                     return;
                 } else {
                     final byte prefix = buf.get();
                     state.prefix = prefix;
                     if (prefix != 2) {
-                        state.state = AjpParseState.DONE;
+                        state.state = AjpRequestParseState.DONE;
                         return;
                     }
                 }
             }
-            case AjpParseState.READING_METHOD: {
+            case AjpRequestParseState.READING_METHOD: {
                 if (!buf.hasRemaining()) {
-                    state.state = AjpParseState.READING_METHOD;
+                    state.state = AjpRequestParseState.READING_METHOD;
                     return;
                 } else {
                     int method = buf.get();
@@ -193,88 +195,88 @@ public class AjpParser {
                     }
                 }
             }
-            case AjpParseState.READING_PROTOCOL: {
+            case AjpRequestParseState.READING_PROTOCOL: {
                 StringHolder result = parseString(buf, state, false);
                 if (result.readComplete) {
                     //TODO: more efficient way of doing this
                     exchange.setProtocol(HttpString.tryFromString(result.value));
                 } else {
-                    state.state = AjpParseState.READING_PROTOCOL;
+                    state.state = AjpRequestParseState.READING_PROTOCOL;
                     return;
                 }
             }
-            case AjpParseState.READING_REQUEST_URI: {
+            case AjpRequestParseState.READING_REQUEST_URI: {
                 StringHolder result = parseString(buf, state, false);
                 if (result.readComplete) {
-                    String res = result.value;
-                    exchange.setRequestURI(res);
+                    String res = URLDecoder.decode(result.value, UTF_8);
+                    exchange.setRequestURI(result.value);
                     exchange.setRequestPath(res);
                     exchange.setRelativePath(res);
                 } else {
-                    state.state = AjpParseState.READING_REQUEST_URI;
+                    state.state = AjpRequestParseState.READING_REQUEST_URI;
                     return;
                 }
             }
-            case AjpParseState.READING_REMOTE_ADDR: {
+            case AjpRequestParseState.READING_REMOTE_ADDR: {
                 StringHolder result = parseString(buf, state, false);
                 if (result.readComplete) {
                     //exchange.setRequestURI(result.value);
                 } else {
-                    state.state = AjpParseState.READING_REMOTE_ADDR;
+                    state.state = AjpRequestParseState.READING_REMOTE_ADDR;
                     return;
                 }
             }
-            case AjpParseState.READING_REMOTE_HOST: {
+            case AjpRequestParseState.READING_REMOTE_HOST: {
                 StringHolder result = parseString(buf, state, false);
                 if (result.readComplete) {
                     //exchange.setRequestURI(result.value);
                 } else {
-                    state.state = AjpParseState.READING_REMOTE_HOST;
+                    state.state = AjpRequestParseState.READING_REMOTE_HOST;
                     return;
                 }
             }
-            case AjpParseState.READING_SERVER_NAME: {
+            case AjpRequestParseState.READING_SERVER_NAME: {
                 StringHolder result = parseString(buf, state, false);
                 if (result.readComplete) {
                     //exchange.setRequestURI(result.value);
                 } else {
-                    state.state = AjpParseState.READING_SERVER_NAME;
+                    state.state = AjpRequestParseState.READING_SERVER_NAME;
                     return;
                 }
             }
-            case AjpParseState.READING_SERVER_PORT: {
+            case AjpRequestParseState.READING_SERVER_PORT: {
                 IntegerHolder result = parse16BitInteger(buf, state);
                 if (result.readComplete) {
                     //exchange.setRequestURI(result.value);
                 } else {
-                    state.state = AjpParseState.READING_SERVER_PORT;
+                    state.state = AjpRequestParseState.READING_SERVER_PORT;
                     return;
                 }
             }
-            case AjpParseState.READING_IS_SSL: {
+            case AjpRequestParseState.READING_IS_SSL: {
                 if (!buf.hasRemaining()) {
-                    state.state = AjpParseState.READING_IS_SSL;
+                    state.state = AjpRequestParseState.READING_IS_SSL;
                     return;
                 } else {
                     final byte isSsl = buf.get();
                 }
             }
-            case AjpParseState.READING_NUM_HEADERS: {
+            case AjpRequestParseState.READING_NUM_HEADERS: {
                 IntegerHolder result = parse16BitInteger(buf, state);
                 if (!result.readComplete) {
-                    state.state = AjpParseState.READING_NUM_HEADERS;
+                    state.state = AjpRequestParseState.READING_NUM_HEADERS;
                     return;
                 } else {
                     state.numHeaders = result.value;
                 }
             }
-            case AjpParseState.READING_HEADERS: {
+            case AjpRequestParseState.READING_HEADERS: {
                 int readHeaders = exchange.getRequestHeaders().getHeaderNames().size();
                 while (readHeaders < state.numHeaders) {
                     if (state.currentHeader == null) {
                         StringHolder result = parseString(buf, state, true);
                         if (!result.readComplete) {
-                            state.state = AjpParseState.READING_HEADERS;
+                            state.state = AjpRequestParseState.READING_HEADERS;
                             return;
                         }
                         if (result.header != null) {
@@ -285,7 +287,7 @@ public class AjpParser {
                     }
                     StringHolder result = parseString(buf, state, false);
                     if (!result.readComplete) {
-                        state.state = AjpParseState.READING_HEADERS;
+                        state.state = AjpRequestParseState.READING_HEADERS;
                         return;
                     }
                     exchange.getRequestHeaders().add(state.currentHeader, result.value);
@@ -293,16 +295,16 @@ public class AjpParser {
                     ++readHeaders;
                 }
             }
-            case AjpParseState.READING_ATTRIBUTES: {
+            case AjpRequestParseState.READING_ATTRIBUTES: {
                 for (; ; ) {
                     if (state.currentAttribute == null && state.currentIntegerPart == -1) {
                         if (!buf.hasRemaining()) {
-                            state.state = AjpParseState.READING_ATTRIBUTES;
+                            state.state = AjpRequestParseState.READING_ATTRIBUTES;
                             return;
                         }
                         int val = (0xFF & buf.get());
                         if (val == 0xFF) {
-                            state.state = AjpParseState.DONE;
+                            state.state = AjpRequestParseState.DONE;
                             return;
                         } else if (val == 0x0A) {
                             //we need to read the name. We overload currentIntegerPart to avoid adding another state field
@@ -314,7 +316,7 @@ public class AjpParser {
                     if (state.currentIntegerPart == 1) {
                         StringHolder result = parseString(buf, state, false);
                         if (!result.readComplete) {
-                            state.state = AjpParseState.READING_ATTRIBUTES;
+                            state.state = AjpRequestParseState.READING_ATTRIBUTES;
                             return;
                         }
                         state.currentAttribute = result.value;
@@ -322,7 +324,7 @@ public class AjpParser {
                     }
                     StringHolder result = parseString(buf, state, false);
                     if (!result.readComplete) {
-                        state.state = AjpParseState.READING_ATTRIBUTES;
+                        state.state = AjpRequestParseState.READING_ATTRIBUTES;
                         return;
                     }
                     //query string.
@@ -338,18 +340,18 @@ public class AjpParser {
                                 stringStart = i + 1;
                             } else if (c == '&') {
                                 if (attrName != null) {
-                                    exchange.addQueryParam(attrName, res.substring(stringStart, i));
+                                    exchange.addQueryParam(URLDecoder.decode(attrName, UTF_8), URLDecoder.decode(res.substring(stringStart, i), UTF_8));
                                 } else {
-                                    exchange.addQueryParam(res.substring(stringStart, i), "");
+                                    exchange.addQueryParam(URLDecoder.decode(res.substring(stringStart, i), UTF_8), "");
                                 }
                                 stringStart = i + 1;
                                 attrName = null;
                             }
                         }
                         if (attrName != null) {
-                            exchange.addQueryParam(attrName, res.substring(stringStart, res.length()));
+                            exchange.addQueryParam(URLDecoder.decode(attrName, UTF_8), URLDecoder.decode(res.substring(stringStart, res.length()), UTF_8));
                         } else if (res.length() != stringStart) {
-                            exchange.addQueryParam(res.substring(stringStart, res.length()), "");
+                            exchange.addQueryParam(URLDecoder.decode(res.substring(stringStart, res.length()), UTF_8), "");
                         }
                     } else {
                         //other attributes
@@ -359,106 +361,11 @@ public class AjpParser {
                 }
             }
         }
-        state.state = AjpParseState.DONE;
+        state.state = AjpRequestParseState.DONE;
     }
 
-    private IntegerHolder parse16BitInteger(ByteBuffer buf, AjpParseState state) {
-        if (!buf.hasRemaining()) {
-            return new IntegerHolder(-1, false);
-        }
-        int number = state.currentIntegerPart;
-        if (number == -1) {
-            number = (buf.get() & 0xFF);
-        }
-        if (buf.hasRemaining()) {
-            final byte b = buf.get();
-            int result = ((0xFF & number) << 8) + (b & 0xFF);
-            state.currentIntegerPart = -1;
-            return new IntegerHolder(result, true);
-        } else {
-            state.currentIntegerPart = number;
-            return new IntegerHolder(-1, false);
-        }
-    }
-
-    private StringHolder parseString(ByteBuffer buf, AjpParseState state, boolean header) {
-        if (!buf.hasRemaining()) {
-            return new StringHolder(null, false);
-        }
-        int stringLength = state.stringLength;
-        if (stringLength == -1) {
-            int number = buf.get() & 0xFF;
-            if (buf.hasRemaining()) {
-                final byte b = buf.get();
-                stringLength = ((0xFF & number) << 8) + (b & 0xFF);
-            } else {
-                state.stringLength = number | STRING_LENGTH_MASK;
-                return new StringHolder(null, false);
-            }
-        } else if ((stringLength & STRING_LENGTH_MASK) != 0) {
-            int number = stringLength & ~STRING_LENGTH_MASK;
-            stringLength = ((0xFF & number) << 8) + (buf.get() & 0xFF);
-        }
-        if (header && (stringLength & 0xFF00) != 0) {
-            state.stringLength = -1;
-            return new StringHolder(HTTP_HEADERS[stringLength & 0xFF]);
-        }
-        if (stringLength == 0xFFFF) {
-            //OxFFFF means null
-            state.stringLength = -1;
-            return new StringHolder(null, true);
-        }
-        StringBuilder builder = state.currentString;
-
-        if (builder == null) {
-            builder = new StringBuilder();
-            state.currentString = builder;
-        }
-        int length = builder.length();
-        while (length < stringLength) {
-            if (!buf.hasRemaining()) {
-                state.stringLength = stringLength;
-                return new StringHolder(null, false);
-            }
-            builder.append((char) buf.get());
-            ++length;
-        }
-
-        if (buf.hasRemaining()) {
-            buf.get(); //null terminator
-            state.currentString = null;
-            state.stringLength = -1;
-            return new StringHolder(builder.toString(), true);
-        } else {
-            return new StringHolder(null, false);
-        }
-    }
-
-    private static class IntegerHolder {
-        final int value;
-        final boolean readComplete;
-
-        private IntegerHolder(int value, boolean readComplete) {
-            this.value = value;
-            this.readComplete = readComplete;
-        }
-    }
-
-    private static class StringHolder {
-        final String value;
-        final HttpString header;
-        final boolean readComplete;
-
-        private StringHolder(String value, boolean readComplete) {
-            this.value = value;
-            this.readComplete = readComplete;
-            this.header = null;
-        }
-
-        private StringHolder(HttpString value) {
-            this.value = null;
-            this.readComplete = true;
-            this.header = value;
-        }
+    @Override
+    protected HttpString headers(int offset) {
+        return HTTP_HEADERS[offset];
     }
 }

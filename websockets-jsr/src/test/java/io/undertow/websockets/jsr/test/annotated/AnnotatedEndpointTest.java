@@ -21,6 +21,7 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
@@ -43,6 +44,7 @@ import java.net.URI;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 @RunWith(DefaultServer.class)
+@AjpIgnore(apacheOnly = true)
 public class AnnotatedEndpointTest {
 
     private static ServerWebSocketContainer deployment;

@@ -1,4 +1,4 @@
-package io.undertow.client.http;
+package io.undertow.client.ajp;
 
 import io.undertow.client.ClientResponse;
 import io.undertow.util.HeaderMap;
@@ -9,16 +9,16 @@ import io.undertow.util.HttpString;
  *
  * @author Emanuel Muckenhuber
  */
-final class HttpResponseBuilder {
+final class AjpResponseBuilder {
 
-    private final ResponseParseState parseState = new ResponseParseState();
+    private final AjpResponseParseState parseState = new AjpResponseParseState();
 
     private int statusCode;
     private HttpString protocol;
     private String reasonPhrase;
     private final HeaderMap responseHeaders = new HeaderMap();
 
-    public ResponseParseState getParseState() {
+    public AjpResponseParseState getParseState() {
         return parseState;
     }
 

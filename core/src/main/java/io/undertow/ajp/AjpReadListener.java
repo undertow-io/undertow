@@ -39,22 +39,24 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
 
     private final AjpServerConnection connection;
     private final String scheme;
-    private AjpParseState state = new AjpParseState();
+    private AjpRequestParseState state = new AjpRequestParseState();
     private HttpServerExchange httpServerExchange;
 
     private volatile int read = 0;
     private final int maxRequestSize;
+    private final long maxEntitySize;
 
     AjpReadListener(final AjpServerConnection connection, final String scheme) {
         this.connection = connection;
         this.scheme = scheme;
-        maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
+        this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
+        this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, 0);
     }
 
     public void startRequest() {
         connection.resetChannel();
-        state = new AjpParseState();
-        httpServerExchange = new HttpServerExchange(connection);
+        state = new AjpRequestParseState();
+        httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
         httpServerExchange.addExchangeCompleteListener(this);
         httpServerExchange.setRequestScheme(scheme);
         read = 0;
@@ -115,7 +117,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
                     buffer.flip();
                 }
                 int begin = buffer.remaining();
-                AjpParser.INSTANCE.parse(buffer, state, httpServerExchange);
+                AjpRequestParser.INSTANCE.parse(buffer, state, httpServerExchange);
                 read += (begin - buffer.remaining());
                 if (buffer.hasRemaining()) {
                     free = false;
@@ -129,13 +131,13 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
             } while (!state.isComplete());
 
 
-            if (state.prefix != AjpParser.FORWARD_REQUEST) {
-                if (state.prefix == AjpParser.CPING) {
+            if (state.prefix != AjpRequestParser.FORWARD_REQUEST) {
+                if (state.prefix == AjpRequestParser.CPING) {
                     UndertowLogger.REQUEST_LOGGER.debug("Received CPING, sending CPONG");
                     handleCPing();
-                } else if (state.prefix == AjpParser.CPONG) {
+                } else if (state.prefix == AjpRequestParser.CPONG) {
                     UndertowLogger.REQUEST_LOGGER.debug("Received CPONG, starting next request");
-                    state = new AjpParseState();
+                    state = new AjpRequestParseState();
                     channel.getReadSetter().set(this);
                     channel.resumeReads();
                 } else {
@@ -152,9 +154,9 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.putAttachment(UndertowOptions.ATTACHMENT_KEY, connection.getUndertowOptions());
-            final AjpResponseConduit responseConduit = new AjpResponseConduit(connection.getChannel().getSinkChannel().getConduit(), connection.getBufferPool(), httpServerExchange, new ConduitListener<AjpResponseConduit>() {
+            final AjpServerResponseConduit responseConduit = new AjpServerResponseConduit(connection.getChannel().getSinkChannel().getConduit(), connection.getBufferPool(), httpServerExchange, new ConduitListener<AjpServerResponseConduit>() {
                 @Override
-                public void handleEvent(AjpResponseConduit channel) {
+                public void handleEvent(AjpServerResponseConduit channel) {
                     httpServerExchange.terminateResponse();
                 }
             });
@@ -183,7 +185,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
     }
 
     private void handleCPing() {
-        state = new AjpParseState();
+        state = new AjpRequestParseState();
         final StreamConnection underlyingChannel = connection.getChannel();
         underlyingChannel.getSourceChannel().suspendReads();
         final ByteBuffer buffer = ByteBuffer.wrap(CPONG);
@@ -225,14 +227,16 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
 
     @Override
     public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-        startRequest();
-        ConduitStreamSourceChannel channel = ((AjpServerConnection)exchange.getConnection()).getChannel().getSourceChannel();
-        channel.getReadSetter().set(this);
-        channel.wakeupReads();
+        if (!exchange.isUpgrade()) {
+            startRequest();
+            ConduitStreamSourceChannel channel = ((AjpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
+            channel.getReadSetter().set(this);
+            channel.wakeupReads();
+        }
         nextListener.proceed();
     }
 
-    private StreamSourceConduit createSourceConduit(StreamSourceConduit underlyingConduit, AjpResponseConduit responseConduit, final HttpServerExchange exchange) {
+    private StreamSourceConduit createSourceConduit(StreamSourceConduit underlyingConduit, AjpServerResponseConduit responseConduit, final HttpServerExchange exchange) {
         ReadDataStreamSourceConduit conduit = new ReadDataStreamSourceConduit(underlyingConduit, (AbstractServerConnection) exchange.getConnection());
 
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
@@ -262,9 +266,9 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
             exchange.terminateRequest();
             return new EmptyStreamSourceConduit(conduit.getReadThread());
         }
-        return new AjpRequestConduit(conduit, responseConduit, length, new ConduitListener<AjpRequestConduit>() {
+        return new AjpServerRequestConduit(conduit, httpServerExchange, responseConduit, length, new ConduitListener<AjpServerRequestConduit>() {
             @Override
-            public void handleEvent(AjpRequestConduit channel) {
+            public void handleEvent(AjpServerRequestConduit channel) {
                 exchange.terminateRequest();
             }
         });

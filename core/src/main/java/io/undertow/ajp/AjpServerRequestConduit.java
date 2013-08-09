@@ -5,7 +5,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.UndertowMessages;
 import io.undertow.conduits.ConduitListener;
+import io.undertow.server.HttpServerExchange;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
@@ -20,7 +22,7 @@ import static org.xnio.Bits.longBitMask;
  *
  * @author Stuart Douglas
  */
-public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
+public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
 
     private static final ByteBuffer READ_BODY_CHUNK;
 
@@ -38,7 +40,9 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
 
     }
 
-    private final AjpResponseConduit ajpResponseConduit;
+    private final HttpServerExchange exchange;
+
+    private final AjpServerResponseConduit ajpResponseConduit;
 
     /**
      * The size of the incoming request. A size of 0 indicates that the request is using chunked encoding
@@ -52,7 +56,7 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
      */
     private final ByteBuffer headerBuffer = ByteBuffer.allocateDirect(HEADER_LENGTH);
 
-    private final ConduitListener<? super AjpRequestConduit> finishListener;
+    private final ConduitListener<? super AjpServerRequestConduit> finishListener;
 
     /**
      * The total amount of remaining data. If this is unknown it is -1.
@@ -63,6 +67,11 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
      * State flags, with the chunk remaining stored in the low bytes
      */
     private long state;
+
+    /**
+     * The total amount of data that has been read
+     */
+    private long totalRead;
 
     /**
      * There is a packet coming from apache.
@@ -82,8 +91,9 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
      */
     private static final long STATE_MASK = longBitMask(0, 60);
 
-    public AjpRequestConduit(final StreamSourceConduit delegate, AjpResponseConduit ajpResponseConduit, Long size, ConduitListener<? super AjpRequestConduit> finishListener) {
+    public AjpServerRequestConduit(final StreamSourceConduit delegate, HttpServerExchange exchange, AjpServerResponseConduit ajpResponseConduit, Long size, ConduitListener<? super AjpServerRequestConduit> finishListener) {
         super(delegate);
+        this.exchange = exchange;
         this.ajpResponseConduit = ajpResponseConduit;
         this.size = size;
         this.finishListener = finishListener;
@@ -130,7 +140,7 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
     @Override
     public int read(ByteBuffer dst) throws IOException {
         long state = this.state;
-        if(anyAreSet(state, STATE_FINISHED)) {
+        if (anyAreSet(state, STATE_FINISHED)) {
             return -1;
         } else if (anyAreSet(state, STATE_SEND_REQUIRED)) {
             state = this.state = (state & STATE_MASK) | STATE_READING;
@@ -152,7 +162,7 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
         long remaining = this.remaining;
         if (remaining == 0) {
             this.state = STATE_FINISHED;
-            if(finishListener != null) {
+            if (finishListener != null) {
                 finishListener.handleEvent(this);
             }
             return -1;
@@ -168,18 +178,19 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
                 headerBuffer.flip();
                 byte b1 = headerBuffer.get(); //0x12
                 byte b2 = headerBuffer.get(); //0x34
-                assert b1 == 0x12;
-                assert b2 == 0x34;
-                headerBuffer.get();//the length headers, two less than the string length header
+                if (b1 != 0x12 || b2 != 0x34) {
+                    throw UndertowMessages.MESSAGES.wrongMagicNumber();
+                }
+                headerBuffer.get();//the length headers, two more than the string length header
                 headerBuffer.get();
                 b1 = headerBuffer.get();
                 b2 = headerBuffer.get();
                 chunkRemaining = ((b1 & 0xFF) << 8) | (b2 & 0xFF);
-                if(chunkRemaining == 0) {
+                if (chunkRemaining == 0) {
                     this.remaining = 0;
                     this.state = STATE_FINISHED;
 
-                    if(finishListener != null) {
+                    if (finishListener != null) {
                         finishListener.handleEvent(this);
                     }
                     return -1;
@@ -196,13 +207,14 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
             }
             int read = next.read(dst);
             chunkRemaining -= read;
-            if(remaining != -1) {
+            if (remaining != -1) {
                 remaining -= read;
             }
+            this.totalRead += read;
             if (remaining == 0) {
                 this.state = STATE_FINISHED;
 
-                if(finishListener != null) {
+                if (finishListener != null) {
                     finishListener.handleEvent(this);
                 }
             } else if (chunkRemaining == 0) {
@@ -215,6 +227,12 @@ public class AjpRequestConduit extends AbstractStreamSourceConduit<StreamSourceC
         } finally {
             this.remaining = remaining;
             dst.limit(limit);
+            final long maxEntitySize = exchange.getMaxEntitySize();
+            if (maxEntitySize > 0) {
+                if (totalRead > maxEntitySize) {
+                    throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxEntitySize);
+                }
+            }
         }
     }
 

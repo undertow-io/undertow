@@ -8,11 +8,13 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.SameThreadExecutor;
+import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.channels.Channel;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,10 +38,14 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
     public void createProxyClient(final HttpServerExchange exchange, final HttpHandler nextHandler, final long timeout, final TimeUnit timeUnit) {
         ProxyClient existing = exchange.getConnection().getAttachment(clientAttachmentKey);
         if (existing != null) {
-            //this connection already has a client, re-use it
-            exchange.putAttachment(CLIENT, existing);
-            exchange.dispatch(SameThreadExecutor.INSTANCE, nextHandler);
-            return;
+            if (existing.isOpen()) {
+                //this connection already has a client, re-use it
+                exchange.putAttachment(CLIENT, existing);
+                exchange.dispatch(SameThreadExecutor.INSTANCE, nextHandler);
+                return;
+            } else {
+                exchange.getConnection().removeAttachment(clientAttachmentKey);
+            }
         }
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
@@ -60,16 +66,6 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
             this.exchange = exchange;
         }
 
-        public void handleCancelled(final HttpServerExchange exchange) {
-            try {
-                if (!exchange.isResponseStarted()) {
-                    exchange.setResponseCode(500);
-                }
-            } finally {
-                exchange.endExchange();
-            }
-        }
-
         @Override
         public void completed(final ClientConnection connection) {
             final ServerConnection serverConnection = exchange.getConnection();
@@ -81,6 +77,12 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
                 @Override
                 public void closed(ServerConnection serverConnection) {
                     IoUtils.safeClose(connection);
+                }
+            });
+            connection.getCloseSetter().set(new ChannelListener<Channel>() {
+                @Override
+                public void handleEvent(Channel channel) {
+                    serverConnection.removeAttachment(clientAttachmentKey);
                 }
             });
             exchange.dispatch(SameThreadExecutor.INSTANCE, next);
@@ -105,6 +107,11 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
         public void getConnection(HttpServerExchange exchange, HttpHandler nextHandler, long timeout, TimeUnit timeUnit) {
             exchange.putAttachment(CONNECTION, connection);
             exchange.dispatch(SameThreadExecutor.INSTANCE, nextHandler);
+        }
+
+        @Override
+        public boolean isOpen() {
+            return connection.isOpen();
         }
     }
 

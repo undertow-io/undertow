@@ -18,13 +18,8 @@
 
 package io.undertow.server;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.concurrent.Executor;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -34,7 +29,10 @@ import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.StreamSourceConduit;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Executor;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -196,10 +194,6 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                     executor.execute(this);
                 }
             }
-        } else if(exchange.isUpgrade() && connection.getExtraBytes() != null) {
-            //if this is a HTTP upgrade request and there are extra bytes make the extra bytes available
-            StreamSourceConduit conduit = connection.getChannel().getSourceChannel().getConduit();
-            connection.getChannel().getSourceChannel().setConduit(new ReadDataStreamSourceConduit(conduit, connection));
         }
         nextListener.proceed();
     }

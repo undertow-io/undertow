@@ -19,6 +19,7 @@
 package io.undertow.ajp;
 
 import io.undertow.UndertowMessages;
+import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpContinue;
@@ -87,6 +88,10 @@ public final class AjpServerConnection extends AbstractServerConnection implemen
 
     @Override
     public StreamConnection upgradeChannel() {
-        throw UndertowMessages.MESSAGES.ajpDoesNotSupportHTTPUpgrade();
+        resetChannel();
+        if (extraBytes != null) {
+            channel.getSourceChannel().setConduit(new ReadDataStreamSourceConduit(channel.getSourceChannel().getConduit(), this));
+        }
+        return channel;
     }
 }

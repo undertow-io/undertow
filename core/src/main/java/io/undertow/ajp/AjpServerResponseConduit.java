@@ -56,7 +56,7 @@ import static org.xnio.Bits.anyAreSet;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author Stuart Douglas
  */
-final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
+final class AjpServerResponseConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.channel.ajp.response");
 
@@ -72,7 +72,7 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     @SuppressWarnings("unused")
     private volatile int state = FLAG_START;
 
-    private static final AtomicIntegerFieldUpdater<AjpResponseConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(AjpResponseConduit.class, "state");
+    private static final AtomicIntegerFieldUpdater<AjpServerResponseConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(AjpServerResponseConduit.class, "state");
 
     /**
      * The current data buffer. This will be released once it has been written out.
@@ -86,7 +86,7 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
 
     private final HttpServerExchange exchange;
 
-    private final ConduitListener<? super AjpResponseConduit> finishListener;
+    private final ConduitListener<? super AjpServerResponseConduit> finishListener;
 
 
 
@@ -122,7 +122,7 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         HEADER_MAP = Collections.unmodifiableMap(headers);
     }
 
-    AjpResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final HttpServerExchange exchange, ConduitListener<? super AjpResponseConduit> finishListener) {
+    AjpServerResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final HttpServerExchange exchange, ConduitListener<? super AjpServerResponseConduit> finishListener) {
         super(next);
         this.pool = pool;
         this.exchange = exchange;
@@ -474,7 +474,7 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         next.awaitWritable(time, timeUnit);
     }
 
-    public boolean doGetRequestBodyChunk(ByteBuffer buffer, final AjpRequestConduit requestChannel) throws IOException {
+    public boolean doGetRequestBodyChunk(ByteBuffer buffer, final AjpServerRequestConduit requestChannel) throws IOException {
         this.readBodyChunkBuffer = buffer;
         boolean result = processWrite();
         if (result) {
@@ -487,7 +487,7 @@ final class AjpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                 @Override
                 public void run() {
                     try {
-                        while (AjpResponseConduit.this.readBodyChunkBuffer != null) {
+                        while (AjpServerResponseConduit.this.readBodyChunkBuffer != null) {
                             next.awaitWritable();
                             boolean result = processWrite();
                             if (result) {

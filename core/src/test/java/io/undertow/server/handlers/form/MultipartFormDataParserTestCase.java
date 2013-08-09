@@ -24,6 +24,7 @@ import java.nio.charset.Charset;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.util.FileUtils;
 import io.undertow.testutils.HttpClientUtils;
@@ -67,6 +68,7 @@ public class MultipartFormDataParserTestCase {
                     }
                     exchange.endExchange();
                 } catch (IOException e) {
+                    e.printStackTrace();
                     exchange.setResponseCode(500);
                     exchange.endExchange();
                 } finally {
@@ -74,7 +76,7 @@ public class MultipartFormDataParserTestCase {
                 }
             }
         };
-        DefaultServer.setRootHandler(fd);
+        DefaultServer.setRootHandler(new BlockingHandler(fd));
     }
 
     @Test

@@ -9,7 +9,7 @@ import java.util.Map;
 /**
  * @author Stuart Douglas
  */
- class AjpParseState {
+ class AjpRequestParseState extends AbstractAjpParseState {
 
     //states
     public static final int BEGIN = 0;
@@ -33,14 +33,6 @@ import java.util.Map;
 
     byte prefix;
 
-    //the length of the string being read
-    int stringLength = -1;
-    StringBuilder currentString;
-
-    //when reading the first byte of an integer this stores the first value. It is set to -1 to signify that
-    //the first byte has not been read yet.
-    int currentIntegerPart = -1;
-
     int dataSize;
 
     int numHeaders = 0;
@@ -57,9 +49,9 @@ import java.util.Map;
     }
 
     AjpSSLSessionInfo createSslSessionInfo() {
-        String sessionId = attributes.get(AjpParser.SSL_SESSION);
-        String cypher = attributes.get(AjpParser.SSL_CIPHER);
-        String cert = attributes.get(AjpParser.SSL_CERT);
+        String sessionId = attributes.get(AjpRequestParser.SSL_SESSION);
+        String cypher = attributes.get(AjpRequestParser.SSL_CIPHER);
+        String cert = attributes.get(AjpRequestParser.SSL_CERT);
         if (sessionId == null ||
                 cypher == null ||
                 cert == null) {
