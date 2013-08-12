@@ -18,10 +18,6 @@
 
 package io.undertow.server.handlers;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
 import io.undertow.UndertowLogger;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
@@ -33,6 +29,10 @@ import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.StreamConnection;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * An HTTP request handler which upgrades the HTTP request and hands it off as a socket to any XNIO consumer.
@@ -60,7 +60,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
         }
         List<Holder> list = handlers.get(productString);
         if (list == null) {
-            handlers.put(productString, list = new ArrayList<Holder>());
+            handlers.put(productString, list = new CopyOnWriteArrayList<Holder>());
         }
         list.add(new Holder(openListener, handshake));
     }
