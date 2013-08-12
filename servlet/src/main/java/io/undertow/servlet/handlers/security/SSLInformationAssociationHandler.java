@@ -6,6 +6,7 @@ import io.undertow.server.SSLSessionInfo;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
 import javax.servlet.ServletRequest;
+import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayInputStream;
 import java.security.cert.X509Certificate;
 
@@ -68,9 +69,8 @@ public class SSLInformationAssociationHandler implements HttpHandler {
 
     /**
      * <p>Return the chain of X509 certificates used to negotiate the SSL Session.</p>
-     *
+     * <p/>
      * We convert JSSE's javax.security.cert.X509Certificate[]  to servlet's  java.security.cert.X509Certificate[]
-     *
      *
      * @param session the   javax.net.ssl.SSLSession to use as the source of the cert chain.
      * @return the chain of java.security.cert.X509Certificates used to
@@ -105,9 +105,13 @@ public class SSLInformationAssociationHandler implements HttpHandler {
             request.setAttribute("javax.servlet.request.cipher_suite", ssl.getCipherSuite());
             request.setAttribute("javax.servlet.request.key_size", getKeyLenght(ssl.getCipherSuite()));
             request.setAttribute("javax.servlet.request.ssl_session_id", ssl.getId());
-            X509Certificate[] certs = getCerts(ssl);
-            if (certs != null) {
-                request.setAttribute("javax.servlet.request.X509Certificate", certs);
+            if (request instanceof HttpServletRequest) {
+                if (HttpServletRequest.CLIENT_CERT_AUTH.equals(((HttpServletRequest) request).getAuthType())) {
+                    X509Certificate[] certs = getCerts(ssl);
+                    if (certs != null) {
+                        request.setAttribute("javax.servlet.request.X509Certificate", certs);
+                    }
+                }
             }
         }
         next.handleRequest(exchange);

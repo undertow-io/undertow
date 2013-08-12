@@ -21,7 +21,8 @@ public class SSLAttributesServlet extends HttpServlet {
         } else if (req.getServletPath().equals("/cipher-suite")) {
             pw.write(req.getAttribute("javax.servlet.request.cipher_suite").toString());
         } else if (req.getServletPath().equals("/cert")) {
-            pw.write(req.getAttribute("javax.servlet.request.X509Certificate").toString());
+            final Object attribute = req.getAttribute("javax.servlet.request.X509Certificate");
+            pw.write(attribute == null ? "null" : attribute.toString());
         }
         pw.close();
     }
