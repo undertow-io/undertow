@@ -194,23 +194,13 @@ public class ExchangeCookieUtils {
             header.append("; domain=");
             header.append(cookie.getDomain());
         }
-        if (cookie.isDiscard()) {
-            header.append("; Discard");
-        }
         if (cookie.isSecure()) {
-            header.append("; Secure");
-        }
-        if (cookie.isHttpOnly()) {
-            header.append("; HttpOnly");
+            header.append("; secure");
         }
         if (cookie.getExpires() != null) {
             header.append("; Expires=");
             header.append(DateUtils.toOldCookieDateString(cookie.getExpires()));
         } else if (cookie.getMaxAge() != null) {
-            if (cookie.getMaxAge() >= 0) {
-                header.append("; Max-Age=");
-                header.append(cookie.getMaxAge());
-            }
             if (cookie.getMaxAge() == 0) {
                 Date expires = new Date();
                 expires.setTime(0);

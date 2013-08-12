@@ -87,7 +87,7 @@ public class ServletCookieAdaptor implements Cookie {
 
     @Override
     public boolean isDiscard() {
-        return false;
+        return cookie.getMaxAge() < 0;
     }
 
     @Override

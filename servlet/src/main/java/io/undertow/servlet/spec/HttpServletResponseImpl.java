@@ -80,7 +80,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             return;
         }
         final ServletCookieAdaptor servletCookieAdaptor = new ServletCookieAdaptor(cookie);
-        servletCookieAdaptor.setVersion(servletContext.getDeployment().getDeploymentInfo().getDefaultCookieVersion());
+        if(cookie.getVersion() == 0) {
+            servletCookieAdaptor.setVersion(servletContext.getDeployment().getDeploymentInfo().getDefaultCookieVersion());
+        }
         exchange.setResponseCookie(servletCookieAdaptor);
     }
 
