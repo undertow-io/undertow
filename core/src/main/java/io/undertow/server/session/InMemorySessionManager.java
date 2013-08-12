@@ -281,7 +281,7 @@ public class InMemorySessionManager implements SessionManager {
             invalidate(exchange, SessionListener.SessionDestroyedReason.INVALIDATED);
         }
 
-        void invalidate(final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {
+        synchronized void invalidate(final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {
             if (cancelKey != null) {
                 cancelKey.remove();
             }
@@ -317,7 +317,7 @@ public class InMemorySessionManager implements SessionManager {
             return newId;
         }
 
-        private void destroy() {
+        private synchronized void destroy() {
             if (cancelKey != null) {
                 cancelKey.remove();
             }
