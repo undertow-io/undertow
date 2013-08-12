@@ -18,11 +18,6 @@
 
 package io.undertow.util;
 
-import static java.lang.Integer.rotateLeft;
-import static java.lang.Integer.signum;
-import static java.lang.System.arraycopy;
-import static java.util.Arrays.copyOfRange;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
@@ -30,6 +25,10 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Random;
+
+import static java.lang.Integer.signum;
+import static java.lang.System.arraycopy;
+import static java.util.Arrays.copyOfRange;
 
 /**
  * An HTTP case-insensitive Latin-1 string.
@@ -284,64 +283,10 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     }
 
     private static int calcHashCode(final byte[] bytes) {
-        if (true) {
-            int hc = 17;
-            for (byte b : bytes) {
-                hc = (hc << 4) + hc + higher(b);
-            }
-            return hc;
+        int hc = 17;
+        for (byte b : bytes) {
+            hc = (hc << 4) + hc + higher(b);
         }
-
-        // use murmur-3 algorithm similar to the one that String uses, but case-insensitive and latin-1 specific
-        int hc = hashCodeBase;
-        final int length = bytes.length;
-        int remaining = length;
-        int position = 0;
-        int tmp;
-        while (remaining >= 4) {
-            tmp = higher(bytes[position]) | higher(bytes[position + 1]) << 8 | higher(bytes[position + 2]) << 16 | higher(bytes[position + 3]) << 24;
-
-            remaining -= 4;
-            position += 4;
-
-            tmp *= 0xcc9e2d51;
-            tmp = rotateLeft(tmp, 15);
-            tmp *= 0x1b873593;
-
-            hc ^= tmp;
-            hc = rotateLeft(hc, 13);
-            hc = hc * 5 + 0xe6546b64;
-        }
-
-        if (remaining > 0) {
-            tmp = 0;
-
-            switch (remaining) {
-                case 3:
-                    tmp ^= higher(bytes[position + 2]) << 16;
-                    // fall through
-                case 2:
-                    tmp ^= higher(bytes[position + 1]) << 8;
-                    // fall through
-                case 1:
-                    tmp ^= higher(bytes[position]);
-                    // fall through
-                default:
-                    tmp *= 0xcc9e2d51;
-                    tmp = rotateLeft(tmp, 15);
-                    tmp *= 0x1b873593;
-                    hc ^= tmp;
-            }
-        }
-
-        hc ^= length;
-
-        hc ^= hc >>> 16;
-        hc *= 0x85ebca6b;
-        hc ^= hc >>> 13;
-        hc *= 0xc2b2ae35;
-        hc ^= hc >>> 16;
-
         return hc;
     }
 
