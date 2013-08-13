@@ -2,6 +2,7 @@ package io.undertow.servlet.test.websocket;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.servlet.Servlet;
@@ -23,7 +24,6 @@ import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import org.apache.james.mime4j.util.CharsetUtil;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.junit.Test;
@@ -37,7 +37,7 @@ import org.xnio.FutureResult;
 @AjpIgnore
 @RunWith(DefaultServer.class)
 public class WebSocketServletTest {
-
+    public static final Charset US_ASCII = Charset.forName("US-ASCII");
 
     @Test
     public void testText() throws Exception {
@@ -104,7 +104,7 @@ public class WebSocketServletTest {
         final FutureResult latch = new FutureResult();
         WebSocketTestClient client = new WebSocketTestClient(org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion.V13, new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/servletContext/"));
         client.connect();
-        client.send(new TextWebSocketFrame(ChannelBuffers.copiedBuffer("hello", CharsetUtil.US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(CharsetUtil.US_ASCII), latch));
+        client.send(new TextWebSocketFrame(ChannelBuffers.copiedBuffer("hello", US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(US_ASCII), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
