@@ -19,17 +19,17 @@
 
 package io.undertow.conduits;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.StreamSourceConduit;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.Math.min;
 import static org.xnio.Bits.allAreClear;
@@ -160,6 +160,8 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
                     } catch (IOException e) {
                         UndertowLogger.REQUEST_LOGGER.debug("Exception terminating reads due to exceeding max size", e);
                     }
+                    finishListener.handleEvent(this);
+                    state |= FLAG_FINISHED | FLAG_CLOSED;
                     exchange.setPersistent(false);
                     throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
                 }
@@ -221,7 +223,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         long val = state;
         checkMaxSize(val);
         if (allAreSet(val, FLAG_CLOSED) || allAreClear(val, MASK_COUNT)) {
-            if(allAreClear(val, FLAG_FINISHED)) {
+            if (allAreClear(val, FLAG_FINISHED)) {
                 invokeFinishListener();
             }
             return -1;

@@ -143,6 +143,8 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             } catch (IOException e) {
                 UndertowLogger.REQUEST_LOGGER.debug("Exception terminating reads due to exceeding max size", e);
             }
+            state |= FLAG_FINISHED | FLAG_CLOSED;
+            finishListener.handleEvent(this);
             exchange.setPersistent(false);
             throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
         }
