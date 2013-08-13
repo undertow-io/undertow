@@ -110,8 +110,9 @@ public class MultiPartTestCase {
                     "content: myValue\n" +
                     "name: file\n" +
                     "filename: uploadfile.txt\n" +
-                    "content-type: null\n" +
+                    "content-type: application/octet-stream\n" +
                     "Content-Disposition: form-data; name=\"file\"; filename=\"uploadfile.txt\"\n" +
+                    "Content-Type: application/octet-stream\n" +
                     "size: 13\n" +
                     "content: file contents\n", response);
         } finally {
