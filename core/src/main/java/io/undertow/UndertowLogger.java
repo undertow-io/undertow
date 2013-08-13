@@ -122,4 +122,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5020, value = "Error writing JDBC log")
     void errorWritingJDBCLog(@Cause SQLException e);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5021, value = "Proxy request to %s timed out")
+    void proxyRequestTimedOut(String requestURI);
 }

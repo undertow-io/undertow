@@ -45,6 +45,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.StreamConnection;
+import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 
 import java.io.IOException;
@@ -58,8 +59,10 @@ import java.util.concurrent.TimeUnit;
 public final class ProxyHandler implements HttpHandler {
 
     private final ProxyClientProvider clientProvider;
+    private final int maxRequestTime;
 
     private static final AttachmentKey<HttpServerExchange> EXCHANGE = AttachmentKey.create(HttpServerExchange.class);
+    private static final AttachmentKey<XnioExecutor.Key> TIMEOUT_KEY = AttachmentKey.create(XnioExecutor.Key.class);
 
     private static final class ResponseCallback implements ClientCallback<ClientExchange> {
 
@@ -112,8 +115,6 @@ public final class ProxyHandler implements HttpHandler {
         }
     }
 
-    ;
-
     private final HttpHandler proxyClientHandler = new HttpHandler() {
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -159,12 +160,42 @@ public final class ProxyHandler implements HttpHandler {
         }
     };
 
-    public ProxyHandler(ProxyClientProvider clientProvider) {
+    public ProxyHandler(ProxyClientProvider clientProvider, int maxRequestTime) {
         this.clientProvider = clientProvider;
+        this.maxRequestTime = maxRequestTime;
     }
 
 
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        if (maxRequestTime > 0) {
+            final XnioExecutor.Key key = exchange.getIoThread().executeAfter(new Runnable() {
+                @Override
+                public void run() {
+                    UndertowLogger.REQUEST_LOGGER.proxyRequestTimedOut(exchange.getRequestURI());
+                    try {
+                        if (exchange.isResponseStarted()) {
+                            IoUtils.safeClose(exchange.getConnection());
+                        } else {
+                            exchange.setResponseCode(500);
+                            exchange.endExchange();
+                        }
+                    } finally {
+                        ClientConnection clientConnection = exchange.getAttachment(ProxyClient.CONNECTION);
+                        IoUtils.safeClose(clientConnection);
+
+
+                    }
+                }
+            }, maxRequestTime, TimeUnit.MILLISECONDS);
+            exchange.putAttachment(TIMEOUT_KEY, key);
+            exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                @Override
+                public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                    key.remove();
+                    nextListener.proceed();
+                }
+            });
+        }
         clientProvider.createProxyClient(exchange, proxyClientProviderHandler, -1, TimeUnit.MILLISECONDS);
     }
 

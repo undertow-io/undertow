@@ -227,7 +227,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         HttpOpenListener proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                         ChannelListener<AcceptingChannel<StreamConnection>> proxyAcceptListener = ChannelListeners.openListenerAdapter(proxyOpenListener);
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                        proxyOpenListener.setRootHandler(new ProxyHandler(new SimpleProxyClientProvider(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null))));
+                        proxyOpenListener.setRootHandler(new ProxyHandler(new SimpleProxyClientProvider(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000));
                         proxyServer.resumeAccepts();
                     }
 
