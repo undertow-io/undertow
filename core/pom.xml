@@ -199,6 +199,27 @@
                                     </systemPropertyVariables>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>proxy-ajp</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <enableAssertions>true</enableAssertions>
+                                    <runOrder>reversealphabetical</runOrder>
+                                    <systemPropertyVariables>
+                                        <test.proxy>true</test.proxy>
+                                        <test.ajp>true</test.ajp>
+                                        <test.dump>${dump}</test.dump>
+                                        <default.server.address>localhost</default.server.address>
+                                        <default.server.port>7777</default.server.port>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
+                                        </java.util.logging.manager>
+                                        <test.level>${test.level}</test.level>
+                                    </systemPropertyVariables>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                 </plugins>
