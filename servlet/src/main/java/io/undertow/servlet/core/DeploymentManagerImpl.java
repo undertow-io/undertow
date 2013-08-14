@@ -275,7 +275,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
         current = new CachedAuthenticatedSessionHandler(current, this.deployment.getServletContext());
         List<NotificationReceiver> notificationReceivers = deploymentInfo.getNotificationReceivers();
-        if (notificationReceivers.isEmpty() == false) {
+        if (!notificationReceivers.isEmpty()) {
             current = new NotificationReceiverHandler(current, notificationReceivers);
         }
 

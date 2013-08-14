@@ -175,19 +175,9 @@ public final class ProxyHandler implements HttpHandler {
                 @Override
                 public void run() {
                     UndertowLogger.REQUEST_LOGGER.proxyRequestTimedOut(exchange.getRequestURI());
-                    try {
-                        if (exchange.isResponseStarted()) {
-                            IoUtils.safeClose(exchange.getConnection());
-                        } else {
-                            exchange.setResponseCode(500);
-                            exchange.endExchange();
-                        }
-                    } finally {
-                        ClientConnection clientConnection = exchange.getAttachment(ProxyClient.CONNECTION);
-                        IoUtils.safeClose(clientConnection);
-
-
-                    }
+                    IoUtils.safeClose(exchange.getConnection());
+                    ClientConnection clientConnection = exchange.getAttachment(ProxyClient.CONNECTION);
+                    IoUtils.safeClose(clientConnection);
                 }
             }, maxRequestTime, TimeUnit.MILLISECONDS);
             exchange.putAttachment(TIMEOUT_KEY, key);
