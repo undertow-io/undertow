@@ -149,9 +149,19 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
             }
             messages.add(msg);
         }
-
-        if (!messages.isEmpty()) {
-            writeMessage(messages);
+        try {
+            if (!messages.isEmpty()) {
+                writeMessage(messages);
+            }
+        } finally {
+            stateUpdater.set(this, 0);
+            //check to see if there is still more messages
+            //if so then run this again
+            if (!pendingMessages.isEmpty()) {
+                if (stateUpdater.compareAndSet(this, 0, 1)) {
+                    logWriteExecutor.execute(this);
+                }
+            }
         }
     }
 
@@ -193,15 +203,6 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
                 }
             }
             ps.close();
-
-            stateUpdater.set(this, 0);
-            //check to see if there is still more messages
-            //if so then run this again
-            if (!pendingMessages.isEmpty()) {
-                if (stateUpdater.compareAndSet(this, 0, 1)) {
-                    logWriteExecutor.execute(this);
-                }
-            }
         } catch (SQLException e) {
             UndertowLogger.ROOT_LOGGER.errorWritingJDBCLog(e);
         } finally {

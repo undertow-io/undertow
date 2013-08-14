@@ -91,7 +91,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         if (!stateUpdater.compareAndSet(this, 1, 2)) {
             return;
         }
-        if(forceLogRotation) {
+        if (forceLogRotation) {
             doRotate();
         }
         List<String> messsages = new ArrayList<String>();
@@ -104,15 +104,18 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
             }
             messsages.add(msg);
         }
-        if(!messsages.isEmpty()) {
-            writeMessage(messsages);
-        }
-        stateUpdater.set(this, 0);
-        //check to see if there is still more messages
-        //if so then run this again
-        if (!pendingMessages.isEmpty() || forceLogRotation) {
-            if (stateUpdater.compareAndSet(this, 0, 1)) {
-                logWriteExecutor.execute(this);
+        try {
+            if (!messsages.isEmpty()) {
+                writeMessage(messsages);
+            }
+        } finally {
+            stateUpdater.set(this, 0);
+            //check to see if there is still more messages
+            //if so then run this again
+            if (!pendingMessages.isEmpty() || forceLogRotation) {
+                if (stateUpdater.compareAndSet(this, 0, 1)) {
+                    logWriteExecutor.execute(this);
+                }
             }
         }
     }
@@ -120,7 +123,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
     /**
      * For tests only. Blocks the current thread until all messages are written
      * Just does a busy wait.
-     *
+     * <p/>
      * DO NOT USE THIS OUTSIDE OF A TEST
      */
     void awaitWrittenForTest() throws InterruptedException {
@@ -160,9 +163,9 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
             }
             File newFile = new File(outputDirectory, logBaseName + "_" + currentDateString + ".log");
             int count = 0;
-            while (newFile.exists())  {
+            while (newFile.exists()) {
                 ++count;
-                newFile = new File(outputDirectory, logBaseName + "_" + currentDateString  + "-" + count + ".log");
+                newFile = new File(outputDirectory, logBaseName + "_" + currentDateString + "-" + count + ".log");
             }
             if (!defaultLogFile.renameTo(newFile)) {
                 UndertowLogger.ROOT_LOGGER.errorRotatingAccessLog(new IOException());
