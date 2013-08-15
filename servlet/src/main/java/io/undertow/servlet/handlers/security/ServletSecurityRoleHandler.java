@@ -25,6 +25,7 @@ import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.DispatcherType;
@@ -39,9 +40,11 @@ import javax.servlet.http.HttpServletResponse;
 public class ServletSecurityRoleHandler implements HttpHandler {
 
     private final HttpHandler next;
+    private final Map<String, Set<String>> principalVsRoleMap;
 
-    public ServletSecurityRoleHandler(final HttpHandler next) {
+    public ServletSecurityRoleHandler(final HttpHandler next, Map<String, Set<String>> principalVsRoleMap) {
         this.next = next;
+        this.principalVsRoleMap = principalVsRoleMap;
     }
 
     @Override
@@ -65,8 +68,16 @@ public class ServletSecurityRoleHandler implements HttpHandler {
                      * The EmptyRoleSemantic was either PERMIT or AUTHENTICATE, either way a roles check is not needed.
                      */
                     found = true;
-                } else {
+                } else if(account != null) {
+                    final Set<String> roles = principalVsRoleMap.get(account.getPrincipal().getName());
+
                     for (String role : roleSet) {
+                        if(roles != null) {
+                            if(roles.contains(role)) {
+                                found = true;
+                                break;
+                            }
+                        }
                         if (account.isUserInRole(role)) {
                             found = true;
                             break;

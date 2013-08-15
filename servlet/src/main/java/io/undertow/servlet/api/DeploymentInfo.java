@@ -97,9 +97,13 @@ public class DeploymentInfo implements Cloneable {
     private final List<NotificationReceiver> notificationReceivers = new ArrayList<NotificationReceiver>();
 
     /**
+     * map of additional roles that should be applied to the given principal.
+     */
+    private final Map<String, Set<String>> principalVersusRolesMap = new HashMap<String, Set<String>>();
+
+    /**
      * Wrappers that are applied before the servlet initial handler, and before any servlet related object have been
      * created. If a wrapper wants to bypass servlet entirely it should register itself here.
-     *
      */
     private final List<HandlerWrapper> initialHandlerChainWrappers = new ArrayList<HandlerWrapper>();
 
@@ -493,7 +497,7 @@ public class DeploymentInfo implements Cloneable {
     /**
      * Sets the executor that will be used to run servlet invocations. If this is null then the XNIO worker pool will be
      * used.
-     *
+     * <p/>
      * Individual servlets may use a different executor
      * <p/>
      * If this is null then the current executor is used, which is generally the XNIO worker pool
@@ -668,12 +672,13 @@ public class DeploymentInfo implements Cloneable {
 
     /**
      * Sets the map that will be used by the ServletContext implementation to store attributes.
-     *
+     * <p/>
      * This should usuablly be null, in which case Undertow will create a new map. This is only
      * used in situations where you want multiple deployments to share the same servlet context
      * attributes.
      *
-     * @param servletContextAttributeBackingMap The backing map
+     * @param servletContextAttributeBackingMap
+     *         The backing map
      */
     public void setServletContextAttributeBackingMap(final ConcurrentMap<String, Object> servletContextAttributeBackingMap) {
         this.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
@@ -741,6 +746,34 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public void addPrincipalVsRoleMapping(final String principal, final String mapping) {
+        Set<String> set = principalVersusRolesMap.get(principal);
+        if (set == null) {
+            principalVersusRolesMap.put(principal, set = new HashSet<String>());
+        }
+        set.add(mapping);
+    }
+
+    public void addPrincipalVsRoleMappings(final String principal, final String... mappings) {
+        Set<String> set = principalVersusRolesMap.get(principal);
+        if (set == null) {
+            principalVersusRolesMap.put(principal, set = new HashSet<String>());
+        }
+        set.addAll(Arrays.asList(mappings));
+    }
+
+    public void addPrincipalVsRoleMappings(final String principal, final Collection<String> mappings) {
+        Set<String> set = principalVersusRolesMap.get(principal);
+        if (set == null) {
+            principalVersusRolesMap.put(principal, set = new HashSet<String>());
+        }
+        set.addAll(mappings);
+    }
+
+    public Map<String, Set<String>> getPrincipalVersusRolesMap() {
+        return Collections.unmodifiableMap(principalVersusRolesMap);
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -798,6 +831,7 @@ public class DeploymentInfo implements Cloneable {
         info.invalidateSessionOnLogout = invalidateSessionOnLogout;
         info.defaultCookieVersion = defaultCookieVersion;
         info.sessionPersistenceManager = sessionPersistenceManager;
+        info.principalVersusRolesMap.putAll(principalVersusRolesMap);
         return info;
     }
 

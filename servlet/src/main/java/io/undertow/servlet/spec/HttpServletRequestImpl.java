@@ -255,11 +255,19 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
 
         final ServletChain servlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet();
+
+        final Set<String> roles = servletContext.getDeployment().getDeploymentInfo().getPrincipalVersusRolesMap().get(account.getPrincipal().getName());
         //TODO: a more efficient imple
         for (SecurityRoleRef ref : servlet.getManagedServlet().getServletInfo().getSecurityRoleRefs()) {
             if (ref.getRole().equals(role)) {
+                if (roles != null && roles.contains(ref.getLinkedRole())) {
+                    return true;
+                }
                 return account.isUserInRole(ref.getLinkedRole());
             }
+        }
+        if (roles != null && roles.contains(role)) {
+            return true;
         }
         return account.isUserInRole(role);
     }

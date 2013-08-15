@@ -142,7 +142,7 @@ public class ServletPathMatches {
                         throw UndertowServletMessages.MESSAGES.twoServletsWithSameMapping(path);
                     }
                     defaultServlet = handler;
-                    defaultHandler = servletChain(handler, handler.getManagedServlet(), null);
+                    defaultHandler = servletChain(handler, handler.getManagedServlet(), null, deploymentInfo);
                 } else if (!path.startsWith("*.")) {
                     //either an exact or a /* based path match
                     if(path.isEmpty()) {
@@ -235,7 +235,7 @@ public class ServletPathMatches {
                     if (!entry.getValue().isEmpty()) {
                         handler = new FilterHandler(entry.getValue(), deploymentInfo.isAllowNonStandardWrappers(), handler);
                     }
-                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet(), pathMatch));
+                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet(), pathMatch, deploymentInfo));
                 }
             } else if (path.isEmpty()) {
                 //the context root match
@@ -271,9 +271,9 @@ public class ServletPathMatches {
                 }
             }
             if (filtersByDispatcher.isEmpty()) {
-                builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), entry.getValue().getManagedServlet(), null));
+                builder.addNameMatch(entry.getKey(), servletChain(entry.getValue(), entry.getValue().getManagedServlet(), null, deploymentInfo));
             } else {
-                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filtersByDispatcher, deploymentInfo.isAllowNonStandardWrappers(), entry.getValue()), entry.getValue().getManagedServlet(), null));
+                builder.addNameMatch(entry.getKey(), servletChain(new FilterHandler(filtersByDispatcher, deploymentInfo.isAllowNonStandardWrappers(), entry.getValue()), entry.getValue().getManagedServlet(), null, deploymentInfo));
             }
         }
 
@@ -286,16 +286,16 @@ public class ServletPathMatches {
         final ServletChain initialHandler;
         if (noExtension.isEmpty()) {
             if (targetServlet != null) {
-                initialHandler = servletChain(targetServlet, targetServlet.getManagedServlet(), servletPath);
+                initialHandler = servletChain(targetServlet, targetServlet.getManagedServlet(), servletPath, deploymentInfo);
             } else {
                 initialHandler = defaultHandler;
             }
         } else if (targetServlet != null) {
             FilterHandler handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), targetServlet);
-            initialHandler = servletChain(handler, targetServlet.getManagedServlet(), servletPath);
+            initialHandler = servletChain(handler, targetServlet.getManagedServlet(), servletPath, deploymentInfo);
         } else {
             FilterHandler handler = new FilterHandler(noExtension, deploymentInfo.isAllowNonStandardWrappers(), defaultServlet);
-            initialHandler = servletChain(handler, defaultServlet.getManagedServlet(), servletPath);
+            initialHandler = servletChain(handler, defaultServlet.getManagedServlet(), servletPath, deploymentInfo);
         }
         return initialHandler;
     }
@@ -355,8 +355,8 @@ public class ServletPathMatches {
         list.add(value);
     }
 
-    private static ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet, final String servletPath) {
-        HttpHandler servletHandler = new ServletSecurityRoleHandler(next);
+    private static ServletChain servletChain(HttpHandler next, final ManagedServlet managedServlet, final String servletPath, final DeploymentInfo deploymentInfo) {
+        HttpHandler servletHandler = new ServletSecurityRoleHandler(next, deploymentInfo.getPrincipalVersusRolesMap());
         servletHandler = wrapHandlers(servletHandler, managedServlet.getServletInfo().getHandlerChainWrappers());
         return new ServletChain(servletHandler, managedServlet , servletPath);
     }
