@@ -204,21 +204,20 @@ public class DeploymentManagerImpl implements DeploymentManager {
     }
 
     private void handleExtensions(final DeploymentInfo deploymentInfo, final ServletContextImpl servletContext) {
-        Set<ServletExtension> loadedExtensions = new HashSet<ServletExtension>();
+        Set<Class<?>> loadedExtensions = new HashSet<Class<?>>();
 
         for (ServletExtension extension : ServiceLoader.load(ServletExtension.class, deploymentInfo.getClassLoader())) {
-            loadedExtensions.add(extension);
+            loadedExtensions.add(extension.getClass());
             extension.handleDeployment(deploymentInfo, servletContext);
         }
 
-        if (!Thread.currentThread().getContextClassLoader().equals(deploymentInfo.getClassLoader())) {
+        if (!ServletExtension.class.getClassLoader().equals(deploymentInfo.getClassLoader())) {
             for (ServletExtension extension : ServiceLoader.load(ServletExtension.class)) {
 
                 // Note: If the CLs are different, but can the see the same extensions and extension might get loaded
                 // and thus instantiated twice, but the handleDeployment() is executed only once.
 
-                if (!loadedExtensions.contains(extension)) {
-                    loadedExtensions.add(extension);
+                if (!loadedExtensions.contains(extension.getClass())) {
                     extension.handleDeployment(deploymentInfo, servletContext);
                 }
             }
