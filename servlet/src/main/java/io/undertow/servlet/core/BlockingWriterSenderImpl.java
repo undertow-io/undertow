@@ -162,6 +162,7 @@ public class BlockingWriterSenderImpl implements Sender {
                     break;
                 }
                 pos += ret;
+                buffer.flip();
                 if (!writeBuffer(buffer, callback)) {
                     return;
                 }
