@@ -40,7 +40,7 @@ public class ContentEncodedResourceTestCase {
         tmpDir.mkdirs();
         tmpDir.deleteOnExit();
 
-        final FileResourceManager resourceManager = new FileResourceManager(tmpDir);
+        final FileResourceManager resourceManager = new FileResourceManager(tmpDir, 10485760);
         DefaultServer.setRootHandler(new ResourceHandler().setResourceManager(resourceManager)
                 .setContentEncodedResourceManager(
                         new ContentEncodedResourceManager(tmpDir, new CachingResourceManager(100, 10000, null, resourceManager, -1), new ContentEncodingRepository()
