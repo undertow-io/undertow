@@ -30,11 +30,17 @@ public class FileResourceManager implements ResourceManager {
 
     private volatile File base;
 
-    public FileResourceManager(final File base) {
+    /**
+      * Size to use direct FS to network transfer (if supported by OS/JDK) instead of read/write
+      */
+    private final long transferMinSize;
+
+    public FileResourceManager(final File base, long transferMinSize) {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         this.base = base;
+        this.transferMinSize = transferMinSize;
     }
 
     public File getBase() {
@@ -57,7 +63,7 @@ public class FileResourceManager implements ResourceManager {
         try {
             File file = new File(base, p);
             if (file.exists()) {
-                return new FileResource(file, base, path);
+                return new FileResource(file, this, path);
             } else {
                 return null;
             }
@@ -65,5 +71,9 @@ public class FileResourceManager implements ResourceManager {
             UndertowLogger.REQUEST_LOGGER.debugf(e, "Invalid path %s");
             return null;
         }
+    }
+
+    public long getTransferMinSize() {
+        return transferMinSize;
     }
 }
