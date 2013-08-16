@@ -322,40 +322,50 @@ public class AjpRequestParser extends AbstractAjpParser {
                         state.currentAttribute = result.value;
                         state.currentIntegerPart = -1;
                     }
-                    StringHolder result = parseString(buf, state, false);
-                    if (!result.readComplete) {
-                        state.state = AjpRequestParseState.READING_ATTRIBUTES;
-                        return;
+                    String result;
+                    if (state.currentAttribute.equals(SSL_KEY_SIZE)) {
+                        IntegerHolder resultHolder = parse16BitInteger(buf, state);
+                        if (!resultHolder.readComplete) {
+                            state.state = AjpRequestParseState.READING_ATTRIBUTES;
+                            return;
+                        }
+                        result = Integer.toString(resultHolder.value);
+                    } else {
+                        StringHolder resultHolder = parseString(buf, state, false);
+                        if (!resultHolder.readComplete) {
+                            state.state = AjpRequestParseState.READING_ATTRIBUTES;
+                            return;
+                        }
+                        result = resultHolder.value;
                     }
                     //query string.
                     if (state.currentAttribute.equals(QUERY_STRING)) {
-                        String res = result.value;
-                        exchange.setQueryString(res == null ? "" : res);
+                        exchange.setQueryString(result == null ? "" : result);
                         int stringStart = 0;
                         String attrName = null;
-                        for (int i = 0; i < res.length(); ++i) {
-                            char c = res.charAt(i);
+                        for (int i = 0; i < result.length(); ++i) {
+                            char c = result.charAt(i);
                             if (c == '=' && attrName == null) {
-                                attrName = res.substring(stringStart, i);
+                                attrName = result.substring(stringStart, i);
                                 stringStart = i + 1;
                             } else if (c == '&') {
                                 if (attrName != null) {
-                                    exchange.addQueryParam(URLDecoder.decode(attrName, UTF_8), URLDecoder.decode(res.substring(stringStart, i), UTF_8));
+                                    exchange.addQueryParam(URLDecoder.decode(attrName, UTF_8), URLDecoder.decode(result.substring(stringStart, i), UTF_8));
                                 } else {
-                                    exchange.addQueryParam(URLDecoder.decode(res.substring(stringStart, i), UTF_8), "");
+                                    exchange.addQueryParam(URLDecoder.decode(result.substring(stringStart, i), UTF_8), "");
                                 }
                                 stringStart = i + 1;
                                 attrName = null;
                             }
                         }
                         if (attrName != null) {
-                            exchange.addQueryParam(URLDecoder.decode(attrName, UTF_8), URLDecoder.decode(res.substring(stringStart, res.length()), UTF_8));
-                        } else if (res.length() != stringStart) {
-                            exchange.addQueryParam(URLDecoder.decode(res.substring(stringStart, res.length()), UTF_8), "");
+                            exchange.addQueryParam(URLDecoder.decode(attrName, UTF_8), URLDecoder.decode(result.substring(stringStart, result.length()), UTF_8));
+                        } else if (result.length() != stringStart) {
+                            exchange.addQueryParam(URLDecoder.decode(result.substring(stringStart, result.length()), UTF_8), "");
                         }
                     } else {
                         //other attributes
-                        state.attributes.put(state.currentAttribute, result.value);
+                        state.attributes.put(state.currentAttribute, result);
                     }
                     state.currentAttribute = null;
                 }
