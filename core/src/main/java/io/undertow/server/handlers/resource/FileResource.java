@@ -50,13 +50,13 @@ public class FileResource implements Resource {
 
     private static final Logger log = Logger.getLogger("io.undertow.server.resources.file");
     private final File file;
-    private final File resourceManagerRoot;
     private final String path;
+    private final FileResourceManager manager;
 
-    public FileResource(final File file, final File resourceManagerRoot, String path) {
+    public FileResource(final File file, final FileResourceManager manager, String path) {
         this.file = file;
-        this.resourceManagerRoot = resourceManagerRoot;
         this.path = path;
+        this.manager = manager;
     }
 
     @Override
@@ -97,7 +97,7 @@ public class FileResource implements Resource {
     public List<Resource> list() {
         final List<Resource> resources = new ArrayList<Resource>();
         for (String child : file.list()) {
-            resources.add(new FileResource(new File(this.file, child), resourceManagerRoot, path));
+            resources.add(new FileResource(new File(this.file, child), manager, path));
         }
         return resources;
     }
@@ -114,24 +114,33 @@ public class FileResource implements Resource {
 
     @Override
     public void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback callback) {
+        abstract class BaseFileTask implements Runnable {
+            protected volatile FileChannel fileChannel;
 
-        class ServerTask implements Runnable, IoCallback {
+            protected boolean openFile() {
+                 try {
+                     fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
+                 } catch (FileNotFoundException e) {
+                     exchange.setResponseCode(404);
+                     callback.onException(exchange, sender, e);
+                     return false;
+                 } catch (IOException e) {
+                     exchange.setResponseCode(500);
+                     callback.onException(exchange, sender, e);
+                     return false;
+                 }
+                 return true;
+             }
+        }
 
-            private FileChannel fileChannel;
+        class ServerTask extends BaseFileTask implements IoCallback {
+
             private Pooled<ByteBuffer> pooled;
 
             @Override
             public void run() {
                 if (fileChannel == null) {
-                    try {
-                        fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
-                    } catch (FileNotFoundException e) {
-                        exchange.setResponseCode(404);
-                        callback.onException(exchange, sender, e);
-                        return;
-                    } catch (IOException e) {
-                        exchange.setResponseCode(500);
-                        callback.onException(exchange, sender, e);
+                    if (!openFile()) {
                         return;
                     }
                     pooled = exchange.getConnection().getBufferPool().allocate();
@@ -181,11 +190,23 @@ public class FileResource implements Resource {
             }
         }
 
-        ServerTask serveTask = new ServerTask();
+        class TransferTask extends BaseFileTask {
+            @Override
+            public void run() {
+                if (!openFile()) {
+                    return;
+                }
+
+                sender.transferFrom(fileChannel, callback);
+                IoUtils.safeClose(fileChannel);
+            }
+        }
+
+        BaseFileTask task = manager.getTransferMinSize() > file.length() ? new ServerTask() : new TransferTask();
         if (exchange.isInIoThread()) {
-            exchange.dispatch(serveTask);
+            exchange.dispatch(task);
         } else {
-            serveTask.run();
+            task.run();
         }
     }
 
@@ -206,7 +227,7 @@ public class FileResource implements Resource {
 
     @Override
     public File getResourceManagerRoot() {
-        return resourceManagerRoot;
+        return manager.getBase();
     }
 
     @Override

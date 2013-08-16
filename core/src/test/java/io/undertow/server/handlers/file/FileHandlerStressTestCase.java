@@ -61,7 +61,7 @@ public class FileHandlerStressTestCase {
         try {
             File rootPath = new File(getClass().getResource("page.html").toURI()).getParentFile();
             final ResourceHandler handler = new ResourceHandler()
-                    .setResourceManager(new FileResourceManager(rootPath));
+                    .setResourceManager(new FileResourceManager(rootPath, 10485760));
 
             final CacheHandler cacheHandler = new CacheHandler(new DirectBufferCache(1024, 10, 10480), handler);
             final PathHandler path = new PathHandler();

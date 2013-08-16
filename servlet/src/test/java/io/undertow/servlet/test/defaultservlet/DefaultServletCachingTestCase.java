@@ -58,7 +58,7 @@ public class DefaultServletCachingTestCase {
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceManager(new CachingResourceManager(100, 10000, new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE), new FileResourceManager(tmpDir), METADATA_MAX_AGE));
+                .setResourceManager(new CachingResourceManager(100, 10000, new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE), new FileResourceManager(tmpDir, 10485760), METADATA_MAX_AGE));
 
         builder.addServlet(new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)
                 .addMapping("/path/default"))
