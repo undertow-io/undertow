@@ -12,6 +12,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -36,6 +37,8 @@ import static org.xnio.IoUtils.safeClose;
 final class AjpReadListener implements ChannelListener<StreamSourceChannel>, ExchangeCompletionListener {
 
     private static final byte[] CPONG = {'A', 'B', 0, 1, 9}; //CPONG response data
+    public static final String HTTPS = "https";
+    public static final String HTTP = "http";
 
     private final AjpServerConnection connection;
     private final String scheme;
@@ -58,7 +61,6 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
         state = new AjpRequestParseState();
         httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
         httpServerExchange.addExchangeCompleteListener(this);
-        httpServerExchange.setRequestScheme(scheme);
         read = 0;
     }
 
@@ -159,12 +161,19 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
                 public void handleEvent(AjpServerResponseConduit channel) {
                     httpServerExchange.terminateResponse();
                 }
-            });
+            }, httpServerExchange.getRequestMethod().equals(Methods.HEAD));
             connection.getChannel().getSinkChannel().setConduit(responseConduit);
             connection.getChannel().getSourceChannel().setConduit(createSourceConduit(connection.getChannel().getSourceChannel().getConduit(), responseConduit, httpServerExchange));
 
             try {
                 connection.setSSLSessionInfo(state.createSslSessionInfo());
+                if(scheme != null) {
+                    httpServerExchange.setRequestScheme(scheme);
+                } else if(connection.getSslSessionInfo() != null) {
+                    httpServerExchange.setRequestScheme(HTTPS);
+                } else {
+                    httpServerExchange.setRequestScheme(HTTP);
+                }
                 state = null;
                 this.httpServerExchange = null;
                 httpServerExchange.setPersistent(true);

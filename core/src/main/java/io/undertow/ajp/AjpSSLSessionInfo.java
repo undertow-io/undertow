@@ -22,10 +22,15 @@ public class AjpSSLSessionInfo implements SSLSessionInfo {
         this.id = id;
         this.cypherSuite = cypherSuite;
 
-        java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
-        ByteArrayInputStream stream = new ByteArrayInputStream(certificate);
-        peerCertificate = cf.generateCertificate(stream);
-        this.certificate = X509Certificate.getInstance(certificate);
+        if (certificate != null) {
+            java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
+            ByteArrayInputStream stream = new ByteArrayInputStream(certificate);
+            peerCertificate = cf.generateCertificate(stream);
+            this.certificate = X509Certificate.getInstance(certificate);
+        } else {
+            this.peerCertificate = null;
+            this.certificate = null;
+        }
     }
 
     @Override

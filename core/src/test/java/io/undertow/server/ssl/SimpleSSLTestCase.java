@@ -18,27 +18,25 @@
 
 package io.undertow.server.ssl;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;
+import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HttpString;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+
 /**
  * @author Stuart Douglas
  */
-@AjpIgnore
 @ProxyIgnore
 @RunWith(DefaultServer.class)
 public class SimpleSSLTestCase {

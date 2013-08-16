@@ -24,6 +24,7 @@ import java.io.OutputStream;
 
 import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Headers;
@@ -40,6 +41,7 @@ import org.xnio.OptionMap;
 /**
  * @author Stuart Douglas
  */
+@AjpIgnore
 @RunWith(DefaultServer.class)
 public class MaxRequestSizeTestCase {
 
@@ -91,7 +93,7 @@ public class MaxRequestSizeTestCase {
                 HttpResponse response = client.execute(post);
                 HttpClientUtils.readResponse(response);
 
-                if(DefaultServer.isProxy()) {
+                if(DefaultServer.isProxy() || DefaultServer.isAjp()) {
                     Assert.assertEquals(500, response.getStatusLine().getStatusCode());
                 } else {
                     Assert.fail("request should have been too big");

@@ -1,6 +1,20 @@
-Listen 9999
-NameVirtualHost *:9999
-<VirtualHost *:9999>
+Listen 9080
+NameVirtualHost *:9080
+<VirtualHost *:9080>
+	ProxyPass / ajp://localhost:8888/
+	ProxyPassReverse / ajp://localhost:8888/
+</VirtualHost>
+Listen 9443
+NameVirtualHost *:9443
+<VirtualHost *:9443>
+    SSLEngine on
+    SSLCertificateFile /etc/apache2/ssl/server.pem
+    SSLCACertificateFile /etc/apache2/ssl/ca.crt
+
+    SSLVerifyClient require
+    SSLVerifyDepth 2
+    SSLOptions +ExportCertData +StdEnvVars
+
 	ProxyPass / ajp://localhost:8888/
 	ProxyPassReverse / ajp://localhost:8888/
 </VirtualHost>

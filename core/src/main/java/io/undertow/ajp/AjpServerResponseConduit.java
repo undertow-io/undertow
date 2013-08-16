@@ -88,6 +88,8 @@ final class AjpServerResponseConduit extends AbstractStreamSinkConduit<StreamSin
 
     private final ConduitListener<? super AjpServerResponseConduit> finishListener;
 
+    private final boolean headRequest;
+
 
 
     /**
@@ -122,11 +124,12 @@ final class AjpServerResponseConduit extends AbstractStreamSinkConduit<StreamSin
         HEADER_MAP = Collections.unmodifiableMap(headers);
     }
 
-    AjpServerResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final HttpServerExchange exchange, ConduitListener<? super AjpServerResponseConduit> finishListener) {
+    AjpServerResponseConduit(final StreamSinkConduit next, final Pool<ByteBuffer> pool, final HttpServerExchange exchange, ConduitListener<? super AjpServerResponseConduit> finishListener, boolean headRequest) {
         super(next);
         this.pool = pool;
         this.exchange = exchange;
         this.finishListener = finishListener;
+        this.headRequest = headRequest;
         state = FLAG_START;
     }
 
@@ -299,6 +302,11 @@ final class AjpServerResponseConduit extends AbstractStreamSinkConduit<StreamSin
             return 0;
         }
         try {
+            if(headRequest) {
+                int remaining = src.remaining();
+                src.position(src.position() + remaining);
+                return remaining;
+            }
             int limit = src.limit();
             try {
                 if (src.remaining() > MAX_DATA_SIZE) {

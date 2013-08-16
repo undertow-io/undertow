@@ -20,7 +20,6 @@ package io.undertow.server.security;
 import io.undertow.security.handlers.SinglePortConfidentialityHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.HttpString;
@@ -41,7 +40,6 @@ import org.junit.runner.RunWith;
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-@AjpIgnore
 @ProxyIgnore
 @RunWith(DefaultServer.class)
 public class SimpleConfidentialRedirectTestCase {

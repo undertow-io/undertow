@@ -18,7 +18,7 @@ public class AjpOpenListener implements OpenListener {
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;
 
-    private volatile String scheme = "http";
+    private volatile String scheme;
 
     private volatile HttpHandler rootHandler;
 

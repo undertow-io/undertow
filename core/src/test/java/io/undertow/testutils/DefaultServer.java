@@ -79,6 +79,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static final String DEFAULT = "default";
     private static final int PROXY_OFFSET = 1111;
+    public static final int APACHE_PORT = 9080;
+    public static final int APACHE_SSL_PORT = 9443;
 
     private static boolean first = true;
     private static OptionMap serverOptions;
@@ -173,7 +175,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static String getDefaultServerSSLAddress() {
-        if (sslServer == null) {
+        if (sslServer == null && !isApacheTest()) {
             throw new IllegalStateException("SSL Server not started.");
         }
         return "https://" + getHostAddress(DEFAULT) + ":" + getHostSSLPort(DEFAULT);
@@ -329,6 +331,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      *                applicable.
      */
     public static void startSSLServer(final SSLContext context, final OptionMap options) throws IOException {
+        if(isApacheTest()) {
+           return;
+        }
         OptionMap combined = OptionMap.builder().addAll(serverOptions).addAll(options)
                 .set(Options.USE_DIRECT_BUFFERS, true)
                 .getMap();
@@ -337,6 +342,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)),
                 getHostSSLPort(DEFAULT)), proxyAcceptListener != null ? proxyAcceptListener : acceptListener, combined);
         sslServer.resumeAccepts();
+    }
+
+    private static boolean isApacheTest() {
+        return ajp && !proxy;
     }
 
     /**
@@ -356,10 +365,16 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static int getHostPort(String serverName) {
-        return Integer.getInteger(serverName + ".server.port", 7777) + ((ajp & !proxy) ? 2222 : 0);
+        if(isApacheTest()) {
+            return APACHE_PORT;
+        }
+        return Integer.getInteger(serverName + ".server.port", 7777);
     }
 
     public static int getHostSSLPort(String serverName) {
+        if(isApacheTest()) {
+            return APACHE_SSL_PORT;
+        }
         return Integer.getInteger(serverName + ".server.sslPort", 7778);
     }
 
