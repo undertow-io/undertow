@@ -25,6 +25,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.HttpString;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -38,6 +39,7 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @AjpIgnore
+@ProxyIgnore
 @RunWith(DefaultServer.class)
 public class SimpleSSLTestCase {
 

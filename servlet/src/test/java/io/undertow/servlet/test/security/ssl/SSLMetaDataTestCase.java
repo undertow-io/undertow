@@ -31,6 +31,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -47,6 +48,7 @@ import org.junit.runner.RunWith;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@ProxyIgnore
 public class SSLMetaDataTestCase {
 
 

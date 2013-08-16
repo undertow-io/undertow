@@ -24,6 +24,7 @@ import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 
 import javax.net.ssl.SSLContext;
@@ -42,6 +43,7 @@ import org.junit.runner.RunWith;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 @AjpIgnore
+@ProxyIgnore
 @RunWith(DefaultServer.class)
 public class ClientCertTestCase extends AuthenticationTestBase {
 

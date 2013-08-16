@@ -34,6 +34,7 @@ import io.undertow.servlet.test.util.TestConfidentialPortManager;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 
 import java.io.IOException;
@@ -53,6 +54,7 @@ import org.junit.runner.RunWith;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore
+@ProxyIgnore
 public class ConfidentialityConstraintUrlMappingTestCase {
 
 

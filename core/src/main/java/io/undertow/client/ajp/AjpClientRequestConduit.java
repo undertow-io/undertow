@@ -19,6 +19,7 @@
 package io.undertow.client.ajp;
 
 import io.undertow.client.ClientRequest;
+import io.undertow.client.ProxiedRequestAttachments;
 import io.undertow.client.UndertowClientMessages;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.util.HeaderMap;
@@ -257,11 +258,11 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
             buffer.put((byte) (int) methodNp);
             putString(buffer, exchange.getRequest().getProtocol().toString());
             putString(buffer, path);
-            putString(buffer, notNull(exchange.getAttachment(AjpClientAttachments.REMOTE_ADDRESS)));
-            putString(buffer, notNull(exchange.getAttachment(AjpClientAttachments.REMOTE_HOST)));
-            putString(buffer, notNull(exchange.getAttachment(AjpClientAttachments.SERVER_NAME)));
-            putInt(buffer, notNull(exchange.getAttachment(AjpClientAttachments.SERVER_PORT)));
-            buffer.put((byte) (notNull(exchange.getAttachment(AjpClientAttachments.IS_SSL)) ? 1 : 0));
+            putString(buffer, notNull(exchange.getAttachment(ProxiedRequestAttachments.REMOTE_ADDRESS)));
+            putString(buffer, notNull(exchange.getAttachment(ProxiedRequestAttachments.REMOTE_HOST)));
+            putString(buffer, notNull(exchange.getAttachment(ProxiedRequestAttachments.SERVER_NAME)));
+            putInt(buffer, notNull(exchange.getAttachment(ProxiedRequestAttachments.SERVER_PORT)));
+            buffer.put((byte) (notNull(exchange.getAttachment(ProxiedRequestAttachments.IS_SSL)) ? 1 : 0));
 
             int headers = 0;
             //we need to count the headers
@@ -285,10 +286,55 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
                 }
             }
 
-            //TODO: attributes
             if (queryString != null) {
                 buffer.put((byte) 5); //query_string
                 putString(buffer, queryString);
+            }
+
+            String remoteUser = request.getAttachment(ProxiedRequestAttachments.REMOTE_USER);
+            if(remoteUser != null) {
+                buffer.put((byte) 3);
+                putString(buffer, remoteUser);
+            }
+            String authType = request.getAttachment(ProxiedRequestAttachments.AUTH_TYPE);
+            if(authType != null) {
+                buffer.put((byte) 4);
+                putString(buffer, authType);
+            }
+            String route = request.getAttachment(ProxiedRequestAttachments.ROUTE);
+            if(route != null) {
+                buffer.put((byte) 6);
+                putString(buffer, route);
+            }
+            String sslCert = request.getAttachment(ProxiedRequestAttachments.SSL_CERT);
+            if(sslCert != null) {
+                buffer.put((byte) 7);
+                putString(buffer, sslCert);
+            }
+            String sslCypher = request.getAttachment(ProxiedRequestAttachments.SSL_CYPHER);
+            if(sslCypher != null) {
+                buffer.put((byte) 8);
+                putString(buffer, sslCypher);
+            }
+            String sslSession = request.getAttachment(ProxiedRequestAttachments.SSL_SESSION);
+            if(sslSession != null) {
+                buffer.put((byte) 9);
+                putString(buffer, sslSession);
+            }
+            Integer sslKeySize = request.getAttachment(ProxiedRequestAttachments.SSL_KEY_SIZE);
+            if(sslKeySize != null) {
+                buffer.put((byte) 0xB);
+                putString(buffer, sslKeySize.toString());
+            }
+            String secret = request.getAttachment(ProxiedRequestAttachments.SECRET);
+            if(secret != null) {
+                buffer.put((byte) 0xC);
+                putString(buffer, secret);
+            }
+            String storedMethod = request.getAttachment(ProxiedRequestAttachments.STORED_METHOD);
+            if(storedMethod != null) {
+                buffer.put((byte) 0xD);
+                putString(buffer, storedMethod);
             }
             buffer.put((byte) 0xFF);
 
