@@ -40,6 +40,7 @@ import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.Certificates;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.SameThreadExecutor;
@@ -52,6 +53,7 @@ import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.security.cert.CertificateEncodingException;
 import javax.security.cert.X509Certificate;
 import java.io.IOException;
 import java.nio.channels.Channel;
@@ -190,9 +192,11 @@ public final class ProxyHandler implements HttpHandler {
                 try {
                     peerCertificates = sslSessionInfo.getPeerCertificateChain();
                     if(peerCertificates.length > 0) {
-                        request.putAttachment(ProxiedRequestAttachments.SSL_CERT, peerCertificates[0].toString());
+                        request.putAttachment(ProxiedRequestAttachments.SSL_CERT, Certificates.toPem(peerCertificates[0]));
                     }
                 } catch (SSLPeerUnverifiedException e) {
+                    //ignore
+                } catch (CertificateEncodingException e) {
                     //ignore
                 }
                 request.putAttachment(ProxiedRequestAttachments.SSL_CYPHER, sslSessionInfo.getCipherSuite());

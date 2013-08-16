@@ -38,4 +38,6 @@ public class DefaultSslSessionInfo implements SSLSessionInfo {
     public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
         return session.getPeerCertificateChain();
     }
+
+
 }
