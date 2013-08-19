@@ -43,8 +43,14 @@ public interface ServerConnection extends Attachable, ConnectedChannel {
 
     /**
      * Sends an out of band response, such as a HTTP 100-continue response.
-     * @return
-     * @param exchange
+     *
+     * WARNING: do not attempt to write to the current exchange until the out of band
+     * exchange has been fully written. Doing so may have unexpected results.
+     *
+     * TODO: this needs more thought.
+     *
+     * @return The out of band exchange.
+     * @param exchange The current exchange
      */
     HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange);
 

@@ -28,6 +28,7 @@ import io.undertow.server.handlers.RequestDumplingHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.proxy.SimpleProxyClientProvider;
 import io.undertow.util.NetworkUtils;
+import io.undertow.util.SingleByteStreamSinkConduit;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
@@ -104,6 +105,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final boolean ajp = Boolean.getBoolean("test.ajp");
     private static final boolean proxy = Boolean.getBoolean("test.proxy");
     private static final boolean dump = Boolean.getBoolean("test.dump");
+    private static final boolean single = Boolean.getBoolean("test.single");
 
     private static final DelegatingHandler rootHandler = new DelegatingHandler();
 
@@ -217,14 +219,15 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         .getMap();
                 if (ajp) {
                     openListener = new AjpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), 8192);
-                    acceptListener = ChannelListeners.openListenerAdapter(openListener);
+                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
                     if (!proxy) {
-                        server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 8888), acceptListener, serverOptions);
+                        int port = 8888;
+                        server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), port), acceptListener, serverOptions);
                     } else {
                         server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
 
                         proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
-                        proxyAcceptListener = ChannelListeners.openListenerAdapter(proxyOpenListener);
+                        proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                         proxyOpenListener.setRootHandler(new ProxyHandler(new SimpleProxyClientProvider(new URI("ajp", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 120000));
                         proxyServer.resumeAccepts();
@@ -232,7 +235,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     }
                 } else {
                     openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
-                    acceptListener = ChannelListeners.openListenerAdapter(openListener);
+                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
                     if (!proxy) {
                         server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
                     } else {
@@ -240,7 +243,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         server = worker.createStreamConnectionServer(targetAddress, acceptListener, serverOptions);
 
                         proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
-                        proxyAcceptListener = ChannelListeners.openListenerAdapter(proxyOpenListener);
+                        proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                         proxyOpenListener.setRootHandler(new ProxyHandler(new SimpleProxyClientProvider(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000));
                         proxyServer.resumeAccepts();
@@ -261,6 +264,19 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 }
             });
         }
+    }
+
+    private static ChannelListener<StreamConnection> wrapOpenListener(final ChannelListener<StreamConnection> listener) {
+        if(!single) {
+            return listener;
+        }
+        return new ChannelListener<StreamConnection>() {
+            @Override
+            public void handleEvent(StreamConnection channel) {
+                channel.getSinkChannel().setConduit(new SingleByteStreamSinkConduit(channel.getSinkChannel().getConduit(), 100));
+                listener.handleEvent(channel);
+            }
+        };
     }
 
     @Override

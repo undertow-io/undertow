@@ -64,6 +64,8 @@ public final class HttpServerConnection extends AbstractServerConnection impleme
         //apply transfer encoding rules
         HttpTransferEncoding.setupRequest(newExchange);
 
+        //we restore the read channel immediately, as this out of band response has no read side
+        channel.getSourceChannel().setConduit(state.source);
         newExchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
             @Override
             public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
