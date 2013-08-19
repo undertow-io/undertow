@@ -72,7 +72,7 @@ public class FileResource implements Resource {
     @Override
     public String getLastModifiedString() {
         final Date lastModified = getLastModified();
-        if(lastModified == null) {
+        if (lastModified == null) {
             return null;
         }
         return DateUtils.toDateString(lastModified);
@@ -118,19 +118,19 @@ public class FileResource implements Resource {
             protected volatile FileChannel fileChannel;
 
             protected boolean openFile() {
-                 try {
-                     fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
-                 } catch (FileNotFoundException e) {
-                     exchange.setResponseCode(404);
-                     callback.onException(exchange, sender, e);
-                     return false;
-                 } catch (IOException e) {
-                     exchange.setResponseCode(500);
-                     callback.onException(exchange, sender, e);
-                     return false;
-                 }
-                 return true;
-             }
+                try {
+                    fileChannel = exchange.getConnection().getWorker().getXnio().openFile(file, FileAccess.READ_ONLY);
+                } catch (FileNotFoundException e) {
+                    exchange.setResponseCode(404);
+                    callback.onException(exchange, sender, e);
+                    return false;
+                } catch (IOException e) {
+                    exchange.setResponseCode(500);
+                    callback.onException(exchange, sender, e);
+                    return false;
+                }
+                return true;
+            }
         }
 
         class ServerTask extends BaseFileTask implements IoCallback {
@@ -145,7 +145,7 @@ public class FileResource implements Resource {
                     }
                     pooled = exchange.getConnection().getBufferPool().allocate();
                 }
-                if(pooled != null) {
+                if (pooled != null) {
                     ByteBuffer buffer = pooled.getResource();
                     try {
                         buffer.clear();
@@ -197,8 +197,25 @@ public class FileResource implements Resource {
                     return;
                 }
 
-                sender.transferFrom(fileChannel, callback);
-                IoUtils.safeClose(fileChannel);
+                sender.transferFrom(fileChannel, new IoCallback() {
+                    @Override
+                    public void onComplete(HttpServerExchange exchange, Sender sender) {
+                        try {
+                            IoUtils.safeClose(fileChannel);
+                        } finally {
+                            callback.onComplete(exchange, sender);
+                        }
+                    }
+
+                    @Override
+                    public void onException(HttpServerExchange exchange, Sender sender, IOException exception) {
+                        try {
+                            IoUtils.safeClose(fileChannel);
+                        } finally {
+                            callback.onException(exchange, sender, exception);
+                        }
+                    }
+                });
             }
         }
 
