@@ -43,6 +43,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.Certificates;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
 import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -56,6 +57,8 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.cert.CertificateEncodingException;
 import javax.security.cert.X509Certificate;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.channels.Channel;
 import java.util.concurrent.TimeUnit;
 
@@ -184,14 +187,20 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap inboundRequestHeaders = exchange.getRequestHeaders();
             final HeaderMap outboundRequestHeaders = request.getRequestHeaders();
             copyHeaders(outboundRequestHeaders, inboundRequestHeaders);
+            SocketAddress address = exchange.getConnection().getPeerAddress();
+            if (address instanceof InetSocketAddress) {
+                outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, ((InetSocketAddress) address).getAddress().getHostAddress());
+            } else {
+                outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, "localhost");
+            }
 
             SSLSessionInfo sslSessionInfo = exchange.getConnection().getSslSessionInfo();
-            if(sslSessionInfo != null) {
+            if (sslSessionInfo != null) {
                 request.putAttachment(ProxiedRequestAttachments.IS_SSL, true);
                 X509Certificate[] peerCertificates;
                 try {
                     peerCertificates = sslSessionInfo.getPeerCertificateChain();
-                    if(peerCertificates.length > 0) {
+                    if (peerCertificates.length > 0) {
                         request.putAttachment(ProxiedRequestAttachments.SSL_CERT, Certificates.toPem(peerCertificates[0]));
                     }
                 } catch (SSLPeerUnverifiedException e) {
@@ -317,8 +326,17 @@ public final class ProxyHandler implements HttpHandler {
             try {
                 channel.shutdownWrites();
                 if (!channel.flush()) {
-                    channel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, ChannelListeners.closingChannelExceptionHandler()));
+                    channel.getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
+                        @Override
+                        public void handleEvent(StreamSinkChannel channel) {
+                            channel.suspendWrites();
+                            channel.getWriteSetter().set(null);
+                        }
+                    }, ChannelListeners.closingChannelExceptionHandler()));
                     channel.resumeWrites();
+                } else {
+                    channel.getWriteSetter().set(null);
+                    channel.shutdownWrites();
                 }
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
