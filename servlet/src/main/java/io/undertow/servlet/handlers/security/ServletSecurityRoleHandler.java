@@ -78,7 +78,7 @@ public class ServletSecurityRoleHandler implements HttpHandler {
                                 break;
                             }
                         }
-                        if (account.isUserInRole(role)) {
+                        if (account.getRoles().contains(role)) {
                             found = true;
                             break;
                         }

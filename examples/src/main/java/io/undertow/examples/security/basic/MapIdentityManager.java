@@ -7,7 +7,9 @@ import io.undertow.security.idm.PasswordCredential;
 
 import java.security.Principal;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A simple {@link IdentityManager} implementation, that just takes a map of users to their
@@ -76,9 +78,10 @@ class MapIdentityManager implements IdentityManager {
                 }
 
                 @Override
-                public boolean isUserInRole(String role) {
-                    return false;
+                public Set<String> getRoles() {
+                    return Collections.emptySet();
                 }
+
             };
         }
         return null;

@@ -18,6 +18,7 @@
 package io.undertow.security.idm;
 
 import java.security.Principal;
+import java.util.Set;
 
 /**
  * Representation of an account, most likely a user account.
@@ -29,15 +30,11 @@ public interface Account {
     Principal getPrincipal();
 
     /**
-     * Check if the given account has the specified role.
-     * <p/>
-     * Not that it is expected that the identity manager implementation returns an account which maps the users groups to roles
-     * specific for the application.
+     * Returns the users roles.
      *
-     * @param role The role.
-     * @return <code>true</code> if the user has the specified role.
+     * @return A set of the users roles
      */
-    boolean isUserInRole(final String role);
+    Set<String> getRoles();
 
     // TODO - Do we need a way to pass back to IDM that account is logging out? A few scenarios: -
     // 1 - Session expiration so cached account known to be logging out.

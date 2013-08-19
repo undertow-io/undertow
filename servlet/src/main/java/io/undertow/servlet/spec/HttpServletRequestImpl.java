@@ -263,13 +263,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 if (roles != null && roles.contains(ref.getLinkedRole())) {
                     return true;
                 }
-                return account.isUserInRole(ref.getLinkedRole());
+                return account.getRoles().contains(ref.getLinkedRole());
             }
         }
         if (roles != null && roles.contains(role)) {
             return true;
         }
-        return account.isUserInRole(role);
+        return account.getRoles().contains(role);
     }
 
     @Override

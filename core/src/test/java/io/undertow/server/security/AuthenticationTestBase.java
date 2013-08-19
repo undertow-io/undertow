@@ -111,8 +111,8 @@ public abstract class AuthenticationTestBase {
                             }
 
                             @Override
-                            public boolean isUserInRole(String role) {
-                                return false;
+                            public Set<String> getRoles() {
+                                return Collections.emptySet();
                             }
 
                         };
@@ -171,8 +171,8 @@ public abstract class AuthenticationTestBase {
                         }
 
                         @Override
-                        public boolean isUserInRole(String role) {
-                            return false;
+                        public Set<String> getRoles() {
+                            return Collections.emptySet();
                         }
 
                     };

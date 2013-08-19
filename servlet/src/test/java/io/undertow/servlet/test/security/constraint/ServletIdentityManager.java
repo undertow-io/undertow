@@ -127,8 +127,8 @@ public class ServletIdentityManager implements IdentityManager {
         }
 
         @Override
-        public boolean isUserInRole(String role) {
-            return roles.contains(role);
+        public Set<String> getRoles() {
+            return roles;
         }
 
     }
