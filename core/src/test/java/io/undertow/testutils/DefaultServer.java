@@ -29,6 +29,7 @@ import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.proxy.SimpleProxyClientProvider;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
+import io.undertow.util.SingleByteStreamSourceConduit;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.RunListener;
@@ -273,7 +274,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection channel) {
-                channel.getSinkChannel().setConduit(new SingleByteStreamSinkConduit(channel.getSinkChannel().getConduit(), 100));
+                channel.getSinkChannel().setConduit(new SingleByteStreamSinkConduit(channel.getSinkChannel().getConduit(), 10000));
+                channel.getSourceChannel().setConduit(new SingleByteStreamSourceConduit(channel.getSourceChannel().getConduit(), 10000));
                 listener.handleEvent(channel);
             }
         };

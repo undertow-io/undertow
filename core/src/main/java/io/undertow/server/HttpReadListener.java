@@ -118,7 +118,6 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                     }
                     return;
                 }
-                //TODO: we need to handle parse errors
                 if (existing != null) {
                     existing = null;
                     connection.setExtraBytes(null);
@@ -152,6 +151,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
             HttpHandlers.executeRootHandler(connection.getRootHandler(), httpServerExchange, Thread.currentThread() instanceof XnioExecutor);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);
+            return;
         } finally {
             if (free) pooled.free();
         }
@@ -159,6 +159,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
 
     private void sendBadRequestAndClose(final StreamConnection channel, final Exception exception) {
         UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(exception);
+        channel.getSourceChannel().suspendReads();
         new StringWriteChannelListener(BAD_REQUEST) {
             @Override
             protected void writeDone(final StreamSinkChannel c) {

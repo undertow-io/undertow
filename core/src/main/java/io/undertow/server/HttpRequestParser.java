@@ -219,6 +219,13 @@ public abstract class HttpRequestParser {
             }
         }
 
+        if (currentState.state == ParseState.PATH_PARAMETERS) {
+            handlePathParameters(buffer, currentState, builder);
+            if (!buffer.hasRemaining()) {
+                return;
+            }
+        }
+
         if (currentState.state == ParseState.VERSION) {
             handleHttpVersion(buffer, currentState, builder);
             if (!buffer.hasRemaining()) {
@@ -402,7 +409,7 @@ public abstract class HttpRequestParser {
                     urlDecodeCodePoint = 0;
                     urlDecodeState = 0;
                     continue;
-                } else if (next == '+'  && decode) {
+                } else if (next == '+' && decode) {
                     if (encodedStringBuilder == null) {
                         encodedStringBuilder = new StringBuilder(stringBuilder.toString());
                         encodedStringBuilder.append(next);
@@ -614,7 +621,6 @@ public abstract class HttpRequestParser {
                     exchange.addPathParam(nextQueryParam, stringBuilder.substring(queryParamPos));
                 }
                 exchange.setParsedRequestPath(state.parseState > HOST_DONE, encodedStringBuilder.toString());
-                state.state = ParseState.VERSION;
                 state.stringBuilder.setLength(0);
                 state.pos = 0;
                 state.nextQueryParam = null;
@@ -623,7 +629,10 @@ public abstract class HttpRequestParser {
                 state.mapCount = 0;
                 state.encodedStringBuilder = null;
                 if (next == '?') {
+                    state.state = ParseState.QUERY_PARAMETERS;
                     handleQueryParameters(buffer, state, exchange);
+                } else {
+                    state.state = ParseState.VERSION;
                 }
                 return;
             } else if (next == '\r' || next == '\n') {

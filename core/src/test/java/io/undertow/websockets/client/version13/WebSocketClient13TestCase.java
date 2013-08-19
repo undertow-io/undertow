@@ -25,7 +25,7 @@ import org.xnio.Options;
 import org.xnio.Pool;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
-import sun.nio.ch.ChannelInputStream;
+import org.xnio.streams.ChannelInputStream;
 
 import java.io.IOException;
 import java.net.URI;

@@ -111,7 +111,7 @@ public class AsyncUpgradeServlet extends HttpServlet {
                 return;
             }
             if (connection.getOutputStream().isReady()) {
-                connection.getOutputStream().print(builder.toString());
+                connection.getOutputStream().write(builder.toString().getBytes());
                 builder = new StringBuilder();
                 reading = true;
             }

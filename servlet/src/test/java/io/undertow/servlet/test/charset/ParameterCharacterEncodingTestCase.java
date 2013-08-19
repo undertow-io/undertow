@@ -33,7 +33,6 @@ import static io.undertow.servlet.Servlets.multipartConfig;
 @RunWith(DefaultServer.class)
 public class ParameterCharacterEncodingTestCase {
 
-
     @BeforeClass
     public static void setup() throws ServletException {
         DeploymentUtils.setupServlet(Servlets.servlet("servlet", EchoServlet.class)

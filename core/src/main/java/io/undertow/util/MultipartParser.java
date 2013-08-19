@@ -29,7 +29,6 @@ import org.xnio.Pooled;
  */
 public class MultipartParser {
 
-
     /**
      * The Carriage Return ASCII character value.
      */
@@ -236,6 +235,7 @@ public class MultipartParser {
         }
 
         private void entity(final ByteBuffer buffer) throws IOException {
+            int startingSubState = subState;
             int pos = buffer.position();
             while (buffer.hasRemaining()) {
                 final byte b = buffer.get();
@@ -244,6 +244,7 @@ public class MultipartParser {
                         //if we have a potential boundary match
                         subState++;
                         if (subState == boundary.length) {
+                            startingSubState = 0;
                             //we have our data
                             ByteBuffer retBuffer = buffer.duplicate();
                             retBuffer.position(pos);
@@ -254,8 +255,20 @@ public class MultipartParser {
                             subState = -1;
                         }
                     } else if (b == boundary[0]) {
+                        //we started half way through a boundary, but it turns out we did not actually meet the boundary condition
+                        //so we call the part handler with our copy of the boundary data
+                        if (startingSubState > 0) {
+                            encodingHandler.handle(partHandler, ByteBuffer.wrap(boundary, 0, startingSubState));
+                            startingSubState = 0;
+                        }
                         subState = 1;
                     } else {
+                        //we started half way through a boundary, but it turns out we did not actually meet the boundary condition
+                        //so we call the part handler with our copy of the boundary data
+                        if (startingSubState > 0) {
+                            encodingHandler.handle(partHandler, ByteBuffer.wrap(boundary, 0, startingSubState));
+                            startingSubState = 0;
+                        }
                         subState = 0;
                     }
                 } else if (subState == -1) {
@@ -288,14 +301,20 @@ public class MultipartParser {
             //handle the data we read so far
             ByteBuffer retBuffer = buffer.duplicate();
             retBuffer.position(pos);
-            partHandler.data(retBuffer);
+            if (subState == 0) {
+                //if we end partially through a boundary we do not handle the data
+                encodingHandler.handle(partHandler, retBuffer);
+            } else if (retBuffer.remaining() > subState && subState > 0) {
+                //we have some data to handle, and the end of the buffer might be a boundary match
+                retBuffer.limit(retBuffer.limit() - subState);
+                encodingHandler.handle(partHandler, retBuffer);
+            }
         }
 
         public boolean isComplete() {
             return state == -1;
         }
     }
-
 
 
     private interface Encoding {
@@ -305,7 +324,7 @@ public class MultipartParser {
     private static class IdentityEncoding implements Encoding {
 
         @Override
-        public void handle(final PartHandler handler, final ByteBuffer rawData)  throws IOException {
+        public void handle(final PartHandler handler, final ByteBuffer rawData) throws IOException {
             handler.data(rawData);
             rawData.clear();
         }
@@ -322,7 +341,7 @@ public class MultipartParser {
         }
 
         @Override
-        public void handle(final PartHandler handler, final ByteBuffer rawData)  throws IOException {
+        public void handle(final PartHandler handler, final ByteBuffer rawData) throws IOException {
             Pooled<ByteBuffer> resource = bufferPool.allocate();
             ByteBuffer buf = resource.getResource();
             try {
@@ -354,7 +373,7 @@ public class MultipartParser {
 
 
         @Override
-        public void handle(final PartHandler handler, final ByteBuffer rawData)  throws IOException {
+        public void handle(final PartHandler handler, final ByteBuffer rawData) throws IOException {
             boolean equalsSeen = this.equalsSeen;
             byte firstCharacter = this.firstCharacter;
             Pooled<ByteBuffer> resource = bufferPool.allocate();

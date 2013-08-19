@@ -42,7 +42,6 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class SimpleUpgradeTestCase {
 
-
     @BeforeClass
     public static void setup() throws ServletException {
 

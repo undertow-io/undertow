@@ -73,6 +73,9 @@ public class BadRequestTestCase {
             }
             Assert.assertEquals(response1, sb.toString());
 
+        } catch (IOException expected) {
+            //this can happen as well, as in some cases we may not have fully consumed the read side
+            //before the connection is shutdown, namely when we are running in test.single
         } finally {
             s.close();
         }

@@ -129,7 +129,17 @@ class ParseState {
 
     public void reset() {
         this.state = 0;
+        this.parseState = 0;
+        this.current = null;
+        this.currentBytes = null;
         this.pos = 0;
         this.leftOver = 0;
+        this.urlDecodeCodePoint = 0;
+        this.urlDecodeState = 0;
+        this.stringBuilder.setLength(0);
+        this.encodedStringBuilder = null;
+        this.nextHeader = null;
+        this.nextQueryParam = null;
+        this.mapCount = 0;
     }
 }
