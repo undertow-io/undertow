@@ -40,38 +40,7 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
 
     }
 
-    private final HttpServerExchange exchange;
-
-    private final AjpServerResponseConduit ajpResponseConduit;
-
-    /**
-     * The size of the incoming request. A size of 0 indicates that the request is using chunked encoding
-     */
-    private final Long size;
-
     private static final int HEADER_LENGTH = 6;
-
-    /**
-     * byte buffer that is used to hold header data
-     */
-    private final ByteBuffer headerBuffer = ByteBuffer.allocateDirect(HEADER_LENGTH);
-
-    private final ConduitListener<? super AjpServerRequestConduit> finishListener;
-
-    /**
-     * The total amount of remaining data. If this is unknown it is -1.
-     */
-    private long remaining;
-
-    /**
-     * State flags, with the chunk remaining stored in the low bytes
-     */
-    private long state;
-
-    /**
-     * The total amount of data that has been read
-     */
-    private long totalRead;
 
     /**
      * There is a packet coming from apache.
@@ -91,16 +60,43 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
      */
     private static final long STATE_MASK = longBitMask(0, 60);
 
+
+    private final HttpServerExchange exchange;
+
+    private final AjpServerResponseConduit ajpResponseConduit;
+
+    /**
+     * byte buffer that is used to hold header data
+     */
+    private final ByteBuffer headerBuffer = ByteBuffer.allocateDirect(HEADER_LENGTH);
+
+    private final ConduitListener<? super AjpServerRequestConduit> finishListener;
+
+    /**
+    /**
+     * The total amount of remaining data. If this is unknown it is -1.
+     */
+    private long remaining;
+
+    /**
+     * State flags, with the chunk remaining stored in the low bytes
+     */
+    private long state;
+
+    /**
+     * The total amount of data that has been read
+     */
+    private long totalRead;
+
     public AjpServerRequestConduit(final StreamSourceConduit delegate, HttpServerExchange exchange, AjpServerResponseConduit ajpResponseConduit, Long size, ConduitListener<? super AjpServerRequestConduit> finishListener) {
         super(delegate);
         this.exchange = exchange;
         this.ajpResponseConduit = ajpResponseConduit;
-        this.size = size;
         this.finishListener = finishListener;
         if (size == null) {
             state = STATE_SEND_REQUIRED;
             remaining = -1;
-        } else if (size == 0) {
+        } else if (size.equals(0)) {
             state = STATE_FINISHED;
             remaining = 0;
         } else {
@@ -213,7 +209,6 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
             this.totalRead += read;
             if (remaining == 0) {
                 this.state = STATE_FINISHED;
-
                 if (finishListener != null) {
                     finishListener.handleEvent(this);
                 }
