@@ -25,6 +25,7 @@ import java.util.List;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -40,6 +41,7 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DefaultServletConfig;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
@@ -67,17 +69,21 @@ import io.undertow.util.SameThreadExecutor;
  */
 public class DefaultServlet extends HttpServlet {
 
-    private final Deployment deployment;
-    private final DefaultServletConfig config;
-    private final ResourceManager resourceManager;
+    private Deployment deployment;
+    private DefaultServletConfig config;
+    private ResourceManager resourceManager;
 
-    private final List<String> welcomePages;
+    private List<String> welcomePages;
 
-    public DefaultServlet(final Deployment deployment, final DefaultServletConfig config, final List<String> welcomePages) {
-        this.deployment = deployment;
-        this.config = config;
-        this.welcomePages = welcomePages;
+    @Override
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
+        ServletContextImpl sc = (ServletContextImpl) config.getServletContext();
+        this.deployment = sc.getDeployment();
+        DefaultServletConfig defaultServletConfig = deployment.getDeploymentInfo().getDefaultServletConfig();
+        this.config = defaultServletConfig != null ? defaultServletConfig : new DefaultServletConfig();
         this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
+        this.welcomePages = deployment.getDeploymentInfo().getWelcomePages();
     }
 
     @Override
@@ -163,7 +169,7 @@ public class DefaultServlet extends HttpServlet {
 
                 @Override
                 public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-                    if(!include) {
+                    if (!include) {
                         sender.close();
                     }
                 }
@@ -181,7 +187,7 @@ public class DefaultServlet extends HttpServlet {
         String welcomePage = findWelcomeFile(oldPath);
 
         if (welcomePage != null) {
-            if(!req.getRequestURI().endsWith("/")) {
+            if (!req.getRequestURI().endsWith("/")) {
                 redirectWithTrailingSlash(req, resp);
             } else {
                 redirect(req, welcomePage);
@@ -190,7 +196,7 @@ public class DefaultServlet extends HttpServlet {
             final String pathWithTraingSlash = oldPath.endsWith("/") ? oldPath : oldPath + "/";
             String path = findWelcomeServlet(pathWithTraingSlash);
             if (path != null) {
-                if(!req.getRequestURI().endsWith("/")) {
+                if (!req.getRequestURI().endsWith("/")) {
                     redirectWithTrailingSlash(req, resp);
                 } else {
                     redirect(req, path);
@@ -202,10 +208,10 @@ public class DefaultServlet extends HttpServlet {
     }
 
     private void redirectWithTrailingSlash(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
-        if(req.getQueryString() != null) {
-            resp.sendRedirect(req.getRequestURI() + "/?" + req.getQueryString() );
+        if (req.getQueryString() != null) {
+            resp.sendRedirect(req.getRequestURI() + "/?" + req.getQueryString());
         } else {
-            resp.sendRedirect(req.getRequestURI() + "/" );
+            resp.sendRedirect(req.getRequestURI() + "/");
         }
     }
 
@@ -217,14 +223,14 @@ public class DefaultServlet extends HttpServlet {
         //two seperate servlet requests
         final HttpServletRequestImpl requestImpl = ServletRequestContext.requireCurrent().getOriginalRequest();
         final HttpServerExchange exchange = requestImpl.getExchange();
-        if(!exchange.isRequestChannelAvailable()) {
+        if (!exchange.isRequestChannelAvailable()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
             public void run() {
                 String path = pathAddition;
-                if(!exchange.getRelativePath().endsWith("/")) {
+                if (!exchange.getRelativePath().endsWith("/")) {
                     path = "/" + path;
                 }
 
