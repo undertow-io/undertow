@@ -19,6 +19,8 @@
 package io.undertow.server.handlers.proxy;
 
 import io.undertow.UndertowLogger;
+import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
@@ -41,9 +43,11 @@ import io.undertow.server.ServerConnection;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Certificates;
+import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -60,6 +64,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.Channel;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -74,6 +79,15 @@ public final class ProxyHandler implements HttpHandler {
 
     private static final AttachmentKey<HttpServerExchange> EXCHANGE = AttachmentKey.create(HttpServerExchange.class);
     private static final AttachmentKey<XnioExecutor.Key> TIMEOUT_KEY = AttachmentKey.create(XnioExecutor.Key.class);
+
+
+    private final ProxyClientHandler proxyClientHandler = new ProxyClientHandler();
+    private final ProxyClientProviderHandler proxyClientProviderHandler = new ProxyClientProviderHandler();
+
+    /**
+     * Map of additional headers to add to the request.
+     */
+    private final Map<HttpString, ExchangeAttribute> requestHeaders = new CopyOnWriteMap<HttpString, ExchangeAttribute>();
 
     public ProxyHandler(ProxyClientProvider clientProvider, int maxRequestTime) {
         this.clientProvider = clientProvider;
@@ -101,8 +115,49 @@ public final class ProxyHandler implements HttpHandler {
                 }
             });
         }
-        clientProvider.createProxyClient(exchange, ProxyClientProviderHandler.INSTANCE, -1, TimeUnit.MILLISECONDS);
+        clientProvider.createProxyClient(exchange, proxyClientProviderHandler, -1, TimeUnit.MILLISECONDS);
     }
+
+    /**
+     * Adds a request header to the outgoing request. The header will always be set, even if it resolves to
+     * an empty string.
+     *
+     * @param header    The header name
+     * @param attribute The header value attribute.
+     * @return this
+     */
+    public ProxyHandler addRequestHeader(final HttpString header, final ExchangeAttribute attribute) {
+        requestHeaders.put(header, attribute);
+        return this;
+    }
+
+    /**
+     * Adds a request header to the outgoing request. The header will always be set, even if it resolves to
+     * an empty string.
+     * <p/>
+     * The attribute value will be parsed, and the resulting exchange attribute will be used to create the actual header
+     * value.
+     *
+     * @param header    The header name
+     * @param attribute The header value attribute.
+     * @return this
+     */
+    public ProxyHandler addRequestHeader(final HttpString header, final String attribute, final ClassLoader classLoader) {
+        requestHeaders.put(header, ExchangeAttributes.parser(classLoader).parse(attribute));
+        return this;
+    }
+
+    /**
+     * Removes a request header
+     *
+     * @param header the header
+     * @return this
+     */
+    public ProxyHandler removeRequestHeader(final HttpString header) {
+        requestHeaders.remove(header);
+        return this;
+    }
+
 
     static void copyHeaders(final HeaderMap to, final HeaderMap from) {
         long f = from.fastIterateNonEmpty();
@@ -114,15 +169,13 @@ public final class ProxyHandler implements HttpHandler {
         }
     }
 
-    private static final class ProxyClientProviderHandler implements HttpHandler {
-
-        public static final ProxyClientProviderHandler INSTANCE = new ProxyClientProviderHandler();
+    private final class ProxyClientProviderHandler implements HttpHandler {
 
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
             final ProxyClient proxyClient = exchange.getAttachment(ProxyClientProvider.CLIENT);
             if (proxyClient != null) {
-                proxyClient.getConnection(exchange, ProxyClientHandler.INSTANCE, -1, TimeUnit.MILLISECONDS);
+                proxyClient.getConnection(exchange, proxyClientHandler, -1, TimeUnit.MILLISECONDS);
                 return;
             }
 
@@ -138,9 +191,7 @@ public final class ProxyHandler implements HttpHandler {
         }
     }
 
-    private static final class ProxyClientHandler implements HttpHandler {
-
-        public static final ProxyClientHandler INSTANCE = new ProxyClientHandler();
+    private final class ProxyClientHandler implements HttpHandler {
 
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -148,7 +199,7 @@ public final class ProxyHandler implements HttpHandler {
             ClientConnection clientConnection = exchange.getAttachment(ProxyClient.CONNECTION);
             //see if we already have a client
             if (clientConnection != null) {
-                exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(clientConnection, exchange));
+                exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(clientConnection, exchange, requestHeaders));
                 return;
             }
 
@@ -168,10 +219,12 @@ public final class ProxyHandler implements HttpHandler {
     private static class ProxyAction implements Runnable {
         private final ClientConnection clientConnection;
         private final HttpServerExchange exchange;
+        private final Map<HttpString, ExchangeAttribute> requestHeaders;
 
-        public ProxyAction(final ClientConnection clientConnection, final HttpServerExchange exchange) {
+        public ProxyAction(final ClientConnection clientConnection, final HttpServerExchange exchange, Map<HttpString, ExchangeAttribute> requestHeaders) {
             this.clientConnection = clientConnection;
             this.exchange = exchange;
+            this.requestHeaders = requestHeaders;
         }
 
         @Override
@@ -187,6 +240,9 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap inboundRequestHeaders = exchange.getRequestHeaders();
             final HeaderMap outboundRequestHeaders = request.getRequestHeaders();
             copyHeaders(outboundRequestHeaders, inboundRequestHeaders);
+            for (Map.Entry<HttpString, ExchangeAttribute> entry : requestHeaders.entrySet()) {
+                outboundRequestHeaders.put(entry.getKey(), entry.getValue().readAttribute(exchange));
+            }
             SocketAddress address = exchange.getConnection().getPeerAddress();
             if (address instanceof InetSocketAddress) {
                 outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, ((InetSocketAddress) address).getAddress().getHostAddress());
