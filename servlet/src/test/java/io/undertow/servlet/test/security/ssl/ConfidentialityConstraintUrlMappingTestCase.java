@@ -32,7 +32,6 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestConfidentialPortManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -52,7 +51,6 @@ import static org.junit.Assert.assertEquals;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 @RunWith(DefaultServer.class)
-@ProxyIgnore
 public class ConfidentialityConstraintUrlMappingTestCase {
 
 

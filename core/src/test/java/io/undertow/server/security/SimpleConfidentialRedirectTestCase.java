@@ -21,13 +21,8 @@ import io.undertow.security.handlers.SinglePortConfidentialityHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.ProxyIgnore;
-import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
-
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-
+import io.undertow.util.HttpString;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -35,12 +30,14 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+
 /**
  * A simple test case to verify a redirect works.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-@ProxyIgnore
 @RunWith(DefaultServer.class)
 public class SimpleConfidentialRedirectTestCase {
 

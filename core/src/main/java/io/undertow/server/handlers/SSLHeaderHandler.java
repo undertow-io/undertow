@@ -36,6 +36,8 @@ import static io.undertow.util.Headers.SSL_SESSION_ID;
  */
 public class SSLHeaderHandler implements HttpHandler {
 
+    public static final String HTTPS = "https";
+
     private static final ExchangeCompletionListener CLEAR_SSL_LISTENER = new ExchangeCompletionListener() {
         @Override
         public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
@@ -70,6 +72,7 @@ public class SSLHeaderHandler implements HttpHandler {
 
             try {
                 SSLSessionInfo info = new BasicSSLSessionInfo(sessionId, cipher, clientCert);
+                exchange.setRequestScheme(HTTPS);
                 exchange.getConnection().setSslSessionInfo(info);
                 exchange.addExchangeCompleteListener(CLEAR_SSL_LISTENER);
             } catch (java.security.cert.CertificateException e) {

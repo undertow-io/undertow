@@ -21,7 +21,6 @@ package io.undertow.server.ssl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HttpString;
 import org.apache.http.Header;
@@ -37,10 +36,8 @@ import java.security.GeneralSecurityException;
 /**
  * @author Stuart Douglas
  */
-@ProxyIgnore
 @RunWith(DefaultServer.class)
 public class SimpleSSLTestCase {
-
 
     @Test
     public void simpleSSLTestCase() throws IOException, GeneralSecurityException {
