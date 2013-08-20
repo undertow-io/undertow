@@ -62,6 +62,10 @@ import static io.undertow.util.Headers.REFRESH_STRING;
 import static io.undertow.util.Headers.SEC_WEB_SOCKET_KEY_STRING;
 import static io.undertow.util.Headers.SEC_WEB_SOCKET_VERSION_STRING;
 import static io.undertow.util.Headers.SERVER_STRING;
+import static io.undertow.util.Headers.SSL_CIPHER_STRING;
+import static io.undertow.util.Headers.SSL_CIPHER_USEKEYSIZE_STRING;
+import static io.undertow.util.Headers.SSL_CLIENT_CERT_STRING;
+import static io.undertow.util.Headers.SSL_SESSION_ID_STRING;
 import static io.undertow.util.Headers.STRICT_TRANSPORT_SECURITY_STRING;
 import static io.undertow.util.Headers.TRAILER_STRING;
 import static io.undertow.util.Headers.TRANSFER_ENCODING_STRING;
@@ -133,6 +137,10 @@ import static io.undertow.util.Protocols.HTTP_1_1_STRING;
                 SEC_WEB_SOCKET_KEY_STRING,
                 SEC_WEB_SOCKET_VERSION_STRING,
                 SERVER_STRING,
+                SSL_CLIENT_CERT_STRING,
+                SSL_CIPHER_STRING,
+                SSL_SESSION_ID_STRING,
+                SSL_CIPHER_USEKEYSIZE_STRING,
                 STRICT_TRANSPORT_SECURITY_STRING,
                 TRAILER_STRING,
                 TRANSFER_ENCODING_STRING,

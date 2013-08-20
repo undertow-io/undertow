@@ -22,6 +22,7 @@ import io.undertow.client.ClientRequest;
 import io.undertow.client.ProxiedRequestAttachments;
 import io.undertow.client.UndertowClientMessages;
 import io.undertow.conduits.ConduitListener;
+import io.undertow.util.FlexBase64;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -316,10 +317,10 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
                 buffer.put((byte) 8);
                 putString(buffer, sslCypher);
             }
-            String sslSession = request.getAttachment(ProxiedRequestAttachments.SSL_SESSION);
+            byte[] sslSession = request.getAttachment(ProxiedRequestAttachments.SSL_SESSION_ID);
             if(sslSession != null) {
                 buffer.put((byte) 9);
-                putString(buffer, sslSession);
+                putString(buffer, FlexBase64.encodeString(sslSession, false));
             }
             Integer sslKeySize = request.getAttachment(ProxiedRequestAttachments.SSL_KEY_SIZE);
             if(sslKeySize != null) {

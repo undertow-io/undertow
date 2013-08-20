@@ -85,6 +85,10 @@ public final class Headers {
     public static final String SERVLET_ENGINE_STRING = "Servlet-Engine";
     public static final String SET_COOKIE_STRING = "Set-Cookie";
     public static final String SET_COOKIE2_STRING = "Set-Cookie2";
+    public static final String SSL_CLIENT_CERT_STRING = "SSL_CLIENT_CERT";
+    public static final String SSL_CIPHER_STRING = "SSL_CIPHER";
+    public static final String SSL_SESSION_ID_STRING = "SSL_SESSION_ID";
+    public static final String SSL_CIPHER_USEKEYSIZE_STRING = "SSL_CIPHER_USEKEYSIZE";
     public static final String STATUS_STRING = "Status";
     public static final String STRICT_TRANSPORT_SECURITY_STRING = "Strict-Transport-Security";
     public static final String TE_STRING = "TE";
@@ -155,6 +159,10 @@ public final class Headers {
     public static final HttpString SERVLET_ENGINE = new HttpString(SERVLET_ENGINE_STRING, 53);
     public static final HttpString SET_COOKIE = new HttpString(SET_COOKIE_STRING, 54);
     public static final HttpString SET_COOKIE2 = new HttpString(SET_COOKIE2_STRING, 55);
+    public static final HttpString SSL_CLIENT_CERT = new HttpString(SSL_CLIENT_CERT_STRING);
+    public static final HttpString SSL_CIPHER = new HttpString(SSL_CIPHER_STRING);
+    public static final HttpString SSL_SESSION_ID = new HttpString(SSL_SESSION_ID_STRING);
+    public static final HttpString SSL_CIPHER_USEKEYSIZE = new HttpString(SSL_CIPHER_USEKEYSIZE_STRING);
     public static final HttpString STATUS = new HttpString(STATUS_STRING, 56);
     public static final HttpString STRICT_TRANSPORT_SECURITY = new HttpString(STRICT_TRANSPORT_SECURITY_STRING, 57);
     public static final HttpString TE = new HttpString(TE_STRING, 58);

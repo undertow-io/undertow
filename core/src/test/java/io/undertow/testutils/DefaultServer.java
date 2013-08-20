@@ -25,8 +25,10 @@ import io.undertow.server.HttpOpenListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
 import io.undertow.server.handlers.RequestDumplingHandler;
+import io.undertow.server.handlers.SSLHeaderHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.proxy.SimpleProxyClientProvider;
+import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
 import io.undertow.util.SingleByteStreamSourceConduit;
@@ -188,6 +190,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         super(klass);
     }
 
+    public static void setupProxyHandlerForSSL(ProxyHandler proxyHandler) {
+        proxyHandler.addRequestHeader(Headers.SSL_CLIENT_CERT, "%{SSL_CLIENT_CERT}" ,DefaultServer.class.getClassLoader());
+        proxyHandler.addRequestHeader(Headers.SSL_CIPHER, "%{SSL_CIPHER}" ,DefaultServer.class.getClassLoader());
+        proxyHandler.addRequestHeader(Headers.SSL_SESSION_ID, "%{SSL_SESSION_ID}" ,DefaultServer.class.getClassLoader());
+    }
+
     @Override
     public Description getDescription() {
         return super.getDescription();
@@ -246,7 +254,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         proxyOpenListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 100 * 8192), OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true), 8192);
                         proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                         proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                        proxyOpenListener.setRootHandler(new ProxyHandler(new SimpleProxyClientProvider(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000));
+                        ProxyHandler proxyHandler = new ProxyHandler(new SimpleProxyClientProvider(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000);
+                        setupProxyHandlerForSSL(proxyHandler);
+                        proxyOpenListener.setRootHandler(proxyHandler);
                         proxyServer.resumeAccepts();
                     }
 
@@ -308,6 +318,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * @param handler The handler to use
      */
     public static void setRootHandler(HttpHandler handler) {
+        if(proxy && !ajp) {
+            //if we are testing HTTP proxy we always add the SSLHeaderHandler
+            //this allows the SSL information to be propagated to be backend
+            handler = new SSLHeaderHandler(handler);
+        }
         if (dump) {
             rootHandler.next = new RequestDumplingHandler(handler);
         } else {

@@ -22,7 +22,6 @@ import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -41,7 +40,6 @@ import static org.junit.Assert.assertEquals;
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
-@ProxyIgnore
 @RunWith(DefaultServer.class)
 public class ClientCertTestCase extends AuthenticationTestBase {
 

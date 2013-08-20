@@ -1,7 +1,5 @@
 package io.undertow.util;
 
-import sun.security.provider.X509Factory;
-
 import javax.security.cert.CertificateEncodingException;
 import javax.security.cert.X509Certificate;
 
@@ -11,14 +9,17 @@ import javax.security.cert.X509Certificate;
  * @author Stuart Douglas
  */
 public class Certificates {
+    public static final java.lang.String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+
+    public static final java.lang.String END_CERT = "-----END CERTIFICATE-----";
 
     public static String toPem(final X509Certificate certificate) throws CertificateEncodingException {
         final StringBuilder builder = new StringBuilder();
-        builder.append(X509Factory.BEGIN_CERT);
+        builder.append(BEGIN_CERT);
         builder.append('\n');
         builder.append(FlexBase64.encodeString(certificate.getEncoded(), true));
         builder.append('\n');
-        builder.append(X509Factory.END_CERT);
+        builder.append(END_CERT);
         return builder.toString();
     }
 

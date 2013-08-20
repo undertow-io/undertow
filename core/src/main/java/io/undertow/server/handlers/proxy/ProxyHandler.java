@@ -245,7 +245,7 @@ public final class ProxyHandler implements HttpHandler {
                 if(headerValue == null || headerValue.isEmpty()) {
                     outboundRequestHeaders.remove(entry.getKey());
                 } else {
-                    outboundRequestHeaders.put(entry.getKey(), headerValue);
+                    outboundRequestHeaders.put(entry.getKey(), headerValue.replace('\n', ' '));
                 }
             }
             SocketAddress address = exchange.getConnection().getPeerAddress();
@@ -270,7 +270,7 @@ public final class ProxyHandler implements HttpHandler {
                     //ignore
                 }
                 request.putAttachment(ProxiedRequestAttachments.SSL_CYPHER, sslSessionInfo.getCipherSuite());
-                request.putAttachment(ProxiedRequestAttachments.SSL_SESSION, new String(sslSessionInfo.getSessionId()));
+                request.putAttachment(ProxiedRequestAttachments.SSL_SESSION_ID, sslSessionInfo.getSessionId());
             }
 
 
