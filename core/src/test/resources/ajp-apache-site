@@ -11,7 +11,7 @@ NameVirtualHost *:9443
     SSLCertificateFile /etc/apache2/ssl/server.pem
     SSLCACertificateFile /etc/apache2/ssl/ca.crt
 
-    SSLVerifyClient require
+    SSLVerifyClient optional
     SSLVerifyDepth 2
     SSLOptions +ExportCertData +StdEnvVars
 

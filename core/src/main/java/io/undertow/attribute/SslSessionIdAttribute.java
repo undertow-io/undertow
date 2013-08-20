@@ -2,6 +2,7 @@ package io.undertow.attribute;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
+import io.undertow.util.FlexBase64;
 
 /**
  * @author Stuart Douglas
@@ -16,7 +17,7 @@ public class SslSessionIdAttribute implements ExchangeAttribute {
         if(ssl == null) {
             return null;
         }
-        return new String(ssl.getId());
+        return FlexBase64.encodeString(ssl.getId(), false);
     }
 
     @Override
