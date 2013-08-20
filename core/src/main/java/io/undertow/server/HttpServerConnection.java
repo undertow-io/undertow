@@ -41,8 +41,13 @@ import java.nio.ByteBuffer;
  */
 public final class HttpServerConnection extends AbstractServerConnection implements ServerConnection {
 
+    private SSLSessionInfo sslSessionInfo;
+
     public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
+        if (channel instanceof SslChannel) {
+            sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel));
+        }
     }
 
     @Override
@@ -127,10 +132,12 @@ public final class HttpServerConnection extends AbstractServerConnection impleme
 
     @Override
     public SSLSessionInfo getSslSessionInfo() {
-        if (channel instanceof SslChannel) {
-            return new DefaultSslSessionInfo(((SslChannel) channel).getSslSession());
-        }
-        return null;
+        return sslSessionInfo;
+    }
+
+    @Override
+    public void setSslSessionInfo(SSLSessionInfo sessionInfo) {
+        this.sslSessionInfo = sessionInfo;
     }
 
     public SSLSession getSslSession() {

@@ -17,7 +17,7 @@ public class SslSessionIdAttribute implements ExchangeAttribute {
         if(ssl == null) {
             return null;
         }
-        return FlexBase64.encodeString(ssl.getId(), false);
+        return FlexBase64.encodeString(ssl.getSessionId(), false);
     }
 
     @Override

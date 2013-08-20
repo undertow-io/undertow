@@ -270,7 +270,7 @@ public final class ProxyHandler implements HttpHandler {
                     //ignore
                 }
                 request.putAttachment(ProxiedRequestAttachments.SSL_CYPHER, sslSessionInfo.getCipherSuite());
-                request.putAttachment(ProxiedRequestAttachments.SSL_SESSION, new String(sslSessionInfo.getId()));
+                request.putAttachment(ProxiedRequestAttachments.SSL_SESSION, new String(sslSessionInfo.getSessionId()));
             }
 
 

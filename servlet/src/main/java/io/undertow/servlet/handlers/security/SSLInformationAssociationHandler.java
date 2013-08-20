@@ -104,7 +104,7 @@ public class SSLInformationAssociationHandler implements HttpHandler {
         if (ssl != null) {
             request.setAttribute("javax.servlet.request.cipher_suite", ssl.getCipherSuite());
             request.setAttribute("javax.servlet.request.key_size", getKeyLenght(ssl.getCipherSuite()));
-            request.setAttribute("javax.servlet.request.ssl_session_id", ssl.getId());
+            request.setAttribute("javax.servlet.request.ssl_session_id", ssl.getSessionId());
             if (request instanceof HttpServletRequest) {
                 if (HttpServletRequest.CLIENT_CERT_AUTH.equals(((HttpServletRequest) request).getAuthType())) {
                     X509Certificate[] certs = getCerts(ssl);

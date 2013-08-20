@@ -7,7 +7,7 @@ package io.undertow.server;
  */
 public interface SSLSessionInfo {
 
-    byte[] getId();
+    byte[] getSessionId();
 
     java.lang.String getCipherSuite();
 

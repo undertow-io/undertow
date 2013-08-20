@@ -21,6 +21,7 @@ package io.undertow.ajp;
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.AbstractServerConnection;
+import io.undertow.server.BasicSSLSessionInfo;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpContinue;
 import io.undertow.server.HttpHandler;
@@ -43,7 +44,7 @@ import java.nio.ByteBuffer;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class AjpServerConnection extends AbstractServerConnection implements ServerConnection {
-    private AjpSSLSessionInfo sslSessionInfo;
+    private SSLSessionInfo sslSessionInfo;
 
     public AjpServerConnection(StreamConnection channel, Pool<ByteBuffer> bufferPool, HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
@@ -82,7 +83,12 @@ public final class AjpServerConnection extends AbstractServerConnection implemen
         return sslSessionInfo;
     }
 
-    void setSSLSessionInfo(AjpSSLSessionInfo sslSessionInfo) {
+    @Override
+    public void setSslSessionInfo(SSLSessionInfo sessionInfo) {
+        this.sslSessionInfo = sessionInfo;
+    }
+
+    void setSSLSessionInfo(BasicSSLSessionInfo sslSessionInfo) {
         this.sslSessionInfo = sslSessionInfo;
     }
 

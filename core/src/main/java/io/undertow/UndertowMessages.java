@@ -29,6 +29,8 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
+import javax.net.ssl.SSLPeerUnverifiedException;
+
 /**
  * @author Stuart Douglas
  */
@@ -223,4 +225,6 @@ public interface UndertowMessages {
     @Message(id = 66, value = "Incorect magic number for AJP packet header")
     IOException wrongMagicNumber();
 
+    @Message(id = 67, value = "No client cert was provided")
+    SSLPeerUnverifiedException peerUnverified();
 }

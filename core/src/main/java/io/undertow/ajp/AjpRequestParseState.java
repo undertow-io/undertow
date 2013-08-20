@@ -1,10 +1,8 @@
 package io.undertow.ajp;
 
-import io.undertow.util.FlexBase64;
+import io.undertow.server.BasicSSLSessionInfo;
 import io.undertow.util.HttpString;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.security.cert.CertificateException;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,7 +49,7 @@ class AjpRequestParseState extends AbstractAjpParseState {
         return state == 15;
     }
 
-    AjpSSLSessionInfo createSslSessionInfo() {
+    BasicSSLSessionInfo createSslSessionInfo() {
         String sessionId = attributes.get(AjpRequestParser.SSL_SESSION);
         String cypher = attributes.get(AjpRequestParser.SSL_CIPHER);
         String cert = attributes.get(AjpRequestParser.SSL_CERT);
@@ -60,20 +58,10 @@ class AjpRequestParseState extends AbstractAjpParseState {
             return null;
         }
         try {
-            ByteBuffer sessionIdBuffer = FlexBase64.decode(sessionId);
-            byte[] sessionIdData;
-            if (sessionIdBuffer.hasArray()) {
-                sessionIdData = sessionIdBuffer.array();
-            } else {
-                sessionIdData = new byte[sessionIdBuffer.remaining()];
-                sessionIdBuffer.get(sessionIdData);
-            }
-            return new AjpSSLSessionInfo(sessionIdData, cypher, cert.getBytes());
+            return new BasicSSLSessionInfo(sessionId, cypher, cert);
         } catch (CertificateException e) {
             return null;
         } catch (javax.security.cert.CertificateException e) {
-            return null;
-        } catch (IOException e) {
             return null;
         }
     }

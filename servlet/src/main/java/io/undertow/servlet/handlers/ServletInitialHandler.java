@@ -261,6 +261,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
     private static class MockServerConnection extends AbstractAttachable implements ServerConnection {
         private final Pool<ByteBuffer> bufferPool;
+        private SSLSessionInfo sslSessionInfo;
 
         private MockServerConnection(Pool<ByteBuffer> bufferPool) {
             this.bufferPool = bufferPool;
@@ -347,7 +348,12 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
         @Override
         public SSLSessionInfo getSslSessionInfo() {
-            return null;
+            return sslSessionInfo;
+        }
+
+        @Override
+        public void setSslSessionInfo(SSLSessionInfo sessionInfo) {
+            sslSessionInfo = sessionInfo;
         }
 
         @Override

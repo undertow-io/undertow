@@ -80,7 +80,27 @@ public interface ServerConnection extends Attachable, ConnectedChannel {
 
     int getBufferSize();
 
+    /**
+     * Gets SSL information about the connection. This could represent the actual
+     * client connection, or could be providing SSL information that was provided
+     * by a front end proxy.
+     *
+     * @return SSL information about the connection
+     */
     SSLSessionInfo getSslSessionInfo();
+
+    /**
+     * Sets the current SSL information. This can be used by handlers to setup SSL
+     * information that was provided by a front end proxy.
+     *
+     * If this is being set of a per request basis then you must ensure that it is either
+     * cleared by an exchange completion listener at the end of the request, or is always
+     * set for every request. Otherwise it is possible to SSL information to 'leak' between
+     * requests.
+     *
+     * @param sessionInfo The ssl session information
+     */
+    void setSslSessionInfo(SSLSessionInfo sessionInfo);
 
     /**
      * Adds a close listener, than will be invoked with the connection is closed
