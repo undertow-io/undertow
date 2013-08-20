@@ -119,8 +119,8 @@ public final class ProxyHandler implements HttpHandler {
     }
 
     /**
-     * Adds a request header to the outgoing request. The header will always be set, even if it resolves to
-     * an empty string.
+     * Adds a request header to the outgoing request. If the header resolves to null or an empty string
+     * it will not be added, however any existing header with the same name will be removed.
      *
      * @param header    The header name
      * @param attribute The header value attribute.
@@ -132,8 +132,8 @@ public final class ProxyHandler implements HttpHandler {
     }
 
     /**
-     * Adds a request header to the outgoing request. The header will always be set, even if it resolves to
-     * an empty string.
+     * Adds a request header to the outgoing request. If the header resolves to null or an empty string
+     * it will not be added, however any existing header with the same name will be removed.
      * <p/>
      * The attribute value will be parsed, and the resulting exchange attribute will be used to create the actual header
      * value.
@@ -241,7 +241,12 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap outboundRequestHeaders = request.getRequestHeaders();
             copyHeaders(outboundRequestHeaders, inboundRequestHeaders);
             for (Map.Entry<HttpString, ExchangeAttribute> entry : requestHeaders.entrySet()) {
-                outboundRequestHeaders.put(entry.getKey(), entry.getValue().readAttribute(exchange));
+                String headerValue = entry.getValue().readAttribute(exchange);
+                if(headerValue == null || headerValue.isEmpty()) {
+                    outboundRequestHeaders.remove(entry.getKey());
+                } else {
+                    outboundRequestHeaders.put(entry.getKey(), headerValue);
+                }
             }
             SocketAddress address = exchange.getConnection().getPeerAddress();
             if (address instanceof InetSocketAddress) {

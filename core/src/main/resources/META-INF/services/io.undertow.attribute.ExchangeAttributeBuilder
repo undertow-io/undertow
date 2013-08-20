@@ -19,3 +19,6 @@ io.undertow.attribute.CookieAttribute$Builder
 io.undertow.attribute.ResponseCodeAttribute$Builder
 io.undertow.attribute.PredicateContextAttribute$Builder
 io.undertow.attribute.QueryParameterAttribute$Builder
+io.undertow.attribute.SslClientCertAttribute$Builder
+io.undertow.attribute.SslCipherAttribute$Builder
+io.undertow.attribute.SslSessionIdAttribute$Builder
