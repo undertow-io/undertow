@@ -24,6 +24,7 @@ import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSourceConduit;
+import org.xnio.conduits.WriteReadyHandler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -48,12 +49,15 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
     private volatile int read = 0;
     private final int maxRequestSize;
     private final long maxEntitySize;
+    private WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel> writeReadyHandler;
+
 
     AjpReadListener(final AjpServerConnection connection, final String scheme) {
         this.connection = connection;
         this.scheme = scheme;
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, 0);
+        this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel>(connection.getChannel().getSinkChannel());
     }
 
     public void startRequest() {
@@ -164,6 +168,8 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
             }, httpServerExchange.getRequestMethod().equals(Methods.HEAD));
             connection.getChannel().getSinkChannel().setConduit(responseConduit);
             connection.getChannel().getSourceChannel().setConduit(createSourceConduit(connection.getChannel().getSourceChannel().getConduit(), responseConduit, httpServerExchange));
+            //we need to set the write ready handler. This allows the response conduit to wrap it
+            responseConduit.setWriteReadyHandler(writeReadyHandler);
 
             try {
                 connection.setSSLSessionInfo(state.createSslSessionInfo());

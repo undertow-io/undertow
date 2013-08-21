@@ -34,6 +34,8 @@ import io.undertow.util.HttpString;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.WriteReadyHandler;
 
 import java.nio.ByteBuffer;
 
@@ -45,9 +47,11 @@ import java.nio.ByteBuffer;
  */
 public final class AjpServerConnection extends AbstractServerConnection implements ServerConnection {
     private SSLSessionInfo sslSessionInfo;
+    private WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel> writeReadyHandler;
 
     public AjpServerConnection(StreamConnection channel, Pool<ByteBuffer> bufferPool, HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
+        this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel>(channel.getSinkChannel());
     }
 
     @Override
@@ -76,6 +80,19 @@ public final class AjpServerConnection extends AbstractServerConnection implemen
             }
         });
         return newExchange;
+    }
+
+    @Override
+    public void restoreChannel(ConduitState state) {
+        super.restoreChannel(state);
+        channel.getSinkChannel().getConduit().setWriteReadyHandler(writeReadyHandler);
+    }
+
+    @Override
+    public ConduitState resetChannel() {
+        ConduitState state = super.resetChannel();
+        channel.getSinkChannel().getConduit().setWriteReadyHandler(writeReadyHandler);
+        return state;
     }
 
     @Override

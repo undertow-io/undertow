@@ -44,6 +44,7 @@ import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.WriteReadyHandler;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
@@ -107,6 +108,8 @@ final class AjpServerResponseConduit extends AbstractStreamSinkConduit<StreamSin
     private static final int FLAG_DELEGATE_SHUTDOWN = 1 << 3;
     private static final int FLAG_CLOSE_QUEUED = 1 << 4;
     private static final int FLAG_WRITE_ENTERED = 1 << 5;
+    private static final int FLAG_WRITE_RESUMED = 1 << 6;
+    private static final int FLAG_WRITE_READ_BODY_CHUNK_FROM_LISTENER = 1 << 7;
 
     static {
         final Map<HttpString, Integer> headers = new HashMap<HttpString, Integer>();
@@ -226,7 +229,7 @@ final class AjpServerResponseConduit extends AbstractStreamSinkConduit<StreamSin
                     }
                 } while (readBodyChunkBuffer.hasRemaining());
                 readBodyChunkBuffer = null;
-                stateUpdater.set(this, newState & ~FLAG_WRITE_ENTERED); //clear the write entered flag
+                stateUpdater.set(this, newState & ~FLAG_WRITE_ENTERED & ~FLAG_WRITE_READ_BODY_CHUNK_FROM_LISTENER); //clear the write entered flag
                 return true;
             }
         }
@@ -250,6 +253,7 @@ final class AjpServerResponseConduit extends AbstractStreamSinkConduit<StreamSin
                 }
             } while (readBodyChunkBuffer.hasRemaining());
             readBodyChunkBuffer = null;
+            this.state &= ~FLAG_WRITE_READ_BODY_CHUNK_FROM_LISTENER;
         }
 
         if (anyAreSet(state, FLAG_SHUTDOWN) && allAreClear(state, FLAG_CLOSE_QUEUED)) {
@@ -429,22 +433,32 @@ final class AjpServerResponseConduit extends AbstractStreamSinkConduit<StreamSin
         }
     }
 
+    @Override
+    public void setWriteReadyHandler(WriteReadyHandler handler) {
+        next.setWriteReadyHandler(new AjpServerWriteReadyHandler(handler));
+    }
+
     public void suspendWrites() {
         log.trace("suspend");
-        next.suspendWrites();
+        state &= ~FLAG_WRITE_RESUMED;
+        if(allAreClear(state, FLAG_WRITE_READ_BODY_CHUNK_FROM_LISTENER)) {
+            next.suspendWrites();
+        }
     }
 
     public void resumeWrites() {
         log.trace("resume");
+        state |= FLAG_WRITE_RESUMED;
         next.resumeWrites();
     }
 
     public boolean isWriteResumed() {
-        return next.isWriteResumed();
+        return anyAreSet(state, FLAG_WRITE_RESUMED);
     }
 
     public void wakeupWrites() {
         log.trace("wakeup");
+        state |= FLAG_WRITE_RESUMED;
         next.wakeupWrites();
     }
 
@@ -474,47 +488,58 @@ final class AjpServerResponseConduit extends AbstractStreamSinkConduit<StreamSin
         }
     }
 
-    public void awaitWritable() throws IOException {
-        next.awaitWritable();
-    }
-
-    public void awaitWritable(final long time, final TimeUnit timeUnit) throws IOException {
-        next.awaitWritable(time, timeUnit);
-    }
-
     public boolean doGetRequestBodyChunk(ByteBuffer buffer, final AjpServerRequestConduit requestChannel) throws IOException {
         this.readBodyChunkBuffer = buffer;
         boolean result = processWrite();
         if (result) {
             exitWrite();
         } else {
-            //if this write does not work we spawn a thread to force it out.
-            //this is not great, but there is not really a great deal we can do here
-            //there is probably a better way to deal with this, but I am not really sure what it is
-            this.exchange.getConnection().getWorker().submit(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        while (AjpServerResponseConduit.this.readBodyChunkBuffer != null) {
-                            next.awaitWritable();
-                            boolean result = processWrite();
-                            if (result) {
-                                exitWrite();
-                            }
-                        }
-                    } catch (IOException e) {
-                        if (requestChannel.isReadResumed()) {
-                            requestChannel.wakeupReads();
-                        }
-                        if (isWriteResumed()) {
-                            next.wakeupWrites();
-                        }
-                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                    }
-                }
-            });
+            //write it out in a listener
+            this.state |= FLAG_WRITE_READ_BODY_CHUNK_FROM_LISTENER;
+            next.resumeWrites();
         }
 
         return result;
     }
+
+    private final class AjpServerWriteReadyHandler implements WriteReadyHandler {
+
+        private final WriteReadyHandler delegate;
+
+        private AjpServerWriteReadyHandler(WriteReadyHandler delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void writeReady() {
+            if(anyAreSet(state, FLAG_WRITE_READ_BODY_CHUNK_FROM_LISTENER)) {
+                try {
+                    boolean result = processWrite();
+                    if(result) {
+                        exitWrite();
+                    }
+                } catch (IOException e) {
+                    //TODO: figure out error handling for this
+                    //I don't know if it actually needs any, as the
+                    //reader should error out anyway.
+                }
+            }
+            if(anyAreSet(state, FLAG_WRITE_RESUMED)) {
+                delegate.writeReady();
+            } else {
+                suspendWrites();
+            }
+        }
+
+        @Override
+        public void forceTermination() {
+            delegate.forceTermination();
+        }
+
+        @Override
+        public void terminated() {
+            delegate.terminated();
+        }
+    }
+
 }
