@@ -58,7 +58,7 @@ final class AjpServerResponseConduit extends AbstractStreamSinkConduit<StreamSin
 
     private static final Logger log = Logger.getLogger("io.undertow.server.channel.ajp.response");
 
-    private static final int MAX_DATA_SIZE = 8186;
+    private static final int MAX_DATA_SIZE = 8184;
 
     private static final Map<HttpString, Integer> HEADER_MAP;
 
