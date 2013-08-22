@@ -27,6 +27,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import org.jboss.logging.Logger;
+import org.xnio.Buffers;
 import org.xnio.IoUtils;
 import org.xnio.Pool;
 import org.xnio.Pooled;
@@ -96,7 +97,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         CLOSE_FRAME_PERSISTENT = buffer;
         buffer = ByteBuffer.wrap(new byte[6]);
         buffer.put(CLOSE_FRAME_PERSISTENT.duplicate());
-        buffer.put(5, (byte)0);
+        buffer.put(5, (byte) 0);
         buffer.flip();
         CLOSE_FRAME_NON_PERSISTENT = buffer;
     }
@@ -147,11 +148,13 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         int oldState = this.state;
         if (anyAreSet(oldState, FLAG_START)) {
 
+            Pooled<ByteBuffer>[] byteBuffers = null;
+
             //merge the cookies into the header map
             ExchangeCookieUtils.flattenCookies(exchange);
 
-            Pooled<ByteBuffer> currentDataBuffer = pool.allocate();
-            final ByteBuffer buffer = currentDataBuffer.getResource();
+            Pooled<ByteBuffer> pooled = pool.allocate();
+            ByteBuffer buffer = pooled.getResource();
             buffer.put((byte) 'A');
             buffer.put((byte) 'B');
             buffer.put((byte) 0); //we fill the size in later
@@ -172,6 +175,22 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
 
             for (final HttpString header : responseHeaders.getHeaderNames()) {
                 for (String headerValue : responseHeaders.get(header)) {
+                    if(buffer.remaining() < header.length() + headerValue.length() + 6) {
+                        //if there is not enough room in the buffer we need to allocate more
+                        buffer.flip();
+                        if(byteBuffers == null) {
+                            byteBuffers = new Pooled[2];
+                            byteBuffers[0] = pooled;
+                        } else {
+                            Pooled<ByteBuffer>[] old = byteBuffers;
+                            byteBuffers = new Pooled[old.length + 1];
+                            System.arraycopy(old, 0, byteBuffers, 0, old.length);
+                        }
+                        pooled = pool.allocate();
+                        byteBuffers[byteBuffers.length - 1] = pooled;
+                        buffer = pooled.getResource();
+                    }
+
                     Integer headerCode = HEADER_MAP.get(header);
                     if (headerCode != null) {
                         putInt(buffer, headerCode);
@@ -181,12 +200,23 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
                     putString(buffer, headerValue);
                 }
             }
-
-            int dataLength = buffer.position() - 4;
-            buffer.put(2, (byte) ((dataLength >> 8) & 0xFF));
-            buffer.put(3, (byte) (dataLength & 0xFF));
-            buffer.flip();
-            queueFrame(new PooledBufferFrameCallback(currentDataBuffer), buffer);
+            if(byteBuffers == null) {
+                int dataLength = buffer.position() - 4;
+                buffer.put(2, (byte) ((dataLength >> 8) & 0xFF));
+                buffer.put(3, (byte) (dataLength & 0xFF));
+                buffer.flip();
+                queueFrame(new PooledBufferFrameCallback(pooled), buffer);
+            } else {
+                ByteBuffer[] bufs = new ByteBuffer[byteBuffers.length];
+                for(int i = 0; i < bufs.length; ++i) {
+                    bufs[i] = byteBuffers[i].getResource();
+                }
+                int dataLength = (int) (Buffers.remaining(bufs) - 4);
+                bufs[0].put(2, (byte) ((dataLength >> 8) & 0xFF));
+                bufs[0].put(3, (byte) (dataLength & 0xFF));
+                buffer.flip();
+                queueFrame(new PooledBuffersFrameCallback(byteBuffers), bufs);
+            }
             state &= ~FLAG_START;
         }
     }

@@ -37,8 +37,8 @@ import org.junit.runner.RunWith;
 /**
  * @author Stuart Douglas
  */
-@AjpIgnore //this test generates to many headers to fit in an AJP response
 @RunWith(DefaultServer.class)
+@AjpIgnore(apacheOnly = true)
 public class LotsOfHeadersResponseTestCase {
 
     private static final String HEADER = "HEADER";
