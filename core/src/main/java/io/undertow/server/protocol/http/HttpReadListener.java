@@ -16,10 +16,13 @@
  * limitations under the License.
  */
 
-package io.undertow.server;
+package io.undertow.server.protocol.http;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HttpHandlers;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -33,8 +36,6 @@ import org.xnio.channels.StreamSourceChannel;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
-
-import static org.xnio.IoUtils.safeClose;
 
 /**
  * Listener which reads requests and headers off of an HTTP stream.
@@ -86,7 +87,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                         res = channel.read(buffer);
                     } catch (IOException e) {
                         UndertowLogger.REQUEST_IO_LOGGER.debug("Error reading request", e);
-                        safeClose(connection);
+                        IoUtils.safeClose(connection);
                         return;
                     }
                 } else {

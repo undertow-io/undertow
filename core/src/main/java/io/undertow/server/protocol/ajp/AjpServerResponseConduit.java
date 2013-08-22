@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.ajp;
+package io.undertow.server.protocol.ajp;
 
 import io.undertow.conduits.AbstractFramedStreamSinkConduit;
 import io.undertow.conduits.ConduitListener;

@@ -1,6 +1,6 @@
 package io.undertow.client.ajp;
 
-import io.undertow.ajp.AbstractAjpParser;
+import io.undertow.server.protocol.ajp.AbstractAjpParser;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 

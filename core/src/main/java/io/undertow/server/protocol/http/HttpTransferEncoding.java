@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.server;
+package io.undertow.server.protocol.http;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
@@ -29,6 +29,8 @@ import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.HeadStreamSinkConduit;
 import io.undertow.conduits.PipelingBufferingStreamSinkConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.server.ConduitWrapper;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;

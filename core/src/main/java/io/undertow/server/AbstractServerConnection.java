@@ -235,6 +235,14 @@ public abstract class AbstractServerConnection extends AbstractAttachable implem
         }
     }
 
+    protected static StreamSinkConduit sink(ConduitState state) {
+        return state.sink;
+    }
+
+    protected static StreamSourceConduit source(ConduitState state) {
+        return state.source;
+    }
+
     @Override
     public void addCloseListener(CloseListener listener) {
         this.closeListeners.add(listener);

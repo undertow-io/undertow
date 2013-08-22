@@ -20,7 +20,7 @@ package io.undertow.server.handlers;
 
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerConnection;
+import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;

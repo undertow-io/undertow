@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.server;
+package io.undertow.server.protocol.http;
 
 import io.undertow.util.HttpString;
 

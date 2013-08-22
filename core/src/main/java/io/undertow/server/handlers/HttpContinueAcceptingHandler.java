@@ -5,7 +5,7 @@ import java.io.IOException;
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
-import io.undertow.server.HttpContinue;
+import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
@@ -17,7 +17,7 @@ import io.undertow.server.HttpServerExchange;
  * handler must be subclassed and the {@link #acceptRequest(io.undertow.server.HttpServerExchange)}
  * method overridden tp provide the desired behaviour.
  *
- * @see io.undertow.server.HttpContinue
+ * @see io.undertow.server.protocol.http.HttpContinue
  * @author Stuart Douglas
  */
 public class HttpContinueAcceptingHandler implements HttpHandler {

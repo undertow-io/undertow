@@ -1,4 +1,4 @@
-package io.undertow.ajp;
+package io.undertow.server.protocol.ajp;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

@@ -357,6 +357,22 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * Sets the request URI
+     *
+     * @param requestURI The new request URI
+     * @param containsHost If this is true the request URI containst the host part
+     *
+     */
+    public void setRequestURI(final String requestURI, boolean containsHost) {
+        this.requestURI = requestURI;
+        if(containsHost) {
+            this.state |= FLAG_URI_CONTAINS_HOST;
+        } else {
+            this.state &= ~FLAG_URI_CONTAINS_HOST;
+        }
+    }
+
+    /**
      * If a request was submitted to the server with a full URI instead of just a path this
      * will return true. For example:
      * <p/>
@@ -411,31 +427,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void setRelativePath(final String relativePath) {
         this.relativePath = relativePath;
-    }
-
-    /**
-     * internal method used by the parser to set both the request and relative
-     * path fields
-     */
-    void setParsedRequestPath(final boolean requestUriContainsHost, final String requestUri, final String requestPath) {
-        this.requestURI = requestUri;
-        this.relativePath = requestPath;
-        this.requestPath = requestPath;
-        if (requestUriContainsHost) {
-            state |= FLAG_URI_CONTAINS_HOST;
-        }
-    }
-
-    void setParsedRequestPath(final String requestPath) {
-        this.relativePath = requestPath;
-        this.requestPath = requestPath;
-    }
-
-    void setParsedRequestPath(final boolean requestUriContainsHost, final String requestUri) {
-        this.requestURI = requestUri;
-        if (requestUriContainsHost) {
-            state |= FLAG_URI_CONTAINS_HOST;
-        }
     }
 
     /**
@@ -664,7 +655,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
      * request and response as terminated, which means that once the current request is completed the raw channel
-     * can be obtained from {@link io.undertow.server.HttpServerConnection#getChannel()}
+     * can be obtained from {@link io.undertow.server.protocol.http.HttpServerConnection#getChannel()}
      *
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
      *                               read
@@ -689,7 +680,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
      * request and response as terminated, which means that once the current request is completed the raw channel
-     * can be obtained from {@link io.undertow.server.HttpServerConnection#getChannel()}
+     * can be obtained from {@link io.undertow.server.protocol.http.HttpServerConnection#getChannel()}
      *
      * @param productName the product name to report to the client
      * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being

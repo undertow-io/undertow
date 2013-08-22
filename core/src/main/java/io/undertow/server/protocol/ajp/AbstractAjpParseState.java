@@ -1,4 +1,4 @@
-package io.undertow.ajp;
+package io.undertow.server.protocol.ajp;
 
 /**
  * Abstract AJP parse state. Stores state common to both request and response parsers

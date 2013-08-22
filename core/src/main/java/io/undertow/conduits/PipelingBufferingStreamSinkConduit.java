@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.ExchangeCompletionListener;
-import io.undertow.server.HttpServerConnection;
+import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import org.xnio.Buffers;

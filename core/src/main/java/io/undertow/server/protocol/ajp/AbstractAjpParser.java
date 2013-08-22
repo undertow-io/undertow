@@ -1,4 +1,4 @@
-package io.undertow.ajp;
+package io.undertow.server.protocol.ajp;
 
 import io.undertow.util.HttpString;
 

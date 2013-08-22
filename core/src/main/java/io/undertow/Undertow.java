@@ -6,12 +6,12 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.undertow.ajp.AjpOpenListener;
+import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.GSSAPIServerSubjectFactory;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpOpenListener;
+import io.undertow.server.protocol.http.HttpOpenListener;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;

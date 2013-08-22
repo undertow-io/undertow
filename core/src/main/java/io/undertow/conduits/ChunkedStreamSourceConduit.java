@@ -20,7 +20,7 @@ package io.undertow.conduits;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.server.HttpServerConnection;
+import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;

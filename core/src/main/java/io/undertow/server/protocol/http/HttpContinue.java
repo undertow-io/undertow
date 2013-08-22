@@ -1,7 +1,8 @@
-package io.undertow.server;
+package io.undertow.server.protocol.http;
 
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;

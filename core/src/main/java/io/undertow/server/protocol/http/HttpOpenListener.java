@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-package io.undertow.server;
+package io.undertow.server.protocol.http;
 
 import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.OpenListener;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import org.xnio.Pool;

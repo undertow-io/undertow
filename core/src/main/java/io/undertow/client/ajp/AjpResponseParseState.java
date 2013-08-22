@@ -1,6 +1,6 @@
 package io.undertow.client.ajp;
 
-import io.undertow.ajp.AbstractAjpParseState;
+import io.undertow.server.protocol.ajp.AbstractAjpParseState;
 import io.undertow.util.HttpString;
 
 /**

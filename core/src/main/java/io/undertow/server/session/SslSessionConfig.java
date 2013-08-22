@@ -20,7 +20,7 @@ package io.undertow.server.session;
 
 import javax.net.ssl.SSLSession;
 
-import io.undertow.server.HttpServerConnection;
+import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 
 /**

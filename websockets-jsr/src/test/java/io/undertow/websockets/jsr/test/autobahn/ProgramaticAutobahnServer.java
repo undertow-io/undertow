@@ -17,7 +17,7 @@
  */
 package io.undertow.websockets.jsr.test.autobahn;
 
-import io.undertow.server.HttpOpenListener;
+import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;

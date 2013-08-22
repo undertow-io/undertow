@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.undertow.server;
+package io.undertow.server.protocol.http;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -27,6 +27,7 @@ import java.util.Map;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.annotationprocessor.HttpParserConfig;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
@@ -303,9 +304,14 @@ public abstract class HttpRequestParser {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
                     if (parseState < HOST_DONE) {
-                        exchange.setParsedRequestPath(false, encodedStringBuilder != null ? encodedStringBuilder.toString() : path, path);
+                        exchange.setRequestPath(path);
+                        exchange.setRelativePath(path);
+                        exchange.setRequestURI(encodedStringBuilder != null ? encodedStringBuilder.toString() : path, false);
                     } else {
-                        exchange.setParsedRequestPath(true, encodedStringBuilder != null ? encodedStringBuilder.toString() : path, path.substring(canonicalPathStart));
+                        String thePath = path.substring(canonicalPathStart);
+                        exchange.setRequestPath(thePath);
+                        exchange.setRelativePath(thePath);
+                        exchange.setRequestURI(encodedStringBuilder != null ? encodedStringBuilder.toString() : path, true);
                     }
                     exchange.setQueryString("");
                     state.state = ParseState.VERSION;
@@ -322,9 +328,14 @@ public abstract class HttpRequestParser {
             } else if (next == '?' && (parseState == START || parseState == HOST_DONE)) {
                 final String path = stringBuilder.toString();
                 if (parseState < HOST_DONE) {
-                    exchange.setParsedRequestPath(false, encodedStringBuilder != null ? encodedStringBuilder.toString() : path, path);
+                    exchange.setRequestPath(path);
+                    exchange.setRelativePath(path);
+                    exchange.setRequestURI(encodedStringBuilder != null ? encodedStringBuilder.toString() : path, false);
                 } else {
-                    exchange.setParsedRequestPath(true, encodedStringBuilder != null ? encodedStringBuilder.toString() : path, path.substring(canonicalPathStart));
+                    String thePath = path.substring(canonicalPathStart);
+                    exchange.setRequestPath(thePath);
+                    exchange.setRelativePath(thePath);
+                    exchange.setRequestURI(encodedStringBuilder != null ? encodedStringBuilder.toString() : path, true);
                 }
                 state.state = ParseState.QUERY_PARAMETERS;
                 state.stringBuilder.setLength(0);
@@ -338,9 +349,12 @@ public abstract class HttpRequestParser {
             } else if (next == ';' && (parseState == START || parseState == HOST_DONE)) {
                 final String path = stringBuilder.toString();
                 if (parseState < HOST_DONE) {
-                    exchange.setParsedRequestPath(path);
+                    exchange.setRequestPath(path);
+                    exchange.setRelativePath(path);
                 } else {
-                    exchange.setParsedRequestPath(path.substring(canonicalPathStart));
+                    String thePath = path.substring(canonicalPathStart);
+                    exchange.setRequestPath(thePath);
+                    exchange.setRelativePath(thePath);
                 }
                 if (state.encodedStringBuilder == null) {
                     state.encodedStringBuilder = new StringBuilder(stringBuilder.toString());
@@ -628,7 +642,7 @@ public abstract class HttpRequestParser {
                 } else {
                     exchange.addPathParam(nextQueryParam, stringBuilder.substring(queryParamPos));
                 }
-                exchange.setParsedRequestPath(state.parseState > HOST_DONE, encodedStringBuilder.toString());
+                exchange.setRequestURI(encodedStringBuilder.toString(), state.parseState > HOST_DONE);
                 state.stringBuilder.setLength(0);
                 state.pos = 0;
                 state.nextQueryParam = null;

@@ -16,38 +16,42 @@
  * limitations under the License.
  */
 
-package io.undertow.server;
+package io.undertow.server.protocol.ajp;
 
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.server.AbstractServerConnection;
+import io.undertow.server.BasicSSLSessionInfo;
+import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.protocol.http.HttpContinue;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.protocol.http.HttpTransferEncoding;
+import io.undertow.server.SSLSessionInfo;
+import io.undertow.server.ServerConnection;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
-import org.xnio.Pooled;
 import org.xnio.StreamConnection;
-import org.xnio.channels.SslChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.WriteReadyHandler;
 
-import javax.net.ssl.SSLSession;
 import java.nio.ByteBuffer;
 
 /**
- * A server-side HTTP connection.
+ * A server-side AJP connection.
  * <p/>
- * Note that the lifecycle of the server connection is tied to the underlying TCP connection. Even if the channel
- * is upgraded the connection is not considered closed until the upgraded channel is closed.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HttpServerConnection extends AbstractServerConnection implements ServerConnection {
-
+public final class AjpServerConnection extends AbstractServerConnection implements ServerConnection {
     private SSLSessionInfo sslSessionInfo;
+    private WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel> writeReadyHandler;
 
-    public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
+    public AjpServerConnection(StreamConnection channel, Pool<ByteBuffer> bufferPool, HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        if (channel instanceof SslChannel) {
-            sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel));
-        }
+        this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel>(channel.getSinkChannel());
     }
 
     @Override
@@ -62,15 +66,13 @@ public final class HttpServerConnection extends AbstractServerConnection impleme
         }
         newExchange.setProtocol(exchange.getProtocol());
         newExchange.setRequestMethod(exchange.getRequestMethod());
-        newExchange.setParsedRequestPath(exchange.getRequestPath());
+        newExchange.setRequestPath(exchange.getRequestPath());
         newExchange.getRequestHeaders().put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
         newExchange.getRequestHeaders().put(Headers.CONTENT_LENGTH, 0);
 
         //apply transfer encoding rules
         HttpTransferEncoding.setupRequest(newExchange);
 
-        //we restore the read channel immediately, as this out of band response has no read side
-        channel.getSourceChannel().setConduit(state.source);
         newExchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
             @Override
             public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
@@ -80,54 +82,17 @@ public final class HttpServerConnection extends AbstractServerConnection impleme
         return newExchange;
     }
 
-    /**
-     * Pushes back the given data. This should only be used by transfer coding handlers that have read past
-     * the end of the request when handling pipelined requests
-     *
-     * @param unget The buffer to push back
-     */
-    public void ungetRequestBytes(final Pooled<ByteBuffer> unget) {
-        if (getExtraBytes() == null) {
-            setExtraBytes(unget);
-        } else {
-            Pooled<ByteBuffer> eb = getExtraBytes();
-            ByteBuffer buf = eb.getResource();
-            final ByteBuffer ugBuffer = unget.getResource();
+    @Override
+    public void restoreChannel(ConduitState state) {
+        super.restoreChannel(state);
+        channel.getSinkChannel().getConduit().setWriteReadyHandler(writeReadyHandler);
+    }
 
-            if (ugBuffer.limit() - ugBuffer.remaining() > buf.remaining()) {
-                //stuff the existing data after the data we are ungetting
-                ugBuffer.compact();
-                ugBuffer.put(buf);
-                ugBuffer.flip();
-                eb.free();
-                setExtraBytes(unget);
-            } else {
-                //TODO: this is horrible, but should not happen often
-                final byte[] data = new byte[ugBuffer.remaining() + buf.remaining()];
-                int first = ugBuffer.remaining();
-                ugBuffer.get(data, 0, ugBuffer.remaining());
-                buf.get(data, first, buf.remaining());
-                eb.free();
-                unget.free();
-                final ByteBuffer newBuffer = ByteBuffer.wrap(data);
-                setExtraBytes(new Pooled<ByteBuffer>() {
-                    @Override
-                    public void discard() {
-
-                    }
-
-                    @Override
-                    public void free() {
-
-                    }
-
-                    @Override
-                    public ByteBuffer getResource() throws IllegalStateException {
-                        return newBuffer;
-                    }
-                });
-            }
-        }
+    @Override
+    public ConduitState resetChannel() {
+        ConduitState state = super.resetChannel();
+        channel.getSinkChannel().getConduit().setWriteReadyHandler(writeReadyHandler);
+        return state;
     }
 
     @Override
@@ -140,11 +105,8 @@ public final class HttpServerConnection extends AbstractServerConnection impleme
         this.sslSessionInfo = sessionInfo;
     }
 
-    public SSLSession getSslSession() {
-        if (channel instanceof SslChannel) {
-            return ((SslChannel) channel).getSslSession();
-        }
-        return null;
+    void setSSLSessionInfo(BasicSSLSessionInfo sslSessionInfo) {
+        this.sslSessionInfo = sslSessionInfo;
     }
 
     @Override

@@ -6,7 +6,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.server.ConduitWrapper;
-import io.undertow.server.HttpContinue;
+import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;

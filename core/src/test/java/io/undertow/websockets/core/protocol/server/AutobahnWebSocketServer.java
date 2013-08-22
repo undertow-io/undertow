@@ -16,7 +16,7 @@
 package io.undertow.websockets.core.protocol.server;
 
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpOpenListener;
+import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketUtils;
