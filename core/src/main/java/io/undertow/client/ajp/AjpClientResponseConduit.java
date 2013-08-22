@@ -121,8 +121,9 @@ public class AjpClientResponseConduit extends AbstractStreamSourceConduit<Stream
                 headerBuffer.flip();
                 byte b1 = headerBuffer.get(); //A
                 byte b2 = headerBuffer.get(); //B
-                assert b1 == 'A';
-                assert b2 == 'B';
+                if(b1 != 'A' || b2 != 'B') {
+                    throw UndertowClientMessages.MESSAGES.wrongMagicNumber("AB", "" + ((char)b1) + ((char)b2));
+                }
                 headerBuffer.get(); //the length headers, two less than the string length header
                 headerBuffer.get();
 

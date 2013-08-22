@@ -50,4 +50,7 @@ public interface UndertowClientMessages {
 
     @Message(id = 1036, value = "Data still remaining in chunk %s")
     IOException dataStillRemainingInChunk(long remaining);
+
+    @Message(id = 1037, value = "Wrong magic number, expected %s, actual %s")
+    IOException wrongMagicNumber(String expected, String actual);
 }

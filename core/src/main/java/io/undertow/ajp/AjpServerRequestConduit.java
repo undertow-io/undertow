@@ -244,4 +244,12 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
             next.awaitReadable(time, timeUnit);
         }
     }
+
+    /**
+     * meethod that is called when an error occurs writing out read body chunk frames
+     * @param e
+     */
+    void setReadBodyChunkError(IOException e) {
+        //TODO:
+    }
 }

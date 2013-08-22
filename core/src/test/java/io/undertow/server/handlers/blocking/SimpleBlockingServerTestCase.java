@@ -172,7 +172,9 @@ public class SimpleBlockingServerTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            Assert.assertTrue(message.equals(HttpClientUtils.readResponse(result)));
+            String resultString = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(message.length(), resultString.length());
+            Assert.assertTrue(message.equals(resultString));
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?useSender");
             result = client.execute(get);
