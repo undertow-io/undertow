@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.handlers;
 
+import io.undertow.UndertowMessages;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,15 +37,12 @@ class ServletPathMatchesData {
 
     private final Map<String, ServletChain> nameMatches;
 
-    private final ServletChain defaultServlet;
-
-    public ServletPathMatchesData(final Map<String, ServletChain> exactPathMatches, final Map<String, PathMatch> prefixMatches, final Map<String, ServletChain> nameMatches, final ServletChain defaultServlet) {
+    public ServletPathMatchesData(final Map<String, ServletChain> exactPathMatches, final Map<String, PathMatch> prefixMatches, final Map<String, ServletChain> nameMatches) {
         this.prefixMatches = prefixMatches;
         this.nameMatches = nameMatches;
-        this.defaultServlet = defaultServlet;
         Map<String, ServletPathMatch> newExactPathMatches = new HashMap<String, ServletPathMatch>();
         for (Map.Entry<String, ServletChain> entry : exactPathMatches.entrySet()) {
-            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey(), false));
+            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey()));
         }
         this.exactPathMatches = newExactPathMatches;
 
@@ -81,23 +80,25 @@ class ServletPathMatchesData {
                 }
             }
         }
-        return new ServletPathMatch(defaultServlet, path, true);
+        //this should never happen
+        //as the default servlet is aways registered under /*
+        throw UndertowMessages.MESSAGES.servletPathMatchFailed();
     }
 
     private ServletPathMatch handleMatch(final String path, final PathMatch match, final int extensionPos) {
         if (match.extensionMatches.isEmpty()) {
-            return new ServletPathMatch(match.defaultHandler, path, false);
+            return new ServletPathMatch(match.defaultHandler, path);
         } else {
             if (extensionPos == -1) {
-                return new ServletPathMatch(match.defaultHandler, path, false);
+                return new ServletPathMatch(match.defaultHandler, path);
             } else {
                 final String ext;
                 ext = path.substring(extensionPos + 1, path.length());
                 ServletChain handler = match.extensionMatches.get(ext);
                 if (handler != null) {
-                    return new ServletPathMatch(handler, path, false);
+                    return new ServletPathMatch(handler, path);
                 } else {
-                    return new ServletPathMatch(match.defaultHandler, path, false);
+                    return new ServletPathMatch(match.defaultHandler, path);
                 }
             }
         }
@@ -114,8 +115,6 @@ class ServletPathMatchesData {
         private final Map<String, PathMatch> prefixMatches = new HashMap<String, PathMatch>();
 
         private final Map<String, ServletChain> nameMatches = new HashMap<String, ServletChain>();
-
-        private ServletChain defaultServlet;
 
         public void addExactMatch(final String exactMatch, final ServletChain match) {
             exactPathMatches.put(exactMatch, match);
@@ -141,16 +140,8 @@ class ServletPathMatchesData {
             nameMatches.put(name, match);
         }
 
-        public ServletChain getDefaultServlet() {
-            return defaultServlet;
-        }
-
-        public void setDefaultServlet(final ServletChain defaultServlet) {
-            this.defaultServlet = defaultServlet;
-        }
-
         public ServletPathMatchesData build() {
-            return new ServletPathMatchesData(exactPathMatches, prefixMatches, nameMatches, defaultServlet);
+            return new ServletPathMatchesData(exactPathMatches, prefixMatches, nameMatches);
         }
 
     }

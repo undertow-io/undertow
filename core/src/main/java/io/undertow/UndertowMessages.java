@@ -227,4 +227,7 @@ public interface UndertowMessages {
 
     @Message(id = 67, value = "No client cert was provided")
     SSLPeerUnverifiedException peerUnverified();
+
+    @Message(id = 68, value = "Servlet patch match failed")
+    IllegalArgumentException servletPathMatchFailed();
 }
