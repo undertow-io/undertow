@@ -176,7 +176,7 @@ public class ServletPathMatches {
         //these paths contain both /* and exact matches.
         for (final String path : pathMatches) {
             //resolve the target servlet, will return null if this is the default servlet
-            MatchData targetServletMatch = resolveServletForPath(path, pathServlets);
+            MatchData targetServletMatch = resolveServletForPath(path, pathServlets, extensionServlets);
 
             final Map<DispatcherType, List<ManagedFilter>> noExtension = new HashMap<DispatcherType, List<ManagedFilter>>();
             final Map<String, Map<DispatcherType, List<ManagedFilter>>> extension = new HashMap<String, Map<DispatcherType, List<ManagedFilter>>>();
@@ -297,7 +297,7 @@ public class ServletPathMatches {
         return initialHandler;
     }
 
-    private static MatchData resolveServletForPath(final String path, final Map<String, ServletHandler> pathServlets) {
+    private static MatchData resolveServletForPath(final String path, final Map<String, ServletHandler> pathServlets, final Map<String, ServletHandler> extensionServlets) {
         if (pathServlets.containsKey(path)) {
             if (path.endsWith("/*")) {
                 final String base = path.substring(0, path.length() - 2);
@@ -323,6 +323,15 @@ public class ServletPathMatches {
         if(servlet != null) {
             return new MatchData(servlet, match);
         }
+        int index = path.lastIndexOf('.');
+        if(index != -1) {
+            String ext = path.substring(index + 1);
+            servlet = extensionServlets.get(ext);
+            if(servlet != null) {
+                return new MatchData(servlet, null);
+            }
+        }
+
         return new MatchData(null, null);
     }
 

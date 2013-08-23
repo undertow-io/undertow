@@ -171,6 +171,47 @@ public class FilterPathMappingTestCase {
         }
     }
 
+
+    @Test
+    public void test_WFLY_1935() throws IOException, ServletException {
+
+        DeploymentInfo builder = new DeploymentInfo();
+
+        final PathHandler root = new PathHandler();
+        final ServletContainer container = ServletContainer.Factory.newInstance();
+
+        builder.addServlet(new ServletInfo("*.a", PathMappingServlet.class)
+                .addMapping("*.a"));
+
+        builder.addFilter(new FilterInfo("/*", PathFilter.class));
+        builder.addFilterUrlMapping("/*", "/*", DispatcherType.REQUEST);
+
+        //non standard, but we still support it
+        builder.addFilter(new FilterInfo("/SimpleServlet.a", PathFilter.class));
+        builder.addFilterUrlMapping("/SimpleServlet.a", "/SimpleServlet.a", DispatcherType.REQUEST);
+
+        builder.setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
+                .setContextPath("/servletContext")
+                .setDeploymentName("servletContext.war");
+
+        final DeploymentManager manager = container.addDeployment(builder);
+        manager.deploy();
+        root.addPath(builder.getContextPath(), manager.start());
+
+        DefaultServer.setRootHandler(root);
+
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+            runTest(client, "SimpleServlet.a", "*.a - /SimpleServlet.a - null", "/*", "/SimpleServlet.a");
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
     private void runTest(final TestHttpClient client, final String path, final String expected, final String... headers) throws IOException {
         final HttpGet get;
         final HttpResponse result;
