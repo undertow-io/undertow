@@ -34,12 +34,11 @@ import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.ExchangeCompletionListener;
-import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
-import io.undertow.server.ServerConnection;
+import io.undertow.server.protocol.http.HttpContinue;
+import io.undertow.server.protocol.http.HttpServerConnection;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Certificates;
@@ -74,9 +73,11 @@ import java.util.concurrent.TimeUnit;
  */
 public final class ProxyHandler implements HttpHandler {
 
+
     private final ProxyClientProvider clientProvider;
     private final int maxRequestTime;
 
+    private static final AttachmentKey<ClientConnection> CONNECTION = AttachmentKey.create(ClientConnection.class);
     private static final AttachmentKey<HttpServerExchange> EXCHANGE = AttachmentKey.create(HttpServerExchange.class);
     private static final AttachmentKey<XnioExecutor.Key> TIMEOUT_KEY = AttachmentKey.create(XnioExecutor.Key.class);
 
@@ -102,7 +103,7 @@ public final class ProxyHandler implements HttpHandler {
                 public void run() {
                     UndertowLogger.REQUEST_LOGGER.proxyRequestTimedOut(exchange.getRequestURI());
                     IoUtils.safeClose(exchange.getConnection());
-                    ClientConnection clientConnection = exchange.getAttachment(ProxyClient.CONNECTION);
+                    ClientConnection clientConnection = exchange.getAttachment(CONNECTION);
                     IoUtils.safeClose(clientConnection);
                 }
             }, maxRequestTime, TimeUnit.MILLISECONDS);
@@ -115,7 +116,12 @@ public final class ProxyHandler implements HttpHandler {
                 }
             });
         }
-        clientProvider.createProxyClient(exchange, proxyClientProviderHandler, -1, TimeUnit.MILLISECONDS);
+        exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
+            @Override
+            public void run() {
+                clientProvider.createProxyClient(exchange, proxyClientProviderHandler, -1, TimeUnit.MILLISECONDS);
+            }
+        });
     }
 
     /**
@@ -169,50 +175,32 @@ public final class ProxyHandler implements HttpHandler {
         }
     }
 
-    private final class ProxyClientProviderHandler implements HttpHandler {
+    private final class ProxyClientProviderHandler implements ProxyCallback<ProxyClient> {
 
         @Override
-        public void handleRequest(HttpServerExchange exchange) throws Exception {
-            final ProxyClient proxyClient = exchange.getAttachment(ProxyClientProvider.CLIENT);
-            if (proxyClient != null) {
-                proxyClient.getConnection(exchange, proxyClientHandler, -1, TimeUnit.MILLISECONDS);
-                return;
-            }
+        public void completed(HttpServerExchange exchange, ProxyClient result) {
+            result.getConnection(exchange, proxyClientHandler, -1, TimeUnit.MILLISECONDS);
+        }
 
-            Throwable error = exchange.getAttachment(ProxyClientProvider.THROWABLE);
-            if (error != null) {
-                if (error instanceof Exception) {
-                    throw (Exception) error;
-                } else {
-                    throw new RuntimeException(error);
-                }
-            }
-            exchange.setResponseCode(500); //should not happen
+        @Override
+        public void failed(HttpServerExchange exchange) {
+            exchange.setResponseCode(500);
+            exchange.endExchange();
         }
     }
 
-    private final class ProxyClientHandler implements HttpHandler {
+    private final class ProxyClientHandler implements ProxyCallback<ClientConnection> {
 
         @Override
-        public void handleRequest(HttpServerExchange exchange) throws Exception {
-            final ServerConnection serverConnection = exchange.getConnection();
-            ClientConnection clientConnection = exchange.getAttachment(ProxyClient.CONNECTION);
-            //see if we already have a client
-            if (clientConnection != null) {
-                exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(clientConnection, exchange, requestHeaders));
-                return;
-            }
+        public void completed(HttpServerExchange exchange, ClientConnection result) {
+            exchange.putAttachment(CONNECTION, result);
+            exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(result, exchange, requestHeaders));
+        }
 
-            //see if an error occurred
-            Throwable error = serverConnection.getAttachment(ProxyClient.THROWABLE);
-            if (error != null) {
-                if (error instanceof Exception) {
-                    throw (Exception) error;
-                } else {
-                    throw new RuntimeException(error);
-                }
-            }
-            exchange.setResponseCode(500); //should not happen
+        @Override
+        public void failed(HttpServerExchange exchange) {
+            exchange.setResponseCode(500);
+            exchange.endExchange();
         }
     }
 
@@ -242,7 +230,7 @@ public final class ProxyHandler implements HttpHandler {
             copyHeaders(outboundRequestHeaders, inboundRequestHeaders);
             for (Map.Entry<HttpString, ExchangeAttribute> entry : requestHeaders.entrySet()) {
                 String headerValue = entry.getValue().readAttribute(exchange);
-                if(headerValue == null || headerValue.isEmpty()) {
+                if (headerValue == null || headerValue.isEmpty()) {
                     outboundRequestHeaders.remove(entry.getKey());
                 } else {
                     outboundRequestHeaders.put(entry.getKey(), headerValue.replace('\n', ' '));

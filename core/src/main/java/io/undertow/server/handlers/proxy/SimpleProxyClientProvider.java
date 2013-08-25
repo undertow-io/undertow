@@ -3,11 +3,9 @@ package io.undertow.server.handlers.proxy;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
-import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -35,34 +33,27 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
     }
 
     @Override
-    public void createProxyClient(final HttpServerExchange exchange, final HttpHandler nextHandler, final long timeout, final TimeUnit timeUnit) {
+    public void createProxyClient(HttpServerExchange exchange, ProxyCallback<ProxyClient> callback, long timeout, TimeUnit timeUnit) {
         ProxyClient existing = exchange.getConnection().getAttachment(clientAttachmentKey);
         if (existing != null) {
             if (existing.isOpen()) {
                 //this connection already has a client, re-use it
-                exchange.putAttachment(CLIENT, existing);
-                exchange.dispatch(SameThreadExecutor.INSTANCE, nextHandler);
+                callback.completed(exchange, existing);
                 return;
             } else {
                 exchange.getConnection().removeAttachment(clientAttachmentKey);
             }
         }
-        exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
-            @Override
-            public void run() {
-                client.connect(new ConnectNotifier(nextHandler, exchange), uri, exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
-            }
-        });
+                client.connect(new ConnectNotifier(callback, exchange), uri, exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
     }
 
 
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {
-
-        private final HttpHandler next;
+        private final ProxyCallback<ProxyClient> callback;
         private final HttpServerExchange exchange;
 
-        private ConnectNotifier(HttpHandler next, HttpServerExchange exchange) {
-            this.next = next;
+        private ConnectNotifier(ProxyCallback<ProxyClient> callback, HttpServerExchange exchange) {
+            this.callback = callback;
             this.exchange = exchange;
         }
 
@@ -72,7 +63,6 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
             final SimpleProxyClient simpleProxyClient = new SimpleProxyClient(connection);
             //we attach to the connection so it can be re-used
             serverConnection.putAttachment(clientAttachmentKey, simpleProxyClient);
-            exchange.putAttachment(CLIENT, simpleProxyClient);
             serverConnection.addCloseListener(new ServerConnection.CloseListener() {
                 @Override
                 public void closed(ServerConnection serverConnection) {
@@ -85,13 +75,12 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
                     serverConnection.removeAttachment(clientAttachmentKey);
                 }
             });
-            exchange.dispatch(SameThreadExecutor.INSTANCE, next);
+            callback.completed(exchange, simpleProxyClient);
         }
 
         @Override
         public void failed(IOException e) {
-            exchange.putAttachment(THROWABLE, e);
-            exchange.dispatch(SameThreadExecutor.INSTANCE, next);
+            callback.failed(exchange);
         }
     }
 
@@ -104,9 +93,8 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
         }
 
         @Override
-        public void getConnection(HttpServerExchange exchange, HttpHandler nextHandler, long timeout, TimeUnit timeUnit) {
-            exchange.putAttachment(CONNECTION, connection);
-            exchange.dispatch(SameThreadExecutor.INSTANCE, nextHandler);
+        public void getConnection(HttpServerExchange exchange, ProxyCallback<ClientConnection> callback, long timeout, TimeUnit timeUnit) {
+            callback.completed(exchange, connection);
         }
 
         @Override
