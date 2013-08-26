@@ -274,7 +274,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                                 authenticationMechanisms.add(new ServletFormAuthenticationMechanism(FORM_AUTH, loginConfig.getLoginPage(),
                                         loginConfig.getErrorPage()));
                             } else if (mechanism.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
-                                authenticationMechanisms.add(new ClientCertAuthenticationMechanism(CLIENT_CERT_AUTH));
+                                authenticationMechanisms.add(new ClientCertAuthenticationMechanism());
                             } else if (mechanism.equalsIgnoreCase(DIGEST_AUTH)) {
                                 authenticationMechanisms.add(new DigestAuthenticationMechanism(loginConfig.getRealmName(), deploymentInfo.getContextPath(), DIGEST_AUTH));
                             } else {
