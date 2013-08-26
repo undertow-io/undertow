@@ -1,14 +1,13 @@
 package io.undertow.servlet.handlers.security;
 
+import java.io.ByteArrayInputStream;
+import java.security.cert.X509Certificate;
+import javax.servlet.ServletRequest;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.servlet.handlers.ServletRequestContext;
-
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
-import java.io.ByteArrayInputStream;
-import java.security.cert.X509Certificate;
 
 /**
  * Handler that associates SSL metadata with request
@@ -105,14 +104,11 @@ public class SSLInformationAssociationHandler implements HttpHandler {
             request.setAttribute("javax.servlet.request.cipher_suite", ssl.getCipherSuite());
             request.setAttribute("javax.servlet.request.key_size", getKeyLenght(ssl.getCipherSuite()));
             request.setAttribute("javax.servlet.request.ssl_session_id", ssl.getSessionId());
-            if (request instanceof HttpServletRequest) {
-                if (HttpServletRequest.CLIENT_CERT_AUTH.equals(((HttpServletRequest) request).getAuthType())) {
-                    X509Certificate[] certs = getCerts(ssl);
-                    if (certs != null) {
-                        request.setAttribute("javax.servlet.request.X509Certificate", certs);
-                    }
-                }
+            X509Certificate[] certs = getCerts(ssl);
+            if (certs != null) {
+                request.setAttribute("javax.servlet.request.X509Certificate", certs);
             }
+
         }
         next.handleRequest(exchange);
     }
