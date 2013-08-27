@@ -42,6 +42,7 @@ final class BoundMethod {
         if (!allParams.isEmpty()) {
             throw JsrWebSocketMessages.MESSAGES.invalidParamers(method, allParams);
         }
+        method.setAccessible(true);
     }
 
     public Object invoke(final Object instance, final Map<Class<?>, Object> values) throws DecodeException {
