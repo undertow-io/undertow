@@ -48,12 +48,6 @@ public class SimpleProxyClientProvider implements ProxyClient {
 
     }
 
-    @Override
-    public boolean isOpen() {
-        return false;
-    }
-
-
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {
         private final ProxyCallback<ClientConnection> callback;
         private final HttpServerExchange exchange;

@@ -19,6 +19,4 @@ public interface ProxyClient {
 
     void getConnection(final HttpServerExchange exchange, final ProxyCallback<ClientConnection> callback, long timeout, TimeUnit timeUnit);
 
-    boolean isOpen();
-
 }
