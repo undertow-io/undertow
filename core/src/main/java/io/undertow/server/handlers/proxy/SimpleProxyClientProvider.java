@@ -21,10 +21,10 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Stuart Douglas
  */
-public class SimpleProxyClientProvider implements ProxyClientProvider {
+public class SimpleProxyClientProvider implements ProxyClient {
 
     private final URI uri;
-    private final AttachmentKey<ProxyClient> clientAttachmentKey = AttachmentKey.create(ProxyClient.class);
+    private final AttachmentKey<ClientConnection> clientAttachmentKey = AttachmentKey.create(ClientConnection.class);
     private final UndertowClient client;
 
     public SimpleProxyClientProvider(URI uri) {
@@ -33,8 +33,8 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
     }
 
     @Override
-    public void createProxyClient(HttpServerExchange exchange, ProxyCallback<ProxyClient> callback, long timeout, TimeUnit timeUnit) {
-        ProxyClient existing = exchange.getConnection().getAttachment(clientAttachmentKey);
+    public void getConnection(HttpServerExchange exchange, ProxyCallback<ClientConnection> callback, long timeout, TimeUnit timeUnit) {
+        ClientConnection existing = exchange.getConnection().getAttachment(clientAttachmentKey);
         if (existing != null) {
             if (existing.isOpen()) {
                 //this connection already has a client, re-use it
@@ -44,15 +44,21 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
                 exchange.getConnection().removeAttachment(clientAttachmentKey);
             }
         }
-                client.connect(new ConnectNotifier(callback, exchange), uri, exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
+        client.connect(new ConnectNotifier(callback, exchange), uri, exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
+
+    }
+
+    @Override
+    public boolean isOpen() {
+        return false;
     }
 
 
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {
-        private final ProxyCallback<ProxyClient> callback;
+        private final ProxyCallback<ClientConnection> callback;
         private final HttpServerExchange exchange;
 
-        private ConnectNotifier(ProxyCallback<ProxyClient> callback, HttpServerExchange exchange) {
+        private ConnectNotifier(ProxyCallback<ClientConnection> callback, HttpServerExchange exchange) {
             this.callback = callback;
             this.exchange = exchange;
         }
@@ -60,9 +66,8 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
         @Override
         public void completed(final ClientConnection connection) {
             final ServerConnection serverConnection = exchange.getConnection();
-            final SimpleProxyClient simpleProxyClient = new SimpleProxyClient(connection);
             //we attach to the connection so it can be re-used
-            serverConnection.putAttachment(clientAttachmentKey, simpleProxyClient);
+            serverConnection.putAttachment(clientAttachmentKey, connection);
             serverConnection.addCloseListener(new ServerConnection.CloseListener() {
                 @Override
                 public void closed(ServerConnection serverConnection) {
@@ -75,7 +80,7 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
                     serverConnection.removeAttachment(clientAttachmentKey);
                 }
             });
-            callback.completed(exchange, simpleProxyClient);
+            callback.completed(exchange, connection);
         }
 
         @Override
@@ -83,24 +88,4 @@ public class SimpleProxyClientProvider implements ProxyClientProvider {
             callback.failed(exchange);
         }
     }
-
-    private static final class SimpleProxyClient implements ProxyClient {
-
-        private final ClientConnection connection;
-
-        private SimpleProxyClient(ClientConnection connection) {
-            this.connection = connection;
-        }
-
-        @Override
-        public void getConnection(HttpServerExchange exchange, ProxyCallback<ClientConnection> callback, long timeout, TimeUnit timeUnit) {
-            callback.completed(exchange, connection);
-        }
-
-        @Override
-        public boolean isOpen() {
-            return connection.isOpen();
-        }
-    }
-
 }

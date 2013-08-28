@@ -73,25 +73,22 @@ import java.util.concurrent.TimeUnit;
  */
 public final class ProxyHandler implements HttpHandler {
 
-
-    private final ProxyClientProvider clientProvider;
+    private final ProxyClient proxyClient;
     private final int maxRequestTime;
 
     private static final AttachmentKey<ClientConnection> CONNECTION = AttachmentKey.create(ClientConnection.class);
     private static final AttachmentKey<HttpServerExchange> EXCHANGE = AttachmentKey.create(HttpServerExchange.class);
     private static final AttachmentKey<XnioExecutor.Key> TIMEOUT_KEY = AttachmentKey.create(XnioExecutor.Key.class);
 
-
     private final ProxyClientHandler proxyClientHandler = new ProxyClientHandler();
-    private final ProxyClientProviderHandler proxyClientProviderHandler = new ProxyClientProviderHandler();
 
     /**
      * Map of additional headers to add to the request.
      */
     private final Map<HttpString, ExchangeAttribute> requestHeaders = new CopyOnWriteMap<HttpString, ExchangeAttribute>();
 
-    public ProxyHandler(ProxyClientProvider clientProvider, int maxRequestTime) {
-        this.clientProvider = clientProvider;
+    public ProxyHandler(ProxyClient proxyClient, int maxRequestTime) {
+        this.proxyClient = proxyClient;
         this.maxRequestTime = maxRequestTime;
     }
 
@@ -119,7 +116,7 @@ public final class ProxyHandler implements HttpHandler {
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
             public void run() {
-                clientProvider.createProxyClient(exchange, proxyClientProviderHandler, -1, TimeUnit.MILLISECONDS);
+                proxyClient.getConnection(exchange, proxyClientHandler, -1, TimeUnit.MILLISECONDS);
             }
         });
     }
@@ -172,20 +169,6 @@ public final class ProxyHandler implements HttpHandler {
             values = from.fiCurrent(f);
             to.putAll(values.getHeaderName(), values);
             f = from.fiNextNonEmpty(f);
-        }
-    }
-
-    private final class ProxyClientProviderHandler implements ProxyCallback<ProxyClient> {
-
-        @Override
-        public void completed(HttpServerExchange exchange, ProxyClient result) {
-            result.getConnection(exchange, proxyClientHandler, -1, TimeUnit.MILLISECONDS);
-        }
-
-        @Override
-        public void failed(HttpServerExchange exchange) {
-            exchange.setResponseCode(500);
-            exchange.endExchange();
         }
     }
 
