@@ -208,7 +208,7 @@ public class ExchangeCookieUtils {
                 header.append(DateUtils.toOldCookieDateString(expires));
             } else if (cookie.getMaxAge() > 0) {
                 Date expires = new Date();
-                expires.setTime(expires.getTime() + cookie.getMaxAge());
+                expires.setTime(expires.getTime() + cookie.getMaxAge() * 1000);
                 header.append("; Expires=");
                 header.append(DateUtils.toOldCookieDateString(expires));
             }
