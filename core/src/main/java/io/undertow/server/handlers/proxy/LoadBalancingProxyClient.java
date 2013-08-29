@@ -1,23 +1,18 @@
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Cookies;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.XnioExecutor;
 import org.xnio.conduits.StreamSinkConduit;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +21,11 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static io.undertow.server.handlers.proxy.Host.AvailabilityType.AVAILABLE;
+import static io.undertow.server.handlers.proxy.Host.AvailabilityType.CLOSED;
+import static io.undertow.server.handlers.proxy.Host.AvailabilityType.FULL;
+import static io.undertow.server.handlers.proxy.Host.AvailabilityType.PROBLEM;
 
 /**
  * Initial implementation of a load balancing proxy client. This initial implementation is rather simplistic, and
@@ -53,6 +53,11 @@ public class LoadBalancingProxyClient implements ProxyClient {
     private final Set<String> sessionCookieNames = new CopyOnWriteArraySet<String>();
 
     private final Map<String, StickeySessionData> stickeySessionData = new ConcurrentHashMap<String, StickeySessionData>();
+
+    /**
+     * The number of connections to create per thread
+     */
+    private volatile int connectionsPerThread = 10;
 
     /**
      * The hosts list.
@@ -99,8 +104,17 @@ public class LoadBalancingProxyClient implements ProxyClient {
         return this;
     }
 
+    public int getConnectionsPerThread() {
+        return connectionsPerThread;
+    }
+
+    public LoadBalancingProxyClient setConnectionsPerThread(int connectionsPerThread) {
+        this.connectionsPerThread = connectionsPerThread;
+        return this;
+    }
+
     public synchronized LoadBalancingProxyClient addHost(final URI host) {
-        Host h = new Host(host);
+        Host h = new Host(this, host, client);
         Host[] existing = hosts;
         Host[] newHosts = new Host[existing.length + 1];
         System.arraycopy(existing, 0, newHosts, 0, existing.length);
@@ -114,7 +128,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         Host[] existing = hosts;
         Host removedHost = null;
         for (int i = 0; i < existing.length; ++i) {
-            if (existing[i].uri.equals(uri)) {
+            if (existing[i].getUri().equals(uri)) {
                 found = i;
                 removedHost = existing[i];
                 break;
@@ -127,7 +141,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         System.arraycopy(existing, 0, newHosts, 0, found);
         System.arraycopy(existing, found + 1, newHosts, found, existing.length - found - 1);
         this.hosts = newHosts;
-        removedHost.closed = true;
+        removedHost.close();
         return this;
     }
 
@@ -140,59 +154,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         }
         final Host host = selectHost(exchange);
         exchange.addResponseWrapper(new StickeySessionExchangeCompletionListener(host));
-        connectToHost(host, exchange, callback);
-    }
-
-    private void connectToHost(final Host host, final HttpServerExchange exchange, final ProxyCallback<ClientConnection> callback) {
-        client.connect(new ClientCallback<ClientConnection>() {
-            @Override
-            public void completed(final ClientConnection result) {
-                host.problem = false;
-                exchange.getConnection().putAttachment(clientAttachmentKey, result);
-                exchange.getConnection().addCloseListener(new ServerConnection.CloseListener() {
-                    @Override
-                    public void closed(ServerConnection connection) {
-                        IoUtils.safeClose(result);
-                    }
-                });
-                callback.completed(exchange, result);
-
-            }
-
-            @Override
-            public void failed(IOException e) {
-                host.problem = true;
-                scheduleFailedHostRetry(host, exchange);
-                callback.failed(exchange);
-
-
-            }
-        }, host.uri, exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
-
-    }
-
-    private void scheduleFailedHostRetry(final Host host, final HttpServerExchange exchange) {
-        exchange.getIoThread().executeAfter(new Runnable() {
-            @Override
-            public void run() {
-                if (host.closed) {
-                    return;
-                }
-                client.connect(new ClientCallback<ClientConnection>() {
-                    @Override
-                    public void completed(ClientConnection result) {
-                        host.problem = false;
-                        IoUtils.safeClose(result);
-                    }
-
-                    @Override
-                    public void failed(IOException e) {
-                        scheduleFailedHostRetry(host, exchange);
-                    }
-                }, host.uri, exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
-            }
-        }, problemServerRetry, TimeUnit.SECONDS);
-
+        host.connect(exchange, callback); //TODO: timeout
     }
 
     protected Host selectHost(HttpServerExchange exchange) {
@@ -202,14 +164,28 @@ public class LoadBalancingProxyClient implements ProxyClient {
         }
         Host[] hosts = this.hosts;
         int host = currentHost.incrementAndGet() % hosts.length;
+
         final int startHost = host; //if the all hosts have problems we come back to this one
+        Host full = null;
+        Host problem = null;
         do {
             Host selected = hosts[host];
-            if (!selected.problem) {
+            Host.AvailabilityType availble = selected.availible();
+            if (availble == AVAILABLE) {
                 return selected;
+            } else if (availble == FULL && full == null) {
+                full = selected;
+            } else if (availble == PROBLEM && problem == null) {
+                problem = selected;
             }
             host = (host + 1) % hosts.length;
         } while (host != startHost);
+        if (full != null) {
+            return full;
+        }
+        if (problem != null) {
+            return problem;
+        }
         //they all have problems, just pick one
         return hosts[startHost];
     }
@@ -221,7 +197,8 @@ public class LoadBalancingProxyClient implements ProxyClient {
             if (sk != null) {
                 StickeySessionData data = stickeySessionData.get(sk.getValue());
                 if (data != null) {
-                    if (data.host.closed || data.host.problem) {
+                    Host.AvailabilityType state = data.host.availible();
+                    if (state == PROBLEM || state == CLOSED) {
                         stickeySessionData.remove(sk.getValue());
                     } else {
                         data.bumpTimeout(exchange.getIoThread());
@@ -233,29 +210,6 @@ public class LoadBalancingProxyClient implements ProxyClient {
         return null;
     }
 
-
-    protected static class Host {
-
-        private final URI uri;
-
-        /**
-         * flag that is set when a problem is detected with this host. It will be taken out of consideration
-         * until the flag is cleared.
-         * <p/>
-         * The exception to this is if all flags are marked as problems, in which case it will be tried anyway
-         */
-        private volatile boolean problem;
-
-        /**
-         * Set to true when the host is removed from this load balancer
-         */
-        private volatile boolean closed;
-
-
-        public Host(URI uri) {
-            this.uri = uri;
-        }
-    }
 
     protected class StickeySessionData implements Runnable {
 

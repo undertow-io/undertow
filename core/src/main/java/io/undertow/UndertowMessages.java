@@ -233,4 +233,7 @@ public interface UndertowMessages {
 
     @Message(id = 69, value = "Could not parse set cookie header %s")
     IllegalArgumentException couldNotParseCookie(String headerValue);
+
+    @Message(id = 70, value = "method can only be called by IO thread")
+    IllegalStateException canOnlyBeCalledByIoThread();
 }
