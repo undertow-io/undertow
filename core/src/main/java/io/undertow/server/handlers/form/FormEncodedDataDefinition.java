@@ -44,7 +44,7 @@ import org.xnio.channels.StreamSourceChannel;
 public class FormEncodedDataDefinition implements FormParserFactory.ParserDefinition {
 
     public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
-    private String defaultEncoding = "UTF-8";
+    private String defaultEncoding = "ISO-8859-1";
 
     public FormEncodedDataDefinition() {
     }

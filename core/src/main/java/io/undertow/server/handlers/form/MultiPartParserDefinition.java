@@ -56,7 +56,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
     private File tempFileLocation;
 
-    private String defaultEncoding = "UTF-8";
+    private String defaultEncoding = "ISO-8859-1";
 
     private long maxIndividualFileSize = -1;
 
