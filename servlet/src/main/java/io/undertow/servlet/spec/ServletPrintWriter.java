@@ -60,6 +60,10 @@ public class ServletPrintWriter {
                 if(result.isOverflow()) {
                     outputStream.flushInternal();
                 }
+                if(result.isError() || result.isUnmappable() || result.isMalformed()) {
+                    error = true;
+                    return;
+                }
             }
         } catch (IOException e) {
             error = true;
