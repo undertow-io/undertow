@@ -40,7 +40,11 @@ public class SenderTestCase {
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 boolean blocking = exchange.getQueryParameters().get("blocking").getFirst().equals("true");
                 if (blocking) {
-                    exchange.startBlocking();
+                    if (exchange.isInIoThread()) {
+                        exchange.startBlocking();
+                        exchange.dispatch(this);
+                        return;
+                    }
                 }
                 final Sender sender = exchange.getResponseSender();
                 class SendClass implements Runnable, IoCallback {
@@ -74,16 +78,21 @@ public class SenderTestCase {
         HttpHandler lotsOfTransferHandler = new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
+
+                boolean blocking = exchange.getQueryParameters().get("blocking").getFirst().equals("true");
+                if (blocking) {
+                    if (exchange.isInIoThread()) {
+                        exchange.startBlocking();
+                        exchange.dispatch(this);
+                        return;
+                    }
+                }
                 URI uri = SenderTestCase.class.getResource(SenderTestCase.class.getSimpleName() + ".class").toURI();
                 File file = new File(uri);
                 final FileChannel channel = new FileInputStream(file).getChannel();
 
                 exchange.setResponseContentLength(channel.size() * TXS);
 
-                boolean blocking = exchange.getQueryParameters().get("blocking").getFirst().equals("true");
-                if (blocking) {
-                    exchange.startBlocking();
-                }
                 final Sender sender = exchange.getResponseSender();
                 class SendClass implements Runnable, IoCallback {
 
@@ -130,8 +139,8 @@ public class SenderTestCase {
         };
 
         PathHandler handler = new PathHandler().addPath("/lots", lotsOfSendsHandler)
-                                               .addPath("/fixed", fixedLengthSender)
-                                               .addPath("/transfer", lotsOfTransferHandler);
+                .addPath("/fixed", fixedLengthSender)
+                .addPath("/transfer", lotsOfTransferHandler);
         DefaultServer.setRootHandler(handler);
     }
 
@@ -167,7 +176,7 @@ public class SenderTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             File file = new File(SenderTestCase.class.getResource(SenderTestCase.class.getSimpleName() + ".class").toURI());
-            byte[] data = new byte[(int)file.length() * TXS];
+            byte[] data = new byte[(int) file.length() * TXS];
 
             for (int i = 0; i < TXS; i++) {
                 DataInputStream is = new DataInputStream(new FileInputStream(file));
@@ -192,7 +201,7 @@ public class SenderTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             File file = new File(SenderTestCase.class.getResource(SenderTestCase.class.getSimpleName() + ".class").toURI());
-            byte[] data = new byte[(int)file.length() * TXS];
+            byte[] data = new byte[(int) file.length() * TXS];
 
             for (int i = 0; i < TXS; i++) {
                 DataInputStream is = new DataInputStream(new FileInputStream(file));
