@@ -230,4 +230,7 @@ public interface UndertowMessages {
 
     @Message(id = 68, value = "Servlet patch match failed")
     IllegalArgumentException servletPathMatchFailed();
+
+    @Message(id = 69, value = "Could not parse set cookie header %s")
+    IllegalArgumentException couldNotParseCookie(String headerValue);
 }
