@@ -57,10 +57,15 @@ public class ServletPrintWriter {
                 int remaining = buffer.remaining();
                 CoderResult result = charsetEncoder.encode(cb, buffer, false);
                 outputStream.updateWritten(remaining - buffer.remaining());
-                if(result.isOverflow()) {
+                if(result.isOverflow() || !buffer.hasRemaining()) {
                     outputStream.flushInternal();
                 }
-                if(result.isError() || result.isUnmappable() || result.isMalformed()) {
+                if(result.isUnmappable()) {
+                    //not much we can do here, but I think writing question marks instead of just erroring
+                    //out is more user friendly.
+                    cb.get();
+                    buffer.put((byte)'?');
+                } else if(result.isError() || result.isMalformed()) {
                     error = true;
                     return;
                 }
