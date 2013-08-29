@@ -193,7 +193,7 @@ public class HttpTransferEncoding {
                 StreamSinkConduit wrappedConduit;
                 final int code = exchange.getResponseCode();
                 if (exchange.getRequestMethod().equals(Methods.HEAD) || (100 <= code && code <= 199) || code == 204 || code == 304) {
-                    final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
+                    final ConduitListener<StreamSinkConduit> finishListener = terminateResponseListener(exchange);
                     if (code == 101 && contentLengthHeader != null) {
                         // add least for websocket upgrades we can have a content length
                         final long contentLength;
@@ -210,13 +210,13 @@ public class HttpTransferEncoding {
                         wrappedConduit = new FixedLengthStreamSinkConduit(channel, 0L, true, !stillPersistent, finishListener);
                     }
                 } else if (!transferEncoding.equals(Headers.IDENTITY)) {
-                    final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
+                    final ConduitListener<StreamSinkConduit> finishListener = terminateResponseListener(exchange);
                     wrappedConduit = new ChunkedStreamSinkConduit(channel, true, !stillPersistent, finishListener, exchange);
                 } else if (contentLengthHeader != null) {
                     final long contentLength;
                     try {
                         contentLength = Long.parseLong(contentLengthHeader);
-                        final ConduitListener<StreamSinkConduit> finishListener = stillPersistent ? terminateResponseListener(exchange) : null;
+                        final ConduitListener<StreamSinkConduit> finishListener = terminateResponseListener(exchange);
                         // fixed-length response
                         wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener);
                     } catch (NumberFormatException e) {
