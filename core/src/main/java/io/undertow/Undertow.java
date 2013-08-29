@@ -268,6 +268,11 @@ public class Undertow {
             return this;
         }
 
+        public Builder addListener(int port, String host, ListenerType listenerType) {
+            listeners.add(new ListenerConfig(listenerType, port, host));
+            return this;
+        }
+
         public Builder setBufferSize(final int bufferSize) {
             this.bufferSize = bufferSize;
             return this;
