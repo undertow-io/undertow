@@ -19,9 +19,6 @@
 package io.undertow.server.handlers;
 
 import java.util.Date;
-import java.util.Map;
-
-import io.undertow.util.AttachmentKey;
 
 /**
  * A HTTP cookie.
@@ -30,9 +27,6 @@ import io.undertow.util.AttachmentKey;
  * @author Stuart Douglas
  */
 public interface Cookie {
-
-    AttachmentKey<Map<String, Cookie>> REQUEST_COOKIES = AttachmentKey.create(Map.class);
-    AttachmentKey<Map<String, Cookie>> RESPONSE_COOKIES = AttachmentKey.create(Map.class);
 
     String getName();
 
