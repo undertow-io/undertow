@@ -196,6 +196,11 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
     }
 
     @Override
+    public boolean isUpgraded() {
+        return anyAreSet(state, UPGRADE_REQUESTED | UPGRADED);
+    }
+
+    @Override
     public void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback) {
         if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
             throw UndertowClientMessages.MESSAGES.invalidConnectionState();
@@ -451,6 +456,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
             } catch (Exception e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
                 IoUtils.safeClose(connection);
+                currentRequest.setFailed(new IOException(e));
             } finally {
                 if (free) pooled.free();
             }

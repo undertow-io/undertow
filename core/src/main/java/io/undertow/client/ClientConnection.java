@@ -74,4 +74,5 @@ public interface ClientConnection extends Channel {
     <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException;
 
 
+    boolean isUpgraded();
 }

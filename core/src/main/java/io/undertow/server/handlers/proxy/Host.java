@@ -82,7 +82,8 @@ class Host {
             return;
         }
 
-        if (connection.isOpen()) {
+
+        if (connection.isOpen() && !connection.isUpgraded()) {
             CallbackHolder callback = hostData.awaitingConnections.poll();
             if (callback != null) {
                 connectionReady(connection, callback.callback, callback.exchange);
