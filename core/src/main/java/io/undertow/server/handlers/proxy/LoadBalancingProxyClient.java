@@ -3,14 +3,19 @@ package io.undertow.server.handlers.proxy;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
-import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.ConduitFactory;
+import io.undertow.util.Cookies;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.XnioExecutor;
+import org.xnio.conduits.StreamSinkConduit;
 
 import java.io.IOException;
 import java.net.URI;
@@ -134,7 +139,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
             return;
         }
         final Host host = selectHost(exchange);
-        exchange.addExchangeCompleteListener(new StickeySessionExchangeCompletionListener(host));
+        exchange.addResponseWrapper(new StickeySessionExchangeCompletionListener(host));
         connectToHost(host, exchange, callback);
     }
 
@@ -281,7 +286,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         }
     }
 
-    private class StickeySessionExchangeCompletionListener implements ExchangeCompletionListener {
+    private class StickeySessionExchangeCompletionListener implements ConduitWrapper<StreamSinkConduit> {
 
         private final Host host;
 
@@ -290,19 +295,27 @@ public class LoadBalancingProxyClient implements ProxyClient {
         }
 
         @Override
-        public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-            Map<String, Cookie> cookies = exchange.getResponseCookies();
-            for (String cookieName : sessionCookieNames) {
-                Cookie sk = cookies.get(cookieName);
-                if (sk != null) {
-                    if (!stickeySessionData.containsKey(sk.getValue())) {
-                        final StickeySessionData data = new StickeySessionData(sk.getValue(), host);
-                        stickeySessionData.put(sk.getValue(), data);
-                        data.bumpTimeout(exchange.getIoThread());
+        public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+            //we don't actually want to wrap the response, just inspect the exchange and look for a session cookie
+
+            HeaderValues cookies = exchange.getResponseHeaders().get(Headers.SET_COOKIE);
+            if (cookies != null) {
+                for (String cookieHeader : cookies) {
+                    try {
+                        Cookie cookie = Cookies.parseSetCookieHeader(cookieHeader);
+                        if (sessionCookieNames.contains(cookie.getName())) {
+                            if (!stickeySessionData.containsKey(cookie.getValue())) {
+                                final StickeySessionData data = new StickeySessionData(cookie.getValue(), host);
+                                stickeySessionData.put(cookie.getValue(), data);
+                                data.bumpTimeout(exchange.getIoThread());
+                            }
+                        }
+                    } catch (IllegalArgumentException ignore) {
+                        //if we can't parse the cookie for some reason
                     }
                 }
             }
-            nextListener.proceed();
+            return factory.create();
         }
     }
 
