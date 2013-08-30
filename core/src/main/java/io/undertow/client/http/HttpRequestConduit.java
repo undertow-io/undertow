@@ -434,7 +434,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         ByteBuffer[] b = {buffer, userData};
                         do {
                             long r = next.write(b, 0, b.length);
-                            if (r == 0) {
+                            if (r == 0 && buffer.hasRemaining()) {
                                 log.trace("Continuation");
                                 return STATE_BUF_FLUSH;
                             }

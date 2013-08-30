@@ -157,7 +157,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     this.charIndex = 0;
                     this.state = STATE_HDR_NAME;
                     buffer.flip();
-                    return processStatefulWrite(STATE_HDR_NAME, buffer);
+                    return processStatefulWrite(STATE_HDR_NAME, userData);
                 }
                 header.appendTo(buffer);
                 buffer.put((byte) ':').put((byte) ' ');
@@ -172,7 +172,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     this.charIndex = 0;
                     this.state = STATE_HDR_VAL;
                     buffer.flip();
-                    return processStatefulWrite(STATE_HDR_VAL, buffer);
+                    return processStatefulWrite(STATE_HDR_VAL, userData);
                 }
                 writeString(buffer, string);
                 buffer.put((byte) '\r').put((byte) '\n');
@@ -323,11 +323,11 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     charIndex = 0;
                     if (valueIdx == headerValues.size()) {
                         if (!buffer.hasRemaining()) {
-                            if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_CR;
+                            if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_EOL_CR;
                         }
                         buffer.put((byte) 13); // CR
                         if (!buffer.hasRemaining()) {
-                            if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_LF;
+                            if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_EOL_LF;
                         }
                         buffer.put((byte) 10); // LF
                         if ((fiCookie = headers.fiNextNonEmpty(fiCookie)) != -1L) {
@@ -337,11 +337,11 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                             break;
                         } else {
                             if (!buffer.hasRemaining()) {
-                                if (flushHeaderBuffer(buffer)) return STATE_HDR_FINAL_CR;
+                                if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_FINAL_CR;
                             }
                             buffer.put((byte) 13); // CR
                             if (!buffer.hasRemaining()) {
-                                if (flushHeaderBuffer(buffer)) return STATE_HDR_FINAL_LF;
+                                if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_FINAL_LF;
                             }
                             buffer.put((byte) 10); // LF
                             this.fiCookie = -1;
@@ -376,13 +376,13 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 // Clean-up states
                 case STATE_HDR_EOL_CR: {
                     if (!buffer.hasRemaining()) {
-                        if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_CR;
+                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_EOL_CR;
                     }
                     buffer.put((byte) 13); // CR
                 }
                 case STATE_HDR_EOL_LF: {
                     if (!buffer.hasRemaining()) {
-                        if (flushHeaderBuffer(buffer)) return STATE_HDR_EOL_LF;
+                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_EOL_LF;
                     }
                     buffer.put((byte) 10); // LF
                     if (valueIdx < headerValues.size()) {
@@ -398,14 +398,14 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 }
                 case STATE_HDR_FINAL_CR: {
                     if (!buffer.hasRemaining()) {
-                        if (flushHeaderBuffer(buffer)) return STATE_HDR_FINAL_CR;
+                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_FINAL_CR;
                     }
                     buffer.put((byte) 13); // CR
                     // fall thru
                 }
                 case STATE_HDR_FINAL_LF: {
                     if (!buffer.hasRemaining()) {
-                        if (flushHeaderBuffer(buffer)) return STATE_HDR_FINAL_LF;
+                        if (flushHeaderBuffer(buffer, string, headerValues, charIndex, fiCookie, valueIdx)) return STATE_HDR_FINAL_LF;
                     }
                     buffer.put((byte) 10); // LF
                     this.fiCookie = -1L;
@@ -424,7 +424,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         ByteBuffer[] b = {buffer, userData};
                         do {
                             long r = next.write(b, 0, b.length);
-                            if (r == 0) {
+                            if (r == 0 && buffer.hasRemaining()) {
                                 return STATE_BUF_FLUSH;
                             }
                         } while (buffer.hasRemaining());
@@ -444,12 +444,17 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         }
     }
 
-    private boolean flushHeaderBuffer(ByteBuffer buffer) throws IOException {
+    private boolean flushHeaderBuffer(ByteBuffer buffer, String string, HeaderValues headerValues, int charIndex, long fiCookie, int valueIdx) throws IOException {
         int res;
         buffer.flip();
         do {
             res = next.write(buffer);
             if (res == 0) {
+                this.string = string;
+                this.headerValues = headerValues;
+                this.charIndex = charIndex;
+                this.fiCookie = fiCookie;
+                this.valueIdx = valueIdx;
                 return true;
             }
         } while (buffer.hasRemaining());
