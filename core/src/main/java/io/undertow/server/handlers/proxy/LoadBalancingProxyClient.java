@@ -5,7 +5,6 @@ import io.undertow.client.UndertowClient;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Cookies;
 import io.undertow.util.HeaderValues;
@@ -37,8 +36,6 @@ import static io.undertow.server.handlers.proxy.Host.AvailabilityType.PROBLEM;
  * @author Stuart Douglas
  */
 public class LoadBalancingProxyClient implements ProxyClient {
-
-    private final AttachmentKey<ClientConnection> clientAttachmentKey = AttachmentKey.create(ClientConnection.class);
 
     /**
      * Time in seconds between retries for problem servers
@@ -147,16 +144,11 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     @Override
     public void getConnection(HttpServerExchange exchange, ProxyCallback<ClientConnection> callback, long timeout, TimeUnit timeUnit) {
-        ClientConnection existing = exchange.getConnection().getAttachment(clientAttachmentKey);
-        if (existing != null && existing.isOpen()) {
-            callback.completed(exchange, existing);
-            return;
-        }
         final Host host = selectHost(exchange);
         if(host == null) {
             callback.failed(exchange);
         } else {
-            exchange.addResponseWrapper(new StickeySessionExchangeCompletionListener(host));
+            exchange.addResponseWrapper(new StickeySessionWrapper(host));
             host.connect(exchange, callback, timeout, timeUnit);
         }
     }
@@ -247,11 +239,11 @@ public class LoadBalancingProxyClient implements ProxyClient {
         }
     }
 
-    private class StickeySessionExchangeCompletionListener implements ConduitWrapper<StreamSinkConduit> {
+    private class StickeySessionWrapper implements ConduitWrapper<StreamSinkConduit> {
 
         private final Host host;
 
-        private StickeySessionExchangeCompletionListener(Host host) {
+        private StickeySessionWrapper(Host host) {
             this.host = host;
         }
 

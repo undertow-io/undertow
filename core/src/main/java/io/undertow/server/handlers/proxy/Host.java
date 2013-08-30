@@ -100,13 +100,14 @@ class Host {
                     task = hostData.awaitingConnections.poll();
                 }
                 if (task != null) {
-                    openConnection(task.exchange, task.callback);
+                    openConnection(task.exchange, task.callback, hostData);
                 }
             }
         }
     }
 
-    private void openConnection(final HttpServerExchange exchange, final ProxyCallback<ClientConnection> callback) {
+    private void openConnection(final HttpServerExchange exchange, final ProxyCallback<ClientConnection> callback, final HostThreadData data) {
+        data.connections++;
         client.connect(new ClientCallback<ClientConnection>() {
             @Override
             public void completed(final ClientConnection result) {
@@ -116,12 +117,11 @@ class Host {
 
             @Override
             public void failed(IOException e) {
+                data.connections--;
                 problem = true;
                 redistributeQueued(getData());
                 scheduleFailedHostRetry(exchange);
                 callback.failed(exchange);
-
-
             }
         }, getUri(), exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
     }
@@ -134,10 +134,10 @@ class Host {
             }
             if (!callback.isCancelled()) {
                 long time = System.currentTimeMillis();
-                if (callback.getExpireTime() < time) {
+                if (callback.getExpireTime() > 0 && callback.getExpireTime() < time) {
                     callback.getCallback().failed(callback.getExchange());
                 } else {
-                    loadBalancingProxyClient.getConnection(callback.getExchange(), callback.getCallback(), time - callback.getExpireTime(), TimeUnit.MILLISECONDS);
+                    loadBalancingProxyClient.getConnection(callback.getExchange(), callback.getCallback(), callback.getExpireTime() > 0 ? time - callback.getExpireTime() : -1, TimeUnit.MILLISECONDS);
                     callback.getCallback().failed(callback.getExchange());
                 }
             }
@@ -230,11 +230,16 @@ class Host {
         if (conn != null) {
             connectionReady(conn, callback, exchange);
         } else if (data.connections < loadBalancingProxyClient.getConnectionsPerThread()) {
-            openConnection(exchange, callback);
+            openConnection(exchange, callback, data);
         } else {
-            long time = System.currentTimeMillis();
-            CallbackHolder holder = new CallbackHolder(callback, exchange, time + timeUnit.toMillis(timeout));
-            holder.setTimeoutKey(exchange.getIoThread().executeAfter(holder, timeout, timeUnit));
+            CallbackHolder holder;
+            if (timeout > 0) {
+                long time = System.currentTimeMillis();
+                holder = new CallbackHolder(callback, exchange, time + timeUnit.toMillis(timeout));
+                holder.setTimeoutKey(exchange.getIoThread().executeAfter(holder, timeout, timeUnit));
+            } else {
+                holder = new CallbackHolder(callback, exchange, -1);
+            }
             data.awaitingConnections.add(holder);
         }
     }
@@ -288,6 +293,7 @@ class Host {
         @Override
         public void run() {
             cancelled = true;
+            callback.failed(exchange);
         }
     }
 
