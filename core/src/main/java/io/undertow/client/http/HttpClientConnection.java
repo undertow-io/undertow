@@ -221,8 +221,11 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
 
         String connectionString = request.getRequestHeaders().getFirst(CONNECTION);
         if (connectionString != null) {
-            if (new HttpString(connectionString).equals(CLOSE)) {
+            HttpString connectionHttpString = new HttpString(connectionString);
+            if (connectionHttpString.equals(CLOSE)) {
                 state |= CLOSE_REQ;
+            } else if(connectionHttpString.equals(UPGRADE)) {
+                state |= UPGRADE_REQUESTED;
             }
         } else if (request.getProtocol() != Protocols.HTTP_1_1) {
             state |= CLOSE_REQ;
@@ -287,12 +290,12 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
         } else if (!sinkChannel.isWriteResumed()) {
             try {
                 //TODO: this needs some more thought
-                if(!sinkChannel.flush()) {
+                if (!sinkChannel.flush()) {
                     sinkChannel.setWriteListener(new ChannelListener<ConduitStreamSinkChannel>() {
                         @Override
                         public void handleEvent(ConduitStreamSinkChannel channel) {
                             try {
-                                if(channel.flush()) {
+                                if (channel.flush()) {
                                     channel.suspendWrites();
                                 }
                             } catch (IOException e) {
@@ -433,27 +436,27 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
 
                 final ClientResponse response = builder.build();
 
-                //check if an updated worked
+                String connectionString = response.getResponseHeaders().getFirst(CONNECTION);
+
+                //check if an upgrade worked
                 if (anyAreSet(HttpClientConnection.this.state, UPGRADE_REQUESTED)) {
-                    String connectionString = response.getResponseHeaders().getFirst(CONNECTION);
-                    if (!new HttpString(connectionString).equals(UPGRADE)) {
+                    if ((connectionString == null || !new HttpString(connectionString).equals(UPGRADE)) && !response.getResponseHeaders().contains(UPGRADE)) {
                         //just unset the upgrade requested flag
                         HttpClientConnection.this.state &= ~UPGRADE_REQUESTED;
                     }
                 }
 
+                if(connectionString != null) {
+                    if (HttpString.tryFromString(connectionString).equals(Headers.CLOSE)) {
+                        HttpClientConnection.this.state |= CLOSE_REQ;
+                    }
+                }
 
                 if (builder.getStatusCode() == 100) {
                     pendingResponse = new HttpResponseBuilder();
                     currentRequest.setContinueResponse(response);
                 } else {
                     prepareResponseChannel(response, currentRequest);
-                    String connection = response.getResponseHeaders().getFirst(Headers.CONNECTION);
-                    if(connection != null) {
-                        if(HttpString.tryFromString(connection).equals(Headers.CLOSE)) {
-                            HttpClientConnection.this.state |= CLOSE_REQ;
-                        }
-                    }
                     channel.getReadSetter().set(null);
                     channel.suspendReads();
                     pendingResponse = null;
@@ -477,7 +480,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
         String encoding = response.getResponseHeaders().getLast(TRANSFER_ENCODING);
         boolean chunked = encoding != null && Headers.CHUNKED.equals(new HttpString(encoding));
         String length = response.getResponseHeaders().getFirst(CONTENT_LENGTH);
-        if(exchange.getRequest().getMethod().equals(Methods.HEAD)) {
+        if (exchange.getRequest().getMethod().equals(Methods.HEAD)) {
             connection.getSourceChannel().setConduit(new FixedLengthStreamSourceConduit(connection.getSourceChannel().getConduit(), 0, responseFinishedListener));
         } else if (chunked) {
             connection.getSourceChannel().setConduit(new ChunkedStreamSourceConduit(connection.getSourceChannel().getConduit(), pushBackStreamSourceConduit, bufferPool, responseFinishedListener, exchange));
