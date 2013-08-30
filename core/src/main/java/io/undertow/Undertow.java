@@ -251,9 +251,10 @@ public class Undertow {
                 bufferSize = 1024;
                 buffersPerRegion = 10;
             } else {
-                //use 4k buffers
+                //use 16k buffers for best performance
+                //as 16k is generally the max amount of data that can be sent in a single write() call
                 directBuffers = true;
-                bufferSize = 1024 * 4;
+                bufferSize = 1024 * 16;
                 buffersPerRegion = 20;
             }
 
