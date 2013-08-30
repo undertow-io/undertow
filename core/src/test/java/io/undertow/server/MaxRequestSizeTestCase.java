@@ -27,6 +27,7 @@ import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.Headers;
 import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
@@ -42,6 +43,7 @@ import org.xnio.OptionMap;
  * @author Stuart Douglas
  */
 @AjpIgnore
+@ProxyIgnore
 @RunWith(DefaultServer.class)
 public class MaxRequestSizeTestCase {
 
