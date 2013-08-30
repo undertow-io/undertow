@@ -93,6 +93,11 @@ public final class ProxyHandler implements HttpHandler {
     }
 
 
+    public ProxyHandler(ProxyClient proxyClient) {
+        this.proxyClient = proxyClient;
+        this.maxRequestTime = -1;
+    }
+
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if (maxRequestTime > 0) {
             final XnioExecutor.Key key = exchange.getIoThread().executeAfter(new Runnable() {
@@ -310,10 +315,10 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap outboundResponseHeaders = exchange.getResponseHeaders();
             exchange.setResponseCode(response.getResponseCode());
             copyHeaders(outboundResponseHeaders, inboundResponseHeaders);
-            if(!exchange.isPersistent()) {
+            if (!exchange.isPersistent()) {
                 //just because the client side is non-persistent it does not mean we want to close the connection to
                 //the backend
-               outboundResponseHeaders.put(Headers.CONNECTION, "keep-alive");
+                outboundResponseHeaders.put(Headers.CONNECTION, "keep-alive");
             }
 
             if (exchange.isUpgrade()) {
