@@ -71,6 +71,7 @@ import static io.undertow.util.Headers.CONNECTION;
 import static io.undertow.util.Headers.CONTENT_LENGTH;
 import static io.undertow.util.Headers.TRANSFER_ENCODING;
 import static io.undertow.util.Headers.UPGRADE;
+import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreSet;
 import static org.xnio.IoUtils.safeClose;
@@ -176,7 +177,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
 
     @Override
     public boolean isOpen() {
-        return connection.isOpen();
+        return connection.isOpen() && allAreClear(state, CLOSE_REQ | CLOSED);
     }
 
     @Override
@@ -343,6 +344,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
 
         if (anyAreSet(state, CLOSE_REQ)) {
             currentRequest = null;
+            this.state |= CLOSED;
             IoUtils.safeClose(connection);
         } else if (anyAreSet(state, UPGRADE_REQUESTED)) {
             connection.getSourceChannel().suspendReads();
@@ -446,6 +448,12 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
                     currentRequest.setContinueResponse(response);
                 } else {
                     prepareResponseChannel(response, currentRequest);
+                    String connection = response.getResponseHeaders().getFirst(Headers.CONNECTION);
+                    if(connection != null) {
+                        if(HttpString.tryFromString(connection).equals(Headers.CLOSE)) {
+                            HttpClientConnection.this.state |= CLOSE_REQ;
+                        }
+                    }
                     channel.getReadSetter().set(null);
                     channel.suspendReads();
                     pendingResponse = null;
