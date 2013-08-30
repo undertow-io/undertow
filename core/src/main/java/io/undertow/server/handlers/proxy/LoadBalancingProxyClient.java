@@ -153,16 +153,23 @@ public class LoadBalancingProxyClient implements ProxyClient {
             return;
         }
         final Host host = selectHost(exchange);
-        exchange.addResponseWrapper(new StickeySessionExchangeCompletionListener(host));
-        host.connect(exchange, callback); //TODO: timeout
+        if(host == null) {
+            callback.failed(exchange);
+        } else {
+            exchange.addResponseWrapper(new StickeySessionExchangeCompletionListener(host));
+            host.connect(exchange, callback, timeout, timeUnit);
+        }
     }
 
     protected Host selectHost(HttpServerExchange exchange) {
+        Host[] hosts = this.hosts;
+        if(hosts.length == 0) {
+            return null;
+        }
         Host sticky = findStickyHost(exchange);
         if (sticky != null) {
             return sticky;
         }
-        Host[] hosts = this.hosts;
         int host = currentHost.incrementAndGet() % hosts.length;
 
         final int startHost = host; //if the all hosts have problems we come back to this one
@@ -186,8 +193,8 @@ public class LoadBalancingProxyClient implements ProxyClient {
         if (problem != null) {
             return problem;
         }
-        //they all have problems, just pick one
-        return hosts[startHost];
+        //no available hosts
+        return null;
     }
 
     protected Host findStickyHost(HttpServerExchange exchange) {

@@ -8,6 +8,7 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
+import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 
 import java.io.IOException;
@@ -74,19 +75,20 @@ class Host {
                 IoUtils.safeClose(con);
                 con = hostData.availbleConnections.poll();
             }
-            CallbackHolder callback = hostData.awaitingConnections.poll();
-            while (callback != null) {
-                callback.getCallback().failed(callback.getExchange());
-                callback = hostData.awaitingConnections.poll();
-            }
+            redistributeQueued(hostData);
             return;
         }
 
-
         if (connection.isOpen() && !connection.isUpgraded()) {
             CallbackHolder callback = hostData.awaitingConnections.poll();
+            while (callback != null && callback.isCancelled()) {
+                callback = hostData.awaitingConnections.poll();
+            }
             if (callback != null) {
-                connectionReady(connection, callback.callback, callback.exchange);
+                if (callback.getTimeoutKey() != null) {
+                    callback.getTimeoutKey().remove();
+                }
+                connectionReady(connection, callback.getCallback(), callback.getExchange());
             } else {
                 hostData.availbleConnections.add(connection);
             }
@@ -94,7 +96,10 @@ class Host {
             int connections = --hostData.connections;
             if (connections < loadBalancingProxyClient.getConnectionsPerThread()) {
                 CallbackHolder task = hostData.awaitingConnections.poll();
-                if(task != null) {
+                while (task != null && task.isCancelled()) {
+                    task = hostData.awaitingConnections.poll();
+                }
+                if (task != null) {
                     openConnection(task.exchange, task.callback);
                 }
             }
@@ -112,12 +117,32 @@ class Host {
             @Override
             public void failed(IOException e) {
                 problem = true;
+                redistributeQueued(getData());
                 scheduleFailedHostRetry(exchange);
                 callback.failed(exchange);
 
 
             }
         }, getUri(), exchange.getIoThread(), exchange.getConnection().getBufferPool(), OptionMap.EMPTY);
+    }
+
+    private void redistributeQueued(HostThreadData hostData) {
+        CallbackHolder callback = hostData.awaitingConnections.poll();
+        while (callback != null) {
+            if (callback.getTimeoutKey() != null) {
+                callback.getTimeoutKey().remove();
+            }
+            if (!callback.isCancelled()) {
+                long time = System.currentTimeMillis();
+                if (callback.getExpireTime() < time) {
+                    callback.getCallback().failed(callback.getExchange());
+                } else {
+                    loadBalancingProxyClient.getConnection(callback.getExchange(), callback.getCallback(), time - callback.getExpireTime(), TimeUnit.MILLISECONDS);
+                    callback.getCallback().failed(callback.getExchange());
+                }
+            }
+            callback = hostData.awaitingConnections.poll();
+        }
     }
 
     private void connectionReady(final ClientConnection result, final ProxyCallback<ClientConnection> callback, final HttpServerExchange exchange) {
@@ -199,15 +224,18 @@ class Host {
         return data;
     }
 
-    public void connect(HttpServerExchange exchange, ProxyCallback<ClientConnection> callback) {
+    public void connect(HttpServerExchange exchange, ProxyCallback<ClientConnection> callback, final long timeout, final TimeUnit timeUnit) {
         HostThreadData data = getData();
         ClientConnection conn = data.availbleConnections.poll();
-        if(conn != null) {
+        if (conn != null) {
             connectionReady(conn, callback, exchange);
-        } else if(data.connections < loadBalancingProxyClient.getConnectionsPerThread()){
+        } else if (data.connections < loadBalancingProxyClient.getConnectionsPerThread()) {
             openConnection(exchange, callback);
         } else {
-            data.awaitingConnections.add(new CallbackHolder(callback, exchange));
+            long time = System.currentTimeMillis();
+            CallbackHolder holder = new CallbackHolder(callback, exchange, time + timeUnit.toMillis(timeout));
+            holder.setTimeoutKey(exchange.getIoThread().executeAfter(holder, timeout, timeUnit));
+            data.awaitingConnections.add(holder);
         }
     }
 
@@ -220,13 +248,17 @@ class Host {
     }
 
 
-    private static final class CallbackHolder {
+    private static final class CallbackHolder implements Runnable {
         final ProxyCallback<ClientConnection> callback;
         final HttpServerExchange exchange;
+        final long expireTime;
+        XnioExecutor.Key timeoutKey;
+        boolean cancelled = false;
 
-        private CallbackHolder(ProxyCallback<ClientConnection> callback, HttpServerExchange exchange) {
+        private CallbackHolder(ProxyCallback<ClientConnection> callback, HttpServerExchange exchange, long expireTime) {
             this.callback = callback;
             this.exchange = exchange;
+            this.expireTime = expireTime;
         }
 
         private ProxyCallback<ClientConnection> getCallback() {
@@ -235,6 +267,27 @@ class Host {
 
         private HttpServerExchange getExchange() {
             return exchange;
+        }
+
+        private long getExpireTime() {
+            return expireTime;
+        }
+
+        private XnioExecutor.Key getTimeoutKey() {
+            return timeoutKey;
+        }
+
+        private boolean isCancelled() {
+            return cancelled;
+        }
+
+        private void setTimeoutKey(XnioExecutor.Key timeoutKey) {
+            this.timeoutKey = timeoutKey;
+        }
+
+        @Override
+        public void run() {
+            cancelled = true;
         }
     }
 
