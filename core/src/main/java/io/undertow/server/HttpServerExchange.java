@@ -662,6 +662,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void upgradeChannel(final ExchangeCompletionListener upgradeCompleteListener) {
         setResponseCode(101);
+        getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
         ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
         if (exchangeCompleteListeners.length == exchangeCompletionListenersCount) {

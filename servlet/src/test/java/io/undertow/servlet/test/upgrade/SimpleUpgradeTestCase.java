@@ -71,7 +71,7 @@ public class SimpleUpgradeTestCase {
             OutputStream out = socket.getOutputStream();
             out.write(("GET " + url + " HTTP/1.1\r\nConnection: upgrade\r\n\r\n").getBytes());
             out.flush();
-            Assert.assertEquals("HTTP/1.1 101 Switching Protocols\r\nContent-Length: 0\r\n\r\n", readBytes(in));
+            Assert.assertTrue(readBytes(in).startsWith("HTTP/1.1 101 Switching Protocols\r\n"));
 
             out.write("Echo Messages\r\n\r\n".getBytes());
             out.flush();
