@@ -69,7 +69,7 @@ public class ChunkedResponseTrailersTestCase {
                 try {
                     if (connection == null) {
                         connection = exchange.getConnection();
-                    } else if (!DefaultServer.isAjp() && connection != exchange.getConnection()) {
+                    } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
                         final OutputStream outputStream = exchange.getOutputStream();
                         outputStream.write("Connection not persistent".getBytes());
                         outputStream.close();

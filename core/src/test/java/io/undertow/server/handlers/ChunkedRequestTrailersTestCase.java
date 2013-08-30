@@ -56,7 +56,7 @@ public class ChunkedRequestTrailersTestCase {
                 try {
                     if (connection == null) {
                         connection = (HttpServerConnection) exchange.getConnection();
-                    } else if (!DefaultServer.isAjp() && connection != exchange.getConnection()) {
+                    } else if (!DefaultServer.isProxy() && connection != exchange.getConnection()) {
                         exchange.setResponseCode(500);
                         final OutputStream outputStream = exchange.getOutputStream();
                         outputStream.write("Connection not persistent".getBytes());

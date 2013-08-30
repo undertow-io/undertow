@@ -59,7 +59,7 @@ public class HeadTestCase {
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 if (connection == null) {
                     connection = exchange.getConnection();
-                } else if (!DefaultServer.isAjp() && connection != exchange.getConnection()) {
+                } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
                     Sender sender = exchange.getResponseSender();
                     sender.send("Connection not persistent");
                     return;
