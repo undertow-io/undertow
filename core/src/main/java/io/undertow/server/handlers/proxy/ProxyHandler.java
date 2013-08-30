@@ -182,8 +182,12 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public void failed(HttpServerExchange exchange) {
-            exchange.setResponseCode(500);
-            exchange.endExchange();
+            if (!exchange.isResponseStarted()) {
+                exchange.setResponseCode(500);
+                exchange.endExchange();
+            } else {
+                IoUtils.safeClose(exchange.getConnection());
+            }
         }
     }
 
@@ -277,9 +281,12 @@ public final class ProxyHandler implements HttpHandler {
 
                 @Override
                 public void failed(IOException e) {
-                    exchange.setResponseCode(500);
-                    exchange.setPersistent(false);
-                    exchange.endExchange();
+                    if (!exchange.isResponseStarted()) {
+                        exchange.setResponseCode(500);
+                        exchange.endExchange();
+                    } else {
+                        IoUtils.safeClose(exchange.getConnection());
+                    }
                 }
             });
 
@@ -334,8 +341,12 @@ public final class ProxyHandler implements HttpHandler {
 
         @Override
         public void failed(IOException e) {
-            exchange.setResponseCode(500);
-            exchange.endExchange();
+            if (!exchange.isResponseStarted()) {
+                exchange.setResponseCode(500);
+                exchange.endExchange();
+            } else {
+                IoUtils.safeClose(exchange.getConnection());
+            }
         }
     }
 
@@ -394,9 +405,10 @@ public final class ProxyHandler implements HttpHandler {
             UndertowLogger.REQUEST_IO_LOGGER.debug("Exception reading from target server", exception);
             if (!exchange.isResponseStarted()) {
                 exchange.setResponseCode(500);
+                exchange.endExchange();
+            } else {
+                IoUtils.safeClose(exchange.getConnection());
             }
-            exchange.setPersistent(false);
-            exchange.endExchange();
         }
     }
 }
