@@ -240,7 +240,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 }
 
             } finally {
-                servletContext.getDeployment().getApplicationListeners().requestDestroyed(request);
+                listeners.requestDestroyed(request);
             }
             //if it is not dispatched and is not a mock request
             if (!exchange.isDispatched() && !(exchange.getConnection() instanceof MockServerConnection)) {
