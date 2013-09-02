@@ -48,15 +48,16 @@ public class ServletInfo implements Cloneable {
     private final List<SecurityRoleRef> securityRoleRefs = new ArrayList<SecurityRoleRef>();
     private final List<HandlerWrapper> handlerChainWrappers = new ArrayList<HandlerWrapper>();
 
-    private volatile InstanceFactory<? extends Servlet> instanceFactory;
-    private volatile String jspFile;
-    private volatile Integer loadOnStartup;
-    private volatile boolean enabled;
-    private volatile boolean asyncSupported;
-    private volatile String runAs;
-    private volatile MultipartConfigElement multipartConfig;
-    private volatile ServletSecurityInfo servletSecurityInfo;
-    private volatile Executor executor;
+    private InstanceFactory<? extends Servlet> instanceFactory;
+    private String jspFile;
+    private Integer loadOnStartup;
+    private boolean enabled;
+    private boolean asyncSupported;
+    private String runAs;
+    private MultipartConfigElement multipartConfig;
+    private ServletSecurityInfo servletSecurityInfo;
+    private Executor executor;
+    private boolean requireWelcomeFileMapping;
 
 
     public ServletInfo(final String name, final Class<? extends Servlet> servletClass) {
@@ -109,7 +110,8 @@ public class ServletInfo implements Cloneable {
                 .setAsyncSupported(asyncSupported)
                 .setRunAs(runAs)
                 .setMultipartConfig(multipartConfig)
-                .setExecutor(executor);
+                .setExecutor(executor)
+                .setRequireWelcomeFileMapping(requireWelcomeFileMapping);
         info.mappings.addAll(mappings);
         info.initParams.putAll(initParams);
         info.securityRoleRefs.addAll(securityRoleRefs);
@@ -256,6 +258,15 @@ public class ServletInfo implements Cloneable {
 
     public ServletInfo setExecutor(final Executor executor) {
         this.executor = executor;
+        return this;
+    }
+
+    public boolean isRequireWelcomeFileMapping() {
+        return requireWelcomeFileMapping;
+    }
+
+    public ServletInfo setRequireWelcomeFileMapping(boolean requireWelcomeFileMapping) {
+        this.requireWelcomeFileMapping = requireWelcomeFileMapping;
         return this;
     }
 }

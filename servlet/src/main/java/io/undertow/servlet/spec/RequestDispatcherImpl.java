@@ -58,12 +58,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         this.path = path;
         this.servletContext = servletContext;
         int qPos = path.indexOf("?");
+
         if (qPos == -1) {
             this.pathMatch = servletContext.getDeployment().getServletPaths().getServletHandlerByPath(path);
         } else {
             this.pathMatch = servletContext.getDeployment().getServletPaths().getServletHandlerByPath(path.substring(0, qPos));
         }
-        this.chain = pathMatch;
+        this.chain = pathMatch.getServletChain();
         this.named = false;
     }
 

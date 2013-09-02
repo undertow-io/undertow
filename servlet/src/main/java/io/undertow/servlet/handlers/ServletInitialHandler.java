@@ -60,9 +60,6 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
 
-import static io.undertow.util.Methods.GET;
-import static io.undertow.util.Methods.HEAD;
-
 /**
  * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
  * and attaches them the to exchange.
@@ -94,28 +91,33 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
-        if (path.isEmpty() && (exchange.getRequestMethod().equals(GET) || exchange.getRequestMethod().equals(HEAD)) && info.isDefaultServletMapping()) {
+        if (info.getType() == ServletPathMatch.Type.REDIRECT) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
             exchange.setResponseCode(302);
-            exchange.getResponseHeaders().put(Headers.LOCATION, exchange.getResolvedPath() + "/" + (exchange.getQueryString().isEmpty() ? "" : ("?" + exchange.getQueryString())));
+            exchange.getResponseHeaders().put(Headers.LOCATION, exchange.getRequestURI() + "/" + (exchange.getQueryString().isEmpty() ? "" : ("?" + exchange.getQueryString())));
             return;
+        } else if (info.getType() == ServletPathMatch.Type.REWRITE) {
+            //this can only happen if the path ends with a /
+            //otherwise there would be a rewrite instead
+            exchange.setRelativePath(exchange.getRelativePath() + info.getRewriteLocation());
+            exchange.setRequestURI(exchange.getRequestURI() + info.getRewriteLocation());
+            exchange.setRequestPath(exchange.getRequestPath() + info.getRewriteLocation());
         }
-
 
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
         final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), request, response, info);
         //set the max request size if applicable
-        if (info.getManagedServlet().getMaxRequestSize() > 0) {
-            exchange.setMaxEntitySize(info.getManagedServlet().getMaxRequestSize());
+        if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0) {
+            exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxRequestSize());
         }
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
 
         exchange.startBlocking(new ServletBlockingHttpExchange(exchange));
         servletRequestContext.setServletPathMatch(info);
 
-        Executor executor = info.getExecutor();
+        Executor executor = info.getServletChain().getExecutor();
         if (executor == null) {
             executor = servletContext.getDeployment().getExecutor();
         }
@@ -125,18 +127,18 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             exchange.dispatch(executor, new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                    dispatchRequest(exchange, servletRequestContext, info, DispatcherType.REQUEST);
+                    dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
                 }
             });
         } else {
-            dispatchRequest(exchange, servletRequestContext, info, DispatcherType.REQUEST);
+            dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
         }
     }
 
     public void dispatchToPath(final HttpServerExchange exchange, final ServletPathMatch pathInfo, final DispatcherType dispatcherType) throws Exception {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         servletRequestContext.setServletPathMatch(pathInfo);
-        dispatchRequest(exchange, servletRequestContext, pathInfo, dispatcherType);
+        dispatchRequest(exchange, servletRequestContext, pathInfo.getServletChain(), dispatcherType);
     }
 
     @Override
@@ -169,8 +171,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         servletRequestContext.setServletRequest(request);
         servletRequestContext.setServletResponse(response);
         //set the max request size if applicable
-        if (info.getManagedServlet().getMaxRequestSize() > 0) {
-            exchange.setMaxEntitySize(info.getManagedServlet().getMaxRequestSize());
+        if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0) {
+            exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxRequestSize());
         }
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
 
@@ -178,7 +180,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         servletRequestContext.setServletPathMatch(info);
 
         try {
-            dispatchRequest(exchange, servletRequestContext, info, DispatcherType.REQUEST);
+            dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
         } catch (Exception e) {
             if (e instanceof RuntimeException) {
                 throw (RuntimeException) e;

@@ -18,10 +18,19 @@
 
 package io.undertow.servlet.handlers;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.Date;
-import java.util.List;
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.resource.Resource;
+import io.undertow.server.handlers.resource.ResourceManager;
+import io.undertow.servlet.api.DefaultServletConfig;
+import io.undertow.servlet.api.Deployment;
+import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.DateUtils;
+import io.undertow.util.ETag;
+import io.undertow.util.ETagUtils;
+import io.undertow.util.Headers;
+import io.undertow.util.Methods;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.RequestDispatcher;
@@ -30,24 +39,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import io.undertow.io.IoCallback;
-import io.undertow.io.Sender;
-import io.undertow.server.HttpHandlers;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.resource.Resource;
-import io.undertow.server.handlers.resource.ResourceManager;
-import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.api.DefaultServletConfig;
-import io.undertow.servlet.api.Deployment;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
-import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.util.DateUtils;
-import io.undertow.util.ETag;
-import io.undertow.util.ETagUtils;
-import io.undertow.util.Headers;
-import io.undertow.util.Methods;
-import io.undertow.util.SameThreadExecutor;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Date;
 
 /**
  * Default servlet responsible for serving up resources. This is both a handler and a servlet. If no filters
@@ -73,7 +67,6 @@ public class DefaultServlet extends HttpServlet {
     private DefaultServletConfig config;
     private ResourceManager resourceManager;
 
-    private List<String> welcomePages;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -83,7 +76,6 @@ public class DefaultServlet extends HttpServlet {
         DefaultServletConfig defaultServletConfig = deployment.getDeploymentInfo().getDefaultServletConfig();
         this.config = defaultServletConfig != null ? defaultServletConfig : new DefaultServletConfig();
         this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
-        this.welcomePages = deployment.getDeploymentInfo().getWelcomePages();
     }
 
     @Override
@@ -103,7 +95,8 @@ public class DefaultServlet extends HttpServlet {
             }
             return;
         } else if (resource.isDirectory()) {
-            handleWelcomePage(req, resp, path);
+            //todo: directory listing
+            resp.sendError(404);
         } else {
             serveFileBlocking(req, resp, resource);
         }
@@ -181,93 +174,6 @@ public class DefaultServlet extends HttpServlet {
                 }
             });
         }
-    }
-
-    private void handleWelcomePage(final HttpServletRequest req, final HttpServletResponse resp, final String oldPath) throws IOException, ServletException {
-        String welcomePage = findWelcomeFile(oldPath);
-
-        if (welcomePage != null) {
-            if (!req.getRequestURI().endsWith("/")) {
-                redirectWithTrailingSlash(req, resp);
-            } else {
-                redirect(req, welcomePage);
-            }
-        } else {
-            final String pathWithTraingSlash = oldPath.endsWith("/") ? oldPath : oldPath + "/";
-            String path = findWelcomeServlet(pathWithTraingSlash);
-            if (path != null) {
-                if (!req.getRequestURI().endsWith("/")) {
-                    redirectWithTrailingSlash(req, resp);
-                } else {
-                    redirect(req, path);
-                }
-            } else {
-                resp.sendError(404);
-            }
-        }
-    }
-
-    private void redirectWithTrailingSlash(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
-        if (req.getQueryString() != null) {
-            resp.sendRedirect(req.getRequestURI() + "/?" + req.getQueryString());
-        } else {
-            resp.sendRedirect(req.getRequestURI() + "/");
-        }
-    }
-
-    private void redirect(final HttpServletRequest req, final String pathAddition) {
-        //we need to redirect in a manner that is indistinguishable from a a direct request
-        //we can't just use a forward, as these do not have security applied, and
-        //also the filters that have been applied to the request would be different.
-        //instead we get the exchange and do a dispatch, and then redirect. This basically acts like
-        //two seperate servlet requests
-        final HttpServletRequestImpl requestImpl = ServletRequestContext.requireCurrent().getOriginalRequest();
-        final HttpServerExchange exchange = requestImpl.getExchange();
-        if (!exchange.isRequestChannelAvailable()) {
-            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
-        }
-        exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
-            @Override
-            public void run() {
-                String path = pathAddition;
-                if (!exchange.getRelativePath().endsWith("/")) {
-                    path = "/" + path;
-                }
-
-                exchange.getResponseHeaders().clear();
-                exchange.setResponseCode(200);
-
-                exchange.setRelativePath(exchange.getRelativePath() + path);
-                exchange.setRequestPath(exchange.getRequestPath() + path);
-                exchange.setRequestURI(exchange.getRequestURI() + path);
-                HttpHandlers.executeRootHandler(requestImpl.getServletContext().getDeployment().getHandler(), exchange, false);
-            }
-        });
-
-    }
-
-    private String findWelcomeFile(final String path) {
-        String realPath = path.endsWith("/") ? path : path + "/";
-        for (String i : welcomePages) {
-            try {
-                Resource resource = resourceManager.getResource(realPath + i);
-                if (resource != null) {
-                    return i;
-                }
-            } catch (IOException e) {
-            }
-        }
-        return null;
-    }
-
-    private String findWelcomeServlet(final String path) {
-        for (String i : welcomePages) {
-            final ServletPathMatch handler = deployment.getServletPaths().getServletHandlerByPath(path + i);
-            if (handler != null && !handler.getManagedServlet().getServletInfo().getServletClass().equals(DefaultServlet.class)) {
-                return i;
-            }
-        }
-        return null;
     }
 
     private String getPath(final HttpServletRequest request) {

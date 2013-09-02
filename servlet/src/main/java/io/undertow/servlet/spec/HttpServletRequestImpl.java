@@ -459,7 +459,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             final List<Part> parts = new ArrayList<Part>();
             String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             if (mimeType != null && mimeType.startsWith(MultiPartParserDefinition.MULTIPART_FORM_DATA)) {
-                final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getManagedServlet();
+                final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getServletChain().getManagedServlet();
                 final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
                 if(parser != null) {
                     final FormData value = parser.parseBlocking();
@@ -512,7 +512,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         try {
             characterEncoding = Charset.forName(env);
 
-            final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getManagedServlet();
+            final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getServletChain().getManagedServlet();
             final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
             if (parser != null) {
                 parser.setCharacterEncoding(env);
@@ -683,7 +683,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 return null;
             }
             readStarted = true;
-            final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getManagedServlet();
+            final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getServletChain().getManagedServlet();
             final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
             if (parser == null) {
                 return null;

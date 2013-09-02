@@ -63,12 +63,17 @@ public class WelcomeFileTestCase {
     public void testWelcomeFileRedirect() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertTrue(response.contains("Redirected home page"));
 
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
+            result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.contains("Redirected home page"));
         } finally {
             client.getConnectionManager().shutdown();
         }

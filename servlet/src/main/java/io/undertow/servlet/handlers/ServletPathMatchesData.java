@@ -42,7 +42,7 @@ class ServletPathMatchesData {
         this.nameMatches = nameMatches;
         Map<String, ServletPathMatch> newExactPathMatches = new HashMap<String, ServletPathMatch>();
         for (Map.Entry<String, ServletChain> entry : exactPathMatches.entrySet()) {
-            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey()));
+            newExactPathMatches.put(entry.getKey(), new ServletPathMatch(entry.getValue(), entry.getKey(), false));
         }
         this.exactPathMatches = newExactPathMatches;
 
@@ -87,18 +87,18 @@ class ServletPathMatchesData {
 
     private ServletPathMatch handleMatch(final String path, final PathMatch match, final int extensionPos) {
         if (match.extensionMatches.isEmpty()) {
-            return new ServletPathMatch(match.defaultHandler, path);
+            return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
         } else {
             if (extensionPos == -1) {
-                return new ServletPathMatch(match.defaultHandler, path);
+                return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
             } else {
                 final String ext;
                 ext = path.substring(extensionPos + 1, path.length());
                 ServletChain handler = match.extensionMatches.get(ext);
                 if (handler != null) {
-                    return new ServletPathMatch(handler, path);
+                    return new ServletPathMatch(handler, path, match.requireWelcomeFileMatch);
                 } else {
-                    return new ServletPathMatch(match.defaultHandler, path);
+                    return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
                 }
             }
         }
@@ -120,12 +120,13 @@ class ServletPathMatchesData {
             exactPathMatches.put(exactMatch, match);
         }
 
-        public void addPrefixMatch(final String prefix, final ServletChain match) {
+        public void addPrefixMatch(final String prefix, final ServletChain match, final boolean requireWelcomeFileMatch) {
             PathMatch m = prefixMatches.get(prefix);
             if (m == null) {
                 prefixMatches.put(prefix, m = new PathMatch(match));
             }
             m.defaultHandler = match;
+            m.requireWelcomeFileMatch = requireWelcomeFileMatch;
         }
 
         public void addExtensionMatch(final String prefix, final String extension, final ServletChain match) {
@@ -151,6 +152,7 @@ class ServletPathMatchesData {
 
         private final Map<String, ServletChain> extensionMatches = new HashMap<String, ServletChain>();
         private volatile ServletChain defaultHandler;
+        private volatile boolean requireWelcomeFileMatch;
 
         public PathMatch(final ServletChain defaultHandler) {
             this.defaultHandler = defaultHandler;
