@@ -624,9 +624,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             final FormData parsedFormData = parseFormData();
             if (parsedFormData != null) {
                 Deque<FormData.FormValue> res = parsedFormData.get(name);
-                if (res == null) {
-                    return null;
-                } else {
+                if (res != null) {
                     for (FormData.FormValue value : res) {
                         ret.add(value.getValue());
                     }
