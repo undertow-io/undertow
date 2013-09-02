@@ -177,6 +177,10 @@ public final class ProxyHandler implements HttpHandler {
         }
     }
 
+    public ProxyClient getProxyClient() {
+        return proxyClient;
+    }
+
     private final class ProxyClientHandler implements ProxyCallback<ClientConnection> {
 
         @Override
