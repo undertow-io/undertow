@@ -60,9 +60,12 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.cert.CertificateEncodingException;
 import javax.security.cert.X509Certificate;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URLEncoder;
 import java.nio.channels.Channel;
+import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -73,10 +76,11 @@ import java.util.concurrent.TimeUnit;
  */
 public final class ProxyHandler implements HttpHandler {
 
+    public static final String UTF_8 = "UTF-8";
     private final ProxyClient proxyClient;
     private final int maxRequestTime;
 
-    private static final AttachmentKey<ClientConnection> CONNECTION = AttachmentKey.create(ClientConnection.class);
+    private static final AttachmentKey<ProxyConnection> CONNECTION = AttachmentKey.create(ProxyConnection.class);
     private static final AttachmentKey<HttpServerExchange> EXCHANGE = AttachmentKey.create(HttpServerExchange.class);
     private static final AttachmentKey<XnioExecutor.Key> TIMEOUT_KEY = AttachmentKey.create(XnioExecutor.Key.class);
 
@@ -105,7 +109,7 @@ public final class ProxyHandler implements HttpHandler {
                 public void run() {
                     UndertowLogger.REQUEST_LOGGER.proxyRequestTimedOut(exchange.getRequestURI());
                     IoUtils.safeClose(exchange.getConnection());
-                    ClientConnection clientConnection = exchange.getAttachment(CONNECTION);
+                    ClientConnection clientConnection = exchange.getAttachment(CONNECTION).getConnection();
                     IoUtils.safeClose(clientConnection);
                 }
             }, maxRequestTime, TimeUnit.MILLISECONDS);
@@ -181,10 +185,10 @@ public final class ProxyHandler implements HttpHandler {
         return proxyClient;
     }
 
-    private final class ProxyClientHandler implements ProxyCallback<ClientConnection> {
+    private final class ProxyClientHandler implements ProxyCallback<ProxyConnection> {
 
         @Override
-        public void completed(HttpServerExchange exchange, ClientConnection result) {
+        public void completed(HttpServerExchange exchange, ProxyConnection result) {
             exchange.putAttachment(CONNECTION, result);
             exchange.dispatch(SameThreadExecutor.INSTANCE, new ProxyAction(result, exchange, requestHeaders));
         }
@@ -201,11 +205,11 @@ public final class ProxyHandler implements HttpHandler {
     }
 
     private static class ProxyAction implements Runnable {
-        private final ClientConnection clientConnection;
+        private final ProxyConnection clientConnection;
         private final HttpServerExchange exchange;
         private final Map<HttpString, ExchangeAttribute> requestHeaders;
 
-        public ProxyAction(final ClientConnection clientConnection, final HttpServerExchange exchange, Map<HttpString, ExchangeAttribute> requestHeaders) {
+        public ProxyAction(final ProxyConnection clientConnection, final HttpServerExchange exchange, Map<HttpString, ExchangeAttribute> requestHeaders) {
             this.clientConnection = clientConnection;
             this.exchange = exchange;
             this.requestHeaders = requestHeaders;
@@ -214,12 +218,49 @@ public final class ProxyHandler implements HttpHandler {
         @Override
         public void run() {
             final ClientRequest request = new ClientRequest();
-            String requestURI = exchange.getRequestURI();
-            String qs = exchange.getQueryString();
-            if (qs != null && !qs.isEmpty()) {
-                requestURI += "?" + qs;
+
+            StringBuilder requestURI = new StringBuilder();
+            try {
+                if (exchange.getRelativePath().isEmpty()) {
+                    requestURI.append(encodeUrlPart(clientConnection.getTargetPath()));
+                } else {
+                    if (clientConnection.getTargetPath().endsWith("/")) {
+                        requestURI.append(clientConnection.getTargetPath().substring(0, clientConnection.getTargetPath().length() - 1));
+                        requestURI.append(encodeUrlPart(exchange.getRelativePath()));
+                    } else {
+                        requestURI = requestURI.append(clientConnection.getTargetPath());
+                        requestURI.append(encodeUrlPart(exchange.getRelativePath()));
+                    }
+                }
+                boolean first = true;
+                if (!exchange.getPathParameters().isEmpty()) {
+                    requestURI.append(';');
+                    for (Map.Entry<String, Deque<String>> entry : exchange.getPathParameters().entrySet()) {
+                        if (first) {
+                            first = false;
+                        } else {
+                            requestURI.append('&');
+                        }
+                        for (String val : entry.getValue()) {
+                            requestURI.append(URLEncoder.encode(entry.getKey(), UTF_8));
+                            requestURI.append('=');
+                            requestURI.append(URLEncoder.encode(val, UTF_8));
+                        }
+                    }
+                }
+
+                String qs = exchange.getQueryString();
+                if (qs != null && !qs.isEmpty()) {
+                    requestURI.append('?');
+                    requestURI.append(qs);
+                }
+            } catch (UnsupportedEncodingException e) {
+                //impossible
+                exchange.setResponseCode(500);
+                exchange.endExchange();
+                return;
             }
-            request.setPath(requestURI)
+            request.setPath(requestURI.toString())
                     .setMethod(exchange.getRequestMethod());
             final HeaderMap inboundRequestHeaders = exchange.getRequestHeaders();
             final HeaderMap outboundRequestHeaders = request.getRequestHeaders();
@@ -258,7 +299,7 @@ public final class ProxyHandler implements HttpHandler {
             }
 
 
-            clientConnection.sendRequest(request, new ClientCallback<ClientExchange>() {
+            clientConnection.getConnection().sendRequest(request, new ClientCallback<ClientExchange>() {
                 @Override
                 public void completed(ClientExchange result) {
 
@@ -276,7 +317,7 @@ public final class ProxyHandler implements HttpHandler {
 
                                     @Override
                                     public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
-                                        IoUtils.safeClose(clientConnection);
+                                        IoUtils.safeClose(clientConnection.getConnection());
                                     }
                                 });
                             }
@@ -284,7 +325,7 @@ public final class ProxyHandler implements HttpHandler {
                     }
 
                     result.setResponseListener(new ResponseCallback(exchange));
-                    IoExceptionHandler handler = new IoExceptionHandler(exchange, clientConnection);
+                    IoExceptionHandler handler = new IoExceptionHandler(exchange, clientConnection.getConnection());
                     ChannelListeners.initiateTransfer(Long.MAX_VALUE, exchange.getRequestChannel(), result.getRequestChannel(), ChannelListeners.closingChannelListener(), new HTTPTrailerChannelListener(exchange, result), handler, handler, exchange.getConnection().getBufferPool());
                 }
 
@@ -424,5 +465,57 @@ public final class ProxyHandler implements HttpHandler {
                 IoUtils.safeClose(exchange.getConnection());
             }
         }
+    }
+
+    /**
+     * perform URL encoding
+     * <p/>
+     * TODO: this whole thing is kinda crapy.
+     *
+     * @return
+     */
+    private static String encodeUrlPart(final String part) throws UnsupportedEncodingException {
+        //we need to go through and check part by part that a section does not need encoding
+
+        int pos = 0;
+        for (int i = 0; i < part.length(); ++i) {
+            char c = part.charAt(i);
+            if (c == '/') {
+                if (pos != i) {
+                    String original = part.substring(pos, i - 1);
+                    String encoded = URLEncoder.encode(original, UTF_8);
+                    if (!encoded.equals(original)) {
+                        return realEncode(part, pos);
+                    }
+                }
+                pos = i + 1;
+            } else if (c == ' ') {
+                return realEncode(part, pos);
+            }
+        }
+        return part;
+    }
+
+    private static String realEncode(String part, int startPos) throws UnsupportedEncodingException {
+        StringBuilder sb = new StringBuilder();
+        sb.append(part.substring(0, startPos));
+        int pos = startPos;
+        for (int i = startPos; i < part.length(); ++i) {
+            char c = part.charAt(i);
+            if (c == '/') {
+                if (pos != i) {
+                    String original = part.substring(pos, i - 1);
+                    String encoded = URLEncoder.encode(original, UTF_8);
+                    sb.append(encoded);
+                    sb.append('/');
+                    pos = i + 1;
+                }
+            }
+        }
+
+        String original = part.substring(pos);
+        String encoded = URLEncoder.encode(original, UTF_8);
+        sb.append(encoded);
+        return sb.toString();
     }
 }

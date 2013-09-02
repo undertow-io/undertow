@@ -106,7 +106,7 @@ class Host {
         }
     }
 
-    private void openConnection(final HttpServerExchange exchange, final ProxyCallback<ClientConnection> callback, final HostThreadData data) {
+    private void openConnection(final HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback, final HostThreadData data) {
         data.connections++;
         client.connect(new ClientCallback<ClientConnection>() {
             @Override
@@ -145,7 +145,7 @@ class Host {
         }
     }
 
-    private void connectionReady(final ClientConnection result, final ProxyCallback<ClientConnection> callback, final HttpServerExchange exchange) {
+    private void connectionReady(final ClientConnection result, final ProxyCallback<ProxyConnection> callback, final HttpServerExchange exchange) {
         exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
             @Override
             public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
@@ -153,7 +153,8 @@ class Host {
                 nextListener.proceed();
             }
         });
-        callback.completed(exchange, result);
+
+        callback.completed(exchange, new ProxyConnection(result, uri.getPath() == null ? "/" : uri.getPath()));
     }
 
     AvailabilityType availible() {
@@ -224,7 +225,7 @@ class Host {
         return data;
     }
 
-    public void connect(HttpServerExchange exchange, ProxyCallback<ClientConnection> callback, final long timeout, final TimeUnit timeUnit) {
+    public void connect(HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, final long timeout, final TimeUnit timeUnit) {
         HostThreadData data = getData();
         ClientConnection conn = data.availbleConnections.poll();
         if (conn != null) {
@@ -254,19 +255,19 @@ class Host {
 
 
     private static final class CallbackHolder implements Runnable {
-        final ProxyCallback<ClientConnection> callback;
+        final ProxyCallback<ProxyConnection> callback;
         final HttpServerExchange exchange;
         final long expireTime;
         XnioExecutor.Key timeoutKey;
         boolean cancelled = false;
 
-        private CallbackHolder(ProxyCallback<ClientConnection> callback, HttpServerExchange exchange, long expireTime) {
+        private CallbackHolder(ProxyCallback<ProxyConnection> callback, HttpServerExchange exchange, long expireTime) {
             this.callback = callback;
             this.exchange = exchange;
             this.expireTime = expireTime;
         }
 
-        private ProxyCallback<ClientConnection> getCallback() {
+        private ProxyCallback<ProxyConnection> getCallback() {
             return callback;
         }
 

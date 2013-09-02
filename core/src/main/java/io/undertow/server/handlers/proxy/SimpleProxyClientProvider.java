@@ -33,12 +33,13 @@ public class SimpleProxyClientProvider implements ProxyClient {
     }
 
     @Override
-    public void getConnection(HttpServerExchange exchange, ProxyCallback<ClientConnection> callback, long timeout, TimeUnit timeUnit) {
+    public void getConnection(HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
         ClientConnection existing = exchange.getConnection().getAttachment(clientAttachmentKey);
         if (existing != null) {
             if (existing.isOpen()) {
                 //this connection already has a client, re-use it
-                callback.completed(exchange, existing);
+
+                callback.completed(exchange, new ProxyConnection(existing, uri.getPath() == null ? "/" : uri.getPath()));
                 return;
             } else {
                 exchange.getConnection().removeAttachment(clientAttachmentKey);
@@ -49,10 +50,10 @@ public class SimpleProxyClientProvider implements ProxyClient {
     }
 
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {
-        private final ProxyCallback<ClientConnection> callback;
+        private final ProxyCallback<ProxyConnection> callback;
         private final HttpServerExchange exchange;
 
-        private ConnectNotifier(ProxyCallback<ClientConnection> callback, HttpServerExchange exchange) {
+        private ConnectNotifier(ProxyCallback<ProxyConnection> callback, HttpServerExchange exchange) {
             this.callback = callback;
             this.exchange = exchange;
         }
@@ -74,7 +75,7 @@ public class SimpleProxyClientProvider implements ProxyClient {
                     serverConnection.removeAttachment(clientAttachmentKey);
                 }
             });
-            callback.completed(exchange, connection);
+            callback.completed(exchange, new ProxyConnection(connection, uri.getPath() == null ? "/" : uri.getPath()));
         }
 
         @Override

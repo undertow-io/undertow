@@ -1,6 +1,5 @@
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
@@ -143,7 +142,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
     }
 
     @Override
-    public void getConnection(HttpServerExchange exchange, ProxyCallback<ClientConnection> callback, long timeout, TimeUnit timeUnit) {
+    public void getConnection(HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
         final Host host = selectHost(exchange);
         if(host == null) {
             callback.failed(exchange);

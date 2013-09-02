@@ -1,6 +1,5 @@
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.client.ClientConnection;
 import io.undertow.server.HttpServerExchange;
 
 import java.util.concurrent.TimeUnit;
@@ -17,6 +16,6 @@ import java.util.concurrent.TimeUnit;
  */
 public interface ProxyClient {
 
-    void getConnection(final HttpServerExchange exchange, final ProxyCallback<ClientConnection> callback, long timeout, TimeUnit timeUnit);
+    void getConnection(final HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit);
 
 }
