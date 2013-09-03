@@ -60,7 +60,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     private final Queue<SendChannel> senders = new ArrayDeque<SendChannel>();
     private final StreamConnection channel;
-    private final StreamConnection connectedChannel;
     private final IdleTimeoutConduit idleTimeoutConduit;
 
     private final WebSocketVersion version;
@@ -85,7 +84,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     private final boolean extensionsSupported;
 
     // TODO: Maybe init lazy to safe memory when not used by the user ?
-    private final ConcurrentMap<String, Object> attrs = new ConcurrentHashMap<String, Object>();
+    private final ConcurrentMap<String, Object> attributes = new ConcurrentHashMap<String, Object>();
 
     /**
      * Create a new {@link WebSocketChannel}
@@ -110,7 +109,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         this.bufferPool = bufferPool;
         this.extensionsSupported = extensionsSupported;
         this.subProtocols = Collections.unmodifiableSet(subProtocols);
-        connectedChannel = connectedStreamChannel;
 
         closeSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
         receiveSetter = new ChannelListener.SimpleSetter<WebSocketChannel>();
@@ -128,14 +126,14 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     public final boolean setAttribute(String key, Object value) {
         if (value == null) {
-            return attrs.remove(key) != null;
+            return attributes.remove(key) != null;
         } else {
-            return attrs.putIfAbsent(key, value) == null;
+            return attributes.putIfAbsent(key, value) == null;
         }
     }
 
     public final Object getAttribute(String key) {
-        return attrs.get(key);
+        return attributes.get(key);
     }
 
     /**
@@ -177,12 +175,12 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     @Override
     public SocketAddress getLocalAddress() {
-        return connectedChannel.getLocalAddress();
+        return channel.getLocalAddress();
     }
 
     @Override
     public <A extends SocketAddress> A getLocalAddress(Class<A> type) {
-        return connectedChannel.getLocalAddress(type);
+        return channel.getLocalAddress(type);
     }
 
     @Override
@@ -225,12 +223,12 @@ public abstract class WebSocketChannel implements ConnectedChannel {
 
     @Override
     public SocketAddress getPeerAddress() {
-        return connectedChannel.getPeerAddress();
+        return channel.getPeerAddress();
     }
 
     @Override
     public <A extends SocketAddress> A getPeerAddress(Class<A> type) {
-        return connectedChannel.getPeerAddress(type);
+        return channel.getPeerAddress(type);
     }
 
     /**
