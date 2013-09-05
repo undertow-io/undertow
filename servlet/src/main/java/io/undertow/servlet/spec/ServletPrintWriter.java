@@ -136,7 +136,7 @@ public class ServletPrintWriter {
     }
 
     public void print(final String s) {
-        final CharBuffer cb = CharBuffer.wrap(s);
+        final CharBuffer cb = CharBuffer.wrap(s == null ? "null" : s);
         write(cb);
     }
 
