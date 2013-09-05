@@ -331,4 +331,27 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
             throw new IllegalAccessError(e.getMessage());
         }
     }
+
+    static int hashCodeOf(String headerName) {
+        int hc = 17;
+
+        for (int i = 0; i < headerName.length(); ++i) {
+            hc = (hc << 4) + hc + higher((byte) headerName.charAt(i));
+        }
+        return hc;
+    }
+
+    public boolean equalToString(String headerName) {
+        if(headerName.length() != bytes.length) {
+            return false;
+        }
+
+        final int len = bytes.length;
+        for (int i = 0; i < len; i++) {
+            if (higher(bytes[i]) != higher((byte)string.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

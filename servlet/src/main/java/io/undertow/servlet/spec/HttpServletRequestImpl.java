@@ -158,7 +158,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public long getDateHeader(final String name) {
-        String header = exchange.getRequestHeaders().getFirst(new HttpString(name));
+        String header = exchange.getRequestHeaders().getFirst(name);
         if (header == null) {
             return -1;
         }
@@ -171,21 +171,19 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getHeader(final String name) {
-        return getHeader(new HttpString(name));
+        HeaderMap headers = exchange.getRequestHeaders();
+        return headers.getFirst(name);
     }
 
     public String getHeader(final HttpString name) {
         HeaderMap headers = exchange.getRequestHeaders();
-        if (headers == null) {
-            return null;
-        }
         return headers.getFirst(name);
     }
 
 
     @Override
     public Enumeration<String> getHeaders(final String name) {
-        List<String> headers = exchange.getRequestHeaders().get(new HttpString(name));
+        List<String> headers = exchange.getRequestHeaders().get(name);
         if (headers == null) {
             return EmptyEnumeration.instance();
         }

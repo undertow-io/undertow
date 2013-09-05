@@ -88,7 +88,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public boolean containsHeader(final String name) {
-        return exchange.getResponseHeaders().contains(new HttpString(name));
+        return exchange.getResponseHeaders().contains(name);
     }
 
     @Override
@@ -246,12 +246,12 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String getHeader(final String name) {
-        return exchange.getResponseHeaders().getFirst(new HttpString(name));
+        return exchange.getResponseHeaders().getFirst(name);
     }
 
     @Override
     public Collection<String> getHeaders(final String name) {
-        return new ArrayList<String>(exchange.getResponseHeaders().get(new HttpString(name)));
+        return new ArrayList<String>(exchange.getResponseHeaders().get(name));
     }
 
     @Override

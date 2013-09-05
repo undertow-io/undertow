@@ -31,7 +31,6 @@ import io.undertow.client.ClientResponse;
 import io.undertow.client.UndertowClientMessages;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.util.AbstractAttachable;
-import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -214,7 +213,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
         String connectionString = request.getRequestHeaders().getFirst(CONNECTION);
         if (connectionString != null) {
-            if (new HttpString(connectionString).equals(CLOSE)) {
+            if (CLOSE.equalToString(connectionString)) {
                 state |= CLOSE_REQ;
             }
         } else if (request.getProtocol() != Protocols.HTTP_1_1) {
@@ -429,7 +428,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                 //check if an updated worked
                 if (anyAreSet(AjpClientConnection.this.state, UPGRADE_REQUESTED)) {
                     String connectionString = response.getResponseHeaders().getFirst(CONNECTION);
-                    if (!new HttpString(connectionString).equals(UPGRADE)) {
+                    if (!UPGRADE.equalToString(connectionString)) {
                         //just unset the upgrade requested flag
                         AjpClientConnection.this.state &= ~UPGRADE_REQUESTED;
                     }

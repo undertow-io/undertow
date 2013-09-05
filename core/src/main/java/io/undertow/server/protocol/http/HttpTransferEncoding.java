@@ -150,7 +150,7 @@ public class HttpTransferEncoding {
 
     private static boolean persistentConnection(HttpServerExchange exchange, String connectionHeader) {
         if (exchange.isHttp11()) {
-            return !(connectionHeader != null && new HttpString(connectionHeader).equals(Headers.CLOSE));
+            return !(connectionHeader != null && Headers.CLOSE.equalToString(connectionHeader));
         } else if (exchange.isHttp10()) {
             if (connectionHeader != null) {
                 if (Headers.KEEP_ALIVE.equals(new HttpString(connectionHeader))) {

@@ -67,6 +67,34 @@ public final class HeaderMap implements Iterable<HeaderValues> {
         }
     }
 
+
+    private HeaderValues getEntry(final String headerName) {
+        if (headerName == null) {
+            return null;
+        }
+        final int hc = HttpString.hashCodeOf(headerName);
+        final int idx = hc & (table.length - 1);
+        final Object o = table[idx];
+        if (o == null) {
+            return null;
+        }
+        HeaderValues headerValues;
+        if (o instanceof HeaderValues) {
+            headerValues = (HeaderValues) o;
+            if (! headerValues.key.equalToString(headerName)) {
+                return null;
+            }
+            return headerValues;
+        } else {
+            final HeaderValues[] row = (HeaderValues[]) o;
+            for (int i = 0; i < row.length; i++) {
+                headerValues = row[i];
+                if (headerValues != null && headerValues.key.equalToString(headerName)) { return headerValues; }
+            }
+            return null;
+        }
+    }
+
     private HeaderValues removeEntry(final HttpString headerName) {
         if (headerName == null) {
             return null;
@@ -92,6 +120,41 @@ public final class HeaderMap implements Iterable<HeaderValues> {
             for (int i = 0; i < row.length; i++) {
                 headerValues = row[i];
                 if (headerValues != null && headerName.equals(headerValues.key)) {
+                    row[i] = null;
+                    size --;
+                    return headerValues;
+                }
+            }
+            return null;
+        }
+    }
+
+
+    private HeaderValues removeEntry(final String headerName) {
+        if (headerName == null) {
+            return null;
+        }
+        final int hc = HttpString.hashCodeOf(headerName);
+        final Object[] table = this.table;
+        final int idx = hc & (table.length - 1);
+        final Object o = table[idx];
+        if (o == null) {
+            return null;
+        }
+        HeaderValues headerValues;
+        if (o instanceof HeaderValues) {
+            headerValues = (HeaderValues) o;
+            if (! headerValues.key.equalToString(headerName)) {
+                return null;
+            }
+            table[idx] = null;
+            size --;
+            return headerValues;
+        } else {
+            final HeaderValues[] row = (HeaderValues[]) o;
+            for (int i = 0; i < row.length; i++) {
+                headerValues = row[i];
+                if (headerValues != null && headerValues.key.equalToString(headerName)) {
                     row[i] = null;
                     size --;
                     return headerValues;
@@ -209,13 +272,34 @@ public final class HeaderMap implements Iterable<HeaderValues> {
         return getEntry(headerName);
     }
 
+    public HeaderValues get(final String headerName) {
+        return getEntry(headerName);
+    }
+
     public String getFirst(HttpString headerName) {
         HeaderValues headerValues = getEntry(headerName);
         if (headerValues == null) return null;
         return headerValues.getFirst();
     }
 
+    public String getFirst(String headerName) {
+        HeaderValues headerValues = getEntry(headerName);
+        if (headerValues == null) return null;
+        return headerValues.getFirst();
+    }
+
     public String get(HttpString headerName, int index) throws IndexOutOfBoundsException {
+        if (headerName == null) {
+            return null;
+        }
+        final HeaderValues headerValues = getEntry(headerName);
+        if (headerValues == null) {
+            return null;
+        }
+        return headerValues.get(index);
+    }
+
+    public String get(String headerName, int index) throws IndexOutOfBoundsException {
         if (headerName == null) {
             return null;
         }
@@ -235,9 +319,29 @@ public final class HeaderMap implements Iterable<HeaderValues> {
         return headerValues.getLast();
     }
 
+    public String getLast(String headerName) {
+        if (headerName == null) {
+            return null;
+        }
+        HeaderValues headerValues = getEntry(headerName);
+        if (headerValues == null) return null;
+        return headerValues.getLast();
+    }
+
     // count
 
     public int count(HttpString headerName) {
+        if (headerName == null) {
+            return 0;
+        }
+        final HeaderValues headerValues = getEntry(headerName);
+        if (headerValues == null) {
+            return 0;
+        }
+        return headerValues.size();
+    }
+
+    public int count(String headerName) {
         if (headerName == null) {
             return 0;
         }
@@ -660,9 +764,35 @@ public final class HeaderMap implements Iterable<HeaderValues> {
         return values != null ? values : Collections.<String>emptyList();
     }
 
+    public Collection<String> remove(String headerName) {
+        if (headerName == null) {
+            return Collections.emptyList();
+        }
+        final Collection<String> values = removeEntry(headerName);
+        return values != null ? values : Collections.<String>emptyList();
+    }
+
     // contains
 
     public boolean contains(HttpString headerName) {
+        final HeaderValues headerValues = getEntry(headerName);
+        if (headerValues == null) {
+            return false;
+        }
+        final Object v = headerValues.value;
+        if (v instanceof String) {
+            return true;
+        }
+        final String[] list = (String[]) v;
+        for (int i = 0; i < list.length; i++) {
+            if (list[i] != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean contains(String headerName) {
         final HeaderValues headerValues = getEntry(headerName);
         if (headerValues == null) {
             return false;
