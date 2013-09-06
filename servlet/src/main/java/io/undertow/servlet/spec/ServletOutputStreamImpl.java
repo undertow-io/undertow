@@ -584,7 +584,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 if (buffer == null) {
                     servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
                 } else {
-                    servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "" + buffer.position());
+                    servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
                 }
             }
             try {
@@ -629,7 +629,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             if (buffer == null) {
                 servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
             } else {
-                servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "" + buffer.position());
+                servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
             }
         }
         createChannel();

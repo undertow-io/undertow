@@ -330,7 +330,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude || exchange.isResponseStarted()) {
             return;
         }
-        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
+        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Integer.toString(len));
         this.contentLength = (long) len;
     }
 
@@ -339,7 +339,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude || exchange.isResponseStarted()) {
             return;
         }
-        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + len);
+        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(len));
         this.contentLength = len;
     }
 
