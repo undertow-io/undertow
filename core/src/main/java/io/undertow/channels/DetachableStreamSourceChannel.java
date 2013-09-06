@@ -30,7 +30,23 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
 
     public DetachableStreamSourceChannel(final StreamSourceChannel delegate) {
         this.delegate = delegate;
-        delegate.getReadSetter().set(ChannelListeners.delegatingChannelListener(this, readSetter));
+        delegate.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
+            @Override
+            public void handleEvent(final StreamSourceChannel channel) {
+                if(isFinished()) {
+                    channel.suspendReads();
+                    return;
+                }
+                ChannelListener<? super DetachableStreamSourceChannel> listener = readSetter.get();
+                if(listener == null) {
+                    channel.suspendReads();
+                    return;
+                } else {
+                    listener.handleEvent(DetachableStreamSourceChannel.this);
+                }
+
+            }
+        });
         delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
     }
 

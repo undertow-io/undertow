@@ -30,7 +30,23 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
 
     public DetachableStreamSinkChannel(final StreamSinkChannel delegate) {
         this.delegate = delegate;
-        delegate.getWriteSetter().set(ChannelListeners.delegatingChannelListener(this, writeSetter));
+        delegate.getWriteSetter().set(new ChannelListener<StreamSinkChannel>() {
+            @Override
+            public void handleEvent(final StreamSinkChannel channel) {
+                if(isFinished()) {
+                    channel.suspendWrites();
+                    return;
+                }
+                ChannelListener<? super DetachableStreamSinkChannel> listener = writeSetter.get();
+                if(listener == null) {
+                    channel.suspendWrites();
+                    return;
+                } else {
+                    listener.handleEvent(DetachableStreamSinkChannel.this);
+                }
+
+            }
+        });
         delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
     }
 
