@@ -15,6 +15,7 @@ import javax.websocket.DeploymentException;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpointConfig;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -46,19 +47,22 @@ public class Bootstrap implements ServletExtension {
         } catch (DeploymentException e) {
             throw new RuntimeException(e);
         }
-        deploymentInfo.addFilter(Servlets.filter(FILTER_NAME, JsrWebSocketFilter.class).setAsyncSupported(true));
-        deploymentInfo.addFilterUrlMapping(FILTER_NAME, "/*", DispatcherType.REQUEST);
         servletContext.setAttribute(ServerContainer.class.getName(), container);
         info.containerReady(container);
         UndertowContainerProvider.addContainer(deploymentInfo.getClassLoader(), container);
 
-        deploymentInfo.addListener(Servlets.listener(ContainerRemovedListener.class));
+        deploymentInfo.addListener(Servlets.listener(WebSocketListener.class));
     }
 
-    private static final class ContainerRemovedListener implements ServletContextListener {
+    private static final class WebSocketListener implements ServletContextListener {
 
         @Override
         public void contextInitialized(ServletContextEvent sce) {
+            ServerWebSocketContainer container = (ServerWebSocketContainer) sce.getServletContext().getAttribute(ServerContainer.class.getName());
+            if(!container.getConfiguredServerEndpoints().isEmpty()) {
+                sce.getServletContext().addFilter(FILTER_NAME, JsrWebSocketFilter.class)
+                        .addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true, "/*");
+            }
         }
 
         @Override
