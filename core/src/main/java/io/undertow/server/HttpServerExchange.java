@@ -99,7 +99,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private int exchangeCompletionListenersCount = 0;
     private ExchangeCompletionListener[] exchangeCompleteListeners = new ExchangeCompletionListener[2];
-    private final Deque<DefaultResponseListener> defaultResponseListeners = new ArrayDeque<DefaultResponseListener>(1);
+    private DefaultResponseListener[] defaultResponseListeners = new DefaultResponseListener[2];
 
     private Map<String, Deque<String>> queryParameters;
     private Map<String, Deque<String>> pathParameters;
@@ -719,7 +719,16 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     public void addDefaultResponseListener(final DefaultResponseListener listener) {
-        defaultResponseListeners.add(listener);
+        int i = 0;
+        while (i != defaultResponseListeners.length && defaultResponseListeners[i] != null) {
+            ++i;
+        }
+        if (i == defaultResponseListeners.length) {
+            DefaultResponseListener[] old = defaultResponseListeners;
+            defaultResponseListeners = new DefaultResponseListener[defaultResponseListeners.length + 2];
+            System.arraycopy(old, 0, defaultResponseListeners, 0, old.length);
+        }
+        defaultResponseListeners[i] = listener;
     }
 
     /**
@@ -1168,15 +1177,20 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
             return;
         }
-        while (!defaultResponseListeners.isEmpty()) {
-            DefaultResponseListener listener = defaultResponseListeners.poll();
-            try {
-                if (listener.handleDefaultResponse(this)) {
-                    return;
+        int i = defaultResponseListeners.length - 1;
+        while (i >=0) {
+            DefaultResponseListener listener = defaultResponseListeners[i];
+            if(listener != null) {
+                defaultResponseListeners[i] = null;
+                try {
+                    if (listener.handleDefaultResponse(this)) {
+                        return;
+                    }
+                } catch (Exception e) {
+                    UndertowLogger.REQUEST_LOGGER.debug("Exception running default response listener", e);
                 }
-            } catch (Exception e) {
-                UndertowLogger.REQUEST_LOGGER.debug("Exception running default response listener", e);
             }
+            i--;
         }
 
         if (blockingHttpExchange != null) {
