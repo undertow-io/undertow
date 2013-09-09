@@ -193,4 +193,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10049, value = "Async request already returned to container")
     IllegalStateException asyncRequestAlreadyReturnedToContainer();
+
+    @Message(id = 10050, value = "Filter %s used in filter mapping %s not found")
+    IllegalStateException filterNotFound(String filterName, String mapping);
 }

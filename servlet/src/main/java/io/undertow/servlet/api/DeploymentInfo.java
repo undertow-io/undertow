@@ -143,6 +143,16 @@ public class DeploymentInfo implements Cloneable {
         for (final FilterInfo filter : this.filters.values()) {
             filter.validate();
         }
+        for(FilterMappingInfo mapping : this.filterServletNameMappings) {
+            if (!this.filters.containsKey(mapping.getFilterName())) {
+                throw UndertowServletMessages.MESSAGES.filterNotFound(mapping.getFilterName(), mapping.getMappingType() + " - " + mapping.getMapping());
+            }
+        }
+        for (FilterMappingInfo mapping : this.filterUrlMappings) {
+            if (!this.filters.containsKey(mapping.getFilterName())) {
+                throw UndertowServletMessages.MESSAGES.filterNotFound(mapping.getFilterName(), mapping.getMappingType() + " - " + mapping.getMapping());
+            }
+        }
     }
 
     public String getDeploymentName() {
