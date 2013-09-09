@@ -237,7 +237,6 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
         //setup the client request conduits
         final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
         sourceChannel.setReadListener(new ClientReadListener());
-        sourceChannel.suspendReads();
         sourceChannel.resumeReads();
 
         ConduitStreamSinkChannel sinkChannel = connection.getSinkChannel();
