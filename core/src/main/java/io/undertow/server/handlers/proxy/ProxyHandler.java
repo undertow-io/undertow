@@ -107,8 +107,10 @@ public final class ProxyHandler implements HttpHandler {
             final XnioExecutor.Key key = exchange.getIoThread().executeAfter(new Runnable() {
                 @Override
                 public void run() {
-                    UndertowLogger.REQUEST_LOGGER.proxyRequestTimedOut(exchange.getRequestURI());
-                    IoUtils.safeClose(exchange.getConnection());
+                    if (exchange.getConnection().isOpen()) {
+                        UndertowLogger.REQUEST_LOGGER.proxyRequestTimedOut(exchange.getRequestURI());
+                        IoUtils.safeClose(exchange.getConnection());
+                    }
                     ClientConnection clientConnection = exchange.getAttachment(CONNECTION).getConnection();
                     IoUtils.safeClose(clientConnection);
                 }
