@@ -1,10 +1,12 @@
 package io.undertow.util;
 
+import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
  * @author Stuart Douglas
@@ -74,6 +76,31 @@ public class SingleByteStreamSourceConduit extends AbstractStreamSourceConduit<S
             } finally {
                 dst.limit(limit);
             }
+        }
+    }
+
+    @Override
+    public long transferTo(long position, long count, FileChannel target) throws IOException {
+        if (state > singleByteReads) {
+            return next.transferTo(position, count, target);
+        }
+        if (state++ % 2 == 0) {
+            return 0;
+        } else {
+            return next.transferTo(position, count == 0 ? 0 : count, target);
+        }
+    }
+
+    @Override
+    public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
+        if (state > singleByteReads) {
+            return next.transferTo(count, throughBuffer, target);
+        }
+        if (state++ % 2 == 0) {
+            throughBuffer.position(throughBuffer.limit());
+            return 0;
+        } else {
+            return next.transferTo(count == 0 ? 0 : count, throughBuffer, target);
         }
     }
 }

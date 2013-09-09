@@ -1,10 +1,12 @@
 package io.undertow.util;
 
+import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.StreamSinkConduit;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
  * A channel that will only write a single byte at a time for a set number of calls to write.
@@ -76,6 +78,31 @@ public class SingleByteStreamSinkConduit extends AbstractStreamSinkConduit<Strea
             } finally {
                 src.limit(limit);
             }
+        }
+    }
+
+    @Override
+    public long transferFrom(FileChannel src, long position, long count) throws IOException {
+        if (state > singleByteWrites) {
+            return next.transferFrom(src, position, count);
+        }
+        if (state++ % 2 == 0) {
+            return 0;
+        } else {
+            return next.transferFrom(src, position, count == 0 ? 0 : 1);
+        }
+    }
+
+    @Override
+    public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
+        if (state > singleByteWrites) {
+            return next.transferFrom(source, count, throughBuffer);
+        }
+        if (state++ % 2 == 0) {
+            throughBuffer.limit(throughBuffer.position());
+            return 0;
+        } else {
+            return next.transferFrom(source, count == 0 ? 0 : 1, throughBuffer);
         }
     }
 }
