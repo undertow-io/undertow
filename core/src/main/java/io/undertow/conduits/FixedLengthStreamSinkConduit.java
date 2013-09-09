@@ -169,22 +169,6 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
         }
     }
 
-    public void suspendWrites() {
-        long val = state;
-        if (anyAreSet(val, FLAG_CLOSE_COMPLETE)) {
-            return;
-        }
-        next.suspendWrites();
-    }
-
-    public void resumeWrites() {
-        long val = state;
-        if (anyAreSet(val, FLAG_CLOSE_COMPLETE)) {
-            return;
-        }
-        next.resumeWrites();
-    }
-
     public boolean isWriteResumed() {
         // not perfect but not provably wrong either...
         return allAreClear(state, FLAG_CLOSE_COMPLETE) && next.isWriteResumed();

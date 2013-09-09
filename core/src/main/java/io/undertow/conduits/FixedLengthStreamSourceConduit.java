@@ -248,26 +248,6 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         }
     }
 
-    public void suspendReads() {
-        long val = state;
-        if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED) || allAreClear(val, MASK_COUNT)) {
-            return;
-        }
-        next.suspendReads();
-    }
-
-    public void resumeReads() {
-        long val = state;
-        if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED) || allAreClear(val, MASK_COUNT)) {
-            return;
-        }
-        if (val == 0L) {
-            next.wakeupReads();
-        } else {
-            next.resumeReads();
-        }
-    }
-
     public boolean isReadResumed() {
         return allAreClear(state, FLAG_CLOSED) && next.isReadResumed();
     }
