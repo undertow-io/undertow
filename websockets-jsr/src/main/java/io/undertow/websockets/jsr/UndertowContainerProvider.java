@@ -41,7 +41,6 @@ public class UndertowContainerProvider extends ContainerProvider {
         if(System.getSecurityManager() != null) {
             AccessController.checkPermission(PERMISSION);
         }
-        AccessController.checkPermission(PERMISSION);
         webSocketContainers.remove(classLoader);
     }
 }
