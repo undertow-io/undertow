@@ -576,7 +576,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 final FormData parsedFormData = parseFormData();
                 if (parsedFormData != null) {
                     FormData.FormValue res = parsedFormData.getFirst(name);
-                    if (res == null) {
+                    if (res == null || res.isFile()) {
                         return null;
                     } else {
                         return res.getValue();
@@ -599,7 +599,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (parsedFormData != null) {
                 Iterator<String> it = parsedFormData.iterator();
                 while (it.hasNext()) {
-                    parameterNames.add(it.next());
+                    String name = it.next();
+                    for(FormData.FormValue param : parsedFormData.get(name)) {
+                        if(!param.isFile()) {
+                            parameterNames.add(it.next());
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -624,7 +630,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 Deque<FormData.FormValue> res = parsedFormData.get(name);
                 if (res != null) {
                     for (FormData.FormValue value : res) {
-                        ret.add(value.getValue());
+                        if(!value.isFile()) {
+                            ret.add(value.getValue());
+                        }
                     }
                 }
             }
@@ -640,9 +648,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (queryParameters == null) {
             queryParameters = exchange.getQueryParameters();
         }
-        final Map<String, String[]> ret = new HashMap<String, String[]>();
+        final Map<String, ArrayList<String>> arrayMap = new HashMap<String, ArrayList<String>>();
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
-            ret.put(entry.getKey(), entry.getValue().toArray(new String[entry.getValue().size()]));
+            arrayMap.put(entry.getKey(), new ArrayList<String>(entry.getValue()));
         }
         if (exchange.getRequestMethod().equals(Methods.POST)) {
 
@@ -652,25 +660,29 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 while (it.hasNext()) {
                     final String name = it.next();
                     Deque<FormData.FormValue> val = parsedFormData.get(name);
-                    if (ret.containsKey(name)) {
-                        String[] existing = ret.get(name);
-                        String[] array = new String[val.size() + existing.length];
-                        System.arraycopy(existing, 0, array, 0, existing.length);
-                        int i = existing.length;
+                    if (arrayMap.containsKey(name)) {
+                        ArrayList<String> existing = arrayMap.get(name);
                         for (final FormData.FormValue v : val) {
-                            array[i++] = v.getValue();
+                            if(!v.isFile()) {
+                                existing.add(v.getValue());
+                            }
                         }
-                        ret.put(name, array);
                     } else {
-                        String[] array = new String[val.size()];
+                        final ArrayList<String> values = new ArrayList<String>();
                         int i = 0;
                         for (final FormData.FormValue v : val) {
-                            array[i++] = v.getValue();
+                            if(!v.isFile()) {
+                                values.add(v.getValue());
+                            }
                         }
-                        ret.put(name, array);
+                        arrayMap.put(name, values);
                     }
                 }
             }
+        }
+        final Map<String, String[]> ret = new HashMap<String, String[]>();
+        for(Map.Entry<String, ArrayList<String>> entry : arrayMap.entrySet()) {
+            ret.put(entry.getKey(), entry.getValue().toArray(new String[entry.getValue().size()]));
         }
         return ret;
     }
