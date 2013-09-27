@@ -249,9 +249,17 @@ public class ServletPathMatches {
                     if (targetServletMatch.handler != null) {
                         if (filterMapping.getMapping().equals(targetServletMatch.handler.getManagedServlet().getServletInfo().getName())) {
                             addToListMap(noExtension, filterMapping.getDispatcher(), filter);
-                            for (Map<DispatcherType, List<ManagedFilter>> l : extension.values()) {
-                                addToListMap(l, filterMapping.getDispatcher(), filter);
-                            }
+                        }
+                    }
+                    for(Map.Entry<String, Map<DispatcherType, List<ManagedFilter>>> entry : extension.entrySet()) {
+                    ServletHandler pathServlet = targetServletMatch.handler;
+                    boolean defaultServletMatch = targetServletMatch.defaultServlet;
+                        if (defaultServletMatch && extensionServlets.containsKey(entry.getKey())) {
+                            pathServlet = extensionServlets.get(entry.getKey());
+                        }
+
+                        if (filterMapping.getMapping().equals(pathServlet.getManagedServlet().getServletInfo().getName())) {
+                            addToListMap(extension.get(entry.getKey()), filterMapping.getDispatcher(), filter);
                         }
                     }
                 } else {

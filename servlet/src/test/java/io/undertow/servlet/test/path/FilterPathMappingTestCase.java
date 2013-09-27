@@ -102,6 +102,9 @@ public class FilterPathMappingTestCase {
         builder.addFilter(new FilterInfo("contextRoot", PathFilter.class));
         builder.addFilterServletNameMapping("contextRoot", "contextRoot", DispatcherType.REQUEST);
 
+        builder.addFilter(new FilterInfo("defaultName", PathFilter.class));
+        builder.addFilterServletNameMapping("defaultName", "/", DispatcherType.REQUEST);
+
         builder.setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setClassLoader(FilterPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
@@ -119,11 +122,11 @@ public class FilterPathMappingTestCase {
             runTest(client, "aa", "/aa - /aa - null", "/*", "*", "/aa");
             runTest(client, "a/c", "/a/* - /a - /c", "/*", "*", "/a/*");
             runTest(client, "a", "/a/* - /a - null", "/*", "*", "/a/*");
-            runTest(client, "aa/b", "/ - /aa/b - null", "/*", "*");
+            runTest(client, "aa/b", "/ - /aa/b - null", "/*", "*", "defaultName");
             runTest(client, "a/b/c/d", "/a/* - /a - /b/c/d", "/*", "*", "/a/*");
-            runTest(client, "defaultStuff", "/ - /defaultStuff - null", "/*", "*");
+            runTest(client, "defaultStuff", "/ - /defaultStuff - null", "/*", "*", "defaultName");
             runTest(client, "", "contextRoot - / - null", "/*", "*", "contextRoot");
-            runTest(client, "yyyy.bop", "/ - /yyyy.bop - null", "/*", "*", "*.bop");
+            runTest(client, "yyyy.bop", "/ - /yyyy.bop - null", "/*", "*", "*.bop", "defaultName");
             runTest(client, "a/yyyy.bop", "/a/* - /a - /yyyy.bop", "/*", "*", "*.bop", "/a/*");
             runTest(client, "myservlet/myfilter/file.dat", "/myservlet/* - /myservlet - /myfilter/file.dat", "/*", "*", "/myservlet/myfilter/*");
             runTest(client, "myservlet/myfilter/file.jsp", "/myservlet/* - /myservlet - /myfilter/file.jsp", "/*", "*", "/myservlet/myfilter/*");
