@@ -307,9 +307,11 @@ public class WebSockets {
     }
 
     private static <T> void sendData(final ByteBuffer[] data, final WebSocketChannel wsChannel, final WebSocketCallback<T> callback, StreamSinkFrameChannel channel, final T context) throws IOException {
-        do {
+        boolean hasRemaining = true;
+        while (hasRemaining) {
             long res = channel.write(data);
-            if (res == 0) {
+            hasRemaining = Buffers.hasRemaining(data);
+            if (res == 0 && hasRemaining) {
                 channel.getWriteSetter().set(new ChannelListener<StreamSinkFrameChannel>() {
                     @Override
                     public void handleEvent(StreamSinkFrameChannel channel) {
@@ -334,7 +336,7 @@ public class WebSockets {
                 channel.resumeWrites();
                 return;
             }
-        } while (Buffers.hasRemaining(data));
+        }
         flushChannelAsync(wsChannel, callback, channel, context);
     }
 
