@@ -232,6 +232,7 @@ public class ServerWebSocketContainer implements ServerContainer {
             ServerEndpoint serverEndpoint = endpoint.getAnnotation(ServerEndpoint.class);
             ClientEndpoint clientEndpoint = endpoint.getAnnotation(ClientEndpoint.class);
             if (serverEndpoint != null) {
+                JsrWebSocketLogger.ROOT_LOGGER.addingAnnotatedServerEndpoint(endpoint, serverEndpoint.value());
                 final PathTemplate template = PathTemplate.create(serverEndpoint.value());
                 if (seenPaths.contains(template)) {
                     PathTemplate existing = null;
@@ -266,6 +267,7 @@ public class ServerWebSocketContainer implements ServerContainer {
                 ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, factory, template, encodingFactory);
                 configuredServerEndpoints.add(confguredServerEndpoint);
             } else if (clientEndpoint != null) {
+                JsrWebSocketLogger.ROOT_LOGGER.addingAnnotatedClientEndpoint(endpoint);
                 EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, clientEndpoint.decoders(), clientEndpoint.encoders());
                 AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory);
 
@@ -296,6 +298,7 @@ public class ServerWebSocketContainer implements ServerContainer {
         if (deploymentComplete) {
             throw JsrWebSocketMessages.MESSAGES.cannotAddEndpointAfterDeployment();
         }
+        JsrWebSocketLogger.ROOT_LOGGER.addingProgramaticEndpoint(endpoint.getEndpointClass(), endpoint.getPath());
         final PathTemplate template = PathTemplate.create(endpoint.getPath());
         if (seenPaths.contains(template)) {
             PathTemplate existing = null;

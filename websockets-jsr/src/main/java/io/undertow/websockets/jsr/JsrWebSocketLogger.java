@@ -44,4 +44,16 @@ public interface JsrWebSocketLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 26002, value = "Unable to instance server configuration %s")
     void couldNotInitializeConfiguration(Class<?> clazz, @Cause Throwable t);
+
+    @LogMessage(level = Logger.Level.INFO)
+    @Message(id = 26003, value = "Adding annotated server endpoint %s for path %s")
+    void addingAnnotatedServerEndpoint(Class<?> endpoint, String value);
+
+    @LogMessage(level = Logger.Level.INFO)
+    @Message(id = 26004, value = "Adding annotated client endpoint %s")
+    void addingAnnotatedClientEndpoint(Class<?> endpoint);
+
+    @LogMessage(level = Logger.Level.INFO)
+    @Message(id = 26005, value = "Adding programmatic server endpoint %s for path %s")
+    void addingProgramaticEndpoint(Class<?> endpointClass, String path);
 }
