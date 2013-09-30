@@ -11,6 +11,8 @@ import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 
+import java.util.HashSet;
+
 /**
  * Class that bridges between Undertow native session listeners and servlet ones.
  *
@@ -43,7 +45,10 @@ public class SessionListenerBridge implements SessionListener {
                 handle = threadSetup.setup(exchange);
             }
             applicationListeners.sessionDestroyed(httpSession);
-            for(String attribute : session.getAttributeNames()) {
+            //we make a defensive copy here, as there is no guarantee that the underlying session map
+            //is a concurrent map, and as a result a concurrent modification exception may be thrown
+            HashSet<String> names = new HashSet<String>(session.getAttributeNames());
+            for(String attribute : names) {
                 session.removeAttribute(attribute);
             }
         } finally {
