@@ -348,7 +348,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
 
         final int len = bytes.length;
         for (int i = 0; i < len; i++) {
-            if (higher(bytes[i]) != higher((byte)string.charAt(i))) {
+            if (higher(bytes[i]) != higher((byte)headerName.charAt(i))) {
                 return false;
             }
         }

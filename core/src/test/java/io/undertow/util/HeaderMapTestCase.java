@@ -20,6 +20,8 @@ package io.undertow.util;
 
 import java.util.Arrays;
 import java.util.List;
+
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -73,5 +75,16 @@ public final class HeaderMapTestCase {
             assertFalse(headerMap.contains(item));
         }
         assertEquals(0, headerMap.size());
+    }
+
+    @Test
+    public void testCollision() {
+        HeaderMap headerMap = new HeaderMap();
+        headerMap.put(new HttpString("Link"), "a");
+        headerMap.put(new HttpString("Rest"), "b");
+        Assert.assertEquals("a", headerMap.getFirst(new HttpString("Link")));
+        Assert.assertEquals("b", headerMap.getFirst(new HttpString("Rest")));
+        Assert.assertEquals("a", headerMap.getFirst("Link"));
+        Assert.assertEquals("b", headerMap.getFirst("Rest"));
     }
 }
