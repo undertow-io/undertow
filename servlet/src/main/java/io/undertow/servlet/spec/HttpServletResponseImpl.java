@@ -228,6 +228,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude) {
             return;
         }
+        if(exchange.isResponseStarted()) {
+            return;
+        }
         exchange.setResponseCode(sc);
     }
 
