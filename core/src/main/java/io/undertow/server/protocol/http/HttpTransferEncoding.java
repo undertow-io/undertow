@@ -24,6 +24,7 @@ import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.FinishableStreamSinkConduit;
+import io.undertow.conduits.FinishableStreamSourceConduit;
 import io.undertow.conduits.FixedLengthStreamSinkConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.HeadStreamSinkConduit;
@@ -101,7 +102,7 @@ public class HttpTransferEncoding {
 
     }
 
-    private static boolean handleRequestEncoding(HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipelingBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) {
+    private static boolean handleRequestEncoding(final HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipelingBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) {
         HttpString transferEncoding = Headers.IDENTITY;
         if (transferEncodingHeader != null) {
             transferEncoding = new HttpString(transferEncodingHeader);
@@ -144,6 +145,14 @@ public class HttpTransferEncoding {
             //this is a http 1.1 non-persistent connection
             //we still know there is no content
             exchange.terminateRequest();
+        } else {
+            ConduitStreamSourceChannel sourceChannel = ((HttpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
+            sourceChannel.setConduit(new FinishableStreamSourceConduit(sourceChannel.getConduit(), new ConduitListener<FinishableStreamSourceConduit>() {
+                @Override
+                public void handleEvent(FinishableStreamSourceConduit channel) {
+                    exchange.terminateRequest();
+                }
+            }));
         }
         return persistentConnection;
     }
