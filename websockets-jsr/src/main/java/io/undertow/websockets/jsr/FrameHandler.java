@@ -74,7 +74,7 @@ class FrameHandler extends AbstractReceiveListener {
         ByteBuffer toSend = singleBuffer.duplicate();
         WebSockets.sendClose(toSend, channel, null);
 
-        session.getContainer().invokeEndpointMethod(new Runnable() {
+        session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
             @Override
             public void run() {
                 try {
@@ -94,7 +94,7 @@ class FrameHandler extends AbstractReceiveListener {
     }
 
     private void invokeOnError(final Throwable e) {
-        session.getContainer().invokeEndpointMethod(new Runnable() {
+        session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
             @Override
             public void run() {
                 try {
@@ -113,7 +113,7 @@ class FrameHandler extends AbstractReceiveListener {
             ByteBuffer[] payload = data.getData();
             final PongMessage message = DefaultPongMessage.create(toBuffer(payload));
 
-            session.getContainer().invokeEndpointMethod(new Runnable() {
+            session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
                 @Override
                 public void run() {
                     ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
@@ -170,7 +170,7 @@ class FrameHandler extends AbstractReceiveListener {
 
     private void invokeBinaryHandler(final BufferedBinaryMessage context, final HandlerWrapper handler, final boolean finalFragment) {
 
-        session.getContainer().invokeEndpointMethod(new Runnable() {
+        session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
             @Override
             public void run() {
                 try {
@@ -222,7 +222,7 @@ class FrameHandler extends AbstractReceiveListener {
 
     private void invokeTextHandler(final BufferedTextMessage data, final HandlerWrapper handler, final boolean finalFragment) {
 
-        session.getContainer().invokeEndpointMethod(new Runnable() {
+        session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
             @Override
             public void run() {
                 MessageHandler mHandler = handler.getHandler();

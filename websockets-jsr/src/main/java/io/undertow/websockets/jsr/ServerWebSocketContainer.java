@@ -85,7 +85,7 @@ public class ServerWebSocketContainer implements ServerContainer {
     private volatile boolean deploymentComplete = false;
 
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter,XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction) {
         this.classIntrospecter = classIntrospecter;
         this.bufferPool = bufferPool;
         this.xnioWorker = xnioWorker;
@@ -204,19 +204,29 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     /**
      * Runs a web socket invocation, setting up the threads and dispatching a thread pool
+     * <p/>
+     * Unfortunately we need to dispatch to a thread pool, because there is a good chance that the endpoint
+     * will use blocking IO methods. We suspend recieves while this is in progress, to make sure that we do not have multiple
+     * methods invoked at once.
+     * <p/>
+     * TODO: make this configurable as to if it executes in a thread pool or not
      *
-     * TODO: have a think about this, we can do better
      * @param invocation The task to run
      */
-    public void invokeEndpointMethod(final Runnable invocation) {
+    public void invokeEndpointMethod(final WebSocketChannel channel, final Runnable invocation) {
+        channel.suspendReceives();
         xnioWorker.submit(new Runnable() {
             @Override
             public void run() {
-                ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
                 try {
-                    invocation.run();
+                    ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
+                    try {
+                        invocation.run();
+                    } finally {
+                        handle.tearDown();
+                    }
                 } finally {
-                    handle.tearDown();
+                    channel.resumeReceives();
                 }
 
             }
@@ -250,7 +260,7 @@ public class ServerWebSocketContainer implements ServerContainer {
                 AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory);
                 Class<? extends ServerEndpointConfig.Configurator> configuratorClass = serverEndpoint.configurator();
                 ServerEndpointConfig.Configurator configurator;
-                if(configuratorClass != ServerEndpointConfig.Configurator.class) {
+                if (configuratorClass != ServerEndpointConfig.Configurator.class) {
                     configurator = configuratorClass.newInstance();
                 } else {
                     configurator = new ServerInstanceFactoryConfigurator(factory);

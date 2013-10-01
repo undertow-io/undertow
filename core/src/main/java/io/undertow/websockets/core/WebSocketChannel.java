@@ -609,7 +609,7 @@ public abstract class WebSocketChannel implements ConnectedChannel {
                     WebSocketLogger.REQUEST_LOGGER.debugf("Suspending reads on channel %s due to no listener", receiver);
                     channel.suspendReads();
                 }
-            } else if (closeFrameReceived) {
+            } else if (closeFrameReceived || receivesSuspended) {
                 channel.suspendReads();
             } else {
                 final ChannelListener listener = receiveSetter.get();

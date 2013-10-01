@@ -358,19 +358,21 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendC
      */
     protected final void activate() {
         ChannelState old, newState;
-        do {
-            old = state;
-            if(old == ChannelState.WAITING) {
-                newState = ChannelState.ACTIVE;
-            } else if (old == ChannelState.WAITING_SHUTDOWN) {
-                newState = ChannelState.SHUTDOWN;
-            } else {
-                break;
-            }
-        } while (!stateUpdater.compareAndSet(this, old, newState));
+        synchronized (writeWaitLock) {
+            do {
+                old = state;
+                if(old == ChannelState.WAITING) {
+                    newState = ChannelState.ACTIVE;
+                } else if (old == ChannelState.WAITING_SHUTDOWN) {
+                    newState = ChannelState.SHUTDOWN;
+                } else {
+                    break;
+                }
+            } while (!stateUpdater.compareAndSet(this, old, newState));
 
-        // now notify the waiters if any
-        notifyWriteWaiters();
+            // now notify the waiters if any
+            notifyWriteWaiters();
+        }
 
         if (old == ChannelState.CLOSED) {
             //the channel was closed with nothing being written
@@ -432,14 +434,14 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendC
     @Override
     public final void close() {
         ChannelState oldState;
-        do {
-            oldState = state;
-            if (oldState == ChannelState.CLOSED) {
-                return;
-            }
-        } while (stateUpdater.compareAndSet(this, oldState, ChannelState.CLOSED));
+        synchronized (writeWaitLock) {
+            do {
+                oldState = state;
+                if (oldState == ChannelState.CLOSED) {
+                    return;
+                }
+            } while (stateUpdater.compareAndSet(this, oldState, ChannelState.CLOSED));
 
-        if (oldState == ChannelState.WAITING) {
             // now notify the waiter
             notifyWriteWaiters();
         }
@@ -452,10 +454,9 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendC
     }
 
     private void notifyWriteWaiters() {
-        synchronized (writeWaitLock) {
-            if (waiters > 0) {
-                writeWaitLock.notifyAll();
-            }
+        assert Thread.holdsLock(writeWaitLock);
+        if (waiters > 0) {
+            writeWaitLock.notifyAll();
         }
     }
 
@@ -693,12 +694,6 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendC
             }
 
         } while (stateUpdater.compareAndSet(this, oldState, newState));
-
-        //if we have blocked threads we should wake them up just in case
-        if (oldState == ChannelState.WAITING) {
-            // now notify the waiter
-            notifyWriteWaiters();
-        }
     }
 
     @Override
@@ -706,10 +701,10 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendC
         ChannelState currentState = state;
         if (currentState == ChannelState.ACTIVE) {
             channel.awaitWritable();
-        } else if (currentState == ChannelState.WAITING) {
+        } else if (currentState == ChannelState.WAITING || currentState == ChannelState.WAITING_SHUTDOWN) {
             try {
                 synchronized (writeWaitLock) {
-                    while (state == ChannelState.WAITING) {
+                    while (state == ChannelState.WAITING || currentState == ChannelState.WAITING_SHUTDOWN) {
                         waiters++;
                         try {
                             writeWaitLock.wait();

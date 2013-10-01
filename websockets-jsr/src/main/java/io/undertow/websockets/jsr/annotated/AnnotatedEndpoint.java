@@ -72,7 +72,7 @@ public class AnnotatedEndpoint extends Endpoint {
     }
 
     private void invokeMethod(final Map<Class<?>, Object> params, final BoundMethod method, final UndertowSession session) {
-        session.getContainer().invokeEndpointMethod(new Runnable() {
+        session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
             @Override
             public void run() {
                 try {
@@ -102,7 +102,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Session.class, session);
                 params.put(Throwable.class, thr);
                 params.put(Map.class, session.getPathParameters());
-                ((UndertowSession) session).getContainer().invokeEndpointMethod(new Runnable() {
+                ((UndertowSession) session).getContainer().invokeEndpointMethod(((UndertowSession) session).getWebSocketChannel(), new Runnable() {
                     @Override
                     public void run() {
                         try {
@@ -184,7 +184,7 @@ public class AnnotatedEndpoint extends Endpoint {
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
             params.put(PongMessage.class, message);
-            session.getContainer().invokeEndpointMethod(new Runnable() {
+            session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
                 @Override
                 public void run() {
                     final Object result;
@@ -261,7 +261,7 @@ public class AnnotatedEndpoint extends Endpoint {
             params.put(Map.class, session.getPathParameters());
             params.put(textMessage.getMessageType(), messageObject);
             params.put(boolean.class, finalFragment);
-            session.getContainer().invokeEndpointMethod(new Runnable() {
+            session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
                 @Override
                 public void run() {
                     final Object result;
@@ -357,7 +357,7 @@ public class AnnotatedEndpoint extends Endpoint {
                 throw new RuntimeException("decoders are not implemented yet");
             }
             params.put(boolean.class, finalFragment);
-            session.getContainer().invokeEndpointMethod(new Runnable() {
+            session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
                 @Override
                 public void run() {
                     final Object result;

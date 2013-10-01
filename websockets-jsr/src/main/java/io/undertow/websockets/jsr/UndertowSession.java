@@ -272,4 +272,8 @@ public final class UndertowSession implements Session {
     public Encoding getEncoding() {
         return encoding;
     }
+
+    public WebSocketChannel getWebSocketChannel() {
+        return webSocketChannel;
+    }
 }
