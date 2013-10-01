@@ -196,6 +196,8 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                     executor.execute(this);
                 }
             }
+        } else if(!exchange.isPersistent()) {
+            IoUtils.safeClose(connection);
         }
         nextListener.proceed();
     }
