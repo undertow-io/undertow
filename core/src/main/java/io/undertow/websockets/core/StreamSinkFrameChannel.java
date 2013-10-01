@@ -770,6 +770,14 @@ public abstract class StreamSinkFrameChannel implements StreamSinkChannel, SendC
         }
         boolean flushed = flush0();
         if (flushed && state == ChannelState.SHUTDOWN) {
+            if(type == WebSocketFrameType.CLOSE) {
+                //if this is a close frame we shut down the underlying channel
+                channel.shutdownWrites();
+                flushed = channel.flush();
+                if(!flushed) {
+                    return false;
+                }
+            }
             state = ChannelState.CLOSED;
             try {
                 wsChannel.complete(this);

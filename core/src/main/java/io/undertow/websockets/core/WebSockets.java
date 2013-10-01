@@ -326,6 +326,7 @@ public class WebSockets {
                                 return;
                             }
                         } while (Buffers.hasRemaining(data));
+                        channel.suspendWrites();
                         try {
                             flushChannelAsync(wsChannel, callback, channel, context);
                         } catch (IOException e) {

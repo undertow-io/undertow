@@ -526,11 +526,6 @@ public abstract class WebSocketChannel implements ConnectedChannel {
     final synchronized void complete(StreamSinkFrameChannel channel) {
         boolean active = isActive(channel);
 
-        if(channel.getType() == WebSocketFrameType.CLOSE) {
-            closeFrameSent = true;
-            IoUtils.safeClose(this.channel.getSinkChannel());
-        }
-
         if (senders.peek() == channel) {
             senders.remove(channel);
         } else {
@@ -543,18 +538,26 @@ public abstract class WebSocketChannel implements ConnectedChannel {
         }
 
         if (active) {
-            SendChannel ch = senders.peek();
 
-            // check if there is some sink waiting
-            if (ch != null) {
-                if (ch instanceof StreamSinkFrameChannel) {
-                    ((StreamSinkFrameChannel) ch).activate();
-                } else if (ch instanceof FragmentedMessageChannelImpl) {
-                    ((FragmentedMessageChannelImpl) ch).activate();
-                }
+            if(channel.getType() == WebSocketFrameType.CLOSE) {
+                closeFrameSent = true;
+                //this should already be closed
+                IoUtils.safeClose(this.channel.getSinkChannel());
             } else {
-                WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on %s in complete method as there is no new sender");
-                channel.suspendWrites();
+
+                SendChannel ch = senders.peek();
+
+                // check if there is some sink waiting
+                if (ch != null) {
+                    if (ch instanceof StreamSinkFrameChannel) {
+                        ((StreamSinkFrameChannel) ch).activate();
+                    } else if (ch instanceof FragmentedMessageChannelImpl) {
+                        ((FragmentedMessageChannelImpl) ch).activate();
+                    }
+                } else {
+                    WebSocketLogger.REQUEST_LOGGER.debugf("Suspending writes on %s in complete method as there is no new sender");
+                    channel.suspendWrites();
+                }
             }
         }
     }
