@@ -43,7 +43,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
     private final String name;
 
     public ClientCertAuthenticationMechanism() {
-        this("CLIENT-CERT");
+        this("CLIENT_CERT");
     }
 
     public ClientCertAuthenticationMechanism(final String mechanismName) {
