@@ -58,6 +58,16 @@ public class ServletPathMatch {
         this.rewriteLocation = rewriteLocation;
     }
 
+
+    public ServletPathMatch(final Type type) {
+        this.servletChain = null;
+        this.matched = null;
+        this.remaining = null;
+        this.requiredWelcomeFileMatch = false;
+        this.type = type;
+        this.rewriteLocation = null;
+    }
+
     public String getMatched() {
         return matched;
     }
@@ -95,6 +105,12 @@ public class ServletPathMatch {
          * An internal rewrite is required, because the path matched a welcome file.
          * The provided match data is the match data after the rewrite.
          */
-        REWRITE;
+        REWRITE,
+
+        /**
+         * If the mapping results in a path that should never be served, such as META-INF or WEB-INF.
+         */
+        NOT_FOUND
+        ;
     }
 }

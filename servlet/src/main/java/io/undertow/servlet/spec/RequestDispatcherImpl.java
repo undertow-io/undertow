@@ -64,6 +64,9 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         } else {
             this.pathMatch = servletContext.getDeployment().getServletPaths().getServletHandlerByPath(path.substring(0, qPos));
         }
+        if(pathMatch.getType() == ServletPathMatch.Type.NOT_FOUND) {
+            throw UndertowServletMessages.MESSAGES.illegalDispatcherPath(path);
+        }
         this.chain = pathMatch.getServletChain();
         this.named = false;
     }

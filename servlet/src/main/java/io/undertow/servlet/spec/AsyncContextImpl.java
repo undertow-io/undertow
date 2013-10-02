@@ -252,6 +252,10 @@ public class AsyncContextImpl implements AsyncContext {
 
         Deployment deployment = requestImpl.getServletContext().getDeployment();
         ServletPathMatch info = deployment.getServletPaths().getServletHandlerByPath(newServletPath);
+
+        if(info.getType() == ServletPathMatch.Type.NOT_FOUND) {
+            throw UndertowServletMessages.MESSAGES.illegalDispatcherPath(path);
+        }
         requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(info);
 
         dispatchAsyncRequest(deployment.getServletDispatcher(), info, exchange);

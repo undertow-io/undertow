@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static io.undertow.servlet.handlers.ServletPathMatch.Type.NOT_FOUND;
 import static io.undertow.servlet.handlers.ServletPathMatch.Type.REDIRECT;
 import static io.undertow.servlet.handlers.ServletPathMatch.Type.REWRITE;
 
@@ -71,6 +72,11 @@ public class ServletPathMatches {
     }
 
     public ServletPathMatch getServletHandlerByPath(final String path) {
+        String lowerPath = path.toLowerCase();
+        if(lowerPath.startsWith("/meta-inf") || lowerPath.startsWith("/web-inf")) {
+            return new ServletPathMatch(NOT_FOUND);
+        }
+
         ServletPathMatch match = getData().getServletHandlerByPath(path);
         if (!match.isRequiredWelcomeFileMatch()) {
             return match;

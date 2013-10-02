@@ -103,6 +103,12 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             exchange.setRelativePath(exchange.getRelativePath() + info.getRewriteLocation());
             exchange.setRequestURI(exchange.getRequestURI() + info.getRewriteLocation());
             exchange.setRequestPath(exchange.getRequestPath() + info.getRewriteLocation());
+        } else if(info.getType() == ServletPathMatch.Type.NOT_FOUND) {
+            //happens when META-INF or WEB-INF is requested
+            //we just immediately kill the request
+            exchange.setResponseCode(404);
+            exchange.endExchange();
+            return;
         }
 
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
