@@ -602,7 +602,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                     String name = it.next();
                     for(FormData.FormValue param : parsedFormData.get(name)) {
                         if(!param.isFile()) {
-                            parameterNames.add(it.next());
+                            parameterNames.add(name);
                             break;
                         }
                     }
