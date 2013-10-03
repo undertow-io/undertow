@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jnlp spec="1.0+" codebase="http://undertow.io/test" href="">
+    <information>
+        <title>Launch applet with Web Start</title>
+        <vendor>Foo Bar Inc.</vendor>
+        <offline-allowed/>
+    </information>
+</jnlp>
