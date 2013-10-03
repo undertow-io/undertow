@@ -20,6 +20,8 @@ package io.undertow.servlet.spec;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -30,8 +32,10 @@ import java.util.Set;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.SessionTrackingMode;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
@@ -40,6 +44,7 @@ import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
 
 
@@ -81,7 +86,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             return;
         }
         final ServletCookieAdaptor servletCookieAdaptor = new ServletCookieAdaptor(cookie);
-        if(cookie.getVersion() == 0) {
+        if (cookie.getVersion() == 0) {
             servletCookieAdaptor.setVersion(servletContext.getDeployment().getDeploymentInfo().getDefaultCookieVersion());
         }
         exchange.setResponseCookie(servletCookieAdaptor);
@@ -93,31 +98,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
-    public String encodeURL(final String url) {
-        return encodeUrl(url);
-    }
-
-    @Override
-    public String encodeRedirectURL(final String url) {
-        return encodeRedirectUrl(url);
-    }
-
-    @Override
     public String encodeUrl(final String url) {
-        HttpSessionImpl session = servletContext.getSession(exchange, false);
-        if(session == null) {
-            return url;
-        }
-        return servletContext.getSessionConfig().rewriteUrl(url, session.getId());
+        return encodeURL(url);
     }
 
     @Override
     public String encodeRedirectUrl(final String url) {
-        HttpSessionImpl session = servletContext.getSession(exchange, false);
-        if(session == null) {
-            return url;
-        }
-        return servletContext.getSessionConfig().rewriteUrl(url, session.getId());
+        return encodeRedirectURL(url);
     }
 
     @Override
@@ -229,7 +216,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude) {
             return;
         }
-        if(exchange.isResponseStarted()) {
+        if (exchange.isResponseStarted()) {
             return;
         }
         exchange.setResponseCode(sc);
@@ -278,7 +265,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public String getContentType() {
         if (contentType != null) {
-            if(charsetSet) {
+            if (charsetSet) {
                 return contentType + ";charset=" + getCharacterEncoding();
             } else {
                 return contentType;
@@ -300,7 +287,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public PrintWriter getWriter() throws IOException {
         if (writer == null) {
-            if(!charsetSet) {
+            if (!charsetSet) {
                 //servet 5.5
                 setCharacterEncoding(getCharacterEncoding());
             }
@@ -542,6 +529,207 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     public ServletContextImpl getServletContext() {
         return servletContext;
     }
+
+    public String encodeURL(String url) {
+        String absolute = toAbsolute(url);
+        if (isEncodeable(absolute)) {
+            // W3c spec clearly said
+            if (url.equalsIgnoreCase("")) {
+                url = absolute;
+            }
+            return (toEncoded(url, servletContext.getSession(exchange, true).getId()));
+        } else {
+            return (url);
+        }
+
+    }
+
+    /**
+     * Encode the session identifier associated with this response
+     * into the specified redirect URL, if necessary.
+     *
+     * @param url URL to be encoded
+     */
+    public String encodeRedirectURL(String url) {
+        if (isEncodeable(toAbsolute(url))) {
+            return (toEncoded(url, servletContext.getSession(exchange, true).getId()));
+        } else {
+            return (url);
+        }
+
+    }
+
+    /**
+     * Convert (if necessary) and return the absolute URL that represents the
+     * resource referenced by this possibly relative URL.  If this URL is
+     * already absolute, return it unchanged.
+     *
+     * @param location URL to be (possibly) converted and then returned
+     * @throws IllegalArgumentException if a MalformedURLException is
+     *                                  thrown when converting the relative URL to an absolute one
+     */
+    private String toAbsolute(String location) {
+
+        if (location == null) {
+            return location;
+        }
+
+        boolean leadingSlash = location.startsWith("/");
+
+        if (leadingSlash || !hasScheme(location)) {
+            return RedirectBuilder.redirect(exchange, location, false);
+        } else {
+            return location;
+        }
+
+    }
+
+    /**
+     * Determine if a URI string has a <code>scheme</code> component.
+     */
+    private boolean hasScheme(String uri) {
+        int len = uri.length();
+        for (int i = 0; i < len; i++) {
+            char c = uri.charAt(i);
+            if (c == ':') {
+                return i > 0;
+            } else if (!Character.isLetterOrDigit(c) &&
+                    (c != '+' && c != '-' && c != '.')) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Return <code>true</code> if the specified URL should be encoded with
+     * a session identifier.  This will be true if all of the following
+     * conditions are met:
+     * <ul>
+     * <li>The request we are responding to asked for a valid session
+     * <li>The requested session ID was not received via a cookie
+     * <li>The specified URL points back to somewhere within the web
+     * application that is responding to this request
+     * </ul>
+     *
+     * @param location Absolute URL to be validated
+     */
+    protected boolean isEncodeable(final String location) {
+
+        if (location == null)
+            return (false);
+
+        // Is this an intra-document reference?
+        if (location.startsWith("#"))
+            return (false);
+
+        // Are we in a valid session that is not using cookies?
+        final HttpServletRequestImpl hreq = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalRequest();
+
+        // Is URL encoding permitted
+        if (!servletContext.getEffectiveSessionTrackingModes().contains(SessionTrackingMode.URL)) {
+            return false;
+        }
+
+        final HttpSession session = hreq.getSession(false);
+        if (session == null)
+            return (false);
+        if (hreq.isRequestedSessionIdFromCookie())
+            return (false);
+
+        return doIsEncodeable(hreq, session, location);
+    }
+
+    private boolean doIsEncodeable(HttpServletRequestImpl hreq, HttpSession session,
+                                   String location) {
+        // Is this a valid absolute URL?
+        URL url = null;
+        try {
+            url = new URL(location);
+        } catch (MalformedURLException e) {
+            return false;
+        }
+
+        // Does this URL match down to (and including) the context path?
+        if (!hreq.getScheme().equalsIgnoreCase(url.getProtocol())) {
+            return false;
+        }
+        if (!hreq.getServerName().equalsIgnoreCase(url.getHost())) {
+            return false;
+        }
+        int serverPort = hreq.getServerPort();
+        if (serverPort == -1) {
+            if ("https".equals(hreq.getScheme())) {
+                serverPort = 443;
+            } else {
+                serverPort = 80;
+            }
+        }
+        int urlPort = url.getPort();
+        if (urlPort == -1) {
+            if ("https".equals(url.getProtocol())) {
+                urlPort = 443;
+            } else {
+                urlPort = 80;
+            }
+        }
+        if (serverPort != urlPort) {
+            return false;
+        }
+
+        String file = url.getFile();
+        if (file == null) {
+            return false;
+        }
+        String tok = servletContext.getSessionCookieConfig().getName() + "=" + session.getId();
+        if (file.indexOf(tok) >= 0) {
+            return false;
+        }
+
+        // This URL belongs to our web application, so it is encodeable
+        return true;
+
+    }
+
+
+    /**
+     * Return the specified URL with the specified session identifier
+     * suitably encoded.
+     *
+     * @param url       URL to be encoded with the session id
+     * @param sessionId Session id to be included in the encoded URL
+     */
+    protected String toEncoded(String url, String sessionId) {
+
+        if ((url == null) || (sessionId == null))
+            return (url);
+
+        String path = url;
+        String query = "";
+        String anchor = "";
+        int question = url.indexOf('?');
+        if (question >= 0) {
+            path = url.substring(0, question);
+            query = url.substring(question);
+        }
+        int pound = path.indexOf('#');
+        if (pound >= 0) {
+            anchor = path.substring(pound);
+            path = path.substring(0, pound);
+        }
+        StringBuilder sb = new StringBuilder(path);
+        if (sb.length() > 0) { // jsessionid can't be first.
+            sb.append(';');
+            sb.append(servletContext.getSessionCookieConfig().getName());
+            sb.append('=');
+            sb.append(sessionId);
+        }
+        sb.append(anchor);
+        sb.append(query);
+        return (sb.toString());
+
+    }
+
 
     public static enum ResponseState {
         NONE,
