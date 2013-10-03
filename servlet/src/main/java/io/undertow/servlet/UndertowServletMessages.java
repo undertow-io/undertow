@@ -196,7 +196,4 @@ public interface UndertowServletMessages {
 
     @Message(id = 10050, value = "Filter %s used in filter mapping %s not found")
     IllegalStateException filterNotFound(String filterName, String mapping);
-
-    @Message(id = 10051, value = "Illegal dispatcher path %s")
-    IllegalArgumentException illegalDispatcherPath(String path);
 }
