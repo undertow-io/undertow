@@ -90,6 +90,10 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
+        if(isForbiddenPath(path)) {
+            exchange.setResponseCode(404);
+            return;
+        }
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
         if (info.getType() == ServletPathMatch.Type.REDIRECT) {
             //UNDERTOW-89
@@ -133,6 +137,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         } else {
             dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
         }
+    }
+
+    private boolean isForbiddenPath(String path) {
+        final String lowerPath = path.toLowerCase();
+        return lowerPath.equals("/meta-inf/") || lowerPath.startsWith("/web-inf/");
     }
 
     public void dispatchToPath(final HttpServerExchange exchange, final ServletPathMatch pathInfo, final DispatcherType dispatcherType) throws Exception {
