@@ -48,6 +48,7 @@ import io.undertow.util.StatusCodes;
  */
 public final class HttpServletResponseImpl implements HttpServletResponse {
 
+    public static final String ISO_8859_1 = "ISO-8859-1";
     private final HttpServerExchange exchange;
     private volatile ServletContextImpl servletContext;
 
@@ -269,7 +270,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public String getCharacterEncoding() {
         if (charset == null) {
-            return "ISO-8859-1";
+            return ISO_8859_1;
         }
         return charset;
     }
@@ -277,7 +278,11 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public String getContentType() {
         if (contentType != null) {
-            return contentType + ";charset=" + getCharacterEncoding();
+            if(charsetSet) {
+                return contentType + ";charset=" + getCharacterEncoding();
+            } else {
+                return contentType;
+            }
         }
         return null;
     }
@@ -295,6 +300,10 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public PrintWriter getWriter() throws IOException {
         if (writer == null) {
+            if(!charsetSet) {
+                //servet 5.5
+                setCharacterEncoding(getCharacterEncoding());
+            }
             if (responseState == ResponseState.STREAM) {
                 throw UndertowServletMessages.MESSAGES.getOutputStreamAlreadyCalled();
             }
