@@ -94,6 +94,22 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
         return null;
     }
 
+    @Override
+    public SessionCookieSource sessionCookieSource(HttpServerExchange exchange) {
+        Map<String, Cookie> cookies = exchange.getRequestCookies();
+        if (cookies != null) {
+            Cookie sessionId = cookies.get(name);
+            if (sessionId != null) {
+                return SessionCookieSource.COOKIE;
+            }
+        }
+        if(fallback != null) {
+            String id =  fallback.findSessionId(exchange);
+            return id != null ? fallback.sessionCookieSource(exchange) : SessionCookieSource.NONE;
+        }
+        return SessionCookieSource.NONE;
+    }
+
     public String getName() {
         return name;
     }

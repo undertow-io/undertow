@@ -46,6 +46,16 @@ public interface SessionConfig {
      */
     String findSessionId(final HttpServerExchange exchange);
 
+    SessionCookieSource sessionCookieSource(final HttpServerExchange exchange);
+
     String rewriteUrl(final String originalUrl, final String sessionId);
+
+    enum SessionCookieSource {
+        URL,
+        COOKIE,
+        SSL,
+        OTHER,
+        NONE
+    }
 
 }

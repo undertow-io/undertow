@@ -43,6 +43,11 @@ public class PathParameterSessionConfig implements SessionConfig {
     }
 
     @Override
+    public SessionCookieSource sessionCookieSource(HttpServerExchange exchange) {
+        return findSessionId(exchange) != null ? SessionCookieSource.URL : SessionCookieSource.NONE;
+    }
+
+    @Override
     public String rewriteUrl(final String originalUrl, final String sessionId) {
         try {
             int pos = originalUrl.indexOf("?");

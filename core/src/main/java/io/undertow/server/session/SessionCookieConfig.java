@@ -88,6 +88,11 @@ public class SessionCookieConfig implements SessionConfig {
         return null;
     }
 
+    @Override
+    public SessionCookieSource sessionCookieSource(HttpServerExchange exchange) {
+        return findSessionId(exchange) != null ? SessionCookieSource.COOKIE : SessionCookieSource.NONE;
+    }
+
     public String getCookieName() {
         return cookieName;
     }

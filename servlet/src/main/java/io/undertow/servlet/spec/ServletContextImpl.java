@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.EventListener;
@@ -88,8 +89,8 @@ public class ServletContextImpl implements ServletContext {
     private final ConcurrentMap<String, Object> attributes;
     private final SessionCookieConfigImpl sessionCookieConfig;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
-    private volatile Set<SessionTrackingMode> sessionTrackingModes = Collections.singleton(SessionTrackingMode.COOKIE);
-    private volatile Set<SessionTrackingMode> defaultSessionTrackingModes = Collections.singleton(SessionTrackingMode.COOKIE);
+    private volatile Set<SessionTrackingMode> sessionTrackingModes = new HashSet<SessionTrackingMode>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
+    private volatile Set<SessionTrackingMode> defaultSessionTrackingModes = new HashSet<SessionTrackingMode>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
     private volatile SessionConfig sessionConfig;
     private volatile boolean initialized = false;
 

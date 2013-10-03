@@ -109,6 +109,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     private FormData parsedFormData;
     private Charset characterEncoding;
     private boolean readStarted;
+    private SessionConfig.SessionCookieSource sessionCookieSource;
 
     public HttpServletRequestImpl(final HttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
@@ -353,18 +354,17 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isRequestedSessionIdFromCookie() {
-        HttpSessionImpl session = servletContext.getSession(exchange, false);
-        return session != null;
+        return sessionCookieSource() == SessionConfig.SessionCookieSource.COOKIE;
     }
 
     @Override
     public boolean isRequestedSessionIdFromURL() {
-        return false;
+        return sessionCookieSource() == SessionConfig.SessionCookieSource.URL;
     }
 
     @Override
     public boolean isRequestedSessionIdFromUrl() {
-        return false;
+        return isRequestedSessionIdFromURL();
     }
 
     @Override
@@ -1020,5 +1020,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             return uri;
         }
         return getQueryString();
+    }
+
+    private SessionConfig.SessionCookieSource sessionCookieSource() {
+        if(sessionCookieSource == null) {
+            sessionCookieSource = servletContext.getSessionCookieConfig().sessionCookieSource(exchange);
+        }
+        return sessionCookieSource;
     }
 }
