@@ -220,7 +220,7 @@ public class AjpRequestParser extends AbstractAjpParser {
             case AjpRequestParseState.READING_REMOTE_ADDR: {
                 StringHolder result = parseString(buf, state, false);
                 if (result.readComplete) {
-                    //exchange.setRequestURI(result.value);
+                    state.remoteAddress = result.value;
                 } else {
                     state.state = AjpRequestParseState.READING_REMOTE_ADDR;
                     return;

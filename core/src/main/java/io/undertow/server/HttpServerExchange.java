@@ -242,6 +242,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private static final int FLAG_IN_CALL = 1 << 17;
 
+    /**
+     * The source address for the request. If this is null then the actual source address from the channel is used
+     */
+    private InetSocketAddress sourceAddress;
+
     public HttpServerExchange(final ServerConnection connection, long maxEntitySize) {
         this.connection = connection;
         this.maxEntitySize = maxEntitySize;
@@ -737,7 +742,20 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the source address of the HTTP request
      */
     public InetSocketAddress getSourceAddress() {
+        if(sourceAddress != null) {
+            return sourceAddress;
+        }
         return connection.getPeerAddress(InetSocketAddress.class);
+    }
+
+    /**
+     * Sets the source address of the HTTP request. If this is not explicitly set
+     * the actual source address of the channel is used.
+     *
+     * @param sourceAddress The address
+     */
+    public void setSourceAddress(InetSocketAddress sourceAddress) {
+        this.sourceAddress = sourceAddress;
     }
 
     /**

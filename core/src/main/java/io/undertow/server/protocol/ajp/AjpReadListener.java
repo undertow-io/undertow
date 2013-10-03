@@ -173,6 +173,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
 
             try {
                 connection.setSSLSessionInfo(state.createSslSessionInfo());
+                httpServerExchange.setSourceAddress(state.createPeerAddress());
                 if(scheme != null) {
                     httpServerExchange.setRequestScheme(scheme);
                 } else if(connection.getSslSessionInfo() != null) {
@@ -183,6 +184,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
                 state = null;
                 this.httpServerExchange = null;
                 httpServerExchange.setPersistent(true);
+
                 HttpHandlers.executeRootHandler(connection.getRootHandler(), httpServerExchange, Thread.currentThread() instanceof XnioExecutor);
 
             } catch (Throwable t) {

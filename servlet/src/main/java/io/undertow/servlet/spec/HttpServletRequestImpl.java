@@ -22,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
@@ -758,12 +759,27 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRemoteAddr() {
-        return exchange.getSourceAddress().getAddress().getHostAddress();
+        InetSocketAddress sourceAddress = exchange.getSourceAddress();
+        if(sourceAddress == null) {
+            return "";
+        }
+        InetAddress address = sourceAddress.getAddress();
+        if(address == null) {
+            //this is unresolved, so we just return the host name
+            //not exactly spec, but if the name should be resolved then a PeerNameResolvingHandler should be used
+            //and this is probably better than just returning null
+            return sourceAddress.getHostString();
+        }
+        return address.getHostAddress();
     }
 
     @Override
     public String getRemoteHost() {
-        return exchange.getSourceAddress().getHostName();
+        InetSocketAddress sourceAddress = exchange.getSourceAddress();
+        if(sourceAddress == null) {
+            return "";
+        }
+        return sourceAddress.getHostString();
     }
 
     @Override

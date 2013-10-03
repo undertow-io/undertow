@@ -68,8 +68,21 @@ public interface ServerConnection extends Attachable, ConnectedChannel {
 
     void close() throws IOException;
 
+    /**
+     * Returns the actual address of the remote connection. This will not take things like X-Forwarded-for
+     * into account.
+     * @return The address of the remote peer
+     */
     SocketAddress getPeerAddress();
 
+    /**
+     * Returns the actual address of the remote connection. This will not take things like X-Forwarded-for
+     * into account.
+     *
+     * @param type The type of address to return
+     * @param <A> The address type
+     * @return The remote endpoint address
+     */
     <A extends SocketAddress> A getPeerAddress(Class<A> type);
 
     SocketAddress getLocalAddress();

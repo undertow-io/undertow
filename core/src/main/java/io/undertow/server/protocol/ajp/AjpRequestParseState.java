@@ -3,6 +3,9 @@ package io.undertow.server.protocol.ajp;
 import io.undertow.server.BasicSSLSessionInfo;
 import io.undertow.util.HttpString;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.security.cert.CertificateException;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +32,7 @@ class AjpRequestParseState extends AbstractAjpParseState {
     public static final int READING_HEADERS = 13;
     public static final int READING_ATTRIBUTES = 14;
     public static final int DONE = 15;
+    public static final String AJP_REMOTE_PORT = "AJP_REMOTE_PORT";
 
     int state;
 
@@ -44,6 +48,8 @@ class AjpRequestParseState extends AbstractAjpParseState {
 
     //TODO: can there be more than one attribute?
     Map<String, String> attributes = new HashMap<String, String>();
+
+    String remoteAddress;
 
     public boolean isComplete() {
         return state == 15;
@@ -62,6 +68,25 @@ class AjpRequestParseState extends AbstractAjpParseState {
         } catch (CertificateException e) {
             return null;
         } catch (javax.security.cert.CertificateException e) {
+            return null;
+        }
+    }
+
+    InetSocketAddress createPeerAddress() {
+        if(remoteAddress == null) {
+            return null;
+        }
+        String portString = attributes.get(AJP_REMOTE_PORT);
+        int port = 0;
+        if(portString != null) {
+            try {
+                port = Integer.parseInt(portString);
+            } catch (IllegalArgumentException e) {}
+        }
+        try {
+            InetAddress address = InetAddress.getByName(remoteAddress);
+            return new InetSocketAddress(address, port);
+        } catch (UnknownHostException e) {
             return null;
         }
     }
