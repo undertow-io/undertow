@@ -29,13 +29,13 @@ import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AbstractAttachable;
+import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
 import io.undertow.util.SameThreadExecutor;
-import io.undertow.util.WrapperConduitFactory;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -46,6 +46,7 @@ import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.Conduit;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
@@ -1559,6 +1560,33 @@ public final class HttpServerExchange extends AbstractAttachable {
             delegate.getCloseSetter().set(null);
             if (delegate.isReadResumed()) {
                 delegate.suspendReads();
+            }
+        }
+    }
+
+    public static class WrapperConduitFactory<T extends Conduit> implements ConduitFactory<T> {
+
+        private final HttpServerExchange exchange;
+        private final ConduitWrapper<T>[] wrappers;
+        private final int wrapperCount;
+        private int position;
+        private T first;
+
+
+        public WrapperConduitFactory(ConduitWrapper<T>[] wrappers, int wrapperCount, T first, HttpServerExchange exchange) {
+            this.wrappers = wrappers;
+            this.wrapperCount = wrapperCount;
+            this.exchange = exchange;
+            this.position = wrapperCount - 1;
+            this.first = first;
+        }
+
+        @Override
+        public T create() {
+            if (position == -1) {
+                return first;
+            } else {
+                return wrappers[position--].wrap(this, exchange);
             }
         }
     }
