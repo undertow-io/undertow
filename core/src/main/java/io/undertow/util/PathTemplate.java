@@ -39,11 +39,13 @@ import io.undertow.UndertowMessages;
  */
 public class PathTemplate implements Comparable<PathTemplate> {
 
+    private final String templateString;
     private final boolean template;
     private final String base;
     private final List<Part> parts;
 
-    private PathTemplate(final boolean template, final String base, final List<Part> parts) {
+    private PathTemplate(String templateString, final boolean template, final String base, final List<Part> parts) {
+        this.templateString = templateString;
         this.template = template;
         this.base = base;
         this.parts = parts;
@@ -137,7 +139,7 @@ public class PathTemplate implements Comparable<PathTemplate> {
                 break;
             }
         }
-        return new PathTemplate(state > 1, base, parts);
+        return new PathTemplate(path, state > 1, base, parts);
     }
 
     /**
@@ -250,9 +252,15 @@ public class PathTemplate implements Comparable<PathTemplate> {
             }
             ++i;
         }
-
     }
 
+    public String getBase() {
+        return base;
+    }
+
+    public String getTemplateString() {
+        return templateString;
+    }
 
     private static class Part {
         final boolean template;

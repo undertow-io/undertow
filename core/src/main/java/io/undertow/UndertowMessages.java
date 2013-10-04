@@ -236,4 +236,7 @@ public interface UndertowMessages {
 
     @Message(id = 70, value = "method can only be called by IO thread")
     IllegalStateException canOnlyBeCalledByIoThread();
+
+    @Message(id = 71, value = "Cannot add path template %s, matcher already contains an equivalent pattern %s")
+    IllegalStateException matcherAlreadyContainsTemplate(String templateString, String templateString1);
 }

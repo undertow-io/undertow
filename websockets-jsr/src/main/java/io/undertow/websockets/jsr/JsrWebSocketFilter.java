@@ -19,6 +19,8 @@
 package io.undertow.websockets.jsr;
 
 import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.PathTemplateMatcher;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
@@ -37,12 +39,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.websocket.server.ServerContainer;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Filter that provides HTTP upgrade functionality. This should be run after all user filters, but before any servlets.
@@ -56,37 +53,25 @@ import java.util.Map;
  */
 public class JsrWebSocketFilter implements Filter {
 
-
     private WebSocketConnectionCallback callback;
+    private PathTemplateMatcher<WebSocketHandshakeHolder> pathTemplateMatcher;
 
-    private Map<ConfiguredServerEndpoint, List<Handshake>> handshakes;
-
-    private List<ConfiguredServerEndpoint> configuredServerEndpoints;
-
-    protected Map<ConfiguredServerEndpoint, List<Handshake>> handshakes(List<ConfiguredServerEndpoint> configs) {
-        final IdentityHashMap<ConfiguredServerEndpoint, List<Handshake>> ret = new IdentityHashMap<ConfiguredServerEndpoint, List<Handshake>>();
-        for (ConfiguredServerEndpoint config : configs) {
-            List<Handshake> handshakes = new ArrayList<Handshake>();
-            handshakes.add(new JsrHybi13Handshake(config));
-            handshakes.add(new JsrHybi08Handshake(config));
-            handshakes.add(new JsrHybi07Handshake(config));
-            ret.put(config, handshakes);
-        }
-        return ret;
+    protected WebSocketHandshakeHolder handshakes(ConfiguredServerEndpoint config) {
+        List<Handshake> handshakes = new ArrayList<Handshake>();
+        handshakes.add(new JsrHybi13Handshake(config));
+        handshakes.add(new JsrHybi08Handshake(config));
+        handshakes.add(new JsrHybi07Handshake(config));
+        return new WebSocketHandshakeHolder(handshakes, config);
     }
 
     @Override
     public void init(final FilterConfig filterConfig) throws ServletException {
         ServerWebSocketContainer container = (ServerWebSocketContainer) filterConfig.getServletContext().getAttribute(ServerContainer.class.getName());
         container.deploymentComplete();
-        configuredServerEndpoints = new ArrayList<ConfiguredServerEndpoint>(container.getConfiguredServerEndpoints());
-        Collections.sort(configuredServerEndpoints, new Comparator<ConfiguredServerEndpoint>() {
-            @Override
-            public int compare(final ConfiguredServerEndpoint o1, final ConfiguredServerEndpoint o2) {
-                return o1.getPathTemplate().compareTo(o2.getPathTemplate());
-            }
-        });
-        this.handshakes = handshakes(configuredServerEndpoints);
+        pathTemplateMatcher = new PathTemplateMatcher<WebSocketHandshakeHolder>();
+        for (ConfiguredServerEndpoint endpoint : container.getConfiguredServerEndpoints()) {
+            pathTemplateMatcher.add(endpoint.getPathTemplate(), handshakes(endpoint));
+        }
         this.callback = new EndpointSessionHandler(container);
     }
 
@@ -94,7 +79,7 @@ public class JsrWebSocketFilter implements Filter {
     public void doFilter(final ServletRequest request, final ServletResponse response, final FilterChain chain) throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
-        if (req.getHeader("Upgrade") != null) {
+        if (req.getHeader(Headers.UPGRADE_STRING) != null) {
             final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp);
 
             String path;
@@ -106,32 +91,25 @@ public class JsrWebSocketFilter implements Filter {
             if (!path.startsWith("/")) {
                 path = "/" + path;
             }
-
-            final Map<String, String> params = new HashMap<String, String>();
-            //we need a better way of handling this mapping.
-            for (ConfiguredServerEndpoint endpoint : configuredServerEndpoints) {
-                if (endpoint.getPathTemplate().matches(path, params)) {
-                    Handshake handshaker = null;
-                    for (Handshake method : handshakes.get(endpoint)) {
-                        if (method.matches(facade)) {
-                            handshaker = method;
-                            break;
-                        }
-                    }
-
-                    if (handshaker == null) {
-                        chain.doFilter(request, response);
-                    } else {
-                        facade.putAttachment(HandshakeUtil.PATH_PARAMS, params);
-                        handshaker.handshake(facade, callback);
-                        return;
+            PathTemplateMatcher.PathMatchResult<WebSocketHandshakeHolder> matchResult = pathTemplateMatcher.match(path);
+            if (matchResult != null) {
+                Handshake handshaker = null;
+                for (Handshake method : matchResult.getValue().handshakes) {
+                    if (method.matches(facade)) {
+                        handshaker = method;
+                        break;
                     }
                 }
+
+                if (handshaker == null) {
+                    chain.doFilter(request, response);
+                } else {
+                    facade.putAttachment(HandshakeUtil.PATH_PARAMS, matchResult.getParameters());
+                    handshaker.handshake(facade, callback);
+                    return;
+                }
             }
-
             chain.doFilter(request, response);
-
-
         } else {
             chain.doFilter(request, response);
         }
@@ -140,5 +118,15 @@ public class JsrWebSocketFilter implements Filter {
     @Override
     public void destroy() {
 
+    }
+
+    private static final class WebSocketHandshakeHolder {
+        final List<Handshake> handshakes;
+        final ConfiguredServerEndpoint endpoint;
+
+        private WebSocketHandshakeHolder(List<Handshake> handshakes, ConfiguredServerEndpoint endpoint) {
+            this.handshakes = handshakes;
+            this.endpoint = endpoint;
+        }
     }
 }
