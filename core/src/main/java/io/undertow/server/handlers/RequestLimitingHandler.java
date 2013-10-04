@@ -23,9 +23,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import io.undertow.Handlers;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 
 import static org.xnio.Bits.longBitMask;
@@ -182,7 +182,7 @@ public final class RequestLimitingHandler implements HttpHandler {
      * @param nextHandler the next handler
      */
     public RequestLimitingHandler setNextHandler(final HttpHandler nextHandler) {
-        HttpHandlers.handlerNotNull(nextHandler);
+        Handlers.handlerNotNull(nextHandler);
         return this;
     }
 

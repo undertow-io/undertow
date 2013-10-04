@@ -20,8 +20,8 @@ package io.undertow.server.handlers;
 
 import java.util.Map;
 
+import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
@@ -66,13 +66,13 @@ public class NameVirtualHostHandler implements HttpHandler {
     }
 
     public NameVirtualHostHandler setDefaultHandler(final HttpHandler defaultHandler) {
-        HttpHandlers.handlerNotNull(defaultHandler);
+        Handlers.handlerNotNull(defaultHandler);
         this.defaultHandler = defaultHandler;
         return this;
     }
 
     public synchronized NameVirtualHostHandler addHost(final String host, final HttpHandler handler) {
-        HttpHandlers.handlerNotNull(handler);
+        Handlers.handlerNotNull(handler);
         hosts.put(host, handler);
         return this;
     }

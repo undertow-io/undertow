@@ -20,8 +20,8 @@ package io.undertow.server.protocol.http;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StringWriteChannelListener;
 import org.xnio.ChannelListener;
@@ -29,7 +29,6 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
-import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -149,7 +148,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
             this.httpServerExchange = null;
             HttpTransferEncoding.setupRequest(httpServerExchange);
-            HttpHandlers.executeRootHandler(connection.getRootHandler(), httpServerExchange, Thread.currentThread() instanceof XnioExecutor);
+            Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
         } catch (Exception e) {
             sendBadRequestAndClose(connection.getChannel(), e);
             return;

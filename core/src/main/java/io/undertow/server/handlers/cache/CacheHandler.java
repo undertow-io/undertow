@@ -1,9 +1,9 @@
 package io.undertow.server.handlers.cache;
 
+import io.undertow.Handlers;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.encoding.AllowedContentEncodings;
 import io.undertow.util.ConduitFactory;
@@ -79,7 +79,7 @@ public class CacheHandler implements HttpHandler {
     }
 
     public CacheHandler setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
+        Handlers.handlerNotNull(next);
         this.next = next;
         return this;
     }

@@ -41,8 +41,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.UndertowLogger;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
@@ -183,12 +183,12 @@ public class AsyncContextImpl implements AsyncContext {
         doDispatch(new Runnable() {
             @Override
             public void run() {
-                HttpHandlers.executeRootHandler(new HttpHandler() {
+                Connectors.executeRootHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
                         servletDispatcher.dispatchToPath(exchange, pathInfo, DispatcherType.ASYNC);
                     }
-                }, exchange, false);
+                }, exchange);
             }
         });
     }

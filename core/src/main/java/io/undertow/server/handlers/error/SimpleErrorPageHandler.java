@@ -23,11 +23,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import io.undertow.Handlers;
 import io.undertow.io.Sender;
 import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
@@ -81,7 +81,7 @@ public class SimpleErrorPageHandler implements HttpHandler {
     }
 
     public SimpleErrorPageHandler setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
+        Handlers.handlerNotNull(next);
         this.next = next;
         return this;
     }

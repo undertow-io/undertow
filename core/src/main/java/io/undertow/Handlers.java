@@ -266,4 +266,9 @@ public class Handlers {
 
     }
 
+    public static void handlerNotNull(final HttpHandler handler) {
+        if (handler == null) {
+            throw UndertowMessages.MESSAGES.handlerCannotBeNull();
+        }
+    }
 }

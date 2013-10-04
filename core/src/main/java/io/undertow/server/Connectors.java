@@ -1,11 +1,13 @@
 package io.undertow.server;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 /**
  * This class provides the connector part of the {@link HttpServerExchange} API.
@@ -130,4 +132,29 @@ public class Connectors {
         return header.toString();
     }
 
+    public static void executeRootHandler(final HttpHandler handler, final HttpServerExchange exchange) {
+        try {
+            exchange.setInCall(true);
+            handler.handleRequest(exchange);
+            exchange.setInCall(false);
+            if (exchange.isDispatched()) {
+                final Runnable dispatchTask = exchange.getDispatchTask();
+                Executor executor = exchange.getDispatchExecutor();
+                exchange.unDispatch();
+                if (dispatchTask != null) {
+                    executor = executor == null ? exchange.getConnection().getWorker() : executor;
+                    executor.execute(dispatchTask);
+                }
+            } else {
+                exchange.endExchange();
+            }
+        } catch (Throwable t) {
+            exchange.setInCall(false);
+            if (!exchange.isResponseStarted()) {
+                exchange.setResponseCode(500);
+            }
+            UndertowLogger.REQUEST_LOGGER.errorf(t, "Blocking request failed %s", exchange);
+            exchange.endExchange();
+        }
+    }
 }

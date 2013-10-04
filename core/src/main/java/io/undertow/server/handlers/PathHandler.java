@@ -25,9 +25,9 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 
+import io.undertow.Handlers;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 
@@ -102,7 +102,7 @@ public class PathHandler implements HttpHandler {
      * @param handler The handler
      */
     public synchronized PathHandler addPath(final String path, final HttpHandler handler) {
-        HttpHandlers.handlerNotNull(handler);
+        Handlers.handlerNotNull(handler);
         if (path.isEmpty()) {
             throw UndertowMessages.MESSAGES.pathMustBeSpecified();
         }

@@ -18,8 +18,8 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CanonicalPathUtils;
 
@@ -48,7 +48,7 @@ public class CanonicalPathHandler implements HttpHandler {
     }
 
     public CanonicalPathHandler setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
+        Handlers.handlerNotNull(next);
         this.next = next;
         return this;
     }

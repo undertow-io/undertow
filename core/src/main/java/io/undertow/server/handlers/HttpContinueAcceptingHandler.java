@@ -2,12 +2,12 @@ package io.undertow.server.handlers;
 
 import java.io.IOException;
 
+import io.undertow.Handlers;
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -66,7 +66,7 @@ public class HttpContinueAcceptingHandler implements HttpHandler {
     }
 
     public HttpContinueAcceptingHandler setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
+        Handlers.handlerNotNull(next);
         this.next = next;
         return this;
     }

@@ -8,7 +8,6 @@ import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -19,7 +18,6 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.StreamConnection;
-import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
@@ -186,7 +184,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
                 this.httpServerExchange = null;
                 httpServerExchange.setPersistent(true);
 
-                HttpHandlers.executeRootHandler(connection.getRootHandler(), httpServerExchange, Thread.currentThread() instanceof XnioExecutor);
+                Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
 
             } catch (Throwable t) {
                 //TODO: we should attempt to return a 500 status code in this situation

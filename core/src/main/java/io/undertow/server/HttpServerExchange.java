@@ -29,7 +29,6 @@ import io.undertow.io.UndertowInputStream;
 import io.undertow.io.UndertowOutputStream;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AbstractAttachable;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -77,19 +76,6 @@ import static org.xnio.Bits.intBitMask;
 public final class HttpServerExchange extends AbstractAttachable {
 
     // immutable state
-
-    /**
-     * The executor that is to be used to dispatch the {@link #DISPATCH_TASK}. Note that this is not cleared
-     * between dispatches, so once a request has been dispatched once then all subsequent dispatches will use
-     * the same executor.
-     */
-    public static final AttachmentKey<Executor> DISPATCH_EXECUTOR = AttachmentKey.create(Executor.class);
-
-    /**
-     * When the call stack return this task will be executed by the executor specified in {@link #DISPATCH_EXECUTOR}.
-     * If the executor is null then it will be executed by the XNIO worker.
-     */
-    public static final AttachmentKey<Runnable> DISPATCH_TASK = AttachmentKey.create(Runnable.class);
 
     private static final Logger log = Logger.getLogger(HttpServerExchange.class);
 
@@ -190,6 +176,20 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private long maxEntitySize;
 
+    /**
+     * When the call stack return this task will be executed by the executor specified in {@link #dispatchExecutor}.
+     * If the executor is null then it will be executed by the XNIO worker.
+     */
+    private Runnable dispatchTask;
+
+    /**
+     * The executor that is to be used to dispatch the {@link #dispatchTask}. Note that this is not cleared
+     * between dispatches, so once a request has been dispatched once then all subsequent dispatches will use
+     * the same executor.
+     */
+    private Executor dispatchExecutor;
+
+
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
 
     /**
@@ -234,7 +234,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * <p/>
      * This will be true most of the time, this only time this will return
      * false is when performing async operations outside the scope of a call to
-     * {@link HttpHandlers#executeRootHandler(HttpHandler, HttpServerExchange, boolean)},
+     * {@link Connectors#executeRootHandler(HttpHandler, HttpServerExchange)},
      * such as when performing async IO.
      * <p/>
      * If this is true then when the call stack returns the exchange will either be dispatched,
@@ -555,8 +555,8 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public void unDispatch() {
         state &= ~FLAG_DISPATCHED;
-        removeAttachment(DISPATCH_EXECUTOR);
-        removeAttachment(DISPATCH_TASK);
+        dispatchExecutor = null;
+        dispatchTask = null;
     }
 
     /**
@@ -596,9 +596,9 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (isInCall()) {
             state |= FLAG_DISPATCHED;
             if (executor != null) {
-                putAttachment(DISPATCH_EXECUTOR, executor);
+                this.dispatchExecutor = executor;
             }
-            putAttachment(DISPATCH_TASK, runnable);
+            this.dispatchTask = runnable;
         } else {
             if (executor == null) {
                 getConnection().getWorker().execute(runnable);
@@ -616,7 +616,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                HttpHandlers.executeRootHandler(handler, HttpServerExchange.this, false);
+                Connectors.executeRootHandler(handler, HttpServerExchange.this);
             }
         };
         dispatch(executor, runnable);
@@ -629,9 +629,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public void setDispatchExecutor(final Executor executor) {
         if (executor == null) {
-            removeAttachment(DISPATCH_EXECUTOR);
+            dispatchExecutor = null;
         } else {
-            putAttachment(DISPATCH_EXECUTOR, executor);
+            dispatchExecutor = executor;
         }
     }
 
@@ -641,7 +641,15 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The current dispatch executor
      */
     public Executor getDispatchExecutor() {
-        return getAttachment(DISPATCH_EXECUTOR);
+        return dispatchExecutor;
+    }
+
+    /**
+     *
+     * @return The current dispatch task
+     */
+    Runnable getDispatchTask() {
+        return dispatchTask;
     }
 
     boolean isInCall() {

@@ -25,9 +25,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import io.undertow.Handlers;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 
@@ -138,7 +138,7 @@ public class OriginHandler implements HttpHandler {
     }
 
     public OriginHandler setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
+        Handlers.handlerNotNull(next);
         this.next = next;
         return this;
     }
@@ -148,7 +148,7 @@ public class OriginHandler implements HttpHandler {
     }
 
     public OriginHandler setOriginFailedHandler(HttpHandler originFailedHandler) {
-        HttpHandlers.handlerNotNull(originFailedHandler);
+        Handlers.handlerNotNull(originFailedHandler);
         this.originFailedHandler = originFailedHandler;
         return this;
     }

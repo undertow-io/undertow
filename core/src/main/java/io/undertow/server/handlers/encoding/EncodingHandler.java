@@ -18,9 +18,9 @@
 
 package io.undertow.server.handlers.encoding;
 
+import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 
 /**
@@ -73,7 +73,7 @@ public class EncodingHandler implements HttpHandler {
     }
 
     public EncodingHandler setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
+        Handlers.handlerNotNull(next);
         this.next = next;
         return this;
     }
@@ -84,7 +84,7 @@ public class EncodingHandler implements HttpHandler {
     }
 
     public EncodingHandler setNoEncodingHandler(HttpHandler noEncodingHandler) {
-        HttpHandlers.handlerNotNull(noEncodingHandler);
+        Handlers.handlerNotNull(noEncodingHandler);
         this.noEncodingHandler = noEncodingHandler;
         return this;
     }

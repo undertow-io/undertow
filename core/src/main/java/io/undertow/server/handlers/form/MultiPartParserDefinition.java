@@ -31,9 +31,9 @@ import java.util.concurrent.Executor;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -209,7 +209,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         public void run() {
             try {
                 parseBlocking();
-                HttpHandlers.executeRootHandler(handler, exchange, false);
+                Connectors.executeRootHandler(handler, exchange);
             } catch (Throwable e) {
                 UndertowLogger.REQUEST_LOGGER.debug("Exception parsing data", e);
                 exchange.setResponseCode(500);

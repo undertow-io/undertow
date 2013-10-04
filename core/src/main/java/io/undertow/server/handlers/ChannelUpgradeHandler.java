@@ -18,10 +18,10 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.Handlers;
 import io.undertow.UndertowLogger;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
@@ -123,7 +123,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
      * @param nonUpgradeHandler the non-upgrade delegate handler
      */
     public ChannelUpgradeHandler setNonUpgradeHandler(final HttpHandler nonUpgradeHandler) {
-        HttpHandlers.handlerNotNull(nonUpgradeHandler);
+        Handlers.handlerNotNull(nonUpgradeHandler);
         this.nonUpgradeHandler = nonUpgradeHandler;
         return this;
     }

@@ -18,11 +18,11 @@
 
 package io.undertow.server.session;
 
+import io.undertow.Handlers;
 import io.undertow.UndertowMessages;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpHandlers;
 import io.undertow.server.handlers.ResponseCodeHandler;
 
 /**
@@ -82,7 +82,7 @@ public class SessionAttachmentHandler implements HttpHandler {
     }
 
     public SessionAttachmentHandler setNext(final HttpHandler next) {
-        HttpHandlers.handlerNotNull(next);
+        Handlers.handlerNotNull(next);
         this.next = next;
         return this;
     }
