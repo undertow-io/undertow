@@ -114,7 +114,7 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                     } catch (IOException e) {
                         UndertowLogger.REQUEST_IO_LOGGER.debug("Error reading request", e);
                         // fuck it, it's all ruined
-                        IoUtils.safeClose(channel);
+                        IoUtils.safeClose(connection);
                         return;
                     }
                     return;
