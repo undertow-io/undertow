@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 
-import io.undertow.server.ExchangeCookieUtils;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.TruncatedResponseException;
 import io.undertow.util.HeaderMap;
@@ -116,7 +116,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         }
 
         //merge the cookies into the header map
-        ExchangeCookieUtils.flattenCookies(exchange);
+        Connectors.flattenCookies(exchange);
 
         pooledBuffer = pool.allocate();
         ByteBuffer buffer = pooledBuffer.getResource();

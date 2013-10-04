@@ -31,6 +31,7 @@ import io.undertow.conduits.HeadStreamSinkConduit;
 import io.undertow.conduits.PipelingBufferingStreamSinkConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.ConduitWrapper;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
@@ -89,7 +90,7 @@ public class HttpTransferEncoding {
                 pipeliningBuffer.setupPipelineBuffer(exchange);
             }
             // no content - immediately start the next request, returning an empty stream for this one
-            exchange.terminateRequest();
+            Connectors.terminateRequest(exchange);
         } else {
             persistentConnection = handleRequestEncoding(exchange, transferEncodingHeader, contentLengthHeader, connection, pipeliningBuffer, persistentConnection);
         }
@@ -116,7 +117,7 @@ public class HttpTransferEncoding {
             if (contentLength == 0L) {
                 log.trace("No content, starting next request");
                 // no content - immediately start the next request, returning an empty stream for this one
-                exchange.terminateRequest();
+                Connectors.terminateRequest(exchange);
             } else {
                 // fixed-length content - add a wrapper for a fixed-length stream
                 ConduitStreamSourceChannel sourceChannel = ((HttpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
@@ -140,17 +141,17 @@ public class HttpTransferEncoding {
             }
 
             // no content - immediately start the next request, returning an empty stream for this one
-            exchange.terminateRequest();
+            Connectors.terminateRequest(exchange);
         } else if (exchange.isHttp11()) {
             //this is a http 1.1 non-persistent connection
             //we still know there is no content
-            exchange.terminateRequest();
+            Connectors.terminateRequest(exchange);
         } else {
             ConduitStreamSourceChannel sourceChannel = ((HttpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
             sourceChannel.setConduit(new FinishableStreamSourceConduit(sourceChannel.getConduit(), new ConduitListener<FinishableStreamSourceConduit>() {
                 @Override
                 public void handleEvent(FinishableStreamSourceConduit channel) {
-                    exchange.terminateRequest();
+                    Connectors.terminateRequest(exchange);
                 }
             }));
         }
@@ -274,7 +275,7 @@ public class HttpTransferEncoding {
                     UndertowLogger.REQUEST_LOGGER.requestWasNotFullyConsumed();
                     exchange.setPersistent(false);
                 }
-                exchange.terminateRequest();
+                Connectors.terminateRequest(exchange);
             }
         };
     }
@@ -286,7 +287,7 @@ public class HttpTransferEncoding {
                     UndertowLogger.REQUEST_LOGGER.requestWasNotFullyConsumed();
                     exchange.setPersistent(false);
                 }
-                exchange.terminateRequest();
+                Connectors.terminateRequest(exchange);
             }
         };
     }
@@ -294,7 +295,7 @@ public class HttpTransferEncoding {
     private static ConduitListener<StreamSinkConduit> terminateResponseListener(final HttpServerExchange exchange) {
         return new ConduitListener<StreamSinkConduit>() {
             public void handleEvent(final StreamSinkConduit channel) {
-                exchange.terminateResponse();
+                Connectors.terminateResponse(exchange);
             }
         };
     }

@@ -6,6 +6,7 @@ import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.EmptyStreamSourceConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.server.AbstractServerConnection;
+import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandlers;
 import io.undertow.server.HttpServerExchange;
@@ -163,7 +164,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
             final AjpServerResponseConduit responseConduit = new AjpServerResponseConduit(connection.getChannel().getSinkChannel().getConduit(), connection.getBufferPool(), httpServerExchange, new ConduitListener<AjpServerResponseConduit>() {
                 @Override
                 public void handleEvent(AjpServerResponseConduit channel) {
-                    httpServerExchange.terminateResponse();
+                    Connectors.terminateResponse(httpServerExchange);
                 }
             }, httpServerExchange.getRequestMethod().equals(Methods.HEAD));
             connection.getChannel().getSinkChannel().setConduit(responseConduit);
@@ -272,7 +273,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
             if (contentLength == 0L) {
                 UndertowLogger.REQUEST_LOGGER.trace("No content, starting next request");
                 // no content - immediately start the next request, returning an empty stream for this one
-                exchange.terminateRequest();
+                Connectors.terminateRequest(httpServerExchange);
                 return new EmptyStreamSourceConduit(conduit.getReadThread());
             } else {
                 length = contentLength;
@@ -280,13 +281,13 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
         } else {
             UndertowLogger.REQUEST_LOGGER.trace("No content length or transfer coding, starting next request");
             // no content - immediately start the next request, returning an empty stream for this one
-            exchange.terminateRequest();
+            Connectors.terminateRequest(httpServerExchange);
             return new EmptyStreamSourceConduit(conduit.getReadThread());
         }
         return new AjpServerRequestConduit(conduit, httpServerExchange, responseConduit, length, new ConduitListener<AjpServerRequestConduit>() {
             @Override
             public void handleEvent(AjpServerRequestConduit channel) {
-                exchange.terminateRequest();
+                Connectors.terminateRequest(httpServerExchange);
             }
         });
     }

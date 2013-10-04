@@ -20,7 +20,7 @@ package io.undertow.server.protocol.ajp;
 
 import io.undertow.conduits.AbstractFramedStreamSinkConduit;
 import io.undertow.conduits.ConduitListener;
-import io.undertow.server.ExchangeCookieUtils;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -151,7 +151,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
             Pooled<ByteBuffer>[] byteBuffers = null;
 
             //merge the cookies into the header map
-            ExchangeCookieUtils.flattenCookies(exchange);
+            Connectors.flattenCookies(exchange);
 
             Pooled<ByteBuffer> pooled = pool.allocate();
             ByteBuffer buffer = pooled.getResource();
