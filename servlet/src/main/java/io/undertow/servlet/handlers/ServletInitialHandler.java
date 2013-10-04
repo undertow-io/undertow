@@ -349,7 +349,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
         @Override
         public OptionMap getUndertowOptions() {
-            return null;
+            return OptionMap.EMPTY;
         }
 
         @Override

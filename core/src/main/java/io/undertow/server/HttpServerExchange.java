@@ -20,6 +20,7 @@ package io.undertow.server;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.channels.DetachableStreamSinkChannel;
 import io.undertow.channels.DetachableStreamSourceChannel;
 import io.undertow.io.AsyncSenderImpl;
@@ -30,6 +31,7 @@ import io.undertow.io.UndertowOutputStream;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.ConduitFactory;
+import io.undertow.util.Cookies;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -881,7 +883,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Map<String, Cookie> getRequestCookies() {
         if (requestCookies == null) {
-            requestCookies = ExchangeCookieUtils.parseRequestCookies(this);
+            requestCookies = Cookies.parseRequestCookies(getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200), requestHeaders.get(Headers.COOKIE));
         }
         return requestCookies;
     }
