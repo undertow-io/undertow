@@ -277,7 +277,7 @@ public final class ProxyHandler implements HttpHandler {
             }
             SocketAddress address = exchange.getConnection().getPeerAddress();
             if (address instanceof InetSocketAddress) {
-                outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, ((InetSocketAddress) address).getAddress().getHostAddress());
+                outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, ((InetSocketAddress) address).getHostString());
             } else {
                 outboundRequestHeaders.put(Headers.X_FORWARDED_FOR, "localhost");
             }
