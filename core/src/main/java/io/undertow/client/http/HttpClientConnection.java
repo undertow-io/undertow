@@ -101,6 +101,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
     private final OptionMap options;
     private final StreamConnection connection;
     private final PushBackStreamSourceConduit pushBackStreamSourceConduit;
+    private final ClientReadListener clientReadListener = new ClientReadListener();
 
     private final Pool<ByteBuffer> bufferPool;
     private final StreamSinkConduit originalSinkConduit;
@@ -125,6 +126,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
         connection.getCloseSetter().set(new ChannelListener<StreamConnection>() {
 
             public void handleEvent(StreamConnection channel) {
+                HttpClientConnection.this.state |= CLOSED;
                 ChannelListeners.invokeChannelListener(HttpClientConnection.this, closeSetter.get());
             }
         });
@@ -236,7 +238,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
 
         //setup the client request conduits
         final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
-        sourceChannel.setReadListener(new ClientReadListener());
+        sourceChannel.setReadListener(clientReadListener);
         sourceChannel.resumeReads();
 
         ConduitStreamSinkChannel sinkChannel = connection.getSinkChannel();
@@ -358,7 +360,9 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
         HttpClientExchange next = pendingQueue.poll();
 
         if (next == null) {
-            connection.getSourceChannel().suspendReads();
+            //we resume reads, so if the target goes away we get notified
+            connection.getSourceChannel().setReadListener(clientReadListener);
+            connection.getSourceChannel().resumeReads();
         } else {
             inititateRequest(next);
         }
@@ -369,15 +373,33 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
         public void handleEvent(StreamSourceChannel channel) {
 
             HttpResponseBuilder builder = pendingResponse;
-            if (builder == null) {
-                channel.suspendReads();
-                return;
-            }
             final Pooled<ByteBuffer> pooled = bufferPool.allocate();
             final ByteBuffer buffer = pooled.getResource();
             boolean free = true;
 
             try {
+
+                if (builder == null) {
+                    //read ready when no request pending
+                    buffer.clear();
+                    try {
+                        int res = channel.read(buffer);
+                         if(res == -1) {
+                            UndertowLogger.CLIENT_LOGGER.debugf("Connection to %s was closed by the target server", connection.getPeerAddress());
+                            IoUtils.safeClose(HttpClientConnection.this);
+                        } else if(res != 0) {
+                             UndertowLogger.CLIENT_LOGGER.debugf("Target server %s sent unexpected data when no request pending, closing connection", connection.getPeerAddress());
+                             IoUtils.safeClose(HttpClientConnection.this);
+                        }
+                        //otherwise it is a spurious notification
+                    } catch (IOException e) {
+                        if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
+                            UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException");
+                        }
+                        safeClose(connection);
+                    }
+                    return;
+                }
                 final ResponseParseState state = builder.getParseState();
                 int res;
                 do {

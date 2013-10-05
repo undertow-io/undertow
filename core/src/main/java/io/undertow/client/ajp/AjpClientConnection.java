@@ -105,6 +105,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     private int state;
 
     private final ChannelListener.SimpleSetter<AjpClientConnection> closeSetter = new ChannelListener.SimpleSetter<AjpClientConnection>();
+    private final ClientReadListener clientReadListener = new ClientReadListener();
 
     AjpClientConnection(final StreamConnection connection, final OptionMap options, final Pool<ByteBuffer> bufferPool) {
         this.options = options;
@@ -225,8 +226,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
         //setup the client request conduits
         final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
-        sourceChannel.setReadListener(new ClientReadListener());
-        sourceChannel.suspendReads();
+        sourceChannel.setReadListener(clientReadListener);
         sourceChannel.resumeReads();
 
         long length = 0;
@@ -331,7 +331,8 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         AjpClientExchange next = pendingQueue.poll();
 
         if (next == null) {
-            connection.getSourceChannel().suspendReads();
+            connection.getSourceChannel().setReadListener(clientReadListener);
+            connection.getSourceChannel().resumeReads();
         } else {
             inititateRequest(next);
         }
@@ -346,16 +347,33 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         public void handleEvent(StreamSourceChannel channel) {
 
             AjpResponseBuilder builder = pendingResponse;
-            if (builder == null) {
-                channel.suspendReads();
-                return;
-            }
             final Pooled<ByteBuffer> pooled = bufferPool.allocate();
             final ByteBuffer buffer = pooled.getResource();
             buffer.clear();
             boolean free = true;
 
             try {
+                if (builder == null) {
+                    //read ready when no request pending
+                    buffer.clear();
+                    try {
+                        int res = channel.read(buffer);
+                        if (res == -1) {
+                            UndertowLogger.CLIENT_LOGGER.debugf("Connection to %s was closed by the target server", connection.getPeerAddress());
+                            IoUtils.safeClose(AjpClientConnection.this);
+                        } else if (res != 0) {
+                            UndertowLogger.CLIENT_LOGGER.debugf("Target server %s sent unexpected data when no request pending, closing connection", connection.getPeerAddress());
+                            IoUtils.safeClose(AjpClientConnection.this);
+                        }
+                        //otherwise it is a spurious notification
+                    } catch (IOException e) {
+                        if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
+                            UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException");
+                        }
+                        safeClose(connection);
+                    }
+                    return;
+                }
                 final AjpResponseParseState state = builder.getParseState();
                 int res;
                 do {

@@ -59,20 +59,15 @@ public interface ClientConnection extends Channel {
 
     XnioWorker getWorker();
 
-
     XnioIoThread getIoThread();
 
-
     boolean isOpen();
-
 
     boolean supportsOption(Option<?> option);
 
     <T> T getOption(Option<T> option) throws IOException;
 
-
     <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException;
-
 
     boolean isUpgraded();
 }
