@@ -6,6 +6,7 @@ import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
+import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.XnioExecutor;
@@ -79,6 +80,9 @@ class Host {
             return;
         }
 
+        //only do something if the connection is open. If it is closed then
+        //the close setter will handle creating a new connection and decrementing
+        //the connection count
         if (connection.isOpen() && !connection.isUpgraded()) {
             CallbackHolder callback = hostData.awaitingConnections.poll();
             while (callback != null && callback.isCancelled()) {
@@ -92,16 +96,26 @@ class Host {
             } else {
                 hostData.availbleConnections.add(connection);
             }
-        } else {
-            int connections = --hostData.connections;
-            if (connections < loadBalancingProxyClient.getConnectionsPerThread()) {
-                CallbackHolder task = hostData.awaitingConnections.poll();
-                while (task != null && task.isCancelled()) {
-                    task = hostData.awaitingConnections.poll();
-                }
-                if (task != null) {
-                    openConnection(task.exchange, task.callback, hostData);
-                }
+        } else if(connection.isOpen() && connection.isUpgraded()) {
+            //we treat upgraded connections as closed
+            //as we do not want the connection pool filled with upgraded connections
+            //if the connection is actually closed the close setter will handle it
+            connection.getCloseSetter().set(null);
+            handleClosedConnection(hostData, connection);
+        }
+    }
+
+    private void handleClosedConnection(HostThreadData hostData, final ClientConnection connection) {
+
+        int connections = --hostData.connections;
+        hostData.availbleConnections.remove(connection);
+        if (connections < loadBalancingProxyClient.getConnectionsPerThread()) {
+            CallbackHolder task = hostData.awaitingConnections.poll();
+            while (task != null && task.isCancelled()) {
+                task = hostData.awaitingConnections.poll();
+            }
+            if (task != null) {
+                openConnection(task.exchange, task.callback, hostData);
             }
         }
     }
@@ -112,6 +126,12 @@ class Host {
             @Override
             public void completed(final ClientConnection result) {
                 problem = false;
+                result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
+                    @Override
+                    public void handleEvent(ClientConnection channel) {
+                        handleClosedConnection(data, channel);
+                    }
+                });
                 connectionReady(result, callback, exchange);
             }
 
@@ -228,6 +248,9 @@ class Host {
     public void connect(HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, final long timeout, final TimeUnit timeUnit) {
         HostThreadData data = getData();
         ClientConnection conn = data.availbleConnections.poll();
+        while (conn != null && !conn.isOpen()) {
+            conn = data.availbleConnections.poll();
+        }
         if (conn != null) {
             connectionReady(conn, callback, exchange);
         } else if (data.connections < loadBalancingProxyClient.getConnectionsPerThread()) {
