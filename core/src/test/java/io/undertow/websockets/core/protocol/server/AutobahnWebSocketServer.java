@@ -64,16 +64,15 @@ import java.net.InetSocketAddress;
  *               ],
  *
  *    "cases": ["*"],
- *    "exclude-cases": ["9.*"],
+ *    "exclude-cases": [],
  *    "exclude-agent-cases": {}
  * }
  * }
- * Note that we disabled the <strong>9.*</strong> tests for now as these fail.
  *
  * <p>04. Run the <tt>AutobahnServer</tt> located in this package. If you are in Eclipse IDE, right click on
  * <tt>AutobahnServer.java</tt> and select Run As > Java Application.
  *
- * <p>05. Run the Autobahn test <tt>wstest -m fuzzingclient -s fuzzingclient.json</tt>.
+ * <p>05. Run the Autobahn test <tt>wstest -m fuzzingclient -s fuzzing_client_spec.json</tt>.
  *
  * <p>06. See the results in <tt>./reports/servers/index.html</tt>
  *
