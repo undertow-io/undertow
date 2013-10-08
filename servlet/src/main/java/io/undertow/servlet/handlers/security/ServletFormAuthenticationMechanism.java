@@ -6,9 +6,9 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
@@ -21,6 +21,9 @@ import io.undertow.servlet.handlers.ServletRequestContext;
  * @author Stuart Douglas
  */
 public class ServletFormAuthenticationMechanism extends FormAuthenticationMechanism {
+
+    private static final String SESSION_KEY = "io.undertow.servlet.form.auth.redirect.location";
+
     public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
         super(name, loginPage, errorPage);
     }
@@ -49,10 +52,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     protected void storeInitialLocation(final HttpServerExchange exchange) {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         HttpServletRequest req = (HttpServletRequest) servletRequestContext.getServletRequest();
-        HttpServletResponse resp = (HttpServletResponse) servletRequestContext.getServletResponse();
-        final Cookie cookie = new Cookie(LOCATION_COOKIE, req.getContextPath() + req.getServletPath() + (req.getPathInfo() == null ? "" : req.getPathInfo()));
-        cookie.setPath(req.getServletContext().getContextPath());
-        resp.addCookie(cookie);
+        req.getSession(true).setAttribute(SESSION_KEY, req.getContextPath() + req.getServletPath() + (req.getPathInfo() == null ? "" : req.getPathInfo()));
     }
 
     @Override
@@ -60,16 +60,14 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         HttpServletRequest req = (HttpServletRequest) servletRequestContext.getServletRequest();
         HttpServletResponse resp = (HttpServletResponse) servletRequestContext.getServletResponse();
-        Cookie[] cookies = req.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookie.getName().equals(LOCATION_COOKIE)) {
-                    try {
-                        resp.sendRedirect(cookie.getValue());
-                        return;
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+        HttpSession session = req.getSession(false);
+        if(session != null) {
+            String path = (String) session.getAttribute(SESSION_KEY);
+            if(path != null) {
+                try {
+                    resp.sendRedirect(path);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
             }
         }
