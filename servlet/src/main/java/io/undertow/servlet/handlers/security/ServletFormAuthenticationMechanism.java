@@ -61,13 +61,15 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         HttpServletRequest req = (HttpServletRequest) servletRequestContext.getServletRequest();
         HttpServletResponse resp = (HttpServletResponse) servletRequestContext.getServletResponse();
         Cookie[] cookies = req.getCookies();
-        for (Cookie cookie : cookies) {
-            if (cookie.getName().equals(LOCATION_COOKIE)) {
-                try {
-                    resp.sendRedirect(cookie.getValue());
-                    return;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals(LOCATION_COOKIE)) {
+                    try {
+                        resp.sendRedirect(cookie.getValue());
+                        return;
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         }
