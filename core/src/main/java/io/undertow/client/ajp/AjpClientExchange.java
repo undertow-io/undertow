@@ -56,7 +56,6 @@ public class AjpClientExchange extends AbstractAttachable implements ClientExcha
 
     void terminateRequest() {
         state |= REQUEST_TERMINATED;
-        clientConnection.getConnection().getSinkChannel().suspendWrites();
         if (anyAreSet(state, RESPONSE_TERMINATED)) {
             clientConnection.requestDone();
         }
@@ -64,9 +63,10 @@ public class AjpClientExchange extends AbstractAttachable implements ClientExcha
 
     void terminateResponse() {
         state |= RESPONSE_TERMINATED;
-        clientConnection.getConnection().getSourceChannel().suspendReads();
         if (anyAreSet(state, REQUEST_TERMINATED)) {
             clientConnection.requestDone();
+        } else {
+            clientConnection.installReadBodyListener();
         }
     }
 

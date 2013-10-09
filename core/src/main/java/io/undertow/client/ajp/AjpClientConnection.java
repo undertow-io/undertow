@@ -342,6 +342,12 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         state |= CLOSE_REQ;
     }
 
+    public void installReadBodyListener() {
+        connection.getSourceChannel().setConduit(pushBackStreamSourceConduit);
+        connection.getSourceChannel().setReadListener(new ResponseRecievedReadListener());
+        connection.getSourceChannel().resumeReads();
+    }
+
     class ClientReadListener implements ChannelListener<StreamSourceChannel> {
 
         public void handleEvent(StreamSourceChannel channel) {
@@ -470,8 +476,93 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             } finally {
                 if (free) pooled.free();
             }
+        }
+    }
 
+    /**
+     * listner that only listens for read body chunk messages, as even after the response is done the server
+     * can still be reading the request.
+     */
+    class ResponseRecievedReadListener implements ChannelListener<StreamSourceChannel> {
 
+        private AjpResponseBuilder builder = new AjpResponseBuilder();
+
+        public void handleEvent(StreamSourceChannel channel) {
+
+            final Pooled<ByteBuffer> pooled = bufferPool.allocate();
+            final ByteBuffer buffer = pooled.getResource();
+            buffer.clear();
+            boolean free = true;
+
+            try {
+                final AjpResponseParseState state = builder.getParseState();
+                int res;
+                do {
+                    try {
+                        res = channel.read(buffer);
+                    } catch (IOException e) {
+                        if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
+                            UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException");
+                        }
+                        safeClose(channel);
+                        currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
+                        return;
+                    }
+
+                    buffer.flip();
+
+                    if (res == 0 && !buffer.hasRemaining()) {
+                        if (!channel.isReadResumed()) {
+                            channel.getReadSetter().set(this);
+                            channel.resumeReads();
+                        }
+                        return;
+                    } else if (res == -1 && !buffer.hasRemaining()) {
+                        try {
+                            channel.suspendReads();
+                            channel.shutdownReads();
+                            IoUtils.safeClose(connection);
+                        } catch (IOException e) {
+                            if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
+                                UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
+                            }
+                            // Cancel the current active request
+                            currentRequest.setFailed(e);
+                            IoUtils.safeClose(connection);
+                            return;
+                        }
+                        return;
+                    }
+
+                    AjpResponseParser.INSTANCE.parse(buffer, state, builder);
+
+                    //this is a bit hacky
+                    //if the state=6 it is a ready body chunk response and not headers
+                    //in which case we notify the conduit and reset the state
+                    if (state.isComplete()) {
+                        if (state.prefix == 6) {
+                            currentRequest.getAjpClientRequestConduit().setBodyChunkRequested(state.currentIntegerPart);
+                            state.reset();
+                            buffer.compact();
+                        } else {
+                            //todo: ping?
+                            UndertowLogger.CLIENT_LOGGER.debugf("Received invalid AJP response code %s with no request active, closing connection", state.prefix);
+                            //invalid, at this point read body chunk is all the server should be sending
+                            IoUtils.safeClose(connection);
+                            currentRequest.setFailed(UndertowClientMessages.MESSAGES.receivedInvalidChunk(state.prefix));
+                        }
+                    } else {
+                        buffer.clear();
+                    }
+
+                } while (!state.isComplete());
+
+            } catch (Exception e) {
+                UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
+                IoUtils.safeClose(connection);
+            } finally {
+                if (free) pooled.free();
+            }
         }
     }
 

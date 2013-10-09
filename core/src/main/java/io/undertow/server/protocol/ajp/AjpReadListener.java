@@ -243,7 +243,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
 
     @Override
     public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-        if (!exchange.isUpgrade()) {
+        if (!exchange.isUpgrade() && exchange.isPersistent()) {
             startRequest();
             ConduitStreamSourceChannel channel = ((AjpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
             channel.getReadSetter().set(this);

@@ -53,4 +53,7 @@ public interface UndertowClientMessages {
 
     @Message(id = 1037, value = "Wrong magic number, expected %s, actual %s")
     IOException wrongMagicNumber(String expected, String actual);
+
+    @Message(id = 1038, value = "Received invalid AJP chunk %s with response already complete")
+    IOException receivedInvalidChunk(byte prefix);
 }

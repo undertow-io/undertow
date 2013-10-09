@@ -18,6 +18,7 @@
 
 package io.undertow.server.protocol.ajp;
 
+import io.undertow.UndertowMessages;
 import io.undertow.conduits.AbstractFramedStreamSinkConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.server.Connectors;
@@ -81,6 +82,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
     private static final int FLAG_START = 1; //indicates that the header has not been generated yet.
     private static final int FLAG_WRITE_RESUMED = 1 << 2;
     private static final int FLAG_WRITE_READ_BODY_CHUNK_FROM_LISTENER = 1 << 3;
+    private static final int FLAG_WRITE_SHUTDOWN = 1 << 4;
 
     private static final ByteBuffer CLOSE_FRAME_PERSISTENT;
     private static final ByteBuffer CLOSE_FRAME_NON_PERSISTENT;
@@ -372,11 +374,20 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         if (!exchange.isPersistent()) {
             next.terminateWrites();
         }
+        state |= FLAG_WRITE_SHUTDOWN;
+    }
+
+    @Override
+    public boolean isWriteShutdown() {
+        return super.isWriteShutdown() || anyAreSet(state, FLAG_WRITE_SHUTDOWN);
     }
 
     boolean doGetRequestBodyChunk(ByteBuffer buffer, final AjpServerRequestConduit requestChannel) throws IOException {
         //first attempt to just write out the buffer
         //if there are other frames queued they will be written out first
+        if(isWriteShutdown()) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
+        }
         super.write(buffer);
         if (buffer.hasRemaining()) {
             //write it out in a listener
