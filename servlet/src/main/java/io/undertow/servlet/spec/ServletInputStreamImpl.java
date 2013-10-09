@@ -201,7 +201,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         }
         readIntoBufferNonBlocking();
         if (anyAreSet(state, FLAG_FINISHED)) {
-            return -1;
+            return 0;
         }
         if(pooled == null) {
             return 0;
