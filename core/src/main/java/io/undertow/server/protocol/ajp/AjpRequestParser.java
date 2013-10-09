@@ -3,6 +3,7 @@ package io.undertow.server.protocol.ajp;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.URLUtils;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -208,10 +209,20 @@ public class AjpRequestParser extends AbstractAjpParser {
             case AjpRequestParseState.READING_REQUEST_URI: {
                 StringHolder result = parseString(buf, state, false);
                 if (result.readComplete) {
-                    String res = URLDecoder.decode(result.value, UTF_8);
-                    exchange.setRequestURI(result.value);
-                    exchange.setRequestPath(res);
-                    exchange.setRelativePath(res);
+                    int colon = result.value.indexOf(';');
+                    if(colon == -1) {
+                        String res = URLDecoder.decode(result.value, UTF_8);
+                        exchange.setRequestURI(result.value);
+                        exchange.setRequestPath(res);
+                        exchange.setRelativePath(res);
+                    } else {
+                        final String url = result.value.substring(0, colon);
+                        String res = URLDecoder.decode(url, UTF_8);
+                        exchange.setRequestURI(url);
+                        exchange.setRequestPath(res);
+                        exchange.setRelativePath(res);
+                        URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, UTF_8);
+                    }
                 } else {
                     state.state = AjpRequestParseState.READING_REQUEST_URI;
                     return;
@@ -341,28 +352,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                     //query string.
                     if (state.currentAttribute.equals(QUERY_STRING)) {
                         exchange.setQueryString(result == null ? "" : result);
-                        int stringStart = 0;
-                        String attrName = null;
-                        for (int i = 0; i < result.length(); ++i) {
-                            char c = result.charAt(i);
-                            if (c == '=' && attrName == null) {
-                                attrName = result.substring(stringStart, i);
-                                stringStart = i + 1;
-                            } else if (c == '&') {
-                                if (attrName != null) {
-                                    exchange.addQueryParam(URLDecoder.decode(attrName, UTF_8), URLDecoder.decode(result.substring(stringStart, i), UTF_8));
-                                } else {
-                                    exchange.addQueryParam(URLDecoder.decode(result.substring(stringStart, i), UTF_8), "");
-                                }
-                                stringStart = i + 1;
-                                attrName = null;
-                            }
-                        }
-                        if (attrName != null) {
-                            exchange.addQueryParam(URLDecoder.decode(attrName, UTF_8), URLDecoder.decode(result.substring(stringStart, result.length()), UTF_8));
-                        } else if (result.length() != stringStart) {
-                            exchange.addQueryParam(URLDecoder.decode(result.substring(stringStart, result.length()), UTF_8), "");
-                        }
+                        URLUtils.parseQueryString(result, exchange, UTF_8);
                     } else {
                         //other attributes
                         state.attributes.put(state.currentAttribute, result);

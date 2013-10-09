@@ -248,11 +248,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
             ConduitStreamSourceChannel channel = ((AjpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
             channel.getReadSetter().set(this);
             channel.wakeupReads();
+        } else if(!exchange.isPersistent()) {
+            IoUtils.safeClose(exchange.getConnection());
         }
         nextListener.proceed();
     }
 
     private StreamSourceConduit createSourceConduit(StreamSourceConduit underlyingConduit, AjpServerResponseConduit responseConduit, final HttpServerExchange exchange) {
+
         ReadDataStreamSourceConduit conduit = new ReadDataStreamSourceConduit(underlyingConduit, (AbstractServerConnection) exchange.getConnection());
 
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
@@ -279,13 +282,13 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
         } else {
             UndertowLogger.REQUEST_LOGGER.trace("No content length or transfer coding, starting next request");
             // no content - immediately start the next request, returning an empty stream for this one
-            Connectors.terminateRequest(httpServerExchange);
+            Connectors.terminateRequest(exchange);
             return new EmptyStreamSourceConduit(conduit.getReadThread());
         }
-        return new AjpServerRequestConduit(conduit, httpServerExchange, responseConduit, length, new ConduitListener<AjpServerRequestConduit>() {
+        return new AjpServerRequestConduit(conduit, exchange, responseConduit, length, new ConduitListener<AjpServerRequestConduit>() {
             @Override
             public void handleEvent(AjpServerRequestConduit channel) {
-                Connectors.terminateRequest(httpServerExchange);
+                Connectors.terminateRequest(exchange);
             }
         });
     }

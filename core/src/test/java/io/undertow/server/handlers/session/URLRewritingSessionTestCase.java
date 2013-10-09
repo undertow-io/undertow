@@ -29,7 +29,6 @@ import io.undertow.server.session.PathParameterSessionConfig;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionManager;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -49,7 +48,6 @@ import org.junit.runner.RunWith;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@AjpIgnore
 public class URLRewritingSessionTestCase {
 
     public static final String COUNT = "count";
