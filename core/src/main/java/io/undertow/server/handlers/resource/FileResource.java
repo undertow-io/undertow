@@ -54,7 +54,11 @@ public class FileResource implements Resource {
     private final FileResourceManager manager;
 
     public FileResource(final File file, final FileResourceManager manager, String path) {
-        this.file = file;
+        try {
+            this.file = file.getCanonicalFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         this.path = path;
         this.manager = manager;
     }
