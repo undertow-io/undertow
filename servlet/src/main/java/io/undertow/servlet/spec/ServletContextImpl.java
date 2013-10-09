@@ -133,11 +133,11 @@ public class ServletContextImpl implements ServletContext {
             } else {
                 if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE) || sessionTrackingModes.contains(SessionTrackingMode.URL)) {
                     sessionConfig = sessionCookieConfig;
-                    sessionCookieConfig.setFallback(new PathParameterSessionConfig(sessionCookieConfig.getName()));
+                    sessionCookieConfig.setFallback(new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase()));
                 } else if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE)) {
                     sessionConfig = sessionCookieConfig;
                 } else if (sessionTrackingModes.contains(SessionTrackingMode.URL)) {
-                    sessionConfig = new PathParameterSessionConfig(sessionCookieConfig.getName());
+                    sessionConfig = new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase());
                 }
             }
         }

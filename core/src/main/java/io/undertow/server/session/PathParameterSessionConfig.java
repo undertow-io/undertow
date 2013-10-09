@@ -20,7 +20,7 @@ public class PathParameterSessionConfig implements SessionConfig {
     }
 
     public PathParameterSessionConfig() {
-        this(SessionCookieConfig.DEFAULT_SESSION_ID);
+        this(SessionCookieConfig.DEFAULT_SESSION_ID.toLowerCase());
     }
 
     @Override

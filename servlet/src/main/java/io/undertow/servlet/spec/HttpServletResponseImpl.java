@@ -720,7 +720,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         StringBuilder sb = new StringBuilder(path);
         if (sb.length() > 0) { // jsessionid can't be first.
             sb.append(';');
-            sb.append(servletContext.getSessionCookieConfig().getName());
+            sb.append(servletContext.getSessionCookieConfig().getName().toLowerCase());
             sb.append('=');
             sb.append(sessionId);
         }
