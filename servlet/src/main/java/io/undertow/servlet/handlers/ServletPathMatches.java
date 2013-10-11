@@ -142,7 +142,7 @@ public class ServletPathMatches {
             String mergedPath = path + i;
             final ServletPathMatch handler = data.getServletHandlerByPath(mergedPath);
             if (handler != null && !handler.isRequiredWelcomeFileMatch()) {
-                return new ServletPathMatch(handler.getServletChain(), mergedPath, null, requiresRedirect ? REDIRECT : REWRITE, i);
+                return new ServletPathMatch(handler.getServletChain(), handler.getMatched(), handler.getRemaining(), requiresRedirect ? REDIRECT : REWRITE, i);
             }
         }
         return null;
