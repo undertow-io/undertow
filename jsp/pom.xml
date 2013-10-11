@@ -77,7 +77,7 @@
 
         <dependency>
             <groupId>org.jboss.spec.javax.servlet.jsp</groupId>
-            <artifactId>jboss-jsp-api_2.2_spec</artifactId>
+            <artifactId>jboss-jsp-api_2.3_spec</artifactId>
         </dependency>
 
         <dependency>
