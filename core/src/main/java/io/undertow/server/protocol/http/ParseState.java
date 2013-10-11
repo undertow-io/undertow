@@ -74,24 +74,12 @@ class ParseState {
      */
     int pos;
 
-    /**
-     * If in a state that performs URL decoding the holds the current code point information.
-     */
-    int urlDecodeCodePoint;
-    int urlDecodeState;
+    boolean urlDecodeRequired = false;
 
     /**
-     * If this is in {@link #NO_STATE} then this holds the current token that has been read so far.
+     * If this is in {@link io.undertow.annotationprocessor.AbstractParserGenerator#NO_STATE} then this holds the current token that has been read so far.
      */
     final StringBuilder stringBuilder = new StringBuilder();
-
-    /**
-     * If the decoded URL does not match the non-decoded version this builder will contain the original URL. If this is
-     * null it means that the decoded and non-decoded versions are the same.
-     *
-     * TODO: we should probably re-use this string builder
-     */
-    StringBuilder encodedStringBuilder;
 
     /**
      * This has different meanings depending on the current state.
@@ -114,6 +102,8 @@ class ParseState {
 
     int mapCount;
 
+    final StringBuilder decodeBuffer = new StringBuilder();
+
     public ParseState() {
         this.parseState = 0;
         this.pos = 0;
@@ -134,10 +124,8 @@ class ParseState {
         this.currentBytes = null;
         this.pos = 0;
         this.leftOver = 0;
-        this.urlDecodeCodePoint = 0;
-        this.urlDecodeState = 0;
+        this.urlDecodeRequired = false;
         this.stringBuilder.setLength(0);
-        this.encodedStringBuilder = null;
         this.nextHeader = null;
         this.nextQueryParam = null;
         this.mapCount = 0;

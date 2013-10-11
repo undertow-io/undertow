@@ -239,4 +239,7 @@ public interface UndertowMessages {
 
     @Message(id = 71, value = "Cannot add path template %s, matcher already contains an equivalent pattern %s")
     IllegalStateException matcherAlreadyContainsTemplate(String templateString, String templateString1);
+
+    @Message(id = 72, value = "Failed to decode url %s to charset %s")
+    IllegalArgumentException failedToDecodeURL(String s, String enc);
 }
