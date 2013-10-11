@@ -43,10 +43,13 @@ public class WelcomeFileTestCase {
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
                 .setResourceManager(new TestResourceLoader(WelcomeFileTestCase.class))
-                .addWelcomePages("doesnotexist.html", "index.html", "default");
+                .addWelcomePages("doesnotexist.html", "index.html", "default", "servletPath/servletFile.xhtml");
 
         builder.addServlet(new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)
                 .addMapping("/path/default"));
+
+        builder.addServlet(new ServletInfo("ServletPath", DefaultTestServlet.class)
+                .addMapping("/foo/servletPath/*"));
 
         builder.addFilter(new FilterInfo("Filter", NoOpFilter.class));
         builder.addFilterUrlMapping("Filter", "/*", DispatcherType.REQUEST);
@@ -93,5 +96,21 @@ public class WelcomeFileTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
+    @Test
+    public void testWelcomeFileStarMappedPathRedirect() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo/?a=b");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("pathInfo:/servletFile.xhtml queryString:a=b servletPath:/foo/servletPath requestUri:/servletContext/foo/servletPath/servletFile.xhtml", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
 
 }
