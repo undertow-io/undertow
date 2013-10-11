@@ -74,9 +74,9 @@
         <version.org.jboss.logging>3.1.3.GA</version.org.jboss.logging>
         <version.org.jboss.logmanager>1.5.0.Beta1</version.org.jboss.logmanager>
         <version.org.jboss.logging.processor>1.2.0.Beta1</version.org.jboss.logging.processor>
-        <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Beta1</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
-        <version.org.jboss.spec.javax.servlet.jsp>1.0.1.Final</version.org.jboss.spec.javax.servlet.jsp>
-        <version.org.jboss.spec.javax.websockets>1.0.0.Beta1</version.org.jboss.spec.javax.websockets>
+        <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>1.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.1_spec>
+        <version.org.jboss.spec.javax.servlet.jsp>1.0.0.Beta1</version.org.jboss.spec.javax.servlet.jsp>
+        <version.org.jboss.spec.javax.websockets>1.0.0.Final</version.org.jboss.spec.javax.websockets>
         <version.org.jboss.web.jasper-jdt>7.0.3.Final</version.org.jboss.web.jasper-jdt>
 
         <!-- Surefire args -->
@@ -323,7 +323,7 @@
 
             <dependency>
                 <groupId>org.jboss.spec.javax.servlet.jsp</groupId>
-                <artifactId>jboss-jsp-api_2.2_spec</artifactId>
+                <artifactId>jboss-jsp-api_2.3_spec</artifactId>
                 <version>${version.org.jboss.spec.javax.servlet.jsp}</version>
             </dependency>
 
