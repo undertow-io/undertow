@@ -96,12 +96,21 @@ public class UndertowOptions {
     public static final Option<Boolean> ALLOW_ENCODED_SLASH = Option.simple(UndertowOptions.class, "ALLOW_ENCODED_SLASH", Boolean.class);
 
     /**
-     * If this is true then the parser will decode the URL and query parameters using UTF-8. If this is false they will
+     * If this is true then the parser will decode the URL and query parameters using the selected character encoding (UTF-8 by default). If this is false they will
      * not be decoded. This will allow a later handler to decode them into whatever charset is desired.
      *
      * Defaults to true.
      */
     public static final Option<Boolean> DECODE_URL = Option.simple(UndertowOptions.class, "DECODE_URL", Boolean.class);
+
+
+    /**
+     * If this is true then the parser will decode the URL and query parameters using the selected character encoding (UTF-8 by default). If this is false they will
+     * not be decoded. This will allow a later handler to decode them into whatever charset is desired.
+     *
+     * Defaults to true.
+     */
+    public static final Option<String> URL_CHARSET = Option.simple(UndertowOptions.class, "URL_CHARSET", String.class);
 
     private UndertowOptions() {
 

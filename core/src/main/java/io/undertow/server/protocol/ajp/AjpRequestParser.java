@@ -6,6 +6,7 @@ import io.undertow.util.HttpString;
 import io.undertow.util.URLUtils;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 
@@ -43,8 +44,10 @@ import static io.undertow.util.Methods.VERSION_CONTROL;
 public class AjpRequestParser extends AbstractAjpParser {
 
 
+    private final String encoding;
+    private final boolean doDecode;
+
     private static final HttpString[] HTTP_HEADERS;
-    public static final AjpRequestParser INSTANCE = new AjpRequestParser();
 
     public static final int FORWARD_REQUEST = 2;
     public static final int CPONG = 9;
@@ -143,7 +146,10 @@ public class AjpRequestParser extends AbstractAjpParser {
         ATTRIBUTES[13] = STORED_METHOD;
     }
 
-    public static final String UTF_8 = "UTF-8";
+    public AjpRequestParser(String encoding, boolean doDecode) {
+        this.encoding = encoding;
+        this.doDecode = doDecode;
+    }
 
 
     public void parse(final ByteBuffer buf, final AjpRequestParseState state, final HttpServerExchange exchange) throws IOException {
@@ -211,17 +217,17 @@ public class AjpRequestParser extends AbstractAjpParser {
                 if (result.readComplete) {
                     int colon = result.value.indexOf(';');
                     if(colon == -1) {
-                        String res = URLDecoder.decode(result.value, UTF_8);
+                        String res = decode(result.value);
                         exchange.setRequestURI(result.value);
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
                     } else {
                         final String url = result.value.substring(0, colon);
-                        String res = URLDecoder.decode(url, UTF_8);
+                        String res = decode(url);
                         exchange.setRequestURI(url);
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
-                        URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, UTF_8);
+                        URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode);
                     }
                 } else {
                     state.state = AjpRequestParseState.READING_REQUEST_URI;
@@ -352,7 +358,7 @@ public class AjpRequestParser extends AbstractAjpParser {
                     //query string.
                     if (state.currentAttribute.equals(QUERY_STRING)) {
                         exchange.setQueryString(result == null ? "" : result);
-                        URLUtils.parseQueryString(result, exchange, UTF_8);
+                        URLUtils.parseQueryString(result, exchange, encoding, doDecode);
                     } else {
                         //other attributes
                         state.attributes.put(state.currentAttribute, result);
@@ -362,6 +368,13 @@ public class AjpRequestParser extends AbstractAjpParser {
             }
         }
         state.state = AjpRequestParseState.DONE;
+    }
+
+    private String decode(String url) throws UnsupportedEncodingException {
+        if(doDecode) {
+            return URLDecoder.decode(url, encoding);
+        }
+        return url;
     }
 
     @Override

@@ -48,12 +48,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
     private volatile int read = 0;
     private final int maxRequestSize;
     private final long maxEntitySize;
+    private final AjpRequestParser parser;
     private WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel> writeReadyHandler;
 
 
-    AjpReadListener(final AjpServerConnection connection, final String scheme) {
+    AjpReadListener(final AjpServerConnection connection, final String scheme, AjpRequestParser parser) {
         this.connection = connection;
         this.scheme = scheme;
+        this.parser = parser;
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, 0);
         this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel>(connection.getChannel().getSinkChannel());
@@ -122,7 +124,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel>, Exc
                     buffer.flip();
                 }
                 int begin = buffer.remaining();
-                AjpRequestParser.INSTANCE.parse(buffer, state, httpServerExchange);
+                parser.parse(buffer, state, httpServerExchange);
                 read += (begin - buffer.remaining());
                 if (buffer.hasRemaining()) {
                     free = false;

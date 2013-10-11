@@ -37,13 +37,15 @@ public class AjpParsingUnitTestCase {
         }
     }
 
+    public static final AjpRequestParser AJP_REQUEST_PARSER = new AjpRequestParser("UTF-8", true);
+
 
     @Test
     public void testAjpParsing() throws IOException {
         final ByteBuffer buffer = AjpParsingUnitTestCase.buffer.duplicate();
         HttpServerExchange result = new HttpServerExchange(null);
         final AjpRequestParseState state = new AjpRequestParseState();
-        AjpRequestParser.INSTANCE.parse(buffer, state, result);
+        AJP_REQUEST_PARSER.parse(buffer, state, result);
         Assert.assertEquals(165, state.dataSize);
         Assert.assertTrue(state.isComplete());
         Assert.assertEquals(0, buffer.remaining());
@@ -60,7 +62,7 @@ public class AjpParsingUnitTestCase {
         int limit = buffer.limit();
         for (int i = 1; i <= limit; ++i) {
             buffer.limit(i);
-            AjpRequestParser.INSTANCE.parse(buffer, state, result);
+            AJP_REQUEST_PARSER.parse(buffer, state, result);
         }
         Assert.assertEquals(165, state.dataSize);
         Assert.assertTrue(state.isComplete());

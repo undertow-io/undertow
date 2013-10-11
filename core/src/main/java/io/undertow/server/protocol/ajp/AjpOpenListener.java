@@ -10,11 +10,15 @@ import org.xnio.StreamConnection;
 
 import java.nio.ByteBuffer;
 
+import static io.undertow.UndertowOptions.DECODE_URL;
+import static io.undertow.UndertowOptions.URL_CHARSET;
+
 /**
  * @author Stuart Douglas
  */
 public class AjpOpenListener implements OpenListener {
 
+    public static final String UTF_8 = "UTF-8";
     private final Pool<ByteBuffer> bufferPool;
     private final int bufferSize;
 
@@ -24,6 +28,8 @@ public class AjpOpenListener implements OpenListener {
 
     private volatile OptionMap undertowOptions;
 
+    private final AjpRequestParser parser;
+
     public AjpOpenListener(final Pool<ByteBuffer> pool, final int bufferSize) {
         this(pool, OptionMap.EMPTY, bufferSize);
     }
@@ -32,6 +38,7 @@ public class AjpOpenListener implements OpenListener {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
         this.bufferSize = bufferSize;
+        parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, UTF_8), undertowOptions.get(DECODE_URL, true));
     }
 
     public void handleEvent(final StreamConnection channel) {
@@ -40,7 +47,7 @@ public class AjpOpenListener implements OpenListener {
         }
 
         AjpServerConnection connection = new AjpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        AjpReadListener readListener = new AjpReadListener(connection, scheme);
+        AjpReadListener readListener = new AjpReadListener(connection, scheme, parser);
         readListener.startRequest();
         channel.getSourceChannel().setReadListener(readListener);
         readListener.handleEvent(channel.getSourceChannel());
