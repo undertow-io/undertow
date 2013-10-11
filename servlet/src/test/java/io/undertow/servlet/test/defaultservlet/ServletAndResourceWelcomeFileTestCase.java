@@ -28,6 +28,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
+import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
@@ -61,7 +62,7 @@ public class ServletAndResourceWelcomeFileTestCase {
                 .setResourceManager(new TestResourceLoader(ServletAndResourceWelcomeFileTestCase.class))
                 .addWelcomePages("doesnotexist.html", "index.html", "default");
 
-        builder.addServlet(new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)
+        builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
                 .addMapping("*.html"));
 
         DeploymentManager manager = container.addDeployment(builder);

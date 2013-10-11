@@ -33,6 +33,7 @@ import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
 import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
+import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
@@ -80,7 +81,7 @@ public class WelcomeFileSecurityTestCase {
                 .setIdentityManager(identityManager)
                 .setLoginConfig(new LoginConfig("BASIC", "Test Realm"))
                 .addServlet(
-                        new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)
+                        new ServletInfo("DefaultTestServlet", PathTestServlet.class)
                                 .setServletSecurityInfo(
                                         new ServletSecurityInfo()
                                                 .addRoleAllowed("role1"))

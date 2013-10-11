@@ -12,6 +12,7 @@ import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
+import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
@@ -45,10 +46,10 @@ public class WelcomeFileTestCase {
                 .setResourceManager(new TestResourceLoader(WelcomeFileTestCase.class))
                 .addWelcomePages("doesnotexist.html", "index.html", "default", "servletPath/servletFile.xhtml");
 
-        builder.addServlet(new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)
+        builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
                 .addMapping("/path/default"));
 
-        builder.addServlet(new ServletInfo("ServletPath", DefaultTestServlet.class)
+        builder.addServlet(new ServletInfo("ServletPath", PathTestServlet.class)
                 .addMapping("/foo/servletPath/*"));
 
         builder.addFilter(new FilterInfo("Filter", NoOpFilter.class));

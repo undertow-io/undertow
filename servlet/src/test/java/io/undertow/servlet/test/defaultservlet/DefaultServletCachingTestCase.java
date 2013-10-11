@@ -17,6 +17,7 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
+import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.MessageFilter;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
@@ -60,7 +61,7 @@ public class DefaultServletCachingTestCase {
                 .setDeploymentName("servletContext.war")
                 .setResourceManager(new CachingResourceManager(100, 10000, new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE), new FileResourceManager(tmpDir, 10485760), METADATA_MAX_AGE));
 
-        builder.addServlet(new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)
+        builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
                 .addMapping("/path/default"))
                 .addFilter(Servlets.filter("message", MessageFilter.class).addInitParam(MessageFilter.MESSAGE, "FILTER_TEXT "))
                 .addFilterUrlMapping("message", "*.txt", DispatcherType.REQUEST);

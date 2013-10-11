@@ -126,11 +126,15 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                     requestImpl.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
                 }
 
-                String newQueryString = "";
+                String newQueryString = requestImpl.getQueryString() == null ? "" : requestImpl.getQueryString();
                 int qsPos = path.indexOf("?");
                 String newServletPath = path;
                 if (qsPos != -1) {
-                    newQueryString = newServletPath.substring(qsPos + 1);
+                    if(newQueryString.isEmpty()) {
+                        newQueryString = newServletPath.substring(qsPos + 1);
+                    } else {
+                        newQueryString = newQueryString + "&" + newServletPath.substring(qsPos + 1);
+                    }
                     newServletPath = newServletPath.substring(0, qsPos);
                 }
                 String newRequestUri = servletContext.getContextPath() + newServletPath;
@@ -241,11 +245,15 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 pathInfo = request.getAttribute(INCLUDE_PATH_INFO);
                 queryString = request.getAttribute(INCLUDE_QUERY_STRING);
 
-                String newQueryString = "";
+                String newQueryString = requestImpl.getQueryString() == null ? "" : requestImpl.getQueryString();
                 int qsPos = path.indexOf("?");
                 String newServletPath = path;
                 if (qsPos != -1) {
-                    newQueryString = newServletPath.substring(qsPos + 1);
+                    if(newQueryString.isEmpty()) {
+                        newQueryString = newServletPath.substring(qsPos + 1);
+                    } else {
+                        newQueryString = newQueryString + "&" + newServletPath.substring(qsPos + 1);
+                    }
                     newServletPath = newServletPath.substring(0, qsPos);
                 }
                 String newRequestUri = servletContext.getContextPath() + newServletPath;

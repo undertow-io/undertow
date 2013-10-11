@@ -18,11 +18,6 @@
 
 package io.undertow.servlet.test.dispatcher;
 
-import java.io.IOException;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -37,21 +32,24 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-
-import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import java.io.IOException;
+
 /**
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class DispatcherIncludeTestCase {
+public class DispatcherForwardTestCase {
 
 
     @BeforeClass
@@ -65,29 +63,29 @@ public class DispatcherIncludeTestCase {
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .setResourceManager(new TestResourceLoader(DispatcherIncludeTestCase.class))
+                .setResourceManager(new TestResourceLoader(DispatcherForwardTestCase.class))
                 .addServlet(
-                        new ServletInfo("include", MessageServlet.class)
-                                .addInitParam(MessageServlet.MESSAGE, "included")
-                                .addMapping("/include"))
+                        new ServletInfo("forward", MessageServlet.class)
+                                .addInitParam(MessageServlet.MESSAGE, "forwarded")
+                                .addMapping("/forward"))
                 .addServlet(
-                        new ServletInfo("dispatcher", IncludeServlet.class)
+                        new ServletInfo("dispatcher", ForwardServlet.class)
                                 .addMapping("/dispatch"))
                 .addServlet(
                         new ServletInfo("pathTest", PathTestServlet.class)
                                 .addMapping("/path"))
                 .addFilter(
-                        new FilterInfo("notIncluded", MessageFilter.class)
-                                .addInitParam(MessageFilter.MESSAGE, "Not Included"))
+                        new FilterInfo("notforwarded", MessageFilter.class)
+                                .addInitParam(MessageFilter.MESSAGE, "Not forwarded"))
                 .addFilter(
                         new FilterInfo("inc", MessageFilter.class)
                                 .addInitParam(MessageFilter.MESSAGE, "Path!"))
                 .addFilter(
                         new FilterInfo("nameFilter", MessageFilter.class)
                                 .addInitParam(MessageFilter.MESSAGE, "Name!"))
-                .addFilterUrlMapping("notIncluded", "/include", DispatcherType.REQUEST)
-                .addFilterUrlMapping("inc", "/include", DispatcherType.INCLUDE)
-                .addFilterServletNameMapping("nameFilter", "include", DispatcherType.INCLUDE);
+                .addFilterUrlMapping("notforwarded", "/forward", DispatcherType.REQUEST)
+                .addFilterUrlMapping("inc", "/forward", DispatcherType.FORWARD)
+                .addFilterServletNameMapping("nameFilter", "forward", DispatcherType.FORWARD);
 
 
         DeploymentManager manager = container.addDeployment(builder);
@@ -102,11 +100,11 @@ public class DispatcherIncludeTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
-            get.setHeader("include", "/include");
+            get.setHeader("forward", "/forward");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "Path!Name!included", response);
+            Assert.assertEquals("Path!Name!forwarded", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -117,12 +115,12 @@ public class DispatcherIncludeTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
-            get.setHeader("include", "include");
+            get.setHeader("forward", "forward");
             get.setHeader("name", "true");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "Name!included", response);
+            Assert.assertEquals("Name!forwarded", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -133,11 +131,11 @@ public class DispatcherIncludeTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
-            get.setHeader("include", "/snippet.html");
+            get.setHeader("forward", "/snippet.html");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "SnippetText", response);
+            Assert.assertEquals("SnippetText", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -148,11 +146,11 @@ public class DispatcherIncludeTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
-            post.setHeader("include", "/snippet.html");
+            post.setHeader("forward", "/snippet.html");
             HttpResponse result = client.execute(post);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "SnippetText", response);
+            Assert.assertEquals("SnippetText", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -164,18 +162,18 @@ public class DispatcherIncludeTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
-            get.setHeader("include", "/path");
+            get.setHeader("forward", "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "pathInfo:null queryString:a=b servletPath:/dispatch requestUri:/servletContext/dispatch", response);
+            Assert.assertEquals("pathInfo:null queryString:a=b servletPath:/path requestUri:/servletContext/path", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
-            get.setHeader("include", "/path?foo=bar");
+            get.setHeader("forward", "/path?foo=bar");
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "pathInfo:null queryString:a=b servletPath:/dispatch requestUri:/servletContext/dispatch", response);
+            Assert.assertEquals("pathInfo:null queryString:a=b&foo=bar servletPath:/path requestUri:/servletContext/path", response);
         } finally {
             client.getConnectionManager().shutdown();
         }

@@ -1,4 +1,4 @@
-package io.undertow.servlet.test.defaultservlet;
+package io.undertow.servlet.test.util;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -11,7 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * @author Stuart Douglas
  */
-public class DefaultTestServlet extends HttpServlet {
+public class PathTestServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {

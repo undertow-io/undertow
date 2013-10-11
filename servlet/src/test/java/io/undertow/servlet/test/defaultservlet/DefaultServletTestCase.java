@@ -12,6 +12,7 @@ import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
+import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
@@ -44,7 +45,7 @@ public class DefaultServletTestCase {
                 .setDeploymentName("servletContext.war")
                 .setResourceManager(new TestResourceLoader(DefaultServletTestCase.class));
 
-        builder.addServlet(new ServletInfo("DefaultTestServlet", DefaultTestServlet.class)
+        builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
                 .addMapping("/path/default"));
 
         builder.addFilter(new FilterInfo("Filter", HelloFilter.class));
