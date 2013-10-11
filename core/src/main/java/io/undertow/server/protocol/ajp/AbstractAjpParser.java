@@ -31,8 +31,9 @@ public abstract class AbstractAjpParser {
     }
 
     protected StringHolder parseString(ByteBuffer buf, AbstractAjpParseState state, boolean header) {
+        boolean containsUrlCharacters = state.containsUrlCharacters;
         if (!buf.hasRemaining()) {
-            return new StringHolder(null, false);
+            return new StringHolder(null, false, false);
         }
         int stringLength = state.stringLength;
         if (stringLength == -1) {
@@ -42,7 +43,7 @@ public abstract class AbstractAjpParser {
                 stringLength = ((0xFF & number) << 8) + (b & 0xFF);
             } else {
                 state.stringLength = number | STRING_LENGTH_MASK;
-                return new StringHolder(null, false);
+                return new StringHolder(null, false, false);
             }
         } else if ((stringLength & STRING_LENGTH_MASK) != 0) {
             int number = stringLength & ~STRING_LENGTH_MASK;
@@ -55,7 +56,7 @@ public abstract class AbstractAjpParser {
         if (stringLength == 0xFFFF) {
             //OxFFFF means null
             state.stringLength = -1;
-            return new StringHolder(null, true);
+            return new StringHolder(null, true, false);
         }
         StringBuilder builder = state.currentString;
 
@@ -67,9 +68,13 @@ public abstract class AbstractAjpParser {
         while (length < stringLength) {
             if (!buf.hasRemaining()) {
                 state.stringLength = stringLength;
-                return new StringHolder(null, false);
+                return new StringHolder(null, false, false);
             }
-            builder.append((char) buf.get());
+            char c = (char) buf.get();
+            if(c == '+' || c == '%') {
+                containsUrlCharacters = true;
+            }
+            builder.append(c);
             ++length;
         }
 
@@ -77,9 +82,10 @@ public abstract class AbstractAjpParser {
             buf.get(); //null terminator
             state.currentString = null;
             state.stringLength = -1;
-            return new StringHolder(builder.toString(), true);
+            state.containsUrlCharacters = false;
+            return new StringHolder(builder.toString(), true, containsUrlCharacters);
         } else {
-            return new StringHolder(null, false);
+            return new StringHolder(null, false, false);
         }
     }
 
@@ -99,10 +105,12 @@ public abstract class AbstractAjpParser {
         public final String value;
         public final HttpString header;
         public final boolean readComplete;
+        public final boolean containsUrlCharacters;
 
-        private StringHolder(String value, boolean readComplete) {
+        private StringHolder(String value, boolean readComplete, boolean containsUrlCharacters) {
             this.value = value;
             this.readComplete = readComplete;
+            this.containsUrlCharacters = containsUrlCharacters;
             this.header = null;
         }
 
@@ -110,6 +118,7 @@ public abstract class AbstractAjpParser {
             this.value = null;
             this.readComplete = true;
             this.header = value;
+            this.containsUrlCharacters = false;
         }
     }
 }

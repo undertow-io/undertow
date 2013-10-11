@@ -24,6 +24,8 @@ public class AbstractAjpParseState {
      */
     public int currentIntegerPart = -1;
 
+    boolean containsUrlCharacters = false;
+
     public void reset() {
         stringLength = -1;
         currentString = null;

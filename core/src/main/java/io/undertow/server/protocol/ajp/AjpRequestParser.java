@@ -217,17 +217,17 @@ public class AjpRequestParser extends AbstractAjpParser {
                 if (result.readComplete) {
                     int colon = result.value.indexOf(';');
                     if(colon == -1) {
-                        String res = decode(result.value);
+                        String res = decode(result.value, result.containsUrlCharacters);
                         exchange.setRequestURI(result.value);
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
                     } else {
                         final String url = result.value.substring(0, colon);
-                        String res = decode(url);
+                        String res = decode(url, result.containsUrlCharacters);
                         exchange.setRequestURI(url);
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
-                        URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode);
+                        URLUtils.parsePathParms(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters);
                     }
                 } else {
                     state.state = AjpRequestParseState.READING_REQUEST_URI;
@@ -370,8 +370,8 @@ public class AjpRequestParser extends AbstractAjpParser {
         state.state = AjpRequestParseState.DONE;
     }
 
-    private String decode(String url) throws UnsupportedEncodingException {
-        if(doDecode) {
+    private String decode(String url, final boolean containsUrlCharacters) throws UnsupportedEncodingException {
+        if(doDecode && containsUrlCharacters) {
             return URLDecoder.decode(url, encoding);
         }
         return url;
