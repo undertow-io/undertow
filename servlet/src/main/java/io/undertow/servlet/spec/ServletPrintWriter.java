@@ -81,7 +81,7 @@ public class ServletPrintWriter {
     }
 
     public void write(final char[] buf, final int off, final int len) {
-        final CharBuffer cb = CharBuffer.wrap(buf, off, off + len);
+        final CharBuffer cb = CharBuffer.wrap(buf, off, len);
         write(cb);
     }
 
@@ -91,7 +91,7 @@ public class ServletPrintWriter {
     }
 
     public void write(final String s, final int off, final int len) {
-        final CharBuffer cb = CharBuffer.wrap(s, off, off + len);
+        final CharBuffer cb = CharBuffer.wrap(s, off, len);
         write(cb);
     }
 
