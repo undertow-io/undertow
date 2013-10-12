@@ -1,12 +1,14 @@
 package io.undertow.server.handlers;
 
-import java.net.URLDecoder;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
+import java.util.TreeMap;
 
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.URLUtils;
 
 /**
  * A handler that will decode the URL and query parameters to the specified charset.
@@ -30,18 +32,26 @@ public class URLDecodingHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        exchange.setRequestPath(URLDecoder.decode(exchange.getRequestPath(), charset));
-        exchange.setRelativePath(URLDecoder.decode(exchange.getRelativePath(), charset));
-        exchange.setResolvedPath(URLDecoder.decode(exchange.getResolvedPath(), charset));
-        if (!exchange.getQueryString().isEmpty()) {
-            for (Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
-                final Deque<String> newVales = new ArrayDeque<String>(param.getValue().size());
-                for (String val : param.getValue()) {
-                    newVales.add(URLDecoder.decode(val, charset));
+        boolean decodeDone = exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_URL, true);
+        if (!decodeDone) {
+            final StringBuilder sb = new StringBuilder();
+            final boolean decodeSlash = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
+            exchange.setRequestPath(URLUtils.decode(exchange.getRequestPath(), charset, decodeSlash, sb));
+            exchange.setRelativePath(URLUtils.decode(exchange.getRelativePath(), charset, decodeSlash, sb));
+            exchange.setResolvedPath(URLUtils.decode(exchange.getResolvedPath(), charset, decodeSlash, sb));
+            if (!exchange.getQueryString().isEmpty()) {
+                final TreeMap<String, Deque<String>> newParams = new TreeMap<String, Deque<String>>();
+                for (Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
+                    final Deque<String> newVales = new ArrayDeque<String>(param.getValue().size());
+                    for (String val : param.getValue()) {
+                        newVales.add(URLUtils.decode(val, charset, true, sb));
+                    }
+                    newParams.put(URLUtils.decode(param.getKey(), charset, true, sb), newVales);
                 }
-                param.setValue(newVales);
+                exchange.getQueryParameters().clear();
+                exchange.getQueryParameters().putAll(newParams);
             }
         }
-
+        next.handleRequest(exchange);
     }
 }

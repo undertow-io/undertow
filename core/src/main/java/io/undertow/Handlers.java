@@ -262,6 +262,19 @@ public class Handlers {
         return predicateContext(predicate(PredicateParser.parse(condition, classLoader), setAttribute(next, "%R", target, classLoader), next));
     }
 
+    /**
+     * Returns a new handler that decodes the URL and query parameters into the specified charset, assuming it
+     * has not already been done by the connector. For this handler to take effect the parameter
+     * {@link UndertowOptions#DECODE_URL} must have been set to false.
+     *
+     * @param charset The charset to decode
+     * @param next The next handler
+     * @return A handler that decodes the URL
+     */
+    public static HttpHandler urlDecodingHandler(final String charset, final HttpHandler next) {
+        return new URLDecodingHandler(next, charset);
+    }
+
     private Handlers() {
 
     }
