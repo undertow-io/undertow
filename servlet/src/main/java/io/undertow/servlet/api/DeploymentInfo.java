@@ -79,6 +79,7 @@ public class DeploymentInfo implements Cloneable {
     private int defaultCookieVersion = 0;
     private SessionPersistenceManager sessionPersistenceManager;
     private String defaultEncoding = "ISO-8859-1";
+    private String urlEncoding = null;
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -243,8 +244,26 @@ public class DeploymentInfo implements Cloneable {
         return defaultEncoding;
     }
 
+    /**
+     * Sets the default encoding that will be used for servlet responses
+     * @param defaultEncoding The default encoding
+     */
     public void setDefaultEncoding(String defaultEncoding) {
         this.defaultEncoding = defaultEncoding;
+    }
+
+    public String getUrlEncoding() {
+        return urlEncoding;
+    }
+
+    /**
+     * Sets the URL encoding. This will only take effect if the {@link io.undertow.UndertowOptions#DECODE_URL}
+     * parameter has been set to false. This allows multiple deployments in the same server to use a different URL encoding
+     *
+     * @param urlEncoding The encoding to use
+     */
+    public void setUrlEncoding(String urlEncoding) {
+        this.urlEncoding = urlEncoding;
     }
 
     /**
@@ -842,6 +861,7 @@ public class DeploymentInfo implements Cloneable {
         info.identityManager = identityManager;
         info.confidentialPortManager = confidentialPortManager;
         info.defaultEncoding = defaultEncoding;
+        info.urlEncoding = urlEncoding;
         info.securityConstraints.addAll(securityConstraints);
         info.outerHandlerChainWrappers.addAll(outerHandlerChainWrappers);
         info.innerHandlerChainWrappers.addAll(innerHandlerChainWrappers);

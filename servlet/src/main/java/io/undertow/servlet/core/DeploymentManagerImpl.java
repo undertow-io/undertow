@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.core;
 
+import io.undertow.Handlers;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
@@ -180,7 +181,9 @@ public class DeploymentManagerImpl implements DeploymentManager {
             HttpHandler initialHandler = wrapHandlers(servletInitialHandler, deployment.getDeploymentInfo().getInitialHandlerChainWrappers());
             initialHandler = new HttpContinueReadHandler(initialHandler);
             initialHandler = handleDevelopmentModePersistentSessions(initialHandler, deploymentInfo, deployment.getSessionManager(), servletContext);
-
+            if(deploymentInfo.getUrlEncoding() != null) {
+                initialHandler = Handlers.urlDecodingHandler(deploymentInfo.getUrlEncoding(), initialHandler);
+            }
             deployment.setInitialHandler(initialHandler);
             deployment.setServletHandler(servletInitialHandler);
             deployment.getServletPaths().invalidate(); //make sure we have a fresh set of servlet paths
