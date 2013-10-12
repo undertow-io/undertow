@@ -21,6 +21,7 @@ package io.undertow.servlet.test.util;
 import javax.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -42,6 +43,16 @@ public class DeploymentUtils {
      * @param servlets The servlets to add
      */
     public static Deployment setupServlet(final ServletInfo... servlets) {
+        return setupServlet(null, servlets);
+    }
+    /**
+     * Sets up a simple servlet deployment with the provided servlets.
+     *
+     * This is just a convenience method for simple deployments
+     *
+     * @param servlets The servlets to add
+     */
+    public static Deployment setupServlet(final ServletExtension servletExtension, final ServletInfo... servlets) {
 
         final PathHandler pathHandler = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
@@ -51,6 +62,9 @@ public class DeploymentUtils {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .addServlets(servlets);
+        if(servletExtension != null) {
+            servletExtension.handleDeployment(builder, null);
+        }
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         try {

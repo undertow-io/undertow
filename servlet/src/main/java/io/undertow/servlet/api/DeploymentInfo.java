@@ -78,6 +78,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean invalidateSessionOnLogout = false;
     private int defaultCookieVersion = 0;
     private SessionPersistenceManager sessionPersistenceManager;
+    private String defaultEncoding = "ISO-8859-1";
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -135,6 +136,9 @@ public class DeploymentInfo implements Cloneable {
         }
         if (classIntrospecter == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("classIntrospecter");
+        }
+        if(defaultEncoding == null) {
+            throw UndertowServletMessages.MESSAGES.paramCannotBeNull("defaultEncoding");
         }
 
         for (final ServletInfo servlet : this.servlets.values()) {
@@ -233,6 +237,14 @@ public class DeploymentInfo implements Cloneable {
      */
     public boolean isIgnoreStandardAuthenticationMechanism() {
         return ignoreStandardAuthenticationMechanism;
+    }
+
+    public String getDefaultEncoding() {
+        return defaultEncoding;
+    }
+
+    public void setDefaultEncoding(String defaultEncoding) {
+        this.defaultEncoding = defaultEncoding;
     }
 
     /**
@@ -829,6 +841,7 @@ public class DeploymentInfo implements Cloneable {
         info.loginConfig = loginConfig;
         info.identityManager = identityManager;
         info.confidentialPortManager = confidentialPortManager;
+        info.defaultEncoding = defaultEncoding;
         info.securityConstraints.addAll(securityConstraints);
         info.outerHandlerChainWrappers.addAll(outerHandlerChainWrappers);
         info.innerHandlerChainWrappers.addAll(innerHandlerChainWrappers);

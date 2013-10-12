@@ -257,7 +257,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public String getCharacterEncoding() {
         if (charset == null) {
-            return ISO_8859_1;
+            return servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding();
         }
         return charset;
     }
