@@ -96,7 +96,7 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
         if (size == null) {
             state = STATE_SEND_REQUIRED;
             remaining = -1;
-        } else if (size.equals(0)) {
+        } else if (size.longValue() == 0L) {
             state = STATE_FINISHED;
             remaining = 0;
         } else {
