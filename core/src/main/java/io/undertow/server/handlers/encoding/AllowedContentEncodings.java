@@ -50,7 +50,7 @@ public class AllowedContentEncodings implements ConduitWrapper<StreamSinkConduit
     }
 
     public boolean isIdentity() {
-        return getCurrentContentEncoding().equals(Headers.IDENTITY);
+        return getCurrentContentEncoding().equals(Headers.IDENTITY.toString());
     }
 
     /**
