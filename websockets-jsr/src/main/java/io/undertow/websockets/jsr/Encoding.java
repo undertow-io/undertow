@@ -108,24 +108,24 @@ public class Encoding implements Closeable {
 
     private Object decodePrimitive(final Class<?> targetType, final String message) throws DecodeException {
         if (targetType == Boolean.class || targetType == boolean.class) {
-            return new Boolean(message);
+            return Boolean.valueOf(message);
         } else if (targetType == Character.class || targetType == char.class) {
             if (message.length() > 1) {
                 throw new DecodeException(message, "Character message larger than 1 character");
             }
-            return new Character(message.charAt(0));
+            return Character.valueOf(message.charAt(0));
         } else if (targetType == Byte.class || targetType == byte.class) {
-            return new Byte(message);
+            return Byte.valueOf(message);
         } else if (targetType == Short.class || targetType == short.class) {
-            return new Short(message);
+            return Short.valueOf(message);
         } else if (targetType == Integer.class || targetType == int.class) {
-            return new Integer(message);
+            return Integer.valueOf(message);
         } else if (targetType == Long.class || targetType == long.class) {
-            return new Long(message);
+            return Long.valueOf(message);
         } else if (targetType == Float.class || targetType == float.class) {
-            return new Float(message);
+            return Float.valueOf(message);
         } else if (targetType == Double.class || targetType == double.class) {
-            return new Double(message);
+            return Double.valueOf(message);
         }
         return null; // impossible
     }
