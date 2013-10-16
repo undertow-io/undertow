@@ -18,9 +18,9 @@ public interface ExchangeAttribute {
     String readAttribute(final HttpServerExchange exchange);
 
     /**
-     *
-     * @param exchange
-     * @param newValue
+     * Sets a new value for the attribute. Not all attributes are writable.
+     * @param exchange The exchange
+     * @param newValue The new value for the attribute
      */
     void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException;
 }
