@@ -3,7 +3,6 @@ package io.undertow.servlet.test.charset;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -15,6 +14,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import java.io.IOException;
 
@@ -29,7 +29,7 @@ public class DefaultCharsetTestCase {
     public static void setup() throws ServletException {
         DeploymentUtils.setupServlet(new ServletExtension() {
             @Override
-            public void handleDeployment(DeploymentInfo deploymentInfo, ServletContextImpl servletContext) {
+            public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
                 deploymentInfo.setDefaultEncoding("UTF-8");
             }
         }, new ServletInfo("servlet", DefaultCharsetServlet.class)

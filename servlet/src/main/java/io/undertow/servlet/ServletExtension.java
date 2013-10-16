@@ -1,7 +1,8 @@
 package io.undertow.servlet;
 
 import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.spec.ServletContextImpl;
+
+import javax.servlet.ServletContext;
 
 /**
  *
@@ -21,6 +22,6 @@ import io.undertow.servlet.spec.ServletContextImpl;
  */
 public interface ServletExtension {
 
-    void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContextImpl servletContext);
+    void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContext servletContext);
 
 }

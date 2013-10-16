@@ -6,9 +6,9 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ContextClassLoaderSetupAction;
-import io.undertow.servlet.spec.ServletContextImpl;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.websocket.DeploymentException;
@@ -26,7 +26,7 @@ public class Bootstrap implements ServletExtension {
     public static final String FILTER_NAME = "Undertow Web Socket Filter";
 
     @Override
-    public void handleDeployment(DeploymentInfo deploymentInfo, ServletContextImpl servletContext) {
+    public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
         WebSocketDeploymentInfo info = (WebSocketDeploymentInfo) deploymentInfo.getServletContextAttributes().get(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
 
         if (info == null) {
