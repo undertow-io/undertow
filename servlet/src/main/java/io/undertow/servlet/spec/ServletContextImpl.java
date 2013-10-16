@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -37,8 +39,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import javax.annotation.security.DeclareRoles;
+import javax.annotation.security.RunAs;
 import javax.servlet.Filter;
 import javax.servlet.FilterRegistration;
+import javax.servlet.MultipartConfigElement;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
@@ -46,6 +51,9 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRegistration;
 import javax.servlet.SessionTrackingMode;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.MultipartConfig;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.Version;
@@ -62,11 +70,15 @@ import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
+import io.undertow.servlet.api.HttpMethodSecurityInfo;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.ListenerInfo;
+import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.ServletSessionConfig;
+import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.core.ManagedListener;
 import io.undertow.servlet.handlers.ServletChain;
@@ -400,6 +412,7 @@ public class ServletContextImpl implements ServletContext {
                 return null;
             }
             ServletInfo servlet = new ServletInfo(servletName, (Class<? extends Servlet>) deploymentInfo.getClassLoader().loadClass(className));
+            readServletAnnotations(servlet);
             deploymentInfo.addServlet(servlet);
             deployment.getServlets().addServlet(servlet);
             return new ServletRegistrationImpl(servlet, deployment);
@@ -416,6 +429,7 @@ public class ServletContextImpl implements ServletContext {
             return null;
         }
         ServletInfo s = new ServletInfo(servletName, servlet.getClass(), new ImmediateInstanceFactory<Servlet>(servlet));
+        readServletAnnotations(s);
         deploymentInfo.addServlet(s);
         deployment.getServlets().addServlet(s);
         return new ServletRegistrationImpl(s, deployment);
@@ -429,10 +443,12 @@ public class ServletContextImpl implements ServletContext {
             return null;
         }
         ServletInfo servlet = new ServletInfo(servletName, servletClass);
+        readServletAnnotations(servlet);
         deploymentInfo.addServlet(servlet);
         deployment.getServlets().addServlet(servlet);
         return new ServletRegistrationImpl(servlet, deployment);
     }
+
 
     @Override
     public <T extends Servlet> T createServlet(final Class<T> clazz) throws ServletException {
@@ -719,5 +735,56 @@ public class ServletContextImpl implements ServletContext {
     public void destroy() {
         attributes.clear();
         deploymentInfo = null;
+    }
+
+    private void readServletAnnotations(ServletInfo servlet) {
+        if(System.getSecurityManager() == null) {
+            new ReadServletAnnotationsTask(servlet, deploymentInfo).run();
+        } else {
+            AccessController.doPrivileged(new ReadServletAnnotationsTask(servlet, deploymentInfo));
+        }
+    }
+
+    private static final class ReadServletAnnotationsTask implements PrivilegedAction<Void> {
+        private final ServletInfo servletInfo;
+        private final DeploymentInfo deploymentInfo;
+
+        private ReadServletAnnotationsTask(ServletInfo servletInfo, DeploymentInfo deploymentInfo) {
+            this.servletInfo = servletInfo;
+            this.deploymentInfo = deploymentInfo;
+        }
+
+        @Override
+        public Void run() {
+            final ServletSecurity security = servletInfo.getServletClass().getAnnotation(ServletSecurity.class);
+            if (security != null) {
+
+                ServletSecurityInfo servletSecurityInfo = new ServletSecurityInfo()
+                        .setEmptyRoleSemantic(security.value().value() == ServletSecurity.EmptyRoleSemantic.DENY ? SecurityInfo.EmptyRoleSemantic.DENY : SecurityInfo.EmptyRoleSemantic.PERMIT)
+                        .setTransportGuaranteeType(security.value().transportGuarantee() == ServletSecurity.TransportGuarantee.CONFIDENTIAL ? TransportGuaranteeType.CONFIDENTIAL : TransportGuaranteeType.NONE)
+                        .addRolesAllowed(security.value().rolesAllowed());
+                for (HttpMethodConstraint constraint : security.httpMethodConstraints()) {
+                    servletSecurityInfo.addHttpMethodSecurityInfo(new HttpMethodSecurityInfo()
+                            .setMethod(constraint.value()))
+                            .setEmptyRoleSemantic(constraint.emptyRoleSemantic() == ServletSecurity.EmptyRoleSemantic.DENY ? SecurityInfo.EmptyRoleSemantic.DENY : SecurityInfo.EmptyRoleSemantic.PERMIT)
+                            .setTransportGuaranteeType(constraint.transportGuarantee() == ServletSecurity.TransportGuarantee.CONFIDENTIAL ? TransportGuaranteeType.CONFIDENTIAL : TransportGuaranteeType.NONE)
+                            .addRolesAllowed(constraint.rolesAllowed());
+                }
+                servletInfo.setServletSecurityInfo(servletSecurityInfo);
+            }
+            final MultipartConfig multipartConfig = servletInfo.getServletClass().getAnnotation(MultipartConfig.class);
+            if(multipartConfig != null) {
+                servletInfo.setMultipartConfig(new MultipartConfigElement(multipartConfig.location(), multipartConfig.maxFileSize(), multipartConfig.maxRequestSize(), multipartConfig.fileSizeThreshold()));
+            }
+            final RunAs runAs = servletInfo.getServletClass().getAnnotation(RunAs.class);
+            if(runAs != null) {
+                servletInfo.setRunAs(runAs.value());
+            }
+            final DeclareRoles declareRoles = servletInfo.getServletClass().getAnnotation(DeclareRoles.class);
+            if(declareRoles != null) {
+                deploymentInfo.addSecurityRoles(declareRoles.value());
+            }
+            return null;
+        }
     }
 }
