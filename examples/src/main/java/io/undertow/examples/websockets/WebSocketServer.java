@@ -11,7 +11,6 @@ import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 import static io.undertow.Handlers.path;
-import static io.undertow.Handlers.redirect;
 import static io.undertow.Handlers.resource;
 import static io.undertow.Handlers.websocket;
 
@@ -36,10 +35,10 @@ public class WebSocketServer {
                                         WebSockets.sendText(message.getData(), channel, null);
                                     }
                                 });
+                                channel.resumeReceives();
                             }
                         }))
-                        .addPath("index.html", resource(new ClassPathResourceManager(WebSocketServer.class.getClassLoader(), WebSocketServer.class.getPackage())))
-                        .addPath("/", redirect("http://localhost:8080/index.html")))
+                        .addPath("/", resource(new ClassPathResourceManager(WebSocketServer.class.getClassLoader(), WebSocketServer.class.getPackage())).addWelcomeFiles("index.html")))
                 .build();
         server.start();
     }

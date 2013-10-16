@@ -74,6 +74,7 @@ public class ChatServer {
                                             }
                                         }
                                     });
+                                    channel.resumeReceives();
                                 }
                             }
                         }))
