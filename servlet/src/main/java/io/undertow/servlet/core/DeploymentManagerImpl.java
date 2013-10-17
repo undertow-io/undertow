@@ -413,8 +413,10 @@ public class DeploymentManagerImpl implements DeploymentManager {
         try {
             deployment.getSessionManager().start();
 
-
-            for (Lifecycle object : deployment.getLifecycleObjects()) {
+            //we need to copy before iterating
+            //because listeners can add other listeners
+            ArrayList<Lifecycle> lifecycles = new ArrayList<Lifecycle>(deployment.getLifecycleObjects());
+            for (Lifecycle object : lifecycles) {
                 object.start();
             }
             HttpHandler root = deployment.getHandler();
