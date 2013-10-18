@@ -19,6 +19,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -68,15 +69,15 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
         return new HandshakeChecker() {
             @Override
             public void checkHandshake(Map<String, String> headers) throws IOException {
-                String upgrade = headers.get(Headers.UPGRADE_STRING.toLowerCase());
-                if (upgrade == null || !upgrade.toLowerCase().trim().equals("websocket")) {
+                String upgrade = headers.get(Headers.UPGRADE_STRING.toLowerCase(Locale.ENGLISH));
+                if (upgrade == null || !upgrade.trim().equalsIgnoreCase("websocket")) {
                     throw WebSocketMessages.MESSAGES.noWebSocketUpgradeHeader();
                 }
-                String connHeader = headers.get(Headers.CONNECTION_STRING.toLowerCase());
-                if (connHeader == null || !connHeader.toLowerCase().trim().equals("upgrade")) {
+                String connHeader = headers.get(Headers.CONNECTION_STRING.toLowerCase(Locale.ENGLISH));
+                if (connHeader == null || !connHeader.trim().equalsIgnoreCase("upgrade")) {
                     throw WebSocketMessages.MESSAGES.noWebSocketConnectionHeader();
                 }
-                String acceptKey = headers.get(Headers.SEC_WEB_SOCKET_ACCEPT_STRING.toLowerCase());
+                String acceptKey = headers.get(Headers.SEC_WEB_SOCKET_ACCEPT_STRING.toLowerCase(Locale.ENGLISH));
                 final String dKey = solve(sentKey);
                 if (!dKey.equals(acceptKey)) {
                     throw WebSocketMessages.MESSAGES.webSocketAcceptKeyMismatch(dKey, acceptKey);

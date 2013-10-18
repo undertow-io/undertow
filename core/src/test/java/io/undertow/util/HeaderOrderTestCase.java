@@ -39,7 +39,7 @@ public class HeaderOrderTestCase {
         Collections.sort(headers, new Comparator<HttpString>() {
             @Override
             public int compare(final HttpString o1, final HttpString o2) {
-                return o1.toString().toLowerCase().compareTo(o2.toString().toLowerCase());
+                return o1.toString().compareToIgnoreCase(o2.toString());
             }
         });
         int val = 1;

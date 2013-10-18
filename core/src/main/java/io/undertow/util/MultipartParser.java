@@ -190,9 +190,9 @@ public class MultipartParser {
                     String encoding = headers.getFirst(Headers.CONTENT_TRANSFER_ENCODING);
                     if (encoding == null) {
                         encodingHandler = new IdentityEncoding();
-                    } else if (encoding.toLowerCase().equals("base64")) {
+                    } else if (encoding.equalsIgnoreCase("base64")) {
                         encodingHandler = new Base64Encoding(bufferPool);
-                    } else if (encoding.toLowerCase().equals("quoted-printable")) {
+                    } else if (encoding.equalsIgnoreCase("quoted-printable")) {
                         encodingHandler = new QuotedPrintableEncoding(bufferPool);
                     } else {
                         encodingHandler = new IdentityEncoding();

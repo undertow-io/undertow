@@ -46,7 +46,7 @@ public class HttpContinue {
         List<String> expect = exchange.getRequestHeaders().get(Headers.EXPECT);
         if (expect != null) {
             for (String header : expect) {
-                if (header.toLowerCase().equals(CONTINUE)) {
+                if (header.equalsIgnoreCase(CONTINUE)) {
                     return true;
                 }
             }

@@ -3,6 +3,7 @@ package io.undertow.server.session;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Deque;
+import java.util.Locale;
 
 import io.undertow.server.HttpServerExchange;
 
@@ -20,7 +21,7 @@ public class PathParameterSessionConfig implements SessionConfig {
     }
 
     public PathParameterSessionConfig() {
-        this(SessionCookieConfig.DEFAULT_SESSION_ID.toLowerCase());
+        this(SessionCookieConfig.DEFAULT_SESSION_ID.toLowerCase(Locale.ENGLISH));
     }
 
     @Override
