@@ -64,6 +64,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Locale;
 
 import static io.undertow.client.UndertowClientMessages.MESSAGES;
 import static io.undertow.util.Headers.CLOSE;
@@ -260,7 +261,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
                 return;
             }
         } else if (transferEncodingString != null) {
-            if (!transferEncodingString.toLowerCase().contains(Headers.CHUNKED.toString())) {
+            if (!transferEncodingString.toLowerCase(Locale.ENGLISH).contains(Headers.CHUNKED.toString())) {
                 handleError(UndertowClientMessages.MESSAGES.unknownTransferEncoding(transferEncodingString));
                 return;
             }

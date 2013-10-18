@@ -100,23 +100,23 @@ public class Cookies {
     }
 
     private static void handleValue(CookieImpl cookie, String key, String value) {
-        if (key.toLowerCase().equals("path")) {
+        if (key.equalsIgnoreCase("path")) {
             cookie.setPath(value);
-        } else if (key.toLowerCase().equals("domain")) {
+        } else if (key.equalsIgnoreCase("domain")) {
             cookie.setDomain(value);
-        } else if (key.toLowerCase().equals("max-age")) {
+        } else if (key.equalsIgnoreCase("max-age")) {
             cookie.setMaxAge(Integer.parseInt(value));
-        } else if (key.toLowerCase().equals("expires")) {
+        } else if (key.equalsIgnoreCase("expires")) {
             cookie.setExpires(DateUtils.parseDate(value));
-        } else if (key.toLowerCase().equals("discard")) {
+        } else if (key.equalsIgnoreCase("discard")) {
             cookie.setDiscard(true);
-        } else if (key.toLowerCase().equals("secure")) {
+        } else if (key.equalsIgnoreCase("secure")) {
             cookie.setSecure(true);
-        } else if (key.toLowerCase().equals("httpOnly")) {
+        } else if (key.equalsIgnoreCase("httpOnly")) {
             cookie.setHttpOnly(true);
-        } else if (key.toLowerCase().equals("version")) {
+        } else if (key.equalsIgnoreCase("version")) {
             cookie.setVersion(Integer.parseInt(value));
-        } else if (key.toLowerCase().equals("comment")) {
+        } else if (key.equalsIgnoreCase("comment")) {
             cookie.setComment(value);
         }
         //otherwise ignore this key-value pair

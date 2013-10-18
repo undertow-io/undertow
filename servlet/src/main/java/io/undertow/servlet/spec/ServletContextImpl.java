@@ -34,6 +34,7 @@ import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -145,11 +146,11 @@ public class ServletContextImpl implements ServletContext {
             } else {
                 if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE) || sessionTrackingModes.contains(SessionTrackingMode.URL)) {
                     sessionConfig = sessionCookieConfig;
-                    sessionCookieConfig.setFallback(new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase()));
+                    sessionCookieConfig.setFallback(new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH)));
                 } else if (sessionTrackingModes.contains(SessionTrackingMode.COOKIE)) {
                     sessionConfig = sessionCookieConfig;
                 } else if (sessionTrackingModes.contains(SessionTrackingMode.URL)) {
-                    sessionConfig = new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase());
+                    sessionConfig = new PathParameterSessionConfig(sessionCookieConfig.getName().toLowerCase(Locale.ENGLISH));
                 }
             }
         }

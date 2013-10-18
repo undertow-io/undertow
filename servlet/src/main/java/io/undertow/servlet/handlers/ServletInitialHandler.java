@@ -140,8 +140,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     }
 
     private boolean isForbiddenPath(String path) {
-        final String lowerPath = path.toLowerCase();
-        return lowerPath.equals("/meta-inf/") || lowerPath.startsWith("/web-inf/");
+        return path.equalsIgnoreCase("/meta-inf/")
+            || path.regionMatches(true, 0, "/web-inf/", 0, "/web-inf/".length());
     }
 
     public void dispatchToPath(final HttpServerExchange exchange, final ServletPathMatch pathInfo, final DispatcherType dispatcherType) throws Exception {
