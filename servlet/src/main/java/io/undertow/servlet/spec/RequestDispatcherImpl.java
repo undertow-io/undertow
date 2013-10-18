@@ -130,13 +130,10 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 int qsPos = path.indexOf("?");
                 String newServletPath = path;
                 if (qsPos != -1) {
-                    if(newQueryString.isEmpty()) {
-                        newQueryString = newServletPath.substring(qsPos + 1);
-                    } else {
-                        newQueryString = newQueryString + "&" + newServletPath.substring(qsPos + 1);
-                    }
+                    newQueryString = newServletPath.substring(qsPos + 1);
                     newServletPath = newServletPath.substring(0, qsPos);
                 }
+                final String newQueryStringPart = newQueryString;
                 if(requestImpl.getQueryString() != null) {
                     if(newQueryString.isEmpty()) {
                         newQueryString = requestImpl.getQueryString();
@@ -146,7 +143,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 }
                 String newRequestUri = servletContext.getContextPath() + newServletPath;
 
-                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
+                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryStringPart);
                 requestImpl.setQueryParameters(newQueryParameters);
 
                 requestImpl.getExchange().setRelativePath(newServletPath);
@@ -256,13 +253,10 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 int qsPos = path.indexOf("?");
                 String newServletPath = path;
                 if (qsPos != -1) {
-                    if(newQueryString.isEmpty()) {
-                        newQueryString = newServletPath.substring(qsPos + 1);
-                    } else {
-                        newQueryString = newQueryString + "&" + newServletPath.substring(qsPos + 1);
-                    }
+                    newQueryString = newServletPath.substring(qsPos + 1);
                     newServletPath = newServletPath.substring(0, qsPos);
                 }
+                final String newQueryStringPart = newQueryString;
 
                 if(requestImpl.getQueryString() != null) {
                     if(newQueryString.isEmpty()) {
@@ -273,7 +267,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 }
                 String newRequestUri = servletContext.getContextPath() + newServletPath;
 
-                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
+                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryStringPart);
                 requestImpl.setQueryParameters(newQueryParameters);
 
                 requestImpl.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
