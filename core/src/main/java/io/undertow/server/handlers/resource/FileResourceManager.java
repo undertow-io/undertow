@@ -18,10 +18,11 @@
 
 package io.undertow.server.handlers.resource;
 
-import java.io.File;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Serves files from the file system.
@@ -36,10 +37,7 @@ public class FileResourceManager implements ResourceManager {
     private final long transferMinSize;
 
     public FileResourceManager(final File base, long transferMinSize) {
-        if (base == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
-        }
-        this.base = base;
+        setBase(base);
         this.transferMinSize = transferMinSize;
     }
 
@@ -51,17 +49,22 @@ public class FileResourceManager implements ResourceManager {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
-        this.base = base;
+        try {
+            this.base = base.getCanonicalFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         return this;
     }
 
+    @Override
     public Resource getResource(final String p) {
         String path = p;
         if (p.startsWith("/")) {
             path = p.substring(1);
         }
         try {
-            File file = new File(base, p).getCanonicalFile();
+            File file = new File(base, p);
             if (file.exists()) {
                 return new FileResource(file, this, path);
             } else {
