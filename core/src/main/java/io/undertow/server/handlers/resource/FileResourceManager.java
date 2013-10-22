@@ -61,7 +61,7 @@ public class FileResourceManager implements ResourceManager {
             path = p.substring(1);
         }
         try {
-            File file = new File(base, p);
+            File file = new File(base, p).getCanonicalFile();
             if (file.exists()) {
                 return new FileResource(file, this, path);
             } else {
