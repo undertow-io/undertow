@@ -77,23 +77,28 @@ public class ServletDebugPageHandler {
         writeLabel(sb, "Path Info", req.getPathInfo());
         writeLabel(sb, "Query String", req.getQueryString());
         sb.append("<b>Stack Trace</b><br/>");
-        sb.append(exception.toString());
+        sb.append(escapeBodyText(exception.toString()));
         sb.append("<br/>");
         for(StackTraceElement element : exception.getStackTrace()) {
-            sb.append(element.toString());
+            sb.append(escapeBodyText(element.toString()));
             sb.append("<br/>");
         }
         sb.append("</body></html>");
-        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html");
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html; charset=UTF-8");
         exchange.getResponseSender().send(sb.toString());
     }
 
     private static void writeLabel(StringBuilder sb, String label, String value) {
         sb.append("<div class=\"label\">");
-        sb.append(label);
+        sb.append(escapeBodyText(label));
         sb.append(":</div><div class=\"value\">");
-        sb.append(value);
+        sb.append(escapeBodyText(value));
         sb.append("</div><br/>");
 
+    }
+
+
+    public static String escapeBodyText(final String bodyText) {
+        return bodyText.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 }
