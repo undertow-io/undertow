@@ -28,7 +28,7 @@ import io.undertow.UndertowMessages;
  */
 public class FileResourceManager implements ResourceManager {
 
-    private volatile File base;
+    private volatile String base;
 
     /**
       * Size to use direct FS to network transfer (if supported by OS/JDK) instead of read/write
@@ -39,34 +39,50 @@ public class FileResourceManager implements ResourceManager {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
-        this.base = base;
+        String basePath = base.getAbsolutePath();
+        if(!basePath.endsWith("/")) {
+            basePath = basePath + '/';
+        }
+        this.base = basePath;
         this.transferMinSize = transferMinSize;
+
     }
 
     public File getBase() {
-        return base;
+        return new File(base);
     }
 
     public FileResourceManager setBase(final File base) {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
-        this.base = base;
+        String basePath = base.getAbsolutePath();
+        if(!basePath.endsWith("/")) {
+            basePath = basePath + '/';
+        }
+        this.base = basePath;
         return this;
     }
 
     public Resource getResource(final String p) {
-        String path = p;
+        String path = null;
+        //base always ends with a /
         if (p.startsWith("/")) {
             path = p.substring(1);
+        } else {
+            path = p;
         }
         try {
-            File file = new File(base, p).getCanonicalFile();
+            File file = new File(base, path);
             if (file.exists()) {
-                return new FileResource(file, this, path);
-            } else {
-                return null;
+                //security check for case insensitive file systems
+                //we make sure the case of the filename matches the case of the request
+                //TODO: we should be able to avoid this if we can tell a FS is case sensitive
+                if(file.getCanonicalFile().getName().equals(file.getName())) {
+                    return new FileResource(file, this, path);
+                }
             }
+            return null;
         } catch (Exception e) {
             UndertowLogger.REQUEST_LOGGER.debugf(e, "Invalid path %s");
             return null;

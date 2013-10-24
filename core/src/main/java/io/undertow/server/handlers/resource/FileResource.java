@@ -36,7 +36,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
-import org.jboss.logging.Logger;
 import org.xnio.FileAccess;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
@@ -48,17 +47,12 @@ import org.xnio.Pooled;
  */
 public class FileResource implements Resource {
 
-    private static final Logger log = Logger.getLogger("io.undertow.server.resources.file");
     private final File file;
     private final String path;
     private final FileResourceManager manager;
 
     public FileResource(final File file, final FileResourceManager manager, String path) {
-        try {
-            this.file = file.getCanonicalFile();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        this.file = file;
         this.path = path;
         this.manager = manager;
     }
