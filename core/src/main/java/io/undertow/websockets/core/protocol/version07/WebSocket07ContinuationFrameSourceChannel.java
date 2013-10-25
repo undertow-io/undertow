@@ -18,16 +18,17 @@
 package io.undertow.websockets.core.protocol.version07;
 
 import io.undertow.websockets.core.FixedPayloadFrameSourceChannel;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.function.ChannelFunction;
-import org.xnio.channels.StreamSourceChannel;
+import org.xnio.Pooled;
+
+import java.nio.ByteBuffer;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket07ContinuationFrameSourceChannel extends FixedPayloadFrameSourceChannel {
-    WebSocket07ContinuationFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, final ChannelFunction ... function) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, function);
+    WebSocket07ContinuationFrameSourceChannel(WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, Pooled<ByteBuffer> pooled, long frameLength, final ChannelFunction... function) {
+        super(wsChannel, WebSocketFrameType.CONTINUATION, payloadSize, rsv, finalFragment, pooled, frameLength, function);
     }
 }

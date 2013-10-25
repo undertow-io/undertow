@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.core.protocol.version07;
+package io.undertow.websockets.core.protocol;
 
 import io.undertow.testutils.DefaultServer;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
@@ -24,7 +24,6 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
-import io.undertow.websockets.core.protocol.version00.WebSocket00ServerTest;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
@@ -35,6 +34,7 @@ import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.junit.Assert;
 import org.junit.Test;
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
 import org.xnio.FutureResult;
 
 import java.io.IOException;
@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket07ServerTest extends WebSocket00ServerTest {
+public class WebSocket07ServerTest extends AbstractWebSocketServerTest {
     @Override
     protected WebSocketVersion getVersion() {
         return WebSocketVersion.V07;
@@ -78,7 +78,11 @@ public class WebSocket07ServerTest extends WebSocket00ServerTest {
                             while (buf.hasRemaining()) {
                                 sink.write(buf);
                             }
-                            Assert.assertTrue(sink.flush());
+                            sink.shutdownWrites();
+                            if(!sink.flush()) {
+                                sink.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
+                                sink.resumeWrites();
+                            }
                             channel.getReceiveSetter().set(null);
                         } catch (IOException e) {
                             throw new RuntimeException(e);

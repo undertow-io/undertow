@@ -17,20 +17,20 @@ package io.undertow.websockets.core.protocol.server;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.protocol.http.HttpOpenListener;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketUtils;
+import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.handler.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
+import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
@@ -42,38 +42,38 @@ import java.net.InetSocketAddress;
 /**
  * This class is intended for use with testing against the Python
  * <a href="http://www.tavendo.de/autobahn/testsuite.html">AutoBahn test suite</a>.
- *
+ * <p/>
  * Autobahn installation documentation can be found <a href="http://autobahn.ws/testsuite/installation">here</a>.
- *
+ * <p/>
  * <h3>How to run the tests on Linux/OSX.</h3>
- *
+ * <p/>
  * <p>01. Install AutoBahn: <tt>sudo easy_install autobahntestsuite</tt>.  Test using <tt>wstest --help</tt>.
- *
+ * <p/>
  * <p>02. Create a directory for test configuration and results: <tt>mkdir ~/autobahn</tt> <tt>cd ~/autobahn</tt>.
- *
+ * <p/>
  * <p>03. Create <tt>fuzzing_client_spec.json</tt> in the above directory
  * {@code
  * {
- *    "options": {"failByDrop": false},
- *    "outdir": "./reports/servers",
- *
- *    "servers": [
- *                 {"agent": "Netty4",
- *                  "url": "ws://localhost:9000",
- *                  "options": {"version": 18}}
- *               ],
- *
- *    "cases": ["*"],
- *    "exclude-cases": [],
- *    "exclude-agent-cases": {}
+ * "options": {"failByDrop": false},
+ * "outdir": "./reports/servers",
+ * <p/>
+ * "servers": [
+ * {"agent": "Netty4",
+ * "url": "ws://localhost:9000",
+ * "options": {"version": 18}}
+ * ],
+ * <p/>
+ * "cases": ["*"],
+ * "exclude-cases": [],
+ * "exclude-agent-cases": {}
  * }
  * }
- *
+ * <p/>
  * <p>04. Run the <tt>AutobahnServer</tt> located in this package. If you are in Eclipse IDE, right click on
  * <tt>AutobahnServer.java</tt> and select Run As > Java Application.
- *
+ * <p/>
  * <p>05. Run the Autobahn test <tt>wstest -m fuzzingclient -s fuzzing_client_spec.json</tt>.
- *
+ * <p/>
  * <p>06. See the results in <tt>./reports/servers/index.html</tt>
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -85,10 +85,25 @@ public class AutobahnWebSocketServer {
     private Xnio xnio;
     private final int port;
 
+    public static WebSocketChannel current;
+
     public AutobahnWebSocketServer(int port) {
         this.port = port;
     }
 
+    private static final ChannelExceptionHandler<StreamSinkFrameChannel> W_H = new ChannelExceptionHandler<StreamSinkFrameChannel>() {
+        @Override
+        public void handleException(StreamSinkFrameChannel channel, IOException exception) {
+            exception.printStackTrace();
+        }
+    };
+
+    private static final ChannelExceptionHandler<StreamSourceFrameChannel> R_H = new ChannelExceptionHandler<StreamSourceFrameChannel>() {
+        @Override
+        public void handleException(StreamSourceFrameChannel channel, IOException exception) {
+            exception.printStackTrace();
+        }
+    };
 
     public void run() {
         xnio = Xnio.getInstance("nio");
@@ -109,7 +124,7 @@ public class AutobahnWebSocketServer {
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();
-            openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192), 8192);
+            openListener = new HttpOpenListener(new ByteBufferSlicePool(BufferAllocator.BYTE_BUFFER_ALLOCATOR, 8192, 8192 * 8192), 8192);
             ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
             server = worker.createStreamConnectionServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
@@ -125,6 +140,7 @@ public class AutobahnWebSocketServer {
         return new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
             @Override
             public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
+                current = channel;
                 channel.getReceiveSetter().set(new Receiver());
                 channel.resumeReceives();
             }
@@ -138,12 +154,28 @@ public class AutobahnWebSocketServer {
             try {
                 final StreamSourceFrameChannel ws = channel.receive();
                 if (ws != null) {
-                    WebSocketUtils.echoFrame(channel, ws);
+                    StreamSinkFrameChannel target;
+                    if (ws.getType() == WebSocketFrameType.PING ||
+                            ws.getType() == WebSocketFrameType.CLOSE) {
+                        target = channel.send(ws.getType() == WebSocketFrameType.PING ? WebSocketFrameType.PONG : WebSocketFrameType.CLOSE);
+                    } else if (ws.getType() == WebSocketFrameType.PONG) {
+                        ws.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, null, null));
+                        ws.wakeupReads();
+                        return;
+                    } else {
+                        target = channel.send(ws.getType());
+                    }
+                    ChannelListeners.initiateTransfer(Long.MAX_VALUE, ws, target, null, ChannelListeners.writeShutdownChannelListener(new ChannelListener<StreamSinkFrameChannel>() {
+                        @Override
+                        public void handleEvent(StreamSinkFrameChannel c) {
+                            channel.resumeReceives();
+                        }
+                    }, W_H), R_H, W_H, channel.getBufferPool());
+
                 }
-                channel.resumeReceives();
             } catch (IOException e) {
-                //e.printStackTrace();
-                IoUtils.safeClose(channel);
+                e.printStackTrace();
+                //IoUtils.safeClose(channel);
             }
         }
     }

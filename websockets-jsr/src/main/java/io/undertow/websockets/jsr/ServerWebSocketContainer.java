@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.Executor;
 
 
 /**
@@ -220,22 +221,16 @@ public class ServerWebSocketContainer implements ServerContainer {
      *
      * @param invocation The task to run
      */
-    public void invokeEndpointMethod(final WebSocketChannel channel, final Runnable invocation) {
-        channel.suspendReceives();
-        xnioWorker.submit(new Runnable() {
+    public void invokeEndpointMethod(final Executor executor, final Runnable invocation) {
+        executor.execute(new Runnable() {
             @Override
             public void run() {
+                ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
                 try {
-                    ThreadSetupAction.Handle handle = threadSetupAction.setup(null);
-                    try {
-                        invocation.run();
-                    } finally {
-                        handle.tearDown();
-                    }
+                    invocation.run();
                 } finally {
-                    channel.resumeReceives();
+                    handle.tearDown();
                 }
-
             }
         });
     }
@@ -268,7 +263,7 @@ public class ServerWebSocketContainer implements ServerContainer {
                 seenPaths.add(template);
 
                 EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, serverEndpoint.decoders(), serverEndpoint.encoders());
-                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory);
+                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(xnioWorker, endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory);
                 Class<? extends ServerEndpointConfig.Configurator> configuratorClass = serverEndpoint.configurator();
                 ServerEndpointConfig.Configurator configurator;
                 if (configuratorClass != ServerEndpointConfig.Configurator.class) {
@@ -291,7 +286,7 @@ public class ServerWebSocketContainer implements ServerContainer {
             } else if (clientEndpoint != null) {
                 JsrWebSocketLogger.ROOT_LOGGER.addingAnnotatedClientEndpoint(endpoint);
                 EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, clientEndpoint.decoders(), clientEndpoint.encoders());
-                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory);
+                AnnotatedEndpointFactory factory = AnnotatedEndpointFactory.create(xnioWorker, endpoint, classIntrospecter.createInstanceFactory(endpoint), encodingFactory);
 
                 ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
                         .decoders(Arrays.asList(clientEndpoint.decoders()))
@@ -317,7 +312,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
 
     private void handleAddingFilterMapping() {
-        if(contextToAddFilter != null) {
+        if (contextToAddFilter != null) {
             contextToAddFilter.getDeployment().getDeploymentInfo().addFilterUrlMapping(Bootstrap.FILTER_NAME, "/*", DispatcherType.REQUEST);
             contextToAddFilter.getDeployment().getServletPaths().invalidate();
             contextToAddFilter = null;

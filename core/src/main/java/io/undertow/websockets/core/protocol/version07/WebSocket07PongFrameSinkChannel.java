@@ -18,13 +18,12 @@
 package io.undertow.websockets.core.protocol.version07;
 
 import io.undertow.websockets.core.WebSocketFrameType;
-import org.xnio.channels.StreamSinkChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket07PongFrameSinkChannel extends WebSocket07FrameSinkChannel {
-    WebSocket07PongFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
-        super(channel, wsChannel, WebSocketFrameType.PONG, payloadSize);
+    WebSocket07PongFrameSinkChannel(WebSocket07Channel wsChannel, long payloadSize) {
+        super(wsChannel, WebSocketFrameType.PONG, payloadSize);
     }
 }

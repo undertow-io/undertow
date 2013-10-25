@@ -16,8 +16,7 @@
 package io.undertow.websockets.core;
 
 import io.undertow.UndertowMessages;
-import org.xnio.Pool;
-import org.xnio.Pooled;
+import org.xnio.channels.Channels;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -25,85 +24,42 @@ import java.nio.ByteBuffer;
 
 /**
  * {@link OutputStream} implementation which buffers all the data until {@link #close()} is called and then will
- * try to send it in a blocking fashion with the provided {@link FragmentedMessageChannel}.
+ * try to send it in a blocking fashion with the provided {@link StreamSinkFrameChannel}.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public final class BinaryOutputStream extends OutputStream {
-    private final FragmentedMessageChannel sender;
-    private final Pooled<ByteBuffer> pooled;
+    private final StreamSinkFrameChannel sender;
     private boolean closed;
 
-    public BinaryOutputStream(FragmentedMessageChannel sender, Pool<ByteBuffer> pool) {
+    public BinaryOutputStream(StreamSinkFrameChannel sender) {
         this.sender = sender;
-        pooled = pool.allocate();
     }
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
         checkClosed();
-
-        ByteBuffer buffer = pooled.getResource();
-        int remaining = buffer.remaining();
-        if (remaining >= len) {
-            buffer.put(b, off, len);
-            send(false, false);
-        } else {
-            int left = len;
-            do {
-                int toWrite = Math.min(remaining, left);
-                buffer.put(b, off, toWrite);
-                off += toWrite;
-                left -= toWrite;
-                send(false, false);
-                remaining = buffer.remaining();
-            } while (left > 0);
-        }
+        Channels.writeBlocking(sender, ByteBuffer.wrap(b, off, len));
     }
-
-    private void send(boolean force, boolean last) throws IOException {
-        ByteBuffer buffer = pooled.getResource();
-        if (force || !buffer.hasRemaining()) {
-            buffer.flip();
-            StreamSinkFrameChannel channel = sender.send(buffer.remaining(), last);
-            while (buffer.hasRemaining()){
-                int res = channel.write(buffer);
-                if(res == 0) {
-                    channel.awaitWritable();
-                }
-            }
-            channel.shutdownWrites();
-            while (!channel.flush()) {
-                channel.awaitWritable();
-            }
-            buffer.clear();
-        }
-    }
-
 
     @Override
     public void write(int b) throws IOException {
         checkClosed();
-        ByteBuffer buffer = pooled.getResource();
-        buffer.put((byte) b);
-        send(false, false);
+        Channels.writeBlocking(sender, ByteBuffer.wrap(new byte[]{(byte) b}));
     }
 
     @Override
     public void flush() throws IOException {
         checkClosed();
-        send(true, false);
+        sender.flush();
     }
 
     @Override
     public void close() throws IOException {
         if (!closed) {
-            try {
-                closed = true;
-                send(true, true);
-            } finally {
-                pooled.free();
-            }
+            closed = true;
+            sender.shutdownWrites();
+            Channels.flushBlocking(sender);
         }
     }
 

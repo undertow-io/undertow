@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -27,11 +28,9 @@ import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.function.ChannelFunction;
-import org.xnio.IoUtils;
 import org.xnio.Pool;
+import org.xnio.Pooled;
 import org.xnio.StreamConnection;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.conduits.PushBackStreamSourceConduit;
 
 import java.nio.ByteBuffer;
 import java.util.Set;
@@ -75,6 +74,7 @@ public class WebSocket07Channel extends WebSocketChannel {
     protected static final byte OPCODE_PONG = 0xA;
 
     private static final ChannelFunction[] EMPTY_FUNCTIONS = new ChannelFunction[0];
+
     /**
      * Create a new {@link WebSocket07Channel}
      *
@@ -89,347 +89,379 @@ public class WebSocket07Channel extends WebSocketChannel {
     }
 
     @Override
-    protected PartialFrame receiveFrame(final StreamSourceChannelControl streamSourceChannelControl) {
-        return new PartialFrame() {
+    protected PartialFrame receiveFrame() {
+        return new WebSocketFrameHeader();
+    }
 
-            private boolean frameFinalFlag;
-            private int frameRsv;
-            private int frameOpcode;
-            private int maskingKey;
-            private boolean frameMasked;
-            private long framePayloadLength;
-            private State state = State.READING_FIRST;
-            private int framePayloadLen1;
-            private StreamSourceFrameChannel channel;
+    @Override
+    protected void markReadsBroken(Throwable cause) {
+        super.markReadsBroken(cause);
+    }
 
-            @Override
-            public StreamSourceFrameChannel getChannel() {
-                return channel;
+    @Override
+    protected StreamSinkFrameChannel createStreamSinkChannel(WebSocketFrameType type, long payloadSize) {
+        switch (type) {
+            case TEXT:
+                return new WebSocket07TextFrameSinkChannel(this, payloadSize);
+            case BINARY:
+                return new WebSocket07BinaryFrameSinkChannel(this, payloadSize);
+            case CLOSE:
+                return new WebSocket07CloseFrameSinkChannel(this, payloadSize);
+            case PONG:
+                return new WebSocket07PongFrameSinkChannel(this, payloadSize);
+            case PING:
+                return new WebSocket07PingFrameSinkChannel(this, payloadSize);
+            default:
+                throw WebSocketMessages.MESSAGES.unsupportedFrameType(type);
+        }
+    }
+
+    class WebSocketFrameHeader implements PartialFrame {
+
+        private boolean frameFinalFlag;
+        private int frameRsv;
+        private int frameOpcode;
+        private int maskingKey;
+        private boolean frameMasked;
+        private long framePayloadLength;
+        private State state = State.READING_FIRST;
+        private int framePayloadLen1;
+        private boolean done = false;
+
+        @Override
+        public StreamSourceFrameChannel getChannel(Pooled<ByteBuffer> pooled) {
+            StreamSourceFrameChannel channel = createChannel(pooled);
+            if (frameFinalFlag) {
+                channel.finalFrame();
+            } else {
+                fragmentedChannel = channel;
+            }
+            return channel;
+        }
+
+        public StreamSourceFrameChannel createChannel(Pooled<ByteBuffer> pooled) {
+
+
+            // Processing ping/pong/close frames because they cannot be
+            // fragmented as per spec
+            if (frameOpcode == OPCODE_PING) {
+                if (frameMasked) {
+                    return new WebSocket07PingFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, new Masker(maskingKey), pooled, framePayloadLength);
+                } else {
+                    return new WebSocket07PingFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, pooled, framePayloadLength);
+                }
+            }
+            if (frameOpcode == OPCODE_PONG) {
+                if (frameMasked) {
+                    return new WebSocket07PongFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, new Masker(maskingKey), pooled, framePayloadLength);
+                } else {
+                    return new WebSocket07PongFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, pooled, framePayloadLength);
+                }
+            }
+            if (frameOpcode == OPCODE_CLOSE) {
+                if (frameMasked) {
+                    return new WebSocket07CloseFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, new Masker(maskingKey), pooled, framePayloadLength);
+                } else {
+                    return new WebSocket07CloseFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, pooled, framePayloadLength);
+                }
             }
 
-            @Override
-            public void handle(final ByteBuffer buffer, final StreamConnection channel,final PushBackStreamSourceConduit pushBack) throws WebSocketException {
-                if (!buffer.hasRemaining()) {
-                    return;
+            if (frameOpcode == OPCODE_TEXT) {
+                // try to grab the checker which was used before
+                UTF8Checker checker = WebSocket07Channel.this.checker;
+                if (checker == null) {
+                    checker = new UTF8Checker();
                 }
-                while (state != State.DONE) {
-                    byte b;
-                    switch (state) {
-                        case READING_FIRST:
-                            // Read FIN, RSV, OPCODE
-                            b = buffer.get();
-                            frameFinalFlag = (b & 0x80) != 0;
-                            frameRsv = (b & 0x70) >> 4;
-                            frameOpcode = b & 0x0F;
 
-                            if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
-                                WebSocketLogger.REQUEST_LOGGER.decodingFrameWithOpCode(frameOpcode);
-                            }
-                            state = State.READING_SECOND;
-                            // clear the lenghtbuffer to reuse it later
-                            lengthBuffer.clear();
-                        case READING_SECOND:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            // Read MASK, PAYLOAD LEN 1
-                            //
-                            frameMasked = (b & 0x80) != 0;
-                            framePayloadLen1 = b & 0x7F;
+                if (!frameFinalFlag) {
+                    // if this is not the final fragment store the used checker to use it in later fragements also
+                    WebSocket07Channel.this.checker = checker;
+                } else {
+                    // was the final fragement reset the checker to null
+                    WebSocket07Channel.this.checker = null;
+                }
 
-                            if (frameRsv != 0 && !areExtensionsSupported()) {
-                                IoUtils.safeClose(channel);
-                                throw WebSocketMessages.MESSAGES.extensionsNotAllowed(frameRsv);
-                            }
+                if (frameMasked) {
+                    return new WebSocket07TextFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, new Masker(maskingKey), checker, pooled, framePayloadLength);
+                } else {
+                    return new WebSocket07TextFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, checker, pooled, framePayloadLength);
+                }
+            } else if (frameOpcode == OPCODE_BINARY) {
+                if (frameMasked) {
+                    return new WebSocket07BinaryFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, new Masker(maskingKey), pooled, framePayloadLength);
+                } else {
+                    return new WebSocket07BinaryFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, pooled, framePayloadLength);
+                }
+            } else if (frameOpcode == OPCODE_CONT) {
+                final ChannelFunction[] functions;
+                if (frameMasked && checker != null) {
+                    functions = new ChannelFunction[2];
+                    functions[0] = new Masker(maskingKey);
+                    functions[1] = checker;
+                } else if (frameMasked) {
+                    functions = new ChannelFunction[1];
+                    functions[0] = new Masker(maskingKey);
+                } else if (checker != null) {
+                    functions = new ChannelFunction[1];
+                    functions[0] = checker;
+                } else {
+                    functions = EMPTY_FUNCTIONS;
+                }
+                if (frameMasked) {
+                    return new WebSocket07ContinuationFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, pooled, framePayloadLength, functions);
+                } else {
+                    return new WebSocket07ContinuationFrameSourceChannel(WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, pooled, framePayloadLength, functions);
+                }
+            } else {
+                throw WebSocketMessages.MESSAGES.unsupportedOpCode(frameOpcode);
+            }
+        }
 
-                            if (frameOpcode > 7) { // control frame (have MSB in opcode set)
-                                validateControlFrame();
-                            } else { // data frame
-                                validateDataFrame();
-                            }
-                            if (framePayloadLen1 == 126 || framePayloadLen1 == 127) {
-                                state = State.READING_EXTENDED_SIZE1;
-                            } else {
-                                framePayloadLength = framePayloadLen1;
-                                if (frameMasked) {
-                                    state = State.READING_MASK_1;
-                                } else {
-                                    state = State.DONE;
-                                }
-                                continue;
-                            }
-                        case READING_EXTENDED_SIZE1:
-                            // Read frame payload length
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            lengthBuffer.put(b);
-                            state = State.READING_EXTENDED_SIZE2;
-                        case READING_EXTENDED_SIZE2:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            lengthBuffer.put(b);
+        @Override
+        public void handle(final ByteBuffer buffer) throws WebSocketException {
+            if (!buffer.hasRemaining()) {
+                return;
+            }
+            while (state != State.DONE) {
+                byte b;
+                switch (state) {
+                    case READING_FIRST:
+                        // Read FIN, RSV, OPCODE
+                        b = buffer.get();
+                        frameFinalFlag = (b & 0x80) != 0;
+                        frameRsv = (b & 0x70) >> 4;
+                        frameOpcode = b & 0x0F;
 
-                            if (framePayloadLen1 == 126) {
-                                lengthBuffer.flip();
-                                // must be unsigned short
-                                framePayloadLength = lengthBuffer.getShort() & 0xFFFF;
+                        if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                            WebSocketLogger.REQUEST_LOGGER.decodingFrameWithOpCode(frameOpcode);
+                        }
+                        state = State.READING_SECOND;
+                        // clear the lenghtbuffer to reuse it later
+                        lengthBuffer.clear();
+                    case READING_SECOND:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        // Read MASK, PAYLOAD LEN 1
+                        //
+                        frameMasked = (b & 0x80) != 0;
+                        framePayloadLen1 = b & 0x7F;
 
-                                if (frameMasked) {
-                                    state = State.READING_MASK_1;
-                                } else {
-                                    state = State.DONE;
-                                }
-                                continue;
-                            }
-                            state = State.READING_EXTENDED_SIZE3;
-                        case READING_EXTENDED_SIZE3:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            lengthBuffer.put(b);
+                        if (frameRsv != 0 && !areExtensionsSupported()) {
+                            throw WebSocketMessages.MESSAGES.extensionsNotAllowed(frameRsv);
+                        }
 
-                            state = State.READING_EXTENDED_SIZE4;
-                        case READING_EXTENDED_SIZE4:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            lengthBuffer.put(b);
-                            state = State.READING_EXTENDED_SIZE5;
-                        case READING_EXTENDED_SIZE5:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            lengthBuffer.put(b);
-                            state = State.READING_EXTENDED_SIZE6;
-                        case READING_EXTENDED_SIZE6:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            lengthBuffer.put(b);
-                            state = State.READING_EXTENDED_SIZE7;
-                        case READING_EXTENDED_SIZE7:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            lengthBuffer.put(b);
-                        case READING_EXTENDED_SIZE8:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            lengthBuffer.put(b);
-
-                            lengthBuffer.flip();
-                            framePayloadLength = lengthBuffer.getLong();
+                        if (frameOpcode > 7) { // control frame (have MSB in opcode set)
+                            validateControlFrame();
+                        } else { // data frame
+                            validateDataFrame();
+                        }
+                        if (framePayloadLen1 == 126 || framePayloadLen1 == 127) {
+                            state = State.READING_EXTENDED_SIZE1;
+                        } else {
+                            framePayloadLength = framePayloadLen1;
                             if (frameMasked) {
                                 state = State.READING_MASK_1;
                             } else {
                                 state = State.DONE;
-                                break;
                             }
-                        case READING_MASK_1:
-                            if (!buffer.hasRemaining()) {
-                                return;
+                            continue;
+                        }
+                    case READING_EXTENDED_SIZE1:
+                        // Read frame payload length
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        lengthBuffer.put(b);
+                        state = State.READING_EXTENDED_SIZE2;
+                    case READING_EXTENDED_SIZE2:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        lengthBuffer.put(b);
+
+                        if (framePayloadLen1 == 126) {
+                            lengthBuffer.flip();
+                            // must be unsigned short
+                            framePayloadLength = lengthBuffer.getShort() & 0xFFFF;
+
+                            if (frameMasked) {
+                                state = State.READING_MASK_1;
+                            } else {
+                                state = State.DONE;
                             }
-                            b = buffer.get();
-                            maskingKey = b & 0xFF;
-                            state = State.READING_MASK_2;
-                        case READING_MASK_2:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            maskingKey = maskingKey << 8 | b & 0xFF;
-                            state = State.READING_MASK_3;
-                        case READING_MASK_3:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            maskingKey = maskingKey << 8 | b & 0xFF;
-                            state = State.READING_MASK_4;
-                        case READING_MASK_4:
-                            if (!buffer.hasRemaining()) {
-                                return;
-                            }
-                            b = buffer.get();
-                            maskingKey = maskingKey << 8 | b & 0xFF;
+                            continue;
+                        }
+                        state = State.READING_EXTENDED_SIZE3;
+                    case READING_EXTENDED_SIZE3:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        lengthBuffer.put(b);
+
+                        state = State.READING_EXTENDED_SIZE4;
+                    case READING_EXTENDED_SIZE4:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        lengthBuffer.put(b);
+                        state = State.READING_EXTENDED_SIZE5;
+                    case READING_EXTENDED_SIZE5:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        lengthBuffer.put(b);
+                        state = State.READING_EXTENDED_SIZE6;
+                    case READING_EXTENDED_SIZE6:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        lengthBuffer.put(b);
+                        state = State.READING_EXTENDED_SIZE7;
+                    case READING_EXTENDED_SIZE7:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        lengthBuffer.put(b);
+                    case READING_EXTENDED_SIZE8:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        lengthBuffer.put(b);
+
+                        lengthBuffer.flip();
+                        framePayloadLength = lengthBuffer.getLong();
+                        if (frameMasked) {
+                            state = State.READING_MASK_1;
+                        } else {
                             state = State.DONE;
                             break;
-                        default:
-                            throw new IllegalStateException(state.toString());
-                    }
-                }
-                // Processing ping/pong/close frames because they cannot be
-                // fragmented as per spec
-                if (frameOpcode == OPCODE_PING) {
-                    if (frameMasked) {
-                        this.channel = new WebSocket07PingFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv, new Masker(maskingKey));
-                    } else {
-                        this.channel = new WebSocket07PingFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv);
-                    }
-                    return;
-                }
-                if (frameOpcode == OPCODE_PONG) {
-                    if (frameMasked) {
-                        this.channel = new WebSocket07PongFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv, new Masker(maskingKey));
-                    } else {
-                        this.channel = new WebSocket07PongFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv);
-                    }
-                    return;
-                }
-                if (frameOpcode == OPCODE_CLOSE) {
-                    if (frameMasked) {
-                        this.channel = new WebSocket07CloseFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv, new Masker(maskingKey));
-                    } else {
-                        this.channel = new WebSocket07CloseFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv);
-                    }
-                    return;
-                }
-
-                if (frameFinalFlag) {
-                    // check if the frame is a ping frame as these are allowed in the middle
-                    if (frameOpcode != OPCODE_PING) {
-                        fragmentedFramesCount = 0;
-                    }
-                } else {
-                    // Increment counter
-                    fragmentedFramesCount++;
-                }
-
-                if (frameOpcode == OPCODE_TEXT) {
-                    // try to grab the checker which was used before
-                    UTF8Checker checker = WebSocket07Channel.this.checker;
-                    if (checker == null) {
-                        checker = new UTF8Checker();
-                    }
-
-                    if (frameMasked) {
-                        this.channel = new WebSocket07TextFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, new Masker(maskingKey), checker);
-                    } else {
-                        this.channel = new WebSocket07TextFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, checker);
-
-                    }
-
-                    if (!frameFinalFlag) {
-                        // if this is not the final fragment store the used checker to use it in later fragements also
-                        WebSocket07Channel.this.checker = checker;
-                    } else {
-                        // was the final fragement reset the checker to null
-                        WebSocket07Channel.this.checker = null;
-                    }
-
-                } else if (frameOpcode == OPCODE_BINARY) {
-                    if (frameMasked) {
-                        this.channel = new WebSocket07BinaryFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, new Masker(maskingKey));
-                    } else {
-                        this.channel = new WebSocket07BinaryFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag);
-                    }
-                } else if (frameOpcode == OPCODE_CONT) {
-                    final ChannelFunction[] functions;
-                    if(frameMasked && checker != null) {
-                        functions = new ChannelFunction[2];
-                        functions[0] = new Masker(maskingKey);
-                        functions[1] = checker;
-                    } else if(frameMasked) {
-                        functions = new ChannelFunction[1];
-                        functions[0] = new Masker(maskingKey);
-                    } else if(checker != null) {
-                        functions = new ChannelFunction[1];
-                        functions[0] = checker;
-                    } else {
-                        functions = EMPTY_FUNCTIONS;
-                    }
-                    if (frameMasked) {
-                        this.channel = new WebSocket07ContinuationFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, functions);
-                    } else {
-                        this.channel = new WebSocket07ContinuationFrameSourceChannel(streamSourceChannelControl, channel.getSourceChannel(), WebSocket07Channel.this, framePayloadLength, frameRsv, frameFinalFlag, functions);
-                    }
-                } else {
-                    throw WebSocketMessages.MESSAGES.unsupportedOpCode(frameOpcode);
+                        }
+                    case READING_MASK_1:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        maskingKey = b & 0xFF;
+                        state = State.READING_MASK_2;
+                    case READING_MASK_2:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        maskingKey = maskingKey << 8 | b & 0xFF;
+                        state = State.READING_MASK_3;
+                    case READING_MASK_3:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        maskingKey = maskingKey << 8 | b & 0xFF;
+                        state = State.READING_MASK_4;
+                    case READING_MASK_4:
+                        if (!buffer.hasRemaining()) {
+                            return;
+                        }
+                        b = buffer.get();
+                        maskingKey = maskingKey << 8 | b & 0xFF;
+                        state = State.DONE;
+                        break;
+                    default:
+                        throw new IllegalStateException(state.toString());
                 }
             }
-
-            private void validateDataFrame() throws WebSocketFrameCorruptedException {
-
-                if(!isClient() && !frameMasked) {
-                    throw WebSocketMessages.MESSAGES.frameNotMasked();
+            if (frameFinalFlag) {
+                // check if the frame is a ping frame as these are allowed in the middle
+                if (frameOpcode != OPCODE_PING) {
+                    fragmentedFramesCount = 0;
                 }
+            } else {
+                // Increment counter
+                fragmentedFramesCount++;
+            }
+            done = true;
+        }
 
-                // check for reserved data frame opcodes
-                if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT || frameOpcode == OPCODE_BINARY)) {
-                    throw WebSocketMessages.MESSAGES.reservedOpCodeInDataFrame(frameOpcode);
-                }
+        private void validateDataFrame() throws WebSocketFrameCorruptedException {
 
-                // check opcode vs message fragmentation state 1/2
-                if (fragmentedFramesCount == 0 && frameOpcode == OPCODE_CONT) {
-                    throw WebSocketMessages.MESSAGES.continuationFrameOutsideFragmented();
-                }
-
-                // check opcode vs message fragmentation state 2/2
-                if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT && frameOpcode != OPCODE_PING) {
-                    throw WebSocketMessages.MESSAGES.nonContinuationFrameInsideFragmented();
-                }
+            if (!isClient() && !frameMasked) {
+                throw WebSocketMessages.MESSAGES.frameNotMasked();
             }
 
-            private void validateControlFrame() throws WebSocketFrameCorruptedException {
-                // control frames MUST NOT be fragmented
-                if (!frameFinalFlag) {
-                    throw WebSocketMessages.MESSAGES.fragmentedControlFrame();
-                }
-
-                // control frames MUST have payload 125 octets or less as stated in the spec
-                if (framePayloadLen1 > 125) {
-                    throw WebSocketMessages.MESSAGES.toBigControlFrame();
-                }
-
-                // check for reserved control frame opcodes
-                if (!(frameOpcode == OPCODE_CLOSE || frameOpcode == OPCODE_PING || frameOpcode == OPCODE_PONG)) {
-                    throw WebSocketMessages.MESSAGES.reservedOpCodeInControlFrame(frameOpcode);
-                }
-
-                // close frame : if there is a body, the first two bytes of the
-                // body MUST be a 2-byte unsigned integer (in network byte
-                // order) representing a status code
-                if (frameOpcode == 8 && framePayloadLen1 == 1) {
-                    throw WebSocketMessages.MESSAGES.controlFrameWithPayloadLen1();
-                }
+            // check for reserved data frame opcodes
+            if (!(frameOpcode == OPCODE_CONT || frameOpcode == OPCODE_TEXT || frameOpcode == OPCODE_BINARY)) {
+                throw WebSocketMessages.MESSAGES.reservedOpCodeInDataFrame(frameOpcode);
             }
 
-            @Override
-            public boolean isDone() {
-                return channel != null;
+            // check opcode vs message fragmentation state 1/2
+            if (fragmentedFramesCount == 0 && frameOpcode == OPCODE_CONT) {
+                throw WebSocketMessages.MESSAGES.continuationFrameOutsideFragmented();
             }
-        };
-    }
 
-    @Override
-    protected StreamSinkFrameChannel createStreamSinkChannel(StreamSinkChannel channel, WebSocketFrameType type, long payloadSize) {
-        switch (type) {
-            case TEXT:
-                return new WebSocket07TextFrameSinkChannel(channel, this, payloadSize);
-            case BINARY:
-                return new WebSocket07BinaryFrameSinkChannel(channel, this, payloadSize);
-            case CLOSE:
-                return new WebSocket07CloseFrameSinkChannel(channel, this, payloadSize);
-            case PONG:
-                return new WebSocket07PongFrameSinkChannel(channel, this, payloadSize);
-            case PING:
-                return new WebSocket07PingFrameSinkChannel(channel, this, payloadSize);
-            case CONTINUATION:
-                return new WebSocket07ContinuationFrameSinkChannel(channel, this, payloadSize);
-            default:
-                throw WebSocketMessages.MESSAGES.unsupportedFrameType(type);
+            // check opcode vs message fragmentation state 2/2
+            if (fragmentedFramesCount != 0 && frameOpcode != OPCODE_CONT) {
+                throw WebSocketMessages.MESSAGES.nonContinuationFrameInsideFragmented();
+            }
+        }
+
+        private void validateControlFrame() throws WebSocketFrameCorruptedException {
+            // control frames MUST NOT be fragmented
+            if (!frameFinalFlag) {
+                throw WebSocketMessages.MESSAGES.fragmentedControlFrame();
+            }
+
+            // control frames MUST have payload 125 octets or less as stated in the spec
+            if (framePayloadLen1 > 125) {
+                throw WebSocketMessages.MESSAGES.toBigControlFrame();
+            }
+
+            // check for reserved control frame opcodes
+            if (!(frameOpcode == OPCODE_CLOSE || frameOpcode == OPCODE_PING || frameOpcode == OPCODE_PONG)) {
+                throw WebSocketMessages.MESSAGES.reservedOpCodeInControlFrame(frameOpcode);
+            }
+
+            // close frame : if there is a body, the first two bytes of the
+            // body MUST be a 2-byte unsigned integer (in network byte
+            // order) representing a status code
+            if (frameOpcode == 8 && framePayloadLen1 == 1) {
+                throw WebSocketMessages.MESSAGES.controlFrameWithPayloadLen1();
+            }
+        }
+
+        @Override
+        public boolean isDone() {
+            return done;
+        }
+
+        @Override
+        public long getFrameLength() {
+            return framePayloadLength;
+        }
+
+        int getMaskingKey() {
+            return maskingKey;
+        }
+
+        @Override
+        public AbstractFramedStreamSourceChannel<?, ?, ?> getExistingChannel() {
+            if (frameOpcode == OPCODE_CONT) {
+                StreamSourceFrameChannel ret = fragmentedChannel;
+                if(frameFinalFlag) {
+                    fragmentedChannel = null;
+                    ret.finalFrame(); //TODO: should  be in handle header data, maybe
+                }
+                return ret;
+            }
+            return null;
         }
     }
 }

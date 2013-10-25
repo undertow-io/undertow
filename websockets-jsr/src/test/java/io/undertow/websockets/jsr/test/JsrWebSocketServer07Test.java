@@ -416,8 +416,7 @@ public class JsrWebSocketServer07Test {
                         try {
                             Writer writer = session.getBasicRemote().getSendWriter();
                             writer.write(message);
-                            writer.flush();
-                            writer.flush();
+                            writer.close();
                         } catch (IOException e) {
                             e.printStackTrace();
                             cause.set(e);

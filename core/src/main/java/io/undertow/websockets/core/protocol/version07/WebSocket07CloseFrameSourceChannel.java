@@ -18,10 +18,9 @@
 package io.undertow.websockets.core.protocol.version07;
 
 import io.undertow.websockets.core.FixedPayloadFrameSourceChannel;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
-import org.xnio.channels.StreamSourceChannel;
+import org.xnio.Pooled;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -39,20 +38,20 @@ class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel 
         VALIDATE
     }
 
-    WebSocket07CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, Masker masker) {
+    WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, long payloadSize, int rsv, Masker masker, Pooled<ByteBuffer> pooled, long frameLength) {
         // no fragmentation allowed per spec
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, masker, new UTF8Checker());
+        super(wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, pooled, frameLength, masker, new UTF8Checker());
         this.masker = masker;
     }
 
-    WebSocket07CloseFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv) {
+    WebSocket07CloseFrameSourceChannel(WebSocket07Channel wsChannel, long payloadSize, int rsv, Pooled<ByteBuffer> pooled, long frameLength) {
         // no fragmentation allowed per spec
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, new UTF8Checker());
+        super(wsChannel, WebSocketFrameType.CLOSE, payloadSize, rsv, true, pooled, frameLength, new UTF8Checker());
         masker = null;
     }
 
     @Override
-    protected int read0(ByteBuffer dst) throws IOException {
+    public int read(ByteBuffer dst) throws IOException {
         switch (validateStatus()) {
             case DONE:
                 if (status.hasRemaining()) {
@@ -63,7 +62,7 @@ class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel 
                     }
                     return copied;
                 } else {
-                    return super.read0(dst);
+                    return super.read(dst);
                 }
             case EOF:
                 return -1;
@@ -73,7 +72,7 @@ class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel 
     }
 
     @Override
-    protected long read0(ByteBuffer[] dsts, int offset, int length) throws IOException {
+    public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
         switch (validateStatus()) {
             case DONE:
                 if (status.hasRemaining()) {
@@ -85,13 +84,13 @@ class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel 
                             copied++;
                         }
                         if (dst.hasRemaining()) {
-                            return copied + super.read0(dsts, offset, length);
+                            return copied + super.read(dsts, offset, length);
                         }
                     }
 
                     return copied;
                 } else {
-                    return super.read0(dsts, offset, length);
+                    return super.read(dsts, offset, length);
                 }
             case EOF:
                 return -1;
@@ -105,7 +104,7 @@ class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel 
             return State.DONE;
         }
         for (;;) {
-            int r = super.read0(status);
+            int r = super.read(status);
             if (r == -1) {
                 return State.EOF;
             }
@@ -118,7 +117,9 @@ class WebSocket07CloseFrameSourceChannel extends FixedPayloadFrameSourceChannel 
 
                 if (statusCode >= 0 && statusCode <= 999 || statusCode >= 1004 && statusCode <= 1006
                         || statusCode >= 1012 && statusCode <= 2999) {
-                    throw WebSocketMessages.MESSAGES.invalidCloseFrameStatusCode(statusCode);
+                    IOException exception =  WebSocketMessages.MESSAGES.invalidCloseFrameStatusCode(statusCode);
+                    ((WebSocket07Channel)getFramedChannel()).markReadsBroken(exception);
+                    throw exception;
                 }
                 return State.DONE;
             }

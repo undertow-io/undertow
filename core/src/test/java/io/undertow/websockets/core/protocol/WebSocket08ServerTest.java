@@ -15,22 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.core.protocol.version00;
+package io.undertow.websockets.core.protocol;
 
-
-import io.undertow.websockets.core.FixedPayloadFrameSourceChannel;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
-import org.xnio.channels.StreamSourceChannel;
-
+import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 /**
- *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocket00BinaryFrameSourceChannel extends FixedPayloadFrameSourceChannel {
-
-    WebSocket00BinaryFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.BINARY, payloadSize, 0, true);
+public class WebSocket08ServerTest extends WebSocket07ServerTest {
+    @Override
+    protected WebSocketVersion getVersion() {
+        return WebSocketVersion.V08;
     }
 }

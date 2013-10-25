@@ -18,7 +18,6 @@
 package io.undertow.websockets.core.protocol.version07;
 
 import io.undertow.websockets.core.WebSocketFrameType;
-import org.xnio.channels.StreamSinkChannel;
 
 /**
  * WebSocket08FrameSinkChannel that is used to write WebSocketFrameType#TEXT frames.
@@ -28,8 +27,8 @@ import org.xnio.channels.StreamSinkChannel;
  */
 class WebSocket07TextFrameSinkChannel extends WebSocket07FrameSinkChannel {
 
-    WebSocket07TextFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
-        super(channel, wsChannel, WebSocketFrameType.TEXT, payloadSize);
+    WebSocket07TextFrameSinkChannel(WebSocket07Channel wsChannel, long payloadSize) {
+        super(wsChannel, WebSocketFrameType.TEXT, payloadSize);
     }
 
     @Override

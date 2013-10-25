@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.function.ChannelFunction;
 
@@ -79,6 +80,10 @@ final class UTF8Checker implements ChannelFunction {
         for (int i = position; i < limit; i++) {
             checkUTF8(buf.get(i));
         }
+    }
+
+    @Override
+    public void newFrame(FrameHeaderData headerData) {
     }
 
     @Override

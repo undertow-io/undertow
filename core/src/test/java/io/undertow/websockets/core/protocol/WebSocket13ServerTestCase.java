@@ -15,22 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.core.protocol.version00;
+package io.undertow.websockets.core.protocol;
 
-import org.junit.Ignore;
+import org.jboss.netty.handler.codec.http.websocketx.WebSocketVersion;
 
 /**
- *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
- *
  */
-@Ignore
-public class WebSocket00BinaryFrameSinkChannelTest extends AbstractWebSocketFrameSinkChannelTest {
-/*
+public class WebSocket13ServerTestCase extends WebSocket08ServerTest {
+
     @Override
-    protected AbstractFrameSinkChannel createChannel(StreamSinkChannel channel, WebSocket00Channel wsChannel,
-            int payloadLength) {
-        return new WebSocket00BinaryFrameSinkChannel(channel, wsChannel, payloadLength);
+    protected WebSocketVersion getVersion() {
+        return WebSocketVersion.V13;
     }
-*/
 }

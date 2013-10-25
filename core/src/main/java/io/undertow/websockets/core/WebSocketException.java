@@ -17,12 +17,14 @@
  */
 package io.undertow.websockets.core;
 
+import java.io.IOException;
+
 /**
  * Base class for all WebSocket Exceptions
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public class WebSocketException extends Exception {
+public class WebSocketException extends IOException {
 
     private static final long serialVersionUID = -6784834646314672530L;
 

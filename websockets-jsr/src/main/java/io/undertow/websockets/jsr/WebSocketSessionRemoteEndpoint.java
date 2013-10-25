@@ -15,23 +15,25 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.undertow.websockets.core.BinaryOutputStream;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketFrameType;
+import io.undertow.websockets.core.WebSocketUtils;
+import io.undertow.websockets.core.WebSockets;
+import org.xnio.channels.Channels;
+
+import javax.websocket.EncodeException;
+import javax.websocket.EndpointConfig;
+import javax.websocket.RemoteEndpoint;
+import javax.websocket.SendHandler;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Future;
-
-import javax.websocket.EncodeException;
-import javax.websocket.EndpointConfig;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.SendHandler;
-
-import io.undertow.websockets.core.BinaryOutputStream;
-import io.undertow.websockets.core.FragmentedMessageChannel;
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSockets;
 
 /**
  * {@link RemoteEndpoint} implementation which uses a WebSocketSession for all its operation.
@@ -178,8 +180,8 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
     class BasicWebSocketSessionRemoteEndpoint implements Basic {
 
-        private FragmentedMessageChannel binaryFrameSender;
-        private FragmentedMessageChannel textFrameSender;
+        private StreamSinkFrameChannel binaryFrameSender;
+        private StreamSinkFrameChannel textFrameSender;
 
         public void assertNotInFragment() {
             if (textFrameSender != null || binaryFrameSender != null) {
@@ -205,10 +207,14 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
             if (textFrameSender == null) {
-                textFrameSender = webSocketChannel.sendFragmentedText();
+                textFrameSender = webSocketChannel.send(WebSocketFrameType.TEXT);
             }
             try {
-                WebSockets.sendTextBlocking(partialMessage, isLast, textFrameSender);
+                Channels.writeBlocking(textFrameSender, WebSocketUtils.fromUtf8String(partialMessage));
+                if(isLast) {
+                    textFrameSender.shutdownWrites();
+                    Channels.flushBlocking(textFrameSender);
+                }
             } finally {
                 if (isLast) {
                     textFrameSender = null;
@@ -223,10 +229,14 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
             if (binaryFrameSender == null) {
-                binaryFrameSender = webSocketChannel.sendFragmentedBinary();
+                binaryFrameSender = webSocketChannel.send(WebSocketFrameType.BINARY);
             }
             try {
-                WebSockets.sendBinaryBlocking(partialByte, isLast, textFrameSender);
+                Channels.writeBlocking(binaryFrameSender, partialByte);
+                if(isLast) {
+                    binaryFrameSender.shutdownWrites();
+                    Channels.flushBlocking(binaryFrameSender);
+                }
             } finally {
                 if (isLast) {
                     binaryFrameSender = null;
@@ -238,13 +248,13 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         public OutputStream getSendStream() throws IOException {
             assertNotInFragment();
             //TODO: track fragment state
-            return new BinaryOutputStream(webSocketChannel.sendFragmentedBinary(), webSocketChannel.getBufferPool());
+            return new BinaryOutputStream(webSocketChannel.send(WebSocketFrameType.BINARY));
         }
 
         @Override
         public Writer getSendWriter() throws IOException {
             assertNotInFragment();
-            return new OutputStreamWriter(new BinaryOutputStream(webSocketChannel.sendFragmentedText(), webSocketChannel.getBufferPool()));
+            return new OutputStreamWriter(new BinaryOutputStream(webSocketChannel.send(WebSocketFrameType.TEXT)));
         }
 
         @Override

@@ -56,4 +56,8 @@ public interface JsrWebSocketLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.INFO)
     @Message(id = 26005, value = "Adding programmatic server endpoint %s for path %s")
     void addingProgramaticEndpoint(Class<?> endpointClass, String path);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 26006, value = "Exception running web socket method")
+    void exceptionInWebSocketMethod(@Cause Throwable e);
 }

@@ -41,30 +41,6 @@ public class WebSockets {
         sendBlockingInternal(new ByteBuffer[]{data}, WebSocketFrameType.TEXT, wsChannel);
     }
 
-
-    /**
-     * Sends a complete text message, invoking the callback when complete
-     *
-     * @param message
-     * @param channel
-     * @param callback
-     */
-    public static void sendText(final String message, final boolean finalFragment, final FragmentedMessageChannel channel, final WebSocketCallback<FragmentedMessageChannel> callback) {
-        final ByteBuffer data = ByteBuffer.wrap(message.getBytes(utf8));
-        sendInternal(new ByteBuffer[]{data}, finalFragment, channel, callback);
-    }
-
-    /**
-     * Sends a complete text message, invoking the callback when complete
-     *
-     * @param message
-     * @param wsChannel
-     */
-    public static void sendTextBlocking(final String message, final boolean finalFragment, final FragmentedMessageChannel wsChannel) throws IOException {
-        final ByteBuffer data = ByteBuffer.wrap(message.getBytes(utf8));
-        sendBlockingInternal(new ByteBuffer[]{data}, finalFragment, wsChannel);
-    }
-
     /**
      * Sends a complete ping message, invoking the callback when complete
      *
@@ -192,49 +168,6 @@ public class WebSockets {
         sendBlockingInternal(data, WebSocketFrameType.BINARY, wsChannel);
     }
 
-
-    /**
-     * Sends a complete text message, invoking the callback when complete
-     *
-     * @param data
-     * @param wsChannel
-     * @param callback
-     */
-    public static void sendBinary(final ByteBuffer data, final boolean finalFragment, final FragmentedMessageChannel wsChannel, final WebSocketCallback<FragmentedMessageChannel> callback) {
-        sendInternal(new ByteBuffer[]{data}, finalFragment, wsChannel, callback);
-    }
-
-    /**
-     * Sends a complete text message, invoking the callback when complete
-     *
-     * @param data
-     * @param wsChannel
-     * @param callback
-     */
-    public static void sendBinary(final ByteBuffer[] data, final boolean finalFragment, final FragmentedMessageChannel wsChannel, final WebSocketCallback<FragmentedMessageChannel> callback) {
-        sendInternal(data, finalFragment, wsChannel, callback);
-    }
-
-    /**
-     * Sends a complete text message, invoking the callback when complete
-     *
-     * @param data
-     * @param wsChannel
-     */
-    public static void sendBinaryBlocking(final ByteBuffer data, final boolean finalFragment, final FragmentedMessageChannel wsChannel) throws IOException {
-        sendBlockingInternal(new ByteBuffer[]{data}, finalFragment, wsChannel);
-    }
-
-    /**
-     * Sends a complete text message, invoking the callback when complete
-     *
-     * @param data
-     * @param wsChannel
-     */
-    public static void sendBinaryBlocking(final ByteBuffer[] data, final boolean finalFragment, final FragmentedMessageChannel wsChannel) throws IOException {
-        sendBlockingInternal(data, finalFragment, wsChannel);
-    }
-
     /**
      * Sends a complete close message, invoking the callback when complete
      *
@@ -288,20 +221,6 @@ public class WebSockets {
                 callback.onError(wsChannel, null, e);
             } else {
                 IoUtils.safeClose(wsChannel);
-            }
-        }
-    }
-
-    private static void sendInternal(final ByteBuffer[] data, boolean finalFrame, final FragmentedMessageChannel wsChannel, final WebSocketCallback<FragmentedMessageChannel> callback) {
-        try {
-            long totalData = Buffers.remaining(data);
-            StreamSinkFrameChannel channel = wsChannel.send(totalData, finalFrame);
-            sendData(data, wsChannel.getWebSocketChannel(), callback, channel, wsChannel);
-        } catch (IOException e) {
-            if (callback != null) {
-                callback.onError(wsChannel.getWebSocketChannel(), null, e);
-            } else {
-                IoUtils.safeClose(wsChannel.getWebSocketChannel());
             }
         }
     }
@@ -360,7 +279,7 @@ public class WebSockets {
                             if (callback != null) {
                                 callback.complete(wsChannel, context);
                             }
-                            if(type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
+                            if (type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
                                 IoUtils.safeClose(wsChannel);
                             }
                         }
@@ -370,7 +289,7 @@ public class WebSockets {
                             if (callback != null) {
                                 callback.onError(wsChannel, context, exception);
                             }
-                            if(type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
+                            if (type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
                                 IoUtils.safeClose(wsChannel);
                             }
                         }
@@ -382,7 +301,7 @@ public class WebSockets {
         if (callback != null) {
             callback.complete(wsChannel, context);
         }
-        if(type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
+        if (type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
             IoUtils.safeClose(wsChannel);
         }
     }
@@ -402,25 +321,8 @@ public class WebSockets {
         while (!channel.flush()) {
             channel.awaitWritable();
         }
-        if(type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
+        if (type == WebSocketFrameType.CLOSE && wsChannel.isCloseFrameReceived()) {
             IoUtils.safeClose(wsChannel);
-        }
-    }
-
-    private static void sendBlockingInternal(final ByteBuffer[] data, boolean finalFragment, final FragmentedMessageChannel wsChannel) throws IOException {
-        long totalData = Buffers.remaining(data);
-        StreamSinkFrameChannel channel = wsChannel.send(totalData, finalFragment);
-        for (ByteBuffer buf : data) {
-            while (buf.hasRemaining()) {
-                int res = channel.write(buf);
-                if (res == 0) {
-                    channel.awaitWritable();
-                }
-            }
-        }
-        channel.shutdownWrites();
-        while (!channel.flush()) {
-            channel.awaitWritable();
         }
     }
 
@@ -429,9 +331,6 @@ public class WebSockets {
     }
 
     public static ByteBuffer mergeBuffers(ByteBuffer... payload) {
-        if (payload.length == 1) {
-            return payload[0];
-        }
         int size = (int) Buffers.remaining(payload);
         if (size == 0) {
             return Buffers.EMPTY_BYTE_BUFFER;

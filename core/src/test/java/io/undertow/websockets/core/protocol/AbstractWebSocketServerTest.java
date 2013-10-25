@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.websockets.core.protocol.version00;
+package io.undertow.websockets.core.protocol;
 
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
@@ -43,6 +43,7 @@ import org.junit.runner.RunWith;
 import org.junit.Test;
 
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
 import org.xnio.FutureResult;
 
 import java.io.IOException;
@@ -57,7 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @RunWith(DefaultServer.class)
 @AjpIgnore(apacheOnly = true)
-public class WebSocket00ServerTest {
+public class AbstractWebSocketServerTest {
 
     @org.junit.Test
     public void testText() throws Exception {
@@ -158,7 +159,11 @@ public class WebSocket00ServerTest {
                             while (buf.hasRemaining()) {
                                 sink.write(buf);
                             }
-                            Assert.assertTrue(sink.flush());
+                            sink.shutdownWrites();
+                            if(!sink.flush()) {
+                                sink.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
+                                sink.resumeWrites();
+                            }
                             channel.getReceiveSetter().set(null);
 
                         } catch (IOException e) {

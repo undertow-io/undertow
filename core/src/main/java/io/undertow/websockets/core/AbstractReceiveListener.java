@@ -2,8 +2,10 @@ package io.undertow.websockets.core;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
+import org.xnio.Pooled;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  * A receive listener that performs a callback when it receives a message
@@ -12,11 +14,6 @@ import java.io.IOException;
  */
 public abstract class AbstractReceiveListener implements ChannelListener<WebSocketChannel> {
 
-    private BufferedBinaryMessage binaryMessage;
-    private BufferedBinaryMessage control;
-    private BufferedTextMessage textMessage;
-    private WebSocketFrameType lastFragmeneted;
-
     @Override
     public void handleEvent(WebSocketChannel channel) {
         try {
@@ -24,26 +21,11 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
             if (result == null) {
                 return;
             } else if (result.getType() == WebSocketFrameType.BINARY) {
-                if (!result.isFinalFragment()) {
-                    lastFragmeneted = WebSocketFrameType.BINARY;
-                }
                 onBinary(channel, result);
             } else if (result.getType() == WebSocketFrameType.TEXT) {
-                if (!result.isFinalFragment()) {
-                    lastFragmeneted = WebSocketFrameType.TEXT;
-                }
                 onText(channel, result);
             } else if (result.getType() == WebSocketFrameType.PONG) {
                 onPong(channel, result);
-            } else if (result.getType() == WebSocketFrameType.CONTINUATION) {
-                if (textMessage != null || binaryMessage != null) {
-                    bufferFullMessage(result);
-                } else {
-                    onContinuation(channel, result);
-                    if (result.isFinalFragment()) {
-                        lastFragmeneted = null;
-                    }
-                }
             } else if (result.getType() == WebSocketFrameType.PING) {
                 onPing(channel, result);
             } else if (result.getType() == WebSocketFrameType.CLOSE) {
@@ -74,14 +56,6 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
         bufferFullMessage(messageChannel);
     }
 
-    protected void onContinuation(WebSocketChannel webSocketChannel, StreamSourceFrameChannel messageChannel) throws IOException {
-        if (lastFragmeneted == WebSocketFrameType.TEXT) {
-            onText(webSocketChannel, messageChannel);
-        } else {
-            onBinary(webSocketChannel, messageChannel);
-        }
-    }
-
     protected void onError(WebSocketChannel channel, Throwable error) {
         IoUtils.safeClose(channel);
     }
@@ -94,28 +68,16 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
      * @param messageChannel The message channel
      */
     protected final void bufferFullMessage(StreamSourceFrameChannel messageChannel) {
-        final boolean finalFrame = messageChannel.isFinalFragment();
-        if (messageChannel.getType() == WebSocketFrameType.CONTINUATION) {
-            if (textMessage != null) {
-                readBufferedText(messageChannel, finalFrame);
-            } else if (binaryMessage != null) {
-                readBufferedBinary(messageChannel, finalFrame, false);
-            }
-        } else if (messageChannel.getType() == WebSocketFrameType.TEXT) {
-            textMessage = new BufferedTextMessage(getMaxTextBufferSize());
-            readBufferedText(messageChannel, finalFrame);
+        if (messageChannel.getType() == WebSocketFrameType.TEXT) {
+            readBufferedText(messageChannel, new BufferedTextMessage(getMaxTextBufferSize(), true));
         } else if (messageChannel.getType() == WebSocketFrameType.BINARY) {
-            binaryMessage = new BufferedBinaryMessage(getMaxBinaryBufferSize());
-            readBufferedBinary(messageChannel, finalFrame, false);
+            readBufferedBinary(messageChannel, false, new BufferedBinaryMessage(getMaxBinaryBufferSize(), true));
         } else if (messageChannel.getType() == WebSocketFrameType.PONG) {
-            control = new BufferedBinaryMessage(-1);
-            readBufferedBinary(messageChannel, finalFrame, true);
+            readBufferedBinary(messageChannel, true, new BufferedBinaryMessage(getMaxBinaryBufferSize(), true));
         } else if (messageChannel.getType() == WebSocketFrameType.PING) {
-            control = new BufferedBinaryMessage(-1);
-            readBufferedBinary(messageChannel, finalFrame, true);
+            readBufferedBinary(messageChannel, true, new BufferedBinaryMessage(getMaxBinaryBufferSize(), true));
         } else if (messageChannel.getType() == WebSocketFrameType.CLOSE) {
-            control = new BufferedBinaryMessage(-1);
-            readBufferedBinary(messageChannel, finalFrame, true);
+            readBufferedBinary(messageChannel, true, new BufferedBinaryMessage(getMaxBinaryBufferSize(), true));
         }
     }
 
@@ -127,72 +89,49 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
         return -1;
     }
 
-    private void readBufferedBinary(final StreamSourceFrameChannel messageChannel, final boolean finalFrame, final boolean controlFrame) {
-        final BufferedBinaryMessage buffer;
-        if(controlFrame) {
-            buffer = control;
-        } else {
-            buffer = binaryMessage;
-        }
+    private void readBufferedBinary(final StreamSourceFrameChannel messageChannel, final boolean controlFrame, final BufferedBinaryMessage buffer) {
 
         buffer.read(messageChannel, new WebSocketCallback<BufferedBinaryMessage>() {
             @Override
             public void complete(WebSocketChannel channel, BufferedBinaryMessage context) {
-                if (finalFrame) {
-                    try {
-                        WebSocketFrameType type = messageChannel.getType();
-                        if (!controlFrame) {
-                            onFullBinaryMessage(channel, buffer);
-                        } else if (type == WebSocketFrameType.PONG) {
-                            onFullPongMessage(channel, buffer);
-                        } else if (type == WebSocketFrameType.PING) {
-                            onFullPingMessage(channel, buffer);
-                        } else if (type == WebSocketFrameType.CLOSE) {
-                            onFullCloseMessage(channel, buffer);
-                        }
-                        if(controlFrame) {
-                            control = null;
-                        } else {
-                            binaryMessage = null;
-                        }
-                    } catch (IOException e) {
-                        AbstractReceiveListener.this.onError(channel, e);
+                try {
+                    WebSocketFrameType type = messageChannel.getType();
+                    if (!controlFrame) {
+                        onFullBinaryMessage(channel, buffer);
+                    } else if (type == WebSocketFrameType.PONG) {
+                        onFullPongMessage(channel, buffer);
+                    } else if (type == WebSocketFrameType.PING) {
+                        onFullPingMessage(channel, buffer);
+                    } else if (type == WebSocketFrameType.CLOSE) {
+                        onFullCloseMessage(channel, buffer);
                     }
+                } catch (IOException e) {
+                    AbstractReceiveListener.this.onError(channel, e);
                 }
             }
 
             @Override
             public void onError(WebSocketChannel channel, BufferedBinaryMessage context, Throwable throwable) {
-                context.release();
+                context.getData().free();
                 AbstractReceiveListener.this.onError(channel, throwable);
-                if(controlFrame) {
-                    control = null;
-                } else {
-                    binaryMessage = null;
-                }
             }
         });
     }
 
-    private void readBufferedText(StreamSourceFrameChannel messageChannel, final boolean finalFrame) {
+    private void readBufferedText(StreamSourceFrameChannel messageChannel, final BufferedTextMessage textMessage) {
         textMessage.read(messageChannel, new WebSocketCallback<BufferedTextMessage>() {
             @Override
             public void complete(WebSocketChannel channel, BufferedTextMessage context) {
-                if (finalFrame) {
-                    try {
-                        onFullTextMessage(channel, textMessage);
-                    } catch (IOException e) {
-                        AbstractReceiveListener.this.onError(channel, e);
-                    } finally {
-                        textMessage = null;
-                    }
+                try {
+                    onFullTextMessage(channel, textMessage);
+                } catch (IOException e) {
+                    AbstractReceiveListener.this.onError(channel, e);
                 }
             }
 
             @Override
             public void onError(WebSocketChannel channel, BufferedTextMessage context, Throwable throwable) {
                 AbstractReceiveListener.this.onError(channel, throwable);
-                textMessage = null;
             }
         });
     }
@@ -206,13 +145,33 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
     }
 
     protected void onFullPingMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
-        WebSockets.sendPong(message.getData(), channel, null);
+        final Pooled<ByteBuffer[]> data = message.getData();
+        WebSockets.sendPong(data.getResource(), channel, new FreeDataCallback(data));
     }
 
     protected void onFullPongMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
     }
 
     protected void onFullCloseMessage(final WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
-        WebSockets.sendClose(message.getData(), channel, null);
+        Pooled<ByteBuffer[]> data = message.getData();
+        WebSockets.sendClose(data.getResource(), channel, new FreeDataCallback(data));
+    }
+
+    private static class FreeDataCallback implements WebSocketCallback<Void> {
+        private final Pooled<ByteBuffer[]> data;
+
+        public FreeDataCallback(Pooled<ByteBuffer[]> data) {
+            this.data = data;
+        }
+
+        @Override
+        public void complete(WebSocketChannel channel, Void context) {
+            data.free();
+        }
+
+        @Override
+        public void onError(WebSocketChannel channel, Void context, Throwable throwable) {
+            data.free();
+        }
     }
 }

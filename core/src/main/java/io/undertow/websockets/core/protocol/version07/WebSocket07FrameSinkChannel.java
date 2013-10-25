@@ -22,11 +22,9 @@ import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
 import org.xnio.Buffers;
 import org.xnio.Pooled;
-import org.xnio.channels.StreamSinkChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.Random;
 
 /**
@@ -36,13 +34,17 @@ import java.util.Random;
  */
 public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel {
 
-    private Pooled<ByteBuffer> start;
     private final int maskingKey;
     private final Masker masker;
+    private final long payloadSize;
+    private boolean dataWritten = false;
+    long toWrite;
 
-    protected WebSocket07FrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, WebSocketFrameType type,
+    protected WebSocket07FrameSinkChannel(WebSocket07Channel wsChannel, WebSocketFrameType type,
                                        long payloadSize) {
-        super(channel, wsChannel, type, payloadSize);
+        super(wsChannel, type);
+        this.payloadSize = payloadSize;
+        this.toWrite = payloadSize;
         if(wsChannel.isClient()) {
             maskingKey = new Random().nextInt();
             masker = new Masker(maskingKey);
@@ -52,7 +54,15 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
         }
     }
 
+    @Override
+    protected void handleFlushComplete() {
+        dataWritten = true;
+    }
+
     private byte opCode() {
+        if(dataWritten) {
+            return WebSocket07Channel.OPCODE_CONT;
+        }
         switch (getType()) {
         case CONTINUATION:
             return WebSocket07Channel.OPCODE_CONT;
@@ -71,25 +81,33 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
         }
     }
 
-
-
     @Override
-    protected ByteBuffer createFrameStart() {
+    protected Pooled<ByteBuffer> createFrameHeader() {
+        if(payloadSize >= 0 && dataWritten) {
+            //for fixed length we don't need more than one header
+            return null;
+        }
+        Pooled<ByteBuffer> start = getChannel().getBufferPool().allocate();
         byte b0 = 0;
-        if (isFinalFragment()) {
+        //if writes are shutdown this is the final fragment
+        if (isFinalFrameQueued() || payloadSize >= 0) {
             b0 |= 1 << 7;
         }
         b0 |= (getRsv() & 7) << 4;
         b0 |= opCode() & 0xf;
 
-        start = wsChannel.getBufferPool().allocate();
-
         final ByteBuffer header = start.getResource();
         //int maskLength = 0; // handle masking for clients but we are currently only
-                            // support servers this is not a priority by now
+        // support servers this is not a priority by now
         byte maskKey = 0;
         if(masker != null) {
             maskKey |= 1 << 7;
+        }
+        long payloadSize;
+        if(this.payloadSize >= 0) {
+            payloadSize = this.payloadSize;
+        } else {
+            payloadSize = getBuffer().remaining();
         }
         if (payloadSize <= 125) {
             header.put(b0);
@@ -110,28 +128,24 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
             header.put((byte)((maskingKey >> 8) & 0xFF));
             header.put((byte)((maskingKey & 0xFF)));
         }
-        return header;
+        header.flip();
+        return start;
     }
 
     @Override
-    protected void frameStartComplete() {
-        super.frameStartComplete();
-        if (start != null) {
-            start.free();
-        }
-    }
-
-    @Override
-    protected ByteBuffer createFrameEnd() {
-        return Buffers.EMPTY_BYTE_BUFFER;
+    public long write(final ByteBuffer[] srcs) throws IOException {
+        return write(srcs, 0, srcs.length);
     }
 
     @Override
     public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
+        if(toWrite >= 0 && Buffers.remaining(srcs) > toWrite) {
+            throw WebSocketMessages.MESSAGES.messageOverflow();
+        }
         if(masker == null) {
             return super.write(srcs, offset, length);
         } else {
-            final Pooled<ByteBuffer> buffer = wsChannel.getBufferPool().allocate();
+            final Pooled<ByteBuffer> buffer = getChannel().getBufferPool().allocate();
             try {
                 ByteBuffer[] copy = new ByteBuffer[length];
                 for(int i = 0; i < length; ++i) {
@@ -140,7 +154,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
                 Buffers.copy(buffer.getResource(), copy, 0, length);
                 buffer.getResource().flip();
                 masker.beforeWrite(buffer.getResource(), 0, buffer.getResource().remaining());
-                long written = super.write(new ByteBuffer[]{buffer.getResource()}, 0, 1);
+                long written = super.write(buffer.getResource());
                 long toAllocate = written;
                 for(int i = offset; i < length; ++i) {
                     ByteBuffer thisBuf = srcs[i];
@@ -152,6 +166,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
                         thisBuf.position(thisBuf.limit());
                     }
                 }
+                toWrite -= written;
                 return written;
             } finally {
                 buffer.free();
@@ -160,7 +175,26 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     }
 
     @Override
-    protected long transferFrom0(final FileChannel src, final long position, final long count) throws IOException {
-        return src.transferTo(position, count, this);
+    public int write(final ByteBuffer src) throws IOException {
+        if(toWrite >= 0 && src.remaining() > toWrite) {
+            throw WebSocketMessages.MESSAGES.messageOverflow();
+        }
+        if(masker == null) {
+            return super.write(src);
+        } else {
+            final Pooled<ByteBuffer> buffer = getChannel().getBufferPool().allocate();
+            try {
+                ByteBuffer copy = src.duplicate();
+                Buffers.copy(buffer.getResource(), copy);
+                buffer.getResource().flip();
+                masker.beforeWrite(buffer.getResource(), 0, buffer.getResource().remaining());
+                int written = super.write(buffer.getResource());
+                src.position(src.position() + written);
+                toWrite -= written;
+                return written;
+            } finally {
+                buffer.free();
+            }
+        }
     }
 }

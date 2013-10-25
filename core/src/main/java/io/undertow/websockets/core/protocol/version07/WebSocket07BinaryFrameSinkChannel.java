@@ -18,15 +18,14 @@
 package io.undertow.websockets.core.protocol.version07;
 
 import io.undertow.websockets.core.WebSocketFrameType;
-import org.xnio.channels.StreamSinkChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket07BinaryFrameSinkChannel extends WebSocket07FrameSinkChannel {
 
-    WebSocket07BinaryFrameSinkChannel(StreamSinkChannel channel, WebSocket07Channel wsChannel, long payloadSize) {
-        super(channel, wsChannel, WebSocketFrameType.BINARY, payloadSize);
+    WebSocket07BinaryFrameSinkChannel(WebSocket07Channel wsChannel, long payloadSize) {
+        super(wsChannel, WebSocketFrameType.BINARY, payloadSize);
     }
 
     @Override

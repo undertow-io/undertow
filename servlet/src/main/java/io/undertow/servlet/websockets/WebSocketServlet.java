@@ -4,7 +4,6 @@ import io.undertow.UndertowLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.websockets.core.handler.WebSocketConnectionCallback;
 import io.undertow.websockets.core.protocol.Handshake;
-import io.undertow.websockets.core.protocol.version00.Hybi00Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
@@ -88,7 +87,6 @@ public class WebSocketServlet extends HttpServlet {
         handshakes.add(new Hybi13Handshake());
         handshakes.add(new Hybi08Handshake());
         handshakes.add(new Hybi07Handshake());
-        handshakes.add(new Hybi00Handshake());
         return handshakes;
     }
 

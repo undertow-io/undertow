@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.websockets.core.function.ChannelFunction;
 
 import java.nio.ByteBuffer;
@@ -26,11 +27,16 @@ import java.nio.ByteBuffer;
  */
 final class Masker implements ChannelFunction {
 
-    private final byte[] maskingKey;
+    private byte[] maskingKey;
     int m;
 
-    public Masker(int maskingKey) {
+    Masker(int maskingKey) {
         this.maskingKey = createsMaskingKey(maskingKey);
+    }
+
+    public void setMaskingKey(int maskingKey) {
+        this.maskingKey = createsMaskingKey(maskingKey);
+        m = 0;
     }
 
     private static byte[] createsMaskingKey(int maskingKey) {
@@ -48,6 +54,12 @@ final class Masker implements ChannelFunction {
             buf.put(i, (byte) (buf.get(i) ^ maskingKey[m++]));
             m %= 4;
         }
+    }
+
+    @Override
+    public void newFrame(FrameHeaderData headerData) {
+        WebSocket07Channel.WebSocketFrameHeader header = (WebSocket07Channel.WebSocketFrameHeader) headerData;
+        setMaskingKey(header.getMaskingKey());
     }
 
     @Override

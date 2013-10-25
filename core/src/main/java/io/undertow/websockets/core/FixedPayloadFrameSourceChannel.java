@@ -17,11 +17,11 @@
  */
 package io.undertow.websockets.core;
 
+import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.websockets.core.function.ChannelFunction;
 import io.undertow.websockets.core.function.ChannelFunctionFileChannel;
-import org.xnio.IoUtils;
+import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -35,136 +35,72 @@ import java.nio.channels.FileChannel;
  */
 public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameChannel {
 
-    private long readBytes;
     private final ChannelFunction[] functions;
 
-    protected FixedPayloadFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment, ChannelFunction... functions) {
-        super(streamSourceChannelControl, channel, wsChannel, type, payloadSize, rsv, finalFragment);
+    protected FixedPayloadFrameSourceChannel(WebSocketChannel wsChannel, WebSocketFrameType type, long payloadSize, int rsv, boolean finalFragment, Pooled<ByteBuffer> pooled, long frameLength, ChannelFunction... functions) {
+        super(wsChannel, type, payloadSize, rsv, finalFragment, pooled, frameLength);
         this.functions = functions;
     }
 
     @Override
-    protected final long transferTo0(long position, long count, FileChannel target) throws IOException {
-        long toRead = bytesToRead();
-        if (toRead < 1) {
-            return -1;
+    protected void handleHeaderData(FrameHeaderData headerData) {
+        super.handleHeaderData(headerData);
+        if(functions != null) {
+            for(ChannelFunction func : functions) {
+                func.newFrame(headerData);
+            }
         }
+    }
 
-        if (toRead < count) {
-            count = toRead;
-        }
-
+    @Override
+    public final long transferTo(long position, long count, FileChannel target) throws IOException {
         long r;
         if (functions != null && functions.length > 0) {
-            r = channel.transferTo(position, count, new ChannelFunctionFileChannel(target, functions));
+            r = super.transferTo(position, count, new ChannelFunctionFileChannel(target, functions));
         } else {
-            r = channel.transferTo(position, count, target);
-        }
-        if (r > 0) {
-            readBytes += r;
+            r = super.transferTo(position, count, target);
         }
         return r;
     }
 
     @Override
-    protected final long transferTo0(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        long toRead = bytesToRead();
-        if (toRead < 1) {
-            return -1;
-        }
-
-        if (toRead < count) {
-            count = toRead;
-        }
-
+    public final long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         // use this because of XNIO bug
         // See https://issues.jboss.org/browse/XNIO-185
         return WebSocketUtils.transfer(this, count, throughBuffer, target);
     }
 
     @Override
-    protected int read0(ByteBuffer dst) throws IOException {
-        long toRead = bytesToRead();
-        if (toRead < 1) {
-            return -1;
-        }
-        int r;
+    public int read(ByteBuffer dst) throws IOException {
         int position = dst.position();
-        int old = dst.limit();
-        try {
-            if (toRead < dst.remaining()) {
-                dst.limit(dst.position() + (int) toRead);
-            }
-            r = channel.read(dst);
-            if (r > 0) {
-                readBytes += r;
-
-                afterRead(dst, position, r);
-            }
-            return r;
-        } finally {
-            dst.limit(old);
-
+        int r = super.read(dst);
+        if (r > 0) {
+            afterRead(dst, position, r);
         }
+        return r;
     }
 
     @Override
-    protected final long read0(ByteBuffer[] dsts) throws IOException {
-        return read0(dsts, 0, dsts.length);
+    public final long read(ByteBuffer[] dsts) throws IOException {
+        return read(dsts, 0, dsts.length);
     }
 
     @Override
-    protected long read0(ByteBuffer[] dsts, int offset, int length) throws IOException {
-        long toRead = bytesToRead();
-        if (toRead < 1) {
-            return -1;
-        }
+    public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
         Bounds[] old = new Bounds[length];
-        int used = 0;
-        long remaining = toRead;
         for (int i = offset; i < length; i++) {
             ByteBuffer dst = dsts[i];
             old[i - offset] = new Bounds(dst.position(), dst.limit());
-            final int bufferRemaining = dsts[i].remaining();
-            used += bufferRemaining;
-            if (used > remaining) {
-                dsts[i].limit((int) remaining);
-            }
-            remaining -= bufferRemaining;
-            remaining = remaining < 0 ? 0 : remaining;
-
         }
-        try {
-            long b = channel.read(dsts, offset, length);
-            if (b > 0) {
-                readBytes += b;
-
-                for (int i = offset; i < length; i++) {
-                    ByteBuffer dst = dsts[i];
-                    int oldPos = old[i - offset].position;
-                    afterRead(dst, oldPos, dst.position() - oldPos);
-                }
-            }
-            return b;
-        } finally {
+        long b = super.read(dsts, offset, length);
+        if (b > 0) {
             for (int i = offset; i < length; i++) {
-                dsts[i].limit(old[i - offset].limit);
+                ByteBuffer dst = dsts[i];
+                int oldPos = old[i - offset].position;
+                afterRead(dst, oldPos, dst.position() - oldPos);
             }
-
         }
-    }
-
-    /**
-     * Read the number of bytes which needs get read before the frame is complete
-     */
-    private long bytesToRead() {
-        return getPayloadSize() - readBytes;
-    }
-
-    @Override
-    protected final boolean isComplete() {
-        assert readBytes <= getPayloadSize();
-        return readBytes == getPayloadSize();
+        return b;
     }
 
     /**
@@ -180,21 +116,21 @@ public abstract class FixedPayloadFrameSourceChannel extends StreamSourceFrameCh
             for (ChannelFunction func : functions) {
                 func.afterRead(buffer, position, length);
             }
+            if (isComplete()) {
+                try {
+                    for (ChannelFunction func : functions) {
+                        func.complete();
+                    }
+                } catch (UnsupportedEncodingException e) {
+                    getFramedChannel().markReadsBroken(e);
+                    throw e;
+                }
+            }
         } catch (UnsupportedEncodingException e) {
-            IoUtils.safeClose(getWebSocketChannel());
+            getFramedChannel().markReadsBroken(e);
             throw e;
         }
 
-    }
-
-    @Override
-    protected void complete() throws IOException {
-        if (isFinalFragment()) {
-            for (ChannelFunction func : functions) {
-                func.complete();
-            }
-        }
-        super.complete();
     }
 
     private static class Bounds {

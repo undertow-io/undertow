@@ -44,8 +44,6 @@ public class AutobahnAnnotatedEndpoint {
         if (last) {
             writer.close();
             writer = null;
-        } else {
-            writer.flush();
         }
     }
 

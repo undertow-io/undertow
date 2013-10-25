@@ -18,20 +18,21 @@
 package io.undertow.websockets.core.protocol.version07;
 
 import io.undertow.websockets.core.FixedPayloadFrameSourceChannel;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
-import org.xnio.channels.StreamSourceChannel;
+import org.xnio.Pooled;
+
+import java.nio.ByteBuffer;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket07TextFrameSourceChannel extends FixedPayloadFrameSourceChannel {
 
-    WebSocket07TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, Masker masker, UTF8Checker checker) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, payloadSize, rsv, finalFragment, masker, checker);
+    WebSocket07TextFrameSourceChannel(WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, Masker masker, UTF8Checker checker, Pooled<ByteBuffer> pooled, long frameLength) {
+        super(wsChannel, WebSocketFrameType.TEXT, payloadSize, rsv, finalFragment, pooled, frameLength, masker, checker);
     }
 
-    WebSocket07TextFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, UTF8Checker checker) {
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.TEXT, payloadSize, rsv, finalFragment, checker);
+    WebSocket07TextFrameSourceChannel(WebSocket07Channel wsChannel, long payloadSize, int rsv, boolean finalFragment, UTF8Checker checker, Pooled<ByteBuffer> pooled, long frameLength) {
+        super(wsChannel, WebSocketFrameType.TEXT, payloadSize, rsv, finalFragment, pooled, frameLength, checker);
     }
 }

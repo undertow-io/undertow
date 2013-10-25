@@ -20,19 +20,21 @@ package io.undertow.websockets.core.protocol.version07;
 import io.undertow.websockets.core.FixedPayloadFrameSourceChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
-import org.xnio.channels.StreamSourceChannel;
+import org.xnio.Pooled;
+
+import java.nio.ByteBuffer;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 class WebSocket07PingFrameSourceChannel extends FixedPayloadFrameSourceChannel {
-    WebSocket07PingFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv, Masker masker) {
+    WebSocket07PingFrameSourceChannel(WebSocketChannel wsChannel, long payloadSize, int rsv, Masker masker, Pooled<ByteBuffer> pooled, long frameLength) {
         // can not be fragmented
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PING, payloadSize, rsv, true, masker);
+        super(wsChannel, WebSocketFrameType.PING, payloadSize, rsv, true, pooled, frameLength, masker);
     }
 
-    WebSocket07PingFrameSourceChannel(WebSocketChannel.StreamSourceChannelControl streamSourceChannelControl, StreamSourceChannel channel, WebSocketChannel wsChannel, long payloadSize, int rsv) {
+    WebSocket07PingFrameSourceChannel(WebSocketChannel wsChannel, long payloadSize, int rsv, Pooled<ByteBuffer> pooled, long frameLength) {
         // can not be fragmented
-        super(streamSourceChannelControl, channel, wsChannel, WebSocketFrameType.PING, payloadSize, rsv, true);
+        super(wsChannel, WebSocketFrameType.PING, payloadSize, rsv, true, pooled, frameLength);
     }
 }

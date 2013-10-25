@@ -152,7 +152,6 @@ public final class WebSocketUtils {
      * Echo back the frame to the sender
      */
     public static void echoFrame(final WebSocketChannel channel, final StreamSourceFrameChannel ws) throws IOException {
-        long size = ws.getPayloadSize();
 
         final WebSocketFrameType type;
         switch (ws.getType()) {
@@ -168,8 +167,7 @@ public final class WebSocketUtils {
                 type = ws.getType();
                 break;
         }
-        final StreamSinkFrameChannel sink = channel.send(type, size);
-        sink.setFinalFragment(ws.isFinalFragment());
+        final StreamSinkFrameChannel sink = channel.send(type);
         sink.setRsv(ws.getRsv());
         initiateTransfer(ws, sink, new ChannelListener<StreamSourceFrameChannel>() {
                     @Override

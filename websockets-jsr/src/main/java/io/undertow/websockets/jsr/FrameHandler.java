@@ -27,6 +27,7 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.jsr.util.ClassUtils;
 import org.xnio.Buffers;
+import org.xnio.Pooled;
 
 import javax.websocket.DecodeException;
 import javax.websocket.Endpoint;
@@ -44,6 +45,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 
 /**
  * @author Stuart Douglas
@@ -54,6 +56,7 @@ class FrameHandler extends AbstractReceiveListener {
     private final UndertowSession session;
     protected static final byte[] EMPTY = new byte[0];
     private final ConcurrentMap<FrameType, HandlerWrapper> handlers = new ConcurrentHashMap<FrameType, HandlerWrapper>();
+    private final Executor executor;
 
     /**
      * Supported types of WebSocket frames for which a {@link MessageHandler} can be added.
@@ -67,16 +70,17 @@ class FrameHandler extends AbstractReceiveListener {
     protected FrameHandler(UndertowSession session, Endpoint endpoint) {
         this.session = session;
         this.endpoint = endpoint;
+        this.executor = new OrderedExecutor(session.getWebSocketChannel().getWorker());
     }
 
     @Override
     protected void onFullCloseMessage(WebSocketChannel channel, final BufferedBinaryMessage message) {
-        ByteBuffer[] payload = message.getData();
-        final ByteBuffer singleBuffer = toBuffer(payload);
+        final Pooled<ByteBuffer[]> pooled = message.getData();
+        final ByteBuffer singleBuffer = toBuffer(pooled.getResource());
         ByteBuffer toSend = singleBuffer.duplicate();
         WebSockets.sendClose(toSend, channel, null);
 
-        session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
+        session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
                 try {
@@ -89,14 +93,14 @@ class FrameHandler extends AbstractReceiveListener {
                 } catch (IOException e) {
                     invokeOnError(e);
                 } finally {
-                    message.release();
+                    pooled.free();
                 }
             }
         });
     }
 
     private void invokeOnError(final Throwable e) {
-        session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
+        session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
                 try {
@@ -109,16 +113,20 @@ class FrameHandler extends AbstractReceiveListener {
     }
 
     @Override
-    protected void onFullPongMessage(WebSocketChannel webSocketChannel, BufferedBinaryMessage data) {
+    protected void onFullPongMessage(WebSocketChannel webSocketChannel, BufferedBinaryMessage bufferedBinaryMessage) {
         final HandlerWrapper handler = getHandler(FrameType.PONG);
         if (handler != null) {
-            ByteBuffer[] payload = data.getData();
-            final PongMessage message = DefaultPongMessage.create(toBuffer(payload));
+            final Pooled<ByteBuffer[]> pooled = bufferedBinaryMessage.getData();
+            final PongMessage message = DefaultPongMessage.create(toBuffer(pooled.getResource()));
 
-            session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
+            session.getContainer().invokeEndpointMethod(executor, new Runnable() {
                 @Override
                 public void run() {
-                    ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
+                    try {
+                        ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
+                    } finally {
+                        pooled.free();
+                    }
                 }
             });
         }
@@ -127,13 +135,12 @@ class FrameHandler extends AbstractReceiveListener {
     @Override
     protected void onText(WebSocketChannel webSocketChannel, StreamSourceFrameChannel messageChannel) throws IOException {
         final HandlerWrapper handler = getHandler(FrameType.TEXT);
-        final boolean finalFragment = messageChannel.isFinalFragment();
         if (handler != null && handler.isPartialHandler()) {
-            BufferedTextMessage data = new BufferedTextMessage();
+            BufferedTextMessage data = new BufferedTextMessage(false);
             data.read(messageChannel, new WebSocketCallback<BufferedTextMessage>() {
                 @Override
                 public void complete(WebSocketChannel channel, BufferedTextMessage context) {
-                    invokeTextHandler(context, handler, finalFragment);
+                    invokeTextHandler(context, handler, context.isComplete());
                 }
 
                 @Override
@@ -150,13 +157,12 @@ class FrameHandler extends AbstractReceiveListener {
     @Override
     protected void onBinary(WebSocketChannel webSocketChannel, StreamSourceFrameChannel messageChannel) throws IOException {
         final HandlerWrapper handler = getHandler(FrameType.BYTE);
-        final boolean finalFragment = messageChannel.isFinalFragment();
         if (handler != null && handler.isPartialHandler()) {
-            BufferedBinaryMessage data = new BufferedBinaryMessage(session.getMaxBinaryMessageBufferSize());
+            BufferedBinaryMessage data = new BufferedBinaryMessage(session.getMaxBinaryMessageBufferSize(), false);
             data.read(messageChannel, new WebSocketCallback<BufferedBinaryMessage>() {
                 @Override
                 public void complete(WebSocketChannel channel, BufferedBinaryMessage context) {
-                    invokeBinaryHandler(context, handler, finalFragment);
+                    invokeBinaryHandler(context, handler, context.isComplete());
                 }
 
                 @Override
@@ -172,13 +178,14 @@ class FrameHandler extends AbstractReceiveListener {
 
     private void invokeBinaryHandler(final BufferedBinaryMessage context, final HandlerWrapper handler, final boolean finalFragment) {
 
-        session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
+        session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
+                Pooled<ByteBuffer[]> pooled = context.getData();
                 try {
                     if (handler.isPartialHandler()) {
                         MessageHandler.Partial mHandler = (MessageHandler.Partial) handler.getHandler();
-                        ByteBuffer[] payload = context.getData();
+                        ByteBuffer[] payload = pooled.getResource();
                         if (handler.getMessageType() == ByteBuffer.class) {
                             mHandler.onMessage(toBuffer(payload), finalFragment);
                         } else if (handler.getMessageType() == byte[].class) {
@@ -197,7 +204,7 @@ class FrameHandler extends AbstractReceiveListener {
                         }
                     } else {
                         MessageHandler.Whole mHandler = (MessageHandler.Whole) handler.getHandler();
-                        ByteBuffer[] payload = context.getData();
+                        ByteBuffer[] payload = pooled.getResource();
                         if (handler.getMessageType() == ByteBuffer.class) {
                             mHandler.onMessage(toBuffer(payload));
                         } else if (handler.getMessageType() == byte[].class) {
@@ -216,7 +223,7 @@ class FrameHandler extends AbstractReceiveListener {
                         }
                     }
                 } finally {
-                    context.release();
+                    pooled.free();
                 }
             }
         });
@@ -224,7 +231,7 @@ class FrameHandler extends AbstractReceiveListener {
 
     private void invokeTextHandler(final BufferedTextMessage data, final HandlerWrapper handler, final boolean finalFragment) {
 
-        session.getContainer().invokeEndpointMethod(session.getWebSocketChannel(), new Runnable() {
+        session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
                 MessageHandler mHandler = handler.getHandler();

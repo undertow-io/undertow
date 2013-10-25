@@ -17,6 +17,8 @@
  */
 package io.undertow.websockets.core.function;
 
+import io.undertow.server.protocol.framed.FrameHeaderData;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -24,6 +26,9 @@ import java.nio.ByteBuffer;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public interface ChannelFunction {
+
+
+    void newFrame(FrameHeaderData headerData);
 
     /**
      * Is called on the {@link ByteBuffer} after a read operation completes

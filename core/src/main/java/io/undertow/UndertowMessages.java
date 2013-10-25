@@ -248,4 +248,7 @@ public interface UndertowMessages {
 
     @Message(id = 74, value = "Could not renegotiate SSL connection to require client certificate, as client had sent more data")
     IllegalStateException couldNotRenegotiate();
+
+    @Message(id = 75, value = "Object was freed")
+    IllegalStateException objectWasFreed();
 }
