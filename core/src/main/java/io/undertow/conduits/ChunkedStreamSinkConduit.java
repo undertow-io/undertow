@@ -29,6 +29,7 @@ import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
@@ -52,6 +53,8 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
      * This attachment must be set before the {@link #terminateWrites()} method is called.
      */
     public static final AttachmentKey<HeaderMap> TRAILERS = AttachmentKey.create(HeaderMap.class);
+
+    private final HeaderMap responseHeaders;
 
     private final ConduitListener<? super ChunkedStreamSinkConduit> finishListener;
     private final int config;
@@ -84,11 +87,13 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
      * @param next       the channel to wrap
      * @param configurable   {@code true} to allow configuration of the next channel, {@code false} otherwise
      * @param passClose      {@code true} to close the underlying channel when this channel is closed, {@code false} otherwise
-     * @param finishListener
-     * @param attachable
+     * @param responseHeaders The response headers
+     * @param finishListener The finish listener
+     * @param attachable The attachable
      */
-    public ChunkedStreamSinkConduit(final StreamSinkConduit next, final boolean configurable, final boolean passClose, final ConduitListener<? super ChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
+    public ChunkedStreamSinkConduit(final StreamSinkConduit next, final boolean configurable, final boolean passClose, HeaderMap responseHeaders, final ConduitListener<? super ChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
         super(next);
+        this.responseHeaders = responseHeaders;
         this.finishListener = finishListener;
         this.attachable = attachable;
         config = (configurable ? CONF_FLAG_CONFIGURABLE : 0) | (passClose ? CONF_FLAG_PASS_CLOSE : 0);
@@ -213,7 +218,16 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             throw UndertowMessages.MESSAGES.chunkedChannelClosedMidChunk();
         }
         chunkingBuffer.clear();
-        if(anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK)) {
+        if(!anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK)) {
+            //if no data was actually sent we just remove the transfer encoding header, and set content length 0
+            //TODO: is this the best way to do it?
+            //todo: should we make this behaviour configurable?
+            responseHeaders.put(Headers.CONTENT_LENGTH, "0"); //according to the spec we don't actually need this, but better to be safe
+            responseHeaders.remove(Headers.TRANSFER_ENCODING);
+            state |= FLAG_NEXT_SHUTDWON | FLAG_WRITES_SHUTDOWN;
+            next.terminateWrites();
+            return;
+        } else {
             chunkingBuffer.put(CRLF);
         }
 

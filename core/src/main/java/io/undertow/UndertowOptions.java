@@ -112,6 +112,14 @@ public class UndertowOptions {
      */
     public static final Option<String> URL_CHARSET = Option.simple(UndertowOptions.class, "URL_CHARSET", String.class);
 
+    /**
+     * If this is true then a Connection: keep-alive header will be added to responses, even when it is not strictly required by
+     * the specification.
+     *
+     * Defaults to true
+     */
+    public static final Option<Boolean> ALWAYS_SET_KEEP_ALIVE = Option.simple(UndertowOptions.class, "ALWAYS_SET_KEEP_ALIVE", Boolean.class);
+
     private UndertowOptions() {
 
     }

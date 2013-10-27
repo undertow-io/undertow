@@ -46,11 +46,12 @@ import org.xnio.conduits.StreamSourceConduit;
 
 /**
  * Class that is  responsible for HTTP transfer encooding, this could be part of the {@link HttpReadListener},
- * but is seperated out for clarity
+ * but is separated out for clarity.
+ *
+ * For more info see http://tools.ietf.org/html/rfc2616#section-4.4
  *
  * @author Stuart Douglas
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
- * @see http://tools.ietf.org/html/rfc2616#section-4.4
  */
 public class HttpTransferEncoding {
 
@@ -99,7 +100,7 @@ public class HttpTransferEncoding {
         sinkChannel.setConduit(new HttpResponseConduit(sinkChannel.getConduit(), connection.getBufferPool(), exchange));
 
         //now the response wrapper, to add in the appropriate connection control headers
-        exchange.addResponseWrapper(responseWrapper(persistentConnection));
+        exchange.addResponseWrapper(responseWrapper());
 
     }
 
@@ -172,94 +173,8 @@ public class HttpTransferEncoding {
         return false;
     }
 
-    private static ConduitWrapper<StreamSinkConduit> responseWrapper(final boolean requestLooksPersistent) {
-        return new ConduitWrapper<StreamSinkConduit>() {
-            public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
-                if (exchange.getRequestMethod().equals(Methods.HEAD)) {
-                    return new HeadStreamSinkConduit(factory.create(), terminateResponseListener(exchange));
-                }
-                final StreamSinkConduit channel = factory.create();
-                final HeaderMap responseHeaders = exchange.getResponseHeaders();
-                // test to see if we're still persistent
-                String connection = responseHeaders.getFirst(Headers.CONNECTION);
-
-                boolean stillPersistent = requestLooksPersistent && exchange.isPersistent() && (connection == null || !HttpString.tryFromString(connection).equals(Headers.CLOSE));
-                HttpString transferEncoding = Headers.IDENTITY;
-                final String transferEncodingHeader = responseHeaders.getLast(Headers.TRANSFER_ENCODING);
-                final String contentLengthHeader = responseHeaders.getFirst(Headers.CONTENT_LENGTH);
-                if (transferEncodingHeader != null) {
-                    if (exchange.isHttp11()) {
-                        transferEncoding = new HttpString(transferEncodingHeader);
-                    } else {
-                        // RFC 2616 3.6 last paragraph
-                        responseHeaders.remove(Headers.TRANSFER_ENCODING);
-                    }
-                } else if (exchange.isHttp11() && contentLengthHeader == null) {
-                    //if we have a HTTP 1.1 request with no transfer encoding and no content length
-                    //then we default to chunked, to enable persistent connections to work
-                    responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
-                    transferEncoding = Headers.CHUNKED;
-                }
-                StreamSinkConduit wrappedConduit;
-                final int code = exchange.getResponseCode();
-                if (exchange.getRequestMethod().equals(Methods.HEAD) || (100 <= code && code <= 199) || code == 204 || code == 304) {
-                    final ConduitListener<StreamSinkConduit> finishListener = terminateResponseListener(exchange);
-                    if (code == 101 && contentLengthHeader != null) {
-                        // add least for websocket upgrades we can have a content length
-                        final long contentLength;
-                        try {
-                            contentLength = Long.parseLong(contentLengthHeader);
-                            // fixed-length response
-                            wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener);
-                        } catch (NumberFormatException e) {
-                            // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
-                            stillPersistent = false;
-                            wrappedConduit = new FinishableStreamSinkConduit(channel, terminateResponseListener(exchange));
-                        }
-                    } else {
-                        wrappedConduit = new FixedLengthStreamSinkConduit(channel, 0L, true, !stillPersistent, finishListener);
-                    }
-                } else if (!transferEncoding.equals(Headers.IDENTITY)) {
-                    final ConduitListener<StreamSinkConduit> finishListener = terminateResponseListener(exchange);
-                    wrappedConduit = new ChunkedStreamSinkConduit(channel, true, !stillPersistent, finishListener, exchange);
-                } else if (contentLengthHeader != null) {
-                    final long contentLength;
-                    try {
-                        contentLength = Long.parseLong(contentLengthHeader);
-                        final ConduitListener<StreamSinkConduit> finishListener = terminateResponseListener(exchange);
-                        // fixed-length response
-                        wrappedConduit = new FixedLengthStreamSinkConduit(channel, contentLength, true, !stillPersistent, finishListener);
-                    } catch (NumberFormatException e) {
-                        // assume that the response is unbounded, but forbid persistence (this will cause subsequent requests to fail when they write their replies)
-                        stillPersistent = false;
-                        wrappedConduit = new FinishableStreamSinkConduit(channel, terminateResponseListener(exchange));
-                    }
-                } else {
-                    log.trace("Cancelling persistence because response is identity with no content length");
-                    // make it not persistent - very unfortunate for the next request handler really...
-                    stillPersistent = false;
-                    wrappedConduit = new FinishableStreamSinkConduit(channel, terminateResponseListener(exchange));
-                }
-                if (code != 101) {
-                    // only set connection header if it was not an upgrade
-                    if (exchange.isHttp11()) {
-                        if (stillPersistent) {
-                            // not strictly required but user agents seem to like it
-                            responseHeaders.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
-                        } else {
-                            responseHeaders.put(Headers.CONNECTION, Headers.CLOSE.toString());
-                        }
-                    } else if (exchange.isHttp10()) {
-                        if (stillPersistent) {
-                            responseHeaders.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
-                        } else {
-                            responseHeaders.remove(Headers.CONNECTION);
-                        }
-                    }
-                }
-                return wrappedConduit;
-            }
-        };
+    private static ConduitWrapper<StreamSinkConduit> responseWrapper() {
+        return HttpResponseWrapper.INSTANCE;
     }
 
 
@@ -300,4 +215,71 @@ public class HttpTransferEncoding {
         };
     }
 
+    private static class HttpResponseWrapper implements ConduitWrapper<StreamSinkConduit> {
+
+        public static final HttpResponseWrapper INSTANCE = new HttpResponseWrapper();
+
+
+        public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
+            StreamSinkConduit channel = factory.create();
+            final ConduitListener<StreamSinkConduit> finishListener = terminateResponseListener(exchange);
+            if (exchange.getRequestMethod().equals(Methods.HEAD)) {
+                //if this is a head request we add a head channel underneath the content encoding channel
+                //this will just discard the data
+                channel = new HeadStreamSinkConduit(channel, null);
+            }
+
+            final HeaderMap responseHeaders = exchange.getResponseHeaders();
+            // test to see if we're still persistent
+            String connection = responseHeaders.getFirst(Headers.CONNECTION);
+            if (exchange.isPersistent() && connection != null) {
+                if (HttpString.tryFromString(connection).equals(Headers.CLOSE)) {
+                    exchange.setPersistent(false);
+                }
+            } else if (exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALWAYS_SET_KEEP_ALIVE, true)) {
+                responseHeaders.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
+            }
+
+            final String contentLengthHeader = responseHeaders.getFirst(Headers.CONTENT_LENGTH);
+            if (contentLengthHeader != null) {
+                try {
+                    final long contentLength = Long.parseLong(contentLengthHeader);
+                    // fixed-length response
+                    return new FixedLengthStreamSinkConduit(channel, contentLength, true, !exchange.isPersistent(), finishListener);
+                } catch (NumberFormatException e) {
+                    //we just fix it for them
+                    responseHeaders.remove(Headers.CONTENT_LENGTH);
+                }
+            }
+            final String transferEncodingHeader = responseHeaders.getLast(Headers.TRANSFER_ENCODING);
+            if (transferEncodingHeader == null) {
+                if (exchange.isHttp11()) {
+                    responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
+                    return new ChunkedStreamSinkConduit(channel, true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
+                } else {
+                    exchange.setPersistent(false);
+                    responseHeaders.put(Headers.CONNECTION, Headers.CLOSE.toString());
+                    return new FinishableStreamSinkConduit(channel, finishListener);
+                }
+            } else {
+                //moved outside because this is rarely used
+                //and makes the method small enough to be inlined
+                return handleExplicitTransferEncoding(exchange, channel, finishListener, responseHeaders, transferEncodingHeader);
+            }
+        }
+
+        private StreamSinkConduit handleExplicitTransferEncoding(HttpServerExchange exchange, StreamSinkConduit channel, ConduitListener<StreamSinkConduit> finishListener, HeaderMap responseHeaders, String transferEncodingHeader) {
+            HttpString transferEncoding = new HttpString(transferEncodingHeader);
+            if (transferEncoding.equals(Headers.CHUNKED)) {
+                return new ChunkedStreamSinkConduit(channel, true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
+            } else {
+
+                log.trace("Cancelling persistence because response is identity with no content length");
+                // make it not persistent - very unfortunate for the next request handler really...
+                exchange.setPersistent(false);
+                responseHeaders.put(Headers.CONNECTION, Headers.CLOSE.toString());
+                return new FinishableStreamSinkConduit(channel, terminateResponseListener(exchange));
+            }
+        }
+    }
 }

@@ -52,9 +52,6 @@ public final class HeadStreamSinkConduit extends AbstractStreamSinkConduit<Strea
      * Construct a new instance.
      *
      * @param next           the next channel
-     * @param contentLength  the content length
-     * @param configurable   {@code true} if this instance should pass configuration to the next
-     * @param propagateClose {@code true} if this instance should pass close to the next
      * @param finishListener the listener to call when the channel is closed or the length is reached
      */
     public HeadStreamSinkConduit(final StreamSinkConduit next, final ConduitListener<? super HeadStreamSinkConduit> finishListener) {
