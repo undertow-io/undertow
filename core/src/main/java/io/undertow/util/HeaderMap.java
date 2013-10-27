@@ -222,6 +222,11 @@ public final class HeaderMap implements Iterable<HeaderValues> {
             size++;
             return headerValues;
         }
+        return getOrCreateNonEmpty(headerName, table, length, idx, o);
+    }
+
+    private HeaderValues getOrCreateNonEmpty(HttpString headerName, Object[] table, int length, int idx, Object o) {
+        HeaderValues headerValues;
         if (o instanceof HeaderValues) {
             headerValues = (HeaderValues) o;
             if (! headerName.equals(headerValues.key)) {
