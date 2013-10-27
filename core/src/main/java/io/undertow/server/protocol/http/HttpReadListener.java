@@ -93,29 +93,8 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
                     res = buffer.remaining();
                 }
 
-                if (res == 0) {
-                    if (!channel.isReadResumed()) {
-                        channel.getReadSetter().set(this);
-                        channel.resumeReads();
-                    }
-                    return;
-                } else if (res == -1) {
-                    try {
-                        channel.suspendReads();
-                        channel.shutdownReads();
-                        final StreamSinkChannel responseChannel = this.connection.getChannel().getSinkChannel();
-                        responseChannel.shutdownWrites();
-                        // will return false if there's a response queued ahead of this one, so we'll set up a listener then
-                        if (!responseChannel.flush()) {
-                            responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
-                            responseChannel.resumeWrites();
-                        }
-                    } catch (IOException e) {
-                        UndertowLogger.REQUEST_IO_LOGGER.debug("Error reading request", e);
-                        // fuck it, it's all ruined
-                        IoUtils.safeClose(connection);
-                        return;
-                    }
+                if(res <= 0) {
+                    handleFailedRead(channel, res);
                     return;
                 }
                 if (existing != null) {
@@ -157,6 +136,37 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
         }
     }
 
+    private void handleFailedRead(StreamSourceChannel channel, int res) {
+        if (res == 0) {
+            if (!channel.isReadResumed()) {
+                channel.getReadSetter().set(this);
+                channel.resumeReads();
+            }
+        } else if (res == -1) {
+            handleConnectionClose(channel);
+        }
+    }
+
+    private void handleConnectionClose(StreamSourceChannel channel) {
+        try {
+            channel.suspendReads();
+            channel.shutdownReads();
+            final StreamSinkChannel responseChannel = this.connection.getChannel().getSinkChannel();
+            responseChannel.shutdownWrites();
+            // will return false if there's a response queued ahead of this one, so we'll set up a listener then
+            if (!responseChannel.flush()) {
+                responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, null));
+                responseChannel.resumeWrites();
+            }
+        } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.debug("Error reading request", e);
+            // fuck it, it's all ruined
+            IoUtils.safeClose(connection);
+            return;
+        }
+        return;
+    }
+
     private void sendBadRequestAndClose(final StreamConnection channel, final Exception exception) {
         UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(exception);
         channel.getSourceChannel().suspendReads();
@@ -178,7 +188,6 @@ final class HttpReadListener implements ChannelListener<StreamSourceChannel>, Ex
             StreamConnection channel = connection.getChannel();
             if (connection.getExtraBytes() == null) {
                 //if we are not pipelining we just register a listener
-
                 channel.getSourceChannel().getReadSetter().set(this);
                 channel.getSourceChannel().resumeReads();
             } else {
