@@ -94,8 +94,10 @@ public class ServletPathMatches {
                 welcomePage = findWelcomeServlet(pathWithTrailingSlash, !pathEndsWithSlash);
                 if (welcomePage != null) {
                     return welcomePage;
-                } else {
+                } else if(pathEndsWithSlash) {
                     return match;
+                } else {
+                    return new ServletPathMatch(match.getServletChain(), match.getMatched(), match.getRemaining(), REDIRECT, "/");
                 }
             }
 
