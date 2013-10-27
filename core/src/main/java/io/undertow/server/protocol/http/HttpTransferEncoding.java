@@ -232,7 +232,9 @@ public class HttpTransferEncoding {
             final HeaderMap responseHeaders = exchange.getResponseHeaders();
             // test to see if we're still persistent
             String connection = responseHeaders.getFirst(Headers.CONNECTION);
-            if (exchange.isPersistent() && connection != null) {
+            if(!exchange.isPersistent()) {
+                responseHeaders.put(Headers.CONNECTION, Headers.CLOSE.toString());
+            } else if (exchange.isPersistent() && connection != null) {
                 if (HttpString.tryFromString(connection).equals(Headers.CLOSE)) {
                     exchange.setPersistent(false);
                 }
