@@ -155,7 +155,7 @@ public class CachedResource implements Resource {
 
             final DirectBufferCache.CacheEntry entry;
             if (existing == null) {
-                entry = dataCache.add(cacheKey, length.intValue());
+                entry = dataCache.add(cacheKey, length.intValue(), cachingResourceManager.getMaxAge());
             } else {
                 entry = existing;
             }
