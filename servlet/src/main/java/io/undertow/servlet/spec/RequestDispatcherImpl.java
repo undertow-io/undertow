@@ -133,21 +133,16 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                     newQueryString = newServletPath.substring(qsPos + 1);
                     newServletPath = newServletPath.substring(0, qsPos);
                 }
-                final String newQueryStringPart = newQueryString;
-                if(requestImpl.getQueryString() != null) {
-                    if(newQueryString.isEmpty()) {
-                        newQueryString = requestImpl.getQueryString();
-                    } else {
-                        newQueryString = newQueryString + "&" + requestImpl.getQueryString();
-                    }
-                }
                 String newRequestUri = servletContext.getContextPath() + newServletPath;
 
-                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryStringPart);
+                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
+                final StringBuilder sb = new StringBuilder();
+
+
                 requestImpl.setQueryParameters(newQueryParameters);
 
                 requestImpl.getExchange().setRelativePath(newServletPath);
-                requestImpl.getExchange().setQueryString(newQueryString);
+                requestImpl.getExchange().setQueryString(QueryParameterUtils.buildQueryString(newQueryParameters));
                 requestImpl.getExchange().setRequestPath(newRequestUri);
                 requestImpl.getExchange().setRequestURI(newRequestUri);
                 requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
@@ -256,25 +251,16 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                     newQueryString = newServletPath.substring(qsPos + 1);
                     newServletPath = newServletPath.substring(0, qsPos);
                 }
-                final String newQueryStringPart = newQueryString;
-
-                if(requestImpl.getQueryString() != null) {
-                    if(newQueryString.isEmpty()) {
-                        newQueryString = requestImpl.getQueryString();
-                    } else {
-                        newQueryString = newQueryString + "&" + requestImpl.getQueryString();
-                    }
-                }
                 String newRequestUri = servletContext.getContextPath() + newServletPath;
 
-                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryStringPart);
+                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
                 requestImpl.setQueryParameters(newQueryParameters);
 
                 requestImpl.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
                 requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, servletContext.getContextPath());
                 requestImpl.setAttribute(INCLUDE_SERVLET_PATH, pathMatch.getMatched());
                 requestImpl.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
-                requestImpl.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
+                requestImpl.setAttribute(INCLUDE_QUERY_STRING, QueryParameterUtils.buildQueryString(newQueryParameters));
             }
             boolean inInclude = responseImpl.isInsideInclude();
             responseImpl.setInsideInclude(true);
