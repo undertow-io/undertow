@@ -45,7 +45,6 @@ public class CachedResource implements Resource {
     private final CachingResourceManager cachingResourceManager;
     private final Resource underlyingResource;
     private final String path;
-    private final Long contentLength;
     private final boolean directory;
     private final Date lastModifiedDate;
     private final String lastModifiedDateString;
@@ -56,7 +55,6 @@ public class CachedResource implements Resource {
     public CachedResource(final CachingResourceManager cachingResourceManager, final Resource underlyingResource, final String path) {
         this.cachingResourceManager = cachingResourceManager;
         this.underlyingResource = underlyingResource;
-        this.contentLength = underlyingResource.getContentLength();
         this.directory = underlyingResource.isDirectory();
         this.lastModifiedDate = underlyingResource.getLastModified();
         if (lastModifiedDate != null) {
@@ -138,20 +136,19 @@ public class CachedResource implements Resource {
 
     @Override
     public void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback completionCallback) {
+        final DirectBufferCache dataCache = cachingResourceManager.getDataCache();
+        if(dataCache == null) {
+            underlyingResource.serve(sender, exchange, completionCallback);
+            return;
+        }
+
+        final DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
         final Long length = getContentLength();
         //if it is not eligable to be served from the cache
         if (length == null || length > cachingResourceManager.getMaxFileSize()) {
             underlyingResource.serve(sender, exchange, completionCallback);
             return;
         }
-
-
-        final DirectBufferCache dataCache = cachingResourceManager.getDataCache();
-        if (dataCache == null) {
-            underlyingResource.serve(sender, exchange, completionCallback);
-            return;
-        }
-        final DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
         //it is not cached yet, install a wrapper to grab the data
         if (existing == null || !existing.enabled() || !existing.reference()) {
             Sender newSender = sender;
@@ -194,7 +191,18 @@ public class CachedResource implements Resource {
 
     @Override
     public Long getContentLength() {
-        return contentLength;
+        //we always use the underlying size unless the data is cached in the buffer cache
+        //to prevent a mis-match between size on disk and cached size
+        final DirectBufferCache dataCache = cachingResourceManager.getDataCache();
+        if(dataCache == null) {
+            return underlyingResource.getContentLength();
+        }
+        final DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
+        if(existing == null || !existing.enabled()) {
+            return underlyingResource.getContentLength();
+        }
+        //we only return the
+        return (long)existing.size();
     }
 
     @Override
