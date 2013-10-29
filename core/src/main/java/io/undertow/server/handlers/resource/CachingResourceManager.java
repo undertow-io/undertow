@@ -19,6 +19,7 @@
 package io.undertow.server.handlers.resource;
 
 import java.io.IOException;
+import java.util.Set;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.cache.DirectBufferCache;
@@ -120,6 +121,21 @@ public class CachingResourceManager implements ResourceManager {
 
     public int getMaxAge() {
         return maxAge;
+    }
+
+    @Override
+    public void close() throws IOException {
+        //clear all cached data on close
+        if(dataCache != null) {
+            Set<Object> keys = dataCache.getAllKeys();
+            for(final Object key : keys) {
+                if(key instanceof CachedResource.CacheKey) {
+                    if(((CachedResource.CacheKey) key).manager == this) {
+                        dataCache.remove(key);
+                    }
+                }
+            }
+        }
     }
 
     private static final class NoResourceMarker {

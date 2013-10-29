@@ -41,10 +41,9 @@ import io.undertow.util.MimeMappings;
  */
 public class CachedResource implements Resource {
 
-    private final String cacheKey;
+    private final CacheKey cacheKey;
     private final CachingResourceManager cachingResourceManager;
     private final Resource underlyingResource;
-    private final String path;
     private final boolean directory;
     private final Date lastModifiedDate;
     private final String lastModifiedDateString;
@@ -64,12 +63,7 @@ public class CachedResource implements Resource {
         }
         this.eTag = underlyingResource.getETag();
         this.name = underlyingResource.getName();
-        if (this.directory && !path.endsWith("/")) {
-            this.path = path + "/";
-        } else {
-            this.path = path;
-        }
-        this.cacheKey = underlyingResource.getCacheKey();
+        this.cacheKey = new CacheKey(cachingResourceManager, underlyingResource.getCacheKey());
         if (cachingResourceManager.getMaxAge() > 0) {
             nextMaxAgeCheck = System.currentTimeMillis() + cachingResourceManager.getMaxAge();
         } else {
@@ -207,7 +201,7 @@ public class CachedResource implements Resource {
 
     @Override
     public String getCacheKey() {
-        return cacheKey;
+        return cacheKey.cacheKey;
     }
 
     @Override
@@ -256,5 +250,35 @@ public class CachedResource implements Resource {
         }
     }
 
+
+    static final class CacheKey {
+        final CachingResourceManager manager;
+        final String cacheKey;
+
+        CacheKey(CachingResourceManager manager, String cacheKey) {
+            this.manager = manager;
+            this.cacheKey = cacheKey;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            CacheKey cacheKey1 = (CacheKey) o;
+
+            if (cacheKey != null ? !cacheKey.equals(cacheKey1.cacheKey) : cacheKey1.cacheKey != null) return false;
+            if (manager != null ? !manager.equals(cacheKey1.manager) : cacheKey1.manager != null) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = manager != null ? manager.hashCode() : 0;
+            result = 31 * result + (cacheKey != null ? cacheKey.hashCode() : 0);
+            return result;
+        }
+    }
 
 }

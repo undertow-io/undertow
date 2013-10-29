@@ -19,6 +19,7 @@
 package io.undertow.server.handlers.resource;
 
 import java.io.File;
+import java.io.IOException;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -91,5 +92,9 @@ public class FileResourceManager implements ResourceManager {
 
     public long getTransferMinSize() {
         return transferMinSize;
+    }
+
+    @Override
+    public void close() throws IOException {
     }
 }

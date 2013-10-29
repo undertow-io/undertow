@@ -1,5 +1,6 @@
 package io.undertow.server.handlers.resource;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 /**
@@ -9,7 +10,7 @@ import java.io.IOException;
  *
  * @author Stuart Douglas
  */
-public interface ResourceManager {
+public interface ResourceManager extends Closeable {
 
     /**
      * Returns a resource for the given path.
@@ -25,6 +26,10 @@ public interface ResourceManager {
         @Override
         public Resource getResource(final String path){
             return null;
+        }
+
+        @Override
+        public void close() throws IOException {
         }
     };
 }

@@ -47,4 +47,8 @@ public class ClassPathResourceManager implements ResourceManager {
         }
 
     }
+
+    @Override
+    public void close() throws IOException {
+    }
 }

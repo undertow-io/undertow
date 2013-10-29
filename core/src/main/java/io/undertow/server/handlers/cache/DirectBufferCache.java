@@ -21,6 +21,8 @@ package io.undertow.server.handlers.cache;
 import static io.undertow.server.handlers.cache.LimitedBufferSlicePool.PooledByteBuffer;
 
 import java.nio.ByteBuffer;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.ConcurrentHashMap;
@@ -128,6 +130,16 @@ public class DirectBufferCache {
         }
 
         return cacheEntry;
+    }
+
+    /**
+     * Returns a set of all the keys in the cache. This is a copy of the
+     * key set at the time of method invocation.
+     *
+     * @return all the keys in this cache
+     */
+    public Set<Object> getAllKeys() {
+        return new HashSet<Object>(cache.keySet());
     }
 
     private void bumpAccess(CacheEntry cacheEntry) {
