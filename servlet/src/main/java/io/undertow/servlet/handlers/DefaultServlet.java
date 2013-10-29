@@ -149,8 +149,8 @@ public class DefaultServlet extends HttpServlet {
             //if we are using a writer who knows what the length will end up being
             Long contentLength = resource.getContentLength();
             if (contentLength != null) {
-                resp.getOutputStream();
                 resp.setContentLengthLong(contentLength);
+                resp.getOutputStream();
             }
         } catch (IllegalStateException e) {
 
