@@ -4,6 +4,7 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.spec.WebConnectionImpl;
 import org.xnio.StreamConnection;
 
@@ -16,9 +17,11 @@ import javax.servlet.http.HttpUpgradeHandler;
  */
 public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements ExchangeCompletionListener {
     private final InstanceHandle<T> instance;
+    private final ThreadSetupAction threadSetupAction;
 
-    public ServletUpgradeListener(final InstanceHandle<T> instance) {
+    public ServletUpgradeListener(final InstanceHandle<T> instance, ThreadSetupAction threadSetupAction) {
         this.instance = instance;
+        this.threadSetupAction = threadSetupAction;
     }
 
     @Override
@@ -27,18 +30,28 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Exc
         exchange.getConnection().addCloseListener(new ServerConnection.CloseListener() {
             @Override
             public void closed(ServerConnection connection) {
+                final ThreadSetupAction.Handle handle = threadSetupAction.setup(exchange);
                 try {
                     instance.getInstance().destroy();
                 } finally {
-                    instance.release();
+                    try {
+                        handle.tearDown();
+                    } finally {
+                        instance.release();
+                    }
                 }
             }
         });
         exchange.getIoThread().execute(new Runnable() {
             @Override
             public void run() {
-                //run the upgrade in the IO thread, to prevent threading issues
-                instance.getInstance().init(new WebConnectionImpl(channel));
+                final ThreadSetupAction.Handle handle = threadSetupAction.setup(exchange);
+                try {
+                    //run the upgrade in the IO thread, to prevent threading issues
+                    instance.getInstance().init(new WebConnectionImpl(channel));
+                } finally {
+                    handle.tearDown();
+                }
             }
         });
     }
