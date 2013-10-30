@@ -170,6 +170,30 @@ public abstract class DetachableStreamSinkChannel implements StreamSinkChannel {
     }
 
     @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        if (isFinished()) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
+        }
+        return delegate.writeFinal(src);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        if (isFinished()) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
+        }
+        return delegate.writeFinal(srcs, offset, length);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs) throws IOException {
+        if (isFinished()) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
+        }
+        return delegate.writeFinal(srcs);
+    }
+
+    @Override
     public boolean supportsOption(final Option<?> option) {
         return delegate.supportsOption(option);
     }

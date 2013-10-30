@@ -29,6 +29,7 @@ import org.xnio.Option;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
+import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -188,6 +189,21 @@ public class StreamSinkChannelAdapter implements StreamSinkChannel {
     @Override
     public Setter<? extends StreamSinkChannel> getCloseSetter() {
         return closeSetter;
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        return Channels.writeFinalBasic(this, src);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        return Channels.writeFinalBasic(this, srcs, offset, length);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs) throws IOException {
+        return Channels.writeFinalBasic(this, srcs, 0, srcs.length);
     }
 
 

@@ -19,7 +19,9 @@
 package io.undertow.conduits;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
+import org.xnio.Buffers;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.StreamSinkConduit;
 
@@ -37,6 +39,28 @@ public final class FinishableStreamSinkConduit extends AbstractStreamSinkConduit
     public FinishableStreamSinkConduit(final StreamSinkConduit delegate, final ConduitListener<? super FinishableStreamSinkConduit> finishListener) {
         super(delegate);
         this.finishListener = finishListener;
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        int res = next.writeFinal(src);
+        if(!src.hasRemaining()) {
+            if (shutdownState == 0) {
+                shutdownState = 1;
+            }
+        }
+        return res;
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        long res = next.writeFinal(srcs, offset, length);
+        if(!Buffers.hasRemaining(srcs, offset, length)) {
+            if (shutdownState == 0) {
+                shutdownState = 1;
+            }
+        }
+        return res;
     }
 
     public void terminateWrites() throws IOException {

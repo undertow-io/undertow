@@ -34,6 +34,7 @@ import org.xnio.IoUtils;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
 import static org.xnio.Bits.anyAreSet;
@@ -74,7 +75,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private static final int CONF_FLAG_PASS_CLOSE = 1 << 1;
 
     /**
-     * Flag that is set when {@link #shutdownWrites()} or @{link #close()} is called
+     * Flag that is set when {@link #terminateWrites()} or @{link #close()} is called
      */
     private static final int FLAG_WRITES_SHUTDOWN = 1;
     private static final int FLAG_NEXT_SHUTDWON = 1 << 2;
@@ -161,6 +162,16 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             }
         }
         return 0;
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        return Conduits.writeFinalBasic(this, srcs, offset, length);
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        return Conduits.writeFinalBasic(this, src);
     }
 
     @Override

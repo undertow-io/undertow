@@ -29,6 +29,7 @@ import org.xnio.channels.FixedLengthOverflowException;
 import org.xnio.channels.FixedLengthUnderflowException;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
 import static java.lang.Math.min;
@@ -120,6 +121,16 @@ public final class FixedLengthStreamSinkConduit extends AbstractStreamSinkCondui
         } finally {
             exitWrite(val, res);
         }
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        return Conduits.writeFinalBasic(this, srcs, offset, length);
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        return Conduits.writeFinalBasic(this, src);
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {

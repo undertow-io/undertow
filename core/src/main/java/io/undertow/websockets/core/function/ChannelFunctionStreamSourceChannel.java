@@ -49,7 +49,7 @@ public class ChannelFunctionStreamSourceChannel implements StreamSourceChannel {
 
     @Override
     public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-        return channel.transferTo(count, throughBuffer, new ChannelFunctionStreamSinkChannel(target, functions));
+        return target.transferFrom(this, count, throughBuffer);
     }
 
     @Override

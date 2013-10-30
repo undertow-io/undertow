@@ -7,6 +7,7 @@ import org.xnio.Pooled;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
 import java.io.IOException;
@@ -83,11 +84,26 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
 
     @Override
     public long write(ByteBuffer[] srcs, int offs, int len) throws IOException {
+        return Conduits.writeFinalBasic(this, srcs, offs, len);
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        return Conduits.writeFinalBasic(this, src);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offs, int len) throws IOException {
         if (anyAreSet(state, FLAG_WRITES_TERMINATED)) {
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
-        return doWrite(srcs, offs, len);
+        long res = doWrite(srcs, offs, len);
+        if(!Buffers.hasRemaining(srcs, offs, len)) {
+            terminateWrites();
+        }
+        return res;
     }
+
 
     private long doWrite(ByteBuffer[] additionalData, int offs, int len) throws IOException {
         ByteBuffer[] buffers = new ByteBuffer[bufferCount + (additionalData == null ? 0 : len)];

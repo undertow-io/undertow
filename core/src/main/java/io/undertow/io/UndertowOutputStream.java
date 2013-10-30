@@ -171,29 +171,16 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
             } else {
                 buffer.put(b, off, len);
                 if (buffer.remaining() == 0) {
-                    writeBufferBlocking();
+                    writeBufferBlocking(false);
                 }
             }
         } else {
             buffer.put(b, off, len);
             if (buffer.remaining() == 0) {
-                writeBufferBlocking();
+                writeBufferBlocking(false);
             }
         }
         updateWritten(len);
-    }
-
-
-    private void writeBufferBlocking() throws IOException {
-        if (channel == null) {
-            channel = exchange.getResponseChannel();
-        }
-        buffer.flip();
-        if (buffer.hasRemaining()) {
-            Channels.writeBlocking(channel, buffer);
-        }
-        buffer.clear();
-        state |= FLAG_WRITE_STARTED;
     }
 
     @Override
@@ -262,7 +249,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
         if (buffer != null && buffer.position() != 0) {
-            writeBuffer();
+            writeBufferBlocking(true);
         }
         if (channel == null) {
             channel = exchange.getResponseChannel();
@@ -270,23 +257,32 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         Channels.flushBlocking(channel);
     }
 
-    private void writeBuffer() throws IOException {
-        buffer.flip();
+    private void writeBufferBlocking(final boolean writeFinal) throws IOException {
         if (channel == null) {
             channel = exchange.getResponseChannel();
         }
-        Channels.writeBlocking(channel, buffer);
+        buffer.flip();
+
+        while (buffer.hasRemaining()) {
+            if(writeFinal) {
+                channel.writeFinal(buffer);
+            } else {
+                channel.write(buffer);
+            }
+            if(buffer.hasRemaining()) {
+                channel.awaitWritable();
+            }
+        }
         buffer.clear();
         state |= FLAG_WRITE_STARTED;
     }
-
     @Override
     public void transferFrom(FileChannel source) throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
         if (buffer != null && buffer.position() != 0) {
-            writeBuffer();
+            writeBufferBlocking(false);
         }
         if (channel == null) {
             channel = exchange.getResponseChannel();
@@ -312,7 +308,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                 }
             }
             if (buffer != null) {
-                writeBuffer();
+                writeBufferBlocking(true);
             }
             if (channel == null) {
                 channel = exchange.getResponseChannel();

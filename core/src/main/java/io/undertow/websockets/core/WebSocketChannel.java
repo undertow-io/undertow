@@ -17,7 +17,7 @@
  */
 package io.undertow.websockets.core;
 
-import io.undertow.channels.IdleTimeoutConduit;
+import io.undertow.conduits.IdleTimeoutConduit;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListener.Setter;

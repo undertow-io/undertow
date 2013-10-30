@@ -33,6 +33,7 @@ import org.xnio.channels.FixedLengthUnderflowException;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
 import java.io.IOException;
@@ -522,6 +523,16 @@ final class AjpClientRequestConduit extends AbstractStreamSinkConduit<StreamSink
             }
         }
         return total;
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        return Conduits.writeFinalBasic(this, srcs, offset, length);
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        return Conduits.writeFinalBasic(this, src);
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {

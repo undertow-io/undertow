@@ -121,4 +121,19 @@ public abstract class DelegatingStreamSinkChannel<T extends DelegatingStreamSink
     public XnioIoThread getIoThread() {
         return delegate.getIoThread();
     }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        return delegate.writeFinal(src);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        return delegate.writeFinal(srcs, offset, length);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs) throws IOException {
+        return delegate.writeFinal(srcs);
+    }
 }

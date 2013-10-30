@@ -82,6 +82,27 @@ public final class WriteTimeoutStreamSinkChannel extends DelegatingStreamSinkCha
     }
 
     @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        int ret = delegate.writeFinal(src);
+        handleWriteTimeout(ret);
+        return ret;
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        long ret = delegate.writeFinal(srcs, offset, length);
+        handleWriteTimeout(ret);
+        return ret;
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs) throws IOException {
+        long ret = delegate.writeFinal(srcs);
+        handleWriteTimeout(ret);
+        return ret;
+    }
+
+    @Override
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
         long ret = delegate.transferFrom(src, position, count);
         handleWriteTimeout(ret);

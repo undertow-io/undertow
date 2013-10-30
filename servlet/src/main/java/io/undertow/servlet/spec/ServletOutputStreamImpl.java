@@ -221,7 +221,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             } else {
                 buffer.put(b, off, len);
                 if (buffer.remaining() == 0) {
-                    writeBufferBlocking();
+                    writeBufferBlocking(false);
                 }
             }
             updateWritten(len);
@@ -375,7 +375,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             //if buffersToWrite is set we are already flushing
             //so we don't have to do anything
             if (buffersToWrite == null && pendingFile == null) {
-                if (flushBufferAsync()) {
+                if (flushBufferAsync(true)) {
                     channel.shutdownWrites();
                     state |= FLAG_DELEGATE_SHUTDOWN;
                     if (!channel.flush()) {
@@ -406,7 +406,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
     }
 
-    private boolean flushBufferAsync() throws IOException {
+    private boolean flushBufferAsync(final boolean writeFinal) throws IOException {
         ByteBuffer[] bufs = buffersToWrite;
         if (bufs == null) {
             ByteBuffer buffer = this.buffer;
@@ -427,7 +427,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         long res;
         long written = 0;
         do {
-            res = channel.write(bufs);
+            if(writeFinal) {
+                res = channel.writeFinal(bufs);
+            } else {
+                res = channel.write(bufs);
+            }
             written += res;
             if (res == 0) {
                 //write it out with a listener
@@ -445,7 +449,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      * Returns the underlying buffer. If this has not been created yet then
      * it is created.
      * <p/>
-     * Callers that use this method must call {@link #updateWritten(int)} to update the written
+     * Callers that use this method must call {@link #updateWritten(long)} to update the written
      * amount.
      * <p/>
      * This allows the buffer to be filled directly, which can be more efficient.
@@ -479,7 +483,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 return;
             }
             if (buffer != null && buffer.position() != 0) {
-                writeBufferBlocking();
+                writeBufferBlocking(false);
             }
             if (channel == null) {
                 channel = servletRequestContext.getExchange().getResponseChannel();
@@ -520,7 +524,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 return;
             }
             if (buffer != null && buffer.position() != 0) {
-                writeBufferBlocking();
+                writeBufferBlocking(false);
             }
             if (channel == null) {
                 channel = servletRequestContext.getExchange().getResponseChannel();
@@ -557,13 +561,20 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     }
 
 
-    private void writeBufferBlocking() throws IOException {
+    private void writeBufferBlocking(final boolean writeFinal) throws IOException {
         if (channel == null) {
             channel = servletRequestContext.getExchange().getResponseChannel();
         }
         buffer.flip();
-        if (buffer.hasRemaining()) {
-            Channels.writeBlocking(channel, buffer);
+        while (buffer.hasRemaining()) {
+            if(writeFinal) {
+                channel.writeFinal(buffer);
+            } else {
+                channel.write(buffer);
+            }
+            if(buffer.hasRemaining()) {
+                channel.awaitWritable();
+            }
         }
         buffer.clear();
         state |= FLAG_WRITE_STARTED;
@@ -589,7 +600,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             }
             try {
                 if (buffer != null) {
-                    writeBufferBlocking();
+                    writeBufferBlocking(true);
                 }
                 if (channel == null) {
                     channel = servletRequestContext.getExchange().getResponseChannel();
@@ -634,7 +645,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
         createChannel();
         if (buffer != null) {
-            if (!flushBufferAsync()) {
+            if (!flushBufferAsync(true)) {
                 resumeWrites();
                 return;
             }

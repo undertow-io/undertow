@@ -117,6 +117,30 @@ public final class GatedStreamSinkChannel implements StreamSinkChannel {
         return closeSetter;
     }
 
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        if (handleGate()) {
+            return 0;
+        }
+        return delegate.writeFinal(src);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        if (handleGate()) {
+            return 0;
+        }
+        return delegate.writeFinal(srcs, offset, length);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs) throws IOException {
+        if (handleGate()) {
+            return 0;
+        }
+        return delegate.writeFinal(srcs);
+    }
+
     public int write(final ByteBuffer src) throws IOException {
         if (handleGate()) {
             return 0;

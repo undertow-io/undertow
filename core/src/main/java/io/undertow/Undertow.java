@@ -25,7 +25,7 @@ import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
-import org.xnio.channels.SslConnection;
+import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
 /**
@@ -118,7 +118,7 @@ public class Undertow {
                     openListener.setRootHandler(rootHandler);
                     ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
                     XnioSsl xnioSsl = xnio.getSslProvider(OptionMap.create(Options.USE_DIRECT_BUFFERS, true));
-                    AcceptingChannel < SslConnection > sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptions);
+                    AcceptingChannel <SslConnection> sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptions);
                     sslServer.resumeAccepts();
                     channels.add(sslServer);
                 }

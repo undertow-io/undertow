@@ -27,6 +27,7 @@ import org.xnio.IoUtils;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
 import static org.xnio.Bits.allAreClear;
@@ -81,6 +82,16 @@ public final class HeadStreamSinkConduit extends AbstractStreamSinkConduit<Strea
             src.position(src.position() + remaining);
         }
         return total;
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        return Conduits.writeFinalBasic(this, src);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        return Conduits.writeFinalBasic(this, srcs, offset, length);
     }
 
     @Override

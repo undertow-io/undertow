@@ -69,7 +69,7 @@
         <version.junit>4.11</version.junit>
         <version.easymock>3.2</version.easymock>
         <version.netty>3.6.6.Final</version.netty>
-        <version.xnio>3.1.0.CR7</version.xnio>
+        <version.xnio>3.2.0.Beta1</version.xnio>
         <version.io.undertow.jastow>1.0.0.Beta1</version.io.undertow.jastow>
         <version.org.apache.httpmime>4.2.5</version.org.apache.httpmime>
         <version.org.apache.httpcomponents>4.2.5</version.org.apache.httpcomponents>

@@ -16,6 +16,7 @@ import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
@@ -106,6 +107,16 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             }
         }
         return total;
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        return Conduits.writeFinalBasic(this, src);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        return Conduits.writeFinalBasic(this, srcs, offset, length);
     }
 
     @Override

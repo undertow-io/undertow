@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.undertow.channels;
+package io.undertow.conduits;
 
 import io.undertow.UndertowLogger;
 import org.xnio.XnioExecutor;
@@ -35,8 +35,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
- * {@link StreamChannel} wrapper that add support to close a {@link StreamChannel} once for a specified time no
- * reads and no writes were perfomed.
+ *  Conduit that adds support to close a channel once for a specified time no
+ * reads and no writes were performed.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
@@ -100,6 +100,20 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     @Override
     public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
         long w = sink.write(srcs, offset, length);
+        handleIdleTimeout();
+        return w;
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        int w = sink.writeFinal(src);
+        handleIdleTimeout();
+        return w;
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        long w = sink.writeFinal(srcs, offset, length);
         handleIdleTimeout();
         return w;
     }
