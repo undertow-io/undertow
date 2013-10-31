@@ -99,6 +99,9 @@ public class ServletDebugPageHandler {
 
 
     public static String escapeBodyText(final String bodyText) {
+        if(bodyText == null) {
+            return "null";
+        }
         return bodyText.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 }
