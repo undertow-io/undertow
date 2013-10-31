@@ -257,7 +257,7 @@ public class HttpTransferEncoding {
             if (transferEncodingHeader == null) {
                 if (exchange.isHttp11()) {
                     responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
-                    return new ChunkedStreamSinkConduit(channel, true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
+                    return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
                 } else {
                     exchange.setPersistent(false);
                     responseHeaders.put(Headers.CONNECTION, Headers.CLOSE.toString());
@@ -273,7 +273,7 @@ public class HttpTransferEncoding {
         private StreamSinkConduit handleExplicitTransferEncoding(HttpServerExchange exchange, StreamSinkConduit channel, ConduitListener<StreamSinkConduit> finishListener, HeaderMap responseHeaders, String transferEncodingHeader) {
             HttpString transferEncoding = new HttpString(transferEncodingHeader);
             if (transferEncoding.equals(Headers.CHUNKED)) {
-                return new ChunkedStreamSinkConduit(channel, true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
+                return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
             } else {
 
                 log.trace("Cancelling persistence because response is identity with no content length");

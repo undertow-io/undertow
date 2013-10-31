@@ -265,7 +265,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
                 handleError(UndertowClientMessages.MESSAGES.unknownTransferEncoding(transferEncodingString));
                 return;
             }
-            conduit = new ChunkedStreamSinkConduit(conduit, false, false, httpClientExchange.getRequest().getRequestHeaders(), requestFinishListener, httpClientExchange);
+            conduit = new ChunkedStreamSinkConduit(conduit, httpClientExchange.getConnection().getBufferPool(), false, false, httpClientExchange.getRequest().getRequestHeaders(), requestFinishListener, httpClientExchange);
         } else {
             conduit = new FixedLengthStreamSinkConduit(conduit, 0, false, false, requestFinishListener);
             hasContent = false;
