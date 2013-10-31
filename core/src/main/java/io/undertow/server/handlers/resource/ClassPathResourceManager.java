@@ -1,5 +1,7 @@
 package io.undertow.server.handlers.resource;
 
+import io.undertow.UndertowMessages;
+
 import java.io.IOException;
 import java.net.URL;
 
@@ -47,6 +49,22 @@ public class ClassPathResourceManager implements ResourceManager {
         }
 
     }
+
+    @Override
+    public boolean isResourceChangeListenerSupported() {
+        return false;
+    }
+
+    @Override
+    public void registerResourceChangeListener(ResourceChangeListener listener) {
+        throw UndertowMessages.MESSAGES.resourceChangeListenerNotSupported();
+    }
+
+    @Override
+    public void removeResourceChangeListener(ResourceChangeListener listener) {
+        throw UndertowMessages.MESSAGES.resourceChangeListenerNotSupported();
+    }
+
 
     @Override
     public void close() throws IOException {

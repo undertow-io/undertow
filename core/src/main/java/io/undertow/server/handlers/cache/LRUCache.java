@@ -122,13 +122,16 @@ public class LRUCache<K, V> {
         }
     }
 
-    public void remove(K key) {
+    public V remove(K key) {
         CacheEntry<K, V> remove = cache.remove(key);
         if (remove != null) {
             Object old = remove.clearToken();
             if (old != null) {
                 accessQueue.removeToken(old);
             }
+            return remove.getValue();
+        } else {
+            return null;
         }
     }
 

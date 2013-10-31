@@ -19,9 +19,9 @@
 package io.undertow.server.handlers.resource;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Set;
 
-import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.cache.LRUCache;
 
@@ -58,10 +58,20 @@ public class CachingResourceManager implements ResourceManager {
         this.dataCache = dataCache;
         this.cache = new LRUCache<String, Object>(metadataCacheSize, maxAge);
         this.maxAge = maxAge;
+        if(underlyingResourceManager.isResourceChangeListenerSupported()) {
+            underlyingResourceManager.registerResourceChangeListener(new ResourceChangeListener() {
+                @Override
+                public void handleChanges(Collection<ResourceChangeEvent> changes) {
+                    for(ResourceChangeEvent change : changes) {
+                        invalidate(change.getResource().getPath());
+                    }
+                }
+            });
+        }
     }
 
     @Override
-    public Resource getResource(final String path) throws IOException {
+    public CachedResource getResource(final String path) throws IOException {
         Object res = cache.get(path);
         if (res instanceof NoResourceMarker) {
             NoResourceMarker marker = (NoResourceMarker) res;
@@ -84,7 +94,7 @@ public class CachingResourceManager implements ResourceManager {
         } else if (res != null) {
             CachedResource resource = (CachedResource) res;
             if (resource.checkStillValid()) {
-                return (Resource) res;
+                return resource;
             } else {
                 invalidate(path);
             }
@@ -99,16 +109,26 @@ public class CachingResourceManager implements ResourceManager {
         return resource;
     }
 
+    @Override
+    public boolean isResourceChangeListenerSupported() {
+        return underlyingResourceManager.isResourceChangeListenerSupported();
+    }
+
+    @Override
+    public void registerResourceChangeListener(ResourceChangeListener listener) {
+        underlyingResourceManager.registerResourceChangeListener(listener);
+    }
+
+    @Override
+    public void removeResourceChangeListener(ResourceChangeListener listener) {
+        underlyingResourceManager.removeResourceChangeListener(listener);
+    }
+
     public void invalidate(final String path) {
-        try {
-            CachedResource resource = (CachedResource) getResource(path);
-            if (resource != null) {
-                resource.invalidate();
-            }
-        } catch (IOException e) {
-            UndertowLogger.ROOT_LOGGER.debugf(e, "Exception invalidating cached resource %s", path);
+        Object entry = cache.remove(path);
+        if (entry instanceof CachedResource) {
+            ((CachedResource) entry).invalidate();
         }
-        cache.remove(path);
     }
 
     DirectBufferCache getDataCache() {

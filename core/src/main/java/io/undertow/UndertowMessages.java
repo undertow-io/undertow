@@ -242,4 +242,7 @@ public interface UndertowMessages {
 
     @Message(id = 72, value = "Failed to decode url %s to charset %s")
     IllegalArgumentException failedToDecodeURL(String s, String enc);
+
+    @Message(id = 73, value = "Resource change listeners are not supported")
+    IllegalArgumentException resourceChangeListenerNotSupported();
 }

@@ -20,14 +20,26 @@ package io.undertow.server.handlers.resource;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import org.xnio.FileChangeCallback;
+import org.xnio.FileChangeEvent;
+import org.xnio.FileSystemWatcher;
+import org.xnio.OptionMap;
+import org.xnio.Xnio;
 
 /**
  * Serves files from the file system.
  */
 public class FileResourceManager implements ResourceManager {
+
+    private final List<ResourceChangeListener> listeners = new ArrayList<ResourceChangeListener>();
+
+    private FileSystemWatcher fileSystemWatcher;
 
     private volatile String base;
 
@@ -90,11 +102,49 @@ public class FileResourceManager implements ResourceManager {
         }
     }
 
+    @Override
+    public boolean isResourceChangeListenerSupported() {
+        return false;
+    }
+
+    @Override
+    public synchronized void registerResourceChangeListener(ResourceChangeListener listener) {
+        listeners.add(listener);
+        if(fileSystemWatcher != null) {
+            fileSystemWatcher = Xnio.getInstance().createFileSystemWatcher("Watcher for " + base, OptionMap.EMPTY);
+            fileSystemWatcher.watchPath(new File(base), new FileChangeCallback() {
+                @Override
+                public void handleChanges(Collection<FileChangeEvent> changes) {
+                    synchronized (FileResourceManager.this) {
+                        final List<ResourceChangeEvent> events = new ArrayList<ResourceChangeEvent>();
+                        for(FileChangeEvent change : changes) {
+                            if(change.getFile().getAbsolutePath().startsWith(base)) {
+                                String path = change.getFile().getAbsolutePath().substring(base.length());
+                                events.add(new ResourceChangeEvent(getResource(path), ResourceChangeEvent.Type.valueOf(change.getType().name())));
+                            }
+                        }
+                        for(ResourceChangeListener listener : listeners) {
+                            listener.handleChanges(events);
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    @Override
+    public synchronized void removeResourceChangeListener(ResourceChangeListener listener) {
+        listeners.remove(listener);
+    }
+
     public long getTransferMinSize() {
         return transferMinSize;
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
+        if(fileSystemWatcher != null) {
+            fileSystemWatcher.close();
+        }
     }
 }
