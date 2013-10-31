@@ -118,10 +118,10 @@ public class UpgradeServletInputStream extends ServletInputStream {
     private class UpgradeServletChannelListener implements ChannelListener<StreamSourceChannel> {
         @Override
         public void handleEvent(final StreamSourceChannel channel) {
+            channel.suspendReads();
             if (anyAreClear(state, FLAG_FINISHED)) {
                 try {
                     state |= FLAG_READY;
-                    channel.suspendReads();
                     listener.onDataAvailable();
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
@@ -129,14 +129,14 @@ public class UpgradeServletInputStream extends ServletInputStream {
                 }
             }
             if (anyAreSet(state, FLAG_FINISHED) && anyAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
-               state |= FLAG_ON_DATA_READ_CALLED;
+                state |= FLAG_ON_DATA_READ_CALLED;
                 try {
                     channel.shutdownReads();
                     listener.onAllDataRead();
                 } catch (IOException e) {
                     IoUtils.safeClose(channel);
                 }
-            } else if(allAreClear(state, FLAG_FINISHED)) {
+            } else if (allAreClear(state, FLAG_FINISHED | FLAG_READY)) {
                 channel.resumeReads();
             }
         }
