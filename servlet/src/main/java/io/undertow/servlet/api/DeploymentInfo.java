@@ -80,6 +80,7 @@ public class DeploymentInfo implements Cloneable {
     private SessionPersistenceManager sessionPersistenceManager;
     private String defaultEncoding = "ISO-8859-1";
     private String urlEncoding = null;
+    private boolean ignoreFlush = true;
     private final List<AuthenticationMechanism> additionalAuthenticationMechanisms = new ArrayList<AuthenticationMechanism>();
     private final Map<String, ServletInfo> servlets = new HashMap<String, ServletInfo>();
     private final Map<String, FilterInfo> filters = new HashMap<String, FilterInfo>();
@@ -573,6 +574,14 @@ public class DeploymentInfo implements Cloneable {
         this.tempDir = tempDir;
     }
 
+    public boolean isIgnoreFlush() {
+        return ignoreFlush;
+    }
+
+    public void setIgnoreFlush(boolean ignoreFlush) {
+        this.ignoreFlush = ignoreFlush;
+    }
+
     public JspConfigDescriptor getJspConfigDescriptor() {
         return jspConfigDescriptor;
     }
@@ -881,6 +890,7 @@ public class DeploymentInfo implements Cloneable {
         info.defaultCookieVersion = defaultCookieVersion;
         info.sessionPersistenceManager = sessionPersistenceManager;
         info.principalVersusRolesMap.putAll(principalVersusRolesMap);
+        info.ignoreFlush = ignoreFlush;
         return info;
     }
 

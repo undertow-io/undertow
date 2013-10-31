@@ -66,6 +66,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private Locale locale;
     private boolean responseDone = false;
 
+    private boolean ignoredFlushPerformed = false;
+
 
     private boolean charsetSet = false; //if a content type has been set either implicitly or implicitly
     private String contentType;
@@ -109,7 +111,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendError(final int sc, final String msg) throws IOException {
-        if (exchange.isResponseStarted()) {
+        if (responseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         resetBuffer();
@@ -141,7 +143,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendRedirect(final String location) throws IOException {
-        if (exchange.isResponseStarted()) {
+        if (responseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         resetBuffer();
@@ -216,7 +218,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (insideInclude) {
             return;
         }
-        if (exchange.isResponseStarted()) {
+        if (responseStarted()) {
             return;
         }
         exchange.setResponseCode(sc);
@@ -314,7 +316,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setCharacterEncoding(final String charset) {
-        if (insideInclude || exchange.isResponseStarted() || writer != null || isCommitted()) {
+        if (insideInclude || responseStarted() || writer != null || isCommitted()) {
             return;
         }
         charsetSet = true;
@@ -326,7 +328,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentLength(final int len) {
-        if (insideInclude || exchange.isResponseStarted()) {
+        if (insideInclude || responseStarted()) {
             return;
         }
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Integer.toString(len));
@@ -335,16 +337,28 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentLengthLong(final long len) {
-        if (insideInclude || exchange.isResponseStarted()) {
+        if (insideInclude || responseStarted()) {
             return;
         }
         exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(len));
         this.contentLength = len;
     }
 
+    boolean isIgnoredFlushPerformed() {
+        return ignoredFlushPerformed;
+    }
+
+    void setIgnoredFlushPerformed(boolean ignoredFlushPerformed) {
+        this.ignoredFlushPerformed = ignoredFlushPerformed;
+    }
+
+    private boolean responseStarted() {
+        return exchange.isResponseStarted() || ignoredFlushPerformed;
+    }
+
     @Override
     public void setContentType(final String type) {
-        if (insideInclude || exchange.isResponseStarted()) {
+        if (insideInclude || responseStarted()) {
             return;
         }
         contentType = type;
@@ -443,7 +457,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public boolean isCommitted() {
-        return exchange.isResponseStarted();
+        return responseStarted();
     }
 
     @Override
@@ -459,7 +473,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setLocale(final Locale loc) {
-        if (insideInclude || exchange.isResponseStarted()) {
+        if (insideInclude || responseStarted()) {
             return;
         }
         this.locale = loc;
