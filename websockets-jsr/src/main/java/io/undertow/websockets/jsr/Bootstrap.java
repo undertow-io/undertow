@@ -6,8 +6,10 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.core.CompositeThreadSetupAction;
 import io.undertow.servlet.core.ContextClassLoaderSetupAction;
+import io.undertow.servlet.spec.ServletContextImpl;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.FilterRegistration;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -59,9 +61,11 @@ public class Bootstrap implements ServletExtension {
         @Override
         public void contextInitialized(ServletContextEvent sce) {
             ServerWebSocketContainer container = (ServerWebSocketContainer) sce.getServletContext().getAttribute(ServerContainer.class.getName());
-            if(!container.getConfiguredServerEndpoints().isEmpty()) {
-                sce.getServletContext().addFilter(FILTER_NAME, JsrWebSocketFilter.class)
-                        .addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true, "/*");
+            FilterRegistration.Dynamic filter = sce.getServletContext().addFilter(FILTER_NAME, JsrWebSocketFilter.class);
+            if(!container.getConfiguredServerEndpoints().isEmpty()){
+                filter.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true, "/*");
+            } else {
+                container.setContextToAddFilter((ServletContextImpl) sce.getServletContext());
             }
         }
 

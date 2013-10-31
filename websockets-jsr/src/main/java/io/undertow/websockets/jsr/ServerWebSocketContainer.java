@@ -21,6 +21,7 @@ import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ThreadSetupAction;
+import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.util.PathTemplate;
 import io.undertow.websockets.client.WebSocketClient;
@@ -32,6 +33,7 @@ import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.XnioWorker;
 
+import javax.servlet.DispatcherType;
 import javax.websocket.ClientEndpoint;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.DeploymentException;
@@ -83,6 +85,8 @@ public class ServerWebSocketContainer implements ServerContainer {
     private volatile int defaultMaxBinaryMessageBufferSize;
     private volatile int defaultMaxTextMessageBufferSize;
     private volatile boolean deploymentComplete = false;
+
+    private ServletContextImpl contextToAddFilter = null;
 
 
     public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction) {
@@ -276,6 +280,7 @@ public class ServerWebSocketContainer implements ServerContainer {
 
                 ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(config, factory, template, encodingFactory);
                 configuredServerEndpoints.add(confguredServerEndpoint);
+                handleAddingFilterMapping();
             } else if (clientEndpoint != null) {
                 JsrWebSocketLogger.ROOT_LOGGER.addingAnnotatedClientEndpoint(endpoint);
                 EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, clientEndpoint.decoders(), clientEndpoint.encoders());
@@ -303,6 +308,14 @@ public class ServerWebSocketContainer implements ServerContainer {
         }
     }
 
+    private void handleAddingFilterMapping() {
+        if(contextToAddFilter != null) {
+            contextToAddFilter.getDeployment().getDeploymentInfo().addFilterUrlMapping(Bootstrap.FILTER_NAME, "/*", DispatcherType.REQUEST);
+            contextToAddFilter.getDeployment().getServletPaths().invalidate();
+            contextToAddFilter = null;
+        }
+    }
+
     @Override
     public void addEndpoint(final ServerEndpointConfig endpoint) throws DeploymentException {
         if (deploymentComplete) {
@@ -324,6 +337,7 @@ public class ServerWebSocketContainer implements ServerContainer {
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, endpoint.getDecoders(), endpoint.getEncoders());
         ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template, encodingFactory);
         configuredServerEndpoints.add(confguredServerEndpoint);
+        handleAddingFilterMapping();
     }
 
 
@@ -338,6 +352,14 @@ public class ServerWebSocketContainer implements ServerContainer {
 
     public List<ConfiguredServerEndpoint> getConfiguredServerEndpoints() {
         return configuredServerEndpoints;
+    }
+
+    public ServletContextImpl getContextToAddFilter() {
+        return contextToAddFilter;
+    }
+
+    public void setContextToAddFilter(ServletContextImpl contextToAddFilter) {
+        this.contextToAddFilter = contextToAddFilter;
     }
 
     private static final class ServerInstanceFactoryConfigurator extends ServerEndpointConfig.Configurator {
