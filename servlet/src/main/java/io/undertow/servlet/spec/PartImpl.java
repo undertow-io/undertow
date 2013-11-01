@@ -20,6 +20,7 @@ package io.undertow.servlet.spec;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,10 +29,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.servlet.MultipartConfigElement;
 import javax.servlet.http.Part;
 
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.util.FileUtils;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -41,14 +44,16 @@ import io.undertow.util.HttpString;
  */
 public class PartImpl implements Part {
 
-    private final HttpString FILE_NAME = HttpString.tryFromString("File-Name");
-
     private final String name;
     private final FormData.FormValue formValue;
+    private final MultipartConfigElement config;
+    private final ServletContextImpl servletContext;
 
-    public PartImpl(final String name, final FormData.FormValue formValue) {
+    public PartImpl(final String name, final FormData.FormValue formValue, MultipartConfigElement config, ServletContextImpl servletContext) {
         this.name = name;
         this.formValue = formValue;
+        this.config = config;
+        this.servletContext = servletContext;
     }
 
     @Override
@@ -86,7 +91,18 @@ public class PartImpl implements Part {
 
     @Override
     public void write(final String fileName) throws IOException {
-        throw new IllegalStateException();
+        File target = new File(fileName);
+        if(!target.isAbsolute()) {
+            if(config.getLocation().isEmpty()) {
+                target = new File(servletContext.getDeployment().getDeploymentInfo().getTempDir(), fileName);
+            } else {
+                target = new File(config.getLocation(), fileName);
+            }
+        }
+        if(!formValue.getFile().renameTo(target)) {
+            //maybe different filesystem
+            FileUtils.copyFile(formValue.getFile(), target);
+        }
     }
 
     @Override

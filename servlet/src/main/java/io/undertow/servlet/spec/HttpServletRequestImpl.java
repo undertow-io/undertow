@@ -453,6 +453,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     private void loadParts() throws IOException, ServletException {
+        final ServletRequestContext requestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         readStarted = true;
         if (parts == null) {
             final List<Part> parts = new ArrayList<Part>();
@@ -464,7 +465,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                     final FormData value = parser.parseBlocking();
                     for (final String namedPart : value) {
                         for (FormData.FormValue part : value.get(namedPart)) {
-                            parts.add(new PartImpl(namedPart, part));
+                            parts.add(new PartImpl(namedPart, part, requestContext.getOriginalServletPathMatch().getServletChain().getManagedServlet().getServletInfo().getMultipartConfig(), servletContext));
                         }
                     }
                 }
