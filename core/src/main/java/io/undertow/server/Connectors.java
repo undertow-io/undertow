@@ -72,6 +72,9 @@ public class Connectors {
         if (cookie.isSecure()) {
             header.append("; secure");
         }
+        if (cookie.isHttpOnly()) {
+            header.append("; HttpOnly");
+        }
         if (cookie.getExpires() != null) {
             header.append("; Expires=");
             header.append(DateUtils.toOldCookieDateString(cookie.getExpires()));
