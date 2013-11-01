@@ -218,6 +218,14 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 next.handleRequest(exchange);
                 //
             } catch (Throwable t) {
+
+                if(t instanceof IOException) {
+                    //we log IOExceptions at a lower level
+                    //because they can be easily caused by malicious remote clients in at attempt to DOS the server by filling the logs
+                    UndertowLogger.REQUEST_IO_LOGGER.debugf(t, "Exception handling request to %s", exchange.getRequestURI());
+                } else {
+                    UndertowLogger.REQUEST_LOGGER.exceptionHandlingRequest(t, exchange.getRequestURI());
+                }
                 if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
                     exchange.unDispatch();
                     servletRequestContext.getOriginalRequest().getAsyncContextInternal().handleError(t);
@@ -232,10 +240,9 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                             try {
                                 dispatcher.error(request, response, servletChain.getManagedServlet().getServletInfo().getName(), t);
                             } catch (Exception e) {
-                                UndertowLogger.REQUEST_LOGGER.errorf(e, "Exception while generating error page %s", location);
+                                UndertowLogger.REQUEST_LOGGER.exceptionGeneratingErrorPage(e, location);
                             }
                         } else {
-                            UndertowLogger.REQUEST_LOGGER.errorf(t, "Servlet request failed %s", exchange);
                             if (servletRequestContext.displayStackTraces()) {
                                 ServletDebugPageHandler.handleRequest(exchange, servletRequestContext, t);
                             } else {

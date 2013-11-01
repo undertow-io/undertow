@@ -126,4 +126,12 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = Logger.Level.ERROR)
     @Message(id = 5021, value = "Proxy request to %s timed out")
     void proxyRequestTimedOut(String requestURI);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5022, value = "Exception generating error page %s")
+    void exceptionGeneratingErrorPage(@Cause Exception e, String location);
+
+    @LogMessage(level = Logger.Level.ERROR)
+    @Message(id = 5023, value = "Exception handling request to %s")
+    void exceptionHandlingRequest(@Cause Throwable t, String requestURI);
 }
