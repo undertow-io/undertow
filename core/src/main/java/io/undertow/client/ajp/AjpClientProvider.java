@@ -4,6 +4,7 @@ import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
 import org.xnio.ChannelListener;
+import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
@@ -35,7 +36,14 @@ public class AjpClientProvider implements ClientProvider {
             public void handleEvent(StreamConnection connection) {
                 handleConnected(connection, listener, uri, ssl, bufferPool, options);
             }
-        }, options);
+        }, options).addNotifier(new IoFuture.Notifier<StreamConnection, Object>() {
+            @Override
+            public void notify(IoFuture<? extends StreamConnection> ioFuture, Object o) {
+                if (ioFuture.getStatus() == IoFuture.Status.FAILED) {
+                    listener.failed(ioFuture.getException());
+                }
+            }
+        }, null);
     }
 
     @Override
@@ -45,7 +53,14 @@ public class AjpClientProvider implements ClientProvider {
             public void handleEvent(StreamConnection connection) {
                 handleConnected(connection, listener, uri, ssl, bufferPool, options);
             }
-        }, options);
+        }, options).addNotifier(new IoFuture.Notifier<StreamConnection, Object>() {
+            @Override
+            public void notify(IoFuture<? extends StreamConnection> ioFuture, Object o) {
+                if(ioFuture.getStatus() == IoFuture.Status.FAILED) {
+                    listener.failed(ioFuture.getException());
+                }
+            }
+        }, null);
     }
 
     private void handleConnected(StreamConnection connection, ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, Pool<ByteBuffer> bufferPool, OptionMap options) {

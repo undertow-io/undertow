@@ -107,12 +107,20 @@ public final class ProxyHandler implements HttpHandler {
             final XnioExecutor.Key key = exchange.getIoThread().executeAfter(new Runnable() {
                 @Override
                 public void run() {
-                    if (exchange.getConnection().isOpen()) {
-                        UndertowLogger.REQUEST_LOGGER.proxyRequestTimedOut(exchange.getRequestURI());
-                        IoUtils.safeClose(exchange.getConnection());
+                    if(exchange.isResponseStarted()) {
+                        if (exchange.getConnection().isOpen()) {
+                            UndertowLogger.REQUEST_LOGGER.proxyRequestTimedOut(exchange.getRequestURI());
+                            IoUtils.safeClose(exchange.getConnection());
+                        }
+                    } else {
+                        exchange.setResponseCode(503);
+                        exchange.endExchange();
                     }
-                    ClientConnection clientConnection = exchange.getAttachment(CONNECTION).getConnection();
-                    IoUtils.safeClose(clientConnection);
+                    ProxyConnection connectionAttachment = exchange.getAttachment(CONNECTION);
+                    if(connectionAttachment != null) {
+                        ClientConnection clientConnection = connectionAttachment.getConnection();
+                        IoUtils.safeClose(clientConnection);
+                    }
                 }
             }, maxRequestTime, TimeUnit.MILLISECONDS);
             exchange.putAttachment(TIMEOUT_KEY, key);
@@ -334,7 +342,7 @@ public final class ProxyHandler implements HttpHandler {
                 @Override
                 public void failed(IOException e) {
                     if (!exchange.isResponseStarted()) {
-                        exchange.setResponseCode(500);
+                        exchange.setResponseCode(503);
                         exchange.endExchange();
                     } else {
                         IoUtils.safeClose(exchange.getConnection());
