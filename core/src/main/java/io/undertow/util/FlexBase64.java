@@ -1491,9 +1491,7 @@ public class FlexBase64 {
         private int copyOverflow(byte[] b, int off, int len, byte[] overflow, int pos, int limit) {
             limit -= pos;
             len = limit <= len ? limit : len;
-            for (int i = 0; i < len; i++) {
-                b[off + i] = overflow[pos + i];
-            }
+            System.arraycopy(overflow, pos, b, off, len);
             this.overflowPos = pos + len;
             return len;
         }
