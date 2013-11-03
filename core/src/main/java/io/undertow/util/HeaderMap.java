@@ -829,7 +829,28 @@ public final class HeaderMap implements Iterable<HeaderValues> {
 
     @Override
     public String toString() {
-        // todo...
-        return "HeaderMap";
+        StringBuilder sb = new StringBuilder("{");
+        boolean first = true;
+        for(HttpString name : getHeaderNames()) {
+            if(first) {
+                first = false;
+            } else {
+                sb.append(", ");
+            }
+            sb.append(name);
+            sb.append("=[");
+            boolean f = true;
+            for(String val : get(name)) {
+                if(f) {
+                    f = false;
+                } else {
+                    sb.append(", ");
+                }
+                sb.append(val);
+            }
+            sb.append("]");
+        }
+        sb.append("}");
+        return sb.toString();
     }
 }
