@@ -31,9 +31,7 @@ public class Connectors {
         Map<String, Cookie> cookies = exchange.getResponseCookiesInternal();
         if (cookies != null) {
             for (Map.Entry<String, Cookie> entry : cookies.entrySet()) {
-                StringBuilder builder = new StringBuilder();
-                builder.append(getCookieString(entry.getValue()));
-                exchange.getResponseHeaders().add(Headers.SET_COOKIE, builder.toString());
+                exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(entry.getValue()));
             }
         }
     }
