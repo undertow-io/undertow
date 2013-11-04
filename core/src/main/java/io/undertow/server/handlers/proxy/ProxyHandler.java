@@ -365,7 +365,7 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap outboundResponseHeaders = exchange.getResponseHeaders();
             exchange.setResponseCode(response.getResponseCode());
             copyHeaders(outboundResponseHeaders, inboundResponseHeaders);
-            if (!exchange.isPersistent()) {
+            if (exchange.isPersistent() && !result.getConnection().isOpen()) {
                 //just because the client side is non-persistent it does not mean we want to close the connection to
                 //the backend
                 outboundResponseHeaders.put(Headers.CONNECTION, "keep-alive");
