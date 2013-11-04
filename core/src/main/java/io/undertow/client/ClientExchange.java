@@ -13,9 +13,18 @@ public interface ClientExchange extends Attachable {
 
     void setContinueHandler(final ContinueNotification continueHandler);
 
-
+    /**
+     * Returns the request channel that can be used to send data to the server.
+     *
+     * @return The request channel
+     */
     StreamSinkChannel getRequestChannel();
 
+    /**
+     * Returns the response channel that can be used to read data from the target server.
+     *
+     * @return The response channel
+     */
     StreamSourceChannel getResponseChannel();
 
     ClientRequest getRequest();
@@ -32,5 +41,9 @@ public interface ClientExchange extends Attachable {
      */
     ClientResponse getContinueResponse();
 
+    /**
+     *
+     * @return The underlying connection
+     */
     ClientConnection getConnection();
 }
