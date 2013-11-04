@@ -158,8 +158,11 @@ public class AjpClientExchange extends AbstractAttachable implements ClientExcha
         return clientConnection;
     }
 
-    ClientCallback<ClientExchange> getReadyCallback() {
-        return readyCallback;
+    void invokeReadReadyCallback(final ClientExchange result) {
+        if(readyCallback != null) {
+            readyCallback.completed(result);
+            readyCallback = null;
+        }
     }
 
     public AjpClientRequestConduit getAjpClientRequestConduit() {

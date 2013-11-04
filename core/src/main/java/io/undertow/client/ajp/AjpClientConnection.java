@@ -243,7 +243,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         currentRequest.setAjpClientRequestConduit(ajpClientRequestConduit);
         sinkChannel.setConduit(ajpClientRequestConduit);
 
-        AjpClientExchange.getReadyCallback().completed(AjpClientExchange);
+        AjpClientExchange.invokeReadReadyCallback(AjpClientExchange);
         if (length == 0) {
             //if there is no content we flush the response channel.
             //otherwise it is up to the user
@@ -403,9 +403,9 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                         }
                         return;
                     } else if (res == -1 && !buffer.hasRemaining()) {
+                        channel.suspendReads();
+                        IoUtils.safeClose(AjpClientConnection.this);
                         try {
-                            channel.suspendReads();
-                            channel.shutdownReads();
                             final StreamSinkChannel requestChannel = connection.getSinkChannel();
                             requestChannel.shutdownWrites();
                             // will return false if there's a response queued ahead of this one, so we'll set up a listener then

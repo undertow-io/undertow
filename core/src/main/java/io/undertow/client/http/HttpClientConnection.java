@@ -272,7 +272,7 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
         }
         sinkChannel.setConduit(conduit);
 
-        httpClientExchange.getReadyCallback().completed(httpClientExchange);
+        httpClientExchange.invokeReadReadyCallback(httpClientExchange);
         if (!hasContent) {
             //if there is no content we flush the response channel.
             //otherwise it is up to the user
@@ -422,9 +422,9 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
                         }
                         return;
                     } else if (res == -1) {
+                        channel.suspendReads();
+                        IoUtils.safeClose(HttpClientConnection.this);
                         try {
-                            channel.suspendReads();
-                            channel.shutdownReads();
                             final StreamSinkChannel requestChannel = connection.getSinkChannel();
                             requestChannel.shutdownWrites();
                             // will return false if there's a response queued ahead of this one, so we'll set up a listener then
@@ -438,9 +438,9 @@ public class HttpClientConnection extends AbstractAttachable implements Closeabl
                             if (UndertowLogger.CLIENT_LOGGER.isDebugEnabled()) {
                                 UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException when attempting to shut down reads");
                             }
+                            IoUtils.safeClose(channel);
                             // Cancel the current active request
                             currentRequest.setFailed(e);
-                            IoUtils.safeClose(channel);
                             return;
                         }
                         return;

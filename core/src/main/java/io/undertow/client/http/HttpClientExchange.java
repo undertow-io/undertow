@@ -155,7 +155,10 @@ public class HttpClientExchange extends AbstractAttachable implements ClientExch
         return clientConnection;
     }
 
-    ClientCallback<ClientExchange> getReadyCallback() {
-        return readyCallback;
+    void invokeReadReadyCallback(final ClientExchange result) {
+        if(readyCallback != null) {
+            readyCallback.completed(result);
+            readyCallback = null;
+        }
     }
 }
