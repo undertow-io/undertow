@@ -58,6 +58,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Executor;
 
 /**
@@ -67,6 +69,8 @@ import java.util.concurrent.Executor;
  * @author Stuart Douglas
  */
 public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
+
+    private static final RuntimePermission PERMISSION = new RuntimePermission("io.undertow.servlet.CREATE_INITIAL_HANDLER");
 
     private final HttpHandler next;
     //private final HttpHandler asyncPath;
@@ -85,6 +89,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         this.servletContext = servletContext;
         this.paths = paths;
         this.listeners = servletContext.getDeployment().getApplicationListeners();
+        if(System.getSecurityManager() != null) {
+            //handle request can use doPrivilidged
+            //we need to make sure this is not abused
+            AccessController.checkPermission(PERMISSION);
+        }
     }
 
     @Override
@@ -131,7 +140,18 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             exchange.dispatch(executor, new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                    dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
+                    if(System.getSecurityManager() == null) {
+                        dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
+                    } else {
+                        //sometimes thread pools inherit some random
+                        AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
+                            @Override
+                            public Object run() throws Exception{
+                                dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
+                                return null;
+                            }
+                        });
+                    }
                 }
             });
         } else {
