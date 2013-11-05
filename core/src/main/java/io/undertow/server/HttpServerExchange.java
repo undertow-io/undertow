@@ -524,6 +524,20 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * Return the port that this request was sent to. In general this will be the value of the Host
+     * header, minus the host name.
+     *
+     * @return The port part of the destination address
+     */
+    public int getHostPort() {
+        String host = requestHeaders.getFirst(Headers.HOST);
+        if (host != null && host.indexOf(':') != -1) {
+            return Integer.parseInt(host.substring(host.indexOf(':')));
+        }
+        return getDestinationAddress().getPort();
+    }
+
+    /**
      * Get the underlying HTTP connection.
      *
      * @return the underlying HTTP connection
