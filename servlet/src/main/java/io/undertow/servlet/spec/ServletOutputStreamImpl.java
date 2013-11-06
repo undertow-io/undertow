@@ -470,9 +470,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (servletRequestContext.getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE) {
             return;
         }
-        if(servletRequestContext.getDeployment().getDeploymentInfo().isIgnoreFlush()) {
+        if(servletRequestContext.getDeployment().getDeploymentInfo().isIgnoreFlush() &&
+                servletRequestContext.getExchange().isRequestComplete()) {
             //we mark the stream as flushed, but don't actually flush
             //because in most cases flush just kills performance
+            //we only do this if the request is fully read, so that http tunneling scenarios still work
             servletRequestContext.getOriginalResponse().setIgnoredFlushPerformed(true);
             return;
         }

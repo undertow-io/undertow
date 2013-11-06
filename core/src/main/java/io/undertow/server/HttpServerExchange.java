@@ -978,6 +978,24 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * Returns true if all data has been read from the request, or if there
+     * was not data.
+     *
+     * @return true if the request is complete
+     */
+    public boolean isRequestComplete() {
+        return allAreSet(state, FLAG_REQUEST_TERMINATED);
+    }
+
+    /**
+     *
+     * @return true if the responses is complete
+     */
+    public boolean isResponseComplete() {
+        return allAreSet(state, FLAG_RESPONSE_TERMINATED);
+    }
+
+    /**
      * Force the codec to treat the request as fully read.  Should only be invoked by handlers which downgrade
      * the socket or implement a transfer coding.
      */
