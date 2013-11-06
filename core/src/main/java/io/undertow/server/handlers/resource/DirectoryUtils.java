@@ -9,6 +9,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import io.undertow.util.RedirectBuilder;
 import org.xnio.channels.Channels;
 
 /**
@@ -52,7 +53,7 @@ public class DirectoryUtils {
         String requestPath = exchange.getRequestPath();
         if (! requestPath.endsWith("/")) {
             exchange.setResponseCode(302);
-            exchange.getResponseHeaders().put(Headers.LOCATION, requestPath + "/");
+            exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
             exchange.endExchange();
             return;
         }

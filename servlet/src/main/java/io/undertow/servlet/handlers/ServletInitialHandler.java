@@ -36,6 +36,7 @@ import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
+import io.undertow.util.RedirectBuilder;
 import org.xnio.BufferAllocator;
 import org.xnio.ByteBufferSlicePool;
 import org.xnio.ChannelListener;
@@ -108,7 +109,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
             exchange.setResponseCode(302);
-            exchange.getResponseHeaders().put(Headers.LOCATION, exchange.getRequestURI() + "/" + (exchange.getQueryString().isEmpty() ? "" : ("?" + exchange.getQueryString())));
+            exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
             return;
         } else if (info.getType() == ServletPathMatch.Type.REWRITE) {
             //this can only happen if the path ends with a /

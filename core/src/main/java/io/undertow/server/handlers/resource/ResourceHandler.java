@@ -21,6 +21,7 @@ import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.MimeMappings;
+import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -149,11 +150,7 @@ public class ResourceHandler implements HttpHandler {
                         }
                     } else if (!exchange.getRequestPath().endsWith("/")) {
                         exchange.setResponseCode(302);
-                        if (exchange.getQueryString() == null) {
-                            exchange.getResponseHeaders().put(Headers.LOCATION, exchange.getRequestURL() + "/?" + exchange.getQueryString());
-                        } else {
-                            exchange.getResponseHeaders().put(Headers.LOCATION, exchange.getRequestURL() + "/");
-                        }
+                        exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
                         exchange.endExchange();
                         return;
                     }
