@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -37,11 +38,23 @@ public class ClassUtilsTest {
 
     @Test
     public void testExtractHandlerType() {
-        Class<?> clazz = ClassUtils.getHandlerType(MessageHandlerImpl.class);
-        Assert.assertEquals(ByteBuffer.class, clazz);
+        Map<Class<?>, Boolean> types = ClassUtils.getHandlerTypes(MessageHandlerImpl.class);
+        Assert.assertEquals(1, types.size());
+        Assert.assertTrue(types.containsKey(ByteBuffer.class));
+        Assert.assertFalse(types.get(ByteBuffer.class));
 
-        Class<?> clazz2 = ClassUtils.getHandlerType(MessageHandlerImpl.class);
-        Assert.assertEquals(ByteBuffer.class, clazz2);
+        types = ClassUtils.getHandlerTypes(AsyncMessageHandlerImpl.class);
+        Assert.assertEquals(1, types.size());
+        Assert.assertTrue(types.containsKey(ByteBuffer.class));
+        Assert.assertTrue(types.get(ByteBuffer.class));
+
+        types = ClassUtils.getHandlerTypes(ComplexMessageHandlerImpl.class);
+        Assert.assertEquals(2, types.size());
+        Assert.assertTrue(types.containsKey(ByteBuffer.class));
+        Assert.assertFalse(types.get(ByteBuffer.class));
+        Assert.assertTrue(types.containsKey(String.class));
+        Assert.assertTrue(types.get(String.class));
+        Assert.assertFalse(types.containsKey(byte[].class));
     }
 
     @Test
@@ -59,10 +72,10 @@ public class ClassUtilsTest {
         Assert.assertEquals(String.class, clazz4);
     }
 
-    private static final class MessageHandlerImpl implements MessageHandler.Whole<ByteBuffer> {
+    private static class MessageHandlerImpl implements MessageHandler.Whole<ByteBuffer> {
         @Override
         public void onMessage(ByteBuffer message) {
-            // NOOP
+            // NOP
         }
     }
 
@@ -72,6 +85,23 @@ public class ClassUtilsTest {
         public void onMessage(final ByteBuffer partialMessage, final boolean last) {
 
         }
+    }
+
+    private static class DummyHandlerImpl extends MessageHandlerImpl {
+        // NOP
+    }
+
+    private static final class ComplexMessageHandlerImpl extends DummyHandlerImpl implements MessageHandler.Partial<String> {
+
+        @Override
+        public void onMessage(String partialMessage, boolean last) {
+            // NOP
+        }
+
+        public void onMessage(byte[] bytes, boolean last) {
+            // NOP
+        }
+
     }
 
     private static final class BinaryEncoder implements Encoder.Binary<String> {

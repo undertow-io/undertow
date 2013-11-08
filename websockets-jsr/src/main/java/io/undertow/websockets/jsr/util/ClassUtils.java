@@ -18,6 +18,10 @@
 package io.undertow.websockets.jsr.util;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 import javax.websocket.Decoder;
 import javax.websocket.Encoder;
@@ -33,16 +37,33 @@ public final class ClassUtils {
     }
 
     /**
-     * Returns the frame type the {@link MessageHandler} handles.
+     * Returns a map of all supported message types by the given handler class.
+     * The key of the map is the supported message type; the value indicates
+     * whether it is a partial message handler or not.
+     *
+     * @return a map of all supported message types by the given handler class.
      */
-    public static Class<?> getHandlerType(Class<? extends MessageHandler> clazz) {
-        Method[] methods = clazz.getMethods();
-        for (Method m : methods) {
-            if ("onMessage".equals(m.getName()) && !m.isBridge()) {
-                return m.getParameterTypes()[0];
+    public static Map<Class<?>, Boolean> getHandlerTypes(Class<? extends MessageHandler> clazz) {
+        Map<Class<?>, Boolean> types = new IdentityHashMap<Class<?>, Boolean>(2);
+        for (Class<?> c = clazz; c != Object.class; c = c.getSuperclass()) {
+            for (Type type : c.getGenericInterfaces()) {
+                if (type instanceof ParameterizedType) {
+                    ParameterizedType pt = (ParameterizedType) type;
+                    Type rawType = pt.getRawType();
+                    if (rawType == MessageHandler.Whole.class) {
+                        Type messageType = pt.getActualTypeArguments()[0];
+                        types.put((Class<?>) messageType, Boolean.FALSE);
+                    } else if (rawType == MessageHandler.Partial.class) {
+                        Type messageType = pt.getActualTypeArguments()[0];
+                        types.put((Class<?>) messageType, Boolean.TRUE);
+                    }
+                }
             }
         }
-        throw JsrWebSocketMessages.MESSAGES.unknownHandlerType(clazz);
+        if (types.isEmpty()) {
+            throw JsrWebSocketMessages.MESSAGES.unknownHandlerType(clazz);
+        }
+        return types;
     }
 
     /**
@@ -70,4 +91,5 @@ public final class ClassUtils {
         }
         throw JsrWebSocketMessages.MESSAGES.couldNotDetermineDecoderTypeFor(clazz);
     }
+
 }

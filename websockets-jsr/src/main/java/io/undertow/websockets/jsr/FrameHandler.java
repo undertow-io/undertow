@@ -39,6 +39,8 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -316,18 +318,19 @@ class FrameHandler extends AbstractReceiveListener {
     }
 
     public final void addHandler(MessageHandler handler) {
-        Class<?> type = ClassUtils.getHandlerType(handler.getClass());
-        verify(type, handler);
+        Map<Class<?>, Boolean> types = ClassUtils.getHandlerTypes(handler.getClass());
+        for (Entry<Class<?>, Boolean> e : types.entrySet()) {
+            Class<?> type = e.getKey();
+            verify(type, handler);
 
+            HandlerWrapper handlerWrapper = createHandlerWrapper(type, handler, e.getValue());
 
-        HandlerWrapper handlerWrapper = createHandlerWrapper(type, handler);
-
-
-        if (handlers.containsKey(handlerWrapper.getFrameType())) {
-            throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(handlerWrapper.getFrameType());
-        } else {
-            if (handlers.putIfAbsent(handlerWrapper.getFrameType(), handlerWrapper) != null) {
+            if (handlers.containsKey(handlerWrapper.getFrameType())) {
                 throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(handlerWrapper.getFrameType());
+            } else {
+                if (handlers.putIfAbsent(handlerWrapper.getFrameType(), handlerWrapper) != null) {
+                    throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(handlerWrapper.getFrameType());
+                }
             }
         }
     }
@@ -335,21 +338,32 @@ class FrameHandler extends AbstractReceiveListener {
     /**
      * Return the {@link FrameType} for the given {@link Class}.
      */
-    protected HandlerWrapper createHandlerWrapper(Class<?> type, MessageHandler handler) {
+    protected HandlerWrapper createHandlerWrapper(Class<?> type, MessageHandler handler, boolean partialHandler) {
+        if (partialHandler) {
+            // Partial message handler supports only String, byte[] and ByteBuffer.
+            // See JavaDocs of the MessageHandler.Partial interface.
+            if (type == String.class) {
+                return new HandlerWrapper(FrameType.TEXT, handler, type, false, true);
+            }
+            if (type == byte[].class || type == ByteBuffer.class) {
+                return new HandlerWrapper(FrameType.BYTE, handler, type, false, true);
+            }
+            throw JsrWebSocketMessages.MESSAGES.unsupportedFrameType(type);
+        }
         if (type == byte[].class || type == ByteBuffer.class || type == InputStream.class) {
-            return new HandlerWrapper(FrameType.BYTE, handler, type, false);
+            return new HandlerWrapper(FrameType.BYTE, handler, type, false, false);
         }
         if (type == String.class || type == Reader.class) {
-            return new HandlerWrapper(FrameType.TEXT, handler, type, false);
+            return new HandlerWrapper(FrameType.TEXT, handler, type, false, false);
         }
         if (type == PongMessage.class) {
-            return new HandlerWrapper(FrameType.PONG, handler, type, false);
+            return new HandlerWrapper(FrameType.PONG, handler, type, false, false);
         }
         Encoding encoding = session.getEncoding();
         if (encoding.canDecodeText(type)) {
-            return new HandlerWrapper(FrameType.TEXT, handler, type, true);
+            return new HandlerWrapper(FrameType.TEXT, handler, type, true, false);
         } else if (encoding.canDecodeBinary(type)) {
-            return new HandlerWrapper(FrameType.BYTE, handler, type, true);
+            return new HandlerWrapper(FrameType.BYTE, handler, type, true, false);
         }
         throw JsrWebSocketMessages.MESSAGES.unsupportedFrameType(type);
     }
@@ -362,11 +376,15 @@ class FrameHandler extends AbstractReceiveListener {
     }
 
     public final void removeHandler(MessageHandler handler) {
-        Class<?> type = ClassUtils.getHandlerType(handler.getClass());
-        FrameType frameType = createHandlerWrapper(type, handler).getFrameType();
-        HandlerWrapper wrapper = handlers.get(frameType);
-        if (wrapper != null && wrapper.getMessageType() == type) {
-            handlers.remove(frameType, wrapper);
+        Map<Class<?>, Boolean> types = ClassUtils.getHandlerTypes(handler.getClass());
+        for (Entry<Class<?>, Boolean> e : types.entrySet()) {
+            Class<?> type = e.getKey();
+            HandlerWrapper handlerWrapper = createHandlerWrapper(type, handler, e.getValue());
+            FrameType frameType = handlerWrapper.getFrameType();
+            HandlerWrapper wrapper = handlers.get(frameType);
+            if (wrapper != null && wrapper.getMessageType() == type) {
+                handlers.remove(frameType, wrapper);
+            }
         }
     }
 
@@ -405,13 +423,13 @@ class FrameHandler extends AbstractReceiveListener {
         private final boolean decodingNeeded;
         private final boolean partialHandler;
 
-        private HandlerWrapper(final FrameType frameType, MessageHandler handler, final Class<?> msgType, final boolean decodingNeeded) {
+        private HandlerWrapper(final FrameType frameType, MessageHandler handler, final Class<?> msgType, final boolean decodingNeeded, final boolean partialHandler) {
             this.frameType = frameType;
             this.handler = handler;
 
             this.msgType = msgType;
             this.decodingNeeded = decodingNeeded;
-            this.partialHandler = handler instanceof MessageHandler.Partial;
+            this.partialHandler = partialHandler;
         }
 
         /**
