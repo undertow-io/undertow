@@ -36,6 +36,7 @@ import io.undertow.servlet.handlers.security.ServletSecurityRoleHandler;
 import javax.servlet.DispatcherType;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -236,12 +237,12 @@ public class ServletPathMatches {
             //resolve the target servlet, will return null if this is the default servlet
             MatchData targetServletMatch = resolveServletForPath(path, pathServlets, extensionServlets, defaultServlet);
 
-            final Map<DispatcherType, List<ManagedFilter>> noExtension = new HashMap<DispatcherType, List<ManagedFilter>>();
+            final Map<DispatcherType, List<ManagedFilter>> noExtension = new EnumMap<DispatcherType, List<ManagedFilter>>(DispatcherType.class);
             final Map<String, Map<DispatcherType, List<ManagedFilter>>> extension = new HashMap<String, Map<DispatcherType, List<ManagedFilter>>>();
             //initalize the extension map. This contains all the filers in the noExtension map, plus
             //any filters that match the extension key
             for (String ext : extensionMatches) {
-                extension.put(ext, new HashMap<DispatcherType, List<ManagedFilter>>());
+                extension.put(ext, new EnumMap<DispatcherType, List<ManagedFilter>>(DispatcherType.class));
             }
 
             //loop over all the filters, and add them to the appropriate map in the correct order
@@ -323,7 +324,7 @@ public class ServletPathMatches {
         //now setup name based mappings
         //these are used for name based dispatch
         for (Map.Entry<String, ServletHandler> entry : servlets.getServletHandlers().entrySet()) {
-            final Map<DispatcherType, List<ManagedFilter>> filtersByDispatcher = new HashMap<DispatcherType, List<ManagedFilter>>();
+            final Map<DispatcherType, List<ManagedFilter>> filtersByDispatcher = new EnumMap<DispatcherType, List<ManagedFilter>>(DispatcherType.class);
             for (final FilterMappingInfo filterMapping : deploymentInfo.getFilterMappings()) {
                 ManagedFilter filter = filters.getManagedFilter(filterMapping.getFilterName());
                 if (filterMapping.getMappingType() == FilterMappingInfo.MappingType.SERVLET) {

@@ -19,7 +19,7 @@
 package io.undertow.servlet.handlers;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,8 +51,8 @@ public class FilterHandler implements HttpHandler {
     public FilterHandler(final Map<DispatcherType, List<ManagedFilter>> filters, final boolean allowNonStandardWrappers, final HttpHandler next) {
         this.allowNonStandardWrappers = allowNonStandardWrappers;
         this.next = next;
-        this.filters = new HashMap<DispatcherType, List<ManagedFilter>>(filters);
-        Map<DispatcherType, Boolean> asyncSupported = new HashMap<DispatcherType, Boolean>();
+        this.filters = new EnumMap<DispatcherType, List<ManagedFilter>>(filters);
+        Map<DispatcherType, Boolean> asyncSupported = new EnumMap<DispatcherType, Boolean>(DispatcherType.class);
         for(Map.Entry<DispatcherType, List<ManagedFilter>> entry : filters.entrySet()) {
             boolean supported = true;
             for(ManagedFilter i : entry.getValue()) {
