@@ -11,6 +11,7 @@ import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
 
 /**
@@ -23,6 +24,7 @@ public class AsyncSenderImpl implements Sender {
     private StreamSinkChannel channel;
     private final HttpServerExchange exchange;
     private ByteBuffer[] buffer;
+    private Pooled[] pooledBuffers = null;
     private FileChannel fileChannel;
     private IoCallback callback;
     private boolean inCallback;
@@ -44,7 +46,7 @@ public class AsyncSenderImpl implements Sender {
                 invokeOnComplete();
             } catch (IOException e) {
                 streamSinkChannel.suspendWrites();
-                callback.onException(exchange, AsyncSenderImpl.this, e);
+                invokeOnException(callback, e);
             }
         }
     };
@@ -84,7 +86,7 @@ public class AsyncSenderImpl implements Sender {
                     invokeOnComplete();
                 }
             } catch (IOException e) {
-                callback.onException(exchange, AsyncSenderImpl.this , e);
+                invokeOnException(callback, e);
             }
 
             return true;
@@ -154,7 +156,8 @@ public class AsyncSenderImpl implements Sender {
             invokeOnComplete();
 
         } catch (IOException e) {
-            callback.onException(exchange, this, e);
+
+            invokeOnException(callback, e);
         }
     }
 
@@ -205,10 +208,9 @@ public class AsyncSenderImpl implements Sender {
             invokeOnComplete();
 
         } catch (IOException e) {
-            callback.onException(exchange, this, e);
+            invokeOnException(callback, e);
         }
     }
-
 
 
     @Override
@@ -251,7 +253,22 @@ public class AsyncSenderImpl implements Sender {
 
     @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
-        send(ByteBuffer.wrap(data.getBytes(charset)), callback);
+        ByteBuffer bytes = ByteBuffer.wrap(data.getBytes(charset));
+        int i = 0;
+        ByteBuffer[] bufs = null;
+        while (bytes.hasRemaining()) {
+            Pooled<ByteBuffer> pooled = exchange.getConnection().getBufferPool().allocate();
+            if (bufs == null) {
+                int noBufs = (bytes.remaining() + pooled.getResource().remaining() - 1) / pooled.getResource().remaining(); //round up division trick
+                pooledBuffers = new Pooled[noBufs];
+                bufs = new ByteBuffer[noBufs];
+            }
+            pooledBuffers[i] = pooled;
+            bufs[i] = pooled.getResource();
+            Buffers.copy(pooled.getResource(), bytes);
+            ++i;
+        }
+        send(bufs, callback);
     }
 
     @Override
@@ -288,7 +305,7 @@ public class AsyncSenderImpl implements Sender {
                         }, new ChannelExceptionHandler<StreamSinkChannel>() {
                             @Override
                             public void handleException(final StreamSinkChannel channel, final IOException exception) {
-                                callback.onException(exchange, AsyncSenderImpl.this, exception);
+                                invokeOnException(callback, exception);
                             }
                         }
                 ));
@@ -300,7 +317,7 @@ public class AsyncSenderImpl implements Sender {
             }
         } catch (IOException e) {
             if (callback != null) {
-                callback.onException(exchange, this, e);
+                invokeOnException(callback, e);
             }
         }
     }
@@ -316,6 +333,12 @@ public class AsyncSenderImpl implements Sender {
      */
     private void invokeOnComplete() {
         for (; ; ) {
+            if (pooledBuffers != null) {
+                for (Pooled buffer : pooledBuffers) {
+                    buffer.free();
+                }
+                pooledBuffers = null;
+            }
             IoCallback callback = this.callback;
             this.buffer = null;
             this.fileChannel = null;
@@ -345,10 +368,10 @@ public class AsyncSenderImpl implements Sender {
                     } while (written < total);
                     //we loop and invoke onComplete again
                 } catch (IOException e) {
-                    callback.onException(exchange, this, e);
+                    invokeOnException(callback, e);
                 }
             } else if (this.fileChannel != null) {
-                if (! transferTask.run(false)) {
+                if (!transferTask.run(false)) {
                     return;
                 }
             } else {
@@ -356,5 +379,17 @@ public class AsyncSenderImpl implements Sender {
             }
 
         }
+    }
+
+
+    private void invokeOnException(IoCallback callback, IOException e) {
+
+        if (pooledBuffers != null) {
+            for (Pooled buffer : pooledBuffers) {
+                buffer.free();
+            }
+            pooledBuffers = null;
+        }
+        callback.onException(exchange, this, e);
     }
 }
