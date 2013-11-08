@@ -33,14 +33,16 @@ public class SecurityNotification {
     private final String mechanism;
     private final boolean programatic;
     private final String message;
+    private final boolean cachingRequired;
 
-    public SecurityNotification(final HttpServerExchange exchange, final EventType eventType, final Account account, final String mechanism, final boolean programatic, final String message) {
+    public SecurityNotification(final HttpServerExchange exchange, final EventType eventType, final Account account, final String mechanism, final boolean programatic, final String message, boolean cachingRequired) {
         this.exchange = exchange;
         this.eventType = eventType;
         this.account = account;
         this.mechanism = mechanism;
         this.programatic = programatic;
         this.message = message;
+        this.cachingRequired = cachingRequired;
     }
 
     public HttpServerExchange getExchange() {
@@ -65,6 +67,10 @@ public class SecurityNotification {
 
     public String getMessage() {
         return message;
+    }
+
+    public boolean isCachingRequired() {
+        return cachingRequired;
     }
 
     public enum EventType {

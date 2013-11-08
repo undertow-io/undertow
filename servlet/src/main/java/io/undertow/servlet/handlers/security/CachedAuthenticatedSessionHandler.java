@@ -107,7 +107,7 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
     }
 
     private boolean isCacheable(final SecurityNotification notification) {
-        return notification.isProgramatic() || "FORM".equals(notification.getMechanism());
+        return notification.isProgramatic() || notification.isCachingRequired();
     }
 
 }

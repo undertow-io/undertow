@@ -108,7 +108,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                 IdentityManager identityManager = securityContext.getIdentityManager();
                 Account account = identityManager.verify(userName, credential);
                 if (account != null) {
-                    securityContext.authenticationComplete(account, name);
+                    securityContext.authenticationComplete(account, name, true);
                     outcome = AuthenticationMechanismOutcome.AUTHENTICATED;
                 } else {
                     securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), name);

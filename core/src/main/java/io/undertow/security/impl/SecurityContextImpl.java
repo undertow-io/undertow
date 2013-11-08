@@ -219,7 +219,7 @@ public class SecurityContextImpl implements SecurityContext {
             return;
         }
         sendNoticiation(new SecurityNotification(exchange, SecurityNotification.EventType.LOGGED_OUT, account, mechanismName, true,
-                MESSAGES.userLoggedOut(account.getPrincipal().getName())));
+                MESSAGES.userLoggedOut(account.getPrincipal().getName()), true));
 
         this.account = null;
         this.mechanismName = null;
@@ -227,21 +227,21 @@ public class SecurityContextImpl implements SecurityContext {
     }
 
     @Override
-    public void authenticationComplete(Account account, String mechanism) {
-        authenticationComplete(account, mechanism, false);
+    public void authenticationComplete(Account account, String mechanism, final boolean cachingRequired) {
+        authenticationComplete(account, mechanism, false, cachingRequired);
     }
 
-    protected void authenticationComplete(Account account, String mechanism, boolean programatic) {
+    protected void authenticationComplete(Account account, String mechanism, boolean programatic, final boolean cachingRequired) {
         this.account = account;
         this.mechanismName = mechanism;
 
         sendNoticiation(new SecurityNotification(exchange, EventType.AUTHENTICATED, account, mechanism, programatic,
-                MESSAGES.userAuthenticated(account.getPrincipal().getName())));
+                MESSAGES.userAuthenticated(account.getPrincipal().getName()), cachingRequired));
     }
 
     @Override
     public void authenticationFailed(String message, String mechanism) {
-        sendNoticiation(new SecurityNotification(exchange, EventType.FAILED_AUTHENTICATION, null, mechanism, false, message));
+        sendNoticiation(new SecurityNotification(exchange, EventType.FAILED_AUTHENTICATION, null, mechanism, false, message, true));
     }
 
     private void sendNoticiation(final SecurityNotification notification) {

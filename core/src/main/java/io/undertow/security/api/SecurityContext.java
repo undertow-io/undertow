@@ -160,8 +160,9 @@ public interface SecurityContext {
      *
      * @param account - The authenticated {@link Account}
      * @param mechanismName - The name of the mechanism used to authenticate the account.
+     * @param cachingRequired - If this mechanism requires caching
      */
-    void authenticationComplete(final Account account, final String mechanismName);
+    void authenticationComplete(final Account account, final String mechanismName, final boolean cachingRequired);
 
     /**
      * Called by the {@link AuthenticationMechanism} to indicate that an authentication attempt has failed.
@@ -196,26 +197,4 @@ public interface SecurityContext {
      * @param receiver - The {@link NotificationReceiver} to remove.
      */
     void removeNotificationReceiver(final NotificationReceiver receiver);
-
-    class AuthenticationResult {
-
-        private final AuthenticationMechanism.AuthenticationMechanismOutcome outcome;
-
-        private final Runnable sendChallengeTask;
-
-
-
-        public AuthenticationResult(final AuthenticationMechanism.AuthenticationMechanismOutcome outcome, final Runnable sendChallengeTask) {
-            this.outcome = outcome;
-            this.sendChallengeTask = sendChallengeTask;
-        }
-
-        public AuthenticationMechanism.AuthenticationMechanismOutcome getOutcome() {
-            return outcome;
-        }
-
-        public Runnable getSendChallengeTask() {
-            return sendChallengeTask;
-        }
-    }
 }

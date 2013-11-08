@@ -283,7 +283,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         // We have authenticated the remote user.
 
         sendAuthenticationInfoHeader(exchange);
-        securityContext.authenticationComplete(account, mechanismName);
+        securityContext.authenticationComplete(account, mechanismName, false);
         return AuthenticationMechanismOutcome.AUTHENTICATED;
 
         // Step 4 - Set up any QOP related requirements.

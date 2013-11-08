@@ -103,7 +103,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                             final AuthenticationMechanismOutcome result;
                             Account account = idm.verify(userName, credential);
                             if (account != null) {
-                                securityContext.authenticationComplete(account, name);
+                                securityContext.authenticationComplete(account, name, false);
                                 result = AuthenticationMechanismOutcome.AUTHENTICATED;
                             } else {
                                 securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), name);

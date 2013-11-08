@@ -46,7 +46,7 @@ public class CachedAuthenticatedSessionMechanism implements AuthenticationMechan
         if (authSession != null) {
             Account account = securityContext.getIdentityManager().verify(authSession.getAccount());
             if (account != null) {
-                securityContext.authenticationComplete(account, authSession.getMechanism());
+                securityContext.authenticationComplete(account, authSession.getMechanism(), false);
                 return AuthenticationMechanismOutcome.AUTHENTICATED;
             } else {
                 // We know we had a previously authenticated account but for some reason the IdentityManager is no longer
