@@ -116,6 +116,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
             } finally {
                 if (outcome == AuthenticationMechanismOutcome.AUTHENTICATED) {
                     handleRedirectBack(exchange);
+                    exchange.endExchange();
                 }
                 return outcome != null ? outcome : AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
             }
@@ -132,6 +133,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                 @Override
                 public boolean handleDefaultResponse(final HttpServerExchange exchange) {
                     FormAuthenticationMechanism.sendRedirect(exchange, location);
+                    exchange.setResponseCode(302);
                     exchange.endExchange();
                     return true;
                 }
