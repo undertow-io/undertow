@@ -38,6 +38,7 @@ import io.undertow.util.Methods;
 
 import static io.undertow.UndertowMessages.MESSAGES;
 import static io.undertow.util.StatusCodes.TEMPORARY_REDIRECT;
+import static io.undertow.util.StatusCodes.FOUND;
 
 /**
  * @author Stuart Douglas
@@ -133,7 +134,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                 @Override
                 public boolean handleDefaultResponse(final HttpServerExchange exchange) {
                     FormAuthenticationMechanism.sendRedirect(exchange, location);
-                    exchange.setResponseCode(302);
+                    exchange.setResponseCode(FOUND);
                     exchange.endExchange();
                     return true;
                 }
