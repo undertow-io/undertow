@@ -378,6 +378,10 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                     charsetSet = true;
                     //we only change the charset if the writer has not been retrieved yet
                     this.charset = type.substring(pos + "charset=".length(), i);
+                    //it is valid for the charset to be enclosed in quotes
+                    if(this.charset.startsWith("\"") && this.charset.endsWith("\"") && this.charset.length() > 1) {
+                        this.charset = this.charset.substring(1, this.charset.length() - 1);
+                    }
                 }
                 int charsetStart = pos;
                 while (type.charAt(--charsetStart) != ';' && charsetStart > 0) {

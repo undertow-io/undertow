@@ -51,6 +51,7 @@ public class ContentTypeCharsetTestCase {
         runtest("text/html", "UTF8", "text/html;charset=UTF8", "text/html;charset=UTF8\nUTF8");
         runtest("text/html", "", "text/html;charset=ISO-8859-1", "text/html;charset=ISO-8859-1\nISO-8859-1");
         runtest("text/html;   charset=UTF8", "", "text/html;charset=UTF8", "text/html;charset=UTF8\nUTF8");
+        runtest("text/html;   charset=\"UTF8\"", "", "text/html;charset=UTF8", "text/html;charset=UTF8\nUTF8");
         runtest("text/html;   charset=UTF8; boundary=someString;", "", "text/html; boundary=someString;charset=UTF8", "text/html; boundary=someString;charset=UTF8\nUTF8");
         runtest("text/html;   charset=UTF8; boundary=someString;   ", "", "text/html; boundary=someString;charset=UTF8", "text/html; boundary=someString;charset=UTF8\nUTF8");
         runtest("multipart/related; type=\"text/xml\"; boundary=\"uuid:ce7d652a-d035-42fa-962c-5b8315084e32\"; start=\"<root.message@cxf.apache.org>\"; start-info=\"text/xml\"", "", "multipart/related; type=\"text/xml\"; boundary=\"uuid:ce7d652a-d035-42fa-962c-5b8315084e32\"; start=\"<root.message@cxf.apache.org>\"; start-info=\"text/xml\";charset=ISO-8859-1", "multipart/related; type=\"text/xml\"; boundary=\"uuid:ce7d652a-d035-42fa-962c-5b8315084e32\"; start=\"<root.message@cxf.apache.org>\"; start-info=\"text/xml\";charset=ISO-8859-1\nISO-8859-1");
