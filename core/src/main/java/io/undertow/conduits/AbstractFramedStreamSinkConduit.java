@@ -84,7 +84,10 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
 
     @Override
     public long write(ByteBuffer[] srcs, int offs, int len) throws IOException {
-        return Conduits.writeFinalBasic(this, srcs, offs, len);
+        if (anyAreSet(state, FLAG_WRITES_TERMINATED)) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
+        }
+        return doWrite(srcs, offs, len);
     }
 
     @Override
@@ -94,14 +97,7 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
 
     @Override
     public long writeFinal(ByteBuffer[] srcs, int offs, int len) throws IOException {
-        if (anyAreSet(state, FLAG_WRITES_TERMINATED)) {
-            throw UndertowMessages.MESSAGES.channelIsClosed();
-        }
-        long res = doWrite(srcs, offs, len);
-        if(!Buffers.hasRemaining(srcs, offs, len)) {
-            terminateWrites();
-        }
-        return res;
+        return Conduits.writeFinalBasic(this, srcs, offs, len);
     }
 
 
