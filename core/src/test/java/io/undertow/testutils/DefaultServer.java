@@ -357,6 +357,19 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     /**
+     * Start the SSL server using the default ssl context and the provided option map
+     * <p/>
+     * The default settings initialise a server with a key for 'localhost' and a trust store containing the certificate of a
+     * single client. Client cert mode is not set by default
+     */
+    public static void startSSLServer(OptionMap optionMap) throws IOException {
+        SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE));
+        clientSslContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE));
+
+        startSSLServer(serverContext, optionMap);
+    }
+
+    /**
      * Start the SSL server using a custom SSLContext with additional options to pass to the JsseXnioSsl instance.
      *
      * @param context - The SSLContext to use for JsseXnioSsl initialisation.

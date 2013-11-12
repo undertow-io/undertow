@@ -74,7 +74,7 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
     }
 
     @Override
-    public java.security.cert.Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
+    public java.security.cert.Certificate[] getPeerCertificates(boolean forceRenegotiate) throws SSLPeerUnverifiedException {
         if (certificate == null) {
             throw UndertowMessages.MESSAGES.peerUnverified();
         }
@@ -82,7 +82,7 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
     }
 
     @Override
-    public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
+    public X509Certificate[] getPeerCertificateChain(boolean forceRenegotiate) throws SSLPeerUnverifiedException {
         if (certificate == null) {
             throw UndertowMessages.MESSAGES.peerUnverified();
         }

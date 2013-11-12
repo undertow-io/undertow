@@ -53,7 +53,7 @@ public final class HttpServerConnection extends AbstractServerConnection impleme
     public HttpServerConnection(StreamConnection channel, final Pool<ByteBuffer> bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         if (channel instanceof SslChannel) {
-            sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel));
+            sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel), this);
         }
     }
 

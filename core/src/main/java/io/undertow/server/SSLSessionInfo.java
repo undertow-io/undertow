@@ -11,8 +11,14 @@ public interface SSLSessionInfo {
 
     java.lang.String getCipherSuite();
 
-    java.security.cert.Certificate[] getPeerCertificates() throws javax.net.ssl.SSLPeerUnverifiedException;
+    /**
+     * Gets the peer certificates. This may force SSL renegotiation.
+     *
+     * @return The peer certificates
+     * @throws javax.net.ssl.SSLPeerUnverifiedException
+     */
+    java.security.cert.Certificate[] getPeerCertificates(boolean forceRenegotiation) throws javax.net.ssl.SSLPeerUnverifiedException;
 
-    javax.security.cert.X509Certificate[] getPeerCertificateChain() throws javax.net.ssl.SSLPeerUnverifiedException;
+    javax.security.cert.X509Certificate[] getPeerCertificateChain(boolean forceRenegotiation) throws javax.net.ssl.SSLPeerUnverifiedException;
 
 }

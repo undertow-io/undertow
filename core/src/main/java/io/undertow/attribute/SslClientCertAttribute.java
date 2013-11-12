@@ -23,7 +23,7 @@ public class SslClientCertAttribute implements ExchangeAttribute {
         }
         X509Certificate[] certificates;
         try {
-            certificates = ssl.getPeerCertificateChain();
+            certificates = ssl.getPeerCertificateChain(false);
             if(certificates.length > 0) {
                 return Certificates.toPem(certificates[0]);
             }

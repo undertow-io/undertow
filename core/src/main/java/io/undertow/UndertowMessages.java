@@ -245,4 +245,7 @@ public interface UndertowMessages {
 
     @Message(id = 73, value = "Resource change listeners are not supported")
     IllegalArgumentException resourceChangeListenerNotSupported();
+
+    @Message(id = 74, value = "Could not renegotiate SSL connection to require client certificate, as client had sent more data")
+    IllegalStateException couldNotRenegotiate();
 }

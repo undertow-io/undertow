@@ -290,7 +290,7 @@ public final class ProxyHandler implements HttpHandler {
                 request.putAttachment(ProxiedRequestAttachments.IS_SSL, true);
                 X509Certificate[] peerCertificates;
                 try {
-                    peerCertificates = sslSessionInfo.getPeerCertificateChain();
+                    peerCertificates = sslSessionInfo.getPeerCertificateChain(false);
                     if (peerCertificates.length > 0) {
                         request.putAttachment(ProxiedRequestAttachments.SSL_CERT, Certificates.toPem(peerCertificates[0]));
                     }

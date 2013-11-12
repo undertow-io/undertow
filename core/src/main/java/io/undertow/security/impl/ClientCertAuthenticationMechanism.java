@@ -41,20 +41,33 @@ import java.security.cert.X509Certificate;
 public class ClientCertAuthenticationMechanism implements AuthenticationMechanism {
 
     private final String name;
+    /**
+     * If we should force a renegotiation if client certs were not supplied. <code>true</code> by default
+     */
+    private final boolean forceRenegotiation;
 
     public ClientCertAuthenticationMechanism() {
-        this("CLIENT_CERT");
+        this(true);
+    }
+
+    public ClientCertAuthenticationMechanism(boolean forceRenegotiation) {
+        this("CLIENT_CERT", forceRenegotiation);
     }
 
     public ClientCertAuthenticationMechanism(final String mechanismName) {
+        this(mechanismName, true);
+    }
+
+    public ClientCertAuthenticationMechanism(final String mechanismName, boolean forceRenegotiation) {
         this.name = mechanismName;
+        this.forceRenegotiation = forceRenegotiation;
     }
 
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange, final SecurityContext securityContext) {
         SSLSessionInfo sslSession = exchange.getConnection().getSslSessionInfo();
         if (sslSession != null) {
             try {
-                Certificate[] clientCerts = sslSession.getPeerCertificates();
+                Certificate[] clientCerts = sslSession.getPeerCertificates(forceRenegotiation);
                 if (clientCerts[0] instanceof X509Certificate) {
                     Credential credential = new X509CertificateCredential((X509Certificate) clientCerts[0]);
 
