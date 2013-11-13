@@ -144,6 +144,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
         try {
 
             final ApplicationListeners listeners = createListeners();
+            listeners.start();
+
             deployment.setApplicationListeners(listeners);
 
             //now create the servlets and filters that we know about. We can still get more later
