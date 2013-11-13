@@ -223,10 +223,12 @@ public class HttpTransferEncoding {
         public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
             StreamSinkConduit channel = factory.create();
             final ConduitListener<StreamSinkConduit> finishListener = terminateResponseListener(exchange);
-            if (exchange.getRequestMethod().equals(Methods.HEAD)) {
+            boolean headRequest = exchange.getRequestMethod().equals(Methods.HEAD);
+            if (headRequest) {
                 //if this is a head request we add a head channel underneath the content encoding channel
                 //this will just discard the data
-                channel = new HeadStreamSinkConduit(channel, null);
+                //we still go through with the rest of the logic, to make sure all headers are set correctly
+                channel = new HeadStreamSinkConduit(channel, finishListener);
             }
 
             final HeaderMap responseHeaders = exchange.getResponseHeaders();
@@ -246,6 +248,9 @@ public class HttpTransferEncoding {
             if (contentLengthHeader != null) {
                 try {
                     final long contentLength = Long.parseLong(contentLengthHeader);
+                    if(headRequest) {
+                        return channel;
+                    }
                     // fixed-length response
                     return new FixedLengthStreamSinkConduit(channel, contentLength, true, !exchange.isPersistent(), finishListener);
                 } catch (NumberFormatException e) {
@@ -257,25 +262,38 @@ public class HttpTransferEncoding {
             if (transferEncodingHeader == null) {
                 if (exchange.isHttp11()) {
                     responseHeaders.put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
+
+                    if(headRequest) {
+                        return channel;
+                    }
                     return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
                 } else {
                     exchange.setPersistent(false);
                     responseHeaders.put(Headers.CONNECTION, Headers.CLOSE.toString());
+                    if(headRequest) {
+                        return channel;
+                    }
                     return new FinishableStreamSinkConduit(channel, finishListener);
                 }
             } else {
                 //moved outside because this is rarely used
                 //and makes the method small enough to be inlined
-                return handleExplicitTransferEncoding(exchange, channel, finishListener, responseHeaders, transferEncodingHeader);
+                return handleExplicitTransferEncoding(exchange, channel, finishListener, responseHeaders, transferEncodingHeader, headRequest);
             }
         }
 
-        private StreamSinkConduit handleExplicitTransferEncoding(HttpServerExchange exchange, StreamSinkConduit channel, ConduitListener<StreamSinkConduit> finishListener, HeaderMap responseHeaders, String transferEncodingHeader) {
+        private StreamSinkConduit handleExplicitTransferEncoding(HttpServerExchange exchange, StreamSinkConduit channel, ConduitListener<StreamSinkConduit> finishListener, HeaderMap responseHeaders, String transferEncodingHeader, boolean headRequest) {
             HttpString transferEncoding = new HttpString(transferEncodingHeader);
             if (transferEncoding.equals(Headers.CHUNKED)) {
+                if(headRequest) {
+                    return channel;
+                }
                 return new ChunkedStreamSinkConduit(channel, exchange.getConnection().getBufferPool(), true, !exchange.isPersistent(), responseHeaders, finishListener, exchange);
             } else {
 
+                if(headRequest) {
+                    return channel;
+                }
                 log.trace("Cancelling persistence because response is identity with no content length");
                 // make it not persistent - very unfortunate for the next request handler really...
                 exchange.setPersistent(false);
