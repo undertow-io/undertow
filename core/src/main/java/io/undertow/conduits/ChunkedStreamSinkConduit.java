@@ -40,6 +40,7 @@ import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
+import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
 
 /**
@@ -84,6 +85,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private static final int FLAG_WRITES_SHUTDOWN = 1;
     private static final int FLAG_NEXT_SHUTDWON = 1 << 2;
     private static final int FLAG_WRITTEN_FIRST_CHUNK = 1 << 3;
+    private static final int FLAG_FINISHED = 1 << 4;
 
     int written = 0;
 
@@ -152,9 +154,6 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                         state |= FLAG_WRITES_SHUTDOWN;
                     }
                     if (!lastChunkBuffer.getResource().hasRemaining()) {
-                        if (finishListener != null) {
-                            finishListener.handleEvent(this);
-                        }
                         state |= FLAG_NEXT_SHUTDWON;
                         lastChunkBuffer.free();
                     }
@@ -222,28 +221,37 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     public boolean flush() throws IOException {
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             if (anyAreSet(state, FLAG_NEXT_SHUTDWON)) {
-                return next.flush();
+                boolean val = next.flush();
+                if (val && allAreClear(state, FLAG_FINISHED)) {
+                    invokeFinishListener();
+                }
+                return val;
             } else {
                 next.write(lastChunkBuffer.getResource());
                 if (!lastChunkBuffer.getResource().hasRemaining()) {
                     lastChunkBuffer.free();
-                    try {
-                        if (anyAreSet(config, CONF_FLAG_PASS_CLOSE)) {
-                            next.terminateWrites();
-                        }
-                        state |= FLAG_NEXT_SHUTDWON;
-                        return next.flush();
-                    } finally {
-                        if (finishListener != null) {
-                            finishListener.handleEvent(this);
-                        }
+                    if (anyAreSet(config, CONF_FLAG_PASS_CLOSE)) {
+                        next.terminateWrites();
                     }
+                    state |= FLAG_NEXT_SHUTDWON;
+                    boolean val = next.flush();
+                    if (val && allAreClear(state, FLAG_FINISHED)) {
+                        invokeFinishListener();
+                    }
+                    return val;
                 } else {
                     return false;
                 }
             }
         } else {
             return next.flush();
+        }
+    }
+
+    private void invokeFinishListener() {
+        state |= FLAG_FINISHED;
+        if (finishListener != null) {
+            finishListener.handleEvent(this);
         }
     }
 
