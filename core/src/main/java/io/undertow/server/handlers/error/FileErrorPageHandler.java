@@ -101,7 +101,7 @@ public class FileErrorPageHandler implements HttpHandler {
                     exchange.endExchange();
                     return;
                 }
-
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, file.length());
                 final StreamSinkChannel response = exchange.getResponseChannel();
                 exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
                     @Override
@@ -110,7 +110,6 @@ public class FileErrorPageHandler implements HttpHandler {
                         nextListener.proceed();
                     }
                 });
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, file.length());
 
                 try {
                     log.tracef("Serving file %s (blocking)", fileChannel);
