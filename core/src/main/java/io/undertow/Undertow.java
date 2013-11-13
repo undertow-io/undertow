@@ -91,6 +91,8 @@ public class Undertow {
                     .set(Options.WORKER_IO_THREADS, ioThreads)
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
+                    .set(Options.BALANCING_TOKENS, 1)
+                    .set(Options.BALANCING_CONNECTIONS, 2)
                     .addAll(this.socketOptions)
                     .getMap();
 
