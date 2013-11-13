@@ -267,11 +267,13 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             responseHeaders.put(Headers.CONTENT_LENGTH, "0"); //according to the spec we don't actually need this, but better to be safe
             responseHeaders.remove(Headers.TRANSFER_ENCODING);
             state |= FLAG_NEXT_SHUTDWON | FLAG_WRITES_SHUTDOWN;
-            next.terminateWrites();
-            return;
+            if(anyAreSet(state, CONF_FLAG_PASS_CLOSE)) {
+                next.terminateWrites();
+            }
+        } else {
+            createLastChunk();
+            state |= FLAG_WRITES_SHUTDOWN;
         }
-        createLastChunk();
-        state |= FLAG_WRITES_SHUTDOWN;
     }
 
     private void createLastChunk() throws UnsupportedEncodingException {
