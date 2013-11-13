@@ -11,6 +11,7 @@ import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.Pooled;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -300,12 +301,20 @@ public class AsyncSenderImpl implements Sender {
                         new ChannelListener<StreamSinkChannel>() {
                             @Override
                             public void handleEvent(final StreamSinkChannel channel) {
-                                callback.onComplete(exchange, AsyncSenderImpl.this);
+                                if(callback != null) {
+                                    callback.onComplete(exchange, AsyncSenderImpl.this);
+                                }
                             }
                         }, new ChannelExceptionHandler<StreamSinkChannel>() {
                             @Override
                             public void handleException(final StreamSinkChannel channel, final IOException exception) {
-                                invokeOnException(callback, exception);
+                                try {
+                                    if(callback != null) {
+                                        invokeOnException(callback, exception);
+                                    }
+                                } finally {
+                                    IoUtils.safeClose(channel);
+                                }
                             }
                         }
                 ));
