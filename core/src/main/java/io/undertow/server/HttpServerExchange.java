@@ -531,8 +531,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public int getHostPort() {
         String host = requestHeaders.getFirst(Headers.HOST);
-        if (host != null && host.indexOf(':') != -1) {
-            return Integer.parseInt(host.substring(host.indexOf(':')));
+        int colonIndex = host.indexOf(':');
+        if (host != null && colonIndex != -1) {
+            return Integer.parseInt(host.substring(colonIndex + 1));
         }
         return getDestinationAddress().getPort();
     }
