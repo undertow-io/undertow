@@ -34,10 +34,10 @@ public interface FlashManager {
     /**
      * Set attribute value
      */
-    void setFlashAttribute(HttpServerExchange exchange, String key, Object value);
+    void setAttribute(HttpServerExchange exchange, String name, Object value);
 
     /**
      * Get attribute value
      */
-    Object getFlashAttribute(HttpServerExchange exchange, String key);
+    Object getAttribute(HttpServerExchange exchange, String name);
 }

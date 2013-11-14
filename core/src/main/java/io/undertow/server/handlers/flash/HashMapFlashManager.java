@@ -30,16 +30,16 @@ import java.util.Map;
  */
 public class HashMapFlashManager implements FlashManager {
 
-    public void setFlashAttribute(HttpServerExchange exchange, String key, Object value) {
-        getOrCreateFlashStore(exchange).put(key, value);
+    public void setAttribute(HttpServerExchange exchange, String name, Object value) {
+        getOrCreateFlashStore(exchange).put(name, value);
     }
 
-    public Object getFlashAttribute(HttpServerExchange exchange, String key) {
+    public Object getAttribute(HttpServerExchange exchange, String name) {
         Map flash = (Map) exchange.getAttachment(FLASH_ATTACHMENT_KEY);
         if (flash == null) {
             return null;
         }
-        return flash.get(key);
+        return flash.get(name);
     }
 
     private Map getOrCreateFlashStore(HttpServerExchange exchange) {
