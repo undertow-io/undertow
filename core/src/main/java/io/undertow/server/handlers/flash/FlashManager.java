@@ -29,7 +29,7 @@ import io.undertow.util.AttachmentKey;
  */
 public interface FlashManager {
 
-    public static final AttachmentKey FLASH_ATTACHMENT_KEY = AttachmentKey.create(Object.class);
+    AttachmentKey FLASH_ATTACHMENT_KEY = AttachmentKey.create(Object.class);
 
     /**
      * Set attribute value
