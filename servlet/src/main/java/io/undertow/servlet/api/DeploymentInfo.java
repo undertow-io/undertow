@@ -744,8 +744,9 @@ public class DeploymentInfo implements Cloneable {
         return servletSessionConfig;
     }
 
-    public void setServletSessionConfig(final ServletSessionConfig servletSessionConfig) {
+    public DeploymentInfo setServletSessionConfig(final ServletSessionConfig servletSessionConfig) {
         this.servletSessionConfig = servletSessionConfig;
+        return this;
     }
 
     /**

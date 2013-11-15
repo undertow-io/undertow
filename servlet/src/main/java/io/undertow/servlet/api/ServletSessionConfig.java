@@ -46,63 +46,71 @@ public class ServletSessionConfig {
         return name;
     }
 
-    public void setName(final String name) {
+    public ServletSessionConfig setName(final String name) {
         this.name = name;
+        return this;
     }
 
     public String getDomain() {
         return domain;
     }
 
-    public void setDomain(final String domain) {
+    public ServletSessionConfig setDomain(final String domain) {
         this.domain = domain;
+        return this;
     }
 
     public String getPath() {
         return path;
     }
 
-    public void setPath(final String path) {
+    public ServletSessionConfig setPath(final String path) {
         this.path = path;
+        return this;
     }
 
     public String getComment() {
         return comment;
     }
 
-    public void setComment(final String comment) {
+    public ServletSessionConfig setComment(final String comment) {
         this.comment = comment;
+        return this;
     }
 
     public boolean isHttpOnly() {
         return httpOnly;
     }
 
-    public void setHttpOnly(final boolean httpOnly) {
+    public ServletSessionConfig setHttpOnly(final boolean httpOnly) {
         this.httpOnly = httpOnly;
+        return this;
     }
 
     public boolean isSecure() {
         return secure;
     }
 
-    public void setSecure(final boolean secure) {
+    public ServletSessionConfig setSecure(final boolean secure) {
         this.secure = secure;
+        return this;
     }
 
     public int getMaxAge() {
         return maxAge;
     }
 
-    public void setMaxAge(final int maxAge) {
+    public ServletSessionConfig setMaxAge(final int maxAge) {
         this.maxAge = maxAge;
+        return this;
     }
 
     public Set<SessionTrackingMode> getSessionTrackingModes() {
         return sessionTrackingModes;
     }
 
-    public void setSessionTrackingModes(final Set<SessionTrackingMode> sessionTrackingModes) {
+    public ServletSessionConfig setSessionTrackingModes(final Set<SessionTrackingMode> sessionTrackingModes) {
         this.sessionTrackingModes = sessionTrackingModes;
+        return this;
     }
 }
