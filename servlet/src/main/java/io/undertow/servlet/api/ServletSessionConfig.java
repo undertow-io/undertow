@@ -35,7 +35,7 @@ public class ServletSessionConfig {
     private Set<SessionTrackingMode> sessionTrackingModes;
 
     private String name = DEFAULT_SESSION_ID;
-    private String path = "/";
+    private String path;
     private String domain;
     private boolean secure;
     private boolean httpOnly;

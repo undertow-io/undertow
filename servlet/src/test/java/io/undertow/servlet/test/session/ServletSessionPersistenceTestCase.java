@@ -21,9 +21,9 @@ package io.undertow.servlet.test.session;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ListenerInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.ServletSessionConfig;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.util.InMemorySessionPersistence;
@@ -55,9 +55,9 @@ public class ServletSessionPersistenceTestCase {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
                 .setSessionPersistenceManager(new InMemorySessionPersistence())
-                .addListener(new ListenerInfo(SessionCookieConfigListener.class))
+                .setServletSessionConfig(new ServletSessionConfig().setPath("/servletContext/aa"))
                 .addServlets(new ServletInfo("servlet", SessionServlet.class)
-                        .addMapping("/aa"));
+                        .addMapping("/aa/b"));
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         try {
@@ -68,11 +68,15 @@ public class ServletSessionPersistenceTestCase {
         DefaultServer.setRootHandler(pathHandler);
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("1", response);
+
+            String cookieValue = result.getHeaders("Set-Cookie")[0].getValue();
+            Assert.assertTrue(cookieValue, cookieValue.contains("JSESSIONID"));
+            Assert.assertTrue(cookieValue, cookieValue.contains("/servletContext/aa"));
 
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());

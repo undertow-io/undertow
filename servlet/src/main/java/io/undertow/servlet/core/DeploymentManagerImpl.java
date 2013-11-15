@@ -54,6 +54,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletContainerInitializerInfo;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
+import io.undertow.servlet.api.ServletSessionConfig;
 import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.api.SessionPersistenceManager;
 import io.undertow.servlet.api.ThreadSetupAction;
@@ -70,11 +71,13 @@ import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.servlet.handlers.security.ServletSecurityConstraintHandler;
 import io.undertow.servlet.predicate.DispatcherTypePredicate;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.servlet.spec.SessionCookieConfigImpl;
 import io.undertow.util.MimeMappings;
 
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.SessionTrackingMode;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -130,6 +133,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
         deployment.setServletContext(servletContext);
         handleExtensions(deploymentInfo, servletContext);
+
+        handleDeploymentSessionConfig(deploymentInfo, servletContext);
 
         deployment.setSessionManager(deploymentInfo.getSessionManagerFactory().createSessionManager(deployment));
         deployment.getSessionManager().setDefaultSessionTimeout(deploymentInfo.getDefaultSessionTimeout());
@@ -452,6 +457,27 @@ public class DeploymentManagerImpl implements DeploymentManager {
             return handler;
         }
         return next;
+    }
+
+    public void handleDeploymentSessionConfig(DeploymentInfo deploymentInfo, ServletContextImpl servletContext) {
+        SessionCookieConfigImpl sessionCookieConfig = servletContext.getSessionCookieConfig();
+        ServletSessionConfig sc = deploymentInfo.getServletSessionConfig();
+        if (sc != null) {
+            sessionCookieConfig.setName(sc.getName());
+            sessionCookieConfig.setComment(sc.getComment());
+            sessionCookieConfig.setDomain(sc.getDomain());
+            sessionCookieConfig.setHttpOnly(sc.isHttpOnly());
+            sessionCookieConfig.setMaxAge(sc.getMaxAge());
+            if(sc.getPath() != null) {
+                sessionCookieConfig.setPath(sc.getPath());
+            } else {
+                sessionCookieConfig.setPath(deploymentInfo.getContextPath());
+            }
+            sessionCookieConfig.setSecure(sc.isSecure());
+            if (sc.getSessionTrackingModes() != null) {
+                servletContext.setDefaultSessionTrackingModes(new HashSet<SessionTrackingMode>(sc.getSessionTrackingModes()));
+            }
+        }
     }
 
 

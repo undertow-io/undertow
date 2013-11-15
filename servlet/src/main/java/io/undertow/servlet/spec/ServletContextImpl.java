@@ -78,7 +78,6 @@ import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSecurityInfo;
-import io.undertow.servlet.api.ServletSessionConfig;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.core.ApplicationListeners;
 import io.undertow.servlet.core.ManagedListener;
@@ -113,19 +112,7 @@ public class ServletContextImpl implements ServletContext {
         this.deployment = deployment;
         this.deploymentInfo = deployment.getDeploymentInfo();
         sessionCookieConfig = new SessionCookieConfigImpl(this);
-        ServletSessionConfig sc = deploymentInfo.getServletSessionConfig();
-        if (sc != null) {
-            sessionCookieConfig.setName(sc.getName());
-            sessionCookieConfig.setComment(sc.getComment());
-            sessionCookieConfig.setDomain(sc.getDomain());
-            sessionCookieConfig.setHttpOnly(sc.isHttpOnly());
-            sessionCookieConfig.setMaxAge(sc.getMaxAge());
-            sessionCookieConfig.setPath(sc.getPath());
-            sessionCookieConfig.setSecure(sc.isSecure());
-            if (sc.getSessionTrackingModes() != null) {
-                defaultSessionTrackingModes = sessionTrackingModes = new HashSet<SessionTrackingMode>(sc.getSessionTrackingModes());
-            }
-        }
+        sessionCookieConfig.setPath(deploymentInfo.getContextPath());
         if (deploymentInfo.getServletContextAttributeBackingMap() == null) {
             this.attributes = new ConcurrentHashMap<String, Object>();
         } else {
@@ -744,6 +731,11 @@ public class ServletContextImpl implements ServletContext {
         } else {
             AccessController.doPrivileged(new ReadServletAnnotationsTask(servlet, deploymentInfo));
         }
+    }
+
+    public void setDefaultSessionTrackingModes(HashSet<SessionTrackingMode> sessionTrackingModes) {
+        this.defaultSessionTrackingModes = sessionTrackingModes;
+        this.sessionTrackingModes = sessionTrackingModes;
     }
 
     private static final class ReadServletAnnotationsTask implements PrivilegedAction<Void> {

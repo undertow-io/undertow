@@ -30,6 +30,7 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.ServletSessionConfig;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
@@ -77,6 +78,7 @@ public class CrossContextServletSessionTestCase {
                 .setContextPath("/" + name)
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName( name + ".war")
+                .setServletSessionConfig(new ServletSessionConfig().setPath("/"))
                 .addServlets(s, forward);
 
         DeploymentManager manager = container.addDeployment(builder);
