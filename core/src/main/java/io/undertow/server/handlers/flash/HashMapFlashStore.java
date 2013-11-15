@@ -24,18 +24,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A {@link FlashManager} implementation that uses a {@link HashMap} for the flash store.
+ * A {@link FlashStore} implementation that uses a {@link HashMap} for the store.
  *
  * @author <a href="mailto:andrei.zinca@gmail.com">Andrei Zinca</a>
  */
-public class HashMapFlashManager implements FlashManager {
+public class HashMapFlashStore implements FlashStore {
 
     public void setAttribute(HttpServerExchange exchange, String name, Object value) {
         getOrCreateFlashStore(exchange).put(name, value);
     }
 
     public Object getAttribute(HttpServerExchange exchange, String name) {
-        Map flash = (Map) exchange.getAttachment(FLASH_ATTACHMENT_KEY);
+        Map flash = (Map) exchange.getAttachment(ATTACHMENT_KEY);
         if (flash == null) {
             return null;
         }
@@ -43,10 +43,10 @@ public class HashMapFlashManager implements FlashManager {
     }
 
     private Map getOrCreateFlashStore(HttpServerExchange exchange) {
-        Map flash = (Map) exchange.getAttachment(FLASH_ATTACHMENT_KEY);
+        Map flash = (Map) exchange.getAttachment(ATTACHMENT_KEY);
         if (flash == null) {
             flash = new HashMap();
-            exchange.putAttachment(FLASH_ATTACHMENT_KEY, flash);
+            exchange.putAttachment(ATTACHMENT_KEY, flash);
         }
         return flash;
     }

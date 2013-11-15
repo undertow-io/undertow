@@ -28,8 +28,7 @@ import io.undertow.server.session.SessionManager;
 
 /**
  * Handler that sets up a Flash store (a way to transfer transient data that survives redirects, to the next request)
- * It uses the session to transfer the flash attachment to the next request. Once the handler is set up,
- * create and use an instance of {@link FlashManager} to work with the flash store.
+ * It uses the session to transfer the {@link FlashStore} to the next request.
  *
  * @author <a href="mailto:andrei.zinca@gmail.com">Andrei Zinca</a>
  */
@@ -61,17 +60,18 @@ public class FlashHandler implements HttpHandler {
                 return;
             }
 
-            // If the session flash attribute is available, it means we already served the attached flash
-            // Remove the session attribute (the attachment does not need removal as it will not be available next)
+            // If the session flash attribute is available, it means we already served the attached flash store
+            // Just remove the session attribute and stop here.
             if (session.getAttribute(FLASH_SESSION_KEY) != null) {
                 session.removeAttribute(FLASH_SESSION_KEY);
-            } else {
-                // The session was not set. If we have a flash attachment then it is meant to be
-                // consumed in the next request, so transfer it using the session
-                Object outgoingFlash = exchange.getAttachment(FlashManager.FLASH_ATTACHMENT_KEY);
-                if (outgoingFlash != null) {
-                    session.setAttribute(FLASH_SESSION_KEY, outgoingFlash);
-                }
+                return;
+            }
+
+            // If the session was not set and we have a flash attachment, then it is meant to be
+            // consumed in the next request, so transfer it using the session
+            Object outgoingFlash = exchange.getAttachment(FlashStore.ATTACHMENT_KEY);
+            if (outgoingFlash != null) {
+                session.setAttribute(FLASH_SESSION_KEY, outgoingFlash);
             }
         }
     };
@@ -95,7 +95,7 @@ public class FlashHandler implements HttpHandler {
         Object incomingFlash = session.getAttribute(FLASH_SESSION_KEY);
 
         if (incomingFlash != null) {
-            exchange.putAttachment(FlashManager.FLASH_ATTACHMENT_KEY, incomingFlash);
+            exchange.putAttachment(FlashStore.ATTACHMENT_KEY, incomingFlash);
         }
 
         next.handleRequest(exchange);

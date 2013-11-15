@@ -22,14 +22,14 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 
 /**
- * The FlashManager works in conjunction with the {@link FlashHandler} and provides ways to set
- * and get data stored in the flash.
+ * The FlashStore works in conjunction with the {@link FlashHandler} and provides the storage and ways to set
+ * and get the data in that storage.
  *
  * @author <a href="mailto:andrei.zinca@gmail.com">Andrei Zinca</a>
  */
-public interface FlashManager {
+public interface FlashStore {
 
-    AttachmentKey FLASH_ATTACHMENT_KEY = AttachmentKey.create(Object.class);
+    AttachmentKey ATTACHMENT_KEY = AttachmentKey.create(Object.class);
 
     /**
      * Set attribute value
