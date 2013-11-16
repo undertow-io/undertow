@@ -18,17 +18,15 @@
 
 package io.undertow.server.handlers.flash;
 
-import io.undertow.server.HttpServerExchange;
-
 import java.util.HashMap;
 
 
 /**
- * HashMap implementation of the {@link FlashStoreManager}.
+ * {@link HashMap} implementation of the {@link FlashStoreManager}.
  *
  * @author <a href="mailto:andrei.zinca@gmail.com">Andrei Zinca</a>
  */
-public class HashMapFlashStoreManager<K, V> implements FlashStoreManager<K, V> {
+public class HashMapFlashStoreManager<K, V> extends AbstractFlashStoreManager<K, V> {
 
     @Override
     public HashMap buildStore() {
@@ -36,15 +34,13 @@ public class HashMapFlashStoreManager<K, V> implements FlashStoreManager<K, V> {
     }
 
     @Override
-    public void setAttribute(HttpServerExchange exchange, K name, V value) {
-        HashMap<K, V> current = (HashMap<K, V>) exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_IN);
-        current.put(name, value);
-        HashMap<K, V> outgoing = (HashMap<K, V>) exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_OUT);
-        outgoing.put(name, value);
+    protected void setAttribute(Object store, K name, V value) {
+        ((HashMap<K, V>) store).put(name, value);
     }
 
     @Override
-    public V getAttribute(HttpServerExchange exchange, K name) {
-        return ((HashMap<K, V>) exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_IN)).get(name);
+    protected V getAttribute(Object store, K name) {
+        return ((HashMap<K, V>) store).get(name);
     }
+
 }
