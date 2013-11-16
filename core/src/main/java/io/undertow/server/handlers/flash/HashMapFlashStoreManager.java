@@ -20,7 +20,6 @@ package io.undertow.server.handlers.flash;
 
 import java.util.HashMap;
 
-
 /**
  * {@link HashMap} implementation of the {@link FlashStoreManager}.
  *

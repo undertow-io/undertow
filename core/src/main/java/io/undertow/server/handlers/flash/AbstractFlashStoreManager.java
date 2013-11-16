@@ -20,9 +20,8 @@ package io.undertow.server.handlers.flash;
 
 import io.undertow.server.HttpServerExchange;
 
-
 /**
- * Abstract implementation of the {@link io.undertow.server.handlers.flash.FlashStoreManager}.
+ * Abstract implementation of the {@link FlashStoreManager}.
  *
  * @author <a href="mailto:andrei.zinca@gmail.com">Andrei Zinca</a>
  */
