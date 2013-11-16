@@ -19,35 +19,25 @@
 package io.undertow.server.handlers.flash;
 
 import io.undertow.server.HttpServerExchange;
-
-import java.util.HashMap;
-import java.util.Map;
+import io.undertow.util.AttachmentKey;
 
 /**
- * A {@link FlashStore} implementation that uses a {@link HashMap} for the store.
+ * Defines two attachment keys, one for incoming flash and one for outgoing flash.
+ * <p>Provides a method to build a flash store that the {@link FlashHandler} uses to initialize the incoming and outgoing
+ * stores.
+ * <p>Provides ways to get and set flash attributes.
  *
  * @author <a href="mailto:andrei.zinca@gmail.com">Andrei Zinca</a>
  */
-public class HashMapFlashStore implements FlashStore {
+public interface FlashStoreManager<K, V> {
 
-    public void setAttribute(HttpServerExchange exchange, String name, Object value) {
-        getOrCreateFlashStore(exchange).put(name, value);
-    }
+    AttachmentKey ATTACHMENT_KEY_OUT = AttachmentKey.create(Object.class);
+    AttachmentKey ATTACHMENT_KEY_IN = AttachmentKey.create(Object.class);
 
-    public Object getAttribute(HttpServerExchange exchange, String name) {
-        Map flash = (Map) exchange.getAttachment(ATTACHMENT_KEY);
-        if (flash == null) {
-            return null;
-        }
-        return flash.get(name);
-    }
+    Object buildStore();
 
-    private Map getOrCreateFlashStore(HttpServerExchange exchange) {
-        Map flash = (Map) exchange.getAttachment(ATTACHMENT_KEY);
-        if (flash == null) {
-            flash = new HashMap();
-            exchange.putAttachment(ATTACHMENT_KEY, flash);
-        }
-        return flash;
-    }
+    void setAttribute(HttpServerExchange exchange, K name, V value);
+
+    V getAttribute(HttpServerExchange exchange, K name);
+
 }

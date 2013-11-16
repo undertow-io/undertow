@@ -19,7 +19,6 @@
 package io.undertow.server.handlers.flash;
 
 import io.undertow.Handlers;
-import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
@@ -28,7 +27,8 @@ import io.undertow.server.session.SessionManager;
 
 /**
  * Handler that sets up a Flash store (a way to transfer transient data that survives redirects, to the next request)
- * It uses the session to transfer the {@link FlashStore} to the next request.
+ * It uses the {@link Session} to transfer the store to the next request so you have to make sure you have an active
+ * session for this to work.
  *
  * @author <a href="mailto:andrei.zinca@gmail.com">Andrei Zinca</a>
  */
@@ -38,67 +38,46 @@ public class FlashHandler implements HttpHandler {
 
     private HttpHandler next;
     private SessionConfig sessionConfig;
+    private FlashStoreManager flashStoreManager;
 
-    public FlashHandler(HttpHandler next, SessionConfig sessionConfig) {
+    public FlashHandler(HttpHandler next, SessionConfig sessionConfig, FlashStoreManager flashStoreManager) {
         this.next = next;
         this.sessionConfig = sessionConfig;
+        this.flashStoreManager = flashStoreManager;
     }
 
-    public FlashHandler(SessionConfig sessionConfig) {
-        this.sessionConfig = sessionConfig;
+    public FlashHandler(SessionConfig sessionConfig, FlashStoreManager flashStoreManager) {
+        this(null, sessionConfig, flashStoreManager);
     }
-
-    private ExchangeCompletionListener completionListener = new ExchangeCompletionListener() {
-        @Override
-        public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-
-            // Make sure our code is the last by running the rest of the listeners ahead of us
-            nextListener.proceed();
-
-            Session session = getSession(exchange);
-            if (session == null) {
-                return;
-            }
-
-            // If the session flash attribute is available, it means we already served the attached flash store
-            // Just remove the session attribute and stop here.
-            if (session.getAttribute(FLASH_SESSION_KEY) != null) {
-                session.removeAttribute(FLASH_SESSION_KEY);
-                return;
-            }
-
-            // If the session was not set and we have a flash attachment, then it is meant to be
-            // consumed in the next request, so transfer it using the session
-            Object outgoingFlash = exchange.getAttachment(FlashStore.ATTACHMENT_KEY);
-            if (outgoingFlash != null) {
-                session.setAttribute(FLASH_SESSION_KEY, outgoingFlash);
-            }
-        }
-    };
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-
-        // Execute this listener right before the requests close, in order to extract
-        // the flash attribute and pass it on to the next request via session
-        exchange.addExchangeCompleteListener(completionListener);
-
         Session session = getSession(exchange);
-        if (session == null) {
-            next.handleRequest(exchange);
-            return;
+
+        // First check for incoming flash store from the previous request and attach if the case
+        if (session != null) {
+            Object incomingFlashStore = session.removeAttribute(FLASH_SESSION_KEY);
+            if (incomingFlashStore != null) {
+                exchange.putAttachment(FlashStoreManager.ATTACHMENT_KEY_IN, incomingFlashStore);
+            }
         }
 
-        // Retrieve potential incoming flash from the session and attach it for the next request but
-        // do not remove the session attribute yet, as it will be a way later in the completion listener
-        // to tell if the flash was already transferred
-        Object incomingFlash = session.getAttribute(FLASH_SESSION_KEY);
-
-        if (incomingFlash != null) {
-            exchange.putAttachment(FlashStore.ATTACHMENT_KEY, incomingFlash);
+        // No incoming flash. Initialize with empty store
+        if (exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_IN) == null) {
+            exchange.putAttachment(FlashStoreManager.ATTACHMENT_KEY_IN, flashStoreManager.buildStore());
         }
 
+        // Initialize the outgoing store
+        exchange.putAttachment(FlashStoreManager.ATTACHMENT_KEY_OUT, flashStoreManager.buildStore());
+
+        // Execute the next handlers
         next.handleRequest(exchange);
+
+        // Transfer outgoing flash to the next request via session
+        Object outgoingFlashStore = exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_OUT);
+        if (outgoingFlashStore != null && session != null) {
+            session.setAttribute(FLASH_SESSION_KEY, outgoingFlashStore);
+        }
     }
 
     private Session getSession(HttpServerExchange exchange) {

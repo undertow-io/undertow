@@ -51,8 +51,9 @@ public class FlashHandlerTestCase {
     @Test
     public void handlerTest() throws IOException {
 
-        final FlashStore flashStore = new HashMapFlashStore();
         final SessionCookieConfig sessionConfig = new SessionCookieConfig();
+
+        final FlashStoreManager flashStoreManager = new HashMapFlashStoreManager();
 
         HttpHandler appHandler = new HttpHandler() {
             @Override
@@ -64,19 +65,24 @@ public class FlashHandlerTestCase {
                         manager.createSession(exchange, sessionConfig);
                     }
                 } else if (exchange.getRequestPath().equals("/flash")) {
-                    flashStore.setAttribute(exchange, "foo", "bar");
+                    flashStoreManager.setAttribute(exchange, "foo", "bar");
                     redirect(exchange, "/flash2");
                 } else if (exchange.getRequestPath().equals("/flash2")) {
-                    Assert.assertEquals("bar", flashStore.getAttribute(exchange, "foo"));
+                    Assert.assertEquals("bar", flashStoreManager.getAttribute(exchange, "foo"));
+                    flashStoreManager.setAttribute(exchange, "bar", "baz");
+                    Assert.assertEquals("bar", flashStoreManager.getAttribute(exchange, "foo"));
                     redirect(exchange, "/flash3");
                 } else if (exchange.getRequestPath().equals("/flash3")) {
-                    Assert.assertNull(flashStore.getAttribute(exchange, "foo"));
+                    Assert.assertNull(flashStoreManager.getAttribute(exchange, "foo"));
+                    Assert.assertEquals("baz", flashStoreManager.getAttribute(exchange, "bar"));
                 }
                 exchange.endExchange();
             }
         };
 
-        final FlashHandler flashHandler = new FlashHandler(appHandler, sessionConfig);
+        final FlashHandler flashHandler = new FlashHandler(sessionConfig, flashStoreManager);
+        flashHandler.setNext(appHandler);
+
         final SessionAttachmentHandler sessionHandler = new SessionAttachmentHandler(flashHandler, new InMemorySessionManager(), sessionConfig);
 
         DefaultServer.setRootHandler(sessionHandler);
