@@ -71,6 +71,7 @@ public class FlashHandlerTestCase {
                     Assert.assertEquals("bar", flashStoreManager.getAttribute(exchange, "foo"));
                     flashStoreManager.setAttribute(exchange, "bar", "baz");
                     Assert.assertEquals("bar", flashStoreManager.getAttribute(exchange, "foo"));
+                    Assert.assertEquals("baz", flashStoreManager.getAttribute(exchange, "bar"));
                     redirect(exchange, "/flash3");
                 } else if (exchange.getRequestPath().equals("/flash3")) {
                     Assert.assertNull(flashStoreManager.getAttribute(exchange, "foo"));
