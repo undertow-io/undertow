@@ -33,12 +33,12 @@ public class HashMapFlashStoreManager<K, V> extends AbstractFlashStoreManager<Ha
     }
 
     @Override
-    protected void setStoreAttribute(HashMap store, K name, V value) {
+    protected void setAttribute(HashMap store, K name, V value) {
         store.put(name, value);
     }
 
     @Override
-    protected V getStoreAttribute(HashMap store, K name) {
+    protected V getAttribute(HashMap store, K name) {
         return (V) store.get(name);
     }
 
