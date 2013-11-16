@@ -367,13 +367,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Sets the request URI
      *
-     * @param requestURI The new request URI
+     * @param requestURI   The new request URI
      * @param containsHost If this is true the request URI containst the host part
-     *
      */
     public void setRequestURI(final String requestURI, boolean containsHost) {
         this.requestURI = requestURI;
-        if(containsHost) {
+        if (containsHost) {
             this.state |= FLAG_URI_CONTAINS_HOST;
         } else {
             this.state &= ~FLAG_URI_CONTAINS_HOST;
@@ -531,9 +530,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public int getHostPort() {
         String host = requestHeaders.getFirst(Headers.HOST);
-        int colonIndex = host.indexOf(':');
-        if (host != null && colonIndex != -1) {
-            return Integer.parseInt(host.substring(colonIndex + 1));
+        if (host != null) {
+            int colonIndex = host.indexOf(':');
+            if (colonIndex != -1) {
+                return Integer.parseInt(host.substring(colonIndex + 1));
+            }
         }
         return getDestinationAddress().getPort();
     }
@@ -663,7 +664,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return The current dispatch task
      */
     Runnable getDispatchTask() {
@@ -768,7 +768,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return the source address of the HTTP request
      */
     public InetSocketAddress getSourceAddress() {
-        if(sourceAddress != null) {
+        if (sourceAddress != null) {
             return sourceAddress;
         }
         return connection.getPeerAddress(InetSocketAddress.class);
@@ -989,7 +989,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return true if the responses is complete
      */
     public boolean isResponseComplete() {
@@ -1240,9 +1239,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             return;
         }
         int i = defaultResponseListeners.length - 1;
-        while (i >=0) {
+        while (i >= 0) {
             DefaultResponseListener listener = defaultResponseListeners[i];
-            if(listener != null) {
+            if (listener != null) {
                 defaultResponseListeners[i] = null;
                 try {
                     if (listener.handleDefaultResponse(this)) {

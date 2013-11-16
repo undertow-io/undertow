@@ -60,7 +60,7 @@ public class ServletSessionTestCase {
                 .setDeploymentName("servletContext.war")
                 .addListener(new ListenerInfo(SessionCookieConfigListener.class))
                 .addServlets(new ServletInfo("servlet", SessionServlet.class)
-                        .addMapping("/aa"));
+                        .addMapping("/aa/b"));
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         try {
@@ -76,7 +76,7 @@ public class ServletSessionTestCase {
     public void testSimpleSessionUsage() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
@@ -103,12 +103,14 @@ public class ServletSessionTestCase {
     public void testSessionCookieConfig() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("1", response);
-            Assert.assertTrue(result.getHeaders("Set-Cookie")[0].getValue().contains("MySessionCookie"));
+            String cookieValue = result.getHeaders("Set-Cookie")[0].getValue();
+            Assert.assertTrue(cookieValue.contains("MySessionCookie"));
+            Assert.assertTrue(cookieValue.contains("/servletContext/aa/"));
 
             result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());

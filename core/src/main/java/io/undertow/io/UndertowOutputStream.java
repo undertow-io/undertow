@@ -249,7 +249,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
         if (buffer != null && buffer.position() != 0) {
-            writeBufferBlocking(true);
+            writeBufferBlocking(false);
         }
         if (channel == null) {
             channel = exchange.getResponseChannel();
