@@ -25,7 +25,7 @@ import java.util.HashMap;
  *
  * @author <a href="mailto:andrei.zinca@gmail.com">Andrei Zinca</a>
  */
-public class HashMapFlashStoreManager<K, V> extends AbstractFlashStoreManager<K, V> {
+public class HashMapFlashStoreManager<K, V> extends AbstractFlashStoreManager<HashMap, K, V> {
 
     @Override
     public HashMap buildStore() {
@@ -33,13 +33,13 @@ public class HashMapFlashStoreManager<K, V> extends AbstractFlashStoreManager<K,
     }
 
     @Override
-    protected void setAttribute(Object store, K name, V value) {
-        ((HashMap<K, V>) store).put(name, value);
+    protected void setStoreAttribute(HashMap store, K name, V value) {
+        store.put(name, value);
     }
 
     @Override
-    protected V getAttribute(Object store, K name) {
-        return ((HashMap<K, V>) store).get(name);
+    protected V getStoreAttribute(HashMap store, K name) {
+        return (V) store.get(name);
     }
 
 }

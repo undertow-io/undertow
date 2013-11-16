@@ -25,30 +25,28 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author <a href="mailto:andrei.zinca@gmail.com">Andrei Zinca</a>
  */
-public abstract class AbstractFlashStoreManager<K, V> implements FlashStoreManager<K, V> {
+public abstract class AbstractFlashStoreManager<T, K, V> implements FlashStoreManager<T, K, V> {
 
     @Override
     public void setAttribute(HttpServerExchange exchange, K name, V value) {
-        setAttribute(exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_OUT), name, value);
+        setStoreAttribute((T) exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_OUT), name, value);
     }
 
     @Override
     public V getAttribute(HttpServerExchange exchange, K name) {
-        V value = getAttribute(exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_OUT), name);
-        if (value != null) {
-            return value;
-        }
-        return getAttribute(exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_IN), name);
+        V value = getStoreAttribute((T) exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_OUT), name);
+        if (value != null) return value;
+        return getStoreAttribute((T) exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_IN), name);
     }
 
     /**
      * Set an attribute in the store
      */
-    protected abstract void setAttribute(Object store, K name, V value);
+    protected abstract void setStoreAttribute(T store, K name, V value);
 
     /**
      * Get an attribute from the store
      */
-    protected abstract V getAttribute(Object store, K name);
+    protected abstract V getStoreAttribute(T store, K name);
 
 }

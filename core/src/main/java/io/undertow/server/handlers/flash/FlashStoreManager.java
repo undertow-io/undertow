@@ -29,12 +29,12 @@ import io.undertow.util.AttachmentKey;
  *
  * @author <a href="mailto:andrei.zinca@gmail.com">Andrei Zinca</a>
  */
-public interface FlashStoreManager<K, V> {
+public interface FlashStoreManager<T, K, V> {
 
     AttachmentKey ATTACHMENT_KEY_OUT = AttachmentKey.create(Object.class);
     AttachmentKey ATTACHMENT_KEY_IN = AttachmentKey.create(Object.class);
 
-    Object buildStore();
+    T buildStore();
 
     void setAttribute(HttpServerExchange exchange, K name, V value);
 
