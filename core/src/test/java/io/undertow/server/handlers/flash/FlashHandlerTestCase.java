@@ -66,11 +66,12 @@ public class FlashHandlerTestCase {
                     }
                 } else if (exchange.getRequestPath().equals("/flash")) {
                     flashStoreManager.setAttribute(exchange, "foo", "bar");
+                    flashStoreManager.setAttribute(exchange, "foo", "boo"); // overwrites
                     redirect(exchange, "/flash2");
                 } else if (exchange.getRequestPath().equals("/flash2")) {
-                    Assert.assertEquals("bar", flashStoreManager.getAttribute(exchange, "foo"));
-                    flashStoreManager.setAttribute(exchange, "bar", "baz");
-                    Assert.assertEquals("bar", flashStoreManager.getAttribute(exchange, "foo"));
+                    Assert.assertEquals("boo", flashStoreManager.getAttribute(exchange, "foo"));
+                    flashStoreManager.setAttribute(exchange, "bar", "baz"); // adds a new one
+                    Assert.assertEquals("boo", flashStoreManager.getAttribute(exchange, "foo"));
                     Assert.assertEquals("baz", flashStoreManager.getAttribute(exchange, "bar"));
                     redirect(exchange, "/flash3");
                 } else if (exchange.getRequestPath().equals("/flash3")) {

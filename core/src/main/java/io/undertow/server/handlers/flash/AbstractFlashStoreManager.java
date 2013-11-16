@@ -29,12 +29,15 @@ public abstract class AbstractFlashStoreManager<K, V> implements FlashStoreManag
 
     @Override
     public void setAttribute(HttpServerExchange exchange, K name, V value) {
-        setAttribute(exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_IN), name, value);
         setAttribute(exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_OUT), name, value);
     }
 
     @Override
     public V getAttribute(HttpServerExchange exchange, K name) {
+        V value = getAttribute(exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_OUT), name);
+        if (value != null) {
+            return value;
+        }
         return getAttribute(exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_IN), name);
     }
 
