@@ -147,10 +147,12 @@ public class DefaultServlet extends HttpServlet {
         try {
             //only set the content length if we are using a stream
             //if we are using a writer who knows what the length will end up being
+            //todo: if someone installs a filter this can cause problems
+            //not sure how best to deal with this
             Long contentLength = resource.getContentLength();
             if (contentLength != null) {
-                resp.setContentLengthLong(contentLength);
                 resp.getOutputStream();
+                resp.setContentLengthLong(contentLength);
             }
         } catch (IllegalStateException e) {
 
