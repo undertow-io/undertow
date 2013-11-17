@@ -71,7 +71,7 @@ public class QueryParameterUtils {
 
     private static void handleQueryParameter(String newQueryString, Map<String, Deque<String>> newQueryParameters, int startPos, int equalPos, int i) {
         String key;
-        String value = null;
+        String value = "";
         if(equalPos == -1) {
             key = newQueryString.substring(startPos, i);
         } else {
@@ -83,7 +83,9 @@ public class QueryParameterUtils {
         if (queue == null) {
             newQueryParameters.put(key, queue = new ArrayDeque<String>(1));
         }
-        queue.add(value);
+        if(value != null) {
+            queue.add(value);
+        }
     }
 
 
