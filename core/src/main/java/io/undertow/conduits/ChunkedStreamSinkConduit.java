@@ -85,7 +85,8 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private static final int FLAG_WRITES_SHUTDOWN = 1;
     private static final int FLAG_NEXT_SHUTDWON = 1 << 2;
     private static final int FLAG_WRITTEN_FIRST_CHUNK = 1 << 3;
-    private static final int FLAG_FINISHED = 1 << 4;
+    private static final int FLAG_FIRST_DATA_WRITTEN = 1 << 4; //set on first flush or write call
+    private static final int FLAG_FINISHED = 1 << 5;
 
     int written = 0;
 
@@ -118,6 +119,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             throw new ClosedChannelException();
         }
+        this.state |= FLAG_FIRST_DATA_WRITTEN;
         int oldLimit = src.limit();
         if (chunkleft == 0) {
             chunkingBuffer.clear();
@@ -195,6 +197,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public int writeFinal(ByteBuffer src) throws IOException {
+        //todo: we could optimise this to just set a content length if no data has been written
         if (lastChunkBuffer == null) {
             createLastChunk();
         }
@@ -219,6 +222,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public boolean flush() throws IOException {
+        this.state |= FLAG_FIRST_DATA_WRITTEN;
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             if (anyAreSet(state, FLAG_NEXT_SHUTDWON)) {
                 boolean val = next.flush();
@@ -260,7 +264,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         if (this.chunkleft != 0) {
             throw UndertowMessages.MESSAGES.chunkedChannelClosedMidChunk();
         }
-        if (!anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK)) {
+        if (!anyAreSet(state, FLAG_FIRST_DATA_WRITTEN)) {
             //if no data was actually sent we just remove the transfer encoding header, and set content length 0
             //TODO: is this the best way to do it?
             //todo: should we make this behaviour configurable?
