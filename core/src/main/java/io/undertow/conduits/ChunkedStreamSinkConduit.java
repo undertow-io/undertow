@@ -283,7 +283,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private void createLastChunk() throws UnsupportedEncodingException {
         lastChunkBuffer = bufferPool.allocate();
         ByteBuffer lastChunkBuffer = this.lastChunkBuffer.getResource();
-        lastChunkBuffer.put(CRLF);
+        if (anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK)) {
+            lastChunkBuffer.put(CRLF);
+        }
         lastChunkBuffer.put(LAST_CHUNK);
         //we just assume it will fit
         HeaderMap trailers = attachable.getAttachment(TRAILERS);
