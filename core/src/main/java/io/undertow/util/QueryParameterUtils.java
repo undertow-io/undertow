@@ -92,9 +92,13 @@ public class QueryParameterUtils {
     public static Map<String, Deque<String>> mergeQueryParametersWithNewQueryString(final Map<String, Deque<String>> queryParameters, final String newQueryString) {
 
         Map<String, Deque<String>> newQueryParameters = parseQueryString(newQueryString);
+        //according to the spec the new query parameters have to 'take precedence'
+        //it looks like they mean they have to be first, rather than completely replacing the existing ones
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
             if (!newQueryParameters.containsKey(entry.getKey())) {
                 newQueryParameters.put(entry.getKey(), new ArrayDeque<String>(entry.getValue()));
+            } else {
+                newQueryParameters.get(entry.getKey()).addAll(entry.getValue());
             }
         }
         return newQueryParameters;
