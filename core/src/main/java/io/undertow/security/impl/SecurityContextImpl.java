@@ -118,7 +118,7 @@ public class SecurityContextImpl implements SecurityContext {
             switch (authenticationState) {
                 case NOT_ATTEMPTED: // No constraint was set that mandated authentication so not reason to hold up the request.
                 case ATTEMPTED: // Attempted based on incoming request but no a failure so allow the request to proceed.
-                case AUTHENITCATED: // Authentication was a success - no responses sent.
+                case AUTHENTICATED: // Authentication was a success - no responses sent.
                     return false;
                 default:
                     // Remaining option is CHALLENGE_SENT to request processing must end.
@@ -159,7 +159,7 @@ public class SecurityContextImpl implements SecurityContext {
 
     @Override
     public boolean isAuthenticated() {
-        return authenticationState == AuthenticationState.AUTHENITCATED;
+        return authenticationState == AuthenticationState.AUTHENTICATED;
     }
 
     /**
@@ -208,7 +208,7 @@ public class SecurityContextImpl implements SecurityContext {
         }
 
         authenticationComplete(account, programaticMechName, true);
-        this.authenticationState = AuthenticationState.AUTHENITCATED;
+        this.authenticationState = AuthenticationState.AUTHENTICATED;
 
         return true;
     }
@@ -288,7 +288,7 @@ public class SecurityContextImpl implements SecurityContext {
                 switch (outcome) {
                     case AUTHENTICATED:
                         // TODO - Should verify that the mechanism did register an authenticated Account.
-                        return AuthenticationState.AUTHENITCATED;
+                        return AuthenticationState.AUTHENTICATED;
                     case NOT_AUTHENTICATED:
                         // A mechanism attempted to authenticate but could not complete, this now means that
                         // authentication is required and challenges need to be sent.
@@ -375,7 +375,7 @@ public class SecurityContextImpl implements SecurityContext {
 
         ATTEMPTED,
 
-        AUTHENITCATED,
+        AUTHENTICATED,
 
         CHALLENGE_SENT;
     }
