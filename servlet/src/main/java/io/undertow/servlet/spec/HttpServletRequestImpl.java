@@ -94,6 +94,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     private static final Charset DEFAULT_CHARSET = Charset.forName("ISO-8859-1");
 
     private final HttpServerExchange exchange;
+    private final ServletContextImpl originalServletContext;
     private ServletContextImpl servletContext;
 
     private Map<String, Object> attributes = null;
@@ -114,6 +115,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public HttpServletRequestImpl(final HttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
         this.servletContext = servletContext;
+        this.originalServletContext = servletContext;
     }
 
     public HttpServerExchange getExchange() {
@@ -285,19 +287,19 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRequestedSessionId() {
-        SessionConfig config = servletContext.getSessionConfig();
+        SessionConfig config = originalServletContext.getSessionConfig();
         return config.findSessionId(exchange);
     }
 
     @Override
     public String changeSessionId() {
-        HttpSessionImpl session = servletContext.getSession(exchange, false);
+        HttpSessionImpl session = originalServletContext.getSession(exchange, false);
         if (session == null) {
             throw UndertowServletMessages.MESSAGES.noSession();
         }
         String oldId = session.getId();
-        String newId = session.getSession().changeSessionId(exchange, servletContext.getSessionCookieConfig());
-        servletContext.getDeployment().getApplicationListeners().httpSessionIdChanged(session, oldId);
+        String newId = session.getSession().changeSessionId(exchange, originalServletContext.getSessionCookieConfig());
+        originalServletContext.getDeployment().getApplicationListeners().httpSessionIdChanged(session, oldId);
         return newId;
     }
 
@@ -337,7 +339,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public HttpSession getSession(final boolean create) {
-        return servletContext.getSession(exchange, create);
+        return originalServletContext.getSession(exchange, create);
     }
 
     @Override
@@ -348,7 +350,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isRequestedSessionIdValid() {
-        HttpSessionImpl session = servletContext.getSession(exchange, false);
+        HttpSessionImpl session = originalServletContext.getSession(exchange, false);
         return session != null;
     }
 
@@ -1025,7 +1027,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     private SessionConfig.SessionCookieSource sessionCookieSource() {
         if(sessionCookieSource == null) {
-            sessionCookieSource = servletContext.getSessionCookieConfig().sessionCookieSource(exchange);
+            sessionCookieSource = originalServletContext.getSessionCookieConfig().sessionCookieSource(exchange);
         }
         return sessionCookieSource;
     }
