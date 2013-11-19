@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.core;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -56,6 +57,7 @@ public class DeploymentImpl implements Deployment {
     private final Executor executor;
     private final Executor asyncExecutor;
 
+
     private volatile ApplicationListeners applicationListeners;
     private volatile ServletContextImpl servletContext;
     private volatile ServletInitialHandler servletHandler;
@@ -64,6 +66,7 @@ public class DeploymentImpl implements Deployment {
     private volatile ErrorPages errorPages;
     private volatile Map<String, String> mimeExtensionMappings;
     private volatile SessionManager sessionManager;
+    private volatile Charset defaultCharset;
 
     public DeploymentImpl(final DeploymentInfo deploymentInfo, ServletContainer servletContainer) {
         this.deploymentInfo = deploymentInfo;
@@ -188,6 +191,14 @@ public class DeploymentImpl implements Deployment {
     @Override
     public Executor getAsyncExecutor() {
         return asyncExecutor;
+    }
+
+    public Charset getDefaultCharset() {
+        return defaultCharset;
+    }
+
+    public void setDefaultCharset(Charset defaultCharset) {
+        this.defaultCharset = defaultCharset;
     }
 
     void destroy(){

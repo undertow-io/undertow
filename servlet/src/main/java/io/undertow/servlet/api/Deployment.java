@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.api;
 
+import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -80,4 +81,5 @@ public interface Deployment {
      */
     Executor getAsyncExecutor();
 
+    Charset getDefaultCharset();
 }

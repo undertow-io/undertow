@@ -81,6 +81,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.SessionTrackingMode;
 import java.io.File;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -135,6 +136,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
         final ServletContextImpl servletContext = new ServletContextImpl(servletContainer, deployment);
         deployment.setServletContext(servletContext);
         handleExtensions(deploymentInfo, servletContext);
+
+        deployment.setDefaultCharset(Charset.forName(deploymentInfo.getDefaultEncoding()));
 
         handleDeploymentSessionConfig(deploymentInfo, servletContext);
 

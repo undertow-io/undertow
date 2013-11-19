@@ -91,8 +91,6 @@ import org.xnio.LocalSocketAddress;
  */
 public final class HttpServletRequestImpl implements HttpServletRequest {
 
-    private static final Charset DEFAULT_CHARSET = Charset.forName("ISO-8859-1");
-
     private final HttpServerExchange exchange;
     private final ServletContextImpl originalServletContext;
     private ServletContextImpl servletContext;
@@ -737,7 +735,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (servletInputStream != null) {
                 throw UndertowServletMessages.MESSAGES.getInputStreamAlreadyCalled();
             }
-            Charset charSet = DEFAULT_CHARSET;
+            Charset charSet = servletContext.getDeployment().getDefaultCharset();
             if (characterEncoding != null) {
                 charSet = characterEncoding;
             } else {

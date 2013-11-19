@@ -53,7 +53,6 @@ import io.undertow.util.StatusCodes;
  */
 public final class HttpServletResponseImpl implements HttpServletResponse {
 
-    public static final String ISO_8859_1 = "ISO-8859-1";
     private final HttpServerExchange exchange;
     private volatile ServletContextImpl servletContext;
 
