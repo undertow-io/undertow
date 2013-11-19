@@ -12,6 +12,7 @@ import javax.servlet.http.HttpSession;
 
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
 /**
@@ -24,12 +25,22 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     private static final String SESSION_KEY = "io.undertow.servlet.form.auth.redirect.location";
 
+    @Deprecated
     public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
         super(name, loginPage, errorPage);
     }
 
+    @Deprecated
     public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage, final String postLocation) {
         super(name, loginPage, errorPage, postLocation);
+    }
+
+    public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, String postLocation) {
+        super(formParserFactory, name, loginPage, errorPage, postLocation);
+    }
+
+    public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage) {
+        super(formParserFactory, name, loginPage, errorPage);
     }
 
     @Override

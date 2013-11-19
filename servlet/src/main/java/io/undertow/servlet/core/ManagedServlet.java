@@ -59,6 +59,8 @@ public class ManagedServlet implements Lifecycle {
         } else {
             instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
         }
+        FormEncodedDataDefinition formDataParser = new FormEncodedDataDefinition()
+                .setDefaultEncoding(servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding());
         if (servletInfo.getMultipartConfig() != null) {
             //todo: fileSizeThreshold
             MultipartConfigElement config = servletInfo.getMultipartConfig();
@@ -84,15 +86,16 @@ public class ManagedServlet implements Lifecycle {
             if(config.getMaxFileSize() > 0) {
                 multiPartParserDefinition.setMaxIndividualFileSize(config.getMaxFileSize());
             }
+            multiPartParserDefinition.setDefaultEncoding(servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding());
 
             formParserFactory = FormParserFactory.builder(false)
-                    .addParser(new FormEncodedDataDefinition())
+                    .addParser(formDataParser)
                     .addParser(multiPartParserDefinition)
                     .build();
 
         } else {
             //no multipart config we don't allow multipart requests
-            formParserFactory = FormParserFactory.builder(false).addParser(new FormEncodedDataDefinition()).build();
+            formParserFactory = FormParserFactory.builder(false).addParser(formDataParser).build();
             maxRequestSize = -1;
         }
     }

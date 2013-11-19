@@ -34,6 +34,8 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.PredicateHandler;
+import io.undertow.server.handlers.form.FormEncodedDataDefinition;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.UndertowServletLogger;
@@ -281,7 +283,13 @@ public class DeploymentManagerImpl implements DeploymentManager {
                             } else if (mechanism.equalsIgnoreCase(FORM_AUTH)) {
                                 // The mechanism name is passed in from the HttpServletRequest interface as the name reported needs to be
                                 // comparable using '=='
-                                authenticationMechanisms.add(new ServletFormAuthenticationMechanism(FORM_AUTH, loginConfig.getLoginPage(),
+
+                                //we don't allow multipart requests, and always use the default encoding
+                                FormParserFactory parser = FormParserFactory.builder(false)
+                                        .addParser(new FormEncodedDataDefinition().setDefaultEncoding(deploymentInfo.getDefaultEncoding()))
+                                        .build();
+
+                                authenticationMechanisms.add(new ServletFormAuthenticationMechanism(parser, FORM_AUTH, loginConfig.getLoginPage(),
                                         loginConfig.getErrorPage()));
                             } else if (mechanism.equalsIgnoreCase(CLIENT_CERT_AUTH)) {
                                 authenticationMechanisms.add(new ClientCertAuthenticationMechanism());

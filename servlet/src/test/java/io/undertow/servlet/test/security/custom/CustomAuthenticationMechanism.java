@@ -19,6 +19,7 @@ package io.undertow.servlet.test.security.custom;
 
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.util.Methods;
 
@@ -39,7 +40,7 @@ public class CustomAuthenticationMechanism extends ServletFormAuthenticationMech
     public static final String POST_LOCATION = "custom_security_check";
 
     public CustomAuthenticationMechanism(String name, String loginPage, String errorPage) {
-        super(name, loginPage, errorPage);
+        super(FormParserFactory.builder().build(), name, loginPage, errorPage);
     }
 
     @Override
