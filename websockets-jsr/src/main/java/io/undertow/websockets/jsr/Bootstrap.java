@@ -62,6 +62,7 @@ public class Bootstrap implements ServletExtension {
         public void contextInitialized(ServletContextEvent sce) {
             ServerWebSocketContainer container = (ServerWebSocketContainer) sce.getServletContext().getAttribute(ServerContainer.class.getName());
             FilterRegistration.Dynamic filter = sce.getServletContext().addFilter(FILTER_NAME, JsrWebSocketFilter.class);
+            filter.setAsyncSupported(true);
             if(!container.getConfiguredServerEndpoints().isEmpty()){
                 filter.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true, "/*");
             } else {
