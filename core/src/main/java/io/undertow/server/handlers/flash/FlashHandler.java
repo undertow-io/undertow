@@ -52,9 +52,9 @@ public class FlashHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        Session session = getSession(exchange);
 
         // First check for incoming flash store from the previous request and attach if the case
+        Session session = getSession(exchange);
         if (session != null) {
             Object incomingFlashStore = session.removeAttribute(FLASH_SESSION_KEY);
             if (incomingFlashStore != null) {
@@ -74,10 +74,12 @@ public class FlashHandler implements HttpHandler {
         next.handleRequest(exchange);
 
         // Transfer outgoing flash to the next request via session
+        session = getSession(exchange);
         Object outgoingFlashStore = exchange.getAttachment(FlashStoreManager.ATTACHMENT_KEY_OUT);
         if (outgoingFlashStore != null && session != null) {
             session.setAttribute(FLASH_SESSION_KEY, outgoingFlashStore);
         }
+
     }
 
     private Session getSession(HttpServerExchange exchange) {
