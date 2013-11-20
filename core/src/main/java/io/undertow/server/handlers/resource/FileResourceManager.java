@@ -44,8 +44,8 @@ public class FileResourceManager implements ResourceManager {
     private volatile String base;
 
     /**
-      * Size to use direct FS to network transfer (if supported by OS/JDK) instead of read/write
-      */
+     * Size to use direct FS to network transfer (if supported by OS/JDK) instead of read/write
+     */
     private final long transferMinSize;
 
     public FileResourceManager(final File base, long transferMinSize) {
@@ -53,7 +53,7 @@ public class FileResourceManager implements ResourceManager {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         String basePath = base.getAbsolutePath();
-        if(!basePath.endsWith("/")) {
+        if (!basePath.endsWith("/")) {
             basePath = basePath + '/';
         }
         this.base = basePath;
@@ -70,7 +70,7 @@ public class FileResourceManager implements ResourceManager {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         String basePath = base.getAbsolutePath();
-        if(!basePath.endsWith("/")) {
+        if (!basePath.endsWith("/")) {
             basePath = basePath + '/';
         }
         this.base = basePath;
@@ -91,7 +91,7 @@ public class FileResourceManager implements ResourceManager {
                 //security check for case insensitive file systems
                 //we make sure the case of the filename matches the case of the request
                 //TODO: we should be able to avoid this if we can tell a FS is case sensitive
-                if(file.getCanonicalFile().getName().equals(file.getName())) {
+                if (file.getCanonicalFile().getName().equals(file.getName())) {
                     return new FileResource(file, this, path);
                 }
             }
@@ -104,26 +104,26 @@ public class FileResourceManager implements ResourceManager {
 
     @Override
     public boolean isResourceChangeListenerSupported() {
-        return false;
+        return true;
     }
 
     @Override
     public synchronized void registerResourceChangeListener(ResourceChangeListener listener) {
         listeners.add(listener);
-        if(fileSystemWatcher != null) {
+        if (fileSystemWatcher == null) {
             fileSystemWatcher = Xnio.getInstance().createFileSystemWatcher("Watcher for " + base, OptionMap.EMPTY);
             fileSystemWatcher.watchPath(new File(base), new FileChangeCallback() {
                 @Override
                 public void handleChanges(Collection<FileChangeEvent> changes) {
                     synchronized (FileResourceManager.this) {
                         final List<ResourceChangeEvent> events = new ArrayList<ResourceChangeEvent>();
-                        for(FileChangeEvent change : changes) {
-                            if(change.getFile().getAbsolutePath().startsWith(base)) {
+                        for (FileChangeEvent change : changes) {
+                            if (change.getFile().getAbsolutePath().startsWith(base)) {
                                 String path = change.getFile().getAbsolutePath().substring(base.length());
                                 events.add(new ResourceChangeEvent(getResource(path), ResourceChangeEvent.Type.valueOf(change.getType().name())));
                             }
                         }
-                        for(ResourceChangeListener listener : listeners) {
+                        for (ResourceChangeListener listener : listeners) {
                             listener.handleChanges(events);
                         }
                     }
@@ -131,6 +131,7 @@ public class FileResourceManager implements ResourceManager {
             });
         }
     }
+
 
     @Override
     public synchronized void removeResourceChangeListener(ResourceChangeListener listener) {
@@ -143,7 +144,7 @@ public class FileResourceManager implements ResourceManager {
 
     @Override
     public synchronized void close() throws IOException {
-        if(fileSystemWatcher != null) {
+        if (fileSystemWatcher != null) {
             fileSystemWatcher.close();
         }
     }
