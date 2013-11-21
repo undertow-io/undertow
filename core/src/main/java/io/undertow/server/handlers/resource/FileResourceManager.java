@@ -120,7 +120,7 @@ public class FileResourceManager implements ResourceManager {
                         for (FileChangeEvent change : changes) {
                             if (change.getFile().getAbsolutePath().startsWith(base)) {
                                 String path = change.getFile().getAbsolutePath().substring(base.length());
-                                events.add(new ResourceChangeEvent(getResource(path), ResourceChangeEvent.Type.valueOf(change.getType().name())));
+                                events.add(new ResourceChangeEvent(path, ResourceChangeEvent.Type.valueOf(change.getType().name())));
                             }
                         }
                         for (ResourceChangeListener listener : listeners) {

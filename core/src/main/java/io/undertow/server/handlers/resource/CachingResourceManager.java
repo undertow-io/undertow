@@ -63,7 +63,7 @@ public class CachingResourceManager implements ResourceManager {
                 @Override
                 public void handleChanges(Collection<ResourceChangeEvent> changes) {
                     for(ResourceChangeEvent change : changes) {
-                        invalidate(change.getResource().getPath());
+                        invalidate(change.getResource());
                     }
                 }
             });
