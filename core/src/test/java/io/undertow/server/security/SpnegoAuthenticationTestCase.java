@@ -15,7 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.undertow.server.security;
+
+import javax.security.auth.Subject;
+
+import io.undertow.testutils.DefaultServer;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -29,8 +34,8 @@ import org.junit.Test;
 public class SpnegoAuthenticationTestCase {
 
     @BeforeClass
-    public static void startServers() {
-
+    public static void startServers() throws Exception {
+        KerberosKDCUtil.startServer();
     }
 
     @AfterClass
@@ -38,10 +43,23 @@ public class SpnegoAuthenticationTestCase {
 
     }
 
-
     @Test
     public void test() {
+        System.out.println("Test Run");
+    }
 
+    @Test
+    public void testJDuke() throws Exception {
+        Subject subject = KerberosKDCUtil.login("jduke", "theduke".toCharArray());
+
+        System.out.println(subject.toString());
+    }
+
+    @Test
+    public void testServer() throws Exception {
+        Subject subject = KerberosKDCUtil.login("HTTP/" + DefaultServer.getDefaultServerAddress().getHostString(), "servicepwd".toCharArray());
+
+        System.out.println(subject.toString());
     }
 
 }
