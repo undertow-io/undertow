@@ -136,8 +136,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                 String newRequestUri = servletContext.getContextPath() + newServletPath;
 
                 Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString);
-                final StringBuilder sb = new StringBuilder();
-
 
                 requestImpl.setQueryParameters(newQueryParameters);
 
