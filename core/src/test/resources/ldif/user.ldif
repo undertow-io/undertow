@@ -1,0 +1,12 @@
+dn: uid=jduke,ou=users,dc=undertow,dc=io
+objectClass: top
+objectClass: person
+objectClass: inetOrgPerson
+objectClass: krb5principal
+objectClass: krb5kdcentry
+cn: Java Duke
+sn: duke
+uid: jduke
+userPassword: theduke
+krb5PrincipalName: jduke@UNDERTOW.IO
+krb5KeyVersionNumber: 0

@@ -36,7 +36,7 @@ import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static org.junit.Assert.assertEquals;
 
 /**
- * A test case to test when the only authentication mechanism
+ * A test case to test when the only authentication mechanism is the BASIC mechanism.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
