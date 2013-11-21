@@ -20,8 +20,11 @@ package io.undertow.servlet.test.streams;
 
 import java.io.IOException;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
+import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
@@ -49,7 +52,12 @@ public class ServletOutputStreamTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
-        DeploymentUtils.setupServlet(
+        DeploymentUtils.setupServlet(new ServletExtension() {
+            @Override
+            public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
+                deploymentInfo.setIgnoreFlush(false);
+            }
+        },
                 new ServletInfo(BLOCKING_SERVLET, BlockingOutputStreamServlet.class)
                         .addMapping("/" + BLOCKING_SERVLET),
                 new ServletInfo(ASYNC_SERVLET, AsyncOutputStreamServlet.class)
@@ -83,7 +91,7 @@ public class ServletOutputStreamTestCase {
     }
 
     @Test
-    public void testBlockingServletOutputStream() {
+    public void testBlockingServletOutputStream() throws IOException {
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
         for (int i = 0; i < 10; ++i) {
             try {
@@ -91,14 +99,23 @@ public class ServletOutputStreamTestCase {
                     builder.append(HELLO_WORLD);
                 }
                 String message = builder.toString();
-                runTest(message, BLOCKING_SERVLET, false, false, 1);
-                runTest(message, BLOCKING_SERVLET, true, false, 10);
-                runTest(message, BLOCKING_SERVLET, false, true, 3);
-                runTest(message, BLOCKING_SERVLET, true, true, 7);
+                runTest(message, BLOCKING_SERVLET, false, false, 1, false);
+                runTest(message, BLOCKING_SERVLET, true, false, 10, false);
+                runTest(message, BLOCKING_SERVLET, false, true, 3, false);
+                runTest(message, BLOCKING_SERVLET, true, true, 7, false);
             } catch (Throwable e) {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
         }
+        message = HELLO_WORLD;
+        runTest(message, BLOCKING_SERVLET, false, true, 1, true);
+    }
+
+
+    @Test
+    public void testChunkedResponseWithInitialFlush() throws IOException {
+        message = HELLO_WORLD;
+        runTest(message, BLOCKING_SERVLET, false, true, 1, true);
     }
 
     @Test
@@ -110,17 +127,17 @@ public class ServletOutputStreamTestCase {
                     builder.append(HELLO_WORLD);
                 }
                 String message = builder.toString();
-                runTest(message, ASYNC_SERVLET, false, false, 1);
-                runTest(message, ASYNC_SERVLET, true, false, 10);
-                runTest(message, ASYNC_SERVLET, false, true, 3);
-                runTest(message, ASYNC_SERVLET, true, true, 7);
+                runTest(message, ASYNC_SERVLET, false, false, 1, false);
+                runTest(message, ASYNC_SERVLET, true, false, 10, false);
+                runTest(message, ASYNC_SERVLET, false, true, 3, false);
+                runTest(message, ASYNC_SERVLET, true, true, 7, false);
             } catch (Exception e) {
                 throw new RuntimeException("test failed with i equal to " + i, e);
             }
         }
     }
 
-    public void runTest(final String message, String url, final boolean flush, final boolean close, int reps) throws IOException {
+    public void runTest(final String message, String url, final boolean flush, final boolean close, int reps, boolean initialFlush) throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
             ServletOutputStreamTestCase.message = message;
@@ -130,6 +147,9 @@ public class ServletOutputStreamTestCase {
             }
             if (close) {
                 uri = uri + "close=true&";
+            }
+            if(initialFlush) {
+                uri = uri + "initialFlush=true&";
             }
             HttpGet get = new HttpGet(uri);
             HttpResponse result = client.execute(get);

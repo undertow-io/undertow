@@ -206,7 +206,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             return 0;
         }
         if (lastChunkBuffer == null) {
-            createLastChunk();
+            createLastChunk(true);
         }
         return doWrite(src);
     }
@@ -282,15 +282,15 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                 next.terminateWrites();
             }
         } else {
-            createLastChunk();
+            createLastChunk(false);
             state |= FLAG_WRITES_SHUTDOWN;
         }
     }
 
-    private void createLastChunk() throws UnsupportedEncodingException {
+    private void createLastChunk(final boolean writeFinal) throws UnsupportedEncodingException {
         lastChunkBuffer = bufferPool.allocate();
         ByteBuffer lastChunkBuffer = this.lastChunkBuffer.getResource();
-        if (anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK)) {
+        if (anyAreSet(state, FLAG_WRITTEN_FIRST_CHUNK) || writeFinal) {
             lastChunkBuffer.put(CRLF);
         }
         lastChunkBuffer.put(LAST_CHUNK);

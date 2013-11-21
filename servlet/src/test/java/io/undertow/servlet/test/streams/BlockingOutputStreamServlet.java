@@ -36,8 +36,12 @@ public class BlockingOutputStreamServlet extends HttpServlet {
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         boolean flush = req.getParameter("flush") != null;
         boolean close = req.getParameter("close") != null;
+        boolean initialFlush = req.getParameter("initialFlush") != null;
         int reps = Integer.parseInt(req.getParameter("reps"));
         ServletOutputStream out = resp.getOutputStream();
+        if(initialFlush) {
+            resp.flushBuffer();
+        }
         for(int i = 0; i < reps; ++i) {
             out.write(ServletOutputStreamTestCase.message.getBytes());
         }
