@@ -331,7 +331,8 @@ public class PipelingBufferingStreamSinkConduit extends AbstractStreamSinkCondui
                     nextListener.proceed();
                 }
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                IoUtils.safeClose(connection.getChannel());
             }
         }
     }
