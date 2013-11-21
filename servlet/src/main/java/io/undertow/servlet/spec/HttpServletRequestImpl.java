@@ -291,13 +291,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String changeSessionId() {
-        HttpSessionImpl session = originalServletContext.getSession(exchange, false);
+        HttpSessionImpl session = servletContext.getSession(originalServletContext.getSessionConfig(), exchange, false);
         if (session == null) {
             throw UndertowServletMessages.MESSAGES.noSession();
         }
         String oldId = session.getId();
         String newId = session.getSession().changeSessionId(exchange, originalServletContext.getSessionCookieConfig());
-        originalServletContext.getDeployment().getApplicationListeners().httpSessionIdChanged(session, oldId);
+        servletContext.getDeployment().getApplicationListeners().httpSessionIdChanged(session, oldId);
         return newId;
     }
 
@@ -337,7 +337,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public HttpSession getSession(final boolean create) {
-        return originalServletContext.getSession(exchange, create);
+        return servletContext.getSession(originalServletContext.getSessionConfig(), exchange, create);
     }
 
     @Override
@@ -348,7 +348,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public boolean isRequestedSessionIdValid() {
-        HttpSessionImpl session = originalServletContext.getSession(exchange, false);
+        HttpSessionImpl session = servletContext.getSession(originalServletContext.getSessionConfig(), exchange, false);
         return session != null;
     }
 

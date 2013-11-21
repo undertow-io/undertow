@@ -661,14 +661,7 @@ public class ServletContextImpl implements ServletContext {
         return null;
     }
 
-    /**
-     * Gets the session
-     *
-     * @param create
-     * @return
-     */
-    public HttpSessionImpl getSession(final HttpServerExchange exchange, boolean create) {
-        final SessionConfig c = sessionConfig;
+    public HttpSessionImpl getSession(final SessionConfig c, final HttpServerExchange exchange, boolean create) {
         HttpSessionImpl httpSession = exchange.getAttachment(sessionAttachmentKey);
         if (httpSession != null && httpSession.isInvalid()) {
             exchange.removeAttachment(sessionAttachmentKey);
@@ -687,6 +680,15 @@ public class ServletContextImpl implements ServletContext {
             }
         }
         return httpSession;
+    }
+    /**
+     * Gets the session
+     *
+     * @param create
+     * @return
+     */
+    public HttpSessionImpl getSession(final HttpServerExchange exchange, boolean create) {
+        return getSession(sessionConfig, exchange, create);
     }
 
     public void updateSessionAccessTime(final HttpServerExchange exchange) {

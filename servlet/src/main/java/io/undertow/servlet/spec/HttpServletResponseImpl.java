@@ -54,6 +54,7 @@ import io.undertow.util.StatusCodes;
 public final class HttpServletResponseImpl implements HttpServletResponse {
 
     private final HttpServerExchange exchange;
+    private final ServletContextImpl originalServletContext;
     private volatile ServletContextImpl servletContext;
 
     private ServletOutputStreamImpl servletOutputStream;
@@ -75,6 +76,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     public HttpServletResponseImpl(final HttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
         this.servletContext = servletContext;
+        this.originalServletContext = servletContext;
     }
 
     public HttpServerExchange getExchange() {
@@ -554,7 +556,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             if (url.equalsIgnoreCase("")) {
                 url = absolute;
             }
-            return (toEncoded(url, servletContext.getSession(exchange, true).getId()));
+            return (toEncoded(url, servletContext.getSession(originalServletContext.getSessionConfig(), exchange, true).getId()));
         } else {
             return (url);
         }
@@ -569,7 +571,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
      */
     public String encodeRedirectURL(String url) {
         if (isEncodeable(toAbsolute(url))) {
-            return (toEncoded(url, servletContext.getSession(exchange, true).getId()));
+            return (toEncoded(url, servletContext.getSession(originalServletContext.getSessionConfig(), exchange, true).getId()));
         } else {
             return (url);
         }
@@ -644,7 +646,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         final HttpServletRequestImpl hreq = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalRequest();
 
         // Is URL encoding permitted
-        if (!servletContext.getEffectiveSessionTrackingModes().contains(SessionTrackingMode.URL)) {
+        if (!originalServletContext.getEffectiveSessionTrackingModes().contains(SessionTrackingMode.URL)) {
             return false;
         }
 
@@ -698,7 +700,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (file == null) {
             return false;
         }
-        String tok = servletContext.getSessionCookieConfig().getName() + "=" + session.getId();
+        String tok = originalServletContext.getSessionCookieConfig().getName() + "=" + session.getId();
         if (file.indexOf(tok) >= 0) {
             return false;
         }
@@ -737,7 +739,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         StringBuilder sb = new StringBuilder(path);
         if (sb.length() > 0) { // jsessionid can't be first.
             sb.append(';');
-            sb.append(servletContext.getSessionCookieConfig().getName().toLowerCase(Locale.ENGLISH));
+            sb.append(originalServletContext.getSessionCookieConfig().getName().toLowerCase(Locale.ENGLISH));
             sb.append('=');
             sb.append(sessionId);
         }

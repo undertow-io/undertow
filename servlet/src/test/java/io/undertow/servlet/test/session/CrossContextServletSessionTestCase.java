@@ -105,22 +105,22 @@ public class CrossContextServletSessionTestCase {
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("2", response);
 
-            result = client.execute(forward1);
+            result = client.execute(forward2);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("3", response);
 
-            result = client.execute(forward1);
+            result = client.execute(forward2);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("4", response);
 
-            result = client.execute(forward2);
+            result = client.execute(forward1);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("1", response);
 
-            result = client.execute(forward2);
+            result = client.execute(forward1);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("2", response);
