@@ -84,7 +84,7 @@ public class ProgramaticAutobahnServer implements Runnable {
 
             final ServletContainer container = ServletContainer.Factory.newInstance();
 
-            ServerWebSocketContainer deployment = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, worker, new ByteBufferSlicePool(100, 1000),new CompositeThreadSetupAction(Collections.EMPTY_LIST));
+            ServerWebSocketContainer deployment = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, worker, new ByteBufferSlicePool(100, 1000),new CompositeThreadSetupAction(Collections.EMPTY_LIST), false);
             DeploymentInfo builder = new DeploymentInfo()
                     .setClassLoader(ProgramaticAutobahnServer.class.getClassLoader())
                     .setContextPath("/")

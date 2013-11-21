@@ -80,6 +80,8 @@ public class ServerWebSocketContainer implements ServerContainer {
     private final Pool<ByteBuffer> bufferPool;
     private final ThreadSetupAction threadSetupAction;
 
+    private final boolean clientMode;
+
     private volatile long defaultAsyncSendTimeout;
     private volatile long maxSessionIdleTimeout;
     private volatile int defaultMaxBinaryMessageBufferSize;
@@ -89,11 +91,12 @@ public class ServerWebSocketContainer implements ServerContainer {
     private ServletContextImpl contextToAddFilter = null;
 
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, XnioWorker xnioWorker, Pool<ByteBuffer> bufferPool, ThreadSetupAction threadSetupAction, boolean clientMode) {
         this.classIntrospecter = classIntrospecter;
         this.bufferPool = bufferPool;
         this.xnioWorker = xnioWorker;
         this.threadSetupAction = threadSetupAction;
+        this.clientMode = clientMode;
     }
 
     @Override
@@ -242,6 +245,10 @@ public class ServerWebSocketContainer implements ServerContainer {
         if (deploymentComplete) {
             throw JsrWebSocketMessages.MESSAGES.cannotAddEndpointAfterDeployment();
         }
+        addEndpointInternal(endpoint);
+    }
+
+    private void addEndpointInternal(final Class<?> endpoint) throws DeploymentException {
         try {
             ServerEndpoint serverEndpoint = endpoint.getAnnotation(ServerEndpoint.class);
             ClientEndpoint clientEndpoint = endpoint.getAnnotation(ClientEndpoint.class);
@@ -308,6 +315,7 @@ public class ServerWebSocketContainer implements ServerContainer {
         }
     }
 
+
     private void handleAddingFilterMapping() {
         if(contextToAddFilter != null) {
             contextToAddFilter.getDeployment().getDeploymentInfo().addFilterUrlMapping(Bootstrap.FILTER_NAME, "/*", DispatcherType.REQUEST);
@@ -342,7 +350,19 @@ public class ServerWebSocketContainer implements ServerContainer {
 
 
     public ConfiguredClientEndpoint getClientEndpoint(final Class<?> type) {
-        return clientEndpoints.get(type);
+        ConfiguredClientEndpoint existing = clientEndpoints.get(type);
+        if(existing != null) {
+            return existing;
+        }
+        if(clientMode && type.isAnnotationPresent(ClientEndpoint.class)) {
+            try {
+                addEndpointInternal(type);
+                return clientEndpoints.get(type);
+            } catch (DeploymentException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return null;
     }
 
 

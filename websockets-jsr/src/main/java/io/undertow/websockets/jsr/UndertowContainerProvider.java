@@ -30,6 +30,7 @@ public class UndertowContainerProvider extends ContainerProvider {
     private static final Map<ClassLoader, WebSocketContainer> webSocketContainers = new ConcurrentHashMap<ClassLoader, WebSocketContainer>();
 
     private static volatile WebSocketContainer defaultContainer;
+    private static volatile boolean defaultContainerDisabled = false;
 
     @Override
     protected WebSocketContainer getContainer() {
@@ -52,6 +53,9 @@ public class UndertowContainerProvider extends ContainerProvider {
     }
 
     private WebSocketContainer getDefaultContainer() {
+        if(defaultContainerDisabled) {
+            return null;
+        }
         if(defaultContainer != null) {
             return defaultContainer;
         }
@@ -63,7 +67,7 @@ public class UndertowContainerProvider extends ContainerProvider {
                     //todo: what options should we use here?
                     XnioWorker worker = Xnio.getInstance().createWorker(OptionMap.create(Options.THREAD_DAEMON, true));
                     Pool<ByteBuffer> buffers = new ByteBufferSlicePool(1024, 10240);
-                    defaultContainer = new ServerWebSocketContainer(DefaultClassIntrospector.INSTANCE, worker, buffers, new CompositeThreadSetupAction(Collections.<ThreadSetupAction>emptyList()));
+                    defaultContainer = new ServerWebSocketContainer(DefaultClassIntrospector.INSTANCE, worker, buffers, new CompositeThreadSetupAction(Collections.<ThreadSetupAction>emptyList()), true);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -84,5 +88,12 @@ public class UndertowContainerProvider extends ContainerProvider {
             AccessController.checkPermission(PERMISSION);
         }
         webSocketContainers.remove(classLoader);
+    }
+
+    public static void disableDefaultContainer() {
+        if(System.getSecurityManager() != null) {
+            AccessController.checkPermission(PERMISSION);
+        }
+        defaultContainerDisabled = true;
     }
 }
