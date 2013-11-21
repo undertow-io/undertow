@@ -119,6 +119,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             throw new ClosedChannelException();
         }
+        if(src.remaining() == 0) {
+            return 0;
+        }
         this.state |= FLAG_FIRST_DATA_WRITTEN;
         int oldLimit = src.limit();
         if (chunkleft == 0) {

@@ -76,8 +76,15 @@ public class ChunkedResponseTransferCodingTestCase {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
         try {
-            generateMessage(1);
+
+
+            generateMessage(0);
             HttpResponse result = client.execute(get);
+            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(message, HttpClientUtils.readResponse(result));
+
+            generateMessage(1);
+            result = client.execute(get);
             Assert.assertEquals(200, result.getStatusLine().getStatusCode());
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
 
